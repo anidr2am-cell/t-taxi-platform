@@ -21,6 +21,8 @@ const ChatRepository = require('../repositories/chat.repository');
 const BookingNumberService = require('../services/bookingNumber.service');
 const BookingService = require('../services/booking.service');
 const BookingStatusService = require('../services/bookingStatus.service');
+const FlightService = require('../services/flight.service');
+const config = require('../config/env');
 const database = require('../config/database');
 
 class Container {
@@ -104,5 +106,10 @@ container.register('bookingService', (c) => new BookingService(
   c.get('vehicleRecommendationService'),
   c.get('vehicleRepository'),
 ));
+container.register('flightService', () => new FlightService({
+  apiKey: config.external.aviationStackApiKey,
+  baseUrl: config.external.aviationStackBaseUrl,
+  timeoutMs: config.external.aviationStackTimeoutMs,
+}));
 
 module.exports = container;

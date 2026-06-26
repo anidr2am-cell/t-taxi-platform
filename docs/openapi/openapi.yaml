@@ -1657,6 +1657,45 @@ paths:
         '404':
           $ref: '#/components/responses/FlightNotFound'
 
+  /public/flights/search:
+    get:
+      tags: [Proxy]
+      summary: Public flight lookup for booking wizard
+      security: []
+      operationId: searchPublicFlights
+      parameters:
+        - name: flightNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          example: TG409
+        - name: flightDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: '2026-07-01'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseFlightInfo'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/FlightNotFound'
+        '429':
+          $ref: '#/components/responses/FlightProviderError'
+        '502':
+          $ref: '#/components/responses/FlightProviderError'
+        '503':
+          $ref: '#/components/responses/FlightProviderError'
+        '504':
+          $ref: '#/components/responses/FlightProviderError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1852,6 +1891,18 @@ components:
                 success: false
                 error_code: FLIGHT_NOT_FOUND
                 message: Flight KE651 not found for date
+    FlightProviderError:
+      description: Flight provider error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            provider:
+              value:
+                success: false
+                error_code: FLIGHT_PROVIDER_ERROR
+                message: Flight provider error
     GooglePlaceNotFound:
       description: Google Places API error or place not found
       content:
@@ -2021,6 +2072,12 @@ components:
         - BOOKING_NOT_ACCESSIBLE
         - RATE_LIMIT
         - EXTERNAL_API_ERROR
+        - INVALID_FLIGHT_NUMBER
+        - INVALID_FLIGHT_DATE
+        - FLIGHT_PROVIDER_NOT_CONFIGURED
+        - FLIGHT_PROVIDER_TIMEOUT
+        - FLIGHT_PROVIDER_RATE_LIMITED
+        - FLIGHT_PROVIDER_ERROR
     SettingDataType:
       type: string
       enum:
@@ -3791,21 +3848,72 @@ components:
                 $ref: '#/components/schemas/Translation'
 
     # --- Proxy ---
+    FlightEndpoint:
+      type: object
+      properties:
+        airportCode:
+          type: string
+          nullable: true
+        airportName:
+          type: string
+          nullable: true
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+        estimatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        actualAt:
+          type: string
+          format: date-time
+          nullable: true
+        terminal:
+          type: string
+          nullable: true
+        gate:
+          type: string
+          nullable: true
+    FlightStatus:
+      type: string
+      enum:
+        - SCHEDULED
+        - ACTIVE
+        - LANDED
+        - CANCELLED
+        - DIVERTED
+        - DELAYED
+        - UNKNOWN
     FlightInfo:
       type: object
       properties:
         flightNumber:
           type: string
-        scheduledArrivalAt:
+        airlineCode:
           type: string
-          format: date-time
-        estimatedArrivalAt:
+          nullable: true
+        airlineName:
           type: string
-          format: date-time
+          nullable: true
+        flightDate:
+          type: string
+          format: date
+        departure:
+          $ref: '#/components/schemas/FlightEndpoint'
+        arrival:
+          $ref: '#/components/schemas/FlightEndpoint'
+        status:
+          $ref: '#/components/schemas/FlightStatus'
         delayMinutes:
           type: integer
-        delayStatus:
+        source:
           type: string
+          enum:
+            - AVIATIONSTACK
+        retrievedAt:
+          type: string
+          format: date-time
 
     ApiResponseFlightInfo:
       allOf:

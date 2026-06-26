@@ -4,7 +4,7 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Booking MVP — customer reservation flow with route-based pricing, guest access, and boarding QR on create. Backend business engines (vehicle recommend, pricing, booking orchestration) plus admin pricing CRUD. Customer Flutter booking wizard (new `/api/v1` path) replacing legacy screens.
+Pack 10 complete — Flight Data Foundation for the booking wizard. Next: Pack 11 Driver Jobs MVP.
 
 # Completed
 
@@ -16,6 +16,10 @@ Booking MVP — customer reservation flow with route-based pricing, guest access
 - [x] Admin pricing API — routes, vehicle prices, charge policies, simulate
 - [x] Pricing engine — `locations` → `routes` → `vehicle_prices` + `charge_policies` (no hardcoded prices)
 - [x] Vehicle recommendation engine — DB `vehicle_capacity_rules`
+- [x] Pack 10 Flight Data Foundation — public flight search `GET /api/v1/public/flights/search`
+- [x] Aviationstack integration through backend only — flight number/date validation, provider response normalization, internal flight status mapping, arrival delay calculation, deterministic multiple-result selection, timeout/error mapping
+- [x] Flight lookup reliability — five-minute in-memory success cache, cache mutation protection, provider errors/not-found not cached
+- [x] OpenAPI flight endpoint documentation, focused flight service tests, `docs/OPERATION_FLOW.md` restored
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
 
@@ -24,16 +28,39 @@ Booking MVP — customer reservation flow with route-based pricing, guest access
 - Booking create — guest token, `PAY_DRIVER`, boarding QR token, commission status fields; dropoff QR schema only (no service yet)
 - Customer booking wizard — step flow exists; full E2E against live API incomplete
 - Frontend split — new `BookingApiService` (`/api/v1`) vs legacy `ApiService` (`/api/*`) and old admin screen
-- Public proxy routes — places, flights, airports, golf (route files stubbed)
+- Public proxy routes — flight foundation complete; places, airports, golf route files still stubbed
 - Chat / Socket.IO — handler skeleton only
 - `database/migrate.ps1` runs through `15`; migration `16` exists but is not in the script
 
 # Next Pack
 
-1. Finish booking lifecycle API — GET guest/member booking, cancel, status transitions, QR verify & dropoff QR generation  
-2. Implement public proxies — `/places/*`, `/flights`, `/airports`, `/golf-courses`  
-3. Wire customer wizard E2E and retire legacy `/api` client paths  
-4. Admin MVP — dashboard, booking list, manual driver assign (per `ADMIN_OPERATION_SYSTEM.md`)
+Pack 11 — Driver Jobs MVP
+
+Planned scope:
+
+- Authenticated driver access
+- Today’s assigned bookings
+- Booking detail
+- No QR scanning yet
+- No map
+- No navigation
+- No location tracking
+- No chat
+- No commission settlement
+
+# Environment Configuration
+
+- `AVIATIONSTACK_API_KEY` required for live flight provider lookup
+- `AVIATIONSTACK_BASE_URL` optional/defaulted
+- `AVIATIONSTACK_TIMEOUT_MS` optional/defaulted
+
+# Current Verification
+
+- `npm test`: 22/22 passed
+- Focused flight tests: 16/16 passed
+- `git diff --check` passed
+- Application loads without API key
+- Missing API key endpoint returns `503 FLIGHT_PROVIDER_NOT_CONFIGURED`
 
 # Architecture Status
 
@@ -51,7 +78,7 @@ Driver — 5%
 - Company income from driver commission — `commission_status`, `commission_amount`, receipt file fields on booking
 - Boarding QR then dropoff QR — boarding token issued at create; dropoff token after pickup (designed; dropoff logic pending)
 - Google Places via backend proxy — API key server-side only (routes not implemented)
-- AviationStack flight tracking — proxy planned; not implemented
+- AviationStack flight search — backend proxy only; API key never exposed to frontend
 - No online payment — `payment_status` stays `UNPAID`/`PAID` manual; `ONLINE` reserved for Phase 2
 - Admin manual dispatch (MVP) — auto-assign weights in DB; driver routes not built
 - Prices from DB only — route × vehicle + charge policies; admin CRUD for rules

@@ -23,6 +23,7 @@ const settingsRoutes = require('./settings.routes');
 const translationRoutes = require('./translation.routes');
 const placesRoutes = require('./places.routes');
 const flightsRoutes = require('./flights.routes');
+const publicRoutes = require('./public.routes');
 
 const router = express.Router();
 
@@ -42,5 +43,6 @@ router.use('/settings', settingsRoutes);
 router.use('/translations', translationRoutes);
 router.use('/places', placesRoutes);
 router.use('/flights', flightsRoutes);
+router.use('/public', publicRoutes);
 
 module.exports = router;
