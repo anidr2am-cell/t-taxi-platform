@@ -1,0 +1,3889 @@
+openapi: 3.1.0
+info:
+  title: TTaxi Platform API
+  version: 1.0.0
+  description: |
+    Thailand Travel Platform — Airport Transfer & future travel services.
+    Aligns with Database Design v1.1 and API Contract v1.0.
+    Base path `/api/v1`. JWT Bearer authentication.
+  contact:
+    name: TTaxi API Support
+    email: support@ttaxi.com
+
+jsonSchemaDialect: https://spec.openapis.org/oas/3.1/dialect/base
+
+servers:
+  - url: https://api.ttaxi.com/api/v1
+    description: Production
+  - url: http://localhost:3000/api/v1
+    description: Local development
+
+tags:
+  - name: Authentication
+    description: Register, login, token refresh
+  - name: Customer
+    description: Customer profile and bookings
+  - name: Booking
+    description: Reservations, pricing, vehicle recommendation
+  - name: Driver
+    description: Driver app — assignments, location, status
+  - name: Vehicle
+    description: Vehicle types and pricing
+  - name: Airport
+    description: Airport master data
+  - name: Golf
+    description: Golf courses and regions
+  - name: Chat
+    description: Chat rooms and messages
+  - name: Notification
+    description: Push and in-app notifications
+  - name: Admin
+    description: Admin panel operations
+  - name: Settings
+    description: Public and admin settings
+  - name: Translation
+    description: i18n bundles
+  - name: Proxy
+    description: Google Places and flight lookup proxies
+  - name: Health
+    description: Service health check
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns API availability and version. No authentication required.
+      security: []
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseHealth'
+              examples:
+                ok:
+                  value:
+                    success: true
+                    message: OK
+                    data:
+                      status: ok
+                      version: 1.0.0
+                      timestamp: '2026-07-01T10:00:00+07:00'
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register customer
+      description: Create a new CUSTOMER account and return JWT tokens.
+      security: []
+      operationId: authRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              default:
+                value:
+                  email: user@example.com
+                  password: secret123
+                  name: Kim Traveler
+                  phone: '+821012345678'
+                  countryCode: KR
+                  locale: ko
+      responses:
+        '201':
+          description: Registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthToken'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/DuplicateError'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login
+      description: Authenticate Customer, Driver, or Admin and return JWT tokens.
+      security: []
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              customer:
+                value:
+                  email: user@example.com
+                  password: secret123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthToken'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      security: []
+      operationId: authRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRefreshToken'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout
+      description: Invalidate refresh token session.
+      operationId: authLogout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user
+      operationId: authMe
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customer/profile:
+    get:
+      tags: [Customer]
+      summary: Get customer profile
+      operationId: getCustomerProfile
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCustomerProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [Customer]
+      summary: Update customer profile
+      operationId: updateCustomerProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerProfileRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCustomerProfile'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /customer/bookings:
+    get:
+      tags: [Customer]
+      summary: List my bookings
+      operationId: listCustomerBookings
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReservationStatus'
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingSummaryPagination'
+
+  /customer/fcm-token:
+    post:
+      tags: [Customer]
+      summary: Register FCM token
+      operationId: registerCustomerFcmToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FcmTokenRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /bookings/vehicle/recommend:
+    post:
+      tags: [Booking]
+      summary: Recommend vehicle
+      description: Calculate recommended vehicle type from passengers and luggage (PRD rules).
+      security: []
+      operationId: recommendVehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleRecommendationRequest'
+            examples:
+              family:
+                value:
+                  adults: 2
+                  children: 1
+                  infants: 0
+                  carriers20Inch: 2
+                  carriers24InchPlus: 1
+                  golfBags: 0
+      responses:
+        '200':
+          description: Recommendation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVehicleRecommendation'
+              examples:
+                suv:
+                  value:
+                    success: true
+                    message: OK
+                    data:
+                      recommendedVehicleType: SUV
+                      vehicleCount: 1
+                      multiVehicle: false
+                      assignments:
+                        - vehicleType: SUV
+                          count: 1
+                      selectableVehicleTypes:
+                        - SUV
+                        - VIP_SUV
+                        - VAN
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /bookings/pricing/calculate:
+    post:
+      tags: [Booking]
+      summary: Calculate booking price
+      description: Preview charge line items and total before creating booking.
+      security: []
+      operationId: calculateBookingPrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingCalculateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePricingResult'
+        '422':
+          $ref: '#/components/responses/VehicleNotSelectable'
+
+  /bookings:
+    post:
+      tags: [Booking]
+      summary: Create booking
+      description: |
+        Creates booking, charge items, chat room, activity log.
+        Server generates `bookingNumber` (TXYYYYMMDD0001). Client must not generate it.
+      security: []
+      operationId: createBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+            examples:
+              airportPickup:
+                $ref: '#/components/examples/BookingRequestAirportPickup'
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/DuplicateBooking'
+        '422':
+          $ref: '#/components/responses/VehicleNotSelectable'
+    get:
+      tags: [Booking]
+      summary: List bookings
+      description: Scoped by role — Customer own, Driver assigned, Admin all.
+      operationId: listBookings
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Single or comma-separated ReservationStatus
+        - name: serviceTypeCode
+          in: query
+          schema:
+            $ref: '#/components/schemas/ServiceType'
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: customerEmail
+          in: query
+          schema:
+            type: string
+            format: email
+          description: Admin only
+        - name: driverId
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Admin only
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Admin — bookingNumber, name, phone
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingSummaryPagination'
+
+  /bookings/{bookingNumber}:
+    get:
+      tags: [Booking]
+      summary: Get booking detail
+      operationId: getBooking
+      security:
+        - bearerAuth: []
+        - guestBookingAccess: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+        - name: email
+          in: query
+          schema:
+            type: string
+            format: email
+          description: Guest access
+        - name: guestAccessToken
+          in: query
+          schema:
+            type: string
+          description: Guest access token from create response
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+        '403':
+          $ref: '#/components/responses/BookingNotAccessible'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Booking]
+      summary: Update booking
+      description: Limited fields. Customer only when PENDING; Admin broader access.
+      operationId: updateBooking
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /bookings/{bookingNumber}/cancel:
+    post:
+      tags: [Booking]
+      summary: Cancel booking
+      operationId: cancelBooking
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelBookingRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /bookings/{bookingNumber}/status:
+    patch:
+      tags: [Booking]
+      summary: Change booking status
+      description: State machine enforced. See ReservationStatus transitions in API docs.
+      operationId: changeBookingStatus
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingStatusChangeRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /bookings/{bookingNumber}/charges:
+    get:
+      tags: [Booking]
+      summary: Get charge line items
+      operationId: getBookingCharges
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChargeItems'
+    post:
+      tags: [Booking]
+      summary: Add charge line item
+      description: Admin only — toll, driver extra, etc.
+      operationId: addBookingCharge
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargeItemCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChargeItemCreated'
+
+  /bookings/{bookingNumber}/activity-logs:
+    get:
+      tags: [Booking]
+      summary: Get booking activity logs
+      description: Admin only — CS audit trail.
+      operationId: getBookingActivityLogs
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseActivityLogList'
+
+  /bookings/{bookingNumber}/status-logs:
+    get:
+      tags: [Booking]
+      summary: Get status change history
+      operationId: getBookingStatusLogs
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseStatusLogList'
+
+  /driver/online:
+    post:
+      tags: [Driver]
+      summary: Set driver online
+      operationId: driverOnline
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isOnline:
+                  type: boolean
+                  const: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverStatus'
+
+  /driver/offline:
+    post:
+      tags: [Driver]
+      summary: Set driver offline
+      operationId: driverOffline
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isOnline:
+                  type: boolean
+                  const: false
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverStatus'
+
+  /driver/location:
+    post:
+      tags: [Driver]
+      summary: Send driver location
+      description: Heartbeat recommended every 10–30 seconds.
+      operationId: driverLocation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverLocationRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /driver/assignments:
+    get:
+      tags: [Driver]
+      summary: List driver assignments
+      operationId: listDriverAssignments
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+            default: active
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverAssignmentPagination'
+
+  /driver/assignments/{assignmentId}/accept:
+    post:
+      tags: [Driver]
+      summary: Accept assignment
+      operationId: acceptAssignment
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverAssignment'
+
+  /driver/assignments/{assignmentId}/reject:
+    post:
+      tags: [Driver]
+      summary: Reject assignment
+      operationId: rejectAssignment
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverAssignment'
+
+  /driver/bookings/{bookingNumber}/arrived:
+    post:
+      tags: [Driver]
+      summary: Mark driver arrived
+      description: Transitions booking to DRIVER_ARRIVED.
+      operationId: driverArrived
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+
+  /driver/bookings/{bookingNumber}/picked-up:
+    post:
+      tags: [Driver]
+      summary: Mark picked up
+      operationId: driverPickedUp
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+
+  /driver/bookings/{bookingNumber}/complete:
+    post:
+      tags: [Driver]
+      summary: Complete booking
+      operationId: driverComplete
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+
+  /vehicles/types:
+    get:
+      tags: [Vehicle]
+      summary: List vehicle types
+      security: []
+      operationId: listVehicleTypes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVehicleTypeList'
+
+  /vehicles/prices:
+    get:
+      tags: [Vehicle]
+      summary: List default vehicle prices
+      security: []
+      operationId: listVehiclePrices
+      parameters:
+        - name: serviceTypeCode
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ServiceType'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVehiclePriceList'
+
+  /airports:
+    get:
+      tags: [Airport]
+      summary: List airports
+      security: []
+      operationId: listAirports
+      parameters:
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: countryCode
+          in: query
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAirportList'
+
+  /airports/{iataCode}:
+    get:
+      tags: [Airport]
+      summary: Get airport by IATA
+      security: []
+      operationId: getAirport
+      parameters:
+        - name: iataCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+          example: BKK
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAirport'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /golf-courses:
+    get:
+      tags: [Golf]
+      summary: List golf courses
+      security: []
+      operationId: listGolfCourses
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGolfCoursePagination'
+
+  /golf-regions:
+    get:
+      tags: [Golf]
+      summary: List golf regions
+      security: []
+      operationId: listGolfRegions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseStringList'
+
+  /chat/rooms/{roomCode}:
+    get:
+      tags: [Chat]
+      summary: Get chat room
+      operationId: getChatRoom
+      parameters:
+        - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatRoom'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /chat/rooms:
+    post:
+      tags: [Chat]
+      summary: Create chat room
+      description: Normally auto-created on booking. Admin recovery use.
+      operationId: createChatRoom
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookingNumber]
+              properties:
+                bookingNumber:
+                  type: string
+                  pattern: '^TX[0-9]{14}$'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatRoom'
+
+  /chat/rooms/{roomCode}/messages:
+    get:
+      tags: [Chat]
+      summary: List chat messages
+      operationId: listChatMessages
+      parameters:
+        - $ref: '#/components/parameters/RoomCode'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: beforeId
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Cursor for pagination
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatMessagePagination'
+    post:
+      tags: [Chat]
+      summary: Send message (REST fallback)
+      operationId: sendChatMessage
+      parameters:
+        - $ref: '#/components/parameters/RoomCode'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMessageSendRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatMessage'
+
+  /chat/rooms/{roomCode}/read:
+    post:
+      tags: [Chat]
+      summary: Mark messages as read
+      operationId: markChatRead
+      parameters:
+        - $ref: '#/components/parameters/RoomCode'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lastReadMessageId:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /chat/rooms/{roomCode}/files:
+    post:
+      tags: [Chat]
+      summary: Upload chat file
+      operationId: uploadChatFile
+      parameters:
+        - $ref: '#/components/parameters/RoomCode'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                replyMessageId:
+                  type: integer
+                  format: int64
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatFileUpload'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /notifications:
+    get:
+      tags: [Notification]
+      summary: List notifications
+      operationId: listNotifications
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: isRead
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationPagination'
+
+  /notifications/{id}/read:
+    patch:
+      tags: [Notification]
+      summary: Mark notification read
+      operationId: markNotificationRead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /notifications/fcm-token:
+    post:
+      tags: [Notification]
+      summary: Register FCM token
+      operationId: registerFcmToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FcmTokenRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Admin dashboard stats
+      operationId: adminDashboard
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDashboard'
+
+  /admin/bookings:
+    get:
+      tags: [Admin]
+      summary: Search admin bookings
+      operationId: adminListBookings
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingSummaryPagination'
+
+  /admin/bookings/{bookingNumber}:
+    patch:
+      tags: [Admin]
+      summary: Admin update booking
+      operationId: adminUpdateBooking
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminBookingUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+
+  /admin/bookings/{bookingNumber}/assign-driver:
+    post:
+      tags: [Admin]
+      summary: Assign driver to booking
+      operationId: adminAssignDriver
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverAssignRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverAssignmentResponse'
+        '409':
+          $ref: '#/components/responses/DriverNotAvailable'
+
+  /admin/bookings/{bookingNumber}/unassign-driver:
+    post:
+      tags: [Admin]
+      summary: Unassign driver
+      operationId: adminUnassignDriver
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /admin/bookings/{bookingNumber}/notes:
+    get:
+      tags: [Admin]
+      summary: List admin notes
+      operationId: adminListBookingNotes
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminNoteList'
+    post:
+      tags: [Admin]
+      summary: Create admin note
+      operationId: adminCreateBookingNote
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminNoteCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminNote'
+
+  /admin/drivers:
+    get:
+      tags: [Admin]
+      summary: List drivers
+      operationId: adminListDrivers
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverList'
+    post:
+      tags: [Admin]
+      summary: Create driver
+      operationId: adminCreateDriver
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriver'
+
+  /admin/drivers/{id}:
+    get:
+      tags: [Admin]
+      summary: Get driver
+      operationId: adminGetDriver
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriver'
+    patch:
+      tags: [Admin]
+      summary: Update driver
+      operationId: adminUpdateDriver
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriver'
+    delete:
+      tags: [Admin]
+      summary: Soft delete driver
+      operationId: adminDeleteDriver
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Deleted
+
+  /admin/vehicle-prices:
+    get:
+      tags: [Admin]
+      summary: List vehicle prices
+      operationId: adminListVehiclePrices
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVehiclePriceList'
+    patch:
+      tags: [Admin]
+      summary: Update vehicle price
+      operationId: adminUpdateVehiclePrice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehiclePriceUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /admin/vehicle-price-rules:
+    get:
+      tags: [Admin]
+      summary: List price rules
+      operationId: adminListPriceRules
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePriceRuleList'
+    post:
+      tags: [Admin]
+      summary: Create price rule
+      operationId: adminCreatePriceRule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceRuleCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePriceRule'
+
+  /admin/golf-courses:
+    get:
+      tags: [Admin]
+      summary: List golf courses (admin)
+      operationId: adminListGolfCourses
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGolfCoursePagination'
+    post:
+      tags: [Admin]
+      summary: Create golf course
+      operationId: adminCreateGolfCourse
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GolfCourseCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGolfCourse'
+
+  /admin/golf-courses/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update golf course
+      operationId: adminUpdateGolfCourse
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GolfCourseUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGolfCourse'
+    delete:
+      tags: [Admin]
+      summary: Delete golf course
+      operationId: adminDeleteGolfCourse
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204':
+          description: Deleted
+
+  /admin/airports:
+    get:
+      tags: [Admin]
+      summary: List airports (admin)
+      operationId: adminListAirports
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAirportList'
+    post:
+      tags: [Admin]
+      summary: Create airport
+      operationId: adminCreateAirport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AirportCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAirport'
+
+  /admin/airports/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update airport
+      operationId: adminUpdateAirport
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AirportUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAirport'
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users
+      operationId: adminListUsers
+      parameters:
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserRole'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserList'
+    post:
+      tags: [Admin]
+      summary: Create user (admin/driver)
+      operationId: adminCreateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUser'
+
+  /admin/users/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update user
+      operationId: adminUpdateUser
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUser'
+
+  /admin/chats:
+    get:
+      tags: [Admin]
+      summary: List active chat rooms
+      operationId: adminListChats
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminChatList'
+
+  /admin/translations:
+    get:
+      tags: [Admin]
+      summary: List translations
+      operationId: adminListTranslations
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTranslationAdminList'
+    post:
+      tags: [Admin]
+      summary: Create or update translation key
+      operationId: adminUpsertTranslation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslationUpsertRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTranslation'
+
+  /admin/notifications/broadcast:
+    post:
+      tags: [Admin]
+      summary: Broadcast notification
+      operationId: adminBroadcastNotification
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BroadcastNotificationRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      summary: List all settings
+      operationId: adminListSettings
+      parameters:
+        - name: group
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSettingsList'
+
+  /admin/settings/{group}/{key}:
+    put:
+      tags: [Admin]
+      summary: Update setting
+      operationId: adminUpdateSetting
+      parameters:
+        - name: group
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSetting'
+
+  /settings/public:
+    get:
+      tags: [Settings]
+      summary: Public settings
+      security: []
+      operationId: getPublicSettings
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePublicSettings'
+
+  /translations:
+    get:
+      tags: [Translation]
+      summary: Get translations by locale
+      security: []
+      operationId: getTranslations
+      parameters:
+        - name: locale
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/Locale'
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTranslationBundle'
+
+  /translations/bundle:
+    get:
+      tags: [Translation]
+      summary: Full translation bundle for app bootstrap
+      security: []
+      operationId: getTranslationBundle
+      parameters:
+        - name: locale
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/Locale'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTranslationBundle'
+
+  /places/autocomplete:
+    get:
+      tags: [Proxy]
+      summary: Google Places autocomplete
+      security: []
+      operationId: placesAutocomplete
+      parameters:
+        - name: input
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: language
+          in: query
+          schema:
+            $ref: '#/components/schemas/Locale'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePlacesAutocomplete'
+        '503':
+          $ref: '#/components/responses/GooglePlaceNotFound'
+
+  /places/details:
+    get:
+      tags: [Proxy]
+      summary: Google Place details
+      security: []
+      operationId: placesDetails
+      parameters:
+        - name: placeId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: language
+          in: query
+          schema:
+            $ref: '#/components/schemas/Locale'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePlaceDetails'
+        '404':
+          $ref: '#/components/responses/GooglePlaceNotFound'
+
+  /flights:
+    get:
+      tags: [Proxy]
+      summary: Flight lookup (AviationStack)
+      security: []
+      operationId: getFlight
+      parameters:
+        - name: flightNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          example: KE651
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseFlightInfo'
+        '404':
+          $ref: '#/components/responses/FlightNotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token. Obtain via /auth/login or /auth/register.
+    guestBookingAccess:
+      type: apiKey
+      in: query
+      name: guestAccessToken
+      description: Guest booking access token with email query param.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    BookingNumber:
+      name: bookingNumber
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^TX[0-9]{14}$'
+      example: TX202607010001
+    RoomCode:
+      name: roomCode
+      in: path
+      required: true
+      schema:
+        type: string
+      example: room_TX202607010001
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    SuccessEmpty:
+      description: Success with no data payload
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponseEmpty'
+          examples:
+            ok:
+              value:
+                success: true
+                message: OK
+                data: null
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validation:
+              value:
+                success: false
+                error_code: VALIDATION_ERROR
+                message: Validation failed
+                errors:
+                  - field: email
+                    message: Invalid email format
+    Unauthorized:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorized:
+              value:
+                success: false
+                error_code: UNAUTHORIZED
+                message: Invalid or expired token
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              value:
+                success: false
+                error_code: FORBIDDEN
+                message: Access denied
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                success: false
+                error_code: NOT_FOUND
+                message: Resource not found
+    InvalidStatusTransition:
+      description: Booking status transition not allowed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid:
+              value:
+                success: false
+                error_code: INVALID_STATUS_TRANSITION
+                message: Cannot transition from COMPLETED to CONFIRMED
+    DuplicateError:
+      description: Duplicate resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            duplicate:
+              value:
+                success: false
+                error_code: DUPLICATE_BOOKING
+                message: Email already registered
+    DuplicateBooking:
+      description: Duplicate booking conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    VehicleNotSelectable:
+      description: Vehicle type not selectable for recommendation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            vehicle:
+              value:
+                success: false
+                error_code: VALIDATION_ERROR
+                message: Vehicle SEDAN is not selectable
+    BookingNotAccessible:
+      description: Booking access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            denied:
+              value:
+                success: false
+                error_code: FORBIDDEN
+                message: Booking not accessible
+    DriverNotAvailable:
+      description: Driver not available for assignment
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    FlightNotFound:
+      description: Flight not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            flight:
+              value:
+                success: false
+                error_code: FLIGHT_NOT_FOUND
+                message: Flight KE651 not found for date
+    GooglePlaceNotFound:
+      description: Google Places API error or place not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            place:
+              value:
+                success: false
+                error_code: GOOGLE_PLACE_NOT_FOUND
+                message: Place not found
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internal:
+              value:
+                success: false
+                error_code: INTERNAL_SERVER_ERROR
+                message: An unexpected error occurred
+
+  examples:
+    BookingRequestAirportPickup:
+      value:
+        serviceTypeCode: AIRPORT_PICKUP
+        scheduledPickupAt: '2026-07-01T14:00:00+07:00'
+        origin:
+          address: Suvarnabhumi Airport
+          placeId: ChIJb0QyKc6Z4jARl4i16m2h5sE
+          lat: 13.69
+          lng: 100.75
+        destination:
+          address: Centric Sea Pattaya
+          placeId: ChIJexample
+          lat: 12.93
+          lng: 100.88
+        transfer:
+          airportIata: BKK
+          flightNumber: KE651
+          flightScheduledArrivalAt: '2026-07-01T13:30:00+07:00'
+          flightEstimatedArrivalAt: '2026-07-01T13:45:00+07:00'
+          delayMinutes: 15
+        passengers:
+          adults: 2
+          children: 0
+          infants: 0
+        luggage:
+          carriers20Inch: 1
+          carriers24InchPlus: 0
+          golfBags: 0
+        vehicleTypeCode: SUV
+        vehicleCount: 1
+        options:
+          nameSign: true
+        customer:
+          name: Kim
+          email: kim@example.com
+          phone: '+821012345678'
+          countryCode: KR
+        specialRequests: Child seat please
+
+  schemas:
+    # --- Enums ---
+    ReservationStatus:
+      type: string
+      enum:
+        - PENDING
+        - CONFIRMED
+        - DRIVER_ASSIGNED
+        - DRIVER_ARRIVED
+        - PICKED_UP
+        - COMPLETED
+        - CANCELLED
+        - NO_SHOW
+    VehicleType:
+      type: string
+      enum:
+        - SEDAN
+        - SUV
+        - VIP_SUV
+        - VAN
+        - VIP_VAN
+        - LUXURY
+    ServiceType:
+      type: string
+      enum:
+        - AIRPORT_PICKUP
+        - AIRPORT_DROPOFF
+        - CITY_TRANSFER
+        - GOLF_TRANSFER
+    UserRole:
+      type: string
+      enum:
+        - CUSTOMER
+        - DRIVER
+        - ADMIN
+        - SUPER_ADMIN
+    PaymentStatus:
+      type: string
+      enum:
+        - UNPAID
+        - PENDING
+        - PAID
+        - REFUNDED
+        - FAILED
+    NotificationChannel:
+      type: string
+      enum:
+        - PUSH
+        - EMAIL
+        - SMS
+    ChatMessageStatus:
+      type: string
+      enum:
+        - SENT
+        - DELIVERED
+        - READ
+    ChatMessageType:
+      type: string
+      enum:
+        - TEXT
+        - IMAGE
+        - FILE
+        - SYSTEM
+    ChargeType:
+      type: string
+      enum:
+        - VEHICLE_BASE
+        - NAME_SIGN
+        - NIGHT_SURCHARGE
+        - AIRPORT_PARKING
+        - TOLL_GATE
+        - PROMOTION
+        - COUPON
+        - DRIVER_EXTRA
+        - SEASON_SURCHARGE
+        - HOLIDAY_SURCHARGE
+        - OTHER
+    Locale:
+      type: string
+      enum:
+        - ko
+        - en
+        - th
+        - ja
+        - zh
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - NOT_FOUND
+        - INVALID_STATUS_TRANSITION
+        - DUPLICATE_BOOKING
+        - FLIGHT_NOT_FOUND
+        - GOOGLE_PLACE_NOT_FOUND
+        - INTERNAL_SERVER_ERROR
+        - AUTH_REQUIRED
+        - AUTH_INVALID
+        - VEHICLE_NOT_SELECTABLE
+        - DRIVER_NOT_AVAILABLE
+        - BOOKING_NOT_ACCESSIBLE
+        - RATE_LIMIT
+        - EXTERNAL_API_ERROR
+    SettingDataType:
+      type: string
+      enum:
+        - STRING
+        - NUMBER
+        - BOOLEAN
+        - JSON
+    DriverStatus:
+      type: string
+      enum:
+        - AVAILABLE
+        - ON_TRIP
+        - OFFLINE
+        - SUSPENDED
+    AssignmentStatus:
+      type: string
+      enum:
+        - ASSIGNED
+        - ACCEPTED
+        - REJECTED
+        - COMPLETED
+        - CANCELLED
+    ActivityType:
+      type: string
+      enum:
+        - BOOKING_CREATED
+        - BOOKING_UPDATED
+        - BOOKING_CANCELLED
+        - STATUS_CHANGED
+        - DRIVER_ASSIGNED
+        - DRIVER_UNASSIGNED
+        - DRIVER_CHANGED
+        - CHARGE_ADDED
+        - CHARGE_REMOVED
+        - CHAT_STARTED
+        - CHAT_MESSAGE_SENT
+        - BOOKING_COMPLETED
+        - PAYMENT_UPDATED
+        - NOTE_ADDED
+
+    # --- Core wrappers ---
+    ApiResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data: {}
+
+    ApiResponseEmpty:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              nullable: true
+
+    ErrorResponse:
+      type: object
+      required: [success, error_code, message]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error_code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    Pagination:
+      type: object
+      required: [page, page_size, total, items]
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        items:
+          type: array
+          items: {}
+
+    # --- Auth ---
+    RegisterRequest:
+      type: object
+      required: [email, password, name, phone]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+        phone:
+          type: string
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+        locale:
+          $ref: '#/components/schemas/Locale'
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    AuthTokenData:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Seconds until access token expiry
+
+    ApiResponseAuthToken:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AuthTokenData'
+
+    ApiResponseRefreshToken:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                accessToken:
+                  type: string
+                expiresIn:
+                  type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/UserRole'
+        name:
+          type: string
+        phone:
+          type: string
+        locale:
+          $ref: '#/components/schemas/Locale'
+        isActive:
+          type: boolean
+
+    ApiResponseUser:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/User'
+
+    ApiResponseHealth:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status:
+                  type: string
+                version:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+
+    # --- Customer ---
+    CustomerProfile:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        displayName:
+          type: string
+        marketingOptIn:
+          type: boolean
+
+    UpdateCustomerProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        locale:
+          $ref: '#/components/schemas/Locale'
+        marketingOptIn:
+          type: boolean
+
+    ApiResponseCustomerProfile:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CustomerProfile'
+
+    FcmTokenRequest:
+      type: object
+      required: [fcmToken, platform]
+      properties:
+        fcmToken:
+          type: string
+        platform:
+          type: string
+          enum: [WEB, ANDROID, IOS]
+        deviceId:
+          type: string
+
+    # --- Booking DTOs ---
+    PlaceLocation:
+      type: object
+      properties:
+        address:
+          type: string
+        placeId:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+
+    PassengersDto:
+      type: object
+      properties:
+        adults:
+          type: integer
+          minimum: 1
+        children:
+          type: integer
+          minimum: 0
+        infants:
+          type: integer
+          minimum: 0
+
+    LuggageDto:
+      type: object
+      properties:
+        carriers20Inch:
+          type: integer
+          minimum: 0
+        carriers24InchPlus:
+          type: integer
+          minimum: 0
+        golfBags:
+          type: integer
+          minimum: 0
+        specialItems:
+          type: string
+
+    TransferDetailsDto:
+      type: object
+      properties:
+        airportIata:
+          type: string
+        flightNumber:
+          type: string
+        flightScheduledArrivalAt:
+          type: string
+          format: date-time
+        flightEstimatedArrivalAt:
+          type: string
+          format: date-time
+        delayMinutes:
+          type: integer
+        delayStatus:
+          type: string
+        golfCourseId:
+          type: integer
+          format: int64
+        golfRegion:
+          type: string
+        driverIncluded:
+          type: boolean
+        pickupTimeLocal:
+          type: string
+          example: '14:30'
+
+    CustomerSnapshotDto:
+      type: object
+      required: [name, email, phone]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+
+    BookingOptionsDto:
+      type: object
+      properties:
+        nameSign:
+          type: boolean
+
+    VehicleRecommendationRequest:
+      type: object
+      required: [adults]
+      properties:
+        adults:
+          type: integer
+          minimum: 1
+        children:
+          type: integer
+          minimum: 0
+        infants:
+          type: integer
+          minimum: 0
+        carriers20Inch:
+          type: integer
+          minimum: 0
+        carriers24InchPlus:
+          type: integer
+          minimum: 0
+        golfBags:
+          type: integer
+          minimum: 0
+
+    VehicleAssignmentItem:
+      type: object
+      properties:
+        vehicleType:
+          $ref: '#/components/schemas/VehicleType'
+        count:
+          type: integer
+
+    VehicleRecommendationResponse:
+      type: object
+      properties:
+        recommendedVehicleType:
+          $ref: '#/components/schemas/VehicleType'
+        vehicleCount:
+          type: integer
+        multiVehicle:
+          type: boolean
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleAssignmentItem'
+        selectableVehicleTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleType'
+
+    ApiResponseVehicleRecommendation:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/VehicleRecommendationResponse'
+
+    PricingCalculateRequest:
+      type: object
+      required: [serviceTypeCode, vehicleTypeCode]
+      properties:
+        serviceTypeCode:
+          $ref: '#/components/schemas/ServiceType'
+        vehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        vehicleCount:
+          type: integer
+          minimum: 1
+          default: 1
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        originAirportIata:
+          type: string
+        destinationRegion:
+          type: string
+        options:
+          $ref: '#/components/schemas/BookingOptionsDto'
+        passengers:
+          $ref: '#/components/schemas/PassengersDto'
+        luggage:
+          $ref: '#/components/schemas/LuggageDto'
+
+    ChargeItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        chargeType:
+          $ref: '#/components/schemas/ChargeType'
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        amount:
+          type: number
+
+    PricingResult:
+      type: object
+      properties:
+        currency:
+          type: string
+          example: THB
+        chargeItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargeItem'
+        totalAmount:
+          type: number
+        appliedPricingRuleId:
+          type: integer
+          format: int64
+          nullable: true
+
+    ApiResponsePricingResult:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PricingResult'
+
+    BookingRequest:
+      type: object
+      required: [serviceTypeCode, vehicleTypeCode, customer]
+      properties:
+        serviceTypeCode:
+          $ref: '#/components/schemas/ServiceType'
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        origin:
+          $ref: '#/components/schemas/PlaceLocation'
+        destination:
+          $ref: '#/components/schemas/PlaceLocation'
+        transfer:
+          $ref: '#/components/schemas/TransferDetailsDto'
+        passengers:
+          $ref: '#/components/schemas/PassengersDto'
+        luggage:
+          $ref: '#/components/schemas/LuggageDto'
+        vehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        vehicleCount:
+          type: integer
+          minimum: 1
+          default: 1
+        options:
+          $ref: '#/components/schemas/BookingOptionsDto'
+        customer:
+          $ref: '#/components/schemas/CustomerSnapshotDto'
+        specialRequests:
+          type: string
+
+    BookingCreatedResponse:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+          pattern: '^TX[0-9]{14}$'
+        id:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+        totalAmount:
+          type: number
+        currency:
+          type: string
+        chargeItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargeItem'
+        chatRoomCode:
+          type: string
+        guestAccessToken:
+          type: string
+          nullable: true
+
+    ApiResponseBookingCreated:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BookingCreatedResponse'
+
+    DriverSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        phone:
+          type: string
+
+    BookingResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bookingNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+        serviceTypeCode:
+          $ref: '#/components/schemas/ServiceType'
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        origin:
+          $ref: '#/components/schemas/PlaceLocation'
+        destination:
+          $ref: '#/components/schemas/PlaceLocation'
+        transfer:
+          $ref: '#/components/schemas/TransferDetailsDto'
+        passengers:
+          $ref: '#/components/schemas/PassengersDto'
+        luggage:
+          $ref: '#/components/schemas/LuggageDto'
+        vehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        recommendedVehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        vehicleCount:
+          type: integer
+        chargeItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargeItem'
+        totalAmount:
+          type: number
+        currency:
+          type: string
+        customer:
+          $ref: '#/components/schemas/CustomerSnapshotDto'
+        driver:
+          $ref: '#/components/schemas/DriverSummary'
+          nullable: true
+        specialRequests:
+          type: string
+        chatRoomCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponseBookingResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BookingResponse'
+
+    BookingSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bookingNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        serviceTypeCode:
+          $ref: '#/components/schemas/ServiceType'
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        totalAmount:
+          type: number
+        currency:
+          type: string
+        customerName:
+          type: string
+        driverName:
+          type: string
+          nullable: true
+
+    BookingSummaryPagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/BookingSummary'
+
+    ApiResponseBookingSummaryPagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BookingSummaryPagination'
+
+    BookingUpdateRequest:
+      type: object
+      properties:
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        specialRequests:
+          type: string
+        destination:
+          $ref: '#/components/schemas/PlaceLocation'
+
+    CancelBookingRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        memo:
+          type: string
+
+    BookingStatusChangeRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        reason:
+          type: string
+        memo:
+          type: string
+
+    ChargeItemCreateRequest:
+      type: object
+      required: [chargeType, quantity, unitPrice]
+      properties:
+        chargeType:
+          $ref: '#/components/schemas/ChargeType'
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+
+    ApiResponseChargeItems:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                chargeItems:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ChargeItem'
+                totalAmount:
+                  type: number
+                currency:
+                  type: string
+
+    ApiResponseChargeItemCreated:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                chargeItem:
+                  $ref: '#/components/schemas/ChargeItem'
+                totalAmount:
+                  type: number
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        activityType:
+          $ref: '#/components/schemas/ActivityType'
+        actorRole:
+          $ref: '#/components/schemas/UserRole'
+        description:
+          type: string
+        payload:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiResponseActivityLogList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivityLog'
+
+    StatusLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        fromStatus:
+          $ref: '#/components/schemas/ReservationStatus'
+        toStatus:
+          $ref: '#/components/schemas/ReservationStatus'
+        changedByUserId:
+          type: integer
+          format: int64
+        changedByRole:
+          $ref: '#/components/schemas/UserRole'
+        reason:
+          type: string
+        memo:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiResponseStatusLogList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/StatusLog'
+
+    # --- Driver ---
+    DriverLocationRequest:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+        heading:
+          type: number
+        speed:
+          type: number
+
+    DriverAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bookingId:
+          type: integer
+          format: int64
+        bookingNumber:
+          type: string
+        driverId:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/AssignmentStatus'
+        isActive:
+          type: boolean
+        assignedAt:
+          type: string
+          format: date-time
+        unassignedAt:
+          type: string
+          format: date-time
+          nullable: true
+        assignmentReason:
+          type: string
+
+    DriverAssignmentResponse:
+      type: object
+      properties:
+        assignmentId:
+          type: integer
+          format: int64
+        isActive:
+          type: boolean
+        driver:
+          $ref: '#/components/schemas/DriverSummary'
+        bookingStatus:
+          $ref: '#/components/schemas/ReservationStatus'
+
+    ApiResponseDriverAssignment:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverAssignment'
+
+    ApiResponseDriverAssignmentResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverAssignmentResponse'
+
+    DriverAssignmentPagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/DriverAssignment'
+
+    ApiResponseDriverAssignmentPagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverAssignmentPagination'
+
+    Driver:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+        name:
+          type: string
+        phone:
+          type: string
+        status:
+          $ref: '#/components/schemas/DriverStatus'
+        primaryVehicleType:
+          $ref: '#/components/schemas/VehicleType'
+        isOnline:
+          type: boolean
+        lastSeenAt:
+          type: string
+          format: date-time
+        currentLat:
+          type: number
+        currentLng:
+          type: number
+        isActive:
+          type: boolean
+
+    ApiResponseDriver:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Driver'
+
+    ApiResponseDriverStatus:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                isOnline:
+                  type: boolean
+                lastSeenAt:
+                  type: string
+                  format: date-time
+
+    DriverCreateRequest:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        licenseNumber:
+          type: string
+        primaryVehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    DriverUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        status:
+          $ref: '#/components/schemas/DriverStatus'
+        isActive:
+          type: boolean
+
+    ApiResponseDriverList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Driver'
+
+    DriverAssignRequest:
+      type: object
+      required: [driverId]
+      properties:
+        driverId:
+          type: integer
+          format: int64
+        driverVehicleId:
+          type: integer
+          format: int64
+        assignmentReason:
+          type: string
+
+    # --- Vehicle ---
+    VehicleTypeInfo:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/VehicleType'
+        name:
+          type: string
+        maxPassengers:
+          type: integer
+        maxLuggage:
+          type: integer
+        isActive:
+          type: boolean
+
+    ApiResponseVehicleTypeList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/VehicleTypeInfo'
+
+    VehiclePrice:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceTypeCode:
+          $ref: '#/components/schemas/ServiceType'
+        vehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        basePrice:
+          type: number
+        currency:
+          type: string
+
+    ApiResponseVehiclePriceList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/VehiclePrice'
+
+    VehiclePriceUpdateRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        basePrice:
+          type: number
+        isActive:
+          type: boolean
+
+    PriceRuleCondition:
+      type: object
+      properties:
+        conditionType:
+          type: string
+          enum: [DAY_OF_WEEK, TIME_RANGE, IS_HOLIDAY, SEASON, ORIGIN_AIRPORT, DEST_REGION]
+        operator:
+          type: string
+          enum: [EQ, IN, BETWEEN, GTE, LTE]
+        conditionValue:
+          type: string
+
+    PriceRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceTypeCode:
+          $ref: '#/components/schemas/ServiceType'
+        vehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        name:
+          type: string
+        basePrice:
+          type: number
+        priority:
+          type: integer
+        isActive:
+          type: boolean
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceRuleCondition'
+
+    PriceRuleCreateRequest:
+      type: object
+      required: [serviceTypeCode, vehicleTypeCode, name, basePrice]
+      properties:
+        serviceTypeCode:
+          $ref: '#/components/schemas/ServiceType'
+        vehicleTypeCode:
+          $ref: '#/components/schemas/VehicleType'
+        name:
+          type: string
+        basePrice:
+          type: number
+        priority:
+          type: integer
+        validFrom:
+          type: string
+          format: date-time
+        validTo:
+          type: string
+          format: date-time
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceRuleCondition'
+
+    ApiResponsePriceRuleList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/PriceRule'
+
+    ApiResponsePriceRule:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PriceRule'
+
+    # --- Airport ---
+    Airport:
+      type: object
+      properties:
+        id:
+          type: integer
+        iataCode:
+          type: string
+        icaoCode:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+        countryCode:
+          type: string
+        timezone:
+          type: string
+          example: Asia/Bangkok
+        isActive:
+          type: boolean
+
+    ApiResponseAirport:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Airport'
+
+    ApiResponseAirportList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Airport'
+
+    AirportCreateRequest:
+      type: object
+      required: [iataCode, name, countryCode]
+      properties:
+        iataCode:
+          type: string
+        icaoCode:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+        countryCode:
+          type: string
+        timezone:
+          type: string
+
+    AirportUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        city:
+          type: string
+        timezone:
+          type: string
+        isActive:
+          type: boolean
+
+    # --- Golf ---
+    GolfCourse:
+      type: object
+      properties:
+        id:
+          type: integer
+        region:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        placeId:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        phone:
+          type: string
+        website:
+          type: string
+          format: uri
+        isActive:
+          type: boolean
+
+    ApiResponseGolfCourse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GolfCourse'
+
+    GolfCoursePagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GolfCourse'
+
+    ApiResponseGolfCoursePagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GolfCoursePagination'
+
+    GolfCourseCreateRequest:
+      type: object
+      required: [region, name]
+      properties:
+        region:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        placeId:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        phone:
+          type: string
+        website:
+          type: string
+
+    GolfCourseUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        region:
+          type: string
+        phone:
+          type: string
+        website:
+          type: string
+        isActive:
+          type: boolean
+
+    ApiResponseStringList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: string
+
+    # --- Chat ---
+    ChatParticipant:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        participantRole:
+          type: string
+          enum: [CUSTOMER, DRIVER, ADMIN]
+        displayName:
+          type: string
+
+    ChatRoom:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        bookingNumber:
+          type: string
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatParticipant'
+        isActive:
+          type: boolean
+
+    ApiResponseChatRoom:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ChatRoom'
+
+    FileAttachment:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        fileUrl:
+          type: string
+          format: uri
+        mimeType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        senderRole:
+          type: string
+          enum: [CUSTOMER, DRIVER, ADMIN]
+        senderName:
+          type: string
+        messageType:
+          $ref: '#/components/schemas/ChatMessageType'
+        content:
+          type: string
+        messageStatus:
+          $ref: '#/components/schemas/ChatMessageStatus'
+        replyMessageId:
+          type: integer
+          format: int64
+          nullable: true
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileAttachment'
+        createdAt:
+          type: string
+          format: date-time
+
+    ChatMessageSendRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+        messageType:
+          $ref: '#/components/schemas/ChatMessageType'
+        replyMessageId:
+          type: integer
+          format: int64
+
+    ApiResponseChatMessage:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ChatMessage'
+
+    ChatMessagePagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChatMessage'
+
+    ApiResponseChatMessagePagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ChatMessagePagination'
+
+    ApiResponseChatFileUpload:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                messageId:
+                  type: integer
+                  format: int64
+                file:
+                  $ref: '#/components/schemas/FileAttachment'
+
+    # --- Notification ---
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        isRead:
+          type: boolean
+        bookingId:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationPagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Notification'
+
+    ApiResponseNotificationPagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/NotificationPagination'
+
+    BroadcastNotificationRequest:
+      type: object
+      required: [channel, title, body]
+      properties:
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+        title:
+          type: string
+        body:
+          type: string
+        targetRole:
+          $ref: '#/components/schemas/UserRole'
+        payload:
+          type: object
+
+    # --- Admin ---
+    DashboardStats:
+      type: object
+      properties:
+        todayBookings:
+          type: integer
+        todayRevenue:
+          type: number
+        pendingBookings:
+          type: integer
+        awaitingDriver:
+          type: integer
+        activeChats:
+          type: integer
+        statusBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                $ref: '#/components/schemas/ReservationStatus'
+              count:
+                type: integer
+
+    ApiResponseDashboard:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DashboardStats'
+
+    AdminNote:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        adminUserId:
+          type: integer
+          format: int64
+        note:
+          type: string
+        isPrivate:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminNoteCreateRequest:
+      type: object
+      required: [note]
+      properties:
+        note:
+          type: string
+        isPrivate:
+          type: boolean
+          default: true
+
+    ApiResponseAdminNote:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AdminNote'
+
+    ApiResponseAdminNoteList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminNote'
+
+    AdminChatRoomSummary:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        bookingNumber:
+          type: string
+        customerName:
+          type: string
+        lastMessage:
+          type: string
+        messageCount:
+          type: integer
+        unreadCount:
+          type: integer
+
+    ApiResponseAdminChatList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminChatRoomSummary'
+
+    AdminBookingUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/BookingUpdateRequest'
+        - type: object
+          properties:
+            vehicleTypeCode:
+              $ref: '#/components/schemas/VehicleType'
+            customer:
+              $ref: '#/components/schemas/CustomerSnapshotDto'
+            adminNotes:
+              type: string
+
+    AdminUserCreateRequest:
+      type: object
+      required: [email, password, role, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        name:
+          type: string
+        phone:
+          type: string
+
+    AdminUserUpdateRequest:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/UserRole'
+        isActive:
+          type: boolean
+        name:
+          type: string
+
+    ApiResponseUserList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    # --- Settings ---
+    Setting:
+      type: object
+      properties:
+        groupName:
+          type: string
+        keyName:
+          type: string
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: object
+        dataType:
+          $ref: '#/components/schemas/SettingDataType'
+        isEncrypted:
+          type: boolean
+        description:
+          type: string
+
+    SettingUpdateRequest:
+      type: object
+      required: [value, dataType]
+      properties:
+        value: {}
+        dataType:
+          $ref: '#/components/schemas/SettingDataType'
+
+    ApiResponseSetting:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Setting'
+
+    ApiResponseSettingsList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Setting'
+
+    PublicSettings:
+      type: object
+      properties:
+        companyName:
+          type: string
+        supportEmail:
+          type: string
+        supportPhone:
+          type: string
+
+    ApiResponsePublicSettings:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PublicSettings'
+
+    # --- Translation ---
+    TranslationItem:
+      type: object
+      properties:
+        keyName:
+          type: string
+        value:
+          type: string
+
+    TranslationBundle:
+      type: object
+      properties:
+        locale:
+          $ref: '#/components/schemas/Locale'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationItem'
+
+    ApiResponseTranslationBundle:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/TranslationBundle'
+
+    Translation:
+      type: object
+      properties:
+        keyName:
+          type: string
+        category:
+          type: string
+        values:
+          type: object
+          additionalProperties:
+            type: string
+
+    TranslationUpsertRequest:
+      type: object
+      required: [keyName, values]
+      properties:
+        keyName:
+          type: string
+        category:
+          type: string
+        values:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            ko: 예약 확인
+            en: Confirm Booking
+
+    ApiResponseTranslation:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Translation'
+
+    ApiResponseTranslationAdminList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Translation'
+
+    # --- Proxy ---
+    FlightInfo:
+      type: object
+      properties:
+        flightNumber:
+          type: string
+        scheduledArrivalAt:
+          type: string
+          format: date-time
+        estimatedArrivalAt:
+          type: string
+          format: date-time
+        delayMinutes:
+          type: integer
+        delayStatus:
+          type: string
+
+    ApiResponseFlightInfo:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FlightInfo'
+
+    PlacePrediction:
+      type: object
+      properties:
+        placeId:
+          type: string
+        description:
+          type: string
+
+    ApiResponsePlacesAutocomplete:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                predictions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PlacePrediction'
+
+    PlaceDetails:
+      type: object
+      properties:
+        placeId:
+          type: string
+        name:
+          type: string
+        formattedAddress:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+
+    ApiResponsePlaceDetails:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PlaceDetails'
+
+    FileRecord:
+      type: object
+      description: Storage entity for attachments
+      properties:
+        id:
+          type: integer
+          format: int64
+        entityType:
+          type: string
+          enum: [BOOKING, CHAT_MESSAGE, DRIVER, USER]
+        entityId:
+          type: integer
+          format: int64
+        storageProvider:
+          type: string
+          enum: [LOCAL, S3]
+        fileUrl:
+          type: string
+          format: uri
+        mimeType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        originalFilename:
+          type: string
+        createdAt:
+          type: string
+          format: date-time

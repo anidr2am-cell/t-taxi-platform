@@ -1,0 +1,14 @@
+node_modules/
+flutter/build/
+flutter/.dart_tool/
+
+.env
+.env.*
+
+logs/
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
