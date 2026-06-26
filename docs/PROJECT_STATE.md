@@ -4,7 +4,7 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Pack 10 complete — Flight Data Foundation for the booking wizard. Next: Pack 11 Driver Jobs MVP.
+Pack 11 complete — Driver Jobs MVP. Next: Pack 12 Driver QR Operation MVP.
 
 # Completed
 
@@ -20,6 +20,12 @@ Pack 10 complete — Flight Data Foundation for the booking wizard. Next: Pack 1
 - [x] Aviationstack integration through backend only — flight number/date validation, provider response normalization, internal flight status mapping, arrival delay calculation, deterministic multiple-result selection, timeout/error mapping
 - [x] Flight lookup reliability — five-minute in-memory success cache, cache mutation protection, provider errors/not-found not cached
 - [x] OpenAPI flight endpoint documentation, focused flight service tests, `docs/OPERATION_FLOW.md` restored
+- [x] Pack 11 Driver Jobs MVP — authenticated DRIVER-only access
+- [x] Driver jobs API — `GET /api/v1/driver/bookings/today`, `GET /api/v1/driver/bookings/:bookingNumber`
+- [x] Driver job security — active-assignment ownership enforcement and safe not-found response for another driver's booking
+- [x] Driver job responses — Thailand service-day filtering, pickup-time sorting, minimal booking list, assigned booking detail
+- [x] Flutter driver MVP — driver login, today's jobs, booking detail, loading/empty/error/refresh states
+- [x] Driver OpenAPI documentation, focused backend driver tests, Flutter tests
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
 
@@ -32,21 +38,30 @@ Pack 10 complete — Flight Data Foundation for the booking wizard. Next: Pack 1
 - Chat / Socket.IO — handler skeleton only
 - `database/migrate.ps1` runs through `15`; migration `16` exists but is not in the script
 
+# Intentionally Deferred
+
+- QR scanning
+- Maps and navigation
+- Live location tracking
+- Chat
+- Commission settlement
+- Automatic driver assignment
+
 # Next Pack
 
-Pack 11 — Driver Jobs MVP
+Pack 12 — Driver QR Operation MVP
 
 Planned scope:
 
-- Authenticated driver access
-- Today’s assigned bookings
-- Booking detail
-- No QR scanning yet
-- No map
-- No navigation
-- No location tracking
-- No chat
-- No commission settlement
+- Boarding QR validation
+- Boarding QR single-use invalidation
+- Status transition to PICKED_UP through BookingStatusService
+- Dropoff QR creation or activation
+- Dropoff QR validation
+- Dropoff QR single-use invalidation
+- Status transition to COMPLETED through BookingStatusService
+- Driver scanner UI
+- No map, chat, tracking, or settlement
 
 # Environment Configuration
 

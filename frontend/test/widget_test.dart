@@ -14,6 +14,7 @@ void main() {
         child: const TTaxiApp(),
       ),
     );
+    await tester.pumpAndSettle();
     expect(find.text('TTaxi'), findsOneWidget);
   });
 }

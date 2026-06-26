@@ -3,6 +3,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../widgets/language_selector.dart';
 import '../../../widgets/pwa_install_banner.dart';
 import '../../booking/pages/booking_wizard_page.dart';
+import '../../driver/pages/driver_login_page.dart';
 import '../widgets/landing_hero.dart';
 import '../widgets/landing_service_cards.dart';
 import '../widgets/landing_trust_section.dart';
@@ -32,6 +33,13 @@ class CustomerLandingPage extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AdminScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.local_taxi),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DriverLoginPage()),
             ),
           ),
           const LanguageSelector(),

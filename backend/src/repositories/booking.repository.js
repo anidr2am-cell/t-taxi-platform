@@ -213,6 +213,80 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  driverJobSelectSql() {
+    return `
+      SELECT
+        b.id,
+        b.booking_number,
+        b.status,
+        b.scheduled_pickup_at,
+        DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d') AS pickup_date,
+        DATE_FORMAT(b.scheduled_pickup_at, '%H:%i') AS pickup_time,
+        b.origin_address,
+        b.destination_address,
+        b.customer_name,
+        b.customer_phone,
+        b.special_requests,
+        b.payment_method,
+        st.code AS service_type_code,
+        st.name AS service_type_name,
+        vt.code AS vehicle_type_code,
+        vt.name AS vehicle_type_name,
+        bp.adults,
+        bp.children,
+        bp.infants,
+        bl.carriers_20_inch,
+        bl.carriers_24_inch_plus,
+        bl.golf_bags,
+        bl.special_items,
+        btd.flight_number,
+        btd.flight_estimated_arrival_at,
+        DATE_FORMAT(btd.flight_estimated_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_estimated_arrival_at_text,
+        btd.delay_status,
+        btd.delay_minutes
+      FROM booking_driver_assignments bda
+      INNER JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+      INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+      INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
+      INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+      LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
+      LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+      LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+      WHERE
+        d.user_id = ?
+        AND d.is_active = 1
+        AND bda.is_active = 1
+        AND bda.deleted_at IS NULL
+        AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+    `;
+  }
+
+  async findActiveDriverBookingsForDate(driverUserId, dateRange) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.driverJobSelectSql()}
+        AND b.status <> 'CANCELLED'
+        AND b.scheduled_pickup_at >= ?
+        AND b.scheduled_pickup_at < ?
+        ORDER BY b.scheduled_pickup_at ASC, b.booking_number ASC
+      `,
+      [driverUserId, dateRange.start, dateRange.end],
+    );
+    return rows;
+  }
+
+  async findActiveDriverBookingByNumber(driverUserId, bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.driverJobSelectSql()}
+        AND b.booking_number = ?
+        LIMIT 1
+      `,
+      [driverUserId, bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
   async updateStatus(conn, bookingId, status, actorUserId, statusFields = {}) {
     await conn.query(
       `

@@ -22,6 +22,7 @@ const BookingNumberService = require('../services/bookingNumber.service');
 const BookingService = require('../services/booking.service');
 const BookingStatusService = require('../services/bookingStatus.service');
 const FlightService = require('../services/flight.service');
+const DriverJobService = require('../services/driverJob.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -111,5 +112,8 @@ container.register('flightService', () => new FlightService({
   baseUrl: config.external.aviationStackBaseUrl,
   timeoutMs: config.external.aviationStackTimeoutMs,
 }));
+container.register('driverJobService', (c) => new DriverJobService(
+  c.get('bookingRepository'),
+));
 
 module.exports = container;

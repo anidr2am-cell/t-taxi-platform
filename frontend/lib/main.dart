@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
+import 'features/driver/pages/driver_jobs_page.dart';
+import 'features/driver/pages/driver_login_page.dart';
 import 'providers/booking_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -39,6 +41,10 @@ class TTaxiApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      routes: {
+        '/driver': (_) => const DriverLoginPage(),
+        '/driver/jobs': (_) => const DriverJobsPage(),
+      },
       home: const HomeScreen(),
     );
   }

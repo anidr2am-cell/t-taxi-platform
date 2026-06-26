@@ -652,6 +652,44 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseDriverAssignmentPagination'
 
+  /driver/bookings/today:
+    get:
+      tags: [Driver]
+      summary: List today's assigned driver bookings
+      description: Returns active bookings assigned to the authenticated DRIVER for the current Thailand service day.
+      operationId: driverListTodayBookings
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverJobsToday'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /driver/bookings/{bookingNumber}:
+    get:
+      tags: [Driver]
+      summary: Get assigned driver booking detail
+      description: The authenticated DRIVER may only access active bookings assigned to that driver.
+      operationId: driverGetBookingDetail
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverBookingDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /driver/assignments/{assignmentId}/accept:
     post:
       tags: [Driver]
@@ -2961,6 +2999,118 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DriverAssignmentPagination'
+    DriverJobServiceType:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ServiceType'
+        name:
+          type: string
+    DriverJobVehicleType:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/VehicleType'
+        name:
+          type: string
+    DriverJobSummary:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        serviceType:
+          $ref: '#/components/schemas/DriverJobServiceType'
+        pickupDate:
+          type: string
+          format: date
+        pickupTime:
+          type: string
+          example: '09:30'
+        origin:
+          type: string
+        destination:
+          type: string
+        passengerCount:
+          type: integer
+        vehicleType:
+          $ref: '#/components/schemas/DriverJobVehicleType'
+        customerDisplayName:
+          type: string
+          nullable: true
+        flightNumber:
+          type: string
+          nullable: true
+        flightStatus:
+          type: string
+          nullable: true
+        latestEstimatedArrival:
+          type: string
+          nullable: true
+        allowedActions:
+          type: array
+          items:
+            type: string
+    DriverJobsToday:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverJobSummary'
+    ApiResponseDriverJobsToday:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverJobsToday'
+    DriverBookingDetail:
+      allOf:
+        - $ref: '#/components/schemas/DriverJobSummary'
+        - type: object
+          properties:
+            customerPhone:
+              type: string
+              nullable: true
+            passengers:
+              $ref: '#/components/schemas/PassengersDto'
+            luggage:
+              $ref: '#/components/schemas/LuggageDto'
+            flight:
+              type: object
+              properties:
+                flightNumber:
+                  type: string
+                  nullable: true
+                flightStatus:
+                  type: string
+                  nullable: true
+                latestEstimatedArrival:
+                  type: string
+                  nullable: true
+                delayMinutes:
+                  type: integer
+                  nullable: true
+            specialInstructions:
+              type: string
+              nullable: true
+            paymentMethod:
+              type: string
+              enum:
+                - PAY_DRIVER
+                - ONLINE
+    ApiResponseDriverBookingDetail:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverBookingDetail'
 
     Driver:
       type: object
