@@ -6,7 +6,7 @@ import '../providers/booking_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/pwa_install_banner.dart';
-import 'booking/booking_flow_screen.dart';
+import '../features/booking/pages/booking_wizard_page.dart';
 import 'admin/admin_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -96,7 +96,7 @@ class HomeScreen extends StatelessWidget {
                   context.read<BookingState>().setServiceType(s.type);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const BookingFlowScreen()),
+                    MaterialPageRoute(builder: (_) => const BookingWizardPage()),
                   );
                 },
               ),
