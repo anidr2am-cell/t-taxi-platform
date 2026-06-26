@@ -54,8 +54,14 @@ class DriverJobService {
   }
 
   allowedActions(status) {
-    if (['DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP'].includes(status)) {
-      return ['VIEW_DETAILS'];
+    if (status === 'DRIVER_ASSIGNED') {
+      return ['VIEW_DETAILS', 'MARK_ARRIVED'];
+    }
+    if (status === 'DRIVER_ARRIVED') {
+      return ['VIEW_DETAILS', 'SCAN_BOARDING_QR'];
+    }
+    if (status === 'PICKED_UP') {
+      return ['VIEW_DETAILS', 'SCAN_DROPOFF_QR'];
     }
     return [];
   }
@@ -112,6 +118,16 @@ class DriverJobService {
       },
       specialInstructions: row.special_requests,
       paymentMethod: row.payment_method,
+      qr: {
+        boarding: {
+          available: Boolean(row.boarding_qr_token_hash),
+          consumed: Boolean(row.boarding_qr_used_at),
+        },
+        dropoff: {
+          available: Boolean(row.dropoff_qr_token_hash && !row.dropoff_qr_used_at),
+          consumed: Boolean(row.dropoff_qr_used_at),
+        },
+      },
     };
   }
 

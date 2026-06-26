@@ -153,7 +153,7 @@ test('today list sorting is requested from repository and mapped concisely', asy
   assert.equal(result.items[0].bookingNumber, 'TX202607010001');
   assert.equal(result.items[0].passengerCount, 3);
   assert.equal(result.items[0].customerDisplayName, 'Kim');
-  assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS']);
+  assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS', 'MARK_ARRIVED']);
 });
 
 test('driver can access assigned booking detail', async () => {

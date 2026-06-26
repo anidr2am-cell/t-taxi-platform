@@ -38,3 +38,26 @@ class BookingCreateResult {
     );
   }
 }
+
+class DropoffQrIssueResult {
+  final String bookingNumber;
+  final String status;
+  final String dropoffQrToken;
+  final String dropoffQrExpiresAt;
+
+  const DropoffQrIssueResult({
+    required this.bookingNumber,
+    required this.status,
+    required this.dropoffQrToken,
+    required this.dropoffQrExpiresAt,
+  });
+
+  factory DropoffQrIssueResult.fromJson(Map<String, dynamic> json) {
+    return DropoffQrIssueResult(
+      bookingNumber: json['bookingNumber'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      dropoffQrToken: json['dropoffQrToken'] as String? ?? '',
+      dropoffQrExpiresAt: json['dropoffQrExpiresAt'] as String? ?? '',
+    );
+  }
+}

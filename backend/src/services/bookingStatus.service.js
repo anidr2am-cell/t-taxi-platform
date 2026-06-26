@@ -166,71 +166,84 @@ class BookingStatusService {
     };
   }
 
+  emitDomainEvent(domainEvent, eventPayload) {
+    if (domainEvent) {
+      appEvents.emit(domainEvent, eventPayload);
+    }
+  }
+
+  async transitionInTransaction(conn, bookingNumber, input, actor, options = {}) {
+    const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+      conn,
+      bookingNumber,
+    );
+
+    if (!booking) {
+      throw new AppError('Booking not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+      });
+    }
+
+    const fromStatus = booking.status;
+    const toStatus = input.status;
+    if (!options.skipAccessCheck) {
+      this.assertActorCanAccessBooking(booking, actor);
+    }
+
+    if (fromStatus === toStatus) {
+      return {
+        result: this.buildBookingResult(booking, toStatus, true),
+        domainEvent: null,
+        eventPayload: null,
+      };
+    }
+
+    this.validateTransition(fromStatus, toStatus, actor.role);
+    const occurredAt = new Date().toISOString();
+
+    await this.bookingRepository.updateStatus(conn, booking.id, toStatus, actor.id, {
+      cancellationReason: input.reason ?? input.memo ?? null,
+    });
+
+    await this.bookingRepository.insertStatusLog(conn, booking.id, {
+      fromStatus,
+      toStatus,
+      changedByUserId: actor.id,
+      changedByRole: actor.role,
+      reason: input.reason ?? null,
+      memo: input.memo ?? null,
+    });
+
+    await this.bookingRepository.insertActivityLog(conn, booking.id, {
+      activityType: ACTIVITY_BY_STATUS[toStatus] ?? 'BOOKING_STATUS_CHANGED',
+      actorUserId: actor.id,
+      actorRole: actor.role,
+      description: `Booking status changed from ${fromStatus} to ${toStatus}`,
+      payload: this.buildActivityPayload(booking, fromStatus, toStatus, actor, {
+        ...input,
+        occurredAt,
+      }),
+    });
+
+    return {
+      result: this.buildBookingResult(booking, toStatus),
+      domainEvent: EVENT_BY_STATUS[toStatus],
+      eventPayload: this.buildEventPayload(booking, fromStatus, toStatus, actor, {
+        ...input,
+        occurredAt,
+      }),
+    };
+  }
+
   async transition(bookingNumber, input, actor) {
     const conn = await this.pool.getConnection();
-    let updatedBooking;
-    let eventPayload;
-    let domainEvent;
+    let transition;
 
     try {
       await conn.beginTransaction();
-
-      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
-        conn,
-        bookingNumber,
-      );
-
-      if (!booking) {
-        throw new AppError('Booking not found', {
-          statusCode: HTTP_STATUS.NOT_FOUND,
-          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
-        });
-      }
-
-      const fromStatus = booking.status;
-      const toStatus = input.status;
-      this.assertActorCanAccessBooking(booking, actor);
-
-      if (fromStatus === toStatus) {
-        await conn.commit();
-        return this.buildBookingResult(booking, toStatus, true);
-      }
-
-      this.validateTransition(fromStatus, toStatus, actor.role);
-      const occurredAt = new Date().toISOString();
-
-      await this.bookingRepository.updateStatus(conn, booking.id, toStatus, actor.id, {
-        cancellationReason: input.reason ?? input.memo ?? null,
-      });
-
-      await this.bookingRepository.insertStatusLog(conn, booking.id, {
-        fromStatus,
-        toStatus,
-        changedByUserId: actor.id,
-        changedByRole: actor.role,
-        reason: input.reason ?? null,
-        memo: input.memo ?? null,
-      });
-
-      await this.bookingRepository.insertActivityLog(conn, booking.id, {
-        activityType: ACTIVITY_BY_STATUS[toStatus] ?? 'BOOKING_STATUS_CHANGED',
-        actorUserId: actor.id,
-        actorRole: actor.role,
-        description: `Booking status changed from ${fromStatus} to ${toStatus}`,
-        payload: this.buildActivityPayload(booking, fromStatus, toStatus, actor, {
-          ...input,
-          occurredAt,
-        }),
-      });
-
+      transition = await this.transitionInTransaction(conn, bookingNumber, input, actor);
       await conn.commit();
-
-      updatedBooking = this.buildBookingResult(booking, toStatus);
-      eventPayload = this.buildEventPayload(booking, fromStatus, toStatus, actor, {
-        ...input,
-        occurredAt,
-      });
-      domainEvent = EVENT_BY_STATUS[toStatus];
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -238,11 +251,8 @@ class BookingStatusService {
       conn.release();
     }
 
-    if (domainEvent) {
-      appEvents.emit(domainEvent, eventPayload);
-    }
-
-    return updatedBooking;
+    this.emitDomainEvent(transition.domainEvent, transition.eventPayload);
+    return transition.result;
   }
 }
 

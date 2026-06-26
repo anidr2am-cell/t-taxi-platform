@@ -3,12 +3,14 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 import '../models/booking_create_result.dart';
+import '../services/booking_api_service.dart';
 
-class BookingCompletePage extends StatelessWidget {
+class BookingCompletePage extends StatefulWidget {
   final BookingCreateResult result;
   final String serviceLabel;
   final String originLabel;
   final String destinationLabel;
+  final Future<DropoffQrIssueResult> Function()? issueDropoffQr;
 
   const BookingCompletePage({
     super.key,
@@ -16,11 +18,69 @@ class BookingCompletePage extends StatelessWidget {
     required this.serviceLabel,
     required this.originLabel,
     required this.destinationLabel,
+    this.issueDropoffQr,
   });
+
+  @override
+  State<BookingCompletePage> createState() => _BookingCompletePageState();
+}
+
+class _BookingCompletePageState extends State<BookingCompletePage> {
+  bool _loadingDropoffQr = false;
+  String? _dropoffQrToken;
+  String? _dropoffQrError;
+  String? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.result.status;
+  }
+
+  bool get _isCompleted => _status == 'COMPLETED';
+
+  Future<void> _loadDropoffQr() async {
+    setState(() {
+      _loadingDropoffQr = true;
+      _dropoffQrError = null;
+    });
+
+    try {
+      final issue =
+          widget.issueDropoffQr ??
+          () => BookingApiService().issueDropoffQr(
+            bookingNumber: widget.result.bookingNumber,
+            guestAccessToken: widget.result.guestAccessToken,
+          );
+      final result = await issue();
+      if (!mounted) return;
+      setState(() {
+        _status = result.status;
+        _dropoffQrToken = result.dropoffQrToken;
+        _loadingDropoffQr = false;
+      });
+    } on BookingApiException catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _loadingDropoffQr = false;
+        _dropoffQrToken = null;
+        _dropoffQrError = err.errorCode == 'INVALID_STATUS_TRANSITION'
+            ? 'Dropoff QR is available after pickup and before trip completion.'
+            : err.message;
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _loadingDropoffQr = false;
+        _dropoffQrError = err.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final result = widget.result;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.t('booking_complete'))),
@@ -51,7 +111,10 @@ class BookingCompletePage extends StatelessWidget {
                       '${result.totalAmount} ${result.currency}',
                       bold: true,
                     ),
-                    _row(l10n.t('payment_method'), l10n.t('pay_driver_at_destination')),
+                    _row(
+                      l10n.t('payment_method'),
+                      l10n.t('pay_driver_at_destination'),
+                    ),
                   ],
                 ),
               ),
@@ -65,44 +128,60 @@ class BookingCompletePage extends StatelessWidget {
                   children: [
                     Text(
                       l10n.t('booking_summary'),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    _row(l10n.t('service_type'), serviceLabel),
-                    _row(l10n.t('origin'), originLabel),
-                    _row(l10n.t('destination'), destinationLabel),
+                    _row(l10n.t('service_type'), widget.serviceLabel),
+                    _row(l10n.t('origin'), widget.originLabel),
+                    _row(l10n.t('destination'), widget.destinationLabel),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              l10n.t('boarding_qr_title'),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.t('boarding_qr_hint'),
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
+            if (_isCompleted)
+              const _QrStatusMessage(message: 'Trip completed')
+            else if (_dropoffQrToken != null)
+              _QrDisplay(
+                title: 'Dropoff QR',
+                hint: 'Show this QR to your driver at destination.',
+                token: _dropoffQrToken!,
+              )
+            else
+              _QrDisplay(
+                title: l10n.t('boarding_qr_title'),
+                hint: l10n.t('boarding_qr_hint'),
+                token: result.boardingQrToken,
+              ),
             const SizedBox(height: 16),
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+            if (!_isCompleted) ...[
+              if (_dropoffQrError != null) ...[
+                Text(
+                  _dropoffQrError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  textAlign: TextAlign.center,
                 ),
-                child: QrImageView(
-                  data: result.boardingQrToken,
-                  size: 200,
-                  backgroundColor: Colors.white,
+                const SizedBox(height: 8),
+              ],
+              OutlinedButton.icon(
+                onPressed: _loadingDropoffQr ? null : _loadDropoffQr,
+                icon: _loadingDropoffQr
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _dropoffQrToken == null
+                      ? 'Refresh dropoff QR'
+                      : 'Issue new dropoff QR',
                 ),
               ),
-            ),
+            ],
             const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: null,
@@ -111,7 +190,8 @@ class BookingCompletePage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+              onPressed: () =>
+                  Navigator.of(context).popUntil((route) => route.isFirst),
               child: Text(l10n.t('app_title')),
             ),
           ],
@@ -132,11 +212,76 @@ class BookingCompletePage extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.w600),
+              style: TextStyle(
+                fontWeight: bold ? FontWeight.bold : FontWeight.w600,
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _QrDisplay extends StatelessWidget {
+  const _QrDisplay({
+    required this.title,
+    required this.hint,
+    required this.token,
+  });
+
+  final String title;
+  final String hint;
+  final String token;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          hint,
+          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: QrImageView(
+              data: token,
+              size: 200,
+              backgroundColor: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QrStatusMessage extends StatelessWidget {
+  const _QrStatusMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      message,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      textAlign: TextAlign.center,
     );
   }
 }

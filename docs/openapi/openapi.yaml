@@ -470,6 +470,39 @@ paths:
         '409':
           $ref: '#/components/responses/InvalidStatusTransition'
 
+  /bookings/{bookingNumber}/dropoff-qr/issue:
+    post:
+      tags: [Booking]
+      summary: Issue customer dropoff QR
+      description: >
+        Requires authenticated customer ownership or a valid guestAccessToken in
+        the JSON body. Booking must be PICKED_UP. Each successful issue returns
+        a new raw dropoff QR token, stores only its hash, and invalidates any
+        previously issued unused dropoff QR token.
+      operationId: issueDropoffQr
+      security:
+        - bearerAuth: []
+        - guestBookingAccess: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DropoffQrIssueRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDropoffQrIssue'
+        '403':
+          $ref: '#/components/responses/BookingNotAccessible'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
   /bookings/{bookingNumber}/cancel:
     post:
       tags: [Booking]
@@ -726,12 +759,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseDriverAssignment'
 
-  /driver/bookings/{bookingNumber}/arrived:
+  /driver/bookings/{bookingNumber}/arrive:
     post:
       tags: [Driver]
       summary: Mark driver arrived
-      description: Transitions booking to DRIVER_ARRIVED.
-      operationId: driverArrived
+      description: Requires authenticated DRIVER role and an active assignment. Transitions DRIVER_ASSIGNED to DRIVER_ARRIVED through BookingStatusService.
+      operationId: driverMarkArrived
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/BookingNumber'
       responses:
@@ -739,35 +774,65 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseBookingResponse'
+                $ref: '#/components/schemas/ApiResponseDriverBookingDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/QrOperationConflict'
 
-  /driver/bookings/{bookingNumber}/picked-up:
+  /driver/bookings/{bookingNumber}/scan-boarding:
     post:
       tags: [Driver]
-      summary: Mark picked up
-      operationId: driverPickedUp
+      summary: Scan boarding QR
+      description: Requires authenticated DRIVER role and an active assignment. Consumes the boarding QR atomically, transitions DRIVER_ARRIVED to PICKED_UP through BookingStatusService, and activates dropoff QR state.
+      operationId: driverScanBoardingQr
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverQrScanRequest'
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseBookingResponse'
+                $ref: '#/components/schemas/ApiResponseDriverBookingDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/QrOperationConflict'
 
-  /driver/bookings/{bookingNumber}/complete:
+  /driver/bookings/{bookingNumber}/scan-dropoff:
     post:
       tags: [Driver]
-      summary: Complete booking
-      operationId: driverComplete
+      summary: Scan dropoff QR
+      description: Requires authenticated DRIVER role and an active assignment. Consumes the dropoff QR atomically and transitions PICKED_UP to COMPLETED through BookingStatusService.
+      operationId: driverScanDropoffQr
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverQrScanRequest'
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseBookingResponse'
+                $ref: '#/components/schemas/ApiResponseDriverBookingDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/QrOperationConflict'
 
   /vehicles/types:
     get:
@@ -1869,6 +1934,23 @@ components:
                 success: false
                 error_code: INVALID_STATUS_TRANSITION
                 message: Cannot transition from COMPLETED to CONFIRMED
+    QrOperationConflict:
+      description: QR operation rejected
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalidTransition:
+              value:
+                success: false
+                error_code: INVALID_STATUS_TRANSITION
+                message: Invalid booking status transition
+            usedToken:
+              value:
+                success: false
+                error_code: QR_TOKEN_ALREADY_USED
+                message: QR token has already been used
     DuplicateError:
       description: Duplicate resource
       content:
@@ -2116,6 +2198,11 @@ components:
         - FLIGHT_PROVIDER_TIMEOUT
         - FLIGHT_PROVIDER_RATE_LIMITED
         - FLIGHT_PROVIDER_ERROR
+        - INVALID_QR_TOKEN
+        - QR_TOKEN_EXPIRED
+        - QR_TOKEN_ALREADY_USED
+        - QR_TOKEN_TYPE_MISMATCH
+        - QR_TOKEN_BOOKING_MISMATCH
     SettingDataType:
       type: string
       enum:
@@ -2658,6 +2745,33 @@ components:
             data:
               $ref: '#/components/schemas/BookingCreatedResponse'
 
+    DropoffQrIssueRequest:
+      type: object
+      properties:
+        guestAccessToken:
+          type: string
+          description: Required for guest bookings. Authenticated customers may omit it.
+    DropoffQrIssueResponse:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        dropoffQrToken:
+          type: string
+          description: Raw token returned only to the authorized customer/guest response.
+        dropoffQrExpiresAt:
+          type: string
+          format: date-time
+    ApiResponseDropoffQrIssue:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DropoffQrIssueResponse'
+
     DriverSummary:
       type: object
       properties:
@@ -3069,6 +3183,28 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DriverJobsToday'
+    DriverQrScanRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          minLength: 1
+    DriverQrPurposeState:
+      type: object
+      properties:
+        available:
+          type: boolean
+        consumed:
+          type: boolean
+    DriverQrState:
+      type: object
+      properties:
+        boarding:
+          $ref: '#/components/schemas/DriverQrPurposeState'
+        dropoff:
+          $ref: '#/components/schemas/DriverQrPurposeState'
     DriverBookingDetail:
       allOf:
         - $ref: '#/components/schemas/DriverJobSummary'
@@ -3104,6 +3240,12 @@ components:
               enum:
                 - PAY_DRIVER
                 - ONLINE
+            qr:
+              $ref: '#/components/schemas/DriverQrState'
+            idempotent:
+              type: boolean
+            dropoffQrAvailable:
+              type: boolean
     ApiResponseDriverBookingDetail:
       allOf:
         - $ref: '#/components/schemas/ApiResponse'

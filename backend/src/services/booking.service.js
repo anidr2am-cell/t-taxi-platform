@@ -3,12 +3,15 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const PAYMENT_METHODS = require('../constants/paymentMethods');
 const COMMISSION_STATUS = require('../constants/commissionStatus');
+const BOOKING_STATUS = require('../constants/reservationStatus');
+const ROLES = require('../constants/roles');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
 
 const TRUST_MESSAGE = 'Your booking has been received. Please show your boarding QR to the driver when you get in. After pickup, a new drop-off QR will be generated automatically.';
 
 const GUEST_TOKEN_TTL_DAYS = 90;
 const BOARDING_QR_TTL_HOURS = 48;
+const DROPOFF_QR_TTL_HOURS = 48;
 
 class BookingService {
   constructor(
@@ -277,6 +280,115 @@ class BookingService {
     } finally {
       conn.release();
     }
+  }
+
+  validateBookingNumber(bookingNumber) {
+    const value = String(bookingNumber ?? '').trim().toUpperCase();
+    if (!/^TX\d{12}$/.test(value)) {
+      throw new AppError('Invalid booking number', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    return value;
+  }
+
+  async assertCustomerOrGuestAccess(conn, booking, authUser, guestAccessToken) {
+    if (
+      authUser?.role === ROLES.CUSTOMER
+      && booking.customer_user_id
+      && booking.customer_user_id === authUser.id
+    ) {
+      return;
+    }
+
+    const token = String(guestAccessToken ?? '').trim();
+    if (!token) {
+      throw new AppError('Booking is not accessible', {
+        statusCode: HTTP_STATUS.FORBIDDEN,
+        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+      });
+    }
+
+    const guestToken = await this.bookingRepository.findActiveGuestTokenForBooking(
+      conn,
+      booking.id,
+      hashToken(token),
+    );
+    if (!guestToken) {
+      throw new AppError('Booking is not accessible', {
+        statusCode: HTTP_STATUS.FORBIDDEN,
+        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+      });
+    }
+  }
+
+  async issueDropoffQr(bookingNumber, input = {}, authUser = null) {
+    const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
+    const conn = await this.pool.getConnection();
+    const rawDropoffToken = generateSecureToken();
+    const expiresAt = this.formatDateTime(
+      this.addHours(new Date(), DROPOFF_QR_TTL_HOURS),
+    );
+    let booking;
+
+    try {
+      await conn.beginTransaction();
+
+      booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        normalizedBookingNumber,
+      );
+
+      if (!booking) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      await this.assertCustomerOrGuestAccess(
+        conn,
+        booking,
+        authUser,
+        input.guestAccessToken,
+      );
+
+      if (booking.status !== BOOKING_STATUS.PICKED_UP) {
+        throw new AppError(
+          'Dropoff QR can only be issued after pickup and before completion',
+          {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+            errors: [{
+              requiredStatus: BOOKING_STATUS.PICKED_UP,
+              currentStatus: booking.status,
+            }],
+          },
+        );
+      }
+
+      await this.bookingRepository.setDropoffQr(
+        conn,
+        booking.id,
+        hashToken(rawDropoffToken),
+        expiresAt,
+      );
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    return {
+      bookingNumber: booking.booking_number,
+      status: booking.status,
+      dropoffQrToken: rawDropoffToken,
+      dropoffQrExpiresAt: expiresAt,
+    };
   }
 }
 

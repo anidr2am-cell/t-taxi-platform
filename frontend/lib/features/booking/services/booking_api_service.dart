@@ -36,7 +36,10 @@ class BookingApiService {
     } else {
       response = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: jsonEncode(body ?? {}),
       );
     }
@@ -65,16 +68,22 @@ class BookingApiService {
     int golfBags = 0,
     int specialLuggageCount = 0,
   }) async {
-    final data = await _request('POST', '/bookings/vehicle/recommend', body: {
-      'adults': adults,
-      'children': children,
-      'infants': infants,
-      'luggage20': luggage20,
-      'luggage24': luggage24,
-      'golfBags': golfBags,
-      'specialLuggageCount': specialLuggageCount,
-    });
-    return VehicleRecommendation.fromJson(Map<String, dynamic>.from(data as Map));
+    final data = await _request(
+      'POST',
+      '/bookings/vehicle/recommend',
+      body: {
+        'adults': adults,
+        'children': children,
+        'infants': infants,
+        'luggage20': luggage20,
+        'luggage24': luggage24,
+        'golfBags': golfBags,
+        'specialLuggageCount': specialLuggageCount,
+      },
+    );
+    return VehicleRecommendation.fromJson(
+      Map<String, dynamic>.from(data as Map),
+    );
   }
 
   Future<PricingResult> calculatePricing({
@@ -94,20 +103,51 @@ class BookingApiService {
       'vehicleCount': vehicleCount,
       'options': {'nameSign': nameSign},
     };
-    if (originAirportIata != null) body['originAirportIata'] = originAirportIata;
-    if (destinationRegion != null) body['destinationRegion'] = destinationRegion;
-    if (originLocationCode != null) body['originLocationCode'] = originLocationCode;
+    if (originAirportIata != null) {
+      body['originAirportIata'] = originAirportIata;
+    }
+    if (destinationRegion != null) {
+      body['destinationRegion'] = destinationRegion;
+    }
+    if (originLocationCode != null) {
+      body['originLocationCode'] = originLocationCode;
+    }
     if (destinationLocationCode != null) {
       body['destinationLocationCode'] = destinationLocationCode;
     }
-    if (scheduledPickupAt != null) body['scheduledPickupAt'] = scheduledPickupAt;
+    if (scheduledPickupAt != null) {
+      body['scheduledPickupAt'] = scheduledPickupAt;
+    }
 
-    final data = await _request('POST', '/bookings/pricing/calculate', body: body);
+    final data = await _request(
+      'POST',
+      '/bookings/pricing/calculate',
+      body: body,
+    );
     return PricingResult.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   Future<BookingCreateResult> createBooking(Map<String, dynamic> body) async {
     final data = await _request('POST', '/bookings', body: body);
     return BookingCreateResult.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DropoffQrIssueResult> issueDropoffQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+  }) async {
+    final body = <String, dynamic>{};
+    if (guestAccessToken != null) {
+      body['guestAccessToken'] = guestAccessToken;
+    }
+
+    final data = await _request(
+      'POST',
+      '/bookings/$bookingNumber/dropoff-qr/issue',
+      body: body,
+    );
+    return DropoffQrIssueResult.fromJson(
+      Map<String, dynamic>.from(data as Map),
+    );
   }
 }

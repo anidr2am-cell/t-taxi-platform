@@ -16,6 +16,8 @@ class DriverApiException implements Exception {
 }
 
 class DriverApiService {
+  const DriverApiService();
+
   static const _tokenKey = 'driver_access_token';
 
   String get _base => '${AppConfig.apiBaseUrl}/api/v1';
@@ -30,13 +32,13 @@ class DriverApiService {
     await prefs.remove(_tokenKey);
   }
 
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> login({required String email, required String password}) async {
     final response = await http.post(
       Uri.parse('$_base/auth/login'),
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
       body: jsonEncode({'email': email, 'password': password}),
     );
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -63,10 +65,7 @@ class DriverApiService {
 
     final response = await http.get(
       Uri.parse('$_base$path'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -74,7 +73,38 @@ class DriverApiService {
       if (response.statusCode == 401) {
         await logout();
       }
-      throw DriverApiException(decoded['message'] as String? ?? 'Request failed');
+      throw DriverApiException(
+        decoded['message'] as String? ?? 'Request failed',
+      );
+    }
+
+    return decoded['data'];
+  }
+
+  Future<dynamic> _post(String path, {Map<String, dynamic>? body}) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) {
+      throw const DriverApiException('Please log in again');
+    }
+
+    final response = await http.post(
+      Uri.parse('$_base$path'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body ?? {}),
+    );
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode >= 400) {
+      if (response.statusCode == 401) {
+        await logout();
+      }
+      throw DriverApiException(
+        decoded['message'] as String? ?? 'Request failed',
+      );
     }
 
     return decoded['data'];
@@ -87,6 +117,27 @@ class DriverApiService {
 
   Future<DriverBooking> getBookingDetail(String bookingNumber) async {
     final data = await _get('/driver/bookings/$bookingNumber');
+    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverBooking> markArrived(String bookingNumber) async {
+    final data = await _post('/driver/bookings/$bookingNumber/arrive');
+    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverBooking> scanBoarding(String bookingNumber, String token) async {
+    final data = await _post(
+      '/driver/bookings/$bookingNumber/scan-boarding',
+      body: {'token': token},
+    );
+    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverBooking> scanDropoff(String bookingNumber, String token) async {
+    final data = await _post(
+      '/driver/bookings/$bookingNumber/scan-dropoff',
+      body: {'token': token},
+    );
     return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
   }
 }

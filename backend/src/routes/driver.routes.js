@@ -9,6 +9,9 @@ const router = express.Router();
 router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
 
 router.get('/bookings/today', driverController.listTodayBookings);
+router.post('/bookings/:bookingNumber/arrive', driverController.markArrived);
+router.post('/bookings/:bookingNumber/scan-boarding', driverController.scanBoarding);
+router.post('/bookings/:bookingNumber/scan-dropoff', driverController.scanDropoff);
 router.get('/bookings/:bookingNumber', driverController.getBookingDetail);
 
 // TODO: online, offline, location, assignments, booking actions

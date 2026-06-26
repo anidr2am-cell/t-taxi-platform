@@ -41,4 +41,10 @@ router.patch(
   bookingController.updateBookingStatus,
 );
 
+router.post(
+  '/:bookingNumber/dropoff-qr/issue',
+  optionalAuthMiddleware,
+  bookingController.issueDropoffQr,
+);
+
 module.exports = router;

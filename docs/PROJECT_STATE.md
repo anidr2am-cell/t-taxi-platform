@@ -4,7 +4,7 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Pack 11 complete — Driver Jobs MVP. Next: Pack 12 Driver QR Operation MVP.
+Pack 12 complete — Driver QR Operation MVP. Next: Pack 13 Admin Dispatch MVP.
 
 # Completed
 
@@ -26,12 +26,21 @@ Pack 11 complete — Driver Jobs MVP. Next: Pack 12 Driver QR Operation MVP.
 - [x] Driver job responses — Thailand service-day filtering, pickup-time sorting, minimal booking list, assigned booking detail
 - [x] Flutter driver MVP — driver login, today's jobs, booking detail, loading/empty/error/refresh states
 - [x] Driver OpenAPI documentation, focused backend driver tests, Flutter tests
+- [x] Pack 12 Driver QR Operation MVP — driver QR operation and customer dropoff QR delivery
+- [x] Driver QR API — `POST /api/v1/driver/bookings/:bookingNumber/arrive`, `POST /api/v1/driver/bookings/:bookingNumber/scan-boarding`, `POST /api/v1/driver/bookings/:bookingNumber/scan-dropoff`
+- [x] Customer dropoff QR API — `POST /api/v1/bookings/:bookingNumber/dropoff-qr/issue`
+- [x] Driver QR security — authenticated DRIVER role enforcement, active assignment ownership, safe not-found for another driver's booking
+- [x] Driver lifecycle operations — `DRIVER_ASSIGNED` to `DRIVER_ARRIVED`, `DRIVER_ARRIVED` to `PICKED_UP`, `PICKED_UP` to `COMPLETED`
+- [x] QR lifecycle reliability — atomic QR consumption/status transition, idempotent arrival/scans, duplicate-scan protection, events after commit only
+- [x] Customer QR issuance — guest/customer-authorized dropoff QR issuance, rotation invalidates previous unused QR, hashes stored only, raw QR tokens not exposed through driver APIs
+- [x] Flutter QR operation — driver Mark Arrived, boarding/dropoff scanner, manual token fallback, loading/success/retry/error states
+- [x] Customer QR UI — boarding QR display, dropoff QR issue/display after `PICKED_UP`, completed state hides active dropoff QR
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
 
 # In Progress
 
-- Booking create — guest token, `PAY_DRIVER`, boarding QR token, commission status fields; dropoff QR schema only (no service yet)
+- Booking create — guest token, `PAY_DRIVER`, boarding QR token, commission status fields
 - Customer booking wizard — step flow exists; full E2E against live API incomplete
 - Frontend split — new `BookingApiService` (`/api/v1`) vs legacy `ApiService` (`/api/*`) and old admin screen
 - Public proxy routes — flight foundation complete; places, airports, golf route files still stubbed
@@ -40,28 +49,28 @@ Pack 11 complete — Driver Jobs MVP. Next: Pack 12 Driver QR Operation MVP.
 
 # Intentionally Deferred
 
-- QR scanning
 - Maps and navigation
-- Live location tracking
+- Live driver location
 - Chat
 - Commission settlement
+- Reviews
 - Automatic driver assignment
 
 # Next Pack
 
-Pack 12 — Driver QR Operation MVP
+Pack 13 — Admin Dispatch MVP
 
 Planned scope:
 
-- Boarding QR validation
-- Boarding QR single-use invalidation
-- Status transition to PICKED_UP through BookingStatusService
-- Dropoff QR creation or activation
-- Dropoff QR validation
-- Dropoff QR single-use invalidation
-- Status transition to COMPLETED through BookingStatusService
-- Driver scanner UI
-- No map, chat, tracking, or settlement
+- Admin booking queue
+- Booking search and filters
+- Manual driver assignment
+- Reassignment
+- Booking status visibility
+- Active assignment visibility
+- No automatic dispatch
+- No live map
+- No settlement
 
 # Environment Configuration
 
@@ -71,11 +80,13 @@ Planned scope:
 
 # Current Verification
 
-- `npm test`: 22/22 passed
-- Focused flight tests: 16/16 passed
-- `git diff --check` passed
-- Application loads without API key
-- Missing API key endpoint returns `503 FLIGHT_PROVIDER_NOT_CONFIGURED`
+- Backend `npm test`: 60/60 passed
+- Focused backend QR tests: 27/27 passed
+- Focused customer Flutter tests: 5/5 passed
+- Flutter tests: 13/13 passed
+- Affected Flutter analyze: no issues
+- OpenAPI YAML parse: passed
+- `git diff --check`: passed with line-ending warnings only
 
 # Architecture Status
 
@@ -91,7 +102,7 @@ Driver — 5%
 - Guest booking supported — no JWT required; `guest_access_token` (hashed) returned once on create
 - Customer pays driver directly — default `payment_method = PAY_DRIVER`; no online checkout in MVP
 - Company income from driver commission — `commission_status`, `commission_amount`, receipt file fields on booking
-- Boarding QR then dropoff QR — boarding token issued at create; dropoff token after pickup (designed; dropoff logic pending)
+- Boarding QR then dropoff QR — boarding token issued at create; dropoff token issued to authorized customer/guest after pickup; driver scans QR to complete trip
 - Google Places via backend proxy — API key server-side only (routes not implemented)
 - AviationStack flight search — backend proxy only; API key never exposed to frontend
 - No online payment — `payment_status` stays `UNPAID`/`PAID` manual; `ONLINE` reserved for Phase 2

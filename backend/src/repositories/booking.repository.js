@@ -201,6 +201,7 @@ class BookingRepository {
         SELECT
           b.id, b.booking_number, b.status, b.total_amount, b.currency,
           b.payment_status, b.payment_method, b.customer_user_id, b.driver_id,
+          b.dropoff_qr_token_hash, b.dropoff_qr_expires_at, b.dropoff_qr_used_at,
           d.user_id AS driver_user_id
         FROM bookings b
         LEFT JOIN drivers d ON d.id = b.driver_id AND d.deleted_at IS NULL
@@ -209,6 +210,23 @@ class BookingRepository {
         FOR UPDATE
       `,
       [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async findActiveGuestTokenForBooking(conn, bookingId, tokenHash) {
+    const [rows] = await conn.query(
+      `
+        SELECT id
+        FROM guest_access_tokens
+        WHERE
+          booking_id = ?
+          AND token_hash = ?
+          AND revoked_at IS NULL
+          AND expires_at > CURRENT_TIMESTAMP
+        LIMIT 1
+      `,
+      [bookingId, tokenHash],
     );
     return rows[0] || null;
   }
@@ -228,6 +246,12 @@ class BookingRepository {
         b.customer_phone,
         b.special_requests,
         b.payment_method,
+        b.boarding_qr_token_hash,
+        b.boarding_qr_expires_at,
+        b.boarding_qr_used_at,
+        b.dropoff_qr_token_hash,
+        b.dropoff_qr_expires_at,
+        b.dropoff_qr_used_at,
         st.code AS service_type_code,
         st.name AS service_type_name,
         vt.code AS vehicle_type_code,
@@ -285,6 +309,79 @@ class BookingRepository {
       [driverUserId, bookingNumber],
     );
     return rows[0] || null;
+  }
+
+  async findActiveDriverBookingByNumberForUpdate(conn, driverUserId, bookingNumber) {
+    const [rows] = await conn.query(
+      `
+        ${this.driverJobSelectSql()}
+        AND b.booking_number = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [driverUserId, bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async findQrTokenBooking(conn, tokenHash) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          id,
+          booking_number,
+          CASE
+            WHEN boarding_qr_token_hash = ? THEN 'BOARDING'
+            WHEN dropoff_qr_token_hash = ? THEN 'DROPOFF'
+            ELSE NULL
+          END AS token_type
+        FROM bookings
+        WHERE
+          deleted_at IS NULL
+          AND (boarding_qr_token_hash = ? OR dropoff_qr_token_hash = ?)
+        LIMIT 1
+      `,
+      [tokenHash, tokenHash, tokenHash, tokenHash],
+    );
+    return rows[0] || null;
+  }
+
+  async markBoardingQrUsed(conn, bookingId) {
+    const [result] = await conn.query(
+      `
+        UPDATE bookings
+        SET boarding_qr_used_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL AND boarding_qr_used_at IS NULL
+      `,
+      [bookingId],
+    );
+    return result.affectedRows === 1;
+  }
+
+  async markDropoffQrUsed(conn, bookingId) {
+    const [result] = await conn.query(
+      `
+        UPDATE bookings
+        SET dropoff_qr_used_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL AND dropoff_qr_used_at IS NULL
+      `,
+      [bookingId],
+    );
+    return result.affectedRows === 1;
+  }
+
+  async setDropoffQr(conn, bookingId, tokenHash, expiresAt) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          dropoff_qr_token_hash = ?,
+          dropoff_qr_expires_at = ?,
+          dropoff_qr_used_at = NULL
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [tokenHash, expiresAt, bookingId],
+    );
   }
 
   async updateStatus(conn, bookingId, status, actorUserId, statusFields = {}) {

@@ -26,8 +26,18 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   return success(res, data, 'Booking status updated');
 });
 
+const issueDropoffQr = asyncHandler(async (req, res) => {
+  const data = await getBookingService().issueDropoffQr(
+    req.params.bookingNumber,
+    req.body,
+    req.user,
+  );
+  return success(res, data, 'Dropoff QR issued');
+});
+
 module.exports = {
   recommendVehicle,
   createBooking,
   updateBookingStatus,
+  issueDropoffQr,
 };
