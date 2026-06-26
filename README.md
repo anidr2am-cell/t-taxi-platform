@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # TTaxi - Thailand Airport Transfer Platform
 
 PWA-based airport transfer booking platform for tourists visiting Thailand.
@@ -138,3 +139,7 @@ Deploy frontend build output from `frontend/build/web` to Gabia Cloud Server wit
 ## License
 
 Proprietary - TTaxi
+=======
+# t-taxi-platform
+88택시 프로젝트
+>>>>>>> 86ded538d3b418dbe66b6eb1fc126dae5a6a56df
