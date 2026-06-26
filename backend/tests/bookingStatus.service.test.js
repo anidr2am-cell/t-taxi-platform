@@ -1,0 +1,218 @@
+const { afterEach, test } = require('node:test');
+const assert = require('node:assert/strict');
+
+process.env.NODE_ENV = 'test';
+process.env.DB_USER = process.env.DB_USER || 'test';
+process.env.DB_NAME = process.env.DB_NAME || 'ttaxi_test';
+process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret-value';
+process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-value';
+
+const BookingStatusService = require('../src/services/bookingStatus.service');
+const AppError = require('../src/utils/AppError');
+const ERROR_CODES = require('../src/constants/errorCodes');
+const ROLES = require('../src/constants/roles');
+const { appEvents, EVENTS } = require('../src/events');
+
+const actor = { id: 7, role: ROLES.ADMIN };
+
+function createBooking(overrides = {}) {
+  return {
+    id: 10,
+    booking_number: 'TX202607010001',
+    status: 'PENDING',
+    total_amount: '1600.00',
+    currency: 'THB',
+    payment_status: 'UNPAID',
+    payment_method: 'PAY_DRIVER',
+    customer_user_id: 55,
+    driver_id: 9,
+    driver_user_id: 99,
+    ...overrides,
+  };
+}
+
+function createHarness({ booking = createBooking(), commitError = null } = {}) {
+  const calls = {
+    beginTransaction: 0,
+    commit: 0,
+    rollback: 0,
+    release: 0,
+    updateStatus: 0,
+    insertStatusLog: 0,
+    insertActivityLog: 0,
+  };
+  const records = {};
+  const conn = {
+    async beginTransaction() {
+      calls.beginTransaction += 1;
+    },
+    async commit() {
+      calls.commit += 1;
+      if (commitError) throw commitError;
+    },
+    async rollback() {
+      calls.rollback += 1;
+    },
+    release() {
+      calls.release += 1;
+    },
+  };
+  const pool = {
+    async getConnection() {
+      return conn;
+    },
+  };
+  const repository = {
+    async findByBookingNumberForUpdate() {
+      return booking;
+    },
+    async updateStatus(_conn, bookingId, status, actorUserId, statusFields) {
+      calls.updateStatus += 1;
+      records.updateStatus = { bookingId, status, actorUserId, statusFields };
+    },
+    async insertStatusLog(_conn, bookingId, log) {
+      calls.insertStatusLog += 1;
+      records.statusLog = { bookingId, log };
+    },
+    async insertActivityLog(_conn, bookingId, activity) {
+      calls.insertActivityLog += 1;
+      records.activityLog = { bookingId, activity };
+    },
+  };
+
+  return {
+    calls,
+    records,
+    service: new BookingStatusService(pool, repository),
+  };
+}
+
+function collectEvents(eventName) {
+  const events = [];
+  const listener = (payload) => events.push(payload);
+  appEvents.on(eventName, listener);
+  return {
+    events,
+    stop() {
+      appEvents.off(eventName, listener);
+    },
+  };
+}
+
+afterEach(() => {
+  appEvents.removeAllListeners(EVENTS.BOOKING_CONFIRMED);
+});
+
+test('valid transition writes logs and emits one domain event after commit', async () => {
+  const harness = createHarness();
+  const collector = collectEvents(EVENTS.BOOKING_CONFIRMED);
+
+  const result = await harness.service.transition(
+    'TX202607010001',
+    { status: 'CONFIRMED', reason: 'PAYMENT_CONFIRMED', memo: 'manual confirm' },
+    actor,
+  );
+
+  collector.stop();
+
+  assert.equal(result.status, 'CONFIRMED');
+  assert.equal(result.idempotent, false);
+  assert.equal(harness.calls.updateStatus, 1);
+  assert.equal(harness.calls.insertStatusLog, 1);
+  assert.equal(harness.calls.insertActivityLog, 1);
+  assert.equal(harness.calls.commit, 1);
+  assert.equal(harness.calls.rollback, 0);
+  assert.equal(collector.events.length, 1);
+
+  assert.deepEqual(harness.records.activityLog.activity.payload, {
+    bookingNumber: 'TX202607010001',
+    previousStatus: 'PENDING',
+    newStatus: 'CONFIRMED',
+    changedByUserId: 7,
+    changedByRole: 'ADMIN',
+    occurredAt: harness.records.activityLog.activity.payload.occurredAt,
+    driverId: 9,
+    reason: 'PAYMENT_CONFIRMED',
+    memo: 'manual confirm',
+  });
+  assert.match(harness.records.activityLog.activity.payload.occurredAt, /^\d{4}-\d{2}-\d{2}T/);
+
+  const event = collector.events[0];
+  assert.equal(event.eventName, EVENTS.BOOKING_CONFIRMED);
+  assert.match(event.eventId, /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.equal(event.bookingId, 10);
+  assert.equal(event.bookingNumber, 'TX202607010001');
+  assert.equal(event.previousStatus, 'PENDING');
+  assert.equal(event.newStatus, 'CONFIRMED');
+  assert.equal(event.actorUserId, 7);
+  assert.equal(event.actorRole, 'ADMIN');
+  assert.equal(event.driverId, 9);
+  assert.equal(event.occurredAt, harness.records.activityLog.activity.payload.occurredAt);
+});
+
+test('invalid transition returns INVALID_STATUS_TRANSITION', async () => {
+  const harness = createHarness();
+
+  await assert.rejects(
+    () => harness.service.transition('TX202607010001', { status: 'COMPLETED' }, actor),
+    (err) => err instanceof AppError
+      && err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
+
+  assert.equal(harness.calls.updateStatus, 0);
+  assert.equal(harness.calls.insertStatusLog, 0);
+  assert.equal(harness.calls.insertActivityLog, 0);
+  assert.equal(harness.calls.rollback, 1);
+});
+
+test('same-status request is idempotent and creates no duplicate side effects', async () => {
+  const harness = createHarness({ booking: createBooking({ status: 'PICKED_UP' }) });
+  const collector = collectEvents(EVENTS.TRIP_PICKED_UP);
+
+  const result = await harness.service.transition(
+    'TX202607010001',
+    { status: 'PICKED_UP' },
+    actor,
+  );
+
+  collector.stop();
+
+  assert.equal(result.status, 'PICKED_UP');
+  assert.equal(result.idempotent, true);
+  assert.equal(harness.calls.updateStatus, 0);
+  assert.equal(harness.calls.insertStatusLog, 0);
+  assert.equal(harness.calls.insertActivityLog, 0);
+  assert.equal(harness.calls.commit, 1);
+  assert.equal(harness.calls.rollback, 0);
+  assert.equal(collector.events.length, 0);
+});
+
+test('repeated same-status request does not duplicate logs', async () => {
+  const harness = createHarness({ booking: createBooking({ status: 'CONFIRMED' }) });
+
+  await harness.service.transition('TX202607010001', { status: 'CONFIRMED' }, actor);
+  await harness.service.transition('TX202607010001', { status: 'CONFIRMED' }, actor);
+
+  assert.equal(harness.calls.updateStatus, 0);
+  assert.equal(harness.calls.insertStatusLog, 0);
+  assert.equal(harness.calls.insertActivityLog, 0);
+  assert.equal(harness.calls.commit, 2);
+});
+
+test('transaction failure prevents event emission', async () => {
+  const harness = createHarness({ commitError: new Error('commit failed') });
+  const collector = collectEvents(EVENTS.BOOKING_CONFIRMED);
+
+  await assert.rejects(
+    () => harness.service.transition('TX202607010001', { status: 'CONFIRMED' }, actor),
+    /commit failed/,
+  );
+
+  collector.stop();
+
+  assert.equal(harness.calls.updateStatus, 1);
+  assert.equal(harness.calls.insertStatusLog, 1);
+  assert.equal(harness.calls.insertActivityLog, 1);
+  assert.equal(harness.calls.rollback, 1);
+  assert.equal(collector.events.length, 0);
+});

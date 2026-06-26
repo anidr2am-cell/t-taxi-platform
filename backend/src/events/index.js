@@ -15,8 +15,14 @@ appEvents.on('error', (err) => {
 // Event names (constants)
 const EVENTS = {
   BOOKING_CREATED: 'booking.created',
+  BOOKING_CONFIRMED: 'booking.confirmed',
   BOOKING_STATUS_CHANGED: 'booking.status_changed',
   DRIVER_ASSIGNED: 'driver.assigned',
+  DRIVER_ARRIVED: 'driver.arrived',
+  TRIP_PICKED_UP: 'trip.picked_up',
+  TRIP_COMPLETED: 'trip.completed',
+  BOOKING_CANCELLED: 'booking.cancelled',
+  BOOKING_NO_SHOW: 'booking.no_show',
   CHAT_MESSAGE_SENT: 'chat.message_sent',
 };
 

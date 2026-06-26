@@ -139,8 +139,8 @@ class BookingRepository {
     await conn.query(
       `
         INSERT INTO booking_status_logs (
-          booking_id, from_status, to_status, changed_by_user_id, changed_by_role, reason
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          booking_id, from_status, to_status, changed_by_user_id, changed_by_role, reason, memo
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
         bookingId,
@@ -149,6 +149,7 @@ class BookingRepository {
         log.changedByUserId,
         log.changedByRole,
         log.reason,
+        log.memo ?? null,
       ],
     );
   }
@@ -192,6 +193,48 @@ class BookingRepository {
       [bookingId],
     );
     return rows[0] || null;
+  }
+
+  async findByBookingNumberForUpdate(conn, bookingNumber) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          b.id, b.booking_number, b.status, b.total_amount, b.currency,
+          b.payment_status, b.payment_method, b.customer_user_id, b.driver_id,
+          d.user_id AS driver_user_id
+        FROM bookings b
+        LEFT JOIN drivers d ON d.id = b.driver_id AND d.deleted_at IS NULL
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async updateStatus(conn, bookingId, status, actorUserId, statusFields = {}) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          status = ?,
+          updated_by = ?,
+          cancelled_at = CASE WHEN ? = 'CANCELLED' THEN CURRENT_TIMESTAMP ELSE cancelled_at END,
+          cancellation_reason = CASE WHEN ? = 'CANCELLED' THEN ? ELSE cancellation_reason END,
+          completed_at = CASE WHEN ? = 'COMPLETED' THEN CURRENT_TIMESTAMP ELSE completed_at END
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [
+        status,
+        actorUserId,
+        status,
+        status,
+        statusFields.cancellationReason ?? null,
+        status,
+        bookingId,
+      ],
+    );
   }
 
   async findAirportByIata(conn, iataCode) {

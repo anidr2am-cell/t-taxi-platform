@@ -20,6 +20,7 @@ const BookingRepository = require('../repositories/booking.repository');
 const ChatRepository = require('../repositories/chat.repository');
 const BookingNumberService = require('../services/bookingNumber.service');
 const BookingService = require('../services/booking.service');
+const BookingStatusService = require('../services/bookingStatus.service');
 const database = require('../config/database');
 
 class Container {
@@ -90,6 +91,10 @@ container.register('chargePolicyAdminService', (c) => new ChargePolicyAdminServi
 container.register('bookingRepository', () => new BookingRepository());
 container.register('chatRepository', () => new ChatRepository());
 container.register('bookingNumberService', () => new BookingNumberService());
+container.register('bookingStatusService', (c) => new BookingStatusService(
+  database.pool,
+  c.get('bookingRepository'),
+));
 container.register('bookingService', (c) => new BookingService(
   database.pool,
   c.get('bookingRepository'),

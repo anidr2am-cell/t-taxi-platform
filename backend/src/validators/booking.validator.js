@@ -4,6 +4,7 @@
 const Joi = require('joi');
 const SERVICE_TYPES = require('../constants/serviceTypes');
 const VEHICLE_TYPES = require('../constants/vehicleTypes');
+const BOOKING_STATUS = require('../constants/reservationStatus');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 
@@ -71,7 +72,14 @@ const createBookingSchema = Joi.object({
   specialRequests: Joi.string().max(2000).allow(null, ''),
 });
 
+const updateBookingStatusSchema = Joi.object({
+  status: Joi.string().valid(...Object.values(BOOKING_STATUS)).required(),
+  reason: Joi.string().max(100).allow(null, ''),
+  memo: Joi.string().max(500).allow(null, ''),
+});
+
 module.exports = {
   vehicleRecommendSchema,
   createBookingSchema,
+  updateBookingStatusSchema,
 };
