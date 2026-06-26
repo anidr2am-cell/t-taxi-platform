@@ -1,6 +1,3 @@
--- TTaxi Platform — Database initialization (MySQL 8)
--- No tables. Safe defaults for charset, SQL mode, and session checks.
-
 CREATE DATABASE IF NOT EXISTS ttaxi
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;

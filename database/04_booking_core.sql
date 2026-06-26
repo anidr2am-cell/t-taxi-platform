@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS bookings (
   customer_country_code CHAR(2) NULL DEFAULT NULL,
   driver_id BIGINT UNSIGNED NULL DEFAULT NULL,
   special_requests TEXT NULL,
-  admin_notes TEXT NULL,
   cancelled_at DATETIME NULL DEFAULT NULL,
   cancellation_reason VARCHAR(500) NULL DEFAULT NULL,
   completed_at DATETIME NULL DEFAULT NULL,
@@ -166,9 +165,9 @@ CREATE TABLE IF NOT EXISTS booking_charge_items (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   booking_id BIGINT UNSIGNED NOT NULL,
   charge_type ENUM(
-    'VEHICLE_BASE', 'NAME_SIGN', 'NIGHT_SURCHARGE', 'AIRPORT_PARKING',
+    'VEHICLE_BASE', 'NAME_SIGN', 'NIGHT_SURCHARGE', 'AIRPORT_SURCHARGE',
     'TOLL_GATE', 'PROMOTION', 'COUPON', 'DRIVER_EXTRA',
-    'SEASON_SURCHARGE', 'HOLIDAY_SURCHARGE', 'OTHER'
+    'SEASON_SURCHARGE', 'HOLIDAY_SURCHARGE', 'WAITING_CHARGE', 'OTHER'
   ) NOT NULL,
   description VARCHAR(255) NULL DEFAULT NULL,
   quantity DECIMAL(10, 2) NOT NULL DEFAULT 1.00,
@@ -238,10 +237,14 @@ CREATE TABLE IF NOT EXISTS booking_driver_assignments (
   unassigned_at DATETIME NULL DEFAULT NULL,
   accepted_at DATETIME NULL DEFAULT NULL,
   completed_at DATETIME NULL DEFAULT NULL,
+  active_booking_key BIGINT UNSIGNED GENERATED ALWAYS AS (
+    IF(is_active = 1 AND deleted_at IS NULL, booking_id, NULL)
+  ) STORED,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL DEFAULT NULL,
   PRIMARY KEY (id),
+  UNIQUE KEY uk_bda_one_active_per_booking (active_booking_key),
   KEY idx_booking_driver_assignments_booking_active (booking_id, is_active),
   KEY idx_booking_driver_assignments_driver_active (driver_id, is_active),
   KEY idx_booking_driver_assignments_driver_status (driver_id, status),
@@ -256,7 +259,15 @@ CREATE TABLE IF NOT EXISTS booking_driver_assignments (
     ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_booking_driver_assignments_assigned_by_user_id
     FOREIGN KEY (assigned_by_user_id) REFERENCES users (id)
-    ON DELETE SET NULL ON UPDATE CASCADE
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT chk_bda_active_state CHECK (
+    is_active <> 1
+    OR deleted_at IS NOT NULL
+    OR (
+      unassigned_at IS NULL
+      AND status IN ('ASSIGNED', 'ACCEPTED')
+    )
+  )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------

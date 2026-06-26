@@ -1,12 +1,22 @@
 /**
  * helpers/container.js — Simple Dependency Injection container
- *
- * Service / Repository를 등록하고 Controller에서 가져옵니다.
- *
- * 예 (구현 단계):
- *   container.register('bookingService', () => new BookingService(bookingRepo));
- *   const bookingService = container.get('bookingService');
  */
+const UserRepository = require('../repositories/user.repository');
+const VehicleRepository = require('../repositories/vehicle.repository');
+const LocationRepository = require('../repositories/location.repository');
+const ServiceTypeRepository = require('../repositories/serviceType.repository');
+const RouteRepository = require('../repositories/route.repository');
+const VehiclePriceRepository = require('../repositories/vehiclePrice.repository');
+const ChargePolicyRepository = require('../repositories/chargePolicy.repository');
+const RevokedRefreshTokenStore = require('../services/revokedRefreshToken.store');
+const TokenService = require('../services/token.service');
+const AuthService = require('../services/auth.service');
+const VehicleRecommendationService = require('../services/vehicleRecommendation.service');
+const PricingService = require('../services/pricing.service');
+const RouteAdminService = require('../services/routeAdmin.service');
+const VehiclePriceAdminService = require('../services/vehiclePriceAdmin.service');
+const ChargePolicyAdminService = require('../services/chargePolicyAdmin.service');
+
 class Container {
   constructor() {
     this.registry = new Map();
@@ -34,7 +44,43 @@ class Container {
 
 const container = new Container();
 
-// TODO: register repositories & services when implemented
-// container.register('userRepository', (c) => new UserRepository(database.pool));
+container.register('userRepository', () => new UserRepository());
+container.register('revokedRefreshTokenStore', () => new RevokedRefreshTokenStore());
+container.register('tokenService', (c) => new TokenService(c.get('revokedRefreshTokenStore')));
+container.register('authService', (c) => new AuthService(
+  c.get('userRepository'),
+  c.get('tokenService'),
+));
+container.register('vehicleRepository', () => new VehicleRepository());
+container.register('vehicleRecommendationService', (c) => new VehicleRecommendationService(
+  c.get('vehicleRepository'),
+));
+container.register('locationRepository', () => new LocationRepository());
+container.register('serviceTypeRepository', () => new ServiceTypeRepository());
+container.register('routeRepository', () => new RouteRepository());
+container.register('vehiclePriceRepository', () => new VehiclePriceRepository());
+container.register('chargePolicyRepository', () => new ChargePolicyRepository());
+container.register('pricingService', (c) => new PricingService(
+  c.get('serviceTypeRepository'),
+  c.get('locationRepository'),
+  c.get('routeRepository'),
+  c.get('vehiclePriceRepository'),
+  c.get('chargePolicyRepository'),
+  c.get('vehicleRepository'),
+));
+container.register('routeAdminService', (c) => new RouteAdminService(
+  c.get('routeRepository'),
+  c.get('vehiclePriceRepository'),
+  c.get('serviceTypeRepository'),
+  c.get('locationRepository'),
+));
+container.register('vehiclePriceAdminService', (c) => new VehiclePriceAdminService(
+  c.get('vehiclePriceRepository'),
+  c.get('routeRepository'),
+  c.get('vehicleRepository'),
+));
+container.register('chargePolicyAdminService', (c) => new ChargePolicyAdminService(
+  c.get('chargePolicyRepository'),
+));
 
 module.exports = container;

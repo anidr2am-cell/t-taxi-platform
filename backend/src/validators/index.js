@@ -3,5 +3,6 @@
  */
 module.exports = {
   // auth: require('./auth.validator'),
+  auth: require('./auth.validator'),
   // booking: require('./booking.validator'),
 };

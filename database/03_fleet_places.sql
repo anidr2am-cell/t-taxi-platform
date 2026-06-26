@@ -148,14 +148,13 @@ CREATE TABLE IF NOT EXISTS vehicle_capacity_rules (
 CREATE TABLE IF NOT EXISTS charge_policies (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   charge_type ENUM(
-    'VEHICLE_BASE', 'NAME_SIGN', 'NIGHT_SURCHARGE', 'AIRPORT_PARKING',
+    'VEHICLE_BASE', 'NAME_SIGN', 'NIGHT_SURCHARGE', 'AIRPORT_SURCHARGE',
     'TOLL_GATE', 'PROMOTION', 'COUPON', 'DRIVER_EXTRA',
-    'SEASON_SURCHARGE', 'HOLIDAY_SURCHARGE', 'OTHER'
+    'SEASON_SURCHARGE', 'HOLIDAY_SURCHARGE', 'WAITING_CHARGE', 'OTHER'
   ) NOT NULL,
   name VARCHAR(100) NOT NULL,
   modifier_type ENUM(
-    'FIXED', 'PERCENT_OF_BASE', 'PERCENT_OF_SUBTOTAL',
-    'PERCENT_ADD', 'PERCENT_OFF'
+    'FIXED', 'PERCENT_OF_BASE', 'PERCENT_OF_SUBTOTAL'
   ) NOT NULL DEFAULT 'FIXED',
   modifier_value DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
   currency CHAR(3) NOT NULL DEFAULT 'THB',
@@ -329,6 +328,32 @@ CREATE TABLE IF NOT EXISTS driver_vehicles (
     FOREIGN KEY (created_by) REFERENCES users (id)
     ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_driver_vehicles_updated_by
+    FOREIGN KEY (updated_by) REFERENCES users (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- driver_assignment_weights
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS driver_assignment_weights (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  factor_code ENUM(
+    'DISTANCE', 'ONLINE', 'VEHICLE_MATCH', 'RATING', 'FAIRNESS', 'REGION'
+  ) NOT NULL,
+  weight DECIMAL(5, 2) NOT NULL DEFAULT 1.00,
+  description VARCHAR(255) NULL DEFAULT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by BIGINT UNSIGNED NULL DEFAULT NULL,
+  updated_by BIGINT UNSIGNED NULL DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at DATETIME NULL DEFAULT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_driver_assignment_weights_factor (factor_code),
+  CONSTRAINT fk_driver_assignment_weights_created_by
+    FOREIGN KEY (created_by) REFERENCES users (id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_driver_assignment_weights_updated_by
     FOREIGN KEY (updated_by) REFERENCES users (id)
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

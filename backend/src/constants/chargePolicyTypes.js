@@ -1,0 +1,9 @@
+module.exports = {
+  NAME_SIGN: 'NAME_SIGN',
+  WAITING: 'WAITING',
+  PARKING: 'PARKING',
+  TOLL: 'TOLL',
+  HOLIDAY: 'HOLIDAY',
+  NIGHT: 'NIGHT',
+  AIRPORT: 'AIRPORT',
+};
