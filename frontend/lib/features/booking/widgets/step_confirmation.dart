@@ -23,11 +23,6 @@ class StepConfirmation extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.t('booking_summary'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(
-                l10n.t('booking_preview_only'),
-                style: TextStyle(color: Colors.grey.shade700),
-              ),
               const Divider(height: 24),
               _row(l10n.t('service_type'), l10n.t(state.serviceType?.labelKey ?? '')),
               _row(l10n.t('origin'), _formatLocation(state.origin)),

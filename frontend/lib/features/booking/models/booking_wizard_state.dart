@@ -20,6 +20,13 @@ class BookingWizardState {
   final String? selectedVehicle;
   final PricingResult? pricing;
   final String? errorMessage;
+  final String customerName;
+  final String customerEmail;
+  final String customerPhone;
+  final String customerCountryCode;
+  final String messengerType;
+  final String messengerId;
+  final String additionalRequests;
 
   const BookingWizardState({
     this.step = 0,
@@ -38,9 +45,16 @@ class BookingWizardState {
     this.selectedVehicle,
     this.pricing,
     this.errorMessage,
+    this.customerName = '',
+    this.customerEmail = '',
+    this.customerPhone = '',
+    this.customerCountryCode = '',
+    this.messengerType = '',
+    this.messengerId = '',
+    this.additionalRequests = '',
   });
 
-  static const int stepCount = 6;
+  static const int stepCount = 7;
 
   BookingWizardState copyWith({
     int? step,
@@ -64,6 +78,13 @@ class BookingWizardState {
     bool clearPricing = false,
     String? errorMessage,
     bool clearError = false,
+    String? customerName,
+    String? customerEmail,
+    String? customerPhone,
+    String? customerCountryCode,
+    String? messengerType,
+    String? messengerId,
+    String? additionalRequests,
   }) {
     return BookingWizardState(
       step: step ?? this.step,
@@ -82,6 +103,13 @@ class BookingWizardState {
       selectedVehicle: selectedVehicle ?? this.selectedVehicle,
       pricing: clearPricing ? null : (pricing ?? this.pricing),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      customerName: customerName ?? this.customerName,
+      customerEmail: customerEmail ?? this.customerEmail,
+      customerPhone: customerPhone ?? this.customerPhone,
+      customerCountryCode: customerCountryCode ?? this.customerCountryCode,
+      messengerType: messengerType ?? this.messengerType,
+      messengerId: messengerId ?? this.messengerId,
+      additionalRequests: additionalRequests ?? this.additionalRequests,
     );
   }
 
@@ -99,6 +127,13 @@ class BookingWizardState {
         'specialLuggageCount': specialLuggageCount,
         'nameSign': nameSign,
         'selectedVehicle': selectedVehicle,
+        'customerName': customerName,
+        'customerEmail': customerEmail,
+        'customerPhone': customerPhone,
+        'customerCountryCode': customerCountryCode,
+        'messengerType': messengerType,
+        'messengerId': messengerId,
+        'additionalRequests': additionalRequests,
       };
 
   factory BookingWizardState.fromJson(Map<String, dynamic> json) {
@@ -120,6 +155,13 @@ class BookingWizardState {
       specialLuggageCount: json['specialLuggageCount'] as int? ?? 0,
       nameSign: json['nameSign'] as bool? ?? false,
       selectedVehicle: json['selectedVehicle'] as String?,
+      customerName: json['customerName'] as String? ?? '',
+      customerEmail: json['customerEmail'] as String? ?? '',
+      customerPhone: json['customerPhone'] as String? ?? '',
+      customerCountryCode: json['customerCountryCode'] as String? ?? '',
+      messengerType: json['messengerType'] as String? ?? '',
+      messengerId: json['messengerId'] as String? ?? '',
+      additionalRequests: json['additionalRequests'] as String? ?? '',
     );
   }
 }

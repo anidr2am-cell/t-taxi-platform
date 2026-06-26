@@ -16,6 +16,11 @@ const PricingService = require('../services/pricing.service');
 const RouteAdminService = require('../services/routeAdmin.service');
 const VehiclePriceAdminService = require('../services/vehiclePriceAdmin.service');
 const ChargePolicyAdminService = require('../services/chargePolicyAdmin.service');
+const BookingRepository = require('../repositories/booking.repository');
+const ChatRepository = require('../repositories/chat.repository');
+const BookingNumberService = require('../services/bookingNumber.service');
+const BookingService = require('../services/booking.service');
+const database = require('../config/database');
 
 class Container {
   constructor() {
@@ -81,6 +86,18 @@ container.register('vehiclePriceAdminService', (c) => new VehiclePriceAdminServi
 ));
 container.register('chargePolicyAdminService', (c) => new ChargePolicyAdminService(
   c.get('chargePolicyRepository'),
+));
+container.register('bookingRepository', () => new BookingRepository());
+container.register('chatRepository', () => new ChatRepository());
+container.register('bookingNumberService', () => new BookingNumberService());
+container.register('bookingService', (c) => new BookingService(
+  database.pool,
+  c.get('bookingRepository'),
+  c.get('chatRepository'),
+  c.get('bookingNumberService'),
+  c.get('pricingService'),
+  c.get('vehicleRecommendationService'),
+  c.get('vehicleRepository'),
 ));
 
 module.exports = container;

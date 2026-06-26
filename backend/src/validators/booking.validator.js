@@ -1,5 +1,5 @@
 /**
- * validators/booking.validator.js — Skeleton (implement with OpenAPI BookingRequest)
+ * validators/booking.validator.js
  */
 const Joi = require('joi');
 const SERVICE_TYPES = require('../constants/serviceTypes');
@@ -17,15 +17,58 @@ const vehicleRecommendSchema = Joi.object({
   specialLuggageCount: luggageCountField,
 });
 
-// TODO: expand to match OpenAPI BookingRequest schema
+const placeSchema = Joi.object({
+  address: Joi.string().max(500).required(),
+  placeId: Joi.string().max(255).allow(null, ''),
+  lat: Joi.number().allow(null),
+  lng: Joi.number().allow(null),
+  name: Joi.string().max(255).allow(null, ''),
+});
+
 const createBookingSchema = Joi.object({
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).required(),
   vehicleTypeCode: Joi.string().valid(...Object.values(VEHICLE_TYPES)).required(),
-  customer: Joi.object({
-    name: Joi.string().required(),
-    email: Joi.string().email().required(),
-    phone: Joi.string().required(),
+  vehicleCount: Joi.number().integer().min(1).max(5).default(1),
+  scheduledPickupAt: Joi.string().isoDate().allow(null),
+  origin: placeSchema.required(),
+  destination: placeSchema.required(),
+  originAirportIata: Joi.string().length(3).uppercase().allow(null),
+  destinationRegion: Joi.string().max(100).allow(null, ''),
+  originLocationCode: Joi.string().max(50).allow(null, ''),
+  destinationLocationCode: Joi.string().max(50).allow(null, ''),
+  destinationAirportIata: Joi.string().length(3).uppercase().allow(null),
+  passengers: Joi.object({
+    adults: Joi.number().integer().min(1).required(),
+    children: luggageCountField,
+    infants: luggageCountField,
   }).required(),
+  luggage: Joi.object({
+    carriers20Inch: luggageCountField,
+    carriers24InchPlus: luggageCountField,
+    golfBags: luggageCountField,
+    specialItems: Joi.string().max(500).allow(null, ''),
+    specialLuggageCount: luggageCountField,
+  }).default({}),
+  options: Joi.object({
+    nameSign: Joi.boolean().default(false),
+  }).default({}),
+  transfer: Joi.object({
+    airportIata: Joi.string().length(3).uppercase().allow(null),
+    flightNumber: Joi.string().max(20).allow(null, ''),
+    golfCourseId: Joi.number().integer().positive().allow(null),
+    golfRegion: Joi.string().max(50).allow(null, ''),
+    driverIncluded: Joi.boolean().default(false),
+  }).default({}),
+  customer: Joi.object({
+    name: Joi.string().max(100).required(),
+    email: Joi.string().email().max(255).required(),
+    phone: Joi.string().max(30).required(),
+    countryCode: Joi.string().length(2).uppercase().allow(null, ''),
+    messengerType: Joi.string().max(30).allow(null, ''),
+    messengerId: Joi.string().max(100).allow(null, ''),
+  }).required(),
+  additionalRequests: Joi.string().max(2000).allow(null, ''),
+  specialRequests: Joi.string().max(2000).allow(null, ''),
 });
 
 module.exports = {

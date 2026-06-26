@@ -5,7 +5,10 @@ import '../../../providers/booking_provider.dart';
 import '../../../widgets/language_selector.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
+import '../models/service_type_option.dart';
+import '../pages/booking_complete_page.dart';
 import '../widgets/step_confirmation.dart';
+import '../widgets/step_customer_info.dart';
 import '../widgets/step_destination_select.dart';
 import '../widgets/step_origin_select.dart';
 import '../widgets/step_passengers_luggage.dart';
@@ -51,6 +54,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         return l10n.t('select_vehicle');
       case 5:
         return l10n.t('booking_summary');
+      case 6:
+        return l10n.t('customer_info');
       default:
         return l10n.t('app_title');
     }
@@ -64,6 +69,37 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         SnackBar(content: Text(_controller.state.errorMessage!)),
       );
     }
+  }
+
+  Future<void> _handleSubmit() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    final snapshot = _controller.state;
+    final serviceLabel = l10n.t(snapshot.serviceType?.labelKey ?? '');
+    final originLabel = _controller.formatLocationLabel(snapshot.origin);
+    final destinationLabel = _controller.formatLocationLabel(snapshot.destination);
+
+    final result = await _controller.submitBooking();
+    if (result == null) {
+      if (_controller.state.errorMessage != null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(_controller.state.errorMessage!)),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => BookingCompletePage(
+          result: result,
+          serviceLabel: serviceLabel,
+          originLabel: originLabel,
+          destinationLabel: destinationLabel,
+        ),
+      ),
+    );
   }
 
   @override
@@ -145,6 +181,17 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         return StepVehicleSelect(state: state, controller: _controller);
       case 5:
         return StepConfirmation(state: state);
+      case 6:
+        return StepCustomerInfo(
+          state: state,
+          onNameChanged: (v) => _controller.updateCustomerInfo(name: v),
+          onEmailChanged: (v) => _controller.updateCustomerInfo(email: v),
+          onPhoneChanged: (v) => _controller.updateCustomerInfo(phone: v),
+          onCountryChanged: (v) => _controller.updateCustomerInfo(countryCode: v),
+          onMessengerTypeChanged: (v) => _controller.updateCustomerInfo(messengerType: v),
+          onMessengerIdChanged: (v) => _controller.updateCustomerInfo(messengerId: v),
+          onAdditionalRequestsChanged: (v) => _controller.updateCustomerInfo(additionalRequests: v),
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -152,7 +199,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
 
   Widget _buildFooter(AppLocalizations l10n, BookingWizardState state) {
     final isLast = state.step == BookingWizardState.stepCount - 1;
-    final canNext = _controller.canProceedFromCurrentStep() && !_controller.isLoading;
+    final canProceed = _controller.canProceedFromCurrentStep() && !_controller.isLoading;
 
     return SafeArea(
       child: Padding(
@@ -165,9 +212,20 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                 child: Text(l10n.t('back')),
               ),
             const Spacer(),
-            if (!isLast)
+            if (isLast)
               ElevatedButton(
-                onPressed: canNext ? _handleNext : null,
+                onPressed: canProceed ? _handleSubmit : null,
+                child: _controller.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.t('confirm')),
+              )
+            else
+              ElevatedButton(
+                onPressed: canProceed ? _handleNext : null,
                 child: Text(l10n.t('next')),
               ),
           ],

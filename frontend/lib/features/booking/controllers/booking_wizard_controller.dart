@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/booking_wizard_state.dart';
+import '../models/booking_create_result.dart';
 import '../models/location_option.dart';
 import '../models/service_type_option.dart';
 import '../services/booking_api_service.dart';
@@ -120,6 +121,127 @@ class BookingWizardController extends ChangeNotifier {
     );
     await _persist();
     notifyListeners();
+  }
+
+  Future<void> updateCustomerInfo({
+    String? name,
+    String? email,
+    String? phone,
+    String? countryCode,
+    String? messengerType,
+    String? messengerId,
+    String? additionalRequests,
+  }) async {
+    _state = _state.copyWith(
+      customerName: name,
+      customerEmail: email,
+      customerPhone: phone,
+      customerCountryCode: countryCode,
+      messengerType: messengerType,
+      messengerId: messengerId,
+      additionalRequests: additionalRequests,
+      clearError: true,
+    );
+    await _persist();
+    notifyListeners();
+  }
+
+  Map<String, dynamic> _placePayload(LocationOption? location) {
+    if (location == null) return {};
+    return {
+      'address': location.address ?? location.displayName,
+      'placeId': location.placeId,
+      'lat': location.latitude,
+      'lng': location.longitude,
+      'name': location.name,
+    };
+  }
+
+  String? _airportIataForTransfer() {
+    final service = _state.serviceType;
+    if (service == BookingServiceType.airportPickup &&
+        _state.origin?.kind == LocationKind.airport) {
+      return _state.origin?.code;
+    }
+    if (service == BookingServiceType.airportDropoff &&
+        _state.destination?.kind == LocationKind.airport) {
+      return _state.destination?.code;
+    }
+    return null;
+  }
+
+  Map<String, dynamic> buildCreatePayload() {
+    final locations = _pricingLocationParams();
+    final airportIata = _airportIataForTransfer();
+
+    return {
+      'serviceTypeCode': _state.serviceType!.apiCode,
+      'vehicleTypeCode': _state.selectedVehicle!,
+      'vehicleCount': 1,
+      'origin': _placePayload(_state.origin),
+      'destination': _placePayload(_state.destination),
+      if (locations['originAirportIata'] != null)
+        'originAirportIata': locations['originAirportIata'],
+      if (locations['destinationRegion'] != null)
+        'destinationRegion': locations['destinationRegion'],
+      if (locations['originLocationCode'] != null)
+        'originLocationCode': locations['originLocationCode'],
+      if (locations['destinationLocationCode'] != null)
+        'destinationLocationCode': locations['destinationLocationCode'],
+      'passengers': {
+        'adults': _state.adults,
+        'children': _state.children,
+        'infants': _state.infants,
+      },
+      'luggage': {
+        'carriers20Inch': _state.luggage20,
+        'carriers24InchPlus': _state.luggage24,
+        'golfBags': _state.golfBags,
+        'specialLuggageCount': _state.specialLuggageCount,
+      },
+      'options': {'nameSign': _state.nameSign},
+      if (airportIata != null)
+        'transfer': {'airportIata': airportIata},
+      'customer': {
+        'name': _state.customerName.trim(),
+        'email': _state.customerEmail.trim(),
+        'phone': _state.customerPhone.trim(),
+        if (_state.customerCountryCode.trim().isNotEmpty)
+          'countryCode': _state.customerCountryCode.trim().toUpperCase(),
+        if (_state.messengerType.trim().isNotEmpty)
+          'messengerType': _state.messengerType.trim(),
+        if (_state.messengerId.trim().isNotEmpty)
+          'messengerId': _state.messengerId.trim(),
+      },
+      if (_state.additionalRequests.trim().isNotEmpty)
+        'additionalRequests': _state.additionalRequests.trim(),
+    };
+  }
+
+  String formatLocationLabel(LocationOption? location) {
+    if (location == null) return '-';
+    final name = location.name ?? location.displayName;
+    if (location.address != null && location.address!.isNotEmpty) {
+      return '$name — ${location.address}';
+    }
+    return name;
+  }
+
+  Future<BookingCreateResult?> submitBooking() async {
+    _setLoading(true);
+    try {
+      final result = await _api.createBooking(buildCreatePayload());
+      await _storage.clear();
+      _state = const BookingWizardState();
+      notifyListeners();
+      return result;
+    } catch (e) {
+      _state = _state.copyWith(errorMessage: e.toString());
+      notifyListeners();
+      return null;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   Future<void> loadRecommendation() async {
@@ -320,6 +442,10 @@ class BookingWizardController extends ChangeNotifier {
         return _state.selectedVehicle != null && _state.pricing != null;
       case 5:
         return true;
+      case 6:
+        return _state.customerName.trim().isNotEmpty &&
+            _state.customerEmail.trim().isNotEmpty &&
+            _state.customerPhone.trim().isNotEmpty;
       default:
         return false;
     }

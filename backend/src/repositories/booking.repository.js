@@ -1,0 +1,211 @@
+const database = require('../config/database');
+const { toDatabaseChargeType } = require('../utils/chargeTypeDb.util');
+
+class BookingRepository {
+  constructor(pool = database.pool) {
+    this.pool = pool;
+  }
+
+  async insertBooking(conn, row) {
+    const [result] = await conn.query(
+      `
+        INSERT INTO bookings (
+          booking_number, status, service_type_id,
+          origin_address, origin_place_id, origin_lat, origin_lng,
+          destination_address, destination_place_id, destination_lat, destination_lng,
+          scheduled_pickup_at, vehicle_type_id, recommended_vehicle_type_id, vehicle_count,
+          route_id, total_amount, currency, payment_status, payment_method, commission_status,
+          customer_user_id, customer_name, customer_email, customer_phone, customer_country_code,
+          special_requests, metadata, boarding_qr_token_hash, boarding_qr_expires_at,
+          created_by, updated_by
+        ) VALUES (
+          ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, 0.00, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?
+        )
+      `,
+      [
+        row.bookingNumber,
+        row.status,
+        row.serviceTypeId,
+        row.originAddress,
+        row.originPlaceId,
+        row.originLat,
+        row.originLng,
+        row.destinationAddress,
+        row.destinationPlaceId,
+        row.destinationLat,
+        row.destinationLng,
+        row.scheduledPickupAt,
+        row.vehicleTypeId,
+        row.recommendedVehicleTypeId,
+        row.vehicleCount,
+        row.routeId,
+        row.currency,
+        row.paymentStatus,
+        row.paymentMethod,
+        row.commissionStatus,
+        row.customerUserId,
+        row.customerName,
+        row.customerEmail,
+        row.customerPhone,
+        row.customerCountryCode,
+        row.specialRequests,
+        row.metadata ? JSON.stringify(row.metadata) : null,
+        row.boardingQrTokenHash,
+        row.boardingQrExpiresAt,
+        row.createdBy,
+        row.updatedBy,
+      ],
+    );
+    return result.insertId;
+  }
+
+  async insertPassengers(conn, bookingId, passengers) {
+    await conn.query(
+      `
+        INSERT INTO booking_passengers (booking_id, adults, children, infants)
+        VALUES (?, ?, ?, ?)
+      `,
+      [bookingId, passengers.adults, passengers.children, passengers.infants],
+    );
+  }
+
+  async insertLuggage(conn, bookingId, luggage) {
+    await conn.query(
+      `
+        INSERT INTO booking_luggage (
+          booking_id, carriers_20_inch, carriers_24_inch_plus, golf_bags, special_items
+        ) VALUES (?, ?, ?, ?, ?)
+      `,
+      [
+        bookingId,
+        luggage.carriers20Inch,
+        luggage.carriers24InchPlus,
+        luggage.golfBags,
+        luggage.specialItems,
+      ],
+    );
+  }
+
+  async insertTransferDetails(conn, bookingId, transfer) {
+    await conn.query(
+      `
+        INSERT INTO booking_transfer_details (
+          booking_id, airport_id, airport_code_custom, flight_number,
+          golf_course_id, golf_region, driver_included
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        bookingId,
+        transfer.airportId,
+        transfer.airportCodeCustom,
+        transfer.flightNumber,
+        transfer.golfCourseId,
+        transfer.golfRegion,
+        transfer.driverIncluded ? 1 : 0,
+      ],
+    );
+  }
+
+  async insertChargeItem(conn, bookingId, item, createdBy) {
+    await conn.query(
+      `
+        INSERT INTO booking_charge_items (
+          booking_id, charge_type, description, quantity, unit_price, amount,
+          reference_type, reference_id, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        bookingId,
+        item.chargeType ? toDatabaseChargeType(item.chargeType) : item.chargeType,
+        item.description,
+        item.quantity,
+        item.unitPrice,
+        item.amount,
+        item.referenceType,
+        item.referenceId,
+        createdBy,
+      ],
+    );
+  }
+
+  async insertStatusLog(conn, bookingId, log) {
+    await conn.query(
+      `
+        INSERT INTO booking_status_logs (
+          booking_id, from_status, to_status, changed_by_user_id, changed_by_role, reason
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        bookingId,
+        log.fromStatus,
+        log.toStatus,
+        log.changedByUserId,
+        log.changedByRole,
+        log.reason,
+      ],
+    );
+  }
+
+  async insertActivityLog(conn, bookingId, activity) {
+    await conn.query(
+      `
+        INSERT INTO booking_activity_logs (
+          booking_id, activity_type, actor_user_id, actor_role, description, payload
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        bookingId,
+        activity.activityType,
+        activity.actorUserId,
+        activity.actorRole,
+        activity.description,
+        activity.payload ? JSON.stringify(activity.payload) : null,
+      ],
+    );
+  }
+
+  async insertGuestToken(conn, bookingId, tokenHash, expiresAt) {
+    await conn.query(
+      `
+        INSERT INTO guest_access_tokens (booking_id, token_hash, expires_at)
+        VALUES (?, ?, ?)
+      `,
+      [bookingId, tokenHash, expiresAt],
+    );
+  }
+
+  async findById(bookingId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT id, booking_number, status, total_amount, currency, payment_status, payment_method
+        FROM bookings
+        WHERE id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0] || null;
+  }
+
+  async findAirportByIata(conn, iataCode) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, iata_code, name
+        FROM airports
+        WHERE iata_code = ? AND deleted_at IS NULL AND is_active = 1
+        LIMIT 1
+      `,
+      [iataCode],
+    );
+    return rows[0] || null;
+  }
+}
+
+module.exports = BookingRepository;

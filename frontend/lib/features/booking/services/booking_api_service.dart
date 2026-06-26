@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../config/app_config.dart';
+import '../models/booking_create_result.dart';
 import '../models/pricing_result.dart';
 import '../models/vehicle_recommendation.dart';
 
@@ -103,5 +104,10 @@ class BookingApiService {
 
     final data = await _request('POST', '/bookings/pricing/calculate', body: body);
     return PricingResult.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) async {
+    final data = await _request('POST', '/bookings', body: body);
+    return BookingCreateResult.fromJson(Map<String, dynamic>.from(data as Map));
   }
 }

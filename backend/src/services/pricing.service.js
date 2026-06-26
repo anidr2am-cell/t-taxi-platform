@@ -384,6 +384,8 @@ class PricingService {
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       amount: item.amount,
+      referenceType: item.referenceType ?? null,
+      referenceId: item.referenceId ?? null,
     }));
 
     return {
