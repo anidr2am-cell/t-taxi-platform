@@ -3,6 +3,51 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
+import 'package:frontend/features/booking/services/booking_chat_api.dart';
+import 'package:frontend/features/chat/models/chat_connection_state.dart';
+import 'package:frontend/features/chat/services/chat_socket_service.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
+
+class _FakeBookingChatApi extends BookingChatApi {
+  @override
+  Future<Map<String, dynamic>> getRoom({
+    required String bookingNumber,
+    String? guestAccessToken,
+    String? customerAccessToken,
+  }) async =>
+      {'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0};
+
+  @override
+  Future<List<dynamic>> listMessages({
+    required String bookingNumber,
+    String? guestAccessToken,
+    String? customerAccessToken,
+  }) async =>
+      [];
+}
+
+class _FakeChatSocketService extends ChatSocketService {
+  @override
+  io.Socket connect({
+    String? accessToken,
+    String? guestAccessToken,
+  }) {
+    debugSetConnectionState(ChatConnectionState.connected);
+    return io.io(
+      'http://localhost:0',
+      io.OptionBuilder().disableAutoConnect().build(),
+    );
+  }
+
+  @override
+  void joinRoom(
+    String bookingNumber, {
+    void Function(Map<String, dynamic> room)? onJoined,
+  }) {
+    debugMarkJoined(bookingNumber, 1);
+    onJoined?.call({'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0});
+  }
+}
 
 void main() {
   testWidgets('boarding QR is shown before pickup', (tester) async {
@@ -117,7 +162,7 @@ Future<void> _scrollToText(WidgetTester tester, String text) async {
   await tester.scrollUntilVisible(
     find.text(text),
     250,
-    scrollable: find.byType(Scrollable),
+    scrollable: find.byType(Scrollable).first,
   );
 }
 
@@ -131,6 +176,8 @@ BookingCompletePage _page({
     originLabel: 'BKK Airport',
     destinationLabel: 'Pattaya Hotel',
     issueDropoffQr: issueDropoffQr,
+    chatApi: _FakeBookingChatApi(),
+    chatSocketService: _FakeChatSocketService(),
   );
 }
 

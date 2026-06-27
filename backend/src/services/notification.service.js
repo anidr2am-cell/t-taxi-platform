@@ -79,6 +79,10 @@ const CONTENT = {
     title: 'Review submitted',
     body: 'A customer submitted a review for a completed trip.',
   },
+  [NOTIFICATION_TYPES.CHAT_MESSAGE_RECEIVED]: {
+    title: 'New chat message',
+    body: 'You have a new message about your booking.',
+  },
 };
 
 class NotificationService {
@@ -273,6 +277,40 @@ class NotificationService {
       case EVENTS.REVIEW_SUBMITTED:
         await addAdmins(NOTIFICATION_TYPES.REVIEW_SUBMITTED);
         break;
+      case EVENTS.CHAT_MESSAGE_SENT: {
+        const chatPayload = this.sanitizePayload({
+          bookingNumber: payload.bookingNumber,
+          messageId: payload.messageId,
+        });
+        if (payload.recipientUserId) {
+          const audienceRole = payload.recipientRole === 'DRIVER'
+            ? ROLES.DRIVER
+            : payload.recipientRole === 'ADMIN'
+              ? ROLES.ADMIN
+              : ROLES.CUSTOMER;
+          specs.push({
+            eventId: payload.eventId,
+            eventName,
+            notificationType: NOTIFICATION_TYPES.CHAT_MESSAGE_RECEIVED,
+            recipientType: RECIPIENT_TYPES.USER,
+            userId: payload.recipientUserId,
+            bookingId: payload.bookingId ?? null,
+            audienceRole,
+            payload: chatPayload,
+          });
+        } else if (payload.recipientRole === 'CUSTOMER' && payload.bookingId) {
+          specs.push({
+            eventId: payload.eventId,
+            eventName,
+            notificationType: NOTIFICATION_TYPES.CHAT_MESSAGE_RECEIVED,
+            recipientType: RECIPIENT_TYPES.GUEST_BOOKING,
+            bookingId: payload.bookingId,
+            audienceRole: ROLES.CUSTOMER,
+            payload: chatPayload,
+          });
+        }
+        break;
+      }
       default:
         break;
     }

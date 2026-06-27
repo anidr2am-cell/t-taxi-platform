@@ -35,6 +35,7 @@ const NotificationRepository = require('../repositories/notification.repository'
 const NotificationService = require('../services/notification.service');
 const OutboxRepository = require('../repositories/outbox.repository');
 const OutboxProcessor = require('../services/outboxProcessor.service');
+const ChatService = require('../services/chat.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -181,6 +182,15 @@ container.register('outboxRepository', () => new OutboxRepository(database.pool)
 container.register('outboxProcessor', (c) => new OutboxProcessor(
   c.get('outboxRepository'),
   () => c.get('notificationService'),
+));
+container.register('chatService', (c) => new ChatService(
+  database.pool,
+  c.get('chatRepository'),
+  c.get('bookingRepository'),
+  c.get('driverRepository'),
+  c.get('userRepository'),
+  c.get('outboxRepository'),
+  c.get('outboxProcessor'),
 ));
 
 module.exports = container;

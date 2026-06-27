@@ -18,6 +18,12 @@ const {
 } = require('../validators/booking.validator');
 const { pricingCalculateSchema } = require('../validators/pricing.validator');
 const { notificationListQuerySchema } = require('../validators/notification.validator');
+const chatController = require('../controllers/chat.controller');
+const {
+  chatMessageListQuerySchema,
+  sendChatMessageSchema,
+  markChatReadSchema,
+} = require('../validators/chat.validator');
 
 const router = express.Router();
 
@@ -73,6 +79,34 @@ router.get(
   optionalAuthMiddleware,
   validate({ params: bookingNumberParamsSchema, query: notificationListQuerySchema }),
   notificationController.listBookingNotifications,
+);
+
+router.get(
+  '/:bookingNumber/chat',
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema }),
+  chatController.getBookingChat,
+);
+
+router.get(
+  '/:bookingNumber/chat/messages',
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema, query: chatMessageListQuerySchema }),
+  chatController.listBookingChatMessages,
+);
+
+router.post(
+  '/:bookingNumber/chat/messages',
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema, body: sendChatMessageSchema }),
+  chatController.sendBookingChatMessage,
+);
+
+router.post(
+  '/:bookingNumber/chat/read',
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema, body: markChatReadSchema }),
+  chatController.markBookingChatRead,
 );
 
 module.exports = router;

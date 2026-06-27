@@ -4,8 +4,11 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 import '../models/booking_create_result.dart';
 import '../services/booking_api_service.dart';
+import '../services/booking_chat_api.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
+import '../../chat/services/chat_socket_service.dart';
+import '../widgets/booking_chat_section.dart';
 
 class BookingCompletePage extends StatefulWidget {
   final BookingCreateResult result;
@@ -13,6 +16,8 @@ class BookingCompletePage extends StatefulWidget {
   final String originLabel;
   final String destinationLabel;
   final Future<DropoffQrIssueResult> Function()? issueDropoffQr;
+  final BookingChatApi? chatApi;
+  final ChatSocketService? chatSocketService;
 
   const BookingCompletePage({
     super.key,
@@ -21,6 +26,8 @@ class BookingCompletePage extends StatefulWidget {
     required this.originLabel,
     required this.destinationLabel,
     this.issueDropoffQr,
+    this.chatApi,
+    this.chatSocketService,
   });
 
   @override
@@ -172,6 +179,13 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 hint: l10n.t('boarding_qr_hint'),
                 token: result.boardingQrToken,
               ),
+            const SizedBox(height: 16),
+            BookingChatSection(
+              bookingNumber: result.bookingNumber,
+              guestAccessToken: result.guestAccessToken,
+              api: widget.chatApi,
+              socketService: widget.chatSocketService,
+            ),
             const SizedBox(height: 16),
             if (!_isCompleted) ...[
               if (_dropoffQrError != null) ...[

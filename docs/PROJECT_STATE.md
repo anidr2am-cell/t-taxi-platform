@@ -4,12 +4,12 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Pack 16 complete — Notification Foundation MVP. Next: Pack 17 Live Chat MVP.
+Pack 17 complete — Live Chat MVP. Next: Pack 18 MVP Integration and Release Readiness.
 
 # Completed
 
 - [x] Architecture & API design docs (`ARCHITECTURE`, `DATABASE_DESIGN`, `API_CONTRACT`, `BUSINESS_ENGINE`, `ADMIN_OPERATION_SYSTEM`)
-- [x] MySQL migrations `00`–`19` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns, settlement settings seed, reviews, notification foundation)
+- [x] MySQL migrations `00`–`20` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns, settlement settings seed, reviews, notification foundation, chat MVP idempotency)
 - [x] Backend skeleton — Express, JWT middleware, Joi validation, Swagger UI, health check
 - [x] Auth API — register, login, refresh, logout, `/auth/me`
 - [x] Booking APIs — `POST /bookings/vehicle/recommend`, `POST /bookings/pricing/calculate`, `POST /bookings`
@@ -90,6 +90,22 @@ Pack 16 complete — Notification Foundation MVP. Next: Pack 17 Live Chat MVP.
 - [x] Notification security — recipients derived server-side; no JWT, guest token, QR token, receipt path, password, or token hash in notification payloads; recipient ownership isolation
 - [x] Flutter notifications — guest booking notification section; driver badge and inbox with mark-read; admin nav, inbox, unread and type filters; loading/empty/error/retry/refresh states
 - [x] Notification OpenAPI documentation and focused backend/Flutter tests
+- [x] Pack 17 Live Chat MVP — booking-scoped operational text chat (REST + Socket.IO)
+- [x] Chat schema migration — `database/20_chat_mvp.sql`; `sender_participant_id` and `client_message_id` on `chat_messages`; unique constraint per room, sender participant, and client message ID; `database/migrate.ps1` through migration 20
+- [x] Chat data model — existing `chat_rooms`, `chat_participants`, `chat_messages`, and `chat_message_reads` reused; one operational room per booking; lazy participant creation on authorized access
+- [x] Customer and guest chat APIs — `GET/POST /api/v1/bookings/:bookingNumber/chat`, `/messages`, `/read`; guest token via `X-Guest-Access-Token` header only
+- [x] Driver chat access — booking-scoped endpoints with JWT; assigned-driver authorization; reassigned driver cannot rejoin, send, or receive new messages after eviction
+- [x] Admin operational chat — `GET /api/v1/admin/chats`, detail, messages, send, read; queue search and unread filter
+- [x] Chat message rules — server-derived sender identity; text validation; 2000-character maximum; `clientMessageId` idempotency; duplicate retry returns existing message
+- [x] Chat read state — persisted read records and unread counts; own messages excluded from unread
+- [x] Chat Socket.IO — secure `handshake.auth.token` and `handshake.auth.guestAccessToken`; query tokens rejected; events `chat:join`, `chat:leave`, `chat:send`, `chat:read`, `chat:joined`, `chat:message`, `chat:read-updated`, `chat:error`; internal rooms by server-side room ID; access revalidated on join, send, read, and reconnect
+- [x] Chat broadcast reliability — message transaction committed before Socket.IO broadcast; persistence failure creates no broadcast; unauthorized old-driver sockets evicted before broadcast
+- [x] Chat notifications — `chat.message_sent` outbox event written atomically; `CHAT_MESSAGE_RECEIVED` through notification foundation; payload contains only `bookingNumber` and `messageId`
+- [x] Terminal booking chat — `COMPLETED`, `CANCELLED`, and `NO_SHOW` remain readable but read-only
+- [x] Legacy chat routes — deprecated `/api/v1/chat/*` returns clear 404 response
+- [x] Flutter chat — customer/guest booking chat, driver booking chat, admin queue and detail; REST initial history; Socket.IO real-time receive; reconnect, rejoin, and history reload; deduplication by `messageId` and `clientMessageId`; loading, empty, error, retry, reconnecting, and offline states; listeners disposed on leave or room switch; real-time connection always enabled in production widgets
+- [x] Chat security — guest token never in URLs or query parameters; JWT and guest tokens not logged; plain-text messages; unrelated users cannot access rooms; no full message body or secrets in notification payload
+- [x] Chat OpenAPI documentation (`docs/CHAT_SOCKET.md` for Socket.IO); focused backend/Flutter tests
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
 
@@ -99,7 +115,6 @@ Pack 16 complete — Notification Foundation MVP. Next: Pack 17 Live Chat MVP.
 - Customer booking wizard — step flow exists; full E2E against live API incomplete
 - Frontend split — new `BookingApiService` (`/api/v1`) vs legacy `ApiService` (`/api/*`) and old admin screen
 - Public proxy routes — flight foundation complete; places, airports, golf route files still stubbed
-- Chat / Socket.IO — handler skeleton only (Pack 17 scope)
 
 # Legacy Issues
 
@@ -130,22 +145,35 @@ Pack 16 complete — Notification Foundation MVP. Next: Pack 17 Live Chat MVP.
 - Maps and live tracking
 - Automatic dispatch
 - Kanban drag and drop
+- Chat file attachments
+- Chat automatic translation
+- AI chat
+- Chat typing indicators
+- Chat reactions
+- Chat message deletion and moderation
+- Chat voice and video
+- Public chat rooms
+- Email and FCM chat delivery
+- Post-completion 24-hour chat send window
+- Live-updating admin chat queue
 
 # Next Pack
 
-Pack 17 — Live Chat MVP
+Pack 18 — MVP Integration and Release Readiness
 
 Planned scope:
 
-- Booking-scoped customer, driver, and admin chat
-- Existing Socket.IO foundation
-- Authorized chat room membership
-- Text messages
-- Read state
-- Admin operational chat view
-- No voice or video calls
-- No message translation
-- File attachments may remain deferred unless the existing structure makes them trivial
+- Fresh database migration verification through migration 20
+- End-to-end customer booking to completed trip flow
+- Admin assignment and reassignment flow
+- Driver QR operation flow
+- Settlement and review flow
+- Notification and chat flow
+- Environment configuration audit
+- Production error and loading-state audit
+- Security and secret audit
+- Deployment readiness checklist
+- No major new product features
 
 # Known Reliability Limitations (Notifications)
 
@@ -153,6 +181,14 @@ Planned scope:
 - Startup recovery processes a bounded batch only
 - No distributed queue or Redis
 - Events reaching maximum retry count require later operational recovery
+
+# Known Reliability Limitations (Chat)
+
+- Message sending uses REST; Socket.IO provides real-time receive and read updates
+- Offline outbound queue is not persisted across app restarts
+- Admin chat queue requires refresh for new-message list updates
+- No long-running distributed Socket.IO or message queue architecture
+- Unauthorized driver eviction scan is optimized for small MVP rooms
 
 # Environment Configuration
 
@@ -162,19 +198,21 @@ Planned scope:
 
 # Current Verification
 
-- Backend `npm test`: 168/168 passed
+- Backend `npm test`: 192/192 passed
+- Focused chat tests (`chat.test.js`, `chat.socket.test.js`): 24/24 passed
 - Focused notification tests (`notification.test.js`): 13/13 passed
 - Focused outbox tests (`outbox.test.js`): 12/12 passed
 - Focused review tests (`review.test.js`): 36/36 passed
 - Focused settlement tests (`commissionSettlement.test.js`): 29/29 passed
 - Focused admin dispatch tests: 18/18 passed
-- Flutter full tests: 45/45 passed
+- Flutter full tests: 55/55 passed
+- Focused Flutter chat tests (`chat_test.dart`): 10/10 passed
 - Focused Flutter notification tests: 6/6 passed
-- Flutter analyze (notification UI files): no issues
+- Flutter analyze (chat UI files): no issues
 - OpenAPI YAML parse: passed
 - `git diff --check`: passed
 - `database/migrate.ps1` parser validation: passed
-- Migration 19 appears exactly once after migration 18 in `database/migrate.ps1`
+- Migration 20 appears exactly once after migration 19 in `database/migrate.ps1`
 
 # Architecture Status
 
@@ -198,6 +236,7 @@ Driver — 32%
 - Prices from DB only — route × vehicle + charge policies; admin CRUD for rules
 - Customer reviews after completion — one review per booking; guest token in header (lookup) or body (submit), never in URL; driver sees aggregate rating only
 - Operational notifications — transactional outbox + in-app delivery; guest notifications scoped to authorized booking; live email/FCM deferred
+- Booking-scoped live chat — REST for send and initial history; Socket.IO for real-time receive and read updates; terminal bookings read-only
 - Architecture is frozen — Controller → Service → Repository; business logic in services only
 
 # Development Rules

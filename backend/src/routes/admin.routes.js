@@ -4,6 +4,7 @@ const adminDispatchRoutes = require('./admin.dispatch.routes');
 const adminSettlementRoutes = require('./admin.settlement.routes');
 const adminReviewRoutes = require('./admin.review.routes');
 const adminNotificationRoutes = require('./admin.notification.routes');
+const adminChatRoutes = require('./admin.chat.routes');
 
 const router = express.Router();
 
@@ -12,6 +13,7 @@ router.use(adminDispatchRoutes);
 router.use(adminSettlementRoutes);
 router.use(adminReviewRoutes);
 router.use(adminNotificationRoutes);
+router.use(adminChatRoutes);
 
 // TODO: dashboard, golf, airports, users, chats, translations, settings
 

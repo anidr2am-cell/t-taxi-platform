@@ -10,8 +10,51 @@ class ChatRepository {
     return result.insertId;
   }
 
+  async findRoomByBookingId(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, booking_id, room_code, is_active, created_at
+        FROM chat_rooms
+        WHERE booking_id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findRoomByBookingIdForUpdate(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, booking_id, room_code, is_active, created_at
+        FROM chat_rooms
+        WHERE booking_id = ? AND deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [bookingId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findRoomByBookingNumber(conn, bookingNumber) {
+    const [rows] = await conn.query(
+      `
+        SELECT cr.id, cr.booking_id, cr.room_code, cr.is_active, cr.created_at,
+               b.booking_number, b.status AS booking_status, b.customer_name,
+               b.customer_user_id, b.driver_id
+        FROM chat_rooms cr
+        INNER JOIN bookings b ON b.id = cr.booking_id AND b.deleted_at IS NULL
+        WHERE b.booking_number = ? AND cr.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] ?? null;
+  }
+
   async insertParticipant(conn, chatRoomId, participant) {
-    await conn.query(
+    const [result] = await conn.query(
       `
         INSERT INTO chat_participants (
           chat_room_id, user_id, participant_role, display_name
@@ -19,11 +62,346 @@ class ChatRepository {
       `,
       [
         chatRoomId,
-        participant.userId,
+        participant.userId ?? null,
         participant.participantRole,
         participant.displayName,
       ],
     );
+    return result.insertId;
+  }
+
+  async findParticipant(conn, chatRoomId, participantRole, userId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, chat_room_id, user_id, participant_role, display_name,
+               last_read_at, joined_at, created_at
+        FROM chat_participants
+        WHERE chat_room_id = ?
+          AND participant_role = ?
+          AND deleted_at IS NULL
+          AND ${userId == null ? 'user_id IS NULL' : 'user_id = ?'}
+        LIMIT 1
+      `,
+      userId == null ? [chatRoomId, participantRole] : [chatRoomId, participantRole, userId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findParticipantById(conn, participantId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, chat_room_id, user_id, participant_role, display_name, last_read_at
+        FROM chat_participants
+        WHERE id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [participantId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findGuestParticipant(conn, chatRoomId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, chat_room_id, user_id, participant_role, display_name, last_read_at
+        FROM chat_participants
+        WHERE chat_room_id = ?
+          AND participant_role = 'CUSTOMER'
+          AND user_id IS NULL
+          AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [chatRoomId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async listParticipants(conn, chatRoomId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, chat_room_id, user_id, participant_role, display_name, last_read_at
+        FROM chat_participants
+        WHERE chat_room_id = ? AND deleted_at IS NULL
+        ORDER BY id ASC
+      `,
+      [chatRoomId],
+    );
+    return rows;
+  }
+
+  async insertMessage(conn, message) {
+    const [result] = await conn.query(
+      `
+        INSERT INTO chat_messages (
+          chat_room_id,
+          sender_user_id,
+          sender_participant_id,
+          sender_role,
+          sender_name,
+          message_type,
+          content,
+          client_message_id,
+          message_status
+        ) VALUES (?, ?, ?, ?, ?, 'TEXT', ?, ?, 'SENT')
+      `,
+      [
+        message.chatRoomId,
+        message.senderUserId ?? null,
+        message.senderParticipantId,
+        message.senderRole,
+        message.senderName,
+        message.content,
+        message.clientMessageId,
+      ],
+    );
+    return result.insertId;
+  }
+
+  async findMessageByClientId(conn, chatRoomId, senderParticipantId, clientMessageId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          id, chat_room_id, sender_participant_id, sender_role, sender_name,
+          content, client_message_id, created_at
+        FROM chat_messages
+        WHERE chat_room_id = ?
+          AND sender_participant_id = ?
+          AND client_message_id = ?
+          AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [chatRoomId, senderParticipantId, clientMessageId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findMessageById(conn, messageId, chatRoomId = null) {
+    const params = [messageId];
+    let sql = `
+      SELECT
+        id, chat_room_id, sender_participant_id, sender_role, sender_name,
+        content, client_message_id, created_at
+      FROM chat_messages
+      WHERE id = ? AND deleted_at IS NULL
+    `;
+    if (chatRoomId != null) {
+      sql += ' AND chat_room_id = ?';
+      params.push(chatRoomId);
+    }
+    sql += ' LIMIT 1';
+    const [rows] = await conn.query(sql, params);
+    return rows[0] ?? null;
+  }
+
+  async listMessages(conn, chatRoomId, { cursor = null, limit = 50 } = {}) {
+    const boundedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+    const params = [chatRoomId];
+    let cursorSql = '';
+    if (cursor) {
+      cursorSql = ' AND (created_at < (SELECT created_at FROM chat_messages WHERE id = ?) OR (created_at = (SELECT created_at FROM chat_messages WHERE id = ?) AND id < ?))';
+      params.push(cursor, cursor, cursor);
+    }
+    params.push(boundedLimit);
+    const [rows] = await conn.query(
+      `
+        SELECT
+          id, sender_participant_id, sender_role, sender_name,
+          content, client_message_id, created_at
+        FROM chat_messages
+        WHERE chat_room_id = ? AND deleted_at IS NULL
+        ${cursorSql}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?
+      `,
+      params,
+    );
+    return rows;
+  }
+
+  async countUnreadForParticipant(conn, chatRoomId, participant) {
+    const [rows] = await conn.query(
+      `
+        SELECT COUNT(*) AS unread_count
+        FROM chat_messages m
+        WHERE m.chat_room_id = ?
+          AND m.deleted_at IS NULL
+          AND m.sender_participant_id <> ?
+          AND (
+            ? IS NULL
+            OR m.created_at > ?
+          )
+      `,
+      [chatRoomId, participant.id, participant.last_read_at, participant.last_read_at],
+    );
+    return Number(rows[0]?.unread_count ?? 0);
+  }
+
+  async updateParticipantLastRead(conn, participantId, readAt) {
+    await conn.query(
+      `
+        UPDATE chat_participants
+        SET last_read_at = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [readAt, participantId],
+    );
+  }
+
+  async insertMessageRead(conn, messageId, participantId) {
+    await conn.query(
+      `
+        INSERT IGNORE INTO chat_message_reads (chat_message_id, chat_participant_id)
+        VALUES (?, ?)
+      `,
+      [messageId, participantId],
+    );
+  }
+
+  async findLastMessage(conn, chatRoomId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, sender_name, content, created_at
+        FROM chat_messages
+        WHERE chat_room_id = ? AND deleted_at IS NULL
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+      `,
+      [chatRoomId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async countAdminUnread(conn, chatRoomId, adminParticipantId) {
+    const participant = await this.findParticipantById(conn, adminParticipantId);
+    if (!participant) return 0;
+    return this.countUnreadForParticipant(conn, chatRoomId, participant);
+  }
+
+  async listAdminChatSummaries(conn, adminUserId, {
+    search = null,
+    unreadOnly = false,
+    limit = 20,
+    offset = 0,
+  } = {}) {
+    const boundedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+    const boundedOffset = Math.max(Number(offset) || 0, 0);
+    const params = [adminUserId];
+    let searchSql = '';
+    if (search) {
+      searchSql = `
+        AND (
+          b.booking_number LIKE ?
+          OR b.customer_name LIKE ?
+          OR d.name LIKE ?
+        )
+      `;
+      const term = `%${search}%`;
+      params.push(term, term, term);
+    }
+    let unreadSql = '';
+    if (unreadOnly) {
+      unreadSql = `
+        AND EXISTS (
+          SELECT 1
+          FROM chat_messages m
+          INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
+            AND ap.user_id = ?
+            AND ap.participant_role = 'ADMIN'
+            AND ap.deleted_at IS NULL
+          WHERE m.chat_room_id = cr.id
+            AND m.deleted_at IS NULL
+            AND m.sender_participant_id <> ap.id
+            AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
+        )
+      `;
+      params.push(adminUserId);
+    }
+    params.push(boundedLimit, boundedOffset);
+    const [rows] = await conn.query(
+      `
+        SELECT
+          cr.id AS room_id,
+          cr.room_code,
+          cr.is_active,
+          cr.created_at AS room_created_at,
+          b.booking_number,
+          b.status AS booking_status,
+          b.customer_name,
+          d.name AS driver_name,
+          lm.id AS last_message_id,
+          lm.content AS last_message_text,
+          lm.created_at AS last_message_at,
+          ap.id AS admin_participant_id,
+          ap.last_read_at AS admin_last_read_at
+        FROM chat_rooms cr
+        INNER JOIN bookings b ON b.id = cr.booking_id AND b.deleted_at IS NULL
+        LEFT JOIN drivers d ON d.id = b.driver_id
+        LEFT JOIN chat_participants ap ON ap.chat_room_id = cr.id
+          AND ap.user_id = ?
+          AND ap.participant_role = 'ADMIN'
+          AND ap.deleted_at IS NULL
+        LEFT JOIN chat_messages lm ON lm.id = (
+          SELECT id FROM chat_messages
+          WHERE chat_room_id = cr.id AND deleted_at IS NULL
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1
+        )
+        WHERE cr.deleted_at IS NULL
+        ${searchSql}
+        ${unreadSql}
+        ORDER BY COALESCE(lm.created_at, cr.created_at) DESC
+        LIMIT ? OFFSET ?
+      `,
+      params,
+    );
+    return rows;
+  }
+
+  async countAdminChatSummaries(conn, adminUserId, { search = null, unreadOnly = false } = {}) {
+    const params = [];
+    let searchSql = '';
+    if (search) {
+      searchSql = `
+        AND (
+          b.booking_number LIKE ?
+          OR b.customer_name LIKE ?
+          OR d.name LIKE ?
+        )
+      `;
+      const term = `%${search}%`;
+      params.push(term, term, term);
+    }
+    let unreadSql = '';
+    if (unreadOnly) {
+      unreadSql = `
+        AND EXISTS (
+          SELECT 1
+          FROM chat_messages m
+          INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
+            AND ap.user_id = ?
+            AND ap.participant_role = 'ADMIN'
+            AND ap.deleted_at IS NULL
+          WHERE m.chat_room_id = cr.id
+            AND m.deleted_at IS NULL
+            AND m.sender_participant_id <> ap.id
+            AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
+        )
+      `;
+      params.unshift(adminUserId);
+    }
+    const [rows] = await conn.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM chat_rooms cr
+        INNER JOIN bookings b ON b.id = cr.booking_id AND b.deleted_at IS NULL
+        LEFT JOIN drivers d ON d.id = b.driver_id
+        WHERE cr.deleted_at IS NULL
+        ${searchSql}
+        ${unreadSql}
+      `,
+      params,
+    );
+    return Number(rows[0]?.total ?? 0);
   }
 }
 

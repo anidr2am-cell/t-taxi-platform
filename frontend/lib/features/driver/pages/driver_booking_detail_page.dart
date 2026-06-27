@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../models/driver_booking.dart';
+import '../pages/driver_chat_page.dart';
 import '../services/driver_api_service.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
@@ -83,6 +84,17 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       appBar: AppBar(
         title: Text(widget.bookingNumber),
         actions: [
+          IconButton(
+            tooltip: 'Open chat',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DriverChatPage(bookingNumber: widget.bookingNumber),
+                ),
+              );
+            },
+            icon: const Icon(Icons.chat),
+          ),
           IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
         ],
       ),

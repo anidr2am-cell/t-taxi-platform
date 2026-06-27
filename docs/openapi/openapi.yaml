@@ -597,6 +597,102 @@ paths:
         '403':
           $ref: '#/components/responses/BookingNotAccessible'
 
+  /bookings/{bookingNumber}/chat:
+    get:
+      tags: [Booking]
+      summary: Get booking chat room
+      description: >
+        Customer owner, guest (X-Guest-Access-Token header), assigned driver, or admin.
+        Terminal bookings (COMPLETED, CANCELLED, NO_SHOW) remain readable but read-only for sending.
+      operationId: getBookingChatRoom
+      security:
+        - bearerAuth: []
+        - guestReviewAccessHeader: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatRoom'
+        '403':
+          description: CHAT_NOT_ACCESSIBLE
+
+  /bookings/{bookingNumber}/chat/messages:
+    get:
+      tags: [Booking]
+      summary: List booking chat messages
+      operationId: listBookingChatMessages
+      security:
+        - bearerAuth: []
+        - guestReviewAccessHeader: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+        - name: cursor
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatMessageList'
+    post:
+      tags: [Booking]
+      summary: Send booking chat message
+      description: >
+        Plain text only, max 2000 characters. clientMessageId is required for idempotent retries.
+      operationId: sendBookingChatMessage
+      security:
+        - bearerAuth: []
+        - guestReviewAccessHeader: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatSendMessageRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatMessage'
+        '409':
+          description: CHAT_READ_ONLY
+
+  /bookings/{bookingNumber}/chat/read:
+    post:
+      tags: [Booking]
+      summary: Mark booking chat messages read up to message ID
+      operationId: markBookingChatRead
+      security:
+        - bearerAuth: []
+        - guestReviewAccessHeader: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMarkReadRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatReadState'
+
   /customer/notifications:
     get:
       tags: [Customer]
@@ -2118,14 +2214,100 @@ paths:
   /admin/chats:
     get:
       tags: [Admin]
-      summary: List active chat rooms
+      summary: List operational booking chat rooms
       operationId: adminListChats
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
       responses:
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAdminChatList'
+
+  /admin/chats/{bookingNumber}:
+    get:
+      tags: [Admin]
+      summary: Get admin booking chat room
+      operationId: adminGetChatRoom
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatRoom'
+
+  /admin/chats/{bookingNumber}/messages:
+    get:
+      tags: [Admin]
+      summary: List admin booking chat messages
+      operationId: adminListChatMessages
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+        - name: cursor
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatMessageList'
+    post:
+      tags: [Admin]
+      summary: Send admin booking chat message
+      operationId: adminSendChatMessage
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatSendMessageRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatMessage'
+
+  /admin/chats/{bookingNumber}/read:
+    post:
+      tags: [Admin]
+      summary: Mark admin booking chat read
+      operationId: adminMarkChatRead
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMarkReadRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChatReadState'
 
   /admin/translations:
     get:
@@ -4882,6 +5064,76 @@ components:
         replyMessageId:
           type: integer
           format: int64
+
+    ChatSendMessageRequest:
+      type: object
+      required: [text, clientMessageId]
+      properties:
+        text:
+          type: string
+          maxLength: 2000
+        clientMessageId:
+          type: string
+          maxLength: 64
+          description: Client-generated id for idempotent retries
+
+    ChatMarkReadRequest:
+      type: object
+      required: [upToMessageId]
+      properties:
+        upToMessageId:
+          type: integer
+          format: int64
+
+    ApiResponseChatMessageList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      messageId:
+                        type: integer
+                      senderType:
+                        type: string
+                      senderDisplayName:
+                        type: string
+                      text:
+                        type: string
+                      createdAt:
+                        type: string
+                        format: date-time
+                      readByCurrentUser:
+                        type: boolean
+                      clientMessageId:
+                        type: string
+                ordering:
+                  type: string
+                  example: newest_first
+                nextCursor:
+                  type: integer
+                  nullable: true
+
+    ApiResponseChatReadState:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                upToMessageId:
+                  type: integer
+                unreadCount:
+                  type: integer
+                roomId:
+                  type: integer
 
     ApiResponseChatMessage:
       allOf:
