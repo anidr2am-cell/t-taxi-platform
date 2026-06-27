@@ -25,11 +25,13 @@ class AdminDispatchService {
     bookingRepository,
     driverRepository,
     bookingStatusService,
+    commissionSettlementService,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.driverRepository = driverRepository;
     this.bookingStatusService = bookingStatusService;
+    this.commissionSettlementService = commissionSettlementService;
   }
 
   actorFromUser(user) {
@@ -131,8 +133,10 @@ class AdminDispatchService {
     return driver.is_active === 1 && driver.status !== 'SUSPENDED';
   }
 
-  mapDriverListItem(row) {
-    const eligibilityState = this.mapDriverEligibility(row);
+  mapDriverListItem(row, settlementBlocked = false, settlementBlockReason = null) {
+    const eligibilityState = settlementBlocked
+      ? 'NOT_ELIGIBLE'
+      : this.mapDriverEligibility(row);
     return {
       driverId: row.id,
       displayName: row.name,
@@ -142,6 +146,7 @@ class AdminDispatchService {
       driverStatus: row.status,
       eligibilityState,
       assignmentEligible: eligibilityState !== 'NOT_ELIGIBLE',
+      settlementBlockReason: settlementBlockReason ?? null,
       primaryVehicle: row.primary_vehicle_id
         ? {
             vehicleId: row.primary_vehicle_id,
@@ -317,7 +322,15 @@ class AdminDispatchService {
 
   async listDrivers() {
     const rows = await this.driverRepository.listForAdminAssignment();
-    return rows.map((row) => this.mapDriverListItem(row));
+    const items = [];
+    for (const row of rows) {
+      const blocked = await this.commissionSettlementService.driverHasBlockingSettlement(row.id);
+      const blockReason = blocked
+        ? 'Outstanding overdue or unresolved commission settlement'
+        : null;
+      items.push(this.mapDriverListItem(row, blocked, blockReason));
+    }
+    return items;
   }
 
   async ensureDriverEligible(conn, driverId) {
@@ -330,6 +343,13 @@ class AdminDispatchService {
     }
     if (!this.isDriverAssignable(driver)) {
       throw new AppError('Driver is not eligible for assignment', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+      });
+    }
+    const blocked = await this.commissionSettlementService.driverHasBlockingSettlement(driver.id);
+    if (blocked) {
+      throw new AppError('Driver has overdue or unresolved commission settlement', {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });

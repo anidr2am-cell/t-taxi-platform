@@ -4,12 +4,12 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Pack 13 complete — Admin Dispatch MVP. Next: Pack 14 Commission Settlement MVP.
+Pack 14 complete — Commission Settlement MVP. Next: Pack 15 Review and Rating MVP.
 
 # Completed
 
 - [x] Architecture & API design docs (`ARCHITECTURE`, `DATABASE_DESIGN`, `API_CONTRACT`, `BUSINESS_ENGINE`, `ADMIN_OPERATION_SYSTEM`)
-- [x] MySQL migrations `00`–`16` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns)
+- [x] MySQL migrations `00`–`17` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns, settlement settings seed)
 - [x] Backend skeleton — Express, JWT middleware, Joi validation, Swagger UI, health check
 - [x] Auth API — register, login, refresh, logout, `/auth/me`
 - [x] Booking APIs — `POST /bookings/vehicle/recommend`, `POST /bookings/pricing/calculate`, `POST /bookings`
@@ -46,10 +46,21 @@ Pack 13 complete — Admin Dispatch MVP. Next: Pack 14 Commission Settlement MVP
 - [x] Assignment status transitions — `BookingStatusService` only; atomic assignment + status change; lifecycle and `driver.reassigned` events after commit
 - [x] Admin response safety — QR hashes, guest token hashes, and secrets excluded from admin responses
 - [x] Booking number validation — `TX` plus 12 digits aligned across generator, services, and validators
-- [x] `database/migrate.ps1` — migrations `00` through `16` including `16_booking_qr_settlement.sql`
 - [x] Flutter admin dispatch — booking queue, search/filters, pagination/load-more, booking detail, assign/reassign dialogs, inactive/ineligible driver indication, loading/empty/error/refresh states, duplicate-submit prevention, 401 session clearing with return to admin login
 - [x] Admin rail — reservations entry connected to Admin Dispatch queue
 - [x] Admin dispatch OpenAPI — queue item schema, booking detail schema, driver list, assign/reassign requests, pagination and authorization documentation
+- [x] Pack 14 Commission Settlement MVP — driver commission obligation after trip completion
+- [x] Commission obligation activated after `COMPLETED`; idempotent `trip.completed` settlement handler; reconciliation for missed completion events (driver list/detail, admin list/detail)
+- [x] Driver settlement API — list, detail, receipt upload, protected receipt download
+- [x] Admin settlement API — queue, detail, receipt access, approve, reject
+- [x] Commission configuration — `settlement.commission_rate_percent` and `settlement.commission_due_days` from settings; no hardcoded commission amount
+- [x] Receipt storage — transactional database updates, receipt replacement, old receipt soft deletion, safe generated filenames, MIME and extension validation, path traversal protection, no server filesystem paths returned
+- [x] Overdue and blocking — derived public overdue status; server-side driver assignment blocking for overdue unpaid commission; assignment eligibility restored when all blocking settlements are approved
+- [x] Settlement authorization — protected receipt access for DRIVER (own bookings), ADMIN, and SUPER_ADMIN; reviewer and driver identity from JWT only
+- [x] Migration `17_settlement_settings_seed.sql`; `database/migrate.ps1` updated through migration 17
+- [x] Flutter driver settlement — list, detail, real JPG/JPEG/PNG/PDF file selection, receipt upload and replacement, rejected and approved states, loading/empty/error/retry/duplicate-submit prevention
+- [x] Flutter admin settlement — queue, detail, receipt review, approve and reject flows
+- [x] Settlement OpenAPI documentation and focused backend/Flutter tests
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
 
@@ -68,28 +79,30 @@ Pack 13 complete — Admin Dispatch MVP. Next: Pack 14 Commission Settlement MVP
 
 # Intentionally Deferred
 
+- Online customer payment
+- Payment gateway integration
+- Automatic bank verification
+- Scheduled overdue processing
+- Notifications
+- Chat
+- Maps and live tracking
+- Reviews (Pack 15 scope)
 - Automatic dispatch
 - Kanban drag and drop
-- Live map and driver tracking
-- Chat
-- Notifications
-- Commission settlement (Pack 14 scope)
-- Reviews
 
 # Next Pack
 
-Pack 14 — Commission Settlement MVP
+Pack 15 — Review and Rating MVP
 
 Planned scope:
 
-- Create commission obligation after trip completion
-- Driver settlement queue
-- Receipt upload
-- Admin receipt review
-- Approve or reject settlement
-- Driver eligibility blocking when commission is overdue
-- No automatic payment gateway
-- No online customer payment
+- Customer review request after `COMPLETED`
+- Guest or authenticated customer review submission
+- One review per booking
+- Rating and short comment
+- Driver rating summary
+- Admin review visibility and moderation
+- No rewards or loyalty program yet
 
 # Environment Configuration
 
@@ -99,12 +112,11 @@ Planned scope:
 
 # Current Verification
 
-- Backend `npm test`: 78/78 passed
-- Focused driver QR tests: 16/16 passed
+- Backend `npm test`: 107/107 passed
+- Focused settlement tests (`commissionSettlement.test.js`): 29/29 passed
 - Focused admin dispatch tests: 18/18 passed
-- Flutter admin dispatch tests: 8/8 passed
-- Flutter full tests: 21/21 passed
-- Flutter analyze (admin dispatch): no issues
+- Flutter full tests: 26/26 passed
+- Flutter analyze (driver settlement, admin settlement): no issues
 - OpenAPI YAML parse: passed
 - `git diff --check`: passed
 - `database/migrate.ps1` PowerShell parser validation: passed
@@ -122,7 +134,7 @@ Driver — 25%
 
 - Guest booking supported — no JWT required; `guest_access_token` (hashed) returned once on create
 - Customer pays driver directly — default `payment_method = PAY_DRIVER`; no online checkout in MVP
-- Company income from driver commission — `commission_status`, `commission_amount`, receipt file fields on booking
+- Company income from driver commission — `commission_status`, `commission_amount`, receipt file fields on booking; obligation created after completion; admin approves receipt proof
 - Boarding QR then dropoff QR — boarding token issued at create; dropoff token issued to authorized customer/guest after pickup; driver scans QR to complete trip
 - Google Places via backend proxy — API key server-side only (routes not implemented)
 - AviationStack flight search — backend proxy only; API key never exposed to frontend

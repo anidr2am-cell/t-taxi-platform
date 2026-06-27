@@ -80,6 +80,19 @@ class DriverRepository {
     );
     return rows[0] || null;
   }
+
+  async findByUserId(userId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT id, user_id, name, phone, status, is_online, is_active
+        FROM drivers
+        WHERE user_id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [userId],
+    );
+    return rows[0] || null;
+  }
 }
 
 module.exports = DriverRepository;

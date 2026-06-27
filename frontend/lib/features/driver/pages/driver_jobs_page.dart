@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/driver_booking.dart';
 import '../services/driver_api_service.dart';
+import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import 'driver_booking_detail_page.dart';
 import 'driver_login_page.dart';
 
@@ -52,6 +53,14 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
       appBar: AppBar(
         title: const Text('Today’s Jobs'),
         actions: [
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DriverSettlementListPage()),
+            ),
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'Settlements',
+          ),
           IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
           IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
         ],

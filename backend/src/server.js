@@ -17,6 +17,9 @@ const app = require('./app');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { initSocket } = require('./socket');
+const { registerSettlementHandlers } = require('./events/handlers/settlement.handler');
+
+registerSettlementHandlers();
 
 const PORT = config.server.port;
 

@@ -1364,6 +1364,105 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseDriver'
 
+  /admin/settlements:
+    get:
+      tags: [Admin]
+      summary: List commission settlements
+      description: Requires JWT bearer auth. Allowed roles ADMIN and SUPER_ADMIN only.
+      operationId: adminListSettlements
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSettlementPagination'
+
+  /admin/settlements/{bookingNumber}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve settlement
+      operationId: adminApproveSettlement
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSettlementDetail'
+
+  /admin/settlements/{bookingNumber}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject settlement receipt
+      operationId: adminRejectSettlement
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementRejectRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSettlementDetail'
+
+  /driver/settlements:
+    get:
+      tags: [Driver]
+      summary: List driver settlements
+      operationId: driverListSettlements
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverSettlementList'
+
+  /driver/settlements/{bookingNumber}/receipt:
+    post:
+      tags: [Driver]
+      summary: Upload commission receipt
+      operationId: driverUploadSettlementReceipt
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Receipt image (JPEG, PNG) or PDF. Max size from UPLOAD_MAX_FILE_SIZE_MB env (default 10 MB).
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSettlementItem'
+        '400':
+          description: Invalid file type, MIME mismatch, or file too large (FILE_TOO_LARGE)
+        '409':
+          description: Receipt already approved (RECEIPT_ALREADY_APPROVED)
+
   /admin/drivers/{id}:
     get:
       tags: [Admin]
@@ -3656,6 +3755,104 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Driver'
+
+    SettlementItem:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        commissionAmount:
+          type: number
+        currency:
+          type: string
+        commissionStatus:
+          type: string
+          enum: [PENDING, RECEIPT_SUBMITTED, APPROVED, REJECTED, OVERDUE]
+          description: Derived status. OVERDUE when dueAt is past and settlement is not approved. RECEIPT_SUBMITTED when a receipt exists and not approved. Assignment blocking uses overdue unpaid rule (including overdue RECEIPT_SUBMITTED until approved).
+        dueAt:
+          type: string
+          format: date-time
+          nullable: true
+        receiptStatus:
+          type: string
+          enum: [NONE, SUBMITTED, APPROVED, REJECTED]
+        receiptUploadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        receiptUrl:
+          type: string
+          nullable: true
+
+    SettlementPagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SettlementItem'
+
+    ApiResponseSettlementPagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/SettlementPagination'
+
+    ApiResponseSettlementItem:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/SettlementItem'
+
+    ApiResponseSettlementDetail:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/SettlementItem'
+                - type: object
+                  properties:
+                    bookingSummary:
+                      type: object
+                    driverSummary:
+                      type: object
+                    receiptMetadata:
+                      type: object
+                      nullable: true
+
+    ApiResponseDriverSettlementList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SettlementItem'
+
+    SettlementRejectRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
 
     DriverAssignRequest:
       type: object

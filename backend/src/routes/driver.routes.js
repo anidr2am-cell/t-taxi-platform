@@ -14,6 +14,8 @@ router.post('/bookings/:bookingNumber/scan-boarding', driverController.scanBoard
 router.post('/bookings/:bookingNumber/scan-dropoff', driverController.scanDropoff);
 router.get('/bookings/:bookingNumber', driverController.getBookingDetail);
 
+router.use('/settlements', require('./driver.settlement.routes'));
+
 // TODO: online, offline, location, assignments, booking actions
 
 module.exports = router;

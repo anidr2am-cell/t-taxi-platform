@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
+import '../../features/admin_settlement/pages/admin_settlement_queue_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
@@ -60,6 +61,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_pricing'),
       l10n.t('admin_golf'),
       l10n.t('admin_airports'),
+      l10n.t('admin_settlements'),
     ];
 
     return Scaffold(
@@ -111,6 +113,8 @@ class _AdminScreenState extends State<AdminScreen> {
         return _buildGolfCourses(l10n);
       case 6:
         return _buildAirports(l10n);
+      case 7:
+        return const AdminSettlementQueuePage();
       default:
         return const SizedBox.shrink();
     }

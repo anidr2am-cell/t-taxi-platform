@@ -98,6 +98,7 @@ class AppLocalizations {
       'admin_pricing': 'Vehicle Pricing',
       'admin_golf': 'Golf Courses',
       'admin_airports': 'Airports',
+      'admin_settlements': 'Settlements',
       'admin_notifications': 'Notifications',
       'admin_translations': 'Translations',
       'admin_settings': 'Settings',

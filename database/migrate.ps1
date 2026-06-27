@@ -41,7 +41,8 @@ $files = @(
     "13_driver_assignment_constraints.sql",
     "14_pricing_integrity.sql",
     "15_pricing_architecture.sql",
-    "16_booking_qr_settlement.sql"
+    "16_booking_qr_settlement.sql",
+    "17_settlement_settings_seed.sql"
 )
 
 function Invoke-MysqlFile {

@@ -24,7 +24,9 @@ const BookingStatusService = require('../services/bookingStatus.service');
 const FlightService = require('../services/flight.service');
 const DriverJobService = require('../services/driverJob.service');
 const DriverRepository = require('../repositories/driver.repository');
-const AdminDispatchService = require('../services/adminDispatch.service');
+const FileRepository = require('../repositories/file.repository');
+const SettingsRepository = require('../repositories/settings.repository');
+const CommissionSettlementService = require('../services/commissionSettlement.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -118,11 +120,21 @@ container.register('driverJobService', (c) => new DriverJobService(
   c.get('bookingRepository'),
 ));
 container.register('driverRepository', () => new DriverRepository());
+container.register('settingsRepository', () => new SettingsRepository());
+container.register('fileRepository', () => new FileRepository());
+container.register('commissionSettlementService', (c) => new CommissionSettlementService(
+  database.pool,
+  c.get('bookingRepository'),
+  c.get('driverRepository'),
+  c.get('fileRepository'),
+  c.get('settingsRepository'),
+));
 container.register('adminDispatchService', (c) => new AdminDispatchService(
   database.pool,
   c.get('bookingRepository'),
   c.get('driverRepository'),
   c.get('bookingStatusService'),
+  c.get('commissionSettlementService'),
 ));
 container.register('driverQrService', (c) => new DriverQrService(
   database.pool,

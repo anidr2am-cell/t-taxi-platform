@@ -742,6 +742,330 @@ class BookingRepository {
     );
     return result.insertId;
   }
+
+  settlementSelectSql() {
+    return `
+      SELECT
+        b.id,
+        b.booking_number,
+        b.status,
+        b.completed_at,
+        b.total_amount,
+        b.currency,
+        b.commission_status,
+        b.commission_amount,
+        b.commission_due_at,
+        b.commission_paid_at,
+        b.commission_receipt_file_id,
+        b.metadata,
+        b.driver_id,
+        d.name AS driver_name,
+        d.phone AS driver_phone,
+        f.mime_type AS receipt_mime_type,
+        f.file_size AS receipt_file_size,
+        f.original_filename AS receipt_original_filename,
+        f.created_at AS receipt_uploaded_at
+      FROM bookings b
+      LEFT JOIN drivers d ON d.id = b.driver_id AND d.deleted_at IS NULL
+      LEFT JOIN files f ON f.id = b.commission_receipt_file_id AND f.deleted_at IS NULL
+    `;
+  }
+
+  async findSettlementByBookingNumberForUpdate(conn, bookingNumber) {
+    const [rows] = await conn.query(
+      `
+        ${this.settlementSelectSql()}
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async findSettlementByBookingNumber(bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.settlementSelectSql()}
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async updateCommissionFields(conn, bookingId, fields) {
+    const sets = [];
+    const params = [];
+    if (fields.commissionStatus !== undefined) {
+      sets.push('commission_status = ?');
+      params.push(fields.commissionStatus);
+    }
+    if (fields.commissionAmount !== undefined) {
+      sets.push('commission_amount = ?');
+      params.push(fields.commissionAmount);
+    }
+    if (fields.commissionDueAt !== undefined) {
+      sets.push('commission_due_at = ?');
+      params.push(fields.commissionDueAt);
+    }
+    if (fields.commissionPaidAt !== undefined) {
+      sets.push('commission_paid_at = ?');
+      params.push(fields.commissionPaidAt);
+    }
+    if (fields.commissionReceiptFileId !== undefined) {
+      sets.push('commission_receipt_file_id = ?');
+      params.push(fields.commissionReceiptFileId);
+    }
+    if (fields.metadata !== undefined) {
+      sets.push('metadata = ?');
+      params.push(fields.metadata ? JSON.stringify(fields.metadata) : null);
+    }
+    if (fields.updatedBy !== undefined) {
+      sets.push('updated_by = ?');
+      params.push(fields.updatedBy);
+    }
+    if (!sets.length) return;
+    params.push(bookingId);
+    await conn.query(
+      `
+        UPDATE bookings
+        SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      params,
+    );
+  }
+
+  async driverOwnsSettlementBooking(driverId, bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT 1
+        FROM bookings b
+        INNER JOIN booking_driver_assignments bda
+          ON bda.booking_id = b.id AND bda.deleted_at IS NULL
+        WHERE b.booking_number = ?
+          AND b.deleted_at IS NULL
+          AND b.status = 'COMPLETED'
+          AND bda.driver_id = ?
+        LIMIT 1
+      `,
+      [bookingNumber, driverId],
+    );
+    return rows.length > 0;
+  }
+
+  async findDriverSettlements(driverId) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.settlementSelectSql()}
+        INNER JOIN booking_driver_assignments bda
+          ON bda.booking_id = b.id AND bda.deleted_at IS NULL
+        WHERE bda.driver_id = ?
+          AND b.status = 'COMPLETED'
+          AND b.deleted_at IS NULL
+          AND b.commission_status NOT IN ('NOT_DUE_YET', 'WAIVED')
+        GROUP BY b.id
+        ORDER BY b.completed_at DESC, b.booking_number DESC
+      `,
+      [driverId],
+    );
+    return rows;
+  }
+
+  buildAdminSettlementFilters(filters) {
+    const where = [
+      'b.deleted_at IS NULL',
+      'b.status = \'COMPLETED\'',
+      'b.commission_status NOT IN (\'NOT_DUE_YET\', \'WAIVED\')',
+    ];
+    const params = [];
+
+    if (filters.status) {
+      if (filters.status === 'OVERDUE') {
+        where.push('(b.commission_status = \'OVERDUE\' OR (b.commission_status = \'DUE\' AND b.commission_due_at IS NOT NULL AND b.commission_due_at < NOW()))');
+      } else if (filters.status === 'PENDING') {
+        where.push('b.commission_status = \'DUE\' AND (b.commission_due_at IS NULL OR b.commission_due_at >= NOW()) AND b.commission_receipt_file_id IS NULL');
+      } else if (filters.status === 'RECEIPT_SUBMITTED') {
+        where.push('b.commission_receipt_file_id IS NOT NULL AND b.commission_status IN (\'DUE\', \'OVERDUE\')');
+      } else if (filters.status === 'APPROVED') {
+        where.push('b.commission_status = \'PAID\'');
+      } else if (filters.status === 'REJECTED') {
+        where.push('JSON_UNQUOTE(JSON_EXTRACT(b.metadata, \'$.commissionRejectionReason\')) IS NOT NULL AND b.commission_receipt_file_id IS NULL');
+      }
+    }
+
+    if (filters.driverId) {
+      where.push('b.driver_id = ?');
+      params.push(filters.driverId);
+    }
+
+    if (filters.bookingNumber) {
+      where.push('b.booking_number = ?');
+      params.push(filters.bookingNumber);
+    }
+
+    if (filters.completedDateFrom) {
+      where.push('b.completed_at >= ?');
+      params.push(filters.completedDateFrom);
+    }
+
+    if (filters.completedDateTo) {
+      where.push('b.completed_at < ?');
+      params.push(filters.completedDateTo);
+    }
+
+    if (filters.overdueOnly) {
+      where.push('(b.commission_status = \'OVERDUE\' OR (b.commission_status = \'DUE\' AND b.commission_due_at IS NOT NULL AND b.commission_due_at < NOW()))');
+    }
+
+    return { whereSql: where.join(' AND '), params };
+  }
+
+  async countAdminSettlements(filters) {
+    const { whereSql, params } = this.buildAdminSettlementFilters(filters);
+    const [rows] = await this.pool.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM bookings b
+        WHERE ${whereSql}
+      `,
+      params,
+    );
+    return rows[0]?.total ?? 0;
+  }
+
+  async findAdminSettlements(filters, pagination) {
+    const { whereSql, params } = this.buildAdminSettlementFilters(filters);
+    const limit = pagination.limit;
+    const offset = pagination.offset;
+    const [rows] = await this.pool.query(
+      `
+        ${this.settlementSelectSql()}
+        WHERE ${whereSql}
+        ORDER BY b.completed_at DESC, b.booking_number DESC
+        LIMIT ? OFFSET ?
+      `,
+      [...params, limit, offset],
+    );
+    return rows;
+  }
+
+  async countBlockingSettlementsForDriver(driverId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM bookings b
+        WHERE b.driver_id = ?
+          AND b.deleted_at IS NULL
+          AND b.status = 'COMPLETED'
+          AND b.commission_status IN ('DUE', 'OVERDUE')
+          AND (
+            b.commission_status = 'OVERDUE'
+            OR (
+              b.commission_due_at IS NOT NULL
+              AND b.commission_due_at < NOW()
+              AND b.commission_receipt_file_id IS NULL
+            )
+          )
+      `,
+      [driverId],
+    );
+    return Number(rows[0]?.total ?? 0);
+  }
+
+  buildAdminMissingObligationScope(filters) {
+    const where = [
+      'b.deleted_at IS NULL',
+      'b.status = \'COMPLETED\'',
+      `(
+        b.commission_status = 'NOT_DUE_YET'
+        OR b.commission_status = 'PENDING_AFTER_COMPLETION'
+        OR b.commission_amount IS NULL
+      )`,
+    ];
+    const params = [];
+
+    if (filters.driverId) {
+      where.push('b.driver_id = ?');
+      params.push(filters.driverId);
+    }
+
+    if (filters.bookingNumber) {
+      where.push('b.booking_number = ?');
+      params.push(filters.bookingNumber);
+    }
+
+    if (filters.completedDateFrom) {
+      where.push('b.completed_at >= ?');
+      params.push(filters.completedDateFrom);
+    }
+
+    if (filters.completedDateTo) {
+      where.push('b.completed_at < ?');
+      params.push(filters.completedDateTo);
+    }
+
+    return { whereSql: where.join(' AND '), params };
+  }
+
+  async findCompletedBookingIdsMissingObligationForAdmin(filters, limit = 100) {
+    const { whereSql, params } = this.buildAdminMissingObligationScope(filters);
+    const [rows] = await this.pool.query(
+      `
+        SELECT b.id
+        FROM bookings b
+        WHERE ${whereSql}
+        ORDER BY b.completed_at DESC, b.id DESC
+        LIMIT ?
+      `,
+      [...params, limit],
+    );
+    return rows.map((row) => row.id);
+  }
+
+  async findCompletedBookingIdsMissingObligation(driverId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT b.id
+        FROM bookings b
+        INNER JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+          AND bda.driver_id = ?
+          AND bda.deleted_at IS NULL
+        WHERE b.deleted_at IS NULL
+          AND b.status = 'COMPLETED'
+          AND (
+            b.commission_status = 'NOT_DUE_YET'
+            OR b.commission_status = 'PENDING_AFTER_COMPLETION'
+            OR b.commission_amount IS NULL
+          )
+      `,
+      [driverId],
+    );
+    return rows.map((row) => row.id);
+  }
+
+  async findUnpaidSettlementsForDriver(driverId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.id,
+          b.commission_status,
+          b.commission_due_at,
+          b.commission_receipt_file_id,
+          b.metadata
+        FROM bookings b
+        WHERE b.driver_id = ?
+          AND b.deleted_at IS NULL
+          AND b.status = 'COMPLETED'
+          AND b.commission_status NOT IN ('PAID', 'WAIVED', 'NOT_DUE_YET')
+      `,
+      [driverId],
+    );
+    return rows;
+  }
 }
 
 module.exports = BookingRepository;
