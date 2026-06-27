@@ -1144,11 +1144,20 @@ paths:
   /admin/bookings:
     get:
       tags: [Admin]
-      summary: Search admin bookings
+      summary: Search admin booking dispatch queue
+      description: Requires JWT bearer auth. Allowed roles ADMIN and SUPER_ADMIN only.
       operationId: adminListBookings
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
         - name: status
           in: query
           schema:
@@ -1157,14 +1166,52 @@ paths:
           in: query
           schema:
             type: string
+        - name: assignmentState
+          in: query
+          schema:
+            type: string
+            enum: [ASSIGNED, UNASSIGNED]
+        - name: serviceDateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: serviceDateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: driverId
+          in: query
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseBookingSummaryPagination'
+                $ref: '#/components/schemas/ApiResponseAdminBookingQueuePagination'
 
   /admin/bookings/{bookingNumber}:
+    get:
+      tags: [Admin]
+      summary: Get admin booking detail
+      operationId: adminGetBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminBookingDetail'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Admin]
       summary: Admin update booking
@@ -1188,6 +1235,8 @@ paths:
       tags: [Admin]
       summary: Assign driver to booking
       operationId: adminAssignDriver
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/BookingNumber'
       requestBody:
@@ -1203,6 +1252,38 @@ paths:
                 $ref: '#/components/schemas/ApiResponseDriverAssignmentResponse'
         '409':
           $ref: '#/components/responses/DriverNotAvailable'
+
+  /admin/bookings/{bookingNumber}/reassign-driver:
+    post:
+      tags: [Admin]
+      summary: Reassign booking to another driver
+      operationId: adminReassignDriver
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverReassignRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverAssignmentResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Assignment conflict or invalid status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
 
   /admin/bookings/{bookingNumber}/unassign-driver:
     post:
@@ -1257,8 +1338,10 @@ paths:
   /admin/drivers:
     get:
       tags: [Admin]
-      summary: List drivers
+      summary: List drivers for manual assignment
       operationId: adminListDrivers
+      security:
+        - bearerAuth: []
       responses:
         '200':
           content:
@@ -1834,7 +1917,7 @@ components:
       required: true
       schema:
         type: string
-        pattern: '^TX[0-9]{14}$'
+        pattern: '^TX[0-9]{12}$'
       example: TX202607010001
     RoomCode:
       name: roomCode
@@ -2848,6 +2931,234 @@ components:
             data:
               $ref: '#/components/schemas/BookingResponse'
 
+    AdminBookingQueueAssignment:
+      type: object
+      properties:
+        assignmentId:
+          type: integer
+          format: int64
+        driverId:
+          type: integer
+          format: int64
+        driverDisplayName:
+          type: string
+          nullable: true
+        driverPhone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    AdminBookingQueueItem:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+          pattern: '^TX[0-9]{12}$'
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        serviceType:
+          type: object
+          properties:
+            code:
+              type: string
+            name:
+              type: string
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        origin:
+          type: string
+        destination:
+          type: string
+        customerDisplayName:
+          type: string
+          nullable: true
+        customerPhone:
+          type: string
+          nullable: true
+        passengerCount:
+          type: integer
+        luggageSummary:
+          type: string
+          nullable: true
+        vehicleType:
+          type: object
+          properties:
+            code:
+              type: string
+            name:
+              type: string
+        flightNumber:
+          type: string
+          nullable: true
+        flightStatus:
+          type: string
+          nullable: true
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        totalAmount:
+          type: number
+        currency:
+          type: string
+        activeAssignment:
+          $ref: '#/components/schemas/AdminBookingQueueAssignment'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminBookingQueuePagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminBookingQueueItem'
+
+    ApiResponseAdminBookingQueuePagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AdminBookingQueuePagination'
+
+    AdminBookingDetail:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        serviceType:
+          type: object
+          properties:
+            code:
+              type: string
+            name:
+              type: string
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        route:
+          type: object
+          properties:
+            origin:
+              $ref: '#/components/schemas/PlaceLocation'
+            destination:
+              $ref: '#/components/schemas/PlaceLocation'
+        customer:
+          $ref: '#/components/schemas/CustomerSnapshotDto'
+        specialRequests:
+          type: string
+          nullable: true
+        passengers:
+          $ref: '#/components/schemas/PassengersDto'
+        luggage:
+          $ref: '#/components/schemas/LuggageDto'
+        vehicle:
+          type: object
+          properties:
+            typeCode:
+              type: string
+            typeName:
+              type: string
+            count:
+              type: integer
+        flight:
+          type: object
+          properties:
+            flightNumber:
+              type: string
+              nullable: true
+            airportIata:
+              type: string
+              nullable: true
+            scheduledArrivalAt:
+              type: string
+              format: date-time
+              nullable: true
+            estimatedArrivalAt:
+              type: string
+              format: date-time
+              nullable: true
+            delayStatus:
+              type: string
+              nullable: true
+            delayMinutes:
+              type: integer
+              nullable: true
+        pricing:
+          type: object
+          properties:
+            totalAmount:
+              type: number
+            currency:
+              type: string
+            paymentMethod:
+              $ref: '#/components/schemas/PaymentMethod'
+            paymentStatus:
+              $ref: '#/components/schemas/PaymentStatus'
+            chargeItems:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChargeItem'
+        commissionStatus:
+          type: string
+          nullable: true
+        activeAssignment:
+          $ref: '#/components/schemas/DriverAssignment'
+          nullable: true
+        assignmentHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverAssignment'
+        statusHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              fromStatus:
+                $ref: '#/components/schemas/ReservationStatus'
+              toStatus:
+                $ref: '#/components/schemas/ReservationStatus'
+              changedByRole:
+                $ref: '#/components/schemas/UserRole'
+              reason:
+                type: string
+                nullable: true
+              memo:
+                type: string
+                nullable: true
+              createdAt:
+                type: string
+                format: date-time
+        allowedActions:
+          type: array
+          items:
+            type: string
+            enum: [ASSIGN_DRIVER, REASSIGN_DRIVER]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponseAdminBookingDetail:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AdminBookingDetail'
+
     BookingSummary:
       type: object
       properties:
@@ -3356,6 +3667,21 @@ components:
         driverVehicleId:
           type: integer
           format: int64
+        assignmentReason:
+          type: string
+
+    DriverReassignRequest:
+      type: object
+      required: [driverId, reason]
+      properties:
+        driverId:
+          type: integer
+          format: int64
+        driverVehicleId:
+          type: integer
+          format: int64
+        reason:
+          type: string
         assignmentReason:
           type: string
 

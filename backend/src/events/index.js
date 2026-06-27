@@ -18,6 +18,7 @@ const EVENTS = {
   BOOKING_CONFIRMED: 'booking.confirmed',
   BOOKING_STATUS_CHANGED: 'booking.status_changed',
   DRIVER_ASSIGNED: 'driver.assigned',
+  DRIVER_REASSIGNED: 'driver.reassigned',
   DRIVER_ARRIVED: 'driver.arrived',
   TRIP_PICKED_UP: 'trip.picked_up',
   TRIP_COMPLETED: 'trip.completed',

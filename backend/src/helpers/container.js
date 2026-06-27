@@ -23,7 +23,8 @@ const BookingService = require('../services/booking.service');
 const BookingStatusService = require('../services/bookingStatus.service');
 const FlightService = require('../services/flight.service');
 const DriverJobService = require('../services/driverJob.service');
-const DriverQrService = require('../services/driverQr.service');
+const DriverRepository = require('../repositories/driver.repository');
+const AdminDispatchService = require('../services/adminDispatch.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -115,6 +116,13 @@ container.register('flightService', () => new FlightService({
 }));
 container.register('driverJobService', (c) => new DriverJobService(
   c.get('bookingRepository'),
+));
+container.register('driverRepository', () => new DriverRepository());
+container.register('adminDispatchService', (c) => new AdminDispatchService(
+  database.pool,
+  c.get('bookingRepository'),
+  c.get('driverRepository'),
+  c.get('bookingStatusService'),
 ));
 container.register('driverQrService', (c) => new DriverQrService(
   database.pool,

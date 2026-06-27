@@ -8,7 +8,7 @@ const paginationQuery = Joi.object({
   page_size: Joi.number().integer().min(1).max(100).default(20),
 });
 
-const bookingNumberParam = Joi.string().pattern(/^TX[0-9]{14}$/);
+const bookingNumberParam = Joi.string().pattern(/^TX[0-9]{12}$/);
 
 module.exports = {
   paginationQuery,

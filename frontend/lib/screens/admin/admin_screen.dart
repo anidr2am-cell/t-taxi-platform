@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
@@ -99,7 +100,7 @@ class _AdminScreenState extends State<AdminScreen> {
       case 0:
         return _buildDashboard(l10n);
       case 1:
-        return _buildReservations(l10n);
+        return const AdminDispatchQueuePage();
       case 2:
         return _buildChats(l10n);
       case 3:

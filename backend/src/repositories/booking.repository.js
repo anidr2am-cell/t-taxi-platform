@@ -420,6 +420,328 @@ class BookingRepository {
     );
     return rows[0] || null;
   }
+
+  buildAdminBookingFilters(filters) {
+    const where = ['b.deleted_at IS NULL'];
+    const params = [];
+
+    if (filters.status) {
+      where.push('b.status = ?');
+      params.push(filters.status);
+    }
+
+    if (filters.driverId) {
+      where.push('b.driver_id = ?');
+      params.push(filters.driverId);
+    }
+
+    if (filters.serviceDateFrom) {
+      where.push('b.scheduled_pickup_at >= ?');
+      params.push(filters.serviceDateFrom);
+    }
+
+    if (filters.serviceDateTo) {
+      where.push('b.scheduled_pickup_at < ?');
+      params.push(filters.serviceDateTo);
+    }
+
+    if (filters.assignmentState === 'ASSIGNED') {
+      where.push(`
+        EXISTS (
+          SELECT 1 FROM booking_driver_assignments bda
+          WHERE bda.booking_id = b.id
+            AND bda.is_active = 1
+            AND bda.deleted_at IS NULL
+        )
+      `);
+    } else if (filters.assignmentState === 'UNASSIGNED') {
+      where.push(`
+        NOT EXISTS (
+          SELECT 1 FROM booking_driver_assignments bda
+          WHERE bda.booking_id = b.id
+            AND bda.is_active = 1
+            AND bda.deleted_at IS NULL
+        )
+      `);
+    }
+
+    if (filters.search) {
+      const term = `%${filters.search}%`;
+      where.push(`
+        (
+          b.booking_number LIKE ?
+          OR b.customer_name LIKE ?
+          OR b.customer_phone LIKE ?
+          OR b.origin_address LIKE ?
+          OR b.destination_address LIKE ?
+          OR btd.flight_number LIKE ?
+        )
+      `);
+      params.push(term, term, term, term, term, term);
+    }
+
+    return { whereSql: where.join(' AND '), params };
+  }
+
+  adminQueueSelectSql() {
+    return `
+      SELECT
+        b.id,
+        b.booking_number,
+        b.status,
+        b.scheduled_pickup_at,
+        b.origin_address,
+        b.destination_address,
+        b.customer_name,
+        b.customer_phone,
+        b.payment_method,
+        b.total_amount,
+        b.currency,
+        b.created_at,
+        b.driver_id,
+        st.code AS service_type_code,
+        st.name AS service_type_name,
+        vt.code AS vehicle_type_code,
+        vt.name AS vehicle_type_name,
+        bp.adults,
+        bp.children,
+        bp.infants,
+        bl.carriers_20_inch,
+        bl.carriers_24_inch_plus,
+        bl.golf_bags,
+        bl.special_items,
+        btd.flight_number,
+        btd.delay_status,
+        bda.id AS assignment_id,
+        bda.driver_id AS assignment_driver_id,
+        bda.status AS assignment_status,
+        d.name AS driver_name,
+        d.phone AS driver_phone
+      FROM bookings b
+      INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
+      INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+      LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
+      LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+      LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+      LEFT JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+        AND bda.is_active = 1
+        AND bda.deleted_at IS NULL
+      LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+    `;
+  }
+
+  async countAdminBookings(filters) {
+    const { whereSql, params } = this.buildAdminBookingFilters(filters);
+    const [rows] = await this.pool.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM bookings b
+        LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+        WHERE ${whereSql}
+      `,
+      params,
+    );
+    return rows[0]?.total ?? 0;
+  }
+
+  async findAdminBookings(filters, pagination) {
+    const { whereSql, params } = this.buildAdminBookingFilters(filters);
+    const limit = pagination.limit;
+    const offset = pagination.offset;
+
+    const [rows] = await this.pool.query(
+      `
+        ${this.adminQueueSelectSql()}
+        WHERE ${whereSql}
+        ORDER BY
+          b.scheduled_pickup_at ASC,
+          b.created_at ASC,
+          b.booking_number ASC
+        LIMIT ? OFFSET ?
+      `,
+      [...params, limit, offset],
+    );
+    return rows;
+  }
+
+  async findAdminBookingDetail(bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.status,
+          b.scheduled_pickup_at,
+          b.origin_address,
+          b.origin_place_id,
+          b.origin_lat,
+          b.origin_lng,
+          b.destination_address,
+          b.destination_place_id,
+          b.destination_lat,
+          b.destination_lng,
+          b.customer_name,
+          b.customer_email,
+          b.customer_phone,
+          b.customer_country_code,
+          b.special_requests,
+          b.payment_method,
+          b.payment_status,
+          b.commission_status,
+          b.total_amount,
+          b.currency,
+          b.vehicle_count,
+          b.created_at,
+          b.updated_at,
+          b.metadata,
+          st.code AS service_type_code,
+          st.name AS service_type_name,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          bp.adults,
+          bp.children,
+          bp.infants,
+          bl.carriers_20_inch,
+          bl.carriers_24_inch_plus,
+          bl.golf_bags,
+          bl.special_items,
+          btd.flight_number,
+          btd.flight_scheduled_arrival_at,
+          btd.flight_estimated_arrival_at,
+          btd.delay_status,
+          btd.delay_minutes,
+          btd.airport_code_custom,
+          a.iata_code AS airport_iata
+        FROM bookings b
+        INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
+        INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+        LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
+        LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+        LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+        LEFT JOIN airports a ON a.id = btd.airport_id AND a.deleted_at IS NULL
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async findChargeItemsByBookingId(bookingId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT charge_type, description, quantity, unit_price, amount
+        FROM booking_charge_items
+        WHERE booking_id = ? AND deleted_at IS NULL
+        ORDER BY id ASC
+      `,
+      [bookingId],
+    );
+    return rows;
+  }
+
+  async findStatusLogsByBookingId(bookingId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT from_status, to_status, changed_by_role, reason, memo, created_at
+        FROM booking_status_logs
+        WHERE booking_id = ?
+        ORDER BY created_at ASC
+      `,
+      [bookingId],
+    );
+    return rows;
+  }
+
+  async findAssignmentsByBookingId(bookingId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          bda.id,
+          bda.driver_id,
+          bda.driver_vehicle_id,
+          bda.status,
+          bda.is_active,
+          bda.assignment_reason,
+          bda.assigned_at,
+          bda.unassigned_at,
+          bda.accepted_at,
+          d.name AS driver_name,
+          d.phone AS driver_phone
+        FROM booking_driver_assignments bda
+        LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+        WHERE bda.booking_id = ? AND bda.deleted_at IS NULL
+        ORDER BY bda.assigned_at DESC, bda.id DESC
+      `,
+      [bookingId],
+    );
+    return rows;
+  }
+
+  async findActiveAssignmentForUpdate(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          bda.id,
+          bda.driver_id,
+          bda.driver_vehicle_id,
+          bda.status,
+          bda.is_active,
+          bda.assignment_reason
+        FROM booking_driver_assignments bda
+        WHERE bda.booking_id = ?
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [bookingId],
+    );
+    return rows[0] || null;
+  }
+
+  async deactivateAssignment(conn, assignmentId, reason) {
+    const [result] = await conn.query(
+      `
+        UPDATE booking_driver_assignments
+        SET
+          is_active = 0,
+          status = 'CANCELLED',
+          unassigned_at = CURRENT_TIMESTAMP,
+          assignment_reason = COALESCE(?, assignment_reason),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND is_active = 1
+          AND deleted_at IS NULL
+      `,
+      [reason, assignmentId],
+    );
+    return result.affectedRows === 1;
+  }
+
+  async insertDriverAssignment(conn, row) {
+    const [result] = await conn.query(
+      `
+        INSERT INTO booking_driver_assignments (
+          booking_id,
+          driver_id,
+          driver_vehicle_id,
+          status,
+          assigned_by_user_id,
+          assignment_reason,
+          is_active
+        ) VALUES (?, ?, ?, 'ASSIGNED', ?, ?, 1)
+      `,
+      [
+        row.bookingId,
+        row.driverId,
+        row.driverVehicleId ?? null,
+        row.assignedByUserId,
+        row.assignmentReason ?? null,
+      ],
+    );
+    return result.insertId;
+  }
 }
 
 module.exports = BookingRepository;

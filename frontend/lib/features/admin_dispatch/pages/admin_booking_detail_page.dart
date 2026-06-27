@@ -1,0 +1,192 @@
+import 'package:flutter/material.dart';
+
+import '../../../l10n/app_localizations.dart';
+import '../services/admin_dispatch_api_service.dart';
+import '../widgets/assign_driver_dialog.dart';
+
+class AdminBookingDetailPage extends StatefulWidget {
+  final String bookingNumber;
+  final AdminDispatchApiService api;
+  final VoidCallback onChanged;
+
+  const AdminBookingDetailPage({
+    super.key,
+    required this.bookingNumber,
+    required this.api,
+    required this.onChanged,
+  });
+
+  @override
+  State<AdminBookingDetailPage> createState() => _AdminBookingDetailPageState();
+}
+
+class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
+  bool _loading = true;
+  String? _error;
+  Map<String, dynamic>? _detail;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final detail = await widget.api.getBookingDetail(widget.bookingNumber);
+      setState(() {
+        _detail = detail;
+        _loading = false;
+      });
+    } catch (err) {
+      setState(() {
+        _error = err.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  List<String> _allowedActions() {
+    final actions = _detail?['allowedActions'] as List<dynamic>? ?? [];
+    return actions.map((e) => e as String).toList();
+  }
+
+  Future<void> _assign() async {
+    final result = await showAssignDriverDialog(
+      context: context,
+      api: widget.api,
+      isReassign: false,
+    );
+    if (result == null) return;
+    setState(() => _submitting = true);
+    try {
+      await widget.api.assignDriver(widget.bookingNumber, result.driverId);
+      widget.onChanged();
+      await _load();
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _reassign() async {
+    final result = await showAssignDriverDialog(
+      context: context,
+      api: widget.api,
+      isReassign: true,
+    );
+    if (result == null) return;
+    setState(() => _submitting = true);
+    try {
+      await widget.api.reassignDriver(
+        widget.bookingNumber,
+        result.driverId,
+        result.reason!,
+      );
+      widget.onChanged();
+      await _load();
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final actions = _allowedActions();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.bookingNumber)),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!),
+                      ElevatedButton(onPressed: _load, child: Text(l10n.t('admin_dispatch_retry'))),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _infoCard(l10n, _detail!),
+                      const SizedBox(height: 16),
+                      if (actions.contains('ASSIGN_DRIVER'))
+                        ElevatedButton(
+                          onPressed: _submitting ? null : _assign,
+                          child: Text(l10n.t('admin_dispatch_assign_driver')),
+                        ),
+                      if (actions.contains('REASSIGN_DRIVER'))
+                        OutlinedButton(
+                          onPressed: _submitting ? null : _reassign,
+                          child: Text(l10n.t('admin_dispatch_reassign_driver')),
+                        ),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _infoCard(AppLocalizations l10n, Map<String, dynamic> detail) {
+    final route = Map<String, dynamic>.from(detail['route'] as Map);
+    final origin = Map<String, dynamic>.from(route['origin'] as Map);
+    final destination = Map<String, dynamic>.from(route['destination'] as Map);
+    final customer = Map<String, dynamic>.from(detail['customer'] as Map);
+    final pricing = Map<String, dynamic>.from(detail['pricing'] as Map);
+    final assignment = detail['activeAssignment'] as Map?;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.t('booking_summary'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _row(l10n.t('status'), detail['status'] as String? ?? ''),
+            _row(l10n.t('origin'), origin['address'] as String? ?? ''),
+            _row(l10n.t('destination'), destination['address'] as String? ?? ''),
+            _row(l10n.t('name'), customer['name'] as String? ?? ''),
+            _row(l10n.t('phone'), customer['phone'] as String? ?? ''),
+            _row(l10n.t('total'), '${pricing['totalAmount']} ${pricing['currency']}'),
+            _row(l10n.t('payment_method'), pricing['paymentMethod'] as String? ?? ''),
+            if (assignment != null)
+              _row(
+                l10n.t('admin_dispatch_assigned_driver'),
+                assignment['driverDisplayName'] as String? ?? '',
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _row(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: TextStyle(color: Colors.grey.shade700))),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+  }
+}
