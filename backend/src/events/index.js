@@ -24,6 +24,11 @@ const EVENTS = {
   TRIP_COMPLETED: 'trip.completed',
   BOOKING_CANCELLED: 'booking.cancelled',
   BOOKING_NO_SHOW: 'booking.no_show',
+  COMMISSION_REQUIRED: 'commission.required',
+  RECEIPT_SUBMITTED: 'receipt.submitted',
+  RECEIPT_REJECTED: 'receipt.rejected',
+  SETTLEMENT_APPROVED: 'settlement.approved',
+  REVIEW_SUBMITTED: 'review.submitted',
   CHAT_MESSAGE_SENT: 'chat.message_sent',
 };
 

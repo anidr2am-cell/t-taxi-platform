@@ -1,0 +1,7 @@
+const NOTIFICATION_CHANNELS = {
+  IN_APP: 'IN_APP',
+  EMAIL: 'EMAIL',
+  FCM: 'FCM',
+};
+
+module.exports = NOTIFICATION_CHANNELS;

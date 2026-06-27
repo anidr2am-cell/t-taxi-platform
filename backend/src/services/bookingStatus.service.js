@@ -5,6 +5,7 @@ const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const ROLES = require('../constants/roles');
 const { appEvents, EVENTS } = require('../events');
+const { isNotificationOutboxEvent } = require('../utils/outboxPayload.util');
 
 const TERMINAL_STATUSES = new Set([
   BOOKING_STATUS.COMPLETED,
@@ -61,9 +62,11 @@ const ACTIVITY_BY_STATUS = {
 };
 
 class BookingStatusService {
-  constructor(pool, bookingRepository) {
+  constructor(pool, bookingRepository, outboxRepository, outboxProcessor) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
+    this.outboxRepository = outboxRepository;
+    this.outboxProcessor = outboxProcessor;
   }
 
   validateTransition(fromStatus, toStatus, actorRole) {
@@ -167,8 +170,14 @@ class BookingStatusService {
   }
 
   emitDomainEvent(domainEvent, eventPayload) {
-    if (domainEvent) {
+    if (domainEvent === EVENTS.TRIP_COMPLETED) {
       appEvents.emit(domainEvent, eventPayload);
+    }
+  }
+
+  async dispatchOutboxAfterCommit(outboxId) {
+    if (outboxId && this.outboxProcessor) {
+      await this.outboxProcessor.dispatchOutboxIds([outboxId]);
     }
   }
 
@@ -196,6 +205,7 @@ class BookingStatusService {
         result: this.buildBookingResult(booking, toStatus, true),
         domainEvent: null,
         eventPayload: null,
+        outboxId: null,
       };
     }
 
@@ -226,13 +236,26 @@ class BookingStatusService {
       }),
     });
 
+    const domainEvent = EVENT_BY_STATUS[toStatus];
+    const eventPayload = this.buildEventPayload(booking, fromStatus, toStatus, actor, {
+      ...input,
+      occurredAt,
+    });
+
+    let outboxId = null;
+    if (this.outboxRepository && domainEvent && isNotificationOutboxEvent(domainEvent)) {
+      outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+        aggregateId: booking.id,
+        eventType: domainEvent,
+        payload: eventPayload,
+      });
+    }
+
     return {
       result: this.buildBookingResult(booking, toStatus),
-      domainEvent: EVENT_BY_STATUS[toStatus],
-      eventPayload: this.buildEventPayload(booking, fromStatus, toStatus, actor, {
-        ...input,
-        occurredAt,
-      }),
+      domainEvent,
+      eventPayload,
+      outboxId,
     };
   }
 
@@ -251,6 +274,7 @@ class BookingStatusService {
       conn.release();
     }
 
+    await this.dispatchOutboxAfterCommit(transition.outboxId);
     this.emitDomainEvent(transition.domainEvent, transition.eventPayload);
     return transition.result;
   }

@@ -4,17 +4,29 @@ const ERROR_CODES = require('../constants/errorCodes');
 const ROLES = require('../constants/roles');
 const MODERATION_STATUS = require('../constants/reviewModerationStatus');
 const { hashToken } = require('../utils/tokenHash.util');
+const { randomUUID } = require('node:crypto');
+const { EVENTS } = require('../events');
 
 const MAX_COMMENT_LENGTH = 500;
 const BOOKING_STATUS = { COMPLETED: 'COMPLETED' };
 
 class ReviewService {
-  constructor(pool, bookingRepository, reviewRepository, driverRepository, bookingService) {
+  constructor(
+    pool,
+    bookingRepository,
+    reviewRepository,
+    driverRepository,
+    bookingService,
+    outboxRepository,
+    outboxProcessor,
+  ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.reviewRepository = reviewRepository;
     this.driverRepository = driverRepository;
     this.bookingService = bookingService;
+    this.outboxRepository = outboxRepository;
+    this.outboxProcessor = outboxProcessor;
   }
 
   formatDateTime(date) {
@@ -266,7 +278,25 @@ class ReviewService {
         payload: { bookingNumber: normalized, reviewId, rating },
       });
 
+      let outboxId = null;
+      if (this.outboxRepository) {
+        outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+          aggregateId: booking.id,
+          eventType: EVENTS.REVIEW_SUBMITTED,
+          payload: {
+            eventId: randomUUID(),
+            eventName: EVENTS.REVIEW_SUBMITTED,
+            bookingId: booking.id,
+            bookingNumber: normalized,
+          },
+        });
+      }
+
       await conn.commit();
+
+      if (outboxId && this.outboxProcessor) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
 
       const review = await this.reviewRepository.findByBookingId(booking.id);
       return this.mapCustomerReviewState(booking, review);

@@ -18,6 +18,7 @@ const config = require('./config');
 const logger = require('./utils/logger');
 const { initSocket } = require('./socket');
 const { registerSettlementHandlers } = require('./events/handlers/settlement.handler');
+const container = require('./helpers/container');
 
 registerSettlementHandlers();
 
@@ -43,6 +44,10 @@ if (config.swagger.enabled) {
     logger.info(`Swagger UI: http://localhost:${PORT}${config.swagger.route}`);
   }
   logger.info(`API base: http://localhost:${PORT}/api/${config.server.apiVersion}`);
+
+  container.get('outboxProcessor').recoverOnStartup().catch((err) => {
+    logger.warn('Outbox startup recovery failed', { error: err.message });
+  });
 });
 
 function shutdown(signal) {

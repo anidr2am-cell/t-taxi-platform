@@ -98,6 +98,19 @@ class UserRepository {
       [userId],
     );
   }
+
+  async findActiveByRoles(roles) {
+    if (!roles?.length) return [];
+    const [rows] = await this.pool.query(
+      `
+        SELECT id, role
+        FROM users
+        WHERE role IN (?) AND is_active = 1 AND deleted_at IS NULL
+      `,
+      [roles],
+    );
+    return rows;
+  }
 }
 
 module.exports = UserRepository;

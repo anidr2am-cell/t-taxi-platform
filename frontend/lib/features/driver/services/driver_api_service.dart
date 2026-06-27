@@ -145,4 +145,23 @@ class DriverApiService {
     );
     return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
   }
+
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async {
+    final query = unreadOnly == true ? '?unreadOnly=true' : '';
+    final data = await _get('/driver/notifications$query');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<int> getUnreadNotificationCount() async {
+    final data = await _get('/driver/notifications/unread-count');
+    return Map<String, dynamic>.from(data as Map)['unreadCount'] as int? ?? 0;
+  }
+
+  Future<void> markNotificationRead(int notificationId) async {
+    await _post('/driver/notifications/$notificationId/read');
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await _post('/driver/notifications/read-all');
+  }
 }

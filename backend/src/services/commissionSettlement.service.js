@@ -7,6 +7,8 @@ const COMMISSION_STATUS = require('../constants/commissionStatus');
 const ROLES = require('../constants/roles');
 const { uploadDir } = require('../config/multer');
 const logger = require('../utils/logger');
+const { randomUUID } = require('node:crypto');
+const { EVENTS } = require('../events');
 
 const ADMIN_RECONCILE_BATCH_LIMIT = 100;
 
@@ -32,12 +34,16 @@ class CommissionSettlementService {
     driverRepository,
     fileRepository,
     settingsRepository,
+    outboxRepository,
+    outboxProcessor,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.driverRepository = driverRepository;
     this.fileRepository = fileRepository;
     this.settingsRepository = settingsRepository;
+    this.outboxRepository = outboxRepository;
+    this.outboxProcessor = outboxProcessor;
   }
 
   parseMetadata(raw) {
@@ -237,8 +243,8 @@ class CommissionSettlementService {
       await conn.beginTransaction();
       const [rows] = await conn.query(
         `
-          SELECT id, booking_number, status, total_amount, currency,
-                 commission_status, commission_amount, completed_at
+        SELECT id, booking_number, status, total_amount, currency,
+               commission_status, commission_amount, completed_at, driver_id
           FROM bookings
           WHERE id = ? AND deleted_at IS NULL
           FOR UPDATE
@@ -285,7 +291,30 @@ class CommissionSettlementService {
         },
       });
 
+      let outboxId = null;
+      if (booking.driver_id && this.outboxRepository) {
+        const driver = await this.driverRepository.findByIdForUpdate(conn, booking.driver_id);
+        if (driver?.user_id) {
+          outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+            aggregateId: booking.id,
+            eventType: EVENTS.COMMISSION_REQUIRED,
+            payload: {
+              eventId: randomUUID(),
+              eventName: EVENTS.COMMISSION_REQUIRED,
+              bookingId: booking.id,
+              bookingNumber: booking.booking_number,
+              driverUserId: driver.user_id,
+              driverId: driver.id,
+            },
+          });
+        }
+      }
+
       await conn.commit();
+
+      if (outboxId && this.outboxProcessor) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -451,7 +480,25 @@ class CommissionSettlementService {
         payload: { bookingNumber, fileId },
       });
 
+      let outboxId = null;
+      if (this.outboxRepository) {
+        outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+          aggregateId: row.id,
+          eventType: EVENTS.RECEIPT_SUBMITTED,
+          payload: {
+            eventId: randomUUID(),
+            eventName: EVENTS.RECEIPT_SUBMITTED,
+            bookingId: row.id,
+            bookingNumber,
+          },
+        });
+      }
+
       await conn.commit();
+
+      if (outboxId && this.outboxProcessor) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
 
       if (file?.path && fs.existsSync(file.path)) {
         fs.unlinkSync(file.path);
@@ -581,9 +628,44 @@ class CommissionSettlementService {
         payload: { bookingNumber },
       });
 
+      let outboxId = null;
+      if (this.outboxRepository) {
+        const [driverRows] = await conn.query(
+          `
+            SELECT b.driver_id, d.user_id AS driver_user_id
+            FROM bookings b
+            INNER JOIN drivers d ON d.id = b.driver_id
+            WHERE b.id = ? AND b.deleted_at IS NULL
+            LIMIT 1
+          `,
+          [row.id],
+        );
+        const driverRow = driverRows[0];
+        if (driverRow?.driver_user_id) {
+          outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+            aggregateId: row.id,
+            eventType: EVENTS.SETTLEMENT_APPROVED,
+            payload: {
+              eventId: randomUUID(),
+              eventName: EVENTS.SETTLEMENT_APPROVED,
+              bookingId: row.id,
+              bookingNumber,
+              driverUserId: driverRow.driver_user_id,
+              driverId: driverRow.driver_id,
+            },
+          });
+        }
+      }
+
       await conn.commit();
-      const updated = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
-      return this.mapAdminDetail(updated, null);
+
+      if (outboxId && this.outboxProcessor) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
+
+      const updatedSettlement = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
+
+      return this.mapAdminDetail(updatedSettlement, null);
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -661,9 +743,44 @@ class CommissionSettlementService {
         payload: { bookingNumber, reason },
       });
 
+      let outboxId = null;
+      if (this.outboxRepository) {
+        const [driverRows] = await conn.query(
+          `
+            SELECT b.driver_id, d.user_id AS driver_user_id
+            FROM bookings b
+            INNER JOIN drivers d ON d.id = b.driver_id
+            WHERE b.id = ? AND b.deleted_at IS NULL
+            LIMIT 1
+          `,
+          [row.id],
+        );
+        const driverRow = driverRows[0];
+        if (driverRow?.driver_user_id) {
+          outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+            aggregateId: row.id,
+            eventType: EVENTS.RECEIPT_REJECTED,
+            payload: {
+              eventId: randomUUID(),
+              eventName: EVENTS.RECEIPT_REJECTED,
+              bookingId: row.id,
+              bookingNumber,
+              driverUserId: driverRow.driver_user_id,
+              driverId: driverRow.driver_id,
+            },
+          });
+        }
+      }
+
       await conn.commit();
-      const updated = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
-      return this.mapAdminDetail(updated, null);
+
+      if (outboxId && this.outboxProcessor) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
+
+      const updatedSettlement = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
+
+      return this.mapAdminDetail(updatedSettlement, null);
     } catch (err) {
       await conn.rollback();
       throw err;

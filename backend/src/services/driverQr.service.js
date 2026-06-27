@@ -133,6 +133,7 @@ class DriverQrService {
       conn.release();
     }
 
+    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
     this.bookingStatusService.emitDomainEvent(
       transition.domainEvent,
       transition.eventPayload,
@@ -204,7 +205,8 @@ class DriverQrService {
     }
 
     if (transition) {
-      this.bookingStatusService.emitDomainEvent(
+      await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    this.bookingStatusService.emitDomainEvent(
         transition.domainEvent,
         transition.eventPayload,
       );
@@ -278,7 +280,8 @@ class DriverQrService {
     }
 
     if (transition) {
-      this.bookingStatusService.emitDomainEvent(
+      await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    this.bookingStatusService.emitDomainEvent(
         transition.domainEvent,
         transition.eventPayload,
       );

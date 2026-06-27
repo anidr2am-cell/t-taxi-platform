@@ -1,0 +1,6 @@
+const RECIPIENT_TYPES = {
+  USER: 'USER',
+  GUEST_BOOKING: 'GUEST_BOOKING',
+};
+
+module.exports = RECIPIENT_TYPES;

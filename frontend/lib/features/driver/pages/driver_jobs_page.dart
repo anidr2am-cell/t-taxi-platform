@@ -4,6 +4,7 @@ import '../models/driver_booking.dart';
 import '../services/driver_api_service.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import 'driver_booking_detail_page.dart';
+import 'driver_notifications_page.dart';
 import 'driver_login_page.dart';
 
 class DriverJobsPage extends StatefulWidget {
@@ -19,6 +20,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
   late final DriverApiService _api;
   Future<DriverJobsToday>? _future;
   Future<Map<String, dynamic>>? _ratingFuture;
+  Future<int>? _unreadFuture;
 
   @override
   void initState() {
@@ -31,7 +33,15 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
     setState(() {
       _future = _api.getTodayBookings();
       _ratingFuture = _api.getRatingSummary();
+      _unreadFuture = _api.getUnreadNotificationCount();
     });
+  }
+
+  void _openNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => DriverNotificationsPage(api: _api)),
+    ).then((_) => _refresh());
   }
 
   Future<void> _logout() async {
@@ -58,6 +68,20 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
       appBar: AppBar(
         title: const Text('Today’s Jobs'),
         actions: [
+          FutureBuilder<int>(
+            future: _unreadFuture,
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return IconButton(
+                onPressed: _openNotifications,
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text('$count'),
+                  child: const Icon(Icons.notifications_outlined),
+                ),
+              );
+            },
+          ),
           IconButton(
             onPressed: () => Navigator.push(
               context,

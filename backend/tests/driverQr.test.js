@@ -118,23 +118,26 @@ function buildHarness(options = {}) {
             status: input.status,
             idempotent: true,
           },
-          domainEvent: null,
-          eventPayload: null,
-        };
-      }
-      return {
-        result: {
-          bookingNumber,
-          status: input.status,
-          idempotent: false,
-        },
-        domainEvent: `event.${input.status}`,
-        eventPayload: { bookingNumber, status: input.status },
+        domainEvent: null,
+        eventPayload: null,
+        outboxId: null,
       };
+    }
+    return {
+      result: {
+        bookingNumber,
+        status: input.status,
+        idempotent: false,
+      },
+      domainEvent: `event.${input.status}`,
+      eventPayload: { bookingNumber, status: input.status },
+      outboxId: null,
+    };
     },
     emitDomainEvent(domainEvent) {
       if (domainEvent) calls.emitted += 1;
     },
+    async dispatchOutboxAfterCommit() {},
   };
   const service = new DriverQrService(
     { async getConnection() { return conn; } },

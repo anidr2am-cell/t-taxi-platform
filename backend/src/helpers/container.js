@@ -31,6 +31,10 @@ const ReviewRepository = require('../repositories/review.repository');
 const ReviewService = require('../services/review.service');
 const AdminDispatchService = require('../services/adminDispatch.service');
 const DriverQrService = require('../services/driverQr.service');
+const NotificationRepository = require('../repositories/notification.repository');
+const NotificationService = require('../services/notification.service');
+const OutboxRepository = require('../repositories/outbox.repository');
+const OutboxProcessor = require('../services/outboxProcessor.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -105,6 +109,8 @@ container.register('bookingNumberService', () => new BookingNumberService());
 container.register('bookingStatusService', (c) => new BookingStatusService(
   database.pool,
   c.get('bookingRepository'),
+  c.get('outboxRepository'),
+  c.get('outboxProcessor'),
 ));
 container.register('bookingService', (c) => new BookingService(
   database.pool,
@@ -114,6 +120,8 @@ container.register('bookingService', (c) => new BookingService(
   c.get('pricingService'),
   c.get('vehicleRecommendationService'),
   c.get('vehicleRepository'),
+  c.get('outboxRepository'),
+  c.get('outboxProcessor'),
 ));
 container.register('flightService', () => new FlightService({
   apiKey: config.external.aviationStackApiKey,
@@ -132,6 +140,8 @@ container.register('commissionSettlementService', (c) => new CommissionSettlemen
   c.get('driverRepository'),
   c.get('fileRepository'),
   c.get('settingsRepository'),
+  c.get('outboxRepository'),
+  c.get('outboxProcessor'),
 ));
 container.register('reviewRepository', () => new ReviewRepository());
 container.register('reviewService', (c) => new ReviewService(
@@ -140,6 +150,8 @@ container.register('reviewService', (c) => new ReviewService(
   c.get('reviewRepository'),
   c.get('driverRepository'),
   c.get('bookingService'),
+  c.get('outboxRepository'),
+  c.get('outboxProcessor'),
 ));
 container.register('adminDispatchService', (c) => new AdminDispatchService(
   database.pool,
@@ -147,12 +159,28 @@ container.register('adminDispatchService', (c) => new AdminDispatchService(
   c.get('driverRepository'),
   c.get('bookingStatusService'),
   c.get('commissionSettlementService'),
+  c.get('outboxRepository'),
+  c.get('outboxProcessor'),
 ));
 container.register('driverQrService', (c) => new DriverQrService(
   database.pool,
   c.get('bookingRepository'),
   c.get('bookingStatusService'),
   c.get('driverJobService'),
+));
+container.register('notificationRepository', () => new NotificationRepository());
+container.register('notificationService', (c) => new NotificationService(
+  database.pool,
+  c.get('notificationRepository'),
+  c.get('userRepository'),
+  c.get('bookingRepository'),
+  c.get('driverRepository'),
+  c.get('bookingService'),
+));
+container.register('outboxRepository', () => new OutboxRepository(database.pool));
+container.register('outboxProcessor', (c) => new OutboxProcessor(
+  c.get('outboxRepository'),
+  () => c.get('notificationService'),
 ));
 
 module.exports = container;

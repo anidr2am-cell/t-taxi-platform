@@ -40,6 +40,8 @@ function createHarness({ booking = createBooking(), commitError = null } = {}) {
     updateStatus: 0,
     insertStatusLog: 0,
     insertActivityLog: 0,
+    outboxInsert: 0,
+    outboxDispatch: 0,
   };
   const records = {};
   const conn = {
@@ -79,11 +81,24 @@ function createHarness({ booking = createBooking(), commitError = null } = {}) {
       records.activityLog = { bookingId, activity };
     },
   };
+  const outboxRepository = {
+    async insertNotificationEvent(_conn, data) {
+      calls.outboxInsert += 1;
+      records.outbox = data;
+      return 42;
+    },
+  };
+  const outboxProcessor = {
+    async dispatchOutboxIds(ids) {
+      calls.outboxDispatch += 1;
+      records.dispatchedIds = ids;
+    },
+  };
 
   return {
     calls,
     records,
-    service: new BookingStatusService(pool, repository),
+    service: new BookingStatusService(pool, repository, outboxRepository, outboxProcessor),
   };
 }
 
@@ -103,17 +118,14 @@ afterEach(() => {
   appEvents.removeAllListeners(EVENTS.BOOKING_CONFIRMED);
 });
 
-test('valid transition writes logs and emits one domain event after commit', async () => {
+test('valid transition writes logs and outbox event after commit', async () => {
   const harness = createHarness();
-  const collector = collectEvents(EVENTS.BOOKING_CONFIRMED);
 
   const result = await harness.service.transition(
     'TX202607010001',
     { status: 'CONFIRMED', reason: 'PAYMENT_CONFIRMED', memo: 'manual confirm' },
     actor,
   );
-
-  collector.stop();
 
   assert.equal(result.status, 'CONFIRMED');
   assert.equal(result.idempotent, false);
@@ -122,7 +134,9 @@ test('valid transition writes logs and emits one domain event after commit', asy
   assert.equal(harness.calls.insertActivityLog, 1);
   assert.equal(harness.calls.commit, 1);
   assert.equal(harness.calls.rollback, 0);
-  assert.equal(collector.events.length, 1);
+  assert.equal(harness.calls.outboxInsert, 1);
+  assert.equal(harness.calls.outboxDispatch, 1);
+  assert.deepEqual(harness.records.dispatchedIds, [42]);
 
   assert.deepEqual(harness.records.activityLog.activity.payload, {
     bookingNumber: 'TX202607010001',
@@ -137,7 +151,9 @@ test('valid transition writes logs and emits one domain event after commit', asy
   });
   assert.match(harness.records.activityLog.activity.payload.occurredAt, /^\d{4}-\d{2}-\d{2}T/);
 
-  const event = collector.events[0];
+  assert.equal(harness.records.outbox.eventType, EVENTS.BOOKING_CONFIRMED);
+  assert.equal(harness.records.outbox.aggregateId, 10);
+  const event = harness.records.outbox.payload;
   assert.equal(event.eventName, EVENTS.BOOKING_CONFIRMED);
   assert.match(event.eventId, /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
   assert.equal(event.bookingId, 10);
@@ -199,20 +215,18 @@ test('repeated same-status request does not duplicate logs', async () => {
   assert.equal(harness.calls.commit, 2);
 });
 
-test('transaction failure prevents event emission', async () => {
+test('transaction failure prevents outbox dispatch', async () => {
   const harness = createHarness({ commitError: new Error('commit failed') });
-  const collector = collectEvents(EVENTS.BOOKING_CONFIRMED);
 
   await assert.rejects(
     () => harness.service.transition('TX202607010001', { status: 'CONFIRMED' }, actor),
     /commit failed/,
   );
 
-  collector.stop();
-
   assert.equal(harness.calls.updateStatus, 1);
   assert.equal(harness.calls.insertStatusLog, 1);
   assert.equal(harness.calls.insertActivityLog, 1);
+  assert.equal(harness.calls.outboxInsert, 1);
+  assert.equal(harness.calls.outboxDispatch, 0);
   assert.equal(harness.calls.rollback, 1);
-  assert.equal(collector.events.length, 0);
 });

@@ -230,10 +230,19 @@ test('assign uses BookingStatusService transitions', async () => {
   assert.deepEqual(transitions, [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.DRIVER_ASSIGNED]);
 });
 
-test('reassign emits driver.reassigned only after commit', async () => {
-  let emitted = 0;
-  const handler = () => { emitted += 1; };
-  appEvents.on(EVENTS.DRIVER_REASSIGNED, handler);
+test('reassign dispatches outbox only after commit', async () => {
+  let dispatched = 0;
+  const outboxRepository = {
+    async insertNotificationEvent() {
+      return 77;
+    },
+  };
+  const outboxProcessor = {
+    async dispatchOutboxIds(ids) {
+      assert.deepEqual(ids, [77]);
+      dispatched += 1;
+    },
+  };
 
   const bookingRepo = {
     async findByBookingNumberForUpdate() {
@@ -265,15 +274,22 @@ test('reassign emits driver.reassigned only after commit', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, {}, settlementStub);
+  const service = new AdminDispatchService(
+    pool,
+    bookingRepo,
+    driverRepo,
+    {},
+    settlementStub,
+    outboxRepository,
+    outboxProcessor,
+  );
 
   await service.reassignDriver(
     'TX202607010001',
     { driverId: 6, reason: 'Closer driver' },
     { id: 1, role: 'ADMIN' },
   );
-  assert.equal(emitted, 1);
-  appEvents.off(EVENTS.DRIVER_REASSIGNED, handler);
+  assert.equal(dispatched, 1);
 });
 
 test('booking detail never includes qr hashes', async () => {
@@ -535,10 +551,18 @@ test('assign maps ER_DUP_ENTRY to ASSIGNMENT_CONFLICT', async () => {
   );
 });
 
-test('reassign does not emit event when transaction fails', async () => {
-  let emitted = 0;
-  const handler = () => { emitted += 1; };
-  appEvents.on(EVENTS.DRIVER_REASSIGNED, handler);
+test('reassign does not dispatch outbox when transaction fails', async () => {
+  let dispatched = 0;
+  const outboxRepository = {
+    async insertNotificationEvent() {
+      return 77;
+    },
+  };
+  const outboxProcessor = {
+    async dispatchOutboxIds() {
+      dispatched += 1;
+    },
+  };
 
   const bookingRepo = {
     async findByBookingNumberForUpdate() {
@@ -559,7 +583,15 @@ test('reassign does not emit event when transaction fails', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub);
+  const service = new AdminDispatchService(
+    pool,
+    bookingRepo,
+    {},
+    {},
+    settlementStub,
+    outboxRepository,
+    outboxProcessor,
+  );
 
   await assert.rejects(
     () => service.reassignDriver(
@@ -568,6 +600,5 @@ test('reassign does not emit event when transaction fails', async () => {
       { id: 1, role: 'ADMIN' },
     ),
   );
-  assert.equal(emitted, 0);
-  appEvents.off(EVENTS.DRIVER_REASSIGNED, handler);
+  assert.equal(dispatched, 0);
 });

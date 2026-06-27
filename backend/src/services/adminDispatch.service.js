@@ -4,7 +4,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const ROLES = require('../constants/roles');
-const { appEvents, EVENTS } = require('../events');
+const { EVENTS } = require('../events');
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -26,12 +26,16 @@ class AdminDispatchService {
     driverRepository,
     bookingStatusService,
     commissionSettlementService,
+    outboxRepository,
+    outboxProcessor,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.driverRepository = driverRepository;
     this.bookingStatusService = bookingStatusService;
     this.commissionSettlementService = commissionSettlementService;
+    this.outboxRepository = outboxRepository;
+    this.outboxProcessor = outboxProcessor;
   }
 
   actorFromUser(user) {
@@ -371,7 +375,7 @@ class AdminDispatchService {
       transitions.push(BOOKING_STATUS.DRIVER_ASSIGNED);
     }
 
-    const events = [];
+    const outboxIds = [];
     for (const status of transitions) {
       const result = await this.bookingStatusService.transitionInTransaction(
         conn,
@@ -380,17 +384,17 @@ class AdminDispatchService {
         actor,
         { skipAccessCheck: true },
       );
-      if (result.domainEvent) {
-        events.push({ event: result.domainEvent, payload: result.eventPayload });
+      if (result.outboxId) {
+        outboxIds.push(result.outboxId);
       }
     }
-    return events;
+    return outboxIds;
   }
 
   async assignDriver(bookingNumber, input, user) {
     const actor = this.actorFromUser(user);
     const conn = await this.pool.getConnection();
-    const pendingEvents = [];
+    const pendingOutboxIds = [];
 
     try {
       await conn.beginTransaction();
@@ -433,13 +437,13 @@ class AdminDispatchService {
         assignmentReason: input.assignmentReason ?? input.reason ?? null,
       });
 
-      const statusEvents = await this.transitionToDriverAssigned(
+      const statusOutboxIds = await this.transitionToDriverAssigned(
         conn,
         bookingNumber,
         actor,
         booking.status,
       );
-      pendingEvents.push(...statusEvents);
+      pendingOutboxIds.push(...statusOutboxIds);
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
         activityType: 'DRIVER_ASSIGNED',
@@ -455,8 +459,8 @@ class AdminDispatchService {
 
       await conn.commit();
 
-      for (const item of pendingEvents) {
-        appEvents.emit(item.event, item.payload);
+      if (this.outboxProcessor && pendingOutboxIds.length) {
+        await this.outboxProcessor.dispatchOutboxIds(pendingOutboxIds);
       }
 
       return {
@@ -486,7 +490,7 @@ class AdminDispatchService {
   async reassignDriver(bookingNumber, input, user) {
     const actor = this.actorFromUser(user);
     const conn = await this.pool.getConnection();
-    let reassignEvent = null;
+    let outboxId = null;
     let response;
 
     try {
@@ -563,21 +567,27 @@ class AdminDispatchService {
         },
       });
 
-      await conn.commit();
+      if (this.outboxRepository) {
+        outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+          aggregateId: booking.id,
+          eventType: EVENTS.DRIVER_REASSIGNED,
+          payload: {
+            eventId: randomUUID(),
+            eventName: EVENTS.DRIVER_REASSIGNED,
+            bookingId: booking.id,
+            bookingNumber,
+            previousDriverId: active.driver_id,
+            newDriverId: driver.id,
+            assignmentId,
+            actorUserId: actor.id,
+            actorRole: actor.role,
+            reason: input.reason ?? null,
+            occurredAt: new Date().toISOString(),
+          },
+        });
+      }
 
-      reassignEvent = {
-        eventId: randomUUID(),
-        eventName: EVENTS.DRIVER_REASSIGNED,
-        bookingId: booking.id,
-        bookingNumber,
-        previousDriverId: active.driver_id,
-        newDriverId: driver.id,
-        assignmentId,
-        actorUserId: actor.id,
-        actorRole: actor.role,
-        reason: input.reason ?? null,
-        occurredAt: new Date().toISOString(),
-      };
+      await conn.commit();
 
       response = {
         assignmentId,
@@ -602,8 +612,8 @@ class AdminDispatchService {
       conn.release();
     }
 
-    if (reassignEvent) {
-      appEvents.emit(EVENTS.DRIVER_REASSIGNED, reassignEvent);
+    if (outboxId && this.outboxProcessor) {
+      await this.outboxProcessor.dispatchOutboxIds([outboxId]);
     }
 
     return response;

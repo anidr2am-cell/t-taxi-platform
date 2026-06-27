@@ -565,6 +565,108 @@ paths:
         '409':
           description: REVIEW_NOT_ELIGIBLE or REVIEW_ALREADY_SUBMITTED
 
+  /bookings/{bookingNumber}/notifications:
+    get:
+      tags: [Booking]
+      summary: List booking-scoped notifications
+      description: >
+        Authenticated customer owner or guest via X-Guest-Access-Token header.
+        Guest access returns only notifications for this booking.
+      operationId: listBookingNotifications
+      security:
+        - bearerAuth: []
+        - guestReviewAccessHeader: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+        - name: notificationType
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+        '403':
+          $ref: '#/components/responses/BookingNotAccessible'
+
+  /customer/notifications:
+    get:
+      tags: [Customer]
+      summary: List authenticated customer notifications
+      operationId: listCustomerNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+        - name: notificationType
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+  /customer/notifications/unread-count:
+    get:
+      tags: [Customer]
+      summary: Customer unread notification count
+      operationId: customerNotificationUnreadCount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUnreadCount'
+  /customer/notifications/read-all:
+    post:
+      tags: [Customer]
+      summary: Mark all customer notifications read
+      operationId: customerNotificationsReadAll
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMarkAllRead'
+  /customer/notifications/{notificationId}/read:
+    post:
+      tags: [Customer]
+      summary: Mark customer notification read
+      operationId: customerNotificationRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationRead'
+
   /bookings/{bookingNumber}/cancel:
     post:
       tags: [Booking]
@@ -1606,6 +1708,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseReviewDetail'
 
+  /admin/notifications:
+    get:
+      tags: [Admin]
+      summary: List admin notifications
+      description: Each admin sees only notifications addressed to their user account.
+      operationId: listAdminNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+        - name: notificationType
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+  /admin/notifications/unread-count:
+    get:
+      tags: [Admin]
+      summary: Admin unread notification count
+      operationId: adminNotificationUnreadCount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUnreadCount'
+  /admin/notifications/read-all:
+    post:
+      tags: [Admin]
+      summary: Mark all admin notifications read
+      operationId: adminNotificationsReadAll
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMarkAllRead'
+  /admin/notifications/{notificationId}/read:
+    post:
+      tags: [Admin]
+      summary: Mark admin notification read
+      operationId: adminNotificationRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationRead'
+
   /driver/rating-summary:
     get:
       tags: [Driver]
@@ -1624,6 +1797,76 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDriverRatingSummary'
+
+  /driver/notifications:
+    get:
+      tags: [Driver]
+      summary: List driver notifications
+      operationId: listDriverNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+        - name: notificationType
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+  /driver/notifications/unread-count:
+    get:
+      tags: [Driver]
+      summary: Driver unread notification count
+      operationId: driverNotificationUnreadCount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUnreadCount'
+  /driver/notifications/read-all:
+    post:
+      tags: [Driver]
+      summary: Mark all driver notifications read
+      operationId: driverNotificationsReadAll
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMarkAllRead'
+  /driver/notifications/{notificationId}/read:
+    post:
+      tags: [Driver]
+      summary: Mark driver notification read
+      operationId: driverNotificationRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationRead'
 
   /admin/drivers/{id}:
     get:
@@ -4139,6 +4382,85 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DriverRatingSummary'
+
+    NotificationListItem:
+      type: object
+      properties:
+        notificationId:
+          type: integer
+        notificationType:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+          description: Sanitized references only; no tokens or secrets
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    PaginatedNotificationList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total:
+                  type: integer
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NotificationListItem'
+
+    ApiResponseUnreadCount:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                unreadCount:
+                  type: integer
+
+    ApiResponseMarkAllRead:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                updatedCount:
+                  type: integer
+
+    ApiResponseNotificationRead:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                notificationId:
+                  type: integer
+                read:
+                  type: boolean
 
     DriverAssignRequest:
       type: object

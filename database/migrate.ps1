@@ -43,7 +43,8 @@ $files = @(
     "15_pricing_architecture.sql",
     "16_booking_qr_settlement.sql",
     "17_settlement_settings_seed.sql",
-    "18_reviews.sql"
+    "18_reviews.sql",
+    "19_notification_foundation.sql"
 )
 
 function Invoke-MysqlFile {

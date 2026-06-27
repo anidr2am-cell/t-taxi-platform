@@ -10,32 +10,32 @@ const {
 } = require('../validators/notification.validator');
 
 const router = express.Router();
-const customerOnly = [authMiddleware, roleMiddleware([ROLES.CUSTOMER])];
+const adminOnly = [authMiddleware, roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN])];
 
 router.get(
   '/notifications',
-  customerOnly,
+  adminOnly,
   validate({ query: notificationListQuerySchema }),
-  notificationController.listCustomerNotifications,
+  notificationController.listAdminNotifications,
 );
 
 router.get(
   '/notifications/unread-count',
-  customerOnly,
-  notificationController.customerUnreadCount,
+  adminOnly,
+  notificationController.adminUnreadCount,
 );
 
 router.post(
   '/notifications/:notificationId/read',
-  customerOnly,
+  adminOnly,
   validate({ params: notificationIdParamsSchema }),
-  notificationController.markCustomerRead,
+  notificationController.markAdminRead,
 );
 
 router.post(
   '/notifications/read-all',
-  customerOnly,
-  notificationController.markCustomerReadAll,
+  adminOnly,
+  notificationController.markAdminReadAll,
 );
 
 module.exports = router;

@@ -4,12 +4,12 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Pack 15 complete — Review and Rating MVP. Next: Pack 16 Notification Foundation MVP.
+Pack 16 complete — Notification Foundation MVP. Next: Pack 17 Live Chat MVP.
 
 # Completed
 
 - [x] Architecture & API design docs (`ARCHITECTURE`, `DATABASE_DESIGN`, `API_CONTRACT`, `BUSINESS_ENGINE`, `ADMIN_OPERATION_SYSTEM`)
-- [x] MySQL migrations `00`–`18` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns, settlement settings seed, reviews)
+- [x] MySQL migrations `00`–`19` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns, settlement settings seed, reviews, notification foundation)
 - [x] Backend skeleton — Express, JWT middleware, Joi validation, Swagger UI, health check
 - [x] Auth API — register, login, refresh, logout, `/auth/me`
 - [x] Booking APIs — `POST /bookings/vehicle/recommend`, `POST /bookings/pricing/calculate`, `POST /bookings`
@@ -76,6 +76,20 @@ Pack 15 complete — Review and Rating MVP. Next: Pack 16 Notification Foundatio
 - [x] Flutter driver rating summary card — average and count only; no individual comments
 - [x] Flutter admin reviews — queue with rating/status/search filters, detail, hide/restore with confirmation, loading/empty/error/refresh states
 - [x] Review OpenAPI documentation and focused backend/Flutter tests
+- [x] Pack 16 Notification Foundation MVP — transactional outbox, in-app notifications, customer/guest/driver/admin APIs
+- [x] Notification schema — `database/19_notification_foundation.sql`; existing `outbox_events` integrated; `database/migrate.ps1` through migration 19
+- [x] Transactional outbox — notification-relevant domain events written in the same DB transaction as business changes; flow: outbox write → commit → bounded `OutboxProcessor` dispatch
+- [x] Outbox reliability — immediate post-commit dispatch; one-time startup recovery (bounded batch, non-blocking); `PENDING`/`FAILED` retryable until `max_retries`; successful rows `COMPLETED`; notification failures do not roll back business transactions
+- [x] Supported operational events — `booking.created`, `booking.confirmed`, `driver.assigned`, `driver.reassigned`, `driver.arrived`, `trip.picked_up`, `trip.completed`, `commission.required`, `receipt.submitted`, `receipt.rejected`, `settlement.approved`, `review.submitted`; review requested after trip completion
+- [x] Centralized `NotificationService` — idempotent notification and delivery records; duplicate domain events do not duplicate notifications; idempotency protects retries and partial failures
+- [x] Delivery channels — IN_APP implemented; EMAIL adapter safely skipped when SMTP unavailable; FCM adapter safely skipped when Firebase configuration unavailable
+- [x] Customer notification APIs — list, unread count, mark read, mark all read
+- [x] Guest booking-scoped notification API — `GET /api/v1/bookings/:bookingNumber/notifications`; `X-Guest-Access-Token` header only
+- [x] Driver notification APIs — inbox, unread count, mark read, mark all read
+- [x] Admin notification APIs — inbox, unread count, mark read, mark all read; pagination and notification-type filters; each admin sees only their own notifications
+- [x] Notification security — recipients derived server-side; no JWT, guest token, QR token, receipt path, password, or token hash in notification payloads; recipient ownership isolation
+- [x] Flutter notifications — guest booking notification section; driver badge and inbox with mark-read; admin nav, inbox, unread and type filters; loading/empty/error/retry/refresh states
+- [x] Notification OpenAPI documentation and focused backend/Flutter tests
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
 
@@ -85,7 +99,7 @@ Pack 15 complete — Review and Rating MVP. Next: Pack 16 Notification Foundatio
 - Customer booking wizard — step flow exists; full E2E against live API incomplete
 - Frontend split — new `BookingApiService` (`/api/v1`) vs legacy `ApiService` (`/api/*`) and old admin screen
 - Public proxy routes — flight foundation complete; places, airports, golf route files still stubbed
-- Chat / Socket.IO — handler skeleton only
+- Chat / Socket.IO — handler skeleton only (Pack 17 scope)
 
 # Legacy Issues
 
@@ -101,8 +115,15 @@ Pack 15 complete — Review and Rating MVP. Next: Pack 16 Notification Foundatio
 - Public review browsing
 - Driver review replies
 - Rewards, points, coupons, and loyalty
-- Notifications (Pack 16 scope)
-- Chat
+- Live SMTP delivery
+- Live FCM delivery
+- Push-token registration UI
+- SMS and WhatsApp
+- Marketing notifications
+- Notification rule editor
+- Continuous outbox worker
+- Authenticated customer global inbox Flutter UI
+- Notification deep links
 - AI moderation
 - Denormalized rating storage on drivers
 - Driver access to individual review comments
@@ -112,18 +133,26 @@ Pack 15 complete — Review and Rating MVP. Next: Pack 16 Notification Foundatio
 
 # Next Pack
 
-Pack 16 — Notification Foundation MVP
+Pack 17 — Live Chat MVP
 
 Planned scope:
 
-- Event-driven notification records
-- In-app notification inbox
-- Booking and operational notification events
-- Customer, driver, and admin notification targeting
-- Read/unread state
-- No WhatsApp or SMS integration
-- No marketing notifications
-- Email and FCM delivery may remain adapters or stubs if credentials are unavailable
+- Booking-scoped customer, driver, and admin chat
+- Existing Socket.IO foundation
+- Authorized chat room membership
+- Text messages
+- Read state
+- Admin operational chat view
+- No voice or video calls
+- No message translation
+- File attachments may remain deferred unless the existing structure makes them trivial
+
+# Known Reliability Limitations (Notifications)
+
+- No continuous background outbox worker
+- Startup recovery processes a bounded batch only
+- No distributed queue or Redis
+- Events reaching maximum retry count require later operational recovery
 
 # Environment Configuration
 
@@ -133,25 +162,28 @@ Planned scope:
 
 # Current Verification
 
-- Backend `npm test`: 143/143 passed
+- Backend `npm test`: 168/168 passed
+- Focused notification tests (`notification.test.js`): 13/13 passed
+- Focused outbox tests (`outbox.test.js`): 12/12 passed
 - Focused review tests (`review.test.js`): 36/36 passed
 - Focused settlement tests (`commissionSettlement.test.js`): 29/29 passed
 - Focused admin dispatch tests: 18/18 passed
-- Flutter full tests: 39/39 passed
-- Focused Flutter review and rating tests: 13/13 passed
-- Flutter analyze (affected review and driver files): no issues
-- OpenAPI YAML: review sections updated and readable
+- Flutter full tests: 45/45 passed
+- Focused Flutter notification tests: 6/6 passed
+- Flutter analyze (notification UI files): no issues
+- OpenAPI YAML parse: passed
 - `git diff --check`: passed
-- Migration 18 appears exactly once after migration 17 in `database/migrate.ps1`
+- `database/migrate.ps1` parser validation: passed
+- Migration 19 appears exactly once after migration 18 in `database/migrate.ps1`
 
 # Architecture Status
 
-Backend — 50%  
-Frontend — 40%  
-Database — 92%  
-OpenAPI — 92%  
-Admin — 40%  
-Driver — 30%
+Backend — 55%  
+Frontend — 42%  
+Database — 93%  
+OpenAPI — 93%  
+Admin — 42%  
+Driver — 32%
 
 # Business Decisions
 
@@ -165,6 +197,7 @@ Driver — 30%
 - Admin manual dispatch (MVP) — auto-assign weights in DB; manual assign/reassign implemented in Pack 13
 - Prices from DB only — route × vehicle + charge policies; admin CRUD for rules
 - Customer reviews after completion — one review per booking; guest token in header (lookup) or body (submit), never in URL; driver sees aggregate rating only
+- Operational notifications — transactional outbox + in-app delivery; guest notifications scoped to authorized booking; live email/FCM deferred
 - Architecture is frozen — Controller → Service → Repository; business logic in services only
 
 # Development Rules

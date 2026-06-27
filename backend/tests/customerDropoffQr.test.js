@@ -243,11 +243,13 @@ test('old rotated token is rejected by driver scan and newest token is accepted'
         result: { status: BOOKING_STATUS.COMPLETED },
         domainEvent: 'trip.completed',
         eventPayload: {},
+        outboxId: null,
       };
     },
     emitDomainEvent() {
       calls.emitted += 1;
     },
+    async dispatchOutboxAfterCommit() {},
   };
   const service = new DriverQrService(
     { async getConnection() { return conn; } },
@@ -310,6 +312,7 @@ test('raw token is not returned in driver response where testable', async () => 
         };
       },
       emitDomainEvent() {},
+      async dispatchOutboxAfterCommit() {},
     },
     new DriverJobService(repo),
   );

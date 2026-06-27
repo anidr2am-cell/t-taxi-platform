@@ -5,6 +5,7 @@ import '../../../theme/app_theme.dart';
 import '../models/booking_create_result.dart';
 import '../services/booking_api_service.dart';
 import '../widgets/booking_review_form.dart';
+import '../widgets/booking_notification_section.dart';
 
 class BookingCompletePage extends StatefulWidget {
   final BookingCreateResult result;
@@ -149,6 +150,11 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
             const SizedBox(height: 24),
             if (_isCompleted) ...[
               const _QrStatusMessage(message: 'Trip completed'),
+              const SizedBox(height: 16),
+              BookingNotificationSection(
+                bookingNumber: result.bookingNumber,
+                guestAccessToken: result.guestAccessToken,
+              ),
               const SizedBox(height: 16),
               BookingReviewForm(
                 bookingNumber: result.bookingNumber,

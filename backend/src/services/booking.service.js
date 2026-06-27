@@ -6,6 +6,8 @@ const COMMISSION_STATUS = require('../constants/commissionStatus');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const ROLES = require('../constants/roles');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
+const { randomUUID } = require('node:crypto');
+const { EVENTS } = require('../events');
 
 const TRUST_MESSAGE = 'Your booking has been received. Please show your boarding QR to the driver when you get in. After pickup, a new drop-off QR will be generated automatically.';
 
@@ -22,6 +24,8 @@ class BookingService {
     pricingService,
     vehicleRecommendationService,
     vehicleRepository,
+    outboxRepository,
+    outboxProcessor,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -30,6 +34,8 @@ class BookingService {
     this.pricingService = pricingService;
     this.vehicleRecommendationService = vehicleRecommendationService;
     this.vehicleRepository = vehicleRepository;
+    this.outboxRepository = outboxRepository;
+    this.outboxProcessor = outboxProcessor;
   }
 
   buildPricingInput(input) {
@@ -258,7 +264,26 @@ class BookingService {
         );
       }
 
+      let outboxId = null;
+      if (this.outboxRepository) {
+        outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+          aggregateId: bookingId,
+          eventType: EVENTS.BOOKING_CREATED,
+          payload: {
+            eventId: randomUUID(),
+            eventName: EVENTS.BOOKING_CREATED,
+            bookingId,
+            bookingNumber,
+            customerUserId,
+          },
+        });
+      }
+
       await conn.commit();
+
+      if (this.outboxProcessor && outboxId) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
 
       const booking = await this.bookingRepository.findById(bookingId);
 
