@@ -1,6 +1,6 @@
-const { appEvents, EVENTS } = require('../events');
-const logger = require('../utils/logger');
-const container = require('../helpers/container');
+const { appEvents, EVENTS } = require('..');
+const logger = require('../../utils/logger');
+const container = require('../../helpers/container');
 
 function registerSettlementHandlers() {
   appEvents.on(EVENTS.TRIP_COMPLETED, async (payload) => {
