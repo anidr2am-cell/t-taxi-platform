@@ -27,6 +27,10 @@ const DriverRepository = require('../repositories/driver.repository');
 const FileRepository = require('../repositories/file.repository');
 const SettingsRepository = require('../repositories/settings.repository');
 const CommissionSettlementService = require('../services/commissionSettlement.service');
+const ReviewRepository = require('../repositories/review.repository');
+const ReviewService = require('../services/review.service');
+const AdminDispatchService = require('../services/adminDispatch.service');
+const DriverQrService = require('../services/driverQr.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -128,6 +132,14 @@ container.register('commissionSettlementService', (c) => new CommissionSettlemen
   c.get('driverRepository'),
   c.get('fileRepository'),
   c.get('settingsRepository'),
+));
+container.register('reviewRepository', () => new ReviewRepository());
+container.register('reviewService', (c) => new ReviewService(
+  database.pool,
+  c.get('bookingRepository'),
+  c.get('reviewRepository'),
+  c.get('driverRepository'),
+  c.get('bookingService'),
 ));
 container.register('adminDispatchService', (c) => new AdminDispatchService(
   database.pool,

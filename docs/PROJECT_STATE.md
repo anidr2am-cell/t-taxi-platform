@@ -4,12 +4,12 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Pack 14 complete — Commission Settlement MVP. Next: Pack 15 Review and Rating MVP.
+Pack 15 complete — Review and Rating MVP. Next: Pack 16 Notification Foundation MVP.
 
 # Completed
 
 - [x] Architecture & API design docs (`ARCHITECTURE`, `DATABASE_DESIGN`, `API_CONTRACT`, `BUSINESS_ENGINE`, `ADMIN_OPERATION_SYSTEM`)
-- [x] MySQL migrations `00`–`17` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns, settlement settings seed)
+- [x] MySQL migrations `00`–`18` (booking hub, charge items, chat, notifications, routes/locations pricing, QR & commission columns, settlement settings seed, reviews)
 - [x] Backend skeleton — Express, JWT middleware, Joi validation, Swagger UI, health check
 - [x] Auth API — register, login, refresh, logout, `/auth/me`
 - [x] Booking APIs — `POST /bookings/vehicle/recommend`, `POST /bookings/pricing/calculate`, `POST /bookings`
@@ -61,6 +61,21 @@ Pack 14 complete — Commission Settlement MVP. Next: Pack 15 Review and Rating 
 - [x] Flutter driver settlement — list, detail, real JPG/JPEG/PNG/PDF file selection, receipt upload and replacement, rejected and approved states, loading/empty/error/retry/duplicate-submit prevention
 - [x] Flutter admin settlement — queue, detail, receipt review, approve and reject flows
 - [x] Settlement OpenAPI documentation and focused backend/Flutter tests
+- [x] Pack 15 Review and Rating MVP — customer reviews after `COMPLETED`
+- [x] Reviews schema — `database/18_reviews.sql`; one review per booking (`UNIQUE booking_id`); rating 1–5; optional comment max 500 characters; `VISIBLE`/`HIDDEN` moderation
+- [x] Review eligibility — authenticated customer ownership or guest token scoped to booking; no access by booking number alone
+- [x] Guest token transport — lookup via `X-Guest-Access-Token` header only; submission via JSON body only; never in URL or query parameters
+- [x] Customer review API — `GET /api/v1/bookings/:bookingNumber/review`, `POST /api/v1/bookings/:bookingNumber/review`
+- [x] Driver rating API — `GET /api/v1/driver/rating-summary` (aggregate only: `averageRating`, `reviewCount`)
+- [x] Admin review API — `GET /api/v1/admin/reviews`, `GET /api/v1/admin/reviews/:reviewId`, `POST /api/v1/admin/reviews/:reviewId/hide`, `POST /api/v1/admin/reviews/:reviewId/restore`
+- [x] Review submission reliability — booking row locking, driver identity from assignment, duplicate protection (`REVIEW_ALREADY_SUBMITTED`), transaction-safe insert and audit log
+- [x] Rating aggregation — `VISIBLE` reviews only; one-decimal average; hidden excluded immediately; restored included again; no denormalized driver rating storage
+- [x] Admin moderation — hide with required reason, restore, audit logs; hidden reason and reviewer identity admin-only
+- [x] Migration `18_reviews.sql`; `database/migrate.ps1` updated through migration 18
+- [x] Flutter customer review — form after `COMPLETED`, 1–5 stars, optional comment, loading/retry/success/already-submitted states, refresh restores submitted state, duplicate-submit prevention
+- [x] Flutter driver rating summary card — average and count only; no individual comments
+- [x] Flutter admin reviews — queue with rating/status/search filters, detail, hide/restore with confirmation, loading/empty/error/refresh states
+- [x] Review OpenAPI documentation and focused backend/Flutter tests
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
 
@@ -83,26 +98,32 @@ Pack 14 complete — Commission Settlement MVP. Next: Pack 15 Review and Rating 
 - Payment gateway integration
 - Automatic bank verification
 - Scheduled overdue processing
-- Notifications
+- Public review browsing
+- Driver review replies
+- Rewards, points, coupons, and loyalty
+- Notifications (Pack 16 scope)
 - Chat
+- AI moderation
+- Denormalized rating storage on drivers
+- Driver access to individual review comments
 - Maps and live tracking
-- Reviews (Pack 15 scope)
 - Automatic dispatch
 - Kanban drag and drop
 
 # Next Pack
 
-Pack 15 — Review and Rating MVP
+Pack 16 — Notification Foundation MVP
 
 Planned scope:
 
-- Customer review request after `COMPLETED`
-- Guest or authenticated customer review submission
-- One review per booking
-- Rating and short comment
-- Driver rating summary
-- Admin review visibility and moderation
-- No rewards or loyalty program yet
+- Event-driven notification records
+- In-app notification inbox
+- Booking and operational notification events
+- Customer, driver, and admin notification targeting
+- Read/unread state
+- No WhatsApp or SMS integration
+- No marketing notifications
+- Email and FCM delivery may remain adapters or stubs if credentials are unavailable
 
 # Environment Configuration
 
@@ -112,23 +133,25 @@ Planned scope:
 
 # Current Verification
 
-- Backend `npm test`: 107/107 passed
+- Backend `npm test`: 143/143 passed
+- Focused review tests (`review.test.js`): 36/36 passed
 - Focused settlement tests (`commissionSettlement.test.js`): 29/29 passed
 - Focused admin dispatch tests: 18/18 passed
-- Flutter full tests: 26/26 passed
-- Flutter analyze (driver settlement, admin settlement): no issues
-- OpenAPI YAML parse: passed
+- Flutter full tests: 39/39 passed
+- Focused Flutter review and rating tests: 13/13 passed
+- Flutter analyze (affected review and driver files): no issues
+- OpenAPI YAML: review sections updated and readable
 - `git diff --check`: passed
-- `database/migrate.ps1` PowerShell parser validation: passed
+- Migration 18 appears exactly once after migration 17 in `database/migrate.ps1`
 
 # Architecture Status
 
-Backend — 45%  
-Frontend — 35%  
-Database — 90%  
-OpenAPI — 90%  
-Admin — 35%  
-Driver — 25%
+Backend — 50%  
+Frontend — 40%  
+Database — 92%  
+OpenAPI — 92%  
+Admin — 40%  
+Driver — 30%
 
 # Business Decisions
 
@@ -141,6 +164,7 @@ Driver — 25%
 - No online payment — `payment_status` stays `UNPAID`/`PAID` manual; `ONLINE` reserved for Phase 2
 - Admin manual dispatch (MVP) — auto-assign weights in DB; manual assign/reassign implemented in Pack 13
 - Prices from DB only — route × vehicle + charge policies; admin CRUD for rules
+- Customer reviews after completion — one review per booking; guest token in header (lookup) or body (submit), never in URL; driver sees aggregate rating only
 - Architecture is frozen — Controller → Service → Repository; business logic in services only
 
 # Development Rules

@@ -2,7 +2,12 @@ const express = require('express');
 const bookingController = require('../controllers/booking.controller');
 const pricingController = require('../controllers/pricing.controller');
 const validate = require('../middlewares/validate.middleware');
+const reviewController = require('../controllers/review.controller');
 const { authMiddleware, optionalAuthMiddleware } = require('../middlewares/auth.middleware');
+const {
+  bookingNumberParamsSchema,
+  submitReviewSchema,
+} = require('../validators/review.validator');
 const roleMiddleware = require('../middlewares/role.middleware');
 const ROLES = require('../constants/roles');
 const {
@@ -45,6 +50,20 @@ router.post(
   '/:bookingNumber/dropoff-qr/issue',
   optionalAuthMiddleware,
   bookingController.issueDropoffQr,
+);
+
+router.get(
+  '/:bookingNumber/review',
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema }),
+  reviewController.getBookingReview,
+);
+
+router.post(
+  '/:bookingNumber/review',
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema, body: submitReviewSchema }),
+  reviewController.submitBookingReview,
 );
 
 module.exports = router;

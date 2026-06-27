@@ -195,6 +195,24 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  async findByBookingNumber(bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.status,
+          b.customer_user_id,
+          b.driver_id
+        FROM bookings b
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
   async findByBookingNumberForUpdate(conn, bookingNumber) {
     const [rows] = await conn.query(
       `

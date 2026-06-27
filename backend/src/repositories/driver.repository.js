@@ -30,7 +30,19 @@ class DriverRepository {
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
               AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
-          ) AS active_assignment_count
+          ) AS active_assignment_count,
+          (
+            SELECT ROUND(AVG(r.rating), 1)
+            FROM reviews r
+            WHERE r.driver_id = d.id
+              AND r.moderation_status = 'VISIBLE'
+          ) AS average_rating,
+          (
+            SELECT COUNT(*)
+            FROM reviews r
+            WHERE r.driver_id = d.id
+              AND r.moderation_status = 'VISIBLE'
+          ) AS review_count
         FROM drivers d
         LEFT JOIN vehicle_types vt ON vt.id = d.primary_vehicle_type_id AND vt.deleted_at IS NULL
         LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id

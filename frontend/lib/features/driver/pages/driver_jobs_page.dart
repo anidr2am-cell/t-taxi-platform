@@ -7,25 +7,30 @@ import 'driver_booking_detail_page.dart';
 import 'driver_login_page.dart';
 
 class DriverJobsPage extends StatefulWidget {
-  const DriverJobsPage({super.key});
+  const DriverJobsPage({super.key, this.api});
+
+  final DriverApiService? api;
 
   @override
   State<DriverJobsPage> createState() => _DriverJobsPageState();
 }
 
 class _DriverJobsPageState extends State<DriverJobsPage> {
-  final _api = DriverApiService();
+  late final DriverApiService _api;
   Future<DriverJobsToday>? _future;
+  Future<Map<String, dynamic>>? _ratingFuture;
 
   @override
   void initState() {
     super.initState();
+    _api = widget.api ?? DriverApiService();
     _refresh();
   }
 
   void _refresh() {
     setState(() {
       _future = _api.getTodayBookings();
+      _ratingFuture = _api.getRatingSummary();
     });
   }
 
@@ -65,7 +70,31 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
           IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
         ],
       ),
-      body: FutureBuilder<DriverJobsToday>(
+      body: Column(
+        children: [
+          FutureBuilder<Map<String, dynamic>>(
+            future: _ratingFuture,
+            builder: (context, ratingSnapshot) {
+              if (!ratingSnapshot.hasData) return const SizedBox.shrink();
+              final rating = ratingSnapshot.data!;
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.star, color: Colors.amber),
+                    title: Text(
+                      rating['averageRating'] == null
+                          ? 'No ratings yet'
+                          : '${rating['averageRating']} average',
+                    ),
+                    subtitle: Text('${rating['reviewCount'] ?? 0} reviews'),
+                  ),
+                ),
+              );
+            },
+          ),
+          Expanded(
+            child: FutureBuilder<DriverJobsToday>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -102,6 +131,9 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
             ),
           );
         },
+            ),
+          ),
+        ],
       ),
     );
   }

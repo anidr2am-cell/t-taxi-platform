@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
 
 router.get('/bookings/today', driverController.listTodayBookings);
+router.get('/rating-summary', require('../controllers/review.controller').getDriverRatingSummary);
 router.post('/bookings/:bookingNumber/arrive', driverController.markArrived);
 router.post('/bookings/:bookingNumber/scan-boarding', driverController.scanBoarding);
 router.post('/bookings/:bookingNumber/scan-dropoff', driverController.scanDropoff);

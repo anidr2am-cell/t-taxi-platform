@@ -503,6 +503,68 @@ paths:
         '409':
           $ref: '#/components/responses/InvalidStatusTransition'
 
+  /bookings/{bookingNumber}/review:
+    get:
+      tags: [Booking]
+      summary: Get review eligibility and submitted review
+      description: >
+        Requires authenticated customer JWT (Bearer) or guest access via
+        X-Guest-Access-Token header. Never send guest tokens in URL path or
+        query parameters. Exactly one review per booking. Booking number alone
+        without authorization returns 403. Customer responses never include
+        hiddenReason or reviewer identity.
+      operationId: getBookingReview
+      security:
+        - bearerAuth: []
+        - guestReviewAccessHeader: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingReviewState'
+        '403':
+          $ref: '#/components/responses/BookingNotAccessible'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Booking]
+      summary: Submit booking review
+      description: >
+        Booking must be COMPLETED with an assigned driver. Authenticated
+        customers use JWT Bearer. Guests pass guestAccessToken in the JSON
+        request body only (never in URL). Rating integer 1-5. Comment optional,
+        max 500 characters. Duplicate submission returns REVIEW_ALREADY_SUBMITTED.
+        driverId and moderation fields are server-derived and cannot be set by
+        the client.
+      operationId: submitBookingReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitReviewRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingReviewState'
+        '400':
+          description: INVALID_RATING or comment validation error
+        '403':
+          $ref: '#/components/responses/BookingNotAccessible'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: REVIEW_NOT_ELIGIBLE or REVIEW_ALREADY_SUBMITTED
+
   /bookings/{bookingNumber}/cancel:
     post:
       tags: [Booking]
@@ -1463,6 +1525,106 @@ paths:
         '409':
           description: Receipt already approved (RECEIPT_ALREADY_APPROVED)
 
+  /admin/reviews:
+    get:
+      tags: [Admin]
+      summary: List customer reviews
+      description: Requires JWT bearer auth. Allowed roles ADMIN and SUPER_ADMIN only.
+      operationId: adminListReviews
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReviewPagination'
+
+  /admin/reviews/{reviewId}/hide:
+    post:
+      tags: [Admin]
+      summary: Hide review
+      operationId: adminHideReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewHideRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReviewDetail'
+
+  /admin/reviews/{reviewId}/restore:
+    post:
+      tags: [Admin]
+      summary: Restore hidden review
+      operationId: adminRestoreReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReviewDetail'
+
+  /admin/reviews/{reviewId}:
+    get:
+      tags: [Admin]
+      summary: Get review detail
+      operationId: adminGetReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReviewDetail'
+
+  /driver/rating-summary:
+    get:
+      tags: [Driver]
+      summary: Get driver rating summary
+      description: >
+        Returns averageRating and reviewCount from VISIBLE reviews only.
+        Hidden reviews are excluded immediately; restored reviews are included.
+        Does not return customer names, comments, phone, email, booking numbers,
+        or moderation reasons.
+      operationId: driverRatingSummary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverRatingSummary'
+
   /admin/drivers/{id}:
     get:
       tags: [Admin]
@@ -1993,6 +2155,11 @@ components:
       in: query
       name: guestAccessToken
       description: Guest booking access token with email query param.
+    guestReviewAccessHeader:
+      type: apiKey
+      in: header
+      name: X-Guest-Access-Token
+      description: Guest booking access token for review lookup. Never send in URL query parameters.
 
   parameters:
     Page:
@@ -3853,6 +4020,125 @@ components:
       properties:
         reason:
           type: string
+
+    BookingReviewState:
+      type: object
+      properties:
+        eligible:
+          type: boolean
+        submitted:
+          type: boolean
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        moderationStatus:
+          type: string
+          enum: [VISIBLE, HIDDEN]
+          nullable: true
+
+    SubmitReviewRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 500
+          nullable: true
+        guestAccessToken:
+          type: string
+          description: Guest booking access token (JSON body only, never URL).
+
+    ApiResponseBookingReviewState:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/BookingReviewState'
+
+    ReviewListItem:
+      type: object
+      properties:
+        reviewId:
+          type: integer
+        bookingNumber:
+          type: string
+        rating:
+          type: integer
+        comment:
+          type: string
+          nullable: true
+        moderationStatus:
+          type: string
+          enum: [VISIBLE, HIDDEN]
+        createdAt:
+          type: string
+          format: date-time
+
+    ReviewPagination:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReviewListItem'
+
+    ApiResponseReviewPagination:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ReviewPagination'
+
+    ApiResponseReviewDetail:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+
+    ReviewHideRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+
+    DriverRatingSummary:
+      type: object
+      properties:
+        averageRating:
+          type: number
+          nullable: true
+          description: One decimal place average from VISIBLE reviews only
+        reviewCount:
+          type: integer
+
+    ApiResponseDriverRatingSummary:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverRatingSummary'
 
     DriverAssignRequest:
       type: object

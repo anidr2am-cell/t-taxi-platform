@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_theme.dart';
 import '../models/booking_create_result.dart';
 import '../services/booking_api_service.dart';
+import '../widgets/booking_review_form.dart';
 
 class BookingCompletePage extends StatefulWidget {
   final BookingCreateResult result;
@@ -35,6 +36,10 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   void initState() {
     super.initState();
     _status = widget.result.status;
+    BookingReviewApi().persistGuestToken(
+      widget.result.bookingNumber,
+      widget.result.guestAccessToken,
+    );
   }
 
   bool get _isCompleted => _status == 'COMPLETED';
@@ -142,9 +147,14 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               ),
             ),
             const SizedBox(height: 24),
-            if (_isCompleted)
-              const _QrStatusMessage(message: 'Trip completed')
-            else if (_dropoffQrToken != null)
+            if (_isCompleted) ...[
+              const _QrStatusMessage(message: 'Trip completed'),
+              const SizedBox(height: 16),
+              BookingReviewForm(
+                bookingNumber: result.bookingNumber,
+                guestAccessToken: result.guestAccessToken,
+              ),
+            ] else if (_dropoffQrToken != null)
               _QrDisplay(
                 title: 'Dropoff QR',
                 hint: 'Show this QR to your driver at destination.',

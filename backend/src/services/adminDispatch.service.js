@@ -157,6 +157,8 @@ class AdminDispatchService {
           }
         : null,
       activeAssignmentCount: Number(row.active_assignment_count ?? 0),
+      averageRating: row.average_rating != null ? Number(row.average_rating) : null,
+      reviewCount: Number(row.review_count ?? 0),
     };
   }
 

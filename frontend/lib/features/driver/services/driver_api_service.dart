@@ -110,6 +110,11 @@ class DriverApiService {
     return decoded['data'];
   }
 
+  Future<Map<String, dynamic>> getRatingSummary() async {
+    final data = await _get('/driver/rating-summary');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<DriverJobsToday> getTodayBookings() async {
     final data = await _get('/driver/bookings/today');
     return DriverJobsToday.fromJson(Map<String, dynamic>.from(data as Map));
