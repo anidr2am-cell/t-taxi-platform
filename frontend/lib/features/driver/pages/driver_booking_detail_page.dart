@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../driver_settlement/pages/driver_settlement_list_page.dart';
+import '../../driver_settlement/services/driver_settlement_api_service.dart';
+import '../driver_auth.dart';
+import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 import '../pages/driver_chat_page.dart';
 import '../services/driver_api_service.dart';
+import '../services/driver_chat_api.dart';
+import '../widgets/driver_qr_scan_sheet.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
   const DriverBookingDetailPage({
@@ -22,30 +29,46 @@ class DriverBookingDetailPage extends StatefulWidget {
 
 class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   late Future<DriverBooking> _future;
+  Future<Map<String, dynamic>>? _settlementFuture;
+  Future<int>? _chatUnreadFuture;
   bool _processing = false;
   String? _actionError;
 
   @override
   void initState() {
     super.initState();
-    _future = widget.api.getBookingDetail(widget.bookingNumber);
+    _loadBooking();
   }
 
-  void _refresh() {
+  void _loadBooking() {
     setState(() {
       _actionError = null;
       _future = widget.api.getBookingDetail(widget.bookingNumber);
+      _settlementFuture = null;
+      _chatUnreadFuture = const DriverChatApi().getRoom(widget.bookingNumber).then(
+        (room) => (room['unreadCount'] as num?)?.toInt() ?? 0,
+      ).catchError((_) => 0);
+    });
+  }
+
+  void _loadSettlement() {
+    setState(() {
+      _settlementFuture = const DriverSettlementApiService()
+          .getSettlement(widget.bookingNumber)
+          .catchError((_) => <String, dynamic>{});
     });
   }
 
   Future<void> _runAction(
     Future<DriverBooking> Function() action,
-    String message,
+    String messageKey,
   ) async {
+    if (_processing) return;
     setState(() {
       _processing = true;
       _actionError = null;
     });
+    final l10n = context.l10n;
     try {
       final updated = await action();
       if (!mounted) return;
@@ -53,9 +76,23 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
         _future = Future.value(updated);
         _processing = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      if (updated.status == 'COMPLETED') {
+        _loadSettlement();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t(messageKey))),
+      );
+    } on DriverApiException catch (err) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      if (driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
+      if (err.isStaleStatus) {
+        _loadBooking();
+      }
+      setState(() => _actionError = err.message);
     } catch (err) {
       if (!mounted) return;
       setState(() {
@@ -65,37 +102,90 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     }
   }
 
-  Future<void> _manualTokenAction({
-    required String title,
-    required Future<DriverBooking> Function(String token) action,
-    required String successMessage,
-  }) async {
-    final token = await showDialog<String>(
+  Future<void> _openQrScan({required bool isBoarding}) async {
+    if (_processing) return;
+    final l10n = context.l10n;
+    final result = await showDriverQrScanSheet(
       context: context,
-      builder: (context) => _QrTokenDialog(title: title),
+      isBoarding: isBoarding,
+      onSubmit: (token) async {
+        if (isBoarding) {
+          await widget.api.scanBoarding(widget.bookingNumber, token);
+        } else {
+          await widget.api.scanDropoff(widget.bookingNumber, token);
+        }
+      },
     );
-    if (token == null || token.trim().isEmpty) return;
-    await _runAction(() => action(token.trim()), successMessage);
+    if (result == true && mounted) {
+      _loadBooking();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isBoarding ? l10n.t('driver_success_boarding') : l10n.t('driver_success_completed'),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _callCustomer(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone.replaceAll(' ', ''));
+    if (!await launchUrl(uri)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.t('driver_call_failed'))),
+      );
+    }
+  }
+
+  void _openChat() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DriverChatPage(bookingNumber: widget.bookingNumber),
+      ),
+    ).then((_) => _loadBooking());
+  }
+
+  void _openSettlementDetail() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DriverSettlementDetailPage(
+          bookingNumber: widget.bookingNumber,
+          api: const DriverSettlementApiService(),
+        ),
+      ),
+    ).then((_) {
+      _loadBooking();
+      _loadSettlement();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.bookingNumber),
         actions: [
-          IconButton(
-            tooltip: 'Open chat',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => DriverChatPage(bookingNumber: widget.bookingNumber),
+          FutureBuilder<int>(
+            future: _chatUnreadFuture,
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return IconButton(
+                tooltip: l10n.t('driver_open_chat'),
+                onPressed: _openChat,
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text('$count'),
+                  child: const Icon(Icons.chat_bubble_outline),
                 ),
               );
             },
-            icon: const Icon(Icons.chat),
           ),
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: _loadBooking,
+            icon: const Icon(Icons.refresh),
+            tooltip: l10n.t('driver_refresh'),
+          ),
         ],
       ),
       body: FutureBuilder<DriverBooking>(
@@ -105,22 +195,25 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final err = snapshot.error!;
+            if (driverIsAuthError(err)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) driverHandleApiError(context, err);
+              });
+            }
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Could not load booking'),
+                    Text(l10n.t('driver_detail_error')),
                     const SizedBox(height: 8),
-                    Text(
-                      snapshot.error.toString(),
-                      textAlign: TextAlign.center,
-                    ),
+                    Text(err.toString(), textAlign: TextAlign.center),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: _refresh,
-                      child: const Text('Retry'),
+                      onPressed: _loadBooking,
+                      child: Text(l10n.t('driver_retry')),
                     ),
                   ],
                 ),
@@ -128,94 +221,149 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
             );
           }
           final booking = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.all(16),
+          if (booking.status == 'COMPLETED' && _settlementFuture == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadSettlement();
+            });
+          }
+
+          final primaryKey = DriverUx.primaryActionKey(booking);
+          final readOnly = DriverUx.isReadOnly(booking.status);
+
+          return Column(
             children: [
-              _Section(
-                title: 'Route',
-                children: [
-                  _Line(
-                    label: 'Pickup',
-                    value: '${booking.pickupDate} ${booking.pickupTime}',
-                  ),
-                  _Line(label: 'From', value: booking.origin),
-                  _Line(label: 'To', value: booking.destination),
-                  _Line(label: 'Status', value: booking.status),
-                ],
-              ),
-              _Section(
-                title: 'Customer',
-                children: [
-                  if (booking.customerDisplayName != null)
-                    _Line(label: 'Name', value: booking.customerDisplayName!),
-                  if (booking.customerPhone != null)
-                    _Line(label: 'Phone', value: booking.customerPhone!),
-                ],
-              ),
-              _Section(
-                title: 'Passengers and luggage',
-                children: [
-                  _Line(
-                    label: 'Passengers',
-                    value: booking.passengerCount.toString(),
-                  ),
-                  _Line(label: 'Vehicle', value: booking.vehicleTypeName),
-                  if (booking.luggage != null)
-                    _Line(
-                      label: 'Luggage',
-                      value: _formatLuggage(booking.luggage!),
-                    ),
-                ],
-              ),
-              if (booking.flightNumber != null)
-                _Section(
-                  title: 'Flight',
+              if (_processing)
+                const LinearProgressIndicator(minHeight: 3),
+              Expanded(
+                child: ListView(
+                  key: const Key('driverDetailScroll'),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   children: [
-                    _Line(label: 'Flight', value: booking.flightNumber!),
-                    if (booking.flightStatus != null)
-                      _Line(label: 'Status', value: booking.flightStatus!),
-                    if (booking.latestEstimatedArrival != null)
-                      _Line(
-                        label: 'Estimated arrival',
-                        value: booking.latestEstimatedArrival!,
+                    _StatusHeader(booking: booking),
+                    if (_actionError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _actionError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    _Section(
+                      title: l10n.t('driver_section_trip'),
+                      children: [
+                        _Line(
+                          label: l10n.t('driver_pickup_time'),
+                          value: '${booking.pickupDate} ${booking.pickupTime}',
+                        ),
+                        _Line(label: l10n.t('origin'), value: booking.origin),
+                        _Line(label: l10n.t('destination'), value: booking.destination),
+                      ],
+                    ),
+                    _Section(
+                      title: l10n.t('customer_info'),
+                      children: [
+                        if (booking.customerDisplayName != null)
+                          _Line(label: l10n.t('name'), value: booking.customerDisplayName!),
+                        if (DriverUx.canCallCustomer(
+                          booking.status,
+                          booking.customerPhone,
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: SizedBox(
+                              height: 48,
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _callCustomer(booking.customerPhone!),
+                                icon: const Icon(Icons.phone),
+                                label: Text(l10n.t('driver_call_customer')),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    _Section(
+                      title: l10n.t('passengers'),
+                      children: [
+                        _Line(
+                          label: l10n.t('passengers'),
+                          value: booking.passengerCount.toString(),
+                        ),
+                        _Line(label: l10n.t('vehicle'), value: booking.vehicleTypeName),
+                        if (booking.luggage != null)
+                          _Line(
+                            label: l10n.t('luggage'),
+                            value: _formatLuggage(booking.luggage!),
+                          ),
+                      ],
+                    ),
+                    if (booking.flightNumber != null)
+                      _Section(
+                        title: l10n.t('flight_number'),
+                        children: [
+                          _Line(label: l10n.t('flight_number'), value: booking.flightNumber!),
+                          if (booking.flightStatus != null)
+                            _Line(label: l10n.t('status'), value: booking.flightStatus!),
+                          if (booking.latestEstimatedArrival != null)
+                            _Line(
+                              label: l10n.t('driver_estimated_arrival'),
+                              value: booking.latestEstimatedArrival!,
+                            ),
+                        ],
+                      ),
+                    if (booking.specialInstructions?.isNotEmpty == true)
+                      _Section(
+                        title: l10n.t('special_requests'),
+                        children: [
+                          Text(booking.specialInstructions!),
+                        ],
+                      ),
+                    _Section(
+                      title: l10n.t('driver_section_chat'),
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.chat),
+                          title: Text(l10n.t('driver_open_chat')),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _openChat,
+                        ),
+                      ],
+                    ),
+                    if (booking.status == 'COMPLETED')
+                      _SettlementSection(
+                        future: _settlementFuture,
+                        onOpenDetail: _openSettlementDetail,
+                      ),
+                    if (readOnly)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          l10n.t(DriverUx.statusLabelKey(booking.status)),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                   ],
                 ),
-              _Section(
-                title: 'Instructions',
-                children: [
-                  _Line(
-                    label: 'Special',
-                    value: booking.specialInstructions?.isNotEmpty == true
-                        ? booking.specialInstructions!
-                        : 'None',
-                  ),
-                  if (booking.paymentMethod != null)
-                    _Line(label: 'Payment', value: booking.paymentMethod!),
-                ],
               ),
-              _Section(
-                title: 'Actions',
-                children: [
-                  if (_processing) const LinearProgressIndicator(),
-                  if (_actionError != null) ...[
-                    Text(
-                      _actionError!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+              if (primaryKey != null && !readOnly)
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: SizedBox(
+                      height: 52,
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _processing
+                            ? null
+                            : () => _onPrimaryAction(booking, primaryKey),
+                        child: Text(l10n.t(primaryKey)),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                  ],
-                  ..._buildActionButtons(booking),
-                  if (booking.allowedActions.isEmpty &&
-                      booking.status == 'COMPLETED')
-                    const Text('Trip completed'),
-                  if (booking.allowedActions.isEmpty &&
-                      booking.status != 'COMPLETED')
-                    const Text('No actions available'),
-                ],
-              ),
+                  ),
+                ),
             ],
           );
         },
@@ -223,56 +371,21 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     );
   }
 
-  List<Widget> _buildActionButtons(DriverBooking booking) {
-    final actions = booking.allowedActions;
-    return [
-      if (actions.contains('MARK_ARRIVED'))
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: ElevatedButton.icon(
-            onPressed: _processing
-                ? null
-                : () => _runAction(
-                    () => widget.api.markArrived(widget.bookingNumber),
-                    'Arrival marked',
-                  ),
-            icon: const Icon(Icons.place),
-            label: const Text('Mark arrived'),
-          ),
-        ),
-      if (actions.contains('SCAN_BOARDING_QR'))
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: ElevatedButton.icon(
-            onPressed: _processing
-                ? null
-                : () => _manualTokenAction(
-                    title: 'Boarding QR token',
-                    action: (token) =>
-                        widget.api.scanBoarding(widget.bookingNumber, token),
-                    successMessage: 'Pickup completed',
-                  ),
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Scan boarding QR'),
-          ),
-        ),
-      if (actions.contains('SCAN_DROPOFF_QR'))
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: ElevatedButton.icon(
-            onPressed: _processing
-                ? null
-                : () => _manualTokenAction(
-                    title: 'Dropoff QR token',
-                    action: (token) =>
-                        widget.api.scanDropoff(widget.bookingNumber, token),
-                    successMessage: 'Trip completed',
-                  ),
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Scan dropoff QR'),
-          ),
-        ),
-    ];
+  void _onPrimaryAction(DriverBooking booking, String actionKey) {
+    if (booking.allowedActions.contains('MARK_ARRIVED')) {
+      _runAction(
+        () => widget.api.markArrived(widget.bookingNumber),
+        'driver_success_arrived',
+      );
+      return;
+    }
+    if (booking.allowedActions.contains('SCAN_BOARDING_QR')) {
+      _openQrScan(isBoarding: true);
+      return;
+    }
+    if (booking.allowedActions.contains('SCAN_DROPOFF_QR')) {
+      _openQrScan(isBoarding: false);
+    }
   }
 
   String _formatLuggage(Map<String, dynamic> luggage) {
@@ -284,75 +397,104 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   }
 }
 
-class _QrTokenDialog extends StatefulWidget {
-  const _QrTokenDialog({required this.title});
+class _StatusHeader extends StatelessWidget {
+  const _StatusHeader({required this.booking});
 
-  final String title;
-
-  @override
-  State<_QrTokenDialog> createState() => _QrTokenDialogState();
-}
-
-class _QrTokenDialogState extends State<_QrTokenDialog> {
-  final _controller = TextEditingController();
-  bool _cameraMode = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final DriverBooking booking;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SizedBox(
-        width: 360,
-        child: _cameraMode
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 240,
-                    child: MobileScanner(
-                      onDetect: (capture) {
-                        String? value;
-                        for (final barcode in capture.barcodes) {
-                          if (barcode.rawValue?.isNotEmpty == true) {
-                            value = barcode.rawValue;
-                            break;
-                          }
-                        }
-                        if (value != null && value.trim().isNotEmpty) {
-                          Navigator.of(context).pop(value);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Use manual entry if camera is unavailable.'),
-                ],
-              )
-            : TextField(
-                key: const Key('manualQrTokenField'),
-                controller: _controller,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: 'QR token'),
+    final l10n = context.l10n;
+    final statusLabel = l10n.t(DriverUx.statusLabelKey(booking.status));
+    final nextKey = DriverUx.nextActionKey(booking);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              statusLabel,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            if (nextKey != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.t('driver_next_action'),
+                style: Theme.of(context).textTheme.labelLarge,
               ),
+              Text(
+                l10n.t(nextKey),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => setState(() => _cameraMode = !_cameraMode),
-          child: Text(_cameraMode ? 'Manual entry' : 'Use camera'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Submit'),
+    );
+  }
+}
+
+class _SettlementSection extends StatelessWidget {
+  const _SettlementSection({
+    required this.future,
+    required this.onOpenDetail,
+  });
+
+  final Future<Map<String, dynamic>>? future;
+  final VoidCallback onOpenDetail;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _Section(
+      title: l10n.t('driver_section_settlement'),
+      children: [
+        FutureBuilder<Map<String, dynamic>>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(),
+              );
+            }
+            final detail = snapshot.data;
+            if (detail == null || detail.isEmpty) {
+              return Text(l10n.t('driver_settlement_loading_failed'));
+            }
+            final status = detail['commissionStatus'] as String? ?? '';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Line(
+                  label: l10n.t('status'),
+                  value: status,
+                ),
+                _Line(
+                  label: l10n.t('amount'),
+                  value: '${detail['commissionAmount']} ${detail['currency']}',
+                ),
+                if (detail['rejectionReason'] != null)
+                  _Line(
+                    label: l10n.t('driver_rejection_reason'),
+                    value: detail['rejectionReason'] as String,
+                  ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onOpenDetail,
+                    child: Text(l10n.t('driver_view_settlement')),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -368,6 +510,7 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -397,7 +540,7 @@ class _Line extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 110,
             child: Text(
               label,
               style: const TextStyle(fontWeight: FontWeight.w600),

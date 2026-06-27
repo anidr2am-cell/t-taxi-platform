@@ -1,0 +1,131 @@
+import 'services/driver_api_service.dart';
+import 'models/driver_booking.dart';
+
+/// Job list grouping for driver today view.
+enum DriverJobGroup {
+  active,
+  upcoming,
+  completed,
+}
+
+class DriverUx {
+  static DriverJobGroup groupForStatus(String status) {
+    switch (status) {
+      case 'DRIVER_ASSIGNED':
+      case 'DRIVER_ARRIVED':
+      case 'PICKED_UP':
+        return DriverJobGroup.active;
+      case 'COMPLETED':
+      case 'NO_SHOW':
+      case 'CANCELLED':
+        return DriverJobGroup.completed;
+      default:
+        return DriverJobGroup.upcoming;
+    }
+  }
+
+  static bool isTerminal(String status) {
+    return status == 'COMPLETED' ||
+        status == 'CANCELLED' ||
+        status == 'NO_SHOW';
+  }
+
+  static bool isReadOnly(String status) => isTerminal(status);
+
+  static bool canCallCustomer(String status, String? phone) {
+    if (phone == null || phone.trim().isEmpty) return false;
+    return status == 'DRIVER_ASSIGNED' ||
+        status == 'DRIVER_ARRIVED' ||
+        status == 'PICKED_UP' ||
+        status == 'CONFIRMED';
+  }
+
+  /// Next action hint for job cards (operational label key suffix).
+  static String? nextActionKey(DriverBooking booking) {
+    if (isReadOnly(booking.status)) return null;
+    if (booking.allowedActions.contains('MARK_ARRIVED')) {
+      return 'driver_action_mark_arrived';
+    }
+    if (booking.allowedActions.contains('SCAN_BOARDING_QR')) {
+      return 'driver_action_scan_boarding';
+    }
+    if (booking.allowedActions.contains('SCAN_DROPOFF_QR')) {
+      return 'driver_action_scan_dropoff';
+    }
+    if (booking.status == 'DRIVER_ASSIGNED') {
+      return 'driver_job_assigned_hint';
+    }
+    return null;
+  }
+
+  static String? primaryActionKey(DriverBooking booking) {
+    if (isReadOnly(booking.status)) return null;
+    if (booking.allowedActions.contains('MARK_ARRIVED')) {
+      return 'driver_action_mark_arrived';
+    }
+    if (booking.allowedActions.contains('SCAN_BOARDING_QR')) {
+      return 'driver_action_scan_boarding';
+    }
+    if (booking.allowedActions.contains('SCAN_DROPOFF_QR')) {
+      return 'driver_action_scan_dropoff';
+    }
+    return null;
+  }
+
+  static Map<DriverJobGroup, List<DriverBooking>> groupBookings(
+    List<DriverBooking> items,
+  ) {
+    final grouped = <DriverJobGroup, List<DriverBooking>>{
+      DriverJobGroup.active: [],
+      DriverJobGroup.upcoming: [],
+      DriverJobGroup.completed: [],
+    };
+    for (final booking in items) {
+      grouped[groupForStatus(booking.status)]!.add(booking);
+    }
+    const order = [
+      DriverJobGroup.active,
+      DriverJobGroup.upcoming,
+      DriverJobGroup.completed,
+    ];
+    for (final g in order) {
+      grouped[g]!.sort((a, b) {
+        final t = a.pickupTime.compareTo(b.pickupTime);
+        if (t != 0) return t;
+        return a.bookingNumber.compareTo(b.bookingNumber);
+      });
+    }
+    return grouped;
+  }
+
+  static String statusLabelKey(String status) {
+    switch (status) {
+      case 'PENDING':
+        return 'status_pending';
+      case 'CONFIRMED':
+        return 'status_confirmed';
+      case 'DRIVER_ASSIGNED':
+        return 'status_driver_assigned';
+      case 'DRIVER_ARRIVED':
+        return 'driver_status_arrived';
+      case 'PICKED_UP':
+        return 'driver_status_picked_up';
+      case 'COMPLETED':
+        return 'status_completed';
+      case 'CANCELLED':
+        return 'status_cancelled';
+      case 'NO_SHOW':
+        return 'driver_status_no_show';
+      default:
+        return 'status';
+    }
+  }
+}
+
+bool driverIsAuthError(Object err) {
+  if (err is DriverApiException) {
+    return err.statusCode == 401 ||
+        err.message.toLowerCase().contains('log in');
+  }
+  return false;
+}

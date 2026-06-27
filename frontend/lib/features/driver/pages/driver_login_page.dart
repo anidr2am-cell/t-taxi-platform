@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../pages/driver_shell_page.dart';
 import '../services/driver_api_service.dart';
-import 'driver_jobs_page.dart';
 
 class DriverLoginPage extends StatefulWidget {
-  const DriverLoginPage({super.key});
+  const DriverLoginPage({super.key, this.api});
+
+  final DriverApiService? api;
 
   @override
   State<DriverLoginPage> createState() => _DriverLoginPageState();
@@ -13,20 +15,21 @@ class DriverLoginPage extends StatefulWidget {
 class _DriverLoginPageState extends State<DriverLoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _api = DriverApiService();
+  late final DriverApiService _api;
   bool _loading = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _api = widget.api ?? DriverApiService();
     _openJobsIfLoggedIn();
   }
 
   Future<void> _openJobsIfLoggedIn() async {
     final token = await _api.getSavedToken();
     if (!mounted || token == null || token.isEmpty) return;
-    _openJobs();
+    _openHome();
   }
 
   @override
@@ -36,14 +39,15 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
     super.dispose();
   }
 
-  void _openJobs() {
+  void _openHome() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const DriverJobsPage()),
+      MaterialPageRoute(builder: (_) => DriverShellPage(api: _api)),
     );
   }
 
   Future<void> _login() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -53,15 +57,13 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      if (mounted) _openJobs();
+      if (mounted) _openHome();
+    } on DriverApiException catch (err) {
+      if (mounted) setState(() => _error = err.message);
     } catch (err) {
-      if (mounted) {
-        setState(() => _error = err.toString());
-      }
+      if (mounted) setState(() => _error = err.toString());
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -84,28 +86,36 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
                 decoration: const InputDecoration(labelText: 'Email'),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _passwordController,
                 obscureText: true,
+                autofillHints: const [AutofillHints.password],
                 decoration: const InputDecoration(labelText: 'Password'),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
-                Text(_error!, style: const TextStyle(color: Colors.red)),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ],
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _loading ? null : _login,
-                child: _loading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Log in'),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _login,
+                  child: _loading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Log in'),
+                ),
               ),
             ],
           ),

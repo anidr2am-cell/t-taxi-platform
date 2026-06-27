@@ -7,12 +7,23 @@ import '../../../config/app_config.dart';
 import '../models/driver_booking.dart';
 
 class DriverApiException implements Exception {
-  const DriverApiException(this.message);
+  const DriverApiException(
+    this.message, {
+    this.errorCode,
+    this.statusCode,
+  });
 
   final String message;
+  final String? errorCode;
+  final int? statusCode;
 
   @override
   String toString() => message;
+
+  bool get isStaleStatus =>
+      errorCode == 'INVALID_STATUS_TRANSITION' ||
+      errorCode == 'BOOKING_NOT_FOUND' ||
+      message.toLowerCase().contains('invalid status');
 }
 
 class DriverApiService {
@@ -75,6 +86,8 @@ class DriverApiService {
       }
       throw DriverApiException(
         decoded['message'] as String? ?? 'Request failed',
+        errorCode: decoded['error_code'] as String?,
+        statusCode: response.statusCode,
       );
     }
 
@@ -104,6 +117,8 @@ class DriverApiService {
       }
       throw DriverApiException(
         decoded['message'] as String? ?? 'Request failed',
+        errorCode: decoded['error_code'] as String?,
+        statusCode: response.statusCode,
       );
     }
 

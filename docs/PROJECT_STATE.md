@@ -4,6 +4,7 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current State
 
+- **Driver UX Planning & First Refinement completed**
 - **Pack 18 completed** — MVP Integration and Release Readiness
 - **MVP development foundation completed**
 - **Next phase:** Staging Deployment and Operational Validation
@@ -11,7 +12,7 @@ TTaxi - Thailand Airport Transfer Platform
 
 # Current Pack
 
-Pack 18 — MVP Integration and Release Readiness (completed).
+Driver UX Planning & First Refinement (completed). Next: Staging Deployment and Operational Validation.
 
 # Completed
 
@@ -127,6 +128,17 @@ Pack 18 — MVP Integration and Release Readiness (completed).
 - [x] No production secrets committed
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
+- [x] Driver UX refinement — mobile-first shell (Jobs, Notifications, Settlement, Profile); grouped today jobs; status-aware primary actions; QR sheet with boarding/dropoff distinction; call customer; chat unread on detail; settlement section after completion; notifications tap-to-open; `docs/DRIVER_UX_FLOW.md`
+
+# Driver UX — Verification
+
+| Check | Result |
+|-------|--------|
+| `flutter analyze` (driver-related) | 3 info-level lints only |
+| Focused driver Flutter tests | 30/30 passed |
+| `flutter test` (full) | 70/70 passed |
+| `flutter build web` | passed |
+| Backend tests | not run (no backend changes) |
 
 # Pack 18 — Fresh Database Verification
 
@@ -267,7 +279,7 @@ Frontend — 42%
 Database — 93%  
 OpenAPI — 93%  
 Admin — 42%  
-Driver — 32%
+Driver — 48%
 
 # Business Decisions
 

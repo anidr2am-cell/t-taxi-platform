@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../driver_auth.dart';
+import '../driver_ux.dart';
+import '../pages/driver_booking_detail_page.dart';
+import '../../driver_settlement/pages/driver_settlement_list_page.dart';
+import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../services/driver_api_service.dart';
 
 class DriverNotificationsPage extends StatefulWidget {
@@ -36,6 +42,11 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
         _loading = false;
       });
     } catch (err) {
+      if (driverIsAuthError(err) && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) driverHandleApiError(context, err);
+        });
+      }
       setState(() {
         _error = err.toString();
         _loading = false;
@@ -65,17 +76,56 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
     }
   }
 
+  void _openTarget(Map<String, dynamic> item) {
+    final payload = Map<String, dynamic>.from(
+      item['payload'] as Map? ?? {},
+    );
+    final bookingNumber = payload['bookingNumber'] as String?;
+    final type = item['notificationType'] as String? ?? '';
+
+    if (bookingNumber != null && bookingNumber.isNotEmpty) {
+      if (type.contains('COMMISSION') ||
+          type.contains('RECEIPT') ||
+          type.contains('SETTLEMENT')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DriverSettlementDetailPage(
+              bookingNumber: bookingNumber,
+              api: const DriverSettlementApiService(),
+            ),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DriverBookingDetailPage(
+              bookingNumber: bookingNumber,
+              api: _api,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.t('driver_notification_no_target'))),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(l10n.t('driver_nav_notifications')),
         actions: [
           IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
           IconButton(
             onPressed: _markingAll ? null : _markAll,
             icon: const Icon(Icons.done_all),
-            tooltip: 'Mark all read',
+            tooltip: l10n.t('driver_mark_all_read'),
           ),
         ],
       ),
@@ -87,12 +137,15 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(_error!),
-                      ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                      ElevatedButton(
+                        onPressed: _load,
+                        child: Text(l10n.t('driver_retry')),
+                      ),
                     ],
                   ),
                 )
               : _items.isEmpty
-                  ? const Center(child: Text('No notifications'))
+                  ? Center(child: Text(l10n.t('driver_notifications_empty')))
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.separated(
@@ -105,13 +158,23 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
                           return ListTile(
                             title: Text(
                               item['title'] as String? ?? 'Notification',
-                              style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.bold),
+                              style: TextStyle(
+                                fontWeight: read ? FontWeight.normal : FontWeight.bold,
+                              ),
                             ),
                             subtitle: Text(item['body'] as String? ?? ''),
-                            trailing: read ? null : IconButton(
-                              icon: const Icon(Icons.check),
-                              onPressed: () => _markRead(item['notificationId'] as int),
-                            ),
+                            trailing: read
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(Icons.check),
+                                    onPressed: () => _markRead(item['notificationId'] as int),
+                                  ),
+                            onTap: () {
+                              if (!read) {
+                                _markRead(item['notificationId'] as int);
+                              }
+                              _openTarget(item);
+                            },
                           );
                         },
                       ),

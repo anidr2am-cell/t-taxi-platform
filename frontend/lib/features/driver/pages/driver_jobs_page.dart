@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../driver_auth.dart';
+import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 import '../services/driver_api_service.dart';
-import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import 'driver_booking_detail_page.dart';
-import 'driver_notifications_page.dart';
-import 'driver_login_page.dart';
 
 class DriverJobsPage extends StatefulWidget {
   const DriverJobsPage({super.key, this.api});
@@ -19,8 +19,6 @@ class DriverJobsPage extends StatefulWidget {
 class _DriverJobsPageState extends State<DriverJobsPage> {
   late final DriverApiService _api;
   Future<DriverJobsToday>? _future;
-  Future<Map<String, dynamic>>? _ratingFuture;
-  Future<int>? _unreadFuture;
 
   @override
   void initState() {
@@ -32,134 +30,119 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
   void _refresh() {
     setState(() {
       _future = _api.getTodayBookings();
-      _ratingFuture = _api.getRatingSummary();
-      _unreadFuture = _api.getUnreadNotificationCount();
     });
-  }
-
-  void _openNotifications() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => DriverNotificationsPage(api: _api)),
-    ).then((_) => _refresh());
-  }
-
-  Future<void> _logout() async {
-    await _api.logout();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const DriverLoginPage()),
-    );
   }
 
   void _openDetail(DriverBooking booking) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DriverBookingDetailPage(bookingNumber: booking.bookingNumber),
+        builder: (_) => DriverBookingDetailPage(
+          bookingNumber: booking.bookingNumber,
+          api: _api,
+        ),
       ),
-    );
+    ).then((_) => _refresh());
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Today’s Jobs'),
+        title: Text(l10n.t('driver_nav_jobs')),
         actions: [
-          FutureBuilder<int>(
-            future: _unreadFuture,
-            builder: (context, snapshot) {
-              final count = snapshot.data ?? 0;
-              return IconButton(
-                onPressed: _openNotifications,
-                icon: Badge(
-                  isLabelVisible: count > 0,
-                  label: Text('$count'),
-                  child: const Icon(Icons.notifications_outlined),
-                ),
-              );
-            },
-          ),
           IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const DriverSettlementListPage()),
-            ),
-            icon: const Icon(Icons.receipt_long),
-            tooltip: 'Settlements',
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh),
+            tooltip: l10n.t('driver_refresh'),
           ),
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
         ],
       ),
-      body: Column(
-        children: [
-          FutureBuilder<Map<String, dynamic>>(
-            future: _ratingFuture,
-            builder: (context, ratingSnapshot) {
-              if (!ratingSnapshot.hasData) return const SizedBox.shrink();
-              final rating = ratingSnapshot.data!;
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.star, color: Colors.amber),
-                    title: Text(
-                      rating['averageRating'] == null
-                          ? 'No ratings yet'
-                          : '${rating['averageRating']} average',
-                    ),
-                    subtitle: Text('${rating['reviewCount'] ?? 0} reviews'),
-                  ),
-                ),
-              );
-            },
-          ),
-          Expanded(
-            child: FutureBuilder<DriverJobsToday>(
+      body: FutureBuilder<DriverJobsToday>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
+            final err = snapshot.error!;
+            if (driverIsAuthError(err)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) driverHandleApiError(context, err);
+              });
+            }
             return _StateMessage(
-              title: 'Could not load jobs',
-              message: snapshot.error.toString(),
-              action: ElevatedButton(onPressed: _refresh, child: const Text('Retry')),
+              title: l10n.t('driver_jobs_error_title'),
+              message: err.toString(),
+              action: ElevatedButton(
+                onPressed: _refresh,
+                child: Text(l10n.t('driver_retry')),
+              ),
             );
           }
           final data = snapshot.data;
           if (data == null || data.items.isEmpty) {
             return _StateMessage(
-              title: 'No jobs today',
-              message: 'Assigned bookings for today will appear here.',
-              action: ElevatedButton(onPressed: _refresh, child: const Text('Refresh')),
+              title: l10n.t('driver_jobs_empty_title'),
+              message: l10n.t('driver_jobs_empty_message'),
+              action: ElevatedButton(
+                onPressed: _refresh,
+                child: Text(l10n.t('driver_refresh')),
+              ),
             );
           }
+
+          final grouped = DriverUx.groupBookings(data.items);
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemBuilder: (context, index) {
-                final booking = data.items[index];
-                return _JobCard(
-                  booking: booking,
-                  onTap: () => _openDetail(booking),
-                );
-              },
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemCount: data.items.length,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                Text(
+                  l10n.t('driver_jobs_today_date').replaceAll('{date}', data.date),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                ..._buildGroup(
+                  context,
+                  l10n.t('driver_jobs_group_active'),
+                  grouped[DriverJobGroup.active]!,
+                ),
+                ..._buildGroup(
+                  context,
+                  l10n.t('driver_jobs_group_upcoming'),
+                  grouped[DriverJobGroup.upcoming]!,
+                ),
+                ..._buildGroup(
+                  context,
+                  l10n.t('driver_jobs_group_completed'),
+                  grouped[DriverJobGroup.completed]!,
+                ),
+              ],
             ),
           );
         },
-            ),
-          ),
-        ],
       ),
     );
+  }
+
+  List<Widget> _buildGroup(
+    BuildContext context,
+    String title,
+    List<DriverBooking> items,
+  ) {
+    if (items.isEmpty) return [];
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 16, bottom: 8),
+        child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      ),
+      ...items.map((b) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _JobCard(booking: b, onTap: () => _openDetail(b)),
+      )),
+    ];
   }
 }
 
@@ -171,9 +154,13 @@ class _JobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final actionKey = DriverUx.nextActionKey(booking);
+    final statusKey = DriverUx.statusLabelKey(booking.status);
+
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -181,23 +168,63 @@ class _JobCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
-                      '${booking.pickupTime} · ${booking.bookingNumber}',
+                      booking.bookingNumber,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
-                  _StatusBadge(status: booking.status),
+                  _StatusChip(label: l10n.t(statusKey)),
                 ],
               ),
+              const SizedBox(height: 6),
+              Text(
+                '${booking.pickupDate} ${booking.pickupTime}',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
               const SizedBox(height: 8),
-              Text('${booking.origin} → ${booking.destination}'),
+              Text(
+                booking.origin,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                '→ ${booking.destination}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: 8),
-              Text('${booking.passengerCount} passengers · ${booking.vehicleTypeName}'),
-              if (booking.flightNumber != null) ...[
-                const SizedBox(height: 4),
-                Text('Flight ${booking.flightNumber}'),
+              if (booking.customerDisplayName != null)
+                Text(booking.customerDisplayName!),
+              Text(
+                '${booking.passengerCount} ${l10n.t('passengers')} · ${booking.vehicleTypeName}',
+              ),
+              if (booking.flightNumber != null)
+                Text('${l10n.t('flight_number')}: ${booking.flightNumber}'),
+              if (actionKey != null) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.touch_app,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        l10n.t(actionKey),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
               ],
             ],
           ),
@@ -207,14 +234,21 @@ class _JobCard extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label});
 
-  final String status;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Chip(label: Text(status.replaceAll('_', ' ')));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+    );
   }
 }
 

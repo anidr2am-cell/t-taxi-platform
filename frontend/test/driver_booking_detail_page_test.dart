@@ -20,9 +20,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Mark arrived');
-    expect(find.text('Mark arrived'), findsOneWidget);
-    expect(find.text('Scan boarding QR'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Scan boarding QR'), findsNothing);
   });
 
   testWidgets('shows loading state', (tester) async {
@@ -50,8 +49,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Mark arrived');
-    await tester.tap(find.text('Mark arrived'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Mark arrived'));
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid status transition'), findsOneWidget);
@@ -74,12 +72,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Mark arrived');
-    await tester.tap(find.text('Mark arrived'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Mark arrived'));
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Scan boarding QR');
-    expect(find.text('Scan boarding QR'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Scan boarding QR'), findsOneWidget);
   });
 
   testWidgets('successful boarding refreshes detail', (tester) async {
@@ -90,8 +86,7 @@ void main() {
     await tester.pumpWidget(_wrap(api));
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Scan boarding QR');
-    await tester.tap(find.text('Scan boarding QR'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Scan boarding QR'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('manualQrTokenField')),
@@ -100,9 +95,8 @@ void main() {
     await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Scan dropoff QR');
     expect(api.lastToken, 'boarding-token');
-    expect(find.text('Scan dropoff QR'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Scan dropoff QR'), findsOneWidget);
   });
 
   testWidgets('successful completion shows completed state', (tester) async {
@@ -116,17 +110,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Scan dropoff QR');
-    await tester.tap(find.text('Scan dropoff QR'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Scan dropoff QR'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('manualQrTokenField')),
       'dropoff-token',
     );
     await tester.tap(find.text('Submit'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Trip completed'), findsOneWidget);
+    expect(find.text('Completed'), findsWidgets);
   });
 
   testWidgets('manual token fallback is available', (tester) async {
@@ -142,8 +136,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _scrollToText(tester, 'Scan boarding QR');
-    await tester.tap(find.text('Scan boarding QR'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Scan boarding QR'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('manualQrTokenField')), findsOneWidget);
@@ -154,14 +147,6 @@ void main() {
 Widget _wrap(DriverApiService api) {
   return MaterialApp(
     home: DriverBookingDetailPage(bookingNumber: 'TX202607010001', api: api),
-  );
-}
-
-Future<void> _scrollToText(WidgetTester tester, String text) async {
-  await tester.scrollUntilVisible(
-    find.text(text),
-    250,
-    scrollable: find.byType(Scrollable),
   );
 }
 
@@ -193,9 +178,15 @@ class _FakeDriverApi extends DriverApiService {
     this.boarded,
     this.completed,
     this.actionError,
-  }) : detailFuture = detailFuture ?? Future.value(detail ?? _booking());
+  }) {
+  _current = detail ?? _booking();
+    if (detailFuture != null) {
+      _detailFuture = detailFuture;
+    }
+  }
 
-  final Future<DriverBooking> detailFuture;
+  late DriverBooking _current;
+  Future<DriverBooking>? _detailFuture;
   final DriverBooking? arrived;
   final DriverBooking? boarded;
   final DriverBooking? completed;
@@ -203,27 +194,33 @@ class _FakeDriverApi extends DriverApiService {
   String? lastToken;
 
   @override
-  Future<DriverBooking> getBookingDetail(String bookingNumber) => detailFuture;
+  Future<DriverBooking> getBookingDetail(String bookingNumber) async {
+    if (_detailFuture != null) return _detailFuture!;
+    return _current;
+  }
 
   @override
   Future<DriverBooking> markArrived(String bookingNumber) async {
     if (actionError != null) throw actionError!;
-    return arrived ??
+    _current = arrived ??
         _booking(status: 'DRIVER_ARRIVED', actions: ['SCAN_BOARDING_QR']);
+    return _current;
   }
 
   @override
   Future<DriverBooking> scanBoarding(String bookingNumber, String token) async {
     lastToken = token;
     if (actionError != null) throw actionError!;
-    return boarded ??
+    _current = boarded ??
         _booking(status: 'PICKED_UP', actions: ['SCAN_DROPOFF_QR']);
+    return _current;
   }
 
   @override
   Future<DriverBooking> scanDropoff(String bookingNumber, String token) async {
     lastToken = token;
     if (actionError != null) throw actionError!;
-    return completed ?? _booking(status: 'COMPLETED', actions: []);
+    _current = completed ?? _booking(status: 'COMPLETED', actions: []);
+    return _current;
   }
 }
