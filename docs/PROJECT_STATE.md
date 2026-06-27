@@ -2,9 +2,16 @@
 
 TTaxi - Thailand Airport Transfer Platform
 
+# Current State
+
+- **Pack 18 completed** — MVP Integration and Release Readiness
+- **MVP development foundation completed**
+- **Next phase:** Staging Deployment and Operational Validation
+- **Public production launch:** not completed
+
 # Current Pack
 
-Pack 17 complete — Live Chat MVP. Next: Pack 18 MVP Integration and Release Readiness.
+Pack 18 — MVP Integration and Release Readiness (completed).
 
 # Completed
 
@@ -106,8 +113,69 @@ Pack 17 complete — Live Chat MVP. Next: Pack 18 MVP Integration and Release Re
 - [x] Flutter chat — customer/guest booking chat, driver booking chat, admin queue and detail; REST initial history; Socket.IO real-time receive; reconnect, rejoin, and history reload; deduplication by `messageId` and `clientMessageId`; loading, empty, error, retry, reconnecting, and offline states; listeners disposed on leave or room switch; real-time connection always enabled in production widgets
 - [x] Chat security — guest token never in URLs or query parameters; JWT and guest tokens not logged; plain-text messages; unrelated users cannot access rooms; no full message body or secrets in notification payload
 - [x] Chat OpenAPI documentation (`docs/CHAT_SOCKET.md` for Socket.IO); focused backend/Flutter tests
+- [x] Pack 18 MVP Integration and Release Readiness — integration hardening, environment audit, E2E verification, release checklist
+- [x] Production environment validation — startup fails clearly for weak JWT secrets, empty production DB password, and wildcard/missing CORS
+- [x] `backend/.env.example` — required vs optional variables documented; no real secrets
+- [x] CORS — `X-Guest-Access-Token` allowed for browser guest flows
+- [x] Frontend configuration — `API_BASE_URL` and `SOCKET_URL` via `--dart-define`; localhost defaults only in development configuration
+- [x] Role boundary tests — admin, driver, customer, guest, and public route boundaries
+- [x] MVP backend lifecycle integration test — full booking through assignment, QR, commission, review, notifications, and chat
+- [x] Admin legacy tab release-safe placeholders — operational tabs gated; broken legacy API calls removed from active paths
+- [x] `docs/MVP_RELEASE_CHECKLIST.md` — go-live checklist with upload persistence warning and known MVP limitations
+- [x] Dependency audit — moderate npm advisories in optional FCM chain reported; no blind major upgrades
+- [x] Upload persistence warning — local `UPLOAD_DIR` requires persistent volume in production
+- [x] No production secrets committed
 - [x] OpenAPI 3.1 spec (`docs/openapi/openapi.yaml`)
 - [x] Flutter — landing page, booking wizard UI, theme, 5-language l10n, PWA manifest
+
+# Pack 18 — Fresh Database Verification
+
+- MySQL Community Server **8.4.10**
+- Clean test database used
+- Migrations **00 through 20** executed successfully in order
+- All migration files appeared exactly once in `database/migrate.ps1`
+- `database/migrate.ps1` completed successfully
+- Migration **21 was not required**
+
+# Pack 18 — Migration Fix (`booking_driver_assignments`)
+
+- `database/04_booking_core.sql` originally used a STORED generated column named `active_booking_key`
+- The generated column referenced `booking_id`
+- MySQL 8.4 rejected the `booking_id` foreign key when that generated column existed in the same table (ERROR 1215)
+- Replaced the generated column plus unique index with a MySQL 8.4-safe **functional unique index** on `(IF(is_active = 1 AND deleted_at IS NULL, booking_id, NULL))`
+- The functional index preserves one active, non-deleted assignment per booking
+- Inactive or deleted historical assignments remain allowed
+- All `booking_driver_assignments` foreign keys and CHECK constraints remain intact
+- `database/13_driver_assignment_constraints.sql` updated for backward compatibility:
+  - skip when the unique index already exists
+  - support legacy databases with `active_booking_key`
+  - create the functional index when the legacy column does not exist
+
+# Pack 18 — Final Verification
+
+| Check | Result |
+|-------|--------|
+| Focused assignment tests | 38/38 passed |
+| Backend full tests (`npm test`) | 203/203 passed |
+| Flutter full tests | 55/55 passed |
+| Flutter web build | passed |
+| OpenAPI YAML parse | passed |
+| `migrate.ps1` parser | passed |
+| Fresh MySQL migration 00–20 | passed |
+| `git diff --check` | passed |
+| Backend application load check | passed |
+
+# Manual Deployment Requirements
+
+These are operational steps before public go-live, not unfinished Pack 18 work:
+
+- Create production `.env` from `backend/.env.example`
+- Set production database credentials and strong JWT secrets
+- Configure HTTPS and reverse proxy for API and Socket.IO
+- Build Flutter web with production `API_BASE_URL` and `SOCKET_URL`
+- Mount persistent storage for `UPLOAD_DIR`
+- Create ADMIN, SUPER_ADMIN, and DRIVER accounts
+- Run staging checklist (`docs/MVP_RELEASE_CHECKLIST.md`) before public go-live
 
 # In Progress
 
@@ -157,23 +225,17 @@ Pack 17 complete — Live Chat MVP. Next: Pack 18 MVP Integration and Release Re
 - Post-completion 24-hour chat send window
 - Live-updating admin chat queue
 
-# Next Pack
+# Next Phase
 
-Pack 18 — MVP Integration and Release Readiness
+**Staging Deployment and Operational Validation**
 
 Planned scope:
 
-- Fresh database migration verification through migration 20
-- End-to-end customer booking to completed trip flow
-- Admin assignment and reassignment flow
-- Driver QR operation flow
-- Settlement and review flow
-- Notification and chat flow
-- Environment configuration audit
-- Production error and loading-state audit
-- Security and secret audit
-- Deployment readiness checklist
-- No major new product features
+- Deploy to staging environment with production-like configuration
+- Execute full manual checklist from `docs/MVP_RELEASE_CHECKLIST.md`
+- Validate end-to-end operational flows with real accounts
+- Confirm upload persistence, HTTPS, CORS, and Socket.IO through reverse proxy
+- Sign off for public go-live separately
 
 # Known Reliability Limitations (Notifications)
 
@@ -195,24 +257,8 @@ Planned scope:
 - `AVIATIONSTACK_API_KEY` required for live flight provider lookup
 - `AVIATIONSTACK_BASE_URL` optional/defaulted
 - `AVIATIONSTACK_TIMEOUT_MS` optional/defaulted
-
-# Current Verification
-
-- Backend `npm test`: 192/192 passed
-- Focused chat tests (`chat.test.js`, `chat.socket.test.js`): 24/24 passed
-- Focused notification tests (`notification.test.js`): 13/13 passed
-- Focused outbox tests (`outbox.test.js`): 12/12 passed
-- Focused review tests (`review.test.js`): 36/36 passed
-- Focused settlement tests (`commissionSettlement.test.js`): 29/29 passed
-- Focused admin dispatch tests: 18/18 passed
-- Flutter full tests: 55/55 passed
-- Focused Flutter chat tests (`chat_test.dart`): 10/10 passed
-- Focused Flutter notification tests: 6/6 passed
-- Flutter analyze (chat UI files): no issues
-- OpenAPI YAML parse: passed
-- `git diff --check`: passed
-- `database/migrate.ps1` parser validation: passed
-- Migration 20 appears exactly once after migration 19 in `database/migrate.ps1`
+- Production requires strong `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, non-empty `DB_PASSWORD`, and explicit `CORS_ORIGIN`
+- Frontend production builds require `--dart-define=API_BASE_URL=...` and `--dart-define=SOCKET_URL=...`
 
 # Architecture Status
 

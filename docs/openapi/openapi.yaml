@@ -422,6 +422,11 @@ paths:
     get:
       tags: [Booking]
       summary: Get booking detail
+      deprecated: true
+      description: >
+        Not implemented in MVP. Use booking-scoped endpoints under
+        /bookings/{bookingNumber}/ (notifications, chat, review, dropoff QR).
+        Guest tokens must use X-Guest-Access-Token header, not URL query.
       operationId: getBooking
       security:
         - bearerAuth: []

@@ -4,6 +4,8 @@ flutter/.dart_tool/
 
 .env
 .env.*
+!.env.example
+!**/.env.example
 
 logs/
 
@@ -14,3 +16,5 @@ logs/
 Thumbs.db
 
 database/.mysql-data/
+database/.mysql-repro-data/
+database/_mysql_clean_*/

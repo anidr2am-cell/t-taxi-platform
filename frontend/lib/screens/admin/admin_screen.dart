@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../features/admin/widgets/admin_auth_gate.dart';
 import '../../features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
 import '../../features/admin_settlement/pages/admin_settlement_queue_page.dart';
 import '../../features/admin_review/pages/admin_review_queue_page.dart';
@@ -40,15 +41,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
-    try {
-      _dashboard = await ApiService().getDashboard();
-      _reservations = await ApiService().getAdminReservations();
-      _chats = await ApiService().getAdminChats();
-      _drivers = await ApiService().getDrivers();
-      _vehiclePrices = await ApiService().getAdminVehiclePrices();
-      _golfCourses = await ApiService().getAdminGolfCourses();
-      _airports = await ApiService().getAdminAirports();
-    } catch (_) {}
+    // Legacy /api/* dashboard endpoints are deprecated; operational data uses v1 module tabs.
     setState(() => _loading = false);
   }
 
@@ -109,54 +102,69 @@ class _AdminScreenState extends State<AdminScreen> {
       case 1:
         return const AdminDispatchQueuePage();
       case 2:
-        return const AdminChatQueuePage();
+        return const AdminAuthGate(child: AdminChatQueuePage());
       case 3:
-        return _buildDrivers(l10n);
+        return _buildLegacyNotice('Drivers', 'Driver management uses operational dispatch and driver APIs.');
       case 4:
-        return _buildPricing(l10n);
+        return _buildLegacyNotice('Pricing', 'Use admin pricing APIs (/api/v1/admin/pricing) for production configuration.');
       case 5:
-        return _buildGolfCourses(l10n);
+        return _buildLegacyNotice('Golf courses', 'Catalog management is deferred in MVP release.');
       case 6:
-        return _buildAirports(l10n);
+        return _buildLegacyNotice('Airports', 'Catalog management is deferred in MVP release.');
       case 7:
-        return const AdminSettlementQueuePage();
+        return const AdminAuthGate(child: AdminSettlementQueuePage());
       case 8:
-        return const AdminReviewQueuePage();
+        return const AdminAuthGate(child: AdminReviewQueuePage());
       case 9:
-        return const AdminNotificationQueuePage();
+        return const AdminAuthGate(child: AdminNotificationQueuePage());
       default:
         return const SizedBox.shrink();
     }
   }
 
   Widget _buildDashboard(AppLocalizations l10n) {
-    final d = _dashboard ?? {};
-    final statusStats = d['statusStats'] as List? ?? [];
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Operational MVP dashboard',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Use Reservations (dispatch), Settlements, Reviews, Notifications, and Chats tabs for live /api/v1 data. '
+            'Legacy dashboard metrics are not wired in this release build.',
+          ),
+          const SizedBox(height: 24),
           Wrap(
             spacing: 16,
             runSpacing: 16,
             children: [
-              _statCard(l10n.t('today_bookings'), '${d['todayReservations'] ?? 0}', Icons.calendar_today),
-              _statCard(l10n.t('today_revenue'), '${d['todayRevenue'] ?? 0} THB', Icons.attach_money),
-              _statCard(l10n.t('pending_count'), '${d['pendingReservations'] ?? 0}', Icons.pending),
-              _statCard(l10n.t('awaiting_driver'), '${d['awaitingDriver'] ?? 0}', Icons.person_search),
-              _statCard(l10n.t('active_chats'), '${d['activeChats'] ?? 0}', Icons.chat),
+              _statCard('Dispatch', 'Live', Icons.local_taxi),
+              _statCard('Settlements', 'Live', Icons.receipt_long),
+              _statCard('Reviews', 'Live', Icons.star),
+              _statCard('Chat', 'Live', Icons.chat),
             ],
           ),
-          const SizedBox(height: 24),
-          Text('Status Statistics', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          ...statusStats.map((s) => ListTile(
-                title: Text(s['status'] as String? ?? ''),
-                trailing: Text('${s['count']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              )),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLegacyNotice(String title, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }

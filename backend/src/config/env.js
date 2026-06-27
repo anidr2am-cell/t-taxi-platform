@@ -35,17 +35,61 @@ const envSchema = Joi.object({
   UPLOAD_MAX_FILE_SIZE_MB: Joi.number().min(1).max(50).default(10),
   LOG_LEVEL: Joi.string().valid('error', 'warn', 'info', 'debug').default('info'),
   LOG_DIR: Joi.string().default('./logs'),
-  SWAGGER_ENABLED: Joi.boolean().truthy('true').falsy('false').default(true),
+  SWAGGER_ENABLED: Joi.boolean().truthy('true').falsy('false').optional(),
   SWAGGER_ROUTE: Joi.string().default('/api-docs'),
   SOCKET_PATH: Joi.string().default('/socket.io'),
+  SMTP_HOST: Joi.string().allow('').optional(),
+  SMTP_PORT: Joi.number().port().default(587),
+  SMTP_USER: Joi.string().allow('').optional(),
+  SMTP_PASSWORD: Joi.string().allow('').optional(),
+  SMTP_FROM: Joi.string().allow('').optional(),
+  TZ: Joi.string().default('Asia/Bangkok'),
 }).unknown(true);
 
 const { value: env, error } = envSchema.validate(process.env, { abortEarly: false });
+
+const WEAK_SECRET_PATTERNS = [
+  /^secret$/i,
+  /^changeme$/i,
+  /^change-me/i,
+  /^replace-with/i,
+  /^test-/i,
+];
+
+function isWeakSecret(value) {
+  if (!value || value.length < 16) return true;
+  return WEAK_SECRET_PATTERNS.some((pattern) => pattern.test(value.trim()));
+}
 
 if (error) {
   // eslint-disable-next-line no-console
   console.error('❌ Invalid environment variables:\n', error.details.map((d) => d.message).join('\n'));
   process.exit(1);
+}
+
+if (env.SWAGGER_ENABLED === undefined) {
+  env.SWAGGER_ENABLED = env.NODE_ENV !== 'production';
+}
+
+if (env.NODE_ENV === 'production') {
+  const productionErrors = [];
+  if (isWeakSecret(env.JWT_ACCESS_SECRET)) {
+    productionErrors.push('JWT_ACCESS_SECRET must be a strong secret in production');
+  }
+  if (isWeakSecret(env.JWT_REFRESH_SECRET)) {
+    productionErrors.push('JWT_REFRESH_SECRET must be a strong secret in production');
+  }
+  if (!env.DB_PASSWORD) {
+    productionErrors.push('DB_PASSWORD is required in production');
+  }
+  if (env.CORS_ORIGIN === '*' || !env.CORS_ORIGIN) {
+    productionErrors.push('CORS_ORIGIN must be an explicit allowlist in production');
+  }
+  if (productionErrors.length) {
+    // eslint-disable-next-line no-console
+    console.error('❌ Production environment validation failed:\n', productionErrors.join('\n'));
+    process.exit(1);
+  }
 }
 
 module.exports = {
@@ -101,4 +145,12 @@ module.exports = {
   cors: {
     origin: env.CORS_ORIGIN,
   },
+  smtp: {
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    user: env.SMTP_USER,
+    password: env.SMTP_PASSWORD,
+    from: env.SMTP_FROM,
+  },
+  timezone: env.TZ,
 };

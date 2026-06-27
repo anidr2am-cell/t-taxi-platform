@@ -2,6 +2,7 @@
  * middlewares/error.middleware.js — Global error handler (must be last middleware)
  */
 const logger = require('../utils/logger');
+const config = require('../config');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 
@@ -34,7 +35,7 @@ function errorMiddleware(err, req, res, next) {
     body.errors = err.errors;
   }
 
-  if (process.env.NODE_ENV === 'development' && !isAppError) {
+  if (config.server.nodeEnv === 'development' && !isAppError) {
     body.stack = err.stack;
   }
 

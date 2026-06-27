@@ -10,7 +10,8 @@ class InAppNotificationAdapter {
 
 class EmailNotificationAdapter {
   isConfigured() {
-    return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+    const smtp = config.smtp;
+    return Boolean(smtp.host && smtp.user);
   }
 
   async send(_notification, _recipient) {

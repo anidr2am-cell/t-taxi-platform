@@ -1,6 +1,21 @@
+/// Application configuration (Pack 18).
+///
+/// Production builds should pass:
+/// `--dart-define=API_BASE_URL=https://api.example.com`
+/// `--dart-define=SOCKET_URL=https://api.example.com`
 class AppConfig {
-  static const String apiBaseUrl = 'http://localhost:3000';
-  static const String socketUrl = 'http://localhost:3000';
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:3000',
+  );
+
+  static const String socketUrl = String.fromEnvironment(
+    'SOCKET_URL',
+    defaultValue: 'http://localhost:3000',
+  );
+
+  static bool get isDevelopment =>
+      apiBaseUrl.contains('localhost') || apiBaseUrl.contains('127.0.0.1');
 }
 
 enum ServiceType {

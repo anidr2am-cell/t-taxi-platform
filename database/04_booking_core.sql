@@ -237,14 +237,13 @@ CREATE TABLE IF NOT EXISTS booking_driver_assignments (
   unassigned_at DATETIME NULL DEFAULT NULL,
   accepted_at DATETIME NULL DEFAULT NULL,
   completed_at DATETIME NULL DEFAULT NULL,
-  active_booking_key BIGINT UNSIGNED GENERATED ALWAYS AS (
-    IF(is_active = 1 AND deleted_at IS NULL, booking_id, NULL)
-  ) STORED,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL DEFAULT NULL,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_bda_one_active_per_booking (active_booking_key),
+  UNIQUE KEY uk_bda_one_active_per_booking (
+    (IF(is_active = 1 AND deleted_at IS NULL, booking_id, NULL))
+  ),
   KEY idx_booking_driver_assignments_booking_active (booking_id, is_active),
   KEY idx_booking_driver_assignments_driver_active (driver_id, is_active),
   KEY idx_booking_driver_assignments_driver_status (driver_id, status),
