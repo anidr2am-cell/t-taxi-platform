@@ -12,6 +12,7 @@ import '../widgets/step_customer_info.dart';
 import '../widgets/step_destination_select.dart';
 import '../widgets/step_origin_select.dart';
 import '../widgets/step_passengers_luggage.dart';
+import '../widgets/step_pickup_datetime.dart';
 import '../widgets/step_service_select.dart';
 import '../widgets/step_vehicle_select.dart';
 import '../widgets/wizard_status_views.dart';
@@ -49,12 +50,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       case 2:
         return l10n.t('destination');
       case 3:
-        return l10n.t('passengers');
+        return l10n.t('pickup_datetime');
       case 4:
-        return l10n.t('select_vehicle');
+        return l10n.t('passengers');
       case 5:
-        return l10n.t('booking_summary');
+        return l10n.t('select_vehicle');
       case 6:
+        return l10n.t('booking_summary');
+      case 7:
         return l10n.t('customer_info');
       default:
         return l10n.t('app_title');
@@ -77,7 +80,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final snapshot = _controller.state;
     final serviceLabel = l10n.t(snapshot.serviceType?.labelKey ?? '');
     final originLabel = _controller.formatLocationLabel(snapshot.origin);
-    final destinationLabel = _controller.formatLocationLabel(snapshot.destination);
+    final destinationLabel = _controller.formatLocationLabel(
+      snapshot.destination,
+    );
 
     final result = await _controller.submitBooking();
     if (result == null) {
@@ -115,7 +120,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         }
 
         final state = _controller.state;
-        if (state.step == 3 &&
+        if (state.step == 4 &&
             state.recommendation == null &&
             !_controller.isLoading &&
             state.errorMessage == null) {
@@ -123,7 +128,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
             _controller.loadRecommendation();
           });
         }
-        final maxWidth = MediaQuery.sizeOf(context).width > 720 ? 720.0 : double.infinity;
+        final maxWidth = MediaQuery.sizeOf(context).width > 720
+            ? 720.0
+            : double.infinity;
 
         return Scaffold(
           appBar: AppBar(
@@ -172,25 +179,31 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           onSelected: _controller.setDestination,
         );
       case 3:
+        return StepPickupDateTime(state: state, controller: _controller);
+      case 4:
         return StepPassengersLuggage(
           state: state,
           controller: _controller,
           onRetryRecommendation: _controller.loadRecommendation,
         );
-      case 4:
-        return StepVehicleSelect(state: state, controller: _controller);
       case 5:
-        return StepConfirmation(state: state);
+        return StepVehicleSelect(state: state, controller: _controller);
       case 6:
+        return StepConfirmation(state: state);
+      case 7:
         return StepCustomerInfo(
           state: state,
           onNameChanged: (v) => _controller.updateCustomerInfo(name: v),
           onEmailChanged: (v) => _controller.updateCustomerInfo(email: v),
           onPhoneChanged: (v) => _controller.updateCustomerInfo(phone: v),
-          onCountryChanged: (v) => _controller.updateCustomerInfo(countryCode: v),
-          onMessengerTypeChanged: (v) => _controller.updateCustomerInfo(messengerType: v),
-          onMessengerIdChanged: (v) => _controller.updateCustomerInfo(messengerId: v),
-          onAdditionalRequestsChanged: (v) => _controller.updateCustomerInfo(additionalRequests: v),
+          onCountryChanged: (v) =>
+              _controller.updateCustomerInfo(countryCode: v),
+          onMessengerTypeChanged: (v) =>
+              _controller.updateCustomerInfo(messengerType: v),
+          onMessengerIdChanged: (v) =>
+              _controller.updateCustomerInfo(messengerId: v),
+          onAdditionalRequestsChanged: (v) =>
+              _controller.updateCustomerInfo(additionalRequests: v),
         );
       default:
         return const SizedBox.shrink();
@@ -199,7 +212,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
 
   Widget _buildFooter(AppLocalizations l10n, BookingWizardState state) {
     final isLast = state.step == BookingWizardState.stepCount - 1;
-    final canProceed = _controller.canProceedFromCurrentStep() && !_controller.isLoading;
+    final canProceed =
+        _controller.canProceedFromCurrentStep() && !_controller.isLoading;
 
     return SafeArea(
       child: Padding(

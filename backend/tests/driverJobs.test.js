@@ -151,6 +151,8 @@ test('today list sorting is requested from repository and mapped concisely', asy
   const result = await service.listToday(44, new Date('2026-07-01T01:00:00.000Z'));
 
   assert.equal(result.items[0].bookingNumber, 'TX202607010001');
+  assert.equal(result.items[0].pickupDate, '2026-07-01');
+  assert.equal(result.items[0].pickupTime, '09:30');
   assert.equal(result.items[0].passengerCount, 3);
   assert.equal(result.items[0].customerDisplayName, 'Kim');
   assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS', 'MARK_ARRIVED']);

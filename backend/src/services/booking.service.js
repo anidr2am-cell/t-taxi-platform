@@ -78,6 +78,24 @@ class BookingService {
     return date.toISOString().slice(0, 19).replace('T', ' ');
   }
 
+  formatThailandDateTime(value) {
+    const date = new Date(value);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+      hour12: false,
+    }).formatToParts(date);
+    const part = (type) => parts.find((item) => item.type === type)?.value;
+    const hour = part('hour') === '24' ? '00' : part('hour');
+    return `${part('year')}-${part('month')}-${part('day')} ${hour}:${part('minute')}:${part('second')}`;
+  }
+
   async resolveTransferAirport(conn, input) {
     const iata = input.transfer?.airportIata
       || input.originAirportIata
@@ -137,10 +155,11 @@ class BookingService {
       const customerUserId = authUser?.id ?? null;
       const createdBy = customerUserId;
 
-      const scheduledPickupAt = input.scheduledPickupAt ?? null;
+      const scheduledPickupAtIso = input.scheduledPickupAt;
+      const scheduledPickupAt = this.formatThailandDateTime(scheduledPickupAtIso);
       const now = new Date();
       const boardingExpires = scheduledPickupAt
-        ? this.addHours(new Date(scheduledPickupAt), BOARDING_QR_TTL_HOURS)
+        ? this.addHours(new Date(scheduledPickupAtIso), BOARDING_QR_TTL_HOURS)
         : this.addDays(now, 30);
 
       const metadata = {};

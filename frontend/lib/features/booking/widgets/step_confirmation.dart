@@ -22,11 +22,24 @@ class StepConfirmation extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.t('booking_summary'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                l10n.t('booking_summary'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const Divider(height: 24),
-              _row(l10n.t('service_type'), l10n.t(state.serviceType?.labelKey ?? '')),
+              _row(
+                l10n.t('service_type'),
+                l10n.t(state.serviceType?.labelKey ?? ''),
+              ),
               _row(l10n.t('origin'), _formatLocation(state.origin)),
               _row(l10n.t('destination'), _formatLocation(state.destination)),
+              _row(
+                l10n.t('pickup_datetime'),
+                '${state.pickupDate ?? '-'} ${state.pickupTime ?? ''}'.trim(),
+              ),
               _row(l10n.t('adults'), '${state.adults}'),
               _row(l10n.t('children'), '${state.children}'),
               _row(l10n.t('infants'), '${state.infants}'),
@@ -38,7 +51,10 @@ class StepConfirmation extends StatelessWidget {
               _row(l10n.t('vehicle'), state.selectedVehicle ?? '-'),
               if (pricing != null) ...[
                 const Divider(height: 24),
-                _row(l10n.t('base_price'), '${pricing.basePrice} ${pricing.currency}'),
+                _row(
+                  l10n.t('base_price'),
+                  '${pricing.basePrice} ${pricing.currency}',
+                ),
                 for (final item in pricing.additionalCharges)
                   _row(item.description, '${item.amount} ${pricing.currency}'),
                 _row(
@@ -77,7 +93,9 @@ class StepConfirmation extends StatelessWidget {
             flex: 3,
             child: Text(
               value,
-              style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.w600),
+              style: TextStyle(
+                fontWeight: bold ? FontWeight.bold : FontWeight.w600,
+              ),
             ),
           ),
         ],

@@ -53,6 +53,11 @@ class AppLocalizations {
       'flight_number': 'Flight Number',
       'date': 'Date',
       'time': 'Time',
+      'pickup_datetime': 'Pick-up date & time',
+      'pickup_date': 'Pick-up date',
+      'pickup_time': 'Pick-up time',
+      'pickup_minimum_notice':
+          'Please choose a pick-up time at least 2 hours from now. Times use Thailand local time.',
       'select_vehicle': 'Select Vehicle',
       'recommended': 'Recommended',
       'total': 'Total',
@@ -124,7 +129,8 @@ class AppLocalizations {
       'country_code_hint': 'TH, US, KR…',
       'boarding_qr_title': 'Boarding QR',
       'boarding_qr_hint': 'Show this QR to your driver at pickup.',
-      'booking_trust_message': 'Your booking has been received. Please show your boarding QR to the driver when you get in.',
+      'booking_trust_message':
+          'Your booking has been received. Please show your boarding QR to the driver when you get in.',
       'chat_after_driver_assignment': 'Chat available after driver assignment',
       'password': 'Password',
       'admin_dispatch_search': 'Search bookings',
@@ -182,7 +188,8 @@ class AppLocalizations {
       'driver_view_settlement': 'View settlement',
       'driver_qr_boarding_title': 'Boarding QR',
       'driver_qr_dropoff_title': 'Dropoff QR',
-      'driver_qr_boarding_help': 'Scan the customer boarding QR shown in their app.',
+      'driver_qr_boarding_help':
+          'Scan the customer boarding QR shown in their app.',
       'driver_qr_dropoff_help': 'Scan the customer dropoff QR from their app.',
       'driver_qr_boarding_manual_label': 'Boarding QR token',
       'driver_qr_dropoff_manual_label': 'Dropoff QR token',
@@ -224,6 +231,10 @@ class AppLocalizations {
       'flight_number': '항공편 번호',
       'date': '날짜',
       'time': '시간',
+      'pickup_datetime': '픽업 날짜·시간',
+      'pickup_date': '픽업 날짜',
+      'pickup_time': '픽업 시간',
+      'pickup_minimum_notice': '현재 시각 기준 최소 2시간 이후의 태국 현지 시간을 선택해 주세요.',
       'select_vehicle': '차량 선택',
       'recommended': '추천',
       'total': '총 금액',
@@ -298,6 +309,10 @@ class AppLocalizations {
       'flight_number': '航班号',
       'date': '日期',
       'time': '时间',
+      'pickup_datetime': '接送日期和时间',
+      'pickup_date': '接送日期',
+      'pickup_time': '接送时间',
+      'pickup_minimum_notice': '请选择至少 2 小时后的泰国当地时间。',
       'select_vehicle': '选择车辆',
       'recommended': '推荐',
       'total': '总计',
@@ -372,6 +387,10 @@ class AppLocalizations {
       'flight_number': '便名',
       'date': '日付',
       'time': '時間',
+      'pickup_datetime': 'ピックアップ日時',
+      'pickup_date': 'ピックアップ日',
+      'pickup_time': 'ピックアップ時間',
+      'pickup_minimum_notice': '現在時刻から2時間以上後のタイ現地時間を選択してください。',
       'select_vehicle': '車両選択',
       'recommended': 'おすすめ',
       'total': '合計',
@@ -446,6 +465,11 @@ class AppLocalizations {
       'flight_number': 'หมายเลขเที่ยวบิน',
       'date': 'วันที่',
       'time': 'เวลา',
+      'pickup_datetime': 'วันที่และเวลารับ',
+      'pickup_date': 'วันที่รับ',
+      'pickup_time': 'เวลารับ',
+      'pickup_minimum_notice':
+          'กรุณาเลือกเวลารับอย่างน้อย 2 ชั่วโมงจากตอนนี้ตามเวลาไทย',
       'select_vehicle': 'เลือกรถ',
       'recommended': 'แนะนำ',
       'total': 'รวม',
@@ -508,13 +532,16 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   AppLocalizationsDelegate(this.languageCode);
 
   @override
-  bool isSupported(Locale locale) => AppLocalizations.supportedLanguages.contains(languageCode);
+  bool isSupported(Locale locale) =>
+      AppLocalizations.supportedLanguages.contains(languageCode);
 
   @override
-  Future<AppLocalizations> load(Locale locale) async => AppLocalizations(languageCode);
+  Future<AppLocalizations> load(Locale locale) async =>
+      AppLocalizations(languageCode);
 
   @override
-  bool shouldReload(covariant AppLocalizationsDelegate old) => old.languageCode != languageCode;
+  bool shouldReload(covariant AppLocalizationsDelegate old) =>
+      old.languageCode != languageCode;
 }
 
 extension AppLocalizationsContext on BuildContext {

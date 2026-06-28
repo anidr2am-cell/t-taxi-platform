@@ -12,13 +12,16 @@ class BookingWizardController extends ChangeNotifier {
     BookingApiService? apiService,
     BookingStateStorage? storage,
     RecentLocationsStorage? recentLocationsStorage,
-  })  : _api = apiService ?? BookingApiService(),
-        _storage = storage ?? BookingStateStorage(),
-        _recentLocations = recentLocationsStorage ?? RecentLocationsStorage();
+    DateTime Function()? now,
+  }) : _api = apiService ?? BookingApiService(),
+       _storage = storage ?? BookingStateStorage(),
+       _recentLocations = recentLocationsStorage ?? RecentLocationsStorage(),
+       _now = now ?? DateTime.now;
 
   final BookingApiService _api;
   final BookingStateStorage _storage;
   final RecentLocationsStorage _recentLocations;
+  final DateTime Function() _now;
 
   BookingWizardState _state = const BookingWizardState();
   bool _isLoading = false;
@@ -63,6 +66,13 @@ class BookingWizardController extends ChangeNotifier {
     final restored = await _storage.load();
     if (restored != null) {
       _state = restored;
+    } else {
+      final initialPickup = defaultPickupDateTime();
+      _state = _state.copyWith(
+        pickupDate: formatDate(initialPickup),
+        pickupTime: formatTime(initialPickup),
+      );
+      await _persist();
     }
     _isInitialized = true;
     notifyListeners();
@@ -112,6 +122,87 @@ class BookingWizardController extends ChangeNotifier {
     await _recentLocations.add(location);
     await _persist();
     notifyListeners();
+  }
+
+  DateTime thailandNow() => _now().toUtc().add(const Duration(hours: 7));
+
+  DateTime minimumPickupDateTime() {
+    return thailandNow().add(const Duration(hours: 2));
+  }
+
+  DateTime defaultPickupDateTime() => minimumPickupDateTime();
+
+  String formatDate(DateTime value) {
+    final y = value.year.toString().padLeft(4, '0');
+    final m = value.month.toString().padLeft(2, '0');
+    final d = value.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  String formatTime(DateTime value) {
+    final h = value.hour.toString().padLeft(2, '0');
+    final m = value.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  DateTime? selectedPickupDateTime() {
+    final date = _state.pickupDate;
+    final time = _state.pickupTime;
+    if (date == null || time == null) return null;
+    final dateParts = date.split('-').map(int.tryParse).toList();
+    final timeParts = time.split(':').map(int.tryParse).toList();
+    if (dateParts.length != 3 || timeParts.length != 2) return null;
+    if (dateParts.any((part) => part == null) ||
+        timeParts.any((part) => part == null)) {
+      return null;
+    }
+    return DateTime(
+      dateParts[0]!,
+      dateParts[1]!,
+      dateParts[2]!,
+      timeParts[0]!,
+      timeParts[1]!,
+    );
+  }
+
+  String? scheduledPickupAtIso() {
+    final selected = selectedPickupDateTime();
+    if (selected == null) return null;
+    return '${formatDate(selected)}T${formatTime(selected)}:00+07:00';
+  }
+
+  bool isPickupDateTimeAllowed(DateTime value) {
+    return !value.isBefore(minimumPickupDateTime());
+  }
+
+  Future<bool> setPickupDateTime(DateTime value) async {
+    if (value.isBefore(
+      DateTime(thailandNow().year, thailandNow().month, thailandNow().day),
+    )) {
+      _state = _state.copyWith(
+        errorMessage: 'Pickup date cannot be in the past',
+      );
+      await _persist();
+      notifyListeners();
+      return false;
+    }
+    if (!isPickupDateTimeAllowed(value)) {
+      _state = _state.copyWith(
+        errorMessage: 'Pickup time must be at least 2 hours from now',
+      );
+      await _persist();
+      notifyListeners();
+      return false;
+    }
+    _state = _state.copyWith(
+      pickupDate: formatDate(value),
+      pickupTime: formatTime(value),
+      clearPricing: true,
+      clearError: true,
+    );
+    await _persist();
+    notifyListeners();
+    return true;
   }
 
   Future<List<LocationOption>> loadRecentLocations() {
@@ -210,6 +301,7 @@ class BookingWizardController extends ChangeNotifier {
         'originLocationCode': locations['originLocationCode'],
       if (locations['destinationLocationCode'] != null)
         'destinationLocationCode': locations['destinationLocationCode'],
+      'scheduledPickupAt': scheduledPickupAtIso(),
       'passengers': {
         'adults': _state.adults,
         'children': _state.children,
@@ -222,8 +314,7 @@ class BookingWizardController extends ChangeNotifier {
         'specialLuggageCount': _state.specialLuggageCount,
       },
       'options': {'nameSign': _state.nameSign},
-      if (airportIata != null)
-        'transfer': {'airportIata': airportIata},
+      if (airportIata != null) 'transfer': {'airportIata': airportIata},
       'customer': {
         'name': _state.customerName.trim(),
         'email': _state.customerEmail.trim(),
@@ -308,7 +399,9 @@ class BookingWizardController extends ChangeNotifier {
 
     final recommendedIndex = vehicleTierOrder.indexOf(recommended);
     final vehicleIndex = vehicleTierOrder.indexOf(vehicleCode);
-    if (recommendedIndex >= 0 && vehicleIndex >= 0 && vehicleIndex < recommendedIndex) {
+    if (recommendedIndex >= 0 &&
+        vehicleIndex >= 0 &&
+        vehicleIndex < recommendedIndex) {
       return false;
     }
     return true;
@@ -339,25 +432,35 @@ class BookingWizardController extends ChangeNotifier {
     if (service == BookingServiceType.airportPickup) {
       originAirportIata = _airportIataFromOption(origin);
       destinationLocationCode = _internalLocationCodeFromOption(destination);
-      destinationRegion = destinationLocationCode == null ? _regionFromLocation(destination) : null;
+      destinationRegion = destinationLocationCode == null
+          ? _regionFromLocation(destination)
+          : null;
     } else if (service == BookingServiceType.airportDropoff) {
       originAirportIata = _airportIataFromOption(destination);
       destinationLocationCode = _internalLocationCodeFromOption(origin);
-      destinationRegion = destinationLocationCode == null ? _regionFromLocation(origin) : null;
+      destinationRegion = destinationLocationCode == null
+          ? _regionFromLocation(origin)
+          : null;
     } else if (service == BookingServiceType.cityTransfer) {
       originAirportIata = _airportIataFromOption(origin);
       originLocationCode = originAirportIata == null
-          ? (_internalLocationCodeFromOption(origin) ?? _regionFromLocation(origin))
+          ? (_internalLocationCodeFromOption(origin) ??
+                _regionFromLocation(origin))
           : null;
       destinationLocationCode = _internalLocationCodeFromOption(destination);
-      destinationRegion = destinationLocationCode == null ? _regionFromLocation(destination) : null;
+      destinationRegion = destinationLocationCode == null
+          ? _regionFromLocation(destination)
+          : null;
     } else if (service == BookingServiceType.golfTransfer) {
       originAirportIata = _airportIataFromOption(origin);
       originLocationCode = originAirportIata == null
-          ? (_internalLocationCodeFromOption(origin) ?? _regionFromLocation(origin))
+          ? (_internalLocationCodeFromOption(origin) ??
+                _regionFromLocation(origin))
           : null;
       destinationLocationCode = _internalLocationCodeFromOption(destination);
-      destinationRegion = destinationLocationCode == null ? _regionFromLocation(destination ?? origin) : null;
+      destinationRegion = destinationLocationCode == null
+          ? _regionFromLocation(destination ?? origin)
+          : null;
     }
 
     return {
@@ -411,10 +514,14 @@ class BookingWizardController extends ChangeNotifier {
   String? _internalLocationCodeFromOption(LocationOption? location) {
     if (location == null) return null;
     final code = location.code?.trim().toUpperCase();
-    if (code != null && code.isNotEmpty && _knownLocationCodeByText.containsValue(code)) {
+    if (code != null &&
+        code.isNotEmpty &&
+        _knownLocationCodeByText.containsValue(code)) {
       return code;
     }
-    if (code != null && code.isNotEmpty && location.kind != LocationKind.place) {
+    if (code != null &&
+        code.isNotEmpty &&
+        location.kind != LocationKind.place) {
       return code;
     }
 
@@ -444,6 +551,7 @@ class BookingWizardController extends ChangeNotifier {
         destinationRegion: locations['destinationRegion'],
         originLocationCode: locations['originLocationCode'],
         destinationLocationCode: locations['destinationLocationCode'],
+        scheduledPickupAt: scheduledPickupAtIso(),
         nameSign: _state.nameSign,
         adults: _state.adults,
         children: _state.children,
@@ -455,10 +563,7 @@ class BookingWizardController extends ChangeNotifier {
       );
       _state = _state.copyWith(pricing: pricing, clearError: true);
     } catch (e) {
-      _state = _state.copyWith(
-        errorMessage: e.toString(),
-        clearPricing: true,
-      );
+      _state = _state.copyWith(errorMessage: e.toString(), clearPricing: true);
     } finally {
       _setLoading(false);
       await _persist();
@@ -466,7 +571,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<bool> goNext() async {
-    if (_state.step == 3) {
+    if (_state.step == 4) {
       await loadRecommendation();
       if (_state.recommendation == null && _state.errorMessage != null) {
         return false;
@@ -479,10 +584,12 @@ class BookingWizardController extends ChangeNotifier {
       await _persist();
       notifyListeners();
 
-      if (nextStep == 3 && _state.recommendation == null) {
+      if (nextStep == 4 && _state.recommendation == null) {
         await loadRecommendation();
       }
-      if (nextStep == 4 && _state.selectedVehicle != null && _state.pricing == null) {
+      if (nextStep == 5 &&
+          _state.selectedVehicle != null &&
+          _state.pricing == null) {
         await loadPricing();
       }
       return true;
@@ -507,12 +614,15 @@ class BookingWizardController extends ChangeNotifier {
       case 2:
         return _state.destination != null;
       case 3:
-        return _state.adults >= 1;
+        final selected = selectedPickupDateTime();
+        return selected != null && isPickupDateTimeAllowed(selected);
       case 4:
-        return _state.selectedVehicle != null && _state.pricing != null;
+        return _state.adults >= 1;
       case 5:
-        return true;
+        return _state.selectedVehicle != null && _state.pricing != null;
       case 6:
+        return true;
+      case 7:
         return _state.customerName.trim().isNotEmpty &&
             _state.customerEmail.trim().isNotEmpty &&
             _state.customerPhone.trim().isNotEmpty;

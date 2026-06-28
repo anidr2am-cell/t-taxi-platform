@@ -16,122 +16,244 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  test('calculatePricing sends contract body with passengers, luggage, and options', () async {
-    Uri? requestedUri;
-    Map<String, dynamic>? body;
-    final api = BookingApiService.test(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        requestedUri = request.url;
-        body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
-        return http.Response(jsonEncode({
-          'success': true,
-          'data': {
-            'currency': 'THB',
-            'chargeItems': [],
-            'totalAmount': 0,
-          },
-        }), 200);
-      }),
-    );
+  test(
+    'calculatePricing sends contract body with passengers, luggage, and options',
+    () async {
+      Uri? requestedUri;
+      Map<String, dynamic>? body;
+      final api = BookingApiService.test(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          requestedUri = request.url;
+          body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {'currency': 'THB', 'chargeItems': [], 'totalAmount': 0},
+            }),
+            200,
+          );
+        }),
+      );
 
-    await api.calculatePricing(
-      serviceTypeCode: 'CITY_TRANSFER',
-      vehicleTypeCode: 'SUV',
-      originLocationCode: 'BANGKOK',
-      destinationRegion: 'Pattaya',
-      nameSign: true,
-      adults: 2,
-      children: 1,
-      infants: 0,
-      luggage20: 1,
-      luggage24: 2,
-      golfBags: 0,
-      specialLuggageCount: 1,
-    );
+      await api.calculatePricing(
+        serviceTypeCode: 'CITY_TRANSFER',
+        vehicleTypeCode: 'SUV',
+        scheduledPickupAt: '2026-07-01T09:30:00+07:00',
+        originLocationCode: 'BANGKOK',
+        destinationRegion: 'Pattaya',
+        nameSign: true,
+        adults: 2,
+        children: 1,
+        infants: 0,
+        luggage20: 1,
+        luggage24: 2,
+        golfBags: 0,
+        specialLuggageCount: 1,
+      );
 
-    expect(requestedUri!.path, '/api/v1/bookings/pricing/calculate');
-    expect(body!['serviceTypeCode'], 'CITY_TRANSFER');
-    expect(body!['vehicleTypeCode'], 'SUV');
-    expect(body!['originLocationCode'], 'BANGKOK');
-    expect(body!['destinationRegion'], 'Pattaya');
-    expect(body!['passengers'], {'adults': 2, 'children': 1, 'infants': 0});
-    expect(body!['luggage'], {
-      'carriers20Inch': 1,
-      'carriers24InchPlus': 2,
-      'golfBags': 0,
-      'specialLuggageCount': 1,
-    });
-    expect(body!['options'], {'nameSign': true});
-    expect(body!.containsKey('chargeOptions'), false);
-  });
+      expect(requestedUri!.path, '/api/v1/bookings/pricing/calculate');
+      expect(body!['serviceTypeCode'], 'CITY_TRANSFER');
+      expect(body!['vehicleTypeCode'], 'SUV');
+      expect(body!['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
+      expect(body!['originLocationCode'], 'BANGKOK');
+      expect(body!['destinationRegion'], 'Pattaya');
+      expect(body!['passengers'], {'adults': 2, 'children': 1, 'infants': 0});
+      expect(body!['luggage'], {
+        'carriers20Inch': 1,
+        'carriers24InchPlus': 2,
+        'golfBags': 0,
+        'specialLuggageCount': 1,
+      });
+      expect(body!['options'], {'nameSign': true});
+      expect(body!.containsKey('chargeOptions'), false);
+    },
+  );
 
-  test('wizard pricing maps Google airport place and Pattaya to MVP pricing codes', () async {
-    final api = _CapturingBookingApi();
+  test(
+    'wizard pricing maps Google airport place and Pattaya to MVP pricing codes',
+    () async {
+      final api = _CapturingBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+      );
+
+      await controller.selectService(BookingServiceType.airportPickup);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'place:bkk',
+          displayName: 'Suvarnabhumi Airport, Bangkok, Thailand',
+          kind: LocationKind.place,
+          placeId: 'google-bkk',
+          name: 'Suvarnabhumi Airport',
+          address: 'Bangkok, Thailand',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'place:pattaya',
+          displayName: '파타야',
+          kind: LocationKind.place,
+          code: 'PATTAYA',
+          placeId: 'google-pattaya',
+          name: '파타야',
+          address: '파타야 촌 부리 태국',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(
+        adults: 2,
+        luggage20: 1,
+        luggage24: 2,
+        nameSign: true,
+      );
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+
+      final body = api.lastPricingRequest!;
+      expect(body['serviceTypeCode'], 'AIRPORT_PICKUP');
+      expect(body['vehicleTypeCode'], 'SUV');
+      expect(body['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
+      expect(body['originAirportIata'], 'BKK');
+      expect(body.containsKey('originLocationCode'), false);
+      expect(body['destinationLocationCode'], 'PATTAYA');
+      expect(body.containsKey('destinationRegion'), false);
+      expect(body['passengers'], {'adults': 2, 'children': 0, 'infants': 0});
+      expect(body['luggage'], {
+        'carriers20Inch': 1,
+        'carriers24InchPlus': 2,
+        'golfBags': 0,
+        'specialLuggageCount': 0,
+      });
+      expect(body['options'], {'nameSign': true});
+    },
+  );
+
+  test(
+    'place details keep localized display text while storing MVP internal code',
+    () {
+      final location = LocationOption.fromPlaceDetails(
+        const PlaceDetails(
+          placeId: 'google-pattaya',
+          name: '파타야',
+          address: '파타야 촌 부리 태국',
+        ),
+      );
+
+      expect(location.displayName, '파타야');
+      expect(location.name, '파타야');
+      expect(location.address, '파타야 촌 부리 태국');
+      expect(location.code, 'PATTAYA');
+      expect(location.placeId, 'google-pattaya');
+    },
+  );
+
+  test('pickup date cannot be in the past', () async {
     final controller = BookingWizardController(
-      apiService: api,
+      apiService: _CapturingBookingApi(),
       storage: _MemoryBookingStateStorage(),
       recentLocationsStorage: RecentLocationsStorage(
         guestRepository: _MemoryRecentLocationsRepository(),
       ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
     );
 
-    await controller.selectService(BookingServiceType.airportPickup);
-    await controller.setOrigin(const LocationOption(
-      id: 'place:bkk',
-      displayName: 'Suvarnabhumi Airport, Bangkok, Thailand',
-      kind: LocationKind.place,
-      placeId: 'google-bkk',
-      name: 'Suvarnabhumi Airport',
-      address: 'Bangkok, Thailand',
-    ));
-    await controller.setDestination(const LocationOption(
-      id: 'place:pattaya',
-      displayName: '파타야',
-      kind: LocationKind.place,
-      code: 'PATTAYA',
-      placeId: 'google-pattaya',
-      name: '파타야',
-      address: '파타야 촌 부리 태국',
-    ));
-    await controller.updatePassengersAndLuggage(
-      adults: 2,
-      luggage20: 1,
-      luggage24: 2,
-      nameSign: true,
-    );
-    await controller.loadRecommendation();
-    await controller.selectVehicle('SUV');
+    final ok = await controller.setPickupDateTime(DateTime(2026, 6, 28, 12));
 
-    final body = api.lastPricingRequest!;
-    expect(body['serviceTypeCode'], 'AIRPORT_PICKUP');
-    expect(body['vehicleTypeCode'], 'SUV');
-    expect(body['originAirportIata'], 'BKK');
-    expect(body.containsKey('originLocationCode'), false);
-    expect(body['destinationLocationCode'], 'PATTAYA');
-    expect(body.containsKey('destinationRegion'), false);
-    expect(body['passengers'], {'adults': 2, 'children': 0, 'infants': 0});
-    expect(body['luggage'], {
-      'carriers20Inch': 1,
-      'carriers24InchPlus': 2,
-      'golfBags': 0,
-      'specialLuggageCount': 0,
-    });
-    expect(body['options'], {'nameSign': true});
+    expect(ok, false);
+    expect(controller.state.errorMessage, contains('past'));
   });
 
-  test('place details keep localized display text while storing MVP internal code', () {
-    final location = LocationOption.fromPlaceDetails(const PlaceDetails(
-      placeId: 'google-pattaya',
-      name: '파타야',
-      address: '파타야 촌 부리 태국',
-    ));
+  test('pickup time must be at least 2 hours from now', () async {
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: _MemoryBookingStateStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
 
-    expect(location.displayName, '파타야');
-    expect(location.name, '파타야');
-    expect(location.address, '파타야 촌 부리 태국');
-    expect(location.code, 'PATTAYA');
-    expect(location.placeId, 'google-pattaya');
+    final ok = await controller.setPickupDateTime(
+      DateTime(2026, 6, 29, 11, 30),
+    );
+
+    expect(ok, false);
+    expect(controller.canProceedFromCurrentStep(), false);
+    expect(controller.state.errorMessage, contains('2 hours'));
+  });
+
+  test('pickup date and time persist in wizard state', () async {
+    final storage = _MemoryBookingStateStorage();
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: storage,
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+    final restored = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: storage,
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+    await restored.initialize();
+
+    expect(restored.state.pickupDate, '2026-07-01');
+    expect(restored.state.pickupTime, '09:30');
+    expect(restored.scheduledPickupAtIso(), '2026-07-01T09:30:00+07:00');
+  });
+
+  test('booking payload includes scheduledPickupAt ISO-8601 field', () async {
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: _MemoryBookingStateStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.selectService(BookingServiceType.cityTransfer);
+    await controller.setOrigin(
+      const LocationOption(
+        id: 'origin',
+        displayName: 'Bangkok',
+        kind: LocationKind.city,
+        code: 'BANGKOK',
+      ),
+    );
+    await controller.setDestination(
+      const LocationOption(
+        id: 'destination',
+        displayName: 'Pattaya',
+        kind: LocationKind.city,
+        code: 'PATTAYA',
+      ),
+    );
+    await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+    await controller.updatePassengersAndLuggage(adults: 2);
+    await controller.loadRecommendation();
+    await controller.selectVehicle('SUV');
+    await controller.updateCustomerInfo(
+      name: 'Kim',
+      email: 'kim@example.com',
+      phone: '+66123456789',
+    );
+
+    final payload = controller.buildCreatePayload();
+
+    expect(payload['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
   });
 }
 
@@ -204,8 +326,15 @@ class _CapturingBookingApi implements BookingApiService {
     if (destinationLocationCode != null) {
       request['destinationLocationCode'] = destinationLocationCode;
     }
+    if (scheduledPickupAt != null) {
+      request['scheduledPickupAt'] = scheduledPickupAt;
+    }
     lastPricingRequest = request;
-    return const PricingResult(currency: 'THB', chargeItems: [], totalAmount: 0);
+    return const PricingResult(
+      currency: 'THB',
+      chargeItems: [],
+      totalAmount: 0,
+    );
   }
 
   @override

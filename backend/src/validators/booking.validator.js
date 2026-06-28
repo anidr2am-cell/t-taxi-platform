@@ -8,6 +8,20 @@ const BOOKING_STATUS = require('../constants/reservationStatus');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 
+function validateScheduledPickupAt(value, helpers) {
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return helpers.error('date.format');
+  }
+
+  const minimum = Date.now() + (2 * 60 * 60 * 1000);
+  if (timestamp < minimum) {
+    return helpers.message('scheduledPickupAt must be at least 2 hours from now');
+  }
+
+  return value;
+}
+
 const vehicleRecommendSchema = Joi.object({
   adults: Joi.number().integer().min(1).required(),
   children: luggageCountField,
@@ -30,7 +44,7 @@ const createBookingSchema = Joi.object({
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).required(),
   vehicleTypeCode: Joi.string().valid(...Object.values(VEHICLE_TYPES)).required(),
   vehicleCount: Joi.number().integer().min(1).max(5).default(1),
-  scheduledPickupAt: Joi.string().isoDate().allow(null),
+  scheduledPickupAt: Joi.string().isoDate().required().custom(validateScheduledPickupAt),
   origin: placeSchema.required(),
   destination: placeSchema.required(),
   originAirportIata: Joi.string().length(3).uppercase().allow(null),

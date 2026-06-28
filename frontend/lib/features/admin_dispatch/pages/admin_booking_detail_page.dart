@@ -70,7 +70,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.toString())));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -95,7 +97,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.toString())));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -112,35 +116,38 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!),
-                      ElevatedButton(onPressed: _load, child: Text(l10n.t('admin_dispatch_retry'))),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_error!),
+                  ElevatedButton(
+                    onPressed: _load,
+                    child: Text(l10n.t('admin_dispatch_retry')),
                   ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _infoCard(l10n, _detail!),
-                      const SizedBox(height: 16),
-                      if (actions.contains('ASSIGN_DRIVER'))
-                        ElevatedButton(
-                          onPressed: _submitting ? null : _assign,
-                          child: Text(l10n.t('admin_dispatch_assign_driver')),
-                        ),
-                      if (actions.contains('REASSIGN_DRIVER'))
-                        OutlinedButton(
-                          onPressed: _submitting ? null : _reassign,
-                          child: Text(l10n.t('admin_dispatch_reassign_driver')),
-                        ),
-                    ],
-                  ),
-                ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _infoCard(l10n, _detail!),
+                  const SizedBox(height: 16),
+                  if (actions.contains('ASSIGN_DRIVER'))
+                    ElevatedButton(
+                      onPressed: _submitting ? null : _assign,
+                      child: Text(l10n.t('admin_dispatch_assign_driver')),
+                    ),
+                  if (actions.contains('REASSIGN_DRIVER'))
+                    OutlinedButton(
+                      onPressed: _submitting ? null : _reassign,
+                      child: Text(l10n.t('admin_dispatch_reassign_driver')),
+                    ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -158,15 +165,31 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.t('booking_summary'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              l10n.t('booking_summary'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             _row(l10n.t('status'), detail['status'] as String? ?? ''),
+            _row(
+              l10n.t('pickup_datetime'),
+              detail['scheduledPickupAt'] as String? ?? '',
+            ),
             _row(l10n.t('origin'), origin['address'] as String? ?? ''),
-            _row(l10n.t('destination'), destination['address'] as String? ?? ''),
+            _row(
+              l10n.t('destination'),
+              destination['address'] as String? ?? '',
+            ),
             _row(l10n.t('name'), customer['name'] as String? ?? ''),
             _row(l10n.t('phone'), customer['phone'] as String? ?? ''),
-            _row(l10n.t('total'), '${pricing['totalAmount']} ${pricing['currency']}'),
-            _row(l10n.t('payment_method'), pricing['paymentMethod'] as String? ?? ''),
+            _row(
+              l10n.t('total'),
+              '${pricing['totalAmount']} ${pricing['currency']}',
+            ),
+            _row(
+              l10n.t('payment_method'),
+              pricing['paymentMethod'] as String? ?? '',
+            ),
             if (assignment != null)
               _row(
                 l10n.t('admin_dispatch_assigned_driver'),
@@ -183,8 +206,15 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: TextStyle(color: Colors.grey.shade700))),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+          Expanded(
+            child: Text(label, style: TextStyle(color: Colors.grey.shade700)),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import 'features/driver/pages/driver_shell_page.dart';
 import 'providers/booking_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
+import 'screens/admin/admin_screen.dart';
 
 void main() {
   runApp(
@@ -42,6 +43,7 @@ class TTaxiApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routes: {
+	'/admin': (_) => const AdminScreen(),
         '/driver': (_) => const DriverLoginPage(),
         '/driver/home': (_) => const DriverShellPage(),
         '/driver/jobs': (_) => const DriverShellPage(),

@@ -8,6 +8,8 @@ class BookingWizardState {
   final BookingServiceType? serviceType;
   final LocationOption? origin;
   final LocationOption? destination;
+  final String? pickupDate;
+  final String? pickupTime;
   final int adults;
   final int children;
   final int infants;
@@ -33,6 +35,8 @@ class BookingWizardState {
     this.serviceType,
     this.origin,
     this.destination,
+    this.pickupDate,
+    this.pickupTime,
     this.adults = 1,
     this.children = 0,
     this.infants = 0,
@@ -54,7 +58,7 @@ class BookingWizardState {
     this.additionalRequests = '',
   });
 
-  static const int stepCount = 7;
+  static const int stepCount = 8;
 
   BookingWizardState copyWith({
     int? step,
@@ -63,6 +67,9 @@ class BookingWizardState {
     LocationOption? destination,
     bool clearOrigin = false,
     bool clearDestination = false,
+    String? pickupDate,
+    String? pickupTime,
+    bool clearPickupDateTime = false,
     int? adults,
     int? children,
     int? infants,
@@ -91,6 +98,8 @@ class BookingWizardState {
       serviceType: serviceType ?? this.serviceType,
       origin: clearOrigin ? null : (origin ?? this.origin),
       destination: clearDestination ? null : (destination ?? this.destination),
+      pickupDate: clearPickupDateTime ? null : (pickupDate ?? this.pickupDate),
+      pickupTime: clearPickupDateTime ? null : (pickupTime ?? this.pickupTime),
       adults: adults ?? this.adults,
       children: children ?? this.children,
       infants: infants ?? this.infants,
@@ -99,7 +108,9 @@ class BookingWizardState {
       golfBags: golfBags ?? this.golfBags,
       specialLuggageCount: specialLuggageCount ?? this.specialLuggageCount,
       nameSign: nameSign ?? this.nameSign,
-      recommendation: clearRecommendation ? null : (recommendation ?? this.recommendation),
+      recommendation: clearRecommendation
+          ? null
+          : (recommendation ?? this.recommendation),
       selectedVehicle: selectedVehicle ?? this.selectedVehicle,
       pricing: clearPricing ? null : (pricing ?? this.pricing),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -114,38 +125,48 @@ class BookingWizardState {
   }
 
   Map<String, dynamic> toJson() => {
-        'step': step,
-        'serviceType': serviceType?.apiCode,
-        'origin': origin?.toJson(),
-        'destination': destination?.toJson(),
-        'adults': adults,
-        'children': children,
-        'infants': infants,
-        'luggage20': luggage20,
-        'luggage24': luggage24,
-        'golfBags': golfBags,
-        'specialLuggageCount': specialLuggageCount,
-        'nameSign': nameSign,
-        'selectedVehicle': selectedVehicle,
-        'customerName': customerName,
-        'customerEmail': customerEmail,
-        'customerPhone': customerPhone,
-        'customerCountryCode': customerCountryCode,
-        'messengerType': messengerType,
-        'messengerId': messengerId,
-        'additionalRequests': additionalRequests,
-      };
+    'step': step,
+    'serviceType': serviceType?.apiCode,
+    'origin': origin?.toJson(),
+    'destination': destination?.toJson(),
+    'pickupDate': pickupDate,
+    'pickupTime': pickupTime,
+    'adults': adults,
+    'children': children,
+    'infants': infants,
+    'luggage20': luggage20,
+    'luggage24': luggage24,
+    'golfBags': golfBags,
+    'specialLuggageCount': specialLuggageCount,
+    'nameSign': nameSign,
+    'selectedVehicle': selectedVehicle,
+    'customerName': customerName,
+    'customerEmail': customerEmail,
+    'customerPhone': customerPhone,
+    'customerCountryCode': customerCountryCode,
+    'messengerType': messengerType,
+    'messengerId': messengerId,
+    'additionalRequests': additionalRequests,
+  };
 
   factory BookingWizardState.fromJson(Map<String, dynamic> json) {
     return BookingWizardState(
       step: json['step'] as int? ?? 0,
-      serviceType: BookingServiceTypeX.fromApiCode(json['serviceType'] as String?),
+      serviceType: BookingServiceTypeX.fromApiCode(
+        json['serviceType'] as String?,
+      ),
       origin: json['origin'] != null
-          ? LocationOption.fromJson(Map<String, dynamic>.from(json['origin'] as Map))
+          ? LocationOption.fromJson(
+              Map<String, dynamic>.from(json['origin'] as Map),
+            )
           : null,
       destination: json['destination'] != null
-          ? LocationOption.fromJson(Map<String, dynamic>.from(json['destination'] as Map))
+          ? LocationOption.fromJson(
+              Map<String, dynamic>.from(json['destination'] as Map),
+            )
           : null,
+      pickupDate: json['pickupDate'] as String?,
+      pickupTime: json['pickupTime'] as String?,
       adults: json['adults'] as int? ?? 1,
       children: json['children'] as int? ?? 0,
       infants: json['infants'] as int? ?? 0,
