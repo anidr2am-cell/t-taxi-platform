@@ -18,9 +18,19 @@ class BookingApiException implements Exception {
 class BookingApiService {
   static final BookingApiService _instance = BookingApiService._();
   factory BookingApiService() => _instance;
-  BookingApiService._();
+  BookingApiService._({http.Client? client, String? baseUrl})
+      : _client = client ?? http.Client(),
+        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
-  String get _base => '${AppConfig.apiBaseUrl}/api/v1';
+  BookingApiService.test({
+    required http.Client client,
+    required String baseUrl,
+  }) : this._(client: client, baseUrl: baseUrl);
+
+  final http.Client _client;
+  final String _baseUrl;
+
+  String get _base => '$_baseUrl/api/v1';
 
   Future<dynamic> _request(
     String method,
@@ -32,9 +42,9 @@ class BookingApiService {
     http.Response response;
 
     if (method == 'GET') {
-      response = await http.get(uri);
+      response = await _client.get(uri);
     } else {
-      response = await http.post(
+      response = await _client.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
@@ -96,11 +106,29 @@ class BookingApiService {
     String? destinationLocationCode,
     bool nameSign = false,
     String? scheduledPickupAt,
+    int adults = 1,
+    int children = 0,
+    int infants = 0,
+    int luggage20 = 0,
+    int luggage24 = 0,
+    int golfBags = 0,
+    int specialLuggageCount = 0,
   }) async {
     final body = <String, dynamic>{
       'serviceTypeCode': serviceTypeCode,
       'vehicleTypeCode': vehicleTypeCode,
       'vehicleCount': vehicleCount,
+      'passengers': {
+        'adults': adults,
+        'children': children,
+        'infants': infants,
+      },
+      'luggage': {
+        'carriers20Inch': luggage20,
+        'carriers24InchPlus': luggage24,
+        'golfBags': golfBags,
+        'specialLuggageCount': specialLuggageCount,
+      },
       'options': {'nameSign': nameSign},
     };
     if (originAirportIata != null) {

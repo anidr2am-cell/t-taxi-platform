@@ -2936,13 +2936,14 @@ components:
         - VEHICLE_BASE
         - NAME_SIGN
         - NIGHT_SURCHARGE
-        - AIRPORT_PARKING
+        - AIRPORT_SURCHARGE
         - TOLL_GATE
         - PROMOTION
         - COUPON
         - DRIVER_EXTRA
         - SEASON_SURCHARGE
         - HOLIDAY_SURCHARGE
+        - WAITING_CHARGE
         - OTHER
     Locale:
       type: string

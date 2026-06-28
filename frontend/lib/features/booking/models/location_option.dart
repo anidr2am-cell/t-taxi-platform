@@ -29,16 +29,31 @@ class LocationOption {
 
   factory LocationOption.fromPlaceDetails(PlaceDetails details) {
     final label = details.name.isNotEmpty ? details.name : details.address;
+    final internalCode = _knownInternalCodeForText(
+      '${details.name} ${details.address}',
+    );
     return LocationOption(
       id: 'place:${details.placeId}',
       displayName: label,
       kind: LocationKind.place,
+      code: internalCode,
       placeId: details.placeId,
       name: details.name,
       address: details.address,
       latitude: details.latitude,
       longitude: details.longitude,
     );
+  }
+
+  static String? _knownInternalCodeForText(String value) {
+    final text = value.toUpperCase();
+    if (text.contains('PATTAYA') || value.contains('파타야')) return 'PATTAYA';
+    if (text.contains('BANGKOK') || value.contains('방콕')) return 'BANGKOK';
+    if (text.contains('BKK') || text.contains('SUVARNABHUMI')) return 'BKK';
+    if (text.contains('DMK') || text.contains('DON MUEANG') || text.contains('DON MUANG')) {
+      return 'DMK';
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() => {

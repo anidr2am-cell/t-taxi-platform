@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../config/app_config.dart';
 import '../models/place_prediction.dart';
@@ -6,13 +6,23 @@ import '../models/place_prediction.dart';
 class PlacesApiService {
   static final PlacesApiService _instance = PlacesApiService._();
   factory PlacesApiService() => _instance;
-  PlacesApiService._();
+  PlacesApiService._({http.Client? client, String? baseUrl})
+      : _client = client ?? http.Client(),
+        _baseUrl = baseUrl ?? 'http://localhost:3000';
 
-  String get _base => '${AppConfig.apiBaseUrl}/api/v1';
+  PlacesApiService.test({
+    required http.Client client,
+    required String baseUrl,
+  }) : this._(client: client, baseUrl: baseUrl);
+
+  final http.Client _client;
+  final String _baseUrl;
+
+  String get _base => '$_baseUrl/api/v1';
 
   Future<dynamic> _get(String path, {Map<String, String>? query}) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
-    final response = await http.get(uri);
+    final response = await _client.get(uri);
     final decoded = jsonDecode(response.body);
 
     if (response.statusCode >= 400) {

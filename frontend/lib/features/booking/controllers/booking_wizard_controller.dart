@@ -37,6 +37,28 @@ class BookingWizardController extends ChangeNotifier {
     'LUXURY',
   ];
 
+  static const Map<String, String> _knownAirportIataByText = {
+    'BKK': 'BKK',
+    'SUVARNABHUMI': 'BKK',
+    'DMK': 'DMK',
+    'DON MUEANG': 'DMK',
+    'DON MUANG': 'DMK',
+    'HKT': 'HKT',
+    'PHUKET AIRPORT': 'HKT',
+    'CNX': 'CNX',
+    'CHIANG MAI AIRPORT': 'CNX',
+    'UTP': 'UTP',
+    'U-TAPAO': 'UTP',
+    'UTAPAO': 'UTP',
+  };
+
+  static const Map<String, String> _knownLocationCodeByText = {
+    'PATTAYA': 'PATTAYA',
+    '파타야': 'PATTAYA',
+    'BANGKOK': 'BANGKOK',
+    '방콕': 'BANGKOK',
+  };
+
   Future<void> initialize() async {
     final restored = await _storage.load();
     if (restored != null) {
@@ -315,21 +337,27 @@ class BookingWizardController extends ChangeNotifier {
     String? destinationLocationCode;
 
     if (service == BookingServiceType.airportPickup) {
-      if (origin?.kind == LocationKind.airport) originAirportIata = origin?.code;
-      destinationRegion = _regionFromLocation(destination);
+      originAirportIata = _airportIataFromOption(origin);
+      destinationLocationCode = _internalLocationCodeFromOption(destination);
+      destinationRegion = destinationLocationCode == null ? _regionFromLocation(destination) : null;
     } else if (service == BookingServiceType.airportDropoff) {
-      if (destination?.kind == LocationKind.airport) {
-        originAirportIata = destination?.code;
-      }
-      destinationRegion = _regionFromLocation(origin);
+      originAirportIata = _airportIataFromOption(destination);
+      destinationLocationCode = _internalLocationCodeFromOption(origin);
+      destinationRegion = destinationLocationCode == null ? _regionFromLocation(origin) : null;
     } else if (service == BookingServiceType.cityTransfer) {
-      originLocationCode = _locationCodeFromOption(origin);
-      destinationLocationCode = _locationCodeFromOption(destination);
-      destinationRegion = _regionFromLocation(destination);
-      originAirportIata = origin?.kind == LocationKind.airport ? origin?.code : null;
+      originAirportIata = _airportIataFromOption(origin);
+      originLocationCode = originAirportIata == null
+          ? (_internalLocationCodeFromOption(origin) ?? _regionFromLocation(origin))
+          : null;
+      destinationLocationCode = _internalLocationCodeFromOption(destination);
+      destinationRegion = destinationLocationCode == null ? _regionFromLocation(destination) : null;
     } else if (service == BookingServiceType.golfTransfer) {
-      destinationRegion = _regionFromLocation(destination ?? origin);
-      if (origin?.kind == LocationKind.airport) originAirportIata = origin?.code;
+      originAirportIata = _airportIataFromOption(origin);
+      originLocationCode = originAirportIata == null
+          ? (_internalLocationCodeFromOption(origin) ?? _regionFromLocation(origin))
+          : null;
+      destinationLocationCode = _internalLocationCodeFromOption(destination);
+      destinationRegion = destinationLocationCode == null ? _regionFromLocation(destination ?? origin) : null;
     }
 
     return {
@@ -360,10 +388,45 @@ class BookingWizardController extends ChangeNotifier {
     return name.isEmpty ? null : name;
   }
 
-  String? _locationCodeFromOption(LocationOption? location) {
+  String? _airportIataFromOption(LocationOption? location) {
     if (location == null) return null;
-    if (location.code != null && location.kind != LocationKind.place) {
-      return location.code!.toUpperCase();
+    final code = location.code?.trim().toUpperCase();
+    if (code != null && _knownAirportIataByText.containsValue(code)) {
+      return code;
+    }
+
+    final text = [
+      location.code,
+      location.name,
+      location.displayName,
+      location.address,
+    ].whereType<String>().join(' ').toUpperCase();
+
+    for (final entry in _knownAirportIataByText.entries) {
+      if (text.contains(entry.key)) return entry.value;
+    }
+    return null;
+  }
+
+  String? _internalLocationCodeFromOption(LocationOption? location) {
+    if (location == null) return null;
+    final code = location.code?.trim().toUpperCase();
+    if (code != null && code.isNotEmpty && _knownLocationCodeByText.containsValue(code)) {
+      return code;
+    }
+    if (code != null && code.isNotEmpty && location.kind != LocationKind.place) {
+      return code;
+    }
+
+    final text = [
+      location.region,
+      location.name,
+      location.displayName,
+      location.address,
+    ].whereType<String>().join(' ').toUpperCase();
+
+    for (final entry in _knownLocationCodeByText.entries) {
+      if (text.contains(entry.key)) return entry.value;
     }
     return null;
   }
@@ -382,6 +445,13 @@ class BookingWizardController extends ChangeNotifier {
         originLocationCode: locations['originLocationCode'],
         destinationLocationCode: locations['destinationLocationCode'],
         nameSign: _state.nameSign,
+        adults: _state.adults,
+        children: _state.children,
+        infants: _state.infants,
+        luggage20: _state.luggage20,
+        luggage24: _state.luggage24,
+        golfBags: _state.golfBags,
+        specialLuggageCount: _state.specialLuggageCount,
       );
       _state = _state.copyWith(pricing: pricing, clearError: true);
     } catch (e) {

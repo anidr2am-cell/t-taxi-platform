@@ -22,6 +22,7 @@ const BookingNumberService = require('../services/bookingNumber.service');
 const BookingService = require('../services/booking.service');
 const BookingStatusService = require('../services/bookingStatus.service');
 const FlightService = require('../services/flight.service');
+const PlacesService = require('../services/places.service');
 const DriverJobService = require('../services/driverJob.service');
 const DriverRepository = require('../repositories/driver.repository');
 const FileRepository = require('../repositories/file.repository');
@@ -128,6 +129,9 @@ container.register('flightService', () => new FlightService({
   apiKey: config.external.aviationStackApiKey,
   baseUrl: config.external.aviationStackBaseUrl,
   timeoutMs: config.external.aviationStackTimeoutMs,
+}));
+container.register('placesService', () => new PlacesService({
+  apiKey: config.external.googleMapsApiKey,
 }));
 container.register('driverJobService', (c) => new DriverJobService(
   c.get('bookingRepository'),

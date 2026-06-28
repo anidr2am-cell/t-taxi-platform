@@ -31,7 +31,7 @@ function errorMiddleware(err, req, res, next) {
     message: err.message || 'Internal server error',
   };
 
-  if (err.errors) {
+  if (err.errors && config.server.nodeEnv !== 'production') {
     body.errors = err.errors;
   }
 

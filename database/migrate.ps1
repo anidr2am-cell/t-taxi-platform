@@ -1,6 +1,6 @@
 param(
     [string]$DbHost = "127.0.0.1",
-    [int]$Port = 3307,
+    [int]$Port = 3306,
     [string]$User = "root",
     [string]$Password = "",
     [string]$DatabaseDir = $PSScriptRoot,

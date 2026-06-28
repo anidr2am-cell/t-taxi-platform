@@ -1,5 +1,4 @@
 const database = require('../config/database');
-const { toDatabaseChargeType } = require('../utils/chargeTypeDb.util');
 
 class BookingRepository {
   constructor(pool = database.pool) {
@@ -123,7 +122,7 @@ class BookingRepository {
       `,
       [
         bookingId,
-        item.chargeType ? toDatabaseChargeType(item.chargeType) : item.chargeType,
+        item.chargeType,
         item.description,
         item.quantity,
         item.unitPrice,

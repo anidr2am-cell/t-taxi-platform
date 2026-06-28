@@ -4,18 +4,28 @@
 /// `--dart-define=API_BASE_URL=https://api.example.com`
 /// `--dart-define=SOCKET_URL=https://api.example.com`
 class AppConfig {
-  static const String apiBaseUrl = String.fromEnvironment(
+  static const String _apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://localhost:3000',
   );
 
-  static const String socketUrl = String.fromEnvironment(
+  static const String _socketUrl = String.fromEnvironment(
     'SOCKET_URL',
     defaultValue: 'http://localhost:3000',
   );
 
+  static String get apiBaseUrl => _normalizeLocalHost(_apiBaseUrl);
+
+  static String get socketUrl => _normalizeLocalHost(_socketUrl);
+
   static bool get isDevelopment =>
       apiBaseUrl.contains('localhost') || apiBaseUrl.contains('127.0.0.1');
+
+  static String _normalizeLocalHost(String value) {
+    final uri = Uri.tryParse(value);
+    if (uri == null || uri.host != 'location') return value;
+    return uri.replace(host: 'localhost').toString();
+  }
 }
 
 enum ServiceType {

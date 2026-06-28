@@ -16,6 +16,7 @@ class GooglePlacesSearchField extends StatefulWidget {
   final String languageCode;
   final bool showAirportShortcuts;
   final ValueChanged<LocationOption> onSelected;
+  final PlacesApiService? placesApi;
 
   const GooglePlacesSearchField({
     super.key,
@@ -24,6 +25,7 @@ class GooglePlacesSearchField extends StatefulWidget {
     required this.onSelected,
     this.selected,
     this.showAirportShortcuts = false,
+    this.placesApi,
   });
 
   @override
@@ -31,7 +33,7 @@ class GooglePlacesSearchField extends StatefulWidget {
 }
 
 class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
-  final _placesApi = PlacesApiService();
+  late final PlacesApiService _placesApi;
   final _recentStorage = RecentLocationsStorage();
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
@@ -49,6 +51,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   @override
   void initState() {
     super.initState();
+    _placesApi = widget.placesApi ?? PlacesApiService();
     _editing = widget.selected == null;
     if (widget.selected != null) {
       _controller.text = widget.selected!.name ?? widget.selected!.displayName;
