@@ -26,6 +26,7 @@ class BookingService {
     vehicleRepository,
     outboxRepository,
     outboxProcessor,
+    flightService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -36,6 +37,7 @@ class BookingService {
     this.vehicleRepository = vehicleRepository;
     this.outboxRepository = outboxRepository;
     this.outboxProcessor = outboxProcessor;
+    this.flightService = flightService;
   }
 
   buildPricingInput(input) {
@@ -94,6 +96,31 @@ class BookingService {
     const part = (type) => parts.find((item) => item.type === type)?.value;
     const hour = part('hour') === '24' ? '00' : part('hour');
     return `${part('year')}-${part('month')}-${part('day')} ${hour}:${part('minute')}:${part('second')}`;
+  }
+
+  extractAirlineCode(flightNumber) {
+    const match = String(flightNumber).match(/^([A-Z]{2,3})\d/);
+    return match ? match[1] : null;
+  }
+
+  resolveTransferFlight(input) {
+    const raw = input.transfer?.flightNumber;
+    if (!raw || !String(raw).trim()) {
+      return { flightNumber: null, airlineCode: null, flightDate: null };
+    }
+    if (!this.flightService) {
+      return {
+        flightNumber: String(raw).trim().replace(/\s+/g, '').toUpperCase(),
+        airlineCode: null,
+        flightDate: input.scheduledPickupAt ? String(input.scheduledPickupAt).slice(0, 10) : null,
+      };
+    }
+    const flightNumber = this.flightService.normalizeFlightNumber(raw);
+    return {
+      flightNumber,
+      airlineCode: this.extractAirlineCode(flightNumber),
+      flightDate: input.scheduledPickupAt ? String(input.scheduledPickupAt).slice(0, 10) : null,
+    };
   }
 
   async resolveTransferAirport(conn, input) {
@@ -228,10 +255,13 @@ class BookingService {
       });
 
       const airportInfo = await this.resolveTransferAirport(conn, input);
+      const flightInfo = this.resolveTransferFlight(input);
       await this.bookingRepository.insertTransferDetails(conn, bookingId, {
         airportId: airportInfo.airportId,
         airportCodeCustom: airportInfo.airportCodeCustom,
-        flightNumber: input.transfer?.flightNumber ?? null,
+        flightNumber: flightInfo.flightNumber,
+        airlineCode: flightInfo.airlineCode,
+        flightDate: flightInfo.flightDate,
         golfCourseId: input.transfer?.golfCourseId ?? null,
         golfRegion: input.transfer?.golfRegion ?? null,
         driverIncluded: Boolean(input.transfer?.driverIncluded),

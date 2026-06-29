@@ -97,14 +97,17 @@ class BookingRepository {
       `
         INSERT INTO booking_transfer_details (
           booking_id, airport_id, airport_code_custom, flight_number,
+          airline_code, flight_date,
           golf_course_id, golf_region, driver_included
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         bookingId,
         transfer.airportId,
         transfer.airportCodeCustom,
         transfer.flightNumber,
+        transfer.airlineCode ?? null,
+        transfer.flightDate ?? null,
         transfer.golfCourseId,
         transfer.golfRegion,
         transfer.driverIncluded ? 1 : 0,

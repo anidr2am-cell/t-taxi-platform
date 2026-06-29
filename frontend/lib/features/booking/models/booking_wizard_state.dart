@@ -29,6 +29,7 @@ class BookingWizardState {
   final String messengerType;
   final String messengerId;
   final String additionalRequests;
+  final String flightNumber;
 
   const BookingWizardState({
     this.step = 0,
@@ -56,6 +57,7 @@ class BookingWizardState {
     this.messengerType = '',
     this.messengerId = '',
     this.additionalRequests = '',
+    this.flightNumber = '',
   });
 
   static const int stepCount = 8;
@@ -92,6 +94,7 @@ class BookingWizardState {
     String? messengerType,
     String? messengerId,
     String? additionalRequests,
+    String? flightNumber,
   }) {
     return BookingWizardState(
       step: step ?? this.step,
@@ -121,6 +124,7 @@ class BookingWizardState {
       messengerType: messengerType ?? this.messengerType,
       messengerId: messengerId ?? this.messengerId,
       additionalRequests: additionalRequests ?? this.additionalRequests,
+      flightNumber: flightNumber ?? this.flightNumber,
     );
   }
 
@@ -147,6 +151,7 @@ class BookingWizardState {
     'messengerType': messengerType,
     'messengerId': messengerId,
     'additionalRequests': additionalRequests,
+    'flightNumber': flightNumber,
   };
 
   factory BookingWizardState.fromJson(Map<String, dynamic> json) {
@@ -183,6 +188,7 @@ class BookingWizardState {
       messengerType: json['messengerType'] as String? ?? '',
       messengerId: json['messengerId'] as String? ?? '',
       additionalRequests: json['additionalRequests'] as String? ?? '',
+      flightNumber: json['flightNumber'] as String? ?? '',
     );
   }
 }

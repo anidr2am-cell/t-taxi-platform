@@ -6,6 +6,7 @@ import '../../features/admin_settlement/pages/admin_settlement_queue_page.dart';
 import '../../features/admin_review/pages/admin_review_queue_page.dart';
 import '../../features/admin_notification/pages/admin_notification_queue_page.dart';
 import '../../features/admin_chat/pages/admin_chat_queue_page.dart';
+import '../../features/admin_flight/pages/admin_flight_monitor_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/language_selector.dart';
 
@@ -34,6 +35,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_settlements'),
       'Reviews',
       'Notifications',
+      'Flights',
     ];
 
     return Scaffold(
@@ -93,6 +95,8 @@ class _AdminScreenState extends State<AdminScreen> {
         return const AdminAuthGate(child: AdminReviewQueuePage());
       case 9:
         return const AdminAuthGate(child: AdminNotificationQueuePage());
+      case 10:
+        return const AdminAuthGate(child: AdminFlightMonitorPage());
       default:
         return const SizedBox.shrink();
     }

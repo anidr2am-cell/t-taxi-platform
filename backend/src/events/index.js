@@ -30,6 +30,9 @@ const EVENTS = {
   SETTLEMENT_APPROVED: 'settlement.approved',
   REVIEW_SUBMITTED: 'review.submitted',
   CHAT_MESSAGE_SENT: 'chat.message_sent',
+  FLIGHT_DELAYED: 'flight.delayed',
+  FLIGHT_CANCELLED: 'flight.cancelled',
+  FLIGHT_LANDED: 'flight.landed',
 };
 
 module.exports = {

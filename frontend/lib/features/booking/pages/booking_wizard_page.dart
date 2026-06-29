@@ -204,6 +204,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               _controller.updateCustomerInfo(messengerId: v),
           onAdditionalRequestsChanged: (v) =>
               _controller.updateCustomerInfo(additionalRequests: v),
+          onFlightNumberChanged: (v) =>
+              _controller.updateCustomerInfo(flightNumber: v),
         );
       default:
         return const SizedBox.shrink();

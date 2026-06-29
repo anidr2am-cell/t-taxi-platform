@@ -1920,6 +1920,86 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseNotificationRead'
 
+  /admin/flights:
+    get:
+      tags: [Admin]
+      summary: List airport pickup flights for monitoring
+      description: >
+        ADMIN and SUPER_ADMIN only. Returns airport pickup bookings with a flight
+        number. Does not include customer personal data.
+      operationId: listAdminFlights
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: flightNumber
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SCHEDULED, ACTIVE, DELAYED, LANDED, CANCELLED, DIVERTED, UNKNOWN]
+        - name: delayedOnly
+          in: query
+          schema:
+            type: boolean
+        - name: bookingNumber
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminFlightList'
+  /admin/flights/{bookingId}:
+    get:
+      tags: [Admin]
+      summary: Get flight monitor detail for a booking
+      operationId: getAdminFlightDetail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminFlightDetail'
+  /admin/flights/{bookingId}/sync:
+    post:
+      tags: [Admin]
+      summary: Manually sync flight data for a booking
+      operationId: syncAdminFlight
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminFlightDetail'
+
   /driver/rating-summary:
     get:
       tags: [Driver]
@@ -4828,6 +4908,95 @@ components:
                   type: array
                   items:
                     $ref: '#/components/schemas/NotificationListItem'
+
+    AdminFlightMonitorItem:
+      type: object
+      properties:
+        bookingId:
+          type: integer
+        bookingNumber:
+          type: string
+        bookingStatus:
+          type: string
+        scheduledPickupAt:
+          type: string
+          nullable: true
+        flightNumber:
+          type: string
+        airlineCode:
+          type: string
+          nullable: true
+        flightDate:
+          type: string
+          format: date
+          nullable: true
+        departureAirportIata:
+          type: string
+          nullable: true
+        arrivalAirportIata:
+          type: string
+          nullable: true
+        scheduledArrivalAt:
+          type: string
+          nullable: true
+        estimatedArrivalAt:
+          type: string
+          nullable: true
+        actualArrivalAt:
+          type: string
+          nullable: true
+        delayMinutes:
+          type: integer
+          nullable: true
+        delayStatus:
+          type: string
+          nullable: true
+        flightStatus:
+          type: string
+          enum: [SCHEDULED, ACTIVE, DELAYED, LANDED, CANCELLED, DIVERTED, UNKNOWN]
+          nullable: true
+        lastSyncedAt:
+          type: string
+          nullable: true
+        syncStatus:
+          type: string
+          enum: [NEVER, SUCCESS, FAILED, SKIPPED, NOT_CONFIGURED, RATE_LIMITED]
+          nullable: true
+        syncError:
+          type: string
+          nullable: true
+
+    PaginatedAdminFlightList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total:
+                  type: integer
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AdminFlightMonitorItem'
+
+    ApiResponseAdminFlightDetail:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/AdminFlightMonitorItem'
+                - type: object
+                  properties:
+                    providerConfigured:
+                      type: boolean
 
     NotificationDeliveryListItem:
       type: object

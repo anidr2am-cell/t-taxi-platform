@@ -259,6 +259,7 @@ class BookingWizardController extends ChangeNotifier {
     String? messengerType,
     String? messengerId,
     String? additionalRequests,
+    String? flightNumber,
   }) async {
     _state = _state.copyWith(
       customerName: name,
@@ -268,6 +269,7 @@ class BookingWizardController extends ChangeNotifier {
       messengerType: messengerType,
       messengerId: messengerId,
       additionalRequests: additionalRequests,
+      flightNumber: flightNumber,
       clearError: true,
     );
     await _persist();
@@ -329,7 +331,13 @@ class BookingWizardController extends ChangeNotifier {
         'specialLuggageCount': _state.specialLuggageCount,
       },
       'options': {'nameSign': _state.nameSign},
-      if (airportIata != null) 'transfer': {'airportIata': airportIata},
+      if (airportIata != null)
+        'transfer': {
+          'airportIata': airportIata,
+          if (_state.serviceType == BookingServiceType.airportPickup &&
+              _state.flightNumber.trim().isNotEmpty)
+            'flightNumber': _state.flightNumber.trim().replaceAll(' ', '').toUpperCase(),
+        },
       'customer': {
         'name': _state.customerName.trim(),
         'email': _state.customerEmail.trim(),

@@ -1,0 +1,4 @@
+module.exports = {
+  MIN_INTERVAL_MS: 120000,
+  DELAYED_ONLY_MIN_MINUTES: 1,
+};

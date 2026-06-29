@@ -27,6 +27,8 @@ const envSchema = Joi.object({
   AVIATIONSTACK_API_KEY: Joi.string().allow('').optional(),
   AVIATIONSTACK_BASE_URL: Joi.string().uri().default('http://api.aviationstack.com/v1'),
   AVIATIONSTACK_TIMEOUT_MS: Joi.number().integer().min(1000).max(30000).default(5000),
+  FLIGHT_SYNC_ENABLED: Joi.boolean().truthy('true', '1').falsy('false', '0').default(true),
+  FLIGHT_SYNC_MIN_INTERVAL_MS: Joi.number().integer().min(30000).max(3600000).default(120000),
   FIREBASE_PROJECT_ID: Joi.string().allow('').optional(),
   FIREBASE_CLIENT_EMAIL: Joi.string().allow('').optional(),
   FIREBASE_PRIVATE_KEY: Joi.string().allow('').optional(),
@@ -114,6 +116,8 @@ module.exports = {
     aviationStackApiKey: env.AVIATIONSTACK_API_KEY,
     aviationStackBaseUrl: env.AVIATIONSTACK_BASE_URL,
     aviationStackTimeoutMs: env.AVIATIONSTACK_TIMEOUT_MS,
+    flightSyncEnabled: env.FLIGHT_SYNC_ENABLED,
+    flightSyncMinIntervalMs: env.FLIGHT_SYNC_MIN_INTERVAL_MS,
   },
   firebase: {
     projectId: env.FIREBASE_PROJECT_ID,

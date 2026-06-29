@@ -39,6 +39,8 @@ const NotificationRepository = require('../repositories/notification.repository'
 const NotificationService = require('../services/notification.service');
 const OutboxRepository = require('../repositories/outbox.repository');
 const OutboxProcessor = require('../services/outboxProcessor.service');
+const FlightMonitorRepository = require('../repositories/flightMonitor.repository');
+const AdminFlightMonitorService = require('../services/adminFlightMonitor.service');
 const ChatService = require('../services/chat.service');
 const config = require('../config/env');
 const database = require('../config/database');
@@ -128,6 +130,7 @@ container.register('bookingService', (c) => new BookingService(
   c.get('vehicleRepository'),
   c.get('outboxRepository'),
   c.get('outboxProcessor'),
+  c.get('flightService'),
 ));
 container.register('guestBookingLookupService', (c) => new GuestBookingLookupService(
   database.pool,
@@ -206,6 +209,19 @@ container.register('chatService', (c) => new ChatService(
   c.get('userRepository'),
   c.get('outboxRepository'),
   c.get('outboxProcessor'),
+));
+container.register('flightMonitorRepository', () => new FlightMonitorRepository());
+container.register('adminFlightMonitorService', (c) => new AdminFlightMonitorService(
+  database.pool,
+  c.get('flightMonitorRepository'),
+  c.get('flightService'),
+  c.get('bookingRepository'),
+  c.get('outboxRepository'),
+  c.get('outboxProcessor'),
+  {
+    syncEnabled: config.external.flightSyncEnabled,
+    minSyncIntervalMs: config.external.flightSyncMinIntervalMs,
+  },
 ));
 
 module.exports = container;

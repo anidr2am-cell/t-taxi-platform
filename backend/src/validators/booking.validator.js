@@ -69,7 +69,16 @@ const createBookingSchema = Joi.object({
   }).default({}),
   transfer: Joi.object({
     airportIata: Joi.string().length(3).uppercase().allow(null),
-    flightNumber: Joi.string().max(20).allow(null, ''),
+    flightNumber: Joi.string().max(20).allow(null, '').custom((value, helpers) => {
+      if (value == null || !String(value).trim()) return null;
+      const normalized = String(value).trim().replace(/\s+/g, '').toUpperCase();
+      if (!/^[A-Z]{2,3}\d{1,4}[A-Z]?$/.test(normalized)) {
+        return helpers.error('any.invalid');
+      }
+      return normalized;
+    }).messages({
+      'any.invalid': 'Invalid flight number format. Example: TG401',
+    }),
     golfCourseId: Joi.number().integer().positive().allow(null),
     golfRegion: Joi.string().max(50).allow(null, ''),
     driverIncluded: Joi.boolean().default(false),

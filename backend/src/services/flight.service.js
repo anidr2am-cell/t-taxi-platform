@@ -3,6 +3,7 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const logger = require('../utils/logger');
+const { createFlightProviderAdapter } = require('../adapters/flightProvider.factory');
 
 const SOURCE = 'AVIATIONSTACK';
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -18,10 +19,15 @@ const STATUS_MAP = {
 };
 
 class FlightService {
-  constructor(config, httpClient = axios, cache = new Map()) {
+  constructor(config, httpClient = axios, cache = new Map(), provider = null) {
     this.config = config;
     this.httpClient = httpClient;
     this.cache = cache;
+    this.provider = provider ?? createFlightProviderAdapter(config, httpClient);
+  }
+
+  isProviderConfigured() {
+    return this.provider.isConfigured();
   }
 
   normalizeFlightNumber(flightNumber) {
@@ -80,7 +86,7 @@ class FlightService {
   }
 
   ensureConfigured() {
-    if (!this.config?.apiKey || !this.config?.baseUrl) {
+    if (!this.provider.isConfigured()) {
       throw new AppError('Flight provider is not configured', {
         statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
         errorCode: ERROR_CODES.FLIGHT_PROVIDER_NOT_CONFIGURED,
@@ -158,43 +164,6 @@ class FlightService {
     return 0;
   }
 
-  normalizeEndpoint(endpoint) {
-    return String(endpoint ?? '').replace(/\/+$/, '');
-  }
-
-  mapProviderError(err) {
-    if (err instanceof AppError) return err;
-
-    if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
-      return new AppError('Flight provider timed out', {
-        statusCode: HTTP_STATUS.GATEWAY_TIMEOUT,
-        errorCode: ERROR_CODES.FLIGHT_PROVIDER_TIMEOUT,
-      });
-    }
-
-    const status = err.response?.status;
-    const providerCode = String(err.response?.data?.error?.code ?? '').toLowerCase();
-
-    if (status === 401 || status === 403 || providerCode.includes('access_key')) {
-      return new AppError('Flight provider is not configured', {
-        statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
-        errorCode: ERROR_CODES.FLIGHT_PROVIDER_NOT_CONFIGURED,
-      });
-    }
-
-    if (status === 429 || providerCode.includes('rate')) {
-      return new AppError('Flight provider rate limit reached', {
-        statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
-        errorCode: ERROR_CODES.FLIGHT_PROVIDER_RATE_LIMITED,
-      });
-    }
-
-    return new AppError('Flight provider error', {
-      statusCode: HTTP_STATUS.BAD_GATEWAY,
-      errorCode: ERROR_CODES.FLIGHT_PROVIDER_ERROR,
-    });
-  }
-
   logProviderFailure(errorCode, flightNumber, flightDate) {
     logger.warn('Flight provider lookup failed', {
       errorCode,
@@ -206,29 +175,7 @@ class FlightService {
 
   async fetchProviderData(flightNumber, flightDate) {
     this.ensureConfigured();
-
-    const baseUrl = this.normalizeEndpoint(this.config.baseUrl);
-    const response = await this.httpClient.get(`${baseUrl}/flights`, {
-      timeout: this.config.timeoutMs,
-      params: {
-        access_key: this.config.apiKey,
-        flight_iata: flightNumber,
-        flight_date: flightDate,
-      },
-    });
-
-    if (response.data?.error) {
-      throw { response };
-    }
-
-    if (!response || !Array.isArray(response.data?.data)) {
-      throw new AppError('Malformed flight provider response', {
-        statusCode: HTTP_STATUS.BAD_GATEWAY,
-        errorCode: ERROR_CODES.FLIGHT_PROVIDER_ERROR,
-      });
-    }
-
-    return response.data.data;
+    return this.provider.fetchFlights(flightNumber, flightDate);
   }
 
   normalizeProviderResult(item, flightNumber, flightDate) {
@@ -275,7 +222,7 @@ class FlightService {
     try {
       providerData = await this.fetchProviderData(flightNumber, flightDate);
     } catch (err) {
-      const mapped = this.mapProviderError(err);
+      const mapped = this.provider.mapProviderError(err);
       this.logProviderFailure(mapped.errorCode, flightNumber, flightDate);
       throw mapped;
     }

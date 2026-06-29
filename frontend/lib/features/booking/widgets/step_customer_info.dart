@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../models/booking_wizard_state.dart';
+import '../models/service_type_option.dart';
 
 class StepCustomerInfo extends StatefulWidget {
   final BookingWizardState state;
@@ -11,6 +12,7 @@ class StepCustomerInfo extends StatefulWidget {
   final ValueChanged<String> onMessengerTypeChanged;
   final ValueChanged<String> onMessengerIdChanged;
   final ValueChanged<String> onAdditionalRequestsChanged;
+  final ValueChanged<String>? onFlightNumberChanged;
 
   const StepCustomerInfo({
     super.key,
@@ -22,6 +24,7 @@ class StepCustomerInfo extends StatefulWidget {
     required this.onMessengerTypeChanged,
     required this.onMessengerIdChanged,
     required this.onAdditionalRequestsChanged,
+    this.onFlightNumberChanged,
   });
 
   @override
@@ -36,6 +39,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   late final TextEditingController _messengerTypeController;
   late final TextEditingController _messengerIdController;
   late final TextEditingController _requestsController;
+  late final TextEditingController _flightController;
 
   @override
   void initState() {
@@ -47,6 +51,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     _messengerTypeController = TextEditingController(text: widget.state.messengerType);
     _messengerIdController = TextEditingController(text: widget.state.messengerId);
     _requestsController = TextEditingController(text: widget.state.additionalRequests);
+    _flightController = TextEditingController(text: widget.state.flightNumber);
   }
 
   @override
@@ -58,6 +63,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     _messengerTypeController.dispose();
     _messengerIdController.dispose();
     _requestsController.dispose();
+    _flightController.dispose();
     super.dispose();
   }
 
@@ -75,6 +81,20 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
+          if (widget.state.serviceType == BookingServiceType.airportPickup &&
+              widget.onFlightNumberChanged != null) ...[
+            TextField(
+              controller: _flightController,
+              decoration: InputDecoration(
+                labelText: l10n.t('flight_number'),
+                hintText: 'TG401',
+                border: const OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.characters,
+              onChanged: widget.onFlightNumberChanged,
+            ),
+            const SizedBox(height: 12),
+          ],
           TextField(
             controller: _nameController,
             decoration: InputDecoration(

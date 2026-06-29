@@ -95,6 +95,18 @@ const CONTENT = {
     title: 'New chat message',
     body: 'You have a new message about your booking.',
   },
+  [NOTIFICATION_TYPES.FLIGHT_DELAYED]: {
+    title: 'Flight delayed',
+    body: 'Your arrival flight has been delayed.',
+  },
+  [NOTIFICATION_TYPES.FLIGHT_CANCELLED]: {
+    title: 'Flight cancelled',
+    body: 'Your arrival flight has been cancelled.',
+  },
+  [NOTIFICATION_TYPES.FLIGHT_LANDED]: {
+    title: 'Flight landed',
+    body: 'Your arrival flight has landed.',
+  },
 };
 
 class NotificationService {
@@ -341,6 +353,21 @@ class NotificationService {
         }
         break;
       }
+      case EVENTS.FLIGHT_DELAYED:
+        addCustomer(NOTIFICATION_TYPES.FLIGHT_DELAYED);
+        addDriver(NOTIFICATION_TYPES.FLIGHT_DELAYED);
+        await addAdmins(NOTIFICATION_TYPES.FLIGHT_DELAYED);
+        break;
+      case EVENTS.FLIGHT_CANCELLED:
+        addCustomer(NOTIFICATION_TYPES.FLIGHT_CANCELLED);
+        addDriver(NOTIFICATION_TYPES.FLIGHT_CANCELLED);
+        await addAdmins(NOTIFICATION_TYPES.FLIGHT_CANCELLED);
+        break;
+      case EVENTS.FLIGHT_LANDED:
+        addCustomer(NOTIFICATION_TYPES.FLIGHT_LANDED);
+        addDriver(NOTIFICATION_TYPES.FLIGHT_LANDED);
+        await addAdmins(NOTIFICATION_TYPES.FLIGHT_LANDED);
+        break;
       default:
         break;
     }
