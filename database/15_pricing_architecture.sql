@@ -120,9 +120,24 @@ DROP TABLE IF EXISTS vehicle_price_rules;
 DROP TRIGGER IF EXISTS trg_bci_before_insert_validate;
 DROP TRIGGER IF EXISTS trg_bci_before_update_validate;
 
-DROP TABLE IF EXISTS vehicle_prices;
+SET @vehicle_prices_normalized = (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'vehicle_prices'
+    AND COLUMN_NAME = 'route_id'
+);
 
-CREATE TABLE vehicle_prices (
+SET @drop_vehicle_prices_sql = IF(
+  @vehicle_prices_normalized = 0,
+  'DROP TABLE IF EXISTS vehicle_prices',
+  'SELECT 1'
+);
+PREPARE stmt_drop_vehicle_prices FROM @drop_vehicle_prices_sql;
+EXECUTE stmt_drop_vehicle_prices;
+DEALLOCATE PREPARE stmt_drop_vehicle_prices;
+
+CREATE TABLE IF NOT EXISTS vehicle_prices (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   route_id INT UNSIGNED NOT NULL,
   vehicle_type_id SMALLINT UNSIGNED NOT NULL,
@@ -153,9 +168,24 @@ CREATE TABLE vehicle_prices (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-DROP TABLE IF EXISTS charge_policies;
+SET @charge_policies_normalized = (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'charge_policies'
+    AND COLUMN_NAME = 'calculation_type'
+);
 
-CREATE TABLE charge_policies (
+SET @drop_charge_policies_sql = IF(
+  @charge_policies_normalized = 0,
+  'DROP TABLE IF EXISTS charge_policies',
+  'SELECT 1'
+);
+PREPARE stmt_drop_charge_policies FROM @drop_charge_policies_sql;
+EXECUTE stmt_drop_charge_policies;
+DEALLOCATE PREPARE stmt_drop_charge_policies;
+
+CREATE TABLE IF NOT EXISTS charge_policies (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   charge_type ENUM(
     'NAME_SIGN', 'WAITING', 'PARKING', 'TOLL', 'HOLIDAY', 'NIGHT', 'AIRPORT'

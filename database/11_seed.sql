@@ -145,32 +145,53 @@ WHERE vt.code = 'LUXURY'
 -- ---------------------------------------------------------------------------
 -- vehicle_prices (fallback THB base prices — adjust in admin)
 -- ---------------------------------------------------------------------------
-INSERT INTO vehicle_prices (service_type_id, vehicle_type_id, base_price, currency, is_active)
-SELECT st.id, vt.id, 800.00, 'THB', 1
-FROM service_types st, vehicle_types vt
-WHERE st.code = 'AIRPORT_PICKUP' AND vt.code = 'SEDAN'
-  AND NOT EXISTS (
-    SELECT 1 FROM vehicle_prices vp
-    WHERE vp.service_type_id = st.id AND vp.vehicle_type_id = vt.id AND vp.region_code IS NULL
-  );
+DROP PROCEDURE IF EXISTS sp_seed_legacy_vehicle_prices;
 
-INSERT INTO vehicle_prices (service_type_id, vehicle_type_id, base_price, currency, is_active)
-SELECT st.id, vt.id, 1000.00, 'THB', 1
-FROM service_types st, vehicle_types vt
-WHERE st.code = 'AIRPORT_PICKUP' AND vt.code = 'SUV'
-  AND NOT EXISTS (
-    SELECT 1 FROM vehicle_prices vp
-    WHERE vp.service_type_id = st.id AND vp.vehicle_type_id = vt.id AND vp.region_code IS NULL
-  );
+DELIMITER $$
 
-INSERT INTO vehicle_prices (service_type_id, vehicle_type_id, base_price, currency, is_active)
-SELECT st.id, vt.id, 1500.00, 'THB', 1
-FROM service_types st, vehicle_types vt
-WHERE st.code = 'AIRPORT_PICKUP' AND vt.code = 'VAN'
-  AND NOT EXISTS (
-    SELECT 1 FROM vehicle_prices vp
-    WHERE vp.service_type_id = st.id AND vp.vehicle_type_id = vt.id AND vp.region_code IS NULL
-  );
+CREATE PROCEDURE sp_seed_legacy_vehicle_prices()
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'vehicle_prices'
+      AND COLUMN_NAME = 'service_type_id'
+  ) THEN
+    INSERT INTO vehicle_prices (service_type_id, vehicle_type_id, base_price, currency, is_active)
+    SELECT st.id, vt.id, 800.00, 'THB', 1
+    FROM service_types st, vehicle_types vt
+    WHERE st.code = 'AIRPORT_PICKUP' AND vt.code = 'SEDAN'
+      AND NOT EXISTS (
+        SELECT 1 FROM vehicle_prices vp
+        WHERE vp.service_type_id = st.id AND vp.vehicle_type_id = vt.id AND vp.region_code IS NULL
+      );
+
+    INSERT INTO vehicle_prices (service_type_id, vehicle_type_id, base_price, currency, is_active)
+    SELECT st.id, vt.id, 1000.00, 'THB', 1
+    FROM service_types st, vehicle_types vt
+    WHERE st.code = 'AIRPORT_PICKUP' AND vt.code = 'SUV'
+      AND NOT EXISTS (
+        SELECT 1 FROM vehicle_prices vp
+        WHERE vp.service_type_id = st.id AND vp.vehicle_type_id = vt.id AND vp.region_code IS NULL
+      );
+
+    INSERT INTO vehicle_prices (service_type_id, vehicle_type_id, base_price, currency, is_active)
+    SELECT st.id, vt.id, 1500.00, 'THB', 1
+    FROM service_types st, vehicle_types vt
+    WHERE st.code = 'AIRPORT_PICKUP' AND vt.code = 'VAN'
+      AND NOT EXISTS (
+        SELECT 1 FROM vehicle_prices vp
+        WHERE vp.service_type_id = st.id AND vp.vehicle_type_id = vt.id AND vp.region_code IS NULL
+      );
+  END IF;
+END$$
+
+DELIMITER ;
+
+CALL sp_seed_legacy_vehicle_prices();
+
+DROP PROCEDURE IF EXISTS sp_seed_legacy_vehicle_prices;
 
 -- ---------------------------------------------------------------------------
 -- airports (Thailand major)

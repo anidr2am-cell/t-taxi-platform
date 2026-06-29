@@ -106,46 +106,67 @@ ALTER TABLE booking_charge_items
     'OTHER'
   ) NOT NULL;
 
-ALTER TABLE charge_policies
-  MODIFY COLUMN charge_type ENUM(
-    'VEHICLE_BASE',
-    'NAME_SIGN',
-    'NIGHT_SURCHARGE',
-    'AIRPORT_PARKING',
-    'AIRPORT_SURCHARGE',
-    'TOLL_GATE',
-    'PROMOTION',
-    'COUPON',
-    'DRIVER_EXTRA',
-    'SEASON_SURCHARGE',
-    'HOLIDAY_SURCHARGE',
-    'WAITING_CHARGE',
-    'OTHER'
-  ) NOT NULL;
+DROP PROCEDURE IF EXISTS sp_apply_legacy_charge_policy_fixes;
 
-UPDATE charge_policies
-SET charge_type = 'AIRPORT_SURCHARGE'
-WHERE charge_type = 'AIRPORT_PARKING';
+DELIMITER $$
 
-ALTER TABLE charge_policies
-  MODIFY COLUMN charge_type ENUM(
-    'VEHICLE_BASE',
-    'NAME_SIGN',
-    'NIGHT_SURCHARGE',
-    'AIRPORT_SURCHARGE',
-    'TOLL_GATE',
-    'PROMOTION',
-    'COUPON',
-    'DRIVER_EXTRA',
-    'SEASON_SURCHARGE',
-    'HOLIDAY_SURCHARGE',
-    'WAITING_CHARGE',
-    'OTHER'
-  ) NOT NULL;
+CREATE PROCEDURE sp_apply_legacy_charge_policy_fixes()
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'charge_policies'
+      AND COLUMN_NAME = 'modifier_type'
+  ) THEN
+    ALTER TABLE charge_policies
+      MODIFY COLUMN charge_type ENUM(
+        'VEHICLE_BASE',
+        'NAME_SIGN',
+        'NIGHT_SURCHARGE',
+        'AIRPORT_PARKING',
+        'AIRPORT_SURCHARGE',
+        'TOLL_GATE',
+        'PROMOTION',
+        'COUPON',
+        'DRIVER_EXTRA',
+        'SEASON_SURCHARGE',
+        'HOLIDAY_SURCHARGE',
+        'WAITING_CHARGE',
+        'OTHER'
+      ) NOT NULL;
 
-ALTER TABLE charge_policies
-  MODIFY COLUMN modifier_type ENUM(
-    'FIXED',
-    'PERCENT_OF_BASE',
-    'PERCENT_OF_SUBTOTAL'
-  ) NOT NULL DEFAULT 'FIXED';
+    UPDATE charge_policies
+    SET charge_type = 'AIRPORT_SURCHARGE'
+    WHERE charge_type = 'AIRPORT_PARKING';
+
+    ALTER TABLE charge_policies
+      MODIFY COLUMN charge_type ENUM(
+        'VEHICLE_BASE',
+        'NAME_SIGN',
+        'NIGHT_SURCHARGE',
+        'AIRPORT_SURCHARGE',
+        'TOLL_GATE',
+        'PROMOTION',
+        'COUPON',
+        'DRIVER_EXTRA',
+        'SEASON_SURCHARGE',
+        'HOLIDAY_SURCHARGE',
+        'WAITING_CHARGE',
+        'OTHER'
+      ) NOT NULL;
+
+    ALTER TABLE charge_policies
+      MODIFY COLUMN modifier_type ENUM(
+        'FIXED',
+        'PERCENT_OF_BASE',
+        'PERCENT_OF_SUBTOTAL'
+      ) NOT NULL DEFAULT 'FIXED';
+  END IF;
+END$$
+
+DELIMITER ;
+
+CALL sp_apply_legacy_charge_policy_fixes();
+
+DROP PROCEDURE IF EXISTS sp_apply_legacy_charge_policy_fixes;
