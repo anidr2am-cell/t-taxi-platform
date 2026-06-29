@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../widgets/language_selector.dart';
 import '../../../widgets/pwa_install_banner.dart';
+import '../../booking/pages/guest_booking_lookup_page.dart';
 import '../../booking/pages/booking_wizard_page.dart';
 import '../../driver/pages/driver_login_page.dart';
 import '../widgets/landing_hero.dart';
@@ -16,6 +17,13 @@ class CustomerLandingPage extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const BookingWizardPage()),
+    );
+  }
+
+  void _openBookingLookup(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const GuestBookingLookupPage()),
     );
   }
 
@@ -53,6 +61,14 @@ class CustomerLandingPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 LandingHero(onBook: () => _openBookingWizard(context)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openBookingLookup(context),
+                    icon: const Icon(Icons.search),
+                    label: const Text('Find my booking'),
+                  ),
+                ),
                 const PwaInstallBanner(),
                 LandingServiceCards(
                   onBook: () => _openBookingWizard(context),

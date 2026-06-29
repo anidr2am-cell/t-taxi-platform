@@ -212,6 +212,59 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  async findGuestLookupBookingByNumber(conn, bookingNumber) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.status,
+          DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
+          b.origin_address,
+          b.destination_address,
+          b.customer_phone,
+          b.customer_country_code,
+          b.payment_method,
+          b.payment_status,
+          b.total_amount,
+          b.currency,
+          b.vehicle_count,
+          b.boarding_qr_token_hash,
+          b.boarding_qr_used_at,
+          b.dropoff_qr_token_hash,
+          b.dropoff_qr_used_at,
+          st.code AS service_type_code,
+          st.name AS service_type_name,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          bp.adults,
+          bp.children,
+          bp.infants,
+          bl.carriers_20_inch,
+          bl.carriers_24_inch_plus,
+          bl.golf_bags,
+          bl.special_items,
+          btd.flight_number,
+          d.name AS driver_name,
+          d.phone AS driver_phone
+        FROM bookings b
+        INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
+        INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+        LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
+        LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+        LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+        LEFT JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+        LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
   async findByBookingNumberForUpdate(conn, bookingNumber) {
     const [rows] = await conn.query(
       `

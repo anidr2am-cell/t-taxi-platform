@@ -6,6 +6,7 @@ const container = require('../helpers/container');
 const getVehicleRecommendationService = () => container.get('vehicleRecommendationService');
 const getBookingService = () => container.get('bookingService');
 const getBookingStatusService = () => container.get('bookingStatusService');
+const getGuestBookingLookupService = () => container.get('guestBookingLookupService');
 
 const recommendVehicle = asyncHandler(async (req, res) => {
   const data = await getVehicleRecommendationService().recommend(req.body);
@@ -35,9 +36,15 @@ const issueDropoffQr = asyncHandler(async (req, res) => {
   return success(res, data, 'Dropoff QR issued');
 });
 
+const lookupGuestBooking = asyncHandler(async (req, res) => {
+  const data = await getGuestBookingLookupService().lookup(req.body);
+  return success(res, data, 'Booking found');
+});
+
 module.exports = {
   recommendVehicle,
   createBooking,
   updateBookingStatus,
   issueDropoffQr,
+  lookupGuestBooking,
 };

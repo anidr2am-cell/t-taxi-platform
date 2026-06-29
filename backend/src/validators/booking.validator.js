@@ -92,8 +92,14 @@ const updateBookingStatusSchema = Joi.object({
   memo: Joi.string().max(500).allow(null, ''),
 });
 
+const guestBookingLookupSchema = Joi.object({
+  bookingNumber: Joi.string().trim().uppercase().pattern(/^TX\d{12}$/).required(),
+  phone: Joi.string().trim().min(4).max(30).required(),
+});
+
 module.exports = {
   vehicleRecommendSchema,
   createBookingSchema,
   updateBookingStatusSchema,
+  guestBookingLookupSchema,
 };

@@ -2573,6 +2573,37 @@ paths:
         '504':
           $ref: '#/components/responses/FlightProviderError'
 
+  /public/bookings/lookup:
+    post:
+      tags: [Booking]
+      summary: Guest booking lookup
+      description: >
+        Public lookup for guests using booking number and the exact booking phone
+        number after formatting normalization. Returns a sanitized booking summary
+        and a short-lived guest access token for existing customer booking actions.
+        Raw QR tokens, QR hashes, user IDs, emails, commission data, internal notes,
+        and activity logs are never returned.
+      security: []
+      operationId: lookupGuestBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestBookingLookupRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGuestBookingLookup'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2772,6 +2803,18 @@ components:
                 success: false
                 error_code: FORBIDDEN
                 message: Booking not accessible
+    RateLimit:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            limited:
+              value:
+                success: false
+                error_code: RATE_LIMIT
+                message: Too many requests
     DriverNotAvailable:
       description: Driver not available for assignment
       content:
@@ -3551,6 +3594,137 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DropoffQrIssueResponse'
+
+    GuestBookingLookupRequest:
+      type: object
+      required: [bookingNumber, phone]
+      properties:
+        bookingNumber:
+          type: string
+          example: TX202607010001
+        phone:
+          type: string
+          description: Booking phone number. Formatting characters are ignored; partial matching is not allowed.
+          example: '+66 81 234 5678'
+    GuestBookingLookupResponse:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        scheduledPickupAt:
+          type: string
+          format: date-time
+          nullable: true
+        serviceType:
+          type: object
+          properties:
+            code:
+              type: string
+            name:
+              type: string
+        route:
+          type: object
+          properties:
+            origin:
+              type: object
+              properties:
+                address:
+                  type: string
+            destination:
+              type: object
+              properties:
+                address:
+                  type: string
+        vehicle:
+          type: object
+          properties:
+            typeCode:
+              type: string
+            typeName:
+              type: string
+            count:
+              type: integer
+        passengers:
+          type: object
+          properties:
+            adults:
+              type: integer
+            children:
+              type: integer
+            infants:
+              type: integer
+            total:
+              type: integer
+        luggage:
+          type: object
+          properties:
+            carriers20Inch:
+              type: integer
+            carriers24InchPlus:
+              type: integer
+            golfBags:
+              type: integer
+            specialItems:
+              type: string
+              nullable: true
+        flight:
+          type: object
+          properties:
+            flightNumber:
+              type: string
+              nullable: true
+        pricing:
+          type: object
+          properties:
+            totalAmount:
+              type: number
+            currency:
+              type: string
+            paymentMethod:
+              type: string
+            paymentStatus:
+              type: string
+        assignedDriver:
+          type: object
+          nullable: true
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+              nullable: true
+        capabilities:
+          type: object
+          properties:
+            chatAvailable:
+              type: boolean
+            notificationsAvailable:
+              type: boolean
+            dropoffQrIssueAvailable:
+              type: boolean
+            reviewAvailable:
+              type: boolean
+            boardingQrRecoverable:
+              type: boolean
+            boardingQrPreviouslyIssued:
+              type: boolean
+        guestAccess:
+          type: object
+          properties:
+            token:
+              type: string
+            expiresAt:
+              type: string
+              format: date-time
+    ApiResponseGuestBookingLookup:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GuestBookingLookupResponse'
 
     DriverSummary:
       type: object

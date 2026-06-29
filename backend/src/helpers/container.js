@@ -20,6 +20,7 @@ const BookingRepository = require('../repositories/booking.repository');
 const ChatRepository = require('../repositories/chat.repository');
 const BookingNumberService = require('../services/bookingNumber.service');
 const BookingService = require('../services/booking.service');
+const GuestBookingLookupService = require('../services/guestBookingLookup.service');
 const BookingStatusService = require('../services/bookingStatus.service');
 const FlightService = require('../services/flight.service');
 const PlacesService = require('../services/places.service');
@@ -124,6 +125,10 @@ container.register('bookingService', (c) => new BookingService(
   c.get('vehicleRepository'),
   c.get('outboxRepository'),
   c.get('outboxProcessor'),
+));
+container.register('guestBookingLookupService', (c) => new GuestBookingLookupService(
+  database.pool,
+  c.get('bookingRepository'),
 ));
 container.register('flightService', () => new FlightService({
   apiKey: config.external.aviationStackApiKey,
