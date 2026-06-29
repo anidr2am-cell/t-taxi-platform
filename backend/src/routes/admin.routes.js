@@ -1,4 +1,5 @@
 const express = require('express');
+const adminDashboardRoutes = require('./admin.dashboard.routes');
 const adminPricingRoutes = require('./admin.pricing.routes');
 const adminDispatchRoutes = require('./admin.dispatch.routes');
 const adminSettlementRoutes = require('./admin.settlement.routes');
@@ -8,6 +9,7 @@ const adminChatRoutes = require('./admin.chat.routes');
 
 const router = express.Router();
 
+router.use(adminDashboardRoutes);
 router.use(adminPricingRoutes);
 router.use(adminDispatchRoutes);
 router.use(adminSettlementRoutes);
@@ -15,6 +17,6 @@ router.use(adminReviewRoutes);
 router.use(adminNotificationRoutes);
 router.use(adminChatRoutes);
 
-// TODO: dashboard, golf, airports, users, chats, translations, settings
+// TODO: golf, airports, users, translations, settings
 
 module.exports = router;

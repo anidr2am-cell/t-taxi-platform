@@ -1,3 +1,9 @@
+process.env.NODE_ENV = 'test';
+process.env.DB_USER = process.env.DB_USER || 'test';
+process.env.DB_NAME = process.env.DB_NAME || 'ttaxi_test';
+process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret-value';
+process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-value';
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');

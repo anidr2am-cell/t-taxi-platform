@@ -17,11 +17,13 @@ const RouteAdminService = require('../services/routeAdmin.service');
 const VehiclePriceAdminService = require('../services/vehiclePriceAdmin.service');
 const ChargePolicyAdminService = require('../services/chargePolicyAdmin.service');
 const BookingRepository = require('../repositories/booking.repository');
+const AdminDashboardRepository = require('../repositories/adminDashboard.repository');
 const ChatRepository = require('../repositories/chat.repository');
 const BookingNumberService = require('../services/bookingNumber.service');
 const BookingService = require('../services/booking.service');
 const GuestBookingLookupService = require('../services/guestBookingLookup.service');
 const BookingStatusService = require('../services/bookingStatus.service');
+const AdminDashboardService = require('../services/adminDashboard.service');
 const FlightService = require('../services/flight.service');
 const PlacesService = require('../services/places.service');
 const DriverJobService = require('../services/driverJob.service');
@@ -107,6 +109,7 @@ container.register('chargePolicyAdminService', (c) => new ChargePolicyAdminServi
   c.get('chargePolicyRepository'),
 ));
 container.register('bookingRepository', () => new BookingRepository());
+container.register('adminDashboardRepository', () => new AdminDashboardRepository());
 container.register('chatRepository', () => new ChatRepository());
 container.register('bookingNumberService', () => new BookingNumberService());
 container.register('bookingStatusService', (c) => new BookingStatusService(
@@ -129,6 +132,9 @@ container.register('bookingService', (c) => new BookingService(
 container.register('guestBookingLookupService', (c) => new GuestBookingLookupService(
   database.pool,
   c.get('bookingRepository'),
+));
+container.register('adminDashboardService', (c) => new AdminDashboardService(
+  c.get('adminDashboardRepository'),
 ));
 container.register('flightService', () => new FlightService({
   apiKey: config.external.aviationStackApiKey,
