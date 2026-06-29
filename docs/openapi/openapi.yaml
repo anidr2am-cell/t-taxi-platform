@@ -1854,6 +1854,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseUnreadCount'
+  /admin/notifications/deliveries:
+    get:
+      tags: [Admin]
+      summary: List notification delivery statuses
+      description: >
+        ADMIN and SUPER_ADMIN only. Returns operational delivery metadata without
+        recipient emails, tokens, notification bodies, or customer personal data.
+      operationId: listAdminNotificationDeliveries
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [IN_APP, EMAIL, FCM]
+        - name: deliveryStatus
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, DELIVERED, SKIPPED, FAILED]
+        - name: notificationType
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationDeliveryList'
   /admin/notifications/read-all:
     post:
       tags: [Admin]
@@ -4795,6 +4828,68 @@ components:
                   type: array
                   items:
                     $ref: '#/components/schemas/NotificationListItem'
+
+    NotificationDeliveryListItem:
+      type: object
+      properties:
+        deliveryId:
+          type: integer
+        notificationId:
+          type: integer
+        notificationType:
+          type: string
+        eventName:
+          type: string
+          nullable: true
+        bookingId:
+          type: integer
+          nullable: true
+        bookingNumber:
+          type: string
+          nullable: true
+        audienceRole:
+          type: string
+          nullable: true
+        channel:
+          type: string
+          enum: [IN_APP, EMAIL, FCM]
+        deliveryStatus:
+          type: string
+          enum: [PENDING, DELIVERED, SKIPPED, FAILED]
+        attemptCount:
+          type: integer
+        lastError:
+          type: string
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaginatedNotificationDeliveryList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total:
+                  type: integer
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NotificationDeliveryListItem'
 
     ApiResponseUnreadCount:
       allOf:

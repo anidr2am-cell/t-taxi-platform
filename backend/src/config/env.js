@@ -40,9 +40,12 @@ const envSchema = Joi.object({
   SOCKET_PATH: Joi.string().default('/socket.io'),
   SMTP_HOST: Joi.string().allow('').optional(),
   SMTP_PORT: Joi.number().port().default(587),
+  SMTP_SECURE: Joi.boolean().truthy('true').falsy('false').default(false),
   SMTP_USER: Joi.string().allow('').optional(),
   SMTP_PASSWORD: Joi.string().allow('').optional(),
   SMTP_FROM: Joi.string().allow('').optional(),
+  SMTP_FROM_NAME: Joi.string().allow('').optional(),
+  SMTP_FROM_EMAIL: Joi.string().email().allow('').optional(),
   TZ: Joi.string().default('Asia/Bangkok'),
 }).unknown(true);
 
@@ -148,9 +151,12 @@ module.exports = {
   smtp: {
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
     user: env.SMTP_USER,
     password: env.SMTP_PASSWORD,
-    from: env.SMTP_FROM,
+    from: env.SMTP_FROM || env.SMTP_FROM_EMAIL,
+    fromName: env.SMTP_FROM_NAME,
+    fromEmail: env.SMTP_FROM_EMAIL || env.SMTP_FROM,
   },
   timezone: env.TZ,
 };

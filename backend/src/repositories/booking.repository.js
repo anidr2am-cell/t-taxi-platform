@@ -184,9 +184,26 @@ class BookingRepository {
   async findById(bookingId) {
     const [rows] = await this.pool.query(
       `
-        SELECT id, booking_number, status, total_amount, currency, payment_status, payment_method
-        FROM bookings
-        WHERE id = ? AND deleted_at IS NULL
+        SELECT
+          b.id,
+          b.booking_number,
+          b.status,
+          b.total_amount,
+          b.currency,
+          b.payment_status,
+          b.payment_method,
+          b.customer_user_id,
+          COALESCE(b.driver_id, bda.driver_id) AS driver_id,
+          d.user_id AS driver_user_id
+        FROM bookings b
+        LEFT JOIN booking_driver_assignments bda
+          ON bda.booking_id = b.id
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+        LEFT JOIN drivers d
+          ON d.id = COALESCE(b.driver_id, bda.driver_id)
+          AND d.deleted_at IS NULL
+        WHERE b.id = ? AND b.deleted_at IS NULL
         LIMIT 1
       `,
       [bookingId],

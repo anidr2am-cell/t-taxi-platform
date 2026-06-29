@@ -5,6 +5,7 @@ const CHARGE_POLICY_TYPES = require('../constants/chargePolicyTypes');
 const CHARGE_TYPES = require('../constants/chargeTypes');
 const CALCULATION_TYPES = require('../constants/calculationTypes');
 const SERVICE_TYPES = require('../constants/serviceTypes');
+const logger = require('../utils/logger');
 const {
   isEffectiveAt,
   mapPolicyTypeToChargeType,
@@ -29,7 +30,18 @@ class PricingService {
   }
 
   normalizeRegionCode(value) {
-    return String(value).trim().toUpperCase().replace(/\s+/g, '_');
+    const normalized = String(value).trim().toUpperCase().replace(/\s+/g, '_');
+    const compact = normalized.replace(/[^A-Z0-9\u0E00-\u0E7F\uAC00-\uD7AF\u3040-\u30FF\u3400-\u9FFF]/g, '');
+    const aliases = [
+      { code: 'PATTAYA', tokens: ['PATTAYA', 'PATTAYACITY', '파타야', 'เมืองพัทยา', 'พัทยา', '芭堤雅', 'パタヤ', 'パッタヤ'] },
+      { code: 'BANGKOK', tokens: ['BANGKOK', 'กรุงเทพ', 'กรุงเทพมหานคร', '방콕', '曼谷', 'バンコク'] },
+      { code: 'BKK', tokens: ['BKK', 'SUVARNABHUMI', 'สุวรรณภูมิ', 'スワンナプーム', '素万那普'] },
+      { code: 'DMK', tokens: ['DMK', 'DONMUEANG', 'DONMUANG', 'ดอนเมือง', 'ドンムアン', '廊曼'] },
+    ];
+    const matched = aliases.find((entry) => (
+      entry.tokens.some((token) => compact.includes(token.toUpperCase()))
+    ));
+    return matched?.code ?? normalized;
   }
 
   async resolveLocations(input) {
@@ -207,6 +219,12 @@ class PricingService {
     );
 
     if (!routes.length) {
+      logger.warn('Pricing route not found', {
+        serviceTypeCode: serviceType.code,
+        serviceTypeId: serviceType.id,
+        originLocationId,
+        destinationLocationId,
+      });
       throw new AppError('Route not found for the given service and locations', {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.NOT_FOUND,
@@ -220,6 +238,11 @@ class PricingService {
     const vehiclePrice = this.selectVehiclePrice(vehiclePrices, vehicleType.id, at);
 
     if (!vehiclePrice) {
+      logger.warn('Pricing vehicle price not found', {
+        routeId: route.id,
+        vehicleTypeCode: vehicleType.code,
+        vehicleTypeId: vehicleType.id,
+      });
       throw new AppError('Vehicle price not configured for this route', {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.NOT_FOUND,

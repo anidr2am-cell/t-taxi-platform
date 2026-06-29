@@ -100,6 +100,16 @@ const listAdminNotifications = asyncHandler(async (req, res) => {
   });
 });
 
+const listAdminNotificationDeliveries = asyncHandler(async (req, res) => {
+  const data = await getNotificationService().listDeliveryStatuses(req.query);
+  return paginate(res, {
+    page: data.page,
+    pageSize: data.pageSize,
+    total: data.total,
+    items: data.items,
+  });
+});
+
 const adminUnreadCount = asyncHandler(async (req, res) => {
   const data = await getNotificationService().unreadCountForUser(req.user.id, req.user.role);
   return success(res, data);
@@ -130,6 +140,7 @@ module.exports = {
   markDriverRead,
   markDriverReadAll,
   listAdminNotifications,
+  listAdminNotificationDeliveries,
   adminUnreadCount,
   markAdminRead,
   markAdminReadAll,

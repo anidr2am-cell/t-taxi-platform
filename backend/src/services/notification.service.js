@@ -35,6 +35,14 @@ const CONTENT = {
     title: 'Booking confirmed',
     body: 'Your booking has been confirmed.',
   },
+  [NOTIFICATION_TYPES.BOOKING_CANCELLED]: {
+    title: 'Booking cancelled',
+    body: 'Your booking has been cancelled.',
+  },
+  [NOTIFICATION_TYPES.BOOKING_NO_SHOW]: {
+    title: 'Booking marked no-show',
+    body: 'Your booking has been marked as no-show.',
+  },
   [NOTIFICATION_TYPES.DRIVER_ASSIGNED]: {
     title: 'Driver assigned',
     body: 'A driver has been assigned to your trip.',
@@ -66,6 +74,10 @@ const CONTENT = {
   [NOTIFICATION_TYPES.RECEIPT_REJECTED]: {
     title: 'Receipt rejected',
     body: 'Your commission receipt was rejected. Please resubmit.',
+  },
+  [NOTIFICATION_TYPES.SETTLEMENT_REJECTED]: {
+    title: 'Settlement rejected',
+    body: 'Your commission settlement was rejected. Please resubmit your receipt.',
   },
   [NOTIFICATION_TYPES.SETTLEMENT_APPROVED]: {
     title: 'Settlement approved',
@@ -126,6 +138,14 @@ class NotificationService {
       filters.createdTo = end.toISOString().slice(0, 19).replace('T', ' ');
     }
     return filters;
+  }
+
+  parseDeliveryFilters(query) {
+    return {
+      ...this.parseListFilters(query),
+      channel: query.channel || null,
+      deliveryStatus: query.deliveryStatus || null,
+    };
   }
 
   sanitizePayload(payload) {
@@ -262,6 +282,16 @@ class NotificationService {
         addCustomer(NOTIFICATION_TYPES.TRIP_COMPLETED);
         addCustomer(NOTIFICATION_TYPES.REVIEW_REQUESTED);
         break;
+      case EVENTS.BOOKING_CANCELLED:
+        addCustomer(NOTIFICATION_TYPES.BOOKING_CANCELLED);
+        addDriver(NOTIFICATION_TYPES.BOOKING_CANCELLED);
+        await addAdmins(NOTIFICATION_TYPES.BOOKING_CANCELLED);
+        break;
+      case EVENTS.BOOKING_NO_SHOW:
+        addCustomer(NOTIFICATION_TYPES.BOOKING_NO_SHOW);
+        addDriver(NOTIFICATION_TYPES.BOOKING_NO_SHOW);
+        await addAdmins(NOTIFICATION_TYPES.BOOKING_NO_SHOW);
+        break;
       case EVENTS.COMMISSION_REQUIRED:
         addDriver(NOTIFICATION_TYPES.COMMISSION_REQUIRED);
         break;
@@ -269,7 +299,7 @@ class NotificationService {
         await addAdmins(NOTIFICATION_TYPES.RECEIPT_SUBMITTED);
         break;
       case EVENTS.RECEIPT_REJECTED:
-        addDriver(NOTIFICATION_TYPES.RECEIPT_REJECTED);
+        addDriver(NOTIFICATION_TYPES.SETTLEMENT_REJECTED);
         break;
       case EVENTS.SETTLEMENT_APPROVED:
         addDriver(NOTIFICATION_TYPES.SETTLEMENT_APPROVED);
@@ -409,43 +439,95 @@ class NotificationService {
         continue;
       }
 
+      if (delivery.last_error?.startsWith('PERMANENT_') || Number(delivery.attempt_count) >= 3) {
+        continue;
+      }
+
       const adapter = this.adapters[delivery.channel];
       if (!adapter) continue;
 
       try {
         const result = await adapter.send(notification, recipient);
-        const conn = await this.pool.getConnection();
-        try {
-          await conn.beginTransaction();
-          const deliveredAt = result.status === DELIVERY_STATUS.DELIVERED
-            ? new Date().toISOString().slice(0, 19).replace('T', ' ')
-            : null;
-          await this.notificationRepository.updateDeliveryStatus(
-            conn,
-            delivery.id,
-            result.status,
-            result.error ?? null,
-            deliveredAt,
-          );
-          await conn.commit();
-        } catch (err) {
-          await conn.rollback();
-          logger.warn('Notification delivery update failed', {
-            notificationId,
-            channel: delivery.channel,
-            error: err.message,
-          });
-        } finally {
-          conn.release();
-        }
+        await this.recordDeliveryResult(notificationId, delivery, result);
       } catch (err) {
+        await this.recordDeliveryResult(notificationId, delivery, {
+          status: DELIVERY_STATUS.FAILED,
+          error: this.safeDeliveryError(err),
+        });
         logger.warn('Notification adapter failed', {
           notificationId,
           channel: delivery.channel,
-          error: err.message,
+          error: this.safeDeliveryError(err),
         });
       }
     }
+  }
+
+  safeDeliveryError(err) {
+    const value = typeof err === 'string' ? err : err?.code || err?.message || 'DELIVERY_FAILED';
+    return String(value).slice(0, 120);
+  }
+
+  async recordDeliveryResult(notificationId, delivery, result) {
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const deliveredAt = result.status === DELIVERY_STATUS.DELIVERED
+        ? new Date().toISOString().slice(0, 19).replace('T', ' ')
+        : null;
+      const error = result.permanent && result.error && !String(result.error).startsWith('PERMANENT_')
+        ? `PERMANENT_${result.error}`
+        : result.error ?? null;
+      await this.notificationRepository.updateDeliveryStatus(
+        conn,
+        delivery.id,
+        result.status,
+        error,
+        deliveredAt,
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      logger.warn('Notification delivery update failed', {
+        notificationId,
+        channel: delivery.channel,
+        error: this.safeDeliveryError(err),
+      });
+    } finally {
+      conn.release();
+    }
+  }
+
+  mapDeliveryStatusItem(row) {
+    return {
+      deliveryId: row.id,
+      notificationId: row.notification_id,
+      notificationType: row.notification_type,
+      eventName: row.event_name,
+      bookingId: row.booking_id,
+      bookingNumber: row.booking_number,
+      audienceRole: row.audience_role,
+      channel: row.channel,
+      deliveryStatus: row.delivery_status,
+      attemptCount: Number(row.attempt_count ?? 0),
+      lastError: row.last_error,
+      deliveredAt: row.delivered_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  async listDeliveryStatuses(query) {
+    const pagination = this.parsePagination(query);
+    const filters = this.parseDeliveryFilters(query);
+    const total = await this.notificationRepository.countDeliveries(filters);
+    const rows = await this.notificationRepository.findDeliveries(filters, pagination);
+    return {
+      page: pagination.page,
+      pageSize: pagination.limit,
+      total,
+      items: rows.map((row) => this.mapDeliveryStatusItem(row)),
+    };
   }
 
   mapListItem(row) {

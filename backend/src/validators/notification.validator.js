@@ -10,11 +10,17 @@ const notificationListQuerySchema = paginationQuery.keys({
   createdTo: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
+const notificationDeliveryListQuerySchema = notificationListQuerySchema.keys({
+  channel: Joi.string().valid('IN_APP', 'EMAIL', 'FCM').optional(),
+  deliveryStatus: Joi.string().valid('PENDING', 'DELIVERED', 'SKIPPED', 'FAILED').optional(),
+});
+
 const notificationIdParamsSchema = Joi.object({
   notificationId: Joi.number().integer().positive().required(),
 });
 
 module.exports = {
   notificationListQuerySchema,
+  notificationDeliveryListQuerySchema,
   notificationIdParamsSchema,
 };

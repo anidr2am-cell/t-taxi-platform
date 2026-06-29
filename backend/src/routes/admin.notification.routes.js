@@ -6,6 +6,7 @@ const roleMiddleware = require('../middlewares/role.middleware');
 const ROLES = require('../constants/roles');
 const {
   notificationListQuerySchema,
+  notificationDeliveryListQuerySchema,
   notificationIdParamsSchema,
 } = require('../validators/notification.validator');
 
@@ -23,6 +24,13 @@ router.get(
   '/notifications/unread-count',
   adminOnly,
   notificationController.adminUnreadCount,
+);
+
+router.get(
+  '/notifications/deliveries',
+  adminOnly,
+  validate({ query: notificationDeliveryListQuerySchema }),
+  notificationController.listAdminNotificationDeliveries,
 );
 
 router.post(

@@ -167,9 +167,54 @@ test('disabled EMAIL adapter records SKIPPED', async () => {
   assert.equal(result.status, DELIVERY_STATUS.SKIPPED);
 });
 
+test('configured EMAIL adapter sends without logging raw recipient data', async () => {
+  let sent = null;
+  const adapter = new EmailNotificationAdapter({
+    smtp: {
+      host: 'smtp.example.com',
+      port: 587,
+      fromEmail: 'noreply@ttaxi.example',
+      fromName: 'TTaxi',
+    },
+    transportFactory: () => ({
+      async sendMail(message) {
+        sent = message;
+      },
+    }),
+  });
+  const result = await adapter.send({
+    title: 'Booking confirmed',
+    body: 'Your booking has been confirmed.',
+    recipient_email: 'customer@example.com',
+    booking_number: 'TX202607010001',
+    payload: { bookingNumber: 'TX202607010001' },
+  });
+  assert.equal(result.status, DELIVERY_STATUS.DELIVERED);
+  assert.equal(sent.to, 'customer@example.com');
+  assert.equal(sent.from, '"TTaxi" <noreply@ttaxi.example>');
+});
+
+test('EMAIL adapter marks malformed recipient as permanent failure', async () => {
+  const adapter = new EmailNotificationAdapter({
+    smtp: { host: 'smtp.example.com', port: 587, fromEmail: 'noreply@ttaxi.example' },
+  });
+  const result = await adapter.send({ recipient_email: 'not-an-email' }, {});
+  assert.equal(result.status, DELIVERY_STATUS.FAILED);
+  assert.equal(result.permanent, true);
+  assert.match(result.error, /^PERMANENT_/);
+});
+
 test('disabled FCM adapter records SKIPPED', async () => {
   const adapter = new FcmNotificationAdapter();
   const result = await adapter.send({}, {});
+  assert.equal(result.status, DELIVERY_STATUS.SKIPPED);
+});
+
+test('configured FCM adapter skips safely when no device token exists', async () => {
+  const adapter = new FcmNotificationAdapter({
+    firebase: { projectId: 'ttaxi-test', clientEmail: 'firebase@example.com' },
+  });
+  const result = await adapter.send({ id: 1, title: 'Title', body: 'Body' }, {});
   assert.equal(result.status, DELIVERY_STATUS.SKIPPED);
 });
 
@@ -257,6 +302,45 @@ test('DRIVER cannot access admin notifications', async () => {
   assert.equal(res.status, 403);
 });
 
+test('ADMIN can list notification delivery statuses without sensitive payloads', async () => {
+  container.register('notificationService', () => ({
+    async listDeliveryStatuses() {
+      return {
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        items: [{
+          deliveryId: 11,
+          notificationId: 22,
+          notificationType: NOTIFICATION_TYPES.BOOKING_CONFIRMED,
+          eventName: EVENTS.BOOKING_CONFIRMED,
+          bookingNumber: 'TX202607010001',
+          channel: NOTIFICATION_CHANNELS.EMAIL,
+          deliveryStatus: DELIVERY_STATUS.DELIVERED,
+          attemptCount: 1,
+          lastError: null,
+        }],
+      };
+    },
+  }));
+  const res = await request(app)
+    .get('/api/v1/admin/notifications/deliveries')
+    .set('Authorization', `Bearer ${sign('ADMIN', 1)}`);
+  assert.equal(res.status, 200);
+  const item = res.body.data.items[0];
+  assert.equal(item.channel, NOTIFICATION_CHANNELS.EMAIL);
+  assert.equal('body' in item, false);
+  assert.equal('recipientEmail' in item, false);
+  assert.equal('fcmToken' in item, false);
+});
+
+test('DRIVER cannot list notification delivery statuses', async () => {
+  const res = await request(app)
+    .get('/api/v1/admin/notifications/deliveries')
+    .set('Authorization', `Bearer ${sign('DRIVER', 44)}`);
+  assert.equal(res.status, 403);
+});
+
 test('trip completed creates customer notifications', async () => {
   let specs = 0;
   const service = makeService({
@@ -277,6 +361,97 @@ test('trip completed creates customer notifications', async () => {
     customerUserId: 8,
   });
   assert.ok(specs >= 2);
+});
+
+test('cancelled and no-show events produce notification specs', async () => {
+  const types = [];
+  const service = makeService({
+    notificationRepository: {
+      async findByIdempotencyKey() { return null; },
+      async insert(_conn, data) { types.push(data.notificationType); return types.length; },
+      async insertDelivery() { return 1; },
+      async findDeliveryByNotificationAndChannel() { return null; },
+      async findDeliveriesByNotificationId() { return []; },
+      async findById(id) { return { id, user_id: 8, payload: {} }; },
+      async updateDeliveryStatus() {},
+    },
+  });
+  await service.handleDomainEvent(EVENTS.BOOKING_CANCELLED, {
+    eventId: 'evt-cancel',
+    bookingId: 10,
+    bookingNumber: 'TX202607010001',
+    customerUserId: 8,
+    driverUserId: 44,
+    driverId: 5,
+  });
+  await service.handleDomainEvent(EVENTS.BOOKING_NO_SHOW, {
+    eventId: 'evt-noshow',
+    bookingId: 10,
+    bookingNumber: 'TX202607010001',
+    customerUserId: 8,
+    driverUserId: 44,
+    driverId: 5,
+  });
+  assert.ok(types.includes(NOTIFICATION_TYPES.BOOKING_CANCELLED));
+  assert.ok(types.includes(NOTIFICATION_TYPES.BOOKING_NO_SHOW));
+});
+
+test('settlement rejection maps to settlement rejected notification type', async () => {
+  const specs = await makeService().buildSpecsForEvent(EVENTS.RECEIPT_REJECTED, {
+    eventId: 'evt-reject',
+    bookingId: 10,
+    bookingNumber: 'TX202607010001',
+    driverUserId: 44,
+    driverId: 5,
+  });
+  assert.equal(specs[0].notificationType, NOTIFICATION_TYPES.SETTLEMENT_REJECTED);
+});
+
+test('adapter failure updates delivery as failed for retry', async () => {
+  const updates = [];
+  const service = makeService({
+    adapters: {
+      [NOTIFICATION_CHANNELS.EMAIL]: {
+        async send() {
+          throw new Error('smtp temporarily unavailable');
+        },
+      },
+    },
+    notificationRepository: {
+      async findDeliveriesByNotificationId() {
+        return [
+          {
+            id: 2,
+            channel: NOTIFICATION_CHANNELS.EMAIL,
+            delivery_status: DELIVERY_STATUS.PENDING,
+            attempt_count: 0,
+            last_error: null,
+          },
+        ];
+      },
+      async findById(id) {
+        return {
+          id,
+          user_id: 8,
+          booking_id: 10,
+          type: NOTIFICATION_TYPES.BOOKING_CREATED,
+          title: 'Booking created',
+          body: 'Your booking has been created.',
+          recipient_email: 'customer@example.com',
+          payload: { bookingNumber: 'TX202607010001' },
+        };
+      },
+      async updateDeliveryStatus(_conn, deliveryId, status, lastError) {
+        updates.push({ deliveryId, status, lastError });
+      },
+    },
+  });
+  await service.processDeliveries(1);
+  assert.deepEqual(updates, [{
+    deliveryId: 2,
+    status: DELIVERY_STATUS.FAILED,
+    lastError: 'smtp temporarily unavailable',
+  }]);
 });
 
 test('handler failure propagates to caller for outbox retry', async () => {

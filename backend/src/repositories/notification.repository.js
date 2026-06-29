@@ -116,11 +116,31 @@ class NotificationRepository {
     const [rows] = await this.pool.query(
       `
         SELECT
-          id, recipient_type, user_id, recipient_driver_id, booking_id,
-          audience_role, event_id, event_name, type, title, body, payload,
-          read_at, created_at, updated_at
-        FROM notifications
-        WHERE id = ? AND deleted_at IS NULL
+          n.id, n.recipient_type, n.user_id, n.recipient_driver_id, n.booking_id,
+          n.audience_role, n.event_id, n.event_name, n.type, n.title, n.body, n.payload,
+          n.read_at, n.created_at, n.updated_at,
+          CASE
+            WHEN n.recipient_type = 'USER' THEN u.email
+            WHEN n.recipient_type = 'GUEST_BOOKING' THEN b.customer_email
+            ELSE NULL
+          END AS recipient_email,
+          u.locale AS recipient_locale,
+          d.fcm_token AS fcm_token,
+          b.booking_number,
+          b.scheduled_pickup_at,
+          b.origin_address,
+          b.destination_address,
+          b.status AS booking_status
+        FROM notifications n
+        LEFT JOIN users u ON u.id = n.user_id AND u.deleted_at IS NULL
+        LEFT JOIN bookings b ON b.id = n.booking_id AND b.deleted_at IS NULL
+        LEFT JOIN notification_devices d
+          ON d.user_id = n.user_id
+          AND d.is_active = 1
+          AND d.deleted_at IS NULL
+        WHERE n.id = ? AND n.deleted_at IS NULL
+        ORDER BY d.last_used_at DESC, d.id DESC
+        LIMIT 1
       `,
       [notificationId],
     );
@@ -130,6 +150,79 @@ class NotificationRepository {
       try { row.payload = JSON.parse(row.payload); } catch { row.payload = {}; }
     }
     return row;
+  }
+
+  buildDeliveryFilters(filters = {}) {
+    const where = ['n.deleted_at IS NULL'];
+    const params = [];
+
+    if (filters.channel) {
+      where.push('d.channel = ?');
+      params.push(filters.channel);
+    }
+    if (filters.deliveryStatus) {
+      where.push('d.delivery_status = ?');
+      params.push(filters.deliveryStatus);
+    }
+    if (filters.notificationType) {
+      where.push('n.type = ?');
+      params.push(filters.notificationType);
+    }
+    if (filters.createdFrom) {
+      where.push('d.created_at >= ?');
+      params.push(filters.createdFrom);
+    }
+    if (filters.createdTo) {
+      where.push('d.created_at < ?');
+      params.push(filters.createdTo);
+    }
+
+    return { whereSql: where.join(' AND '), params };
+  }
+
+  async countDeliveries(filters) {
+    const { whereSql, params } = this.buildDeliveryFilters(filters);
+    const [rows] = await this.pool.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM notification_deliveries d
+        INNER JOIN notifications n ON n.id = d.notification_id
+        WHERE ${whereSql}
+      `,
+      params,
+    );
+    return Number(rows[0]?.total ?? 0);
+  }
+
+  async findDeliveries(filters, pagination) {
+    const { whereSql, params } = this.buildDeliveryFilters(filters);
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          d.id,
+          d.notification_id,
+          d.channel,
+          d.delivery_status,
+          d.attempt_count,
+          d.last_error,
+          d.delivered_at,
+          d.created_at,
+          d.updated_at,
+          n.type AS notification_type,
+          n.event_name,
+          n.audience_role,
+          n.booking_id,
+          b.booking_number
+        FROM notification_deliveries d
+        INNER JOIN notifications n ON n.id = d.notification_id
+        LEFT JOIN bookings b ON b.id = n.booking_id AND b.deleted_at IS NULL
+        WHERE ${whereSql}
+        ORDER BY d.created_at DESC, d.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [...params, pagination.limit, pagination.offset],
+    );
+    return rows;
   }
 
   buildListFilters(filters) {

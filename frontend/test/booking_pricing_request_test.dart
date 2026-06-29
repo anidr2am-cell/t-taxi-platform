@@ -152,6 +152,32 @@ void main() {
     },
   );
 
+  test(
+    'place details map Pattaya local-language variants to internal route code',
+    () {
+      for (final details in const [
+        PlaceDetails(
+          placeId: 'google-pattaya-th',
+          name: 'เมืองพัทยา',
+          address: 'อำเภอบางละมุง ชลบุรี ประเทศไทย',
+        ),
+        PlaceDetails(
+          placeId: 'google-pattaya-ja',
+          name: 'パタヤ',
+          address: 'チョンブリー タイ',
+        ),
+        PlaceDetails(
+          placeId: 'google-pattaya-zh',
+          name: '芭堤雅',
+          address: '春武里府 泰国',
+        ),
+      ]) {
+        final location = LocationOption.fromPlaceDetails(details);
+        expect(location.code, 'PATTAYA');
+      }
+    },
+  );
+
   test('pickup date cannot be in the past', () async {
     final controller = BookingWizardController(
       apiService: _CapturingBookingApi(),

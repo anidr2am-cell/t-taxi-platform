@@ -43,9 +43,15 @@ class BookingWizardController extends ChangeNotifier {
   static const Map<String, String> _knownAirportIataByText = {
     'BKK': 'BKK',
     'SUVARNABHUMI': 'BKK',
+    'สุวรรณภูมิ': 'BKK',
+    'スワンナプーム': 'BKK',
+    '素万那普': 'BKK',
     'DMK': 'DMK',
     'DON MUEANG': 'DMK',
     'DON MUANG': 'DMK',
+    'ดอนเมือง': 'DMK',
+    'ドンムアン': 'DMK',
+    '廊曼': 'DMK',
     'HKT': 'HKT',
     'PHUKET AIRPORT': 'HKT',
     'CNX': 'CNX',
@@ -58,8 +64,17 @@ class BookingWizardController extends ChangeNotifier {
   static const Map<String, String> _knownLocationCodeByText = {
     'PATTAYA': 'PATTAYA',
     '파타야': 'PATTAYA',
+    'เมืองพัทยา': 'PATTAYA',
+    'พัทยา': 'PATTAYA',
+    '芭堤雅': 'PATTAYA',
+    'パタヤ': 'PATTAYA',
+    'パッタヤ': 'PATTAYA',
     'BANGKOK': 'BANGKOK',
     '방콕': 'BANGKOK',
+    'กรุงเทพ': 'BANGKOK',
+    'กรุงเทพมหานคร': 'BANGKOK',
+    '曼谷': 'BANGKOK',
+    'バンコク': 'BANGKOK',
   };
 
   Future<void> initialize() async {

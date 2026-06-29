@@ -47,10 +47,37 @@ class LocationOption {
 
   static String? _knownInternalCodeForText(String value) {
     final text = value.toUpperCase();
-    if (text.contains('PATTAYA') || value.contains('파타야')) return 'PATTAYA';
-    if (text.contains('BANGKOK') || value.contains('방콕')) return 'BANGKOK';
-    if (text.contains('BKK') || text.contains('SUVARNABHUMI')) return 'BKK';
-    if (text.contains('DMK') || text.contains('DON MUEANG') || text.contains('DON MUANG')) {
+    final compact = text.replaceAll(RegExp(r'[^A-Z0-9\u0E00-\u0E7F\uAC00-\uD7AF\u3040-\u30FF\u3400-\u9FFF]'), '');
+    if (compact.contains('PATTAYA') ||
+        compact.contains('파타야') ||
+        compact.contains('เมืองพัทยา') ||
+        compact.contains('พัทยา') ||
+        compact.contains('芭堤雅') ||
+        compact.contains('パタヤ') ||
+        compact.contains('パッタヤ')) {
+      return 'PATTAYA';
+    }
+    if (compact.contains('BANGKOK') ||
+        compact.contains('방콕') ||
+        compact.contains('กรุงเทพ') ||
+        compact.contains('กรุงเทพมหานคร') ||
+        compact.contains('曼谷') ||
+        compact.contains('バンコク')) {
+      return 'BANGKOK';
+    }
+    if (compact.contains('BKK') ||
+        compact.contains('SUVARNABHUMI') ||
+        compact.contains('สุวรรณภูมิ') ||
+        compact.contains('スワンナプーム') ||
+        compact.contains('素万那普')) {
+      return 'BKK';
+    }
+    if (compact.contains('DMK') ||
+        compact.contains('DONMUEANG') ||
+        compact.contains('DONMUANG') ||
+        compact.contains('ดอนเมือง') ||
+        compact.contains('ドンムアン') ||
+        compact.contains('廊曼')) {
       return 'DMK';
     }
     return null;
