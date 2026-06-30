@@ -346,16 +346,18 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     if (result.status == 'COMPLETED') {
       return AppUi.surfaceCard(
         backgroundColor: AppTokens.surfaceMuted,
-        child: const Text(
-          'Trip completed. Active QR codes are hidden.',
-          style: TextStyle(color: AppTokens.textSecondary),
+        child: Text(
+          context.l10n.t('guest_lookup_trip_completed_qr_hidden'),
+          style: const TextStyle(color: AppTokens.textSecondary),
         ),
       );
     }
 
     if (_dropoffQrToken != null) {
       return AppUi.surfaceCard(
-        child: SelectableText('Dropoff QR token: $_dropoffQrToken'),
+        child: SelectableText(
+          context.l10n.t('guest_lookup_dropoff_qr_token').replaceAll('{token}', _dropoffQrToken!),
+        ),
       );
     }
 
@@ -371,10 +373,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     if (result.capabilities.boardingQrPreviouslyIssued) {
       return AppUi.surfaceCard(
         backgroundColor: AppTokens.infoLight,
-        child: const Text(
-          'Boarding QR was issued when the booking was created. '
-          'For security, it cannot be recovered from lookup.',
-          style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
+        child: Text(
+          context.l10n.t('guest_lookup_boarding_qr_security'),
+          style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
         ),
       );
     }

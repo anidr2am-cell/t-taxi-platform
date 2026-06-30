@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../utils/user_facing_error.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../config/app_config.dart';
 
 class BookingReviewApi {
@@ -154,7 +155,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(err, fallback: 'Could not load review');
+        _error = userFacingError(err, fallback: context.l10n.t('booking_review_load_error'));
         _loading = false;
       });
     }
@@ -184,7 +185,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
         return;
       }
       setState(() {
-        _error = userFacingError(err, fallback: 'Could not load review');
+        _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
         _submitting = false;
       });
     }
@@ -192,6 +193,8 @@ class BookingReviewFormState extends State<BookingReviewForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -199,7 +202,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
       return Column(
         children: [
           Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ElevatedButton(onPressed: _load, child: const Text('Retry')),
+          ElevatedButton(onPressed: _load, child: Text(l10n.t('admin_dispatch_retry'))),
         ],
       );
     }
@@ -215,8 +218,13 @@ class BookingReviewFormState extends State<BookingReviewForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Thank you for your review', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Rating: ${_state?['rating']} / 5'),
+              Text(
+                l10n.t('booking_review_thanks'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                l10n.t('booking_review_rating').replaceAll('{rating}', '${_state?['rating']}'),
+              ),
               if (_state?['comment'] != null) Text('${_state?['comment']}'),
             ],
           ),
@@ -230,7 +238,10 @@ class BookingReviewFormState extends State<BookingReviewForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Rate your trip', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              l10n.t('booking_review_title'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -249,7 +260,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
             TextField(
               controller: _commentController,
               maxLength: 500,
-              decoration: const InputDecoration(labelText: 'Comment (optional)'),
+              decoration: InputDecoration(labelText: l10n.t('booking_review_comment')),
               enabled: !_submitting,
             ),
             if (_error != null) ...[
@@ -258,12 +269,12 @@ class BookingReviewFormState extends State<BookingReviewForm> {
             ],
             ElevatedButton(
               onPressed: _submitting || !isValidReviewRating(_rating) ? null : _submit,
-              child: Text(_submitting ? 'Submitting...' : 'Submit review'),
+              child: Text(_submitting ? l10n.t('booking_review_submitting') : l10n.t('booking_review_submit')),
             ),
             if (_error != null)
               OutlinedButton(
                 onPressed: _submitting ? null : _submit,
-                child: const Text('Retry'),
+                child: Text(l10n.t('admin_dispatch_retry')),
               ),
           ],
         ),

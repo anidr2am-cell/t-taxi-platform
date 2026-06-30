@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../chat/models/chat_connection_state.dart';
 import '../../chat/services/chat_realtime_session.dart';
 import '../../chat/services/chat_socket_service.dart';
@@ -100,6 +102,8 @@ class _BookingChatSectionState extends State<BookingChatSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -111,9 +115,14 @@ class _BookingChatSectionState extends State<BookingChatSection> {
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text('Booking chat', style: Theme.of(context).textTheme.titleMedium),
-                _ConnectionChip(state: _session.connectionState),
-                if (_session.unreadCount > 0) Chip(label: Text('${_session.unreadCount} unread')),
+                Text(l10n.t('booking_chat_title'), style: Theme.of(context).textTheme.titleMedium),
+                _ConnectionChip(state: _session.connectionState, l10n: l10n),
+                if (_session.unreadCount > 0)
+                  Chip(
+                    label: Text(
+                      l10n.t('booking_chat_unread').replaceAll('{count}', '${_session.unreadCount}'),
+                    ),
+                  ),
                 IconButton(onPressed: _session.refresh, icon: const Icon(Icons.refresh)),
               ],
             ),
@@ -124,17 +133,23 @@ class _BookingChatSectionState extends State<BookingChatSection> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(_session.error!, style: const TextStyle(color: Colors.red)),
+                      child: Text(
+                        userFacingError(_session.error!, fallback: l10n.t('ui_load_failed')),
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
                     if (_session.connectionState == ChatConnectionState.error)
-                      TextButton(onPressed: _session.retryConnection, child: const Text('Retry')),
+                      TextButton(
+                        onPressed: _session.retryConnection,
+                        child: Text(l10n.t('admin_dispatch_retry')),
+                      ),
                   ],
                 ),
               ),
             if (!_session.loading && _session.messages.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('No messages yet. Send the first message.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(l10n.t('booking_chat_empty')),
               ),
             SizedBox(
               height: 220,
@@ -144,7 +159,7 @@ class _BookingChatSectionState extends State<BookingChatSection> {
                   final item = _session.messages[index] as Map<String, dynamic>;
                   return ListTile(
                     dense: true,
-                    title: Text(item['senderDisplayName'] as String? ?? 'Participant'),
+                    title: Text(item['senderDisplayName'] as String? ?? l10n.t('admin_chat_participant')),
                     subtitle: Text(item['text'] as String? ?? ''),
                   );
                 },
@@ -159,9 +174,9 @@ class _BookingChatSectionState extends State<BookingChatSection> {
                     decoration: InputDecoration(
                       hintText: _session.sendingAllowed
                           ? (_session.hasPendingOutbound
-                              ? 'Queued — waiting for connection'
-                              : 'Type a message')
-                          : 'Chat is read-only',
+                              ? l10n.t('admin_chat_hint_queued')
+                              : l10n.t('booking_chat_hint_type'))
+                          : l10n.t('admin_chat_hint_readonly'),
                     ),
                     onSubmitted: (_) => _send(),
                   ),
@@ -186,9 +201,10 @@ class _BookingChatSectionState extends State<BookingChatSection> {
 }
 
 class _ConnectionChip extends StatelessWidget {
-  const _ConnectionChip({required this.state});
+  const _ConnectionChip({required this.state, required this.l10n});
 
   final ChatConnectionState state;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +216,7 @@ class _ConnectionChip extends StatelessWidget {
     };
     return Chip(
       label: Text(
-        chatConnectionLabel(state),
+        chatConnectionLabel(state, l10n),
         style: const TextStyle(fontSize: 11),
       ),
       backgroundColor: color.withValues(alpha: 0.12),

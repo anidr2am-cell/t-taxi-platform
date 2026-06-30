@@ -123,7 +123,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   AppUi.statusBadge(
-                    chatConnectionLabel(_session.connectionState),
+                    chatConnectionLabel(_session.connectionState, context.l10n),
                     tone: _toneForConnection(_session.connectionState),
                   ),
                   if (_session.unreadCount > 0)

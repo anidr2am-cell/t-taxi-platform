@@ -20,5 +20,5 @@ String userFacingError(
       text.contains('SocketException')) {
     return fallback ?? 'Something went wrong. Please try again.';
   }
-  return fallback ?? text;
+  return text;
 }

@@ -396,7 +396,7 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppUi.statusBadge(
-                    chatConnectionLabel(_session.connectionState),
+                    chatConnectionLabel(_session.connectionState, context.l10n),
                     tone: _toneForConnection(_session.connectionState),
                   ),
                   IconButton(onPressed: widget.onBack, icon: const Icon(Icons.arrow_back)),

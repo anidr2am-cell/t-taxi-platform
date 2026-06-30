@@ -210,7 +210,7 @@ void main() {
     final api = _FakeFlightApi();
     await tester.pumpWidget(_wrap(AdminFlightMonitorPage(api: api, dispatchApi: _FakeDispatchApi())));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Refresh worker status'));
+    await tester.tap(find.byTooltip('Refresh'));
     await tester.pumpAndSettle();
     expect(api.statusCalls, greaterThan(1));
   });
@@ -249,5 +249,24 @@ void main() {
     await tester.tap(find.byIcon(Icons.sync));
     await tester.pumpAndSettle();
     expect(find.text('Flight provider is not configured'), findsOneWidget);
+  });
+
+  testWidgets('flight monitor has no horizontal overflow at 768px', (tester) async {
+    tester.view.physicalSize = const Size(768, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final api = _FakeFlightApi();
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(size: Size(768, 1024)),
+        child: _wrap(AdminFlightMonitorPage(api: api, dispatchApi: _FakeDispatchApi())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('TX202607010001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

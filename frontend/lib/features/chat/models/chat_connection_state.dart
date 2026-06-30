@@ -1,3 +1,5 @@
+import '../../../l10n/app_localizations.dart';
+
 enum ChatConnectionState {
   connecting,
   connected,
@@ -6,17 +8,17 @@ enum ChatConnectionState {
   error,
 }
 
-String chatConnectionLabel(ChatConnectionState state) {
+String chatConnectionLabel(ChatConnectionState state, AppLocalizations l10n) {
   switch (state) {
     case ChatConnectionState.connecting:
-      return 'Connecting…';
+      return l10n.t('chat_connection_connecting');
     case ChatConnectionState.connected:
-      return 'Live';
+      return l10n.t('chat_connection_connected');
     case ChatConnectionState.reconnecting:
-      return 'Reconnecting…';
+      return l10n.t('chat_connection_reconnecting');
     case ChatConnectionState.offline:
-      return 'Offline';
+      return l10n.t('chat_connection_offline');
     case ChatConnectionState.error:
-      return 'Connection error';
+      return l10n.t('chat_connection_error');
   }
 }

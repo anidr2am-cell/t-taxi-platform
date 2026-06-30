@@ -80,8 +80,8 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
         _loadingDropoffQr = false;
         _dropoffQrToken = null;
         _dropoffQrError = err.errorCode == 'INVALID_STATUS_TRANSITION'
-            ? 'Dropoff QR is available after pickup and before trip completion.'
-            : err.message;
+            ? context.l10n.t('booking_dropoff_qr_unavailable')
+            : userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
       });
     } catch (err) {
       if (!mounted) return;
@@ -135,7 +135,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Trip completed',
+                          l10n.t('booking_trip_completed'),
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                 color: AppTokens.success,
                                 fontWeight: FontWeight.w700,
@@ -158,8 +158,8 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 ),
               ] else if (_dropoffQrToken != null)
                 _QrDisplay(
-                  title: 'Dropoff QR',
-                  hint: 'Show this QR to your driver at destination.',
+                  title: l10n.t('booking_dropoff_qr_title'),
+                  hint: l10n.t('booking_dropoff_qr_hint'),
                   token: _dropoffQrToken!,
                 )
               else
@@ -181,8 +181,8 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   AppUi.errorState(message: _dropoffQrError!),
                 AppUi.secondaryButton(
                   label: _dropoffQrToken == null
-                      ? 'Refresh dropoff QR'
-                      : 'Issue new dropoff QR',
+                      ? l10n.t('booking_refresh_dropoff_qr')
+                      : l10n.t('booking_issue_new_dropoff_qr'),
                   icon: Icons.refresh,
                   onPressed: _loadingDropoffQr ? null : _loadDropoffQr,
                   fullWidth: true,

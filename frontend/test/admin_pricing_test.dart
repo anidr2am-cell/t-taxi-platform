@@ -192,6 +192,20 @@ void main() {
     expect(find.text('Active routes'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('pricing manager has no horizontal overflow at 768px', (tester) async {
+    tester.view.physicalSize = const Size(768, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final api = _FakePricingApi();
+    await tester.pumpWidget(_wrap(AdminPricingManagerPage(api: api), size: const Size(768, 1024)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pricing Manager'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _FakePricingApi implements AdminPricingApiService {

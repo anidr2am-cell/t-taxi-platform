@@ -148,7 +148,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
       final syncError = updated['syncError'] as String?;
       if (syncStatus == 'NOT_CONFIGURED' || syncError == 'CONFIG_MISSING') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Flight provider is not configured')),
+          SnackBar(content: Text(context.l10n.t('admin_flight_provider_missing'))),
         );
       }
     } catch (err) {
@@ -180,12 +180,21 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
 
   String _text(dynamic value) => value == null ? '-' : '$value';
 
+  double _filterFieldWidth(BuildContext context, double desktopWidth) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width >= 900) return desktopWidth;
+    if (width >= 768) return (width - 96) / 2;
+    return width - (AppTokens.spaceMd * 2);
+  }
+
   String _cycleSummary(Map<String, dynamic>? cycle) {
     if (cycle == null) return 'No cycle yet';
     return 'selected ${_text(cycle['selected'])} · success ${_text(cycle['succeeded'])} · failed ${_text(cycle['failed'])} · skipped ${_text(cycle['skipped'])}';
   }
 
   Widget _syncStatusPanel() {
+    final l10n = context.l10n;
+
     if (_statusLoading) {
       return const Padding(
         padding: EdgeInsets.all(AppTokens.spaceMd),
@@ -196,9 +205,9 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
       return Padding(
         padding: AppUi.pagePadding(context).copyWith(bottom: 0),
         child: AppUi.errorState(
-          message: 'Automatic flight sync status unavailable\n$_statusError',
+          message: '${l10n.t('admin_flight_sync_unavailable')}\n$_statusError',
           onRetry: _loadSyncStatus,
-          retryLabel: 'Retry',
+          retryLabel: l10n.t('admin_dispatch_retry'),
         ),
       );
     }
@@ -226,7 +235,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                 SizedBox(
                   width: double.infinity,
                   child: Text(
-                    'Automatic flight sync',
+                    l10n.t('admin_flight_sync_title'),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppTokens.primaryDark,
@@ -240,13 +249,13 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 IconButton(
-                  tooltip: 'Refresh worker status',
+                  tooltip: l10n.t('admin_dashboard_refresh'),
                   onPressed: _loadSyncStatus,
                   icon: const Icon(Icons.refresh),
                 ),
                 OutlinedButton(
                   onPressed: running ? null : _runSyncCycle,
-                  child: Text(running ? 'Running' : 'Run sync cycle'),
+                  child: Text(running ? l10n.t('admin_flight_running') : l10n.t('admin_flight_run_sync')),
                 ),
               ],
             ),
@@ -256,17 +265,23 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
               runSpacing: AppTokens.spaceSm,
               children: [
                 AppUi.statusBadge(
-                  enabled ? 'Worker: Enabled' : 'Worker: Disabled',
+                  enabled ? l10n.t('admin_flight_worker_enabled') : l10n.t('admin_flight_worker_disabled'),
                   tone: enabled ? AppStatusTone.success : AppStatusTone.neutral,
                 ),
                 AppUi.statusBadge(
-                  providerConfigured ? 'Provider: Configured' : 'Provider: Not configured',
+                  providerConfigured
+                      ? l10n.t('admin_flight_provider_configured')
+                      : l10n.t('admin_flight_provider_not_configured'),
                   tone: providerConfigured ? AppStatusTone.success : AppStatusTone.warning,
                 ),
               ],
             ),
             const SizedBox(height: AppTokens.spaceSm),
-            Text('Last completed: ${_text(status['lastCycleCompletedAt'])}'),
+            Text(
+              l10n
+                  .t('admin_flight_last_completed')
+                  .replaceAll('{value}', _text(status['lastCycleCompletedAt'])),
+            ),
             Text(_cycleSummary(lastCycle)),
           ],
         ),
@@ -276,6 +291,8 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Column(
       children: [
         _syncStatusPanel(),
@@ -284,7 +301,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
             OutlinedButton.icon(
               onPressed: _pickDate,
               icon: const Icon(Icons.calendar_today, size: 18),
-              label: Text(_dateFilter ?? 'Date'),
+              label: Text(_dateFilter ?? l10n.t('admin_flight_date')),
             ),
             if (_dateFilter != null)
               TextButton(
@@ -292,35 +309,35 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                   setState(() => _dateFilter = null);
                   _load();
                 },
-                child: const Text('Clear date'),
+                child: Text(l10n.t('admin_flight_clear_date')),
               ),
             SizedBox(
-              width: 160,
+              width: _filterFieldWidth(context, 160),
               child: TextField(
                 controller: _flightSearchController,
-                decoration: const InputDecoration(
-                  labelText: 'Flight number',
+                decoration: InputDecoration(
+                  labelText: l10n.t('admin_flight_flight_number'),
                   isDense: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 textCapitalization: TextCapitalization.characters,
                 onSubmitted: (_) => _load(),
               ),
             ),
             SizedBox(
-              width: 180,
+              width: _filterFieldWidth(context, 180),
               child: TextField(
                 controller: _bookingSearchController,
-                decoration: const InputDecoration(
-                  labelText: 'Booking number',
+                decoration: InputDecoration(
+                  labelText: l10n.t('admin_flight_booking_number'),
                   isDense: true,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 onSubmitted: (_) => _load(),
               ),
             ),
             FilterChip(
-              label: const Text('Delayed only'),
+              label: Text(l10n.t('admin_flight_delayed_only')),
               selected: _delayedOnly,
               onSelected: (value) {
                 setState(() => _delayedOnly = value);
@@ -337,11 +354,11 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                   ? AppUi.errorState(
                       message: _error!,
                       onRetry: () => _load(),
-                      retryLabel: 'Retry',
+                      retryLabel: l10n.t('admin_dispatch_retry'),
                     )
                   : _items.isEmpty
                       ? AppUi.emptyState(
-                          title: 'No airport pickup flights found',
+                          title: l10n.t('admin_flight_empty'),
                           icon: Icons.flight_land_outlined,
                         )
                       : RefreshIndicator(
@@ -365,43 +382,46 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                    Wrap(
+                                      spacing: AppTokens.spaceSm,
+                                      runSpacing: AppTokens.spaceSm,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
-                                        Expanded(
-                                          child: Text(
-                                            '${_text(item['bookingNumber'])} · ${_text(item['flightNumber'])}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 16,
-                                            ),
+                                        Text(
+                                          '${_text(item['bookingNumber'])} · ${_text(item['flightNumber'])}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 16,
                                           ),
                                         ),
                                         AppUi.statusBadge(
                                           flightStatus.isEmpty ? 'UNKNOWN' : flightStatus,
                                           tone: AppUi.toneForFlightRowStatus(flightStatus),
                                         ),
-                                        if (delayMinutes > 0) ...[
-                                          const SizedBox(width: AppTokens.spaceSm),
+                                        if (delayMinutes > 0)
                                           AppUi.statusBadge(
-                                            'Delay ${delayMinutes}m',
+                                            l10n
+                                                .t('admin_flight_delay_minutes')
+                                                .replaceAll('{minutes}', '$delayMinutes'),
                                             tone: AppStatusTone.warning,
                                           ),
-                                        ],
                                       ],
                                     ),
                                     const SizedBox(height: AppTokens.spaceSm),
                                     AppUi.summaryRow(
-                                      label: 'Route',
+                                      label: l10n.t('admin_flight_route'),
                                       value:
                                           '${_text(item['departureAirportIata'])} → ${_text(item['arrivalAirportIata'])}',
                                     ),
                                     AppUi.summaryRow(
-                                      label: 'Pickup',
+                                      label: l10n.t('admin_flight_pickup'),
                                       value: _text(item['scheduledPickupAt']),
                                     ),
                                     Text(
-                                      'Sync: ${_text(item['syncStatus'])} · Last: ${_text(item['lastSyncedAt'])}',
+                                      l10n
+                                          .t('admin_flight_sync_line')
+                                          .replaceAll('{status}', _text(item['syncStatus']))
+                                          .replaceAll('{last}', _text(item['lastSyncedAt'])),
                                       style: const TextStyle(
                                         color: AppTokens.textSecondary,
                                         fontSize: 13,
@@ -411,7 +431,9 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                                       Padding(
                                         padding: const EdgeInsets.only(top: 4),
                                         child: Text(
-                                          'Sync error: ${item['syncError']}',
+                                          l10n
+                                              .t('admin_flight_sync_error')
+                                              .replaceAll('{message}', '${item['syncError']}'),
                                           style: const TextStyle(
                                             color: AppTokens.error,
                                             fontSize: 13,

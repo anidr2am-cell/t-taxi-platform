@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../../../config/app_config.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../booking/widgets/booking_review_form.dart';
@@ -97,7 +98,7 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(err, fallback: 'Could not load notifications');
+        _error = userFacingError(err, fallback: context.l10n.t('booking_notification_load_error'));
         _loading = false;
       });
     }
@@ -116,28 +117,36 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
       guestAccessToken: token,
     );
     setState(() {
-      _pushStatus = _messageForPushResult(result);
+      _pushStatus = _messageForPushResult(context.l10n, result);
       _enablingNotifications = false;
     });
   }
 
-  String _messageForPushResult(NotificationDeviceRegistrationResult result) {
+  String _messageForPushResult(
+    AppLocalizations l10n,
+    NotificationDeviceRegistrationResult result,
+  ) {
     switch (result.status) {
       case NotificationDeviceRegistrationStatus.registered:
-        return 'Notifications enabled';
+        return l10n.t('booking_notification_enabled');
       case NotificationDeviceRegistrationStatus.permissionDenied:
-        return 'Notification permission was denied';
+        return l10n.t('booking_notification_permission_denied');
       case NotificationDeviceRegistrationStatus.unsupported:
-        return 'Push notifications are not supported in this browser';
+        return l10n.t('booking_notification_unsupported');
       case NotificationDeviceRegistrationStatus.configMissing:
-        return 'Push notifications are not configured for this environment';
+        return l10n.t('booking_notification_config_missing');
       case NotificationDeviceRegistrationStatus.failed:
-        return result.message ?? 'Notification registration failed';
+        return userFacingError(
+          result.message ?? '',
+          fallback: l10n.t('booking_notification_register_failed'),
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     if (_loading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
@@ -148,7 +157,7 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
       return Column(
         children: [
           Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ElevatedButton(onPressed: _load, child: const Text('Retry')),
+          ElevatedButton(onPressed: _load, child: Text(l10n.t('admin_dispatch_retry'))),
         ],
       );
     }
@@ -158,15 +167,20 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Expanded(
-                  child: Text('Updates', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
+                Text(l10n.t('booking_notification_updates'), style: const TextStyle(fontWeight: FontWeight.bold)),
                 TextButton.icon(
                   onPressed: _enablingNotifications ? null : _enableNotifications,
                   icon: const Icon(Icons.notifications_active_outlined),
-                  label: Text(_enablingNotifications ? 'Enabling...' : 'Enable notifications'),
+                  label: Text(
+                    _enablingNotifications
+                        ? l10n.t('booking_notification_enabling')
+                        : l10n.t('booking_notification_enable'),
+                  ),
                 ),
               ],
             ),
@@ -176,7 +190,7 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
             ],
             const SizedBox(height: 8),
             if (_items.isEmpty)
-              const Text('No updates yet')
+              Text(l10n.t('booking_notification_empty'))
             else
               ..._items.take(5).map((item) {
                 final map = Map<String, dynamic>.from(item as Map);
@@ -184,7 +198,7 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    map['title'] as String? ?? 'Notification',
+                    map['title'] as String? ?? l10n.t('booking_notification_default_title'),
                     style: TextStyle(
                       fontWeight: read ? FontWeight.normal : FontWeight.bold,
                     ),

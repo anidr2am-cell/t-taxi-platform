@@ -57,11 +57,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     if (_loading && _metrics == null) {
-      return AppUi.loadingState(message: 'Loading dashboard...');
+      return AppUi.loadingState(message: l10n.t('admin_dashboard_loading'));
     }
     if (_error != null && _metrics == null) {
-      return AppUi.errorState(message: _error!, onRetry: _load);
+      return AppUi.errorState(
+        message: _error!,
+        onRetry: _load,
+        retryLabel: l10n.t('admin_dispatch_retry'),
+      );
     }
 
     final metrics = _metrics!;
@@ -77,10 +83,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           children: [
           AppUi.sectionHeader(
             context,
-            title: 'Operations for ${metrics.date}',
-            subtitle: '${metrics.timezone} · Last updated ${metrics.updatedAt}',
+            title: l10n.t('admin_dashboard_operations').replaceAll('{date}', metrics.date),
+            subtitle: l10n
+                .t('admin_dashboard_subtitle')
+                .replaceAll('{timezone}', metrics.timezone)
+                .replaceAll('{updatedAt}', metrics.updatedAt),
             trailing: IconButton(
-              tooltip: 'Refresh',
+              tooltip: l10n.t('admin_dashboard_refresh'),
               onPressed: _loading ? null : _load,
               icon: const Icon(Icons.refresh),
             ),
@@ -92,29 +101,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           const SizedBox(height: AppTokens.spaceMd),
           AppUi.sectionHeader(
             context,
-            title: 'Needs attention',
-            subtitle: 'Prioritize unassigned bookings, active trips, and settlement issues.',
+            title: l10n.t('admin_dashboard_needs_attention'),
+            subtitle: l10n.t('admin_dashboard_needs_attention_sub'),
           ),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               AppUi.kpiMetricCard(
-                label: 'Unassigned',
+                label: l10n.t('admin_dashboard_unassigned'),
                 value: '${metrics.bookings.unassigned}',
                 icon: Icons.person_add_alt,
                 tone: AppStatusTone.warning,
                 onTap: widget.onOpenDispatch,
               ),
               AppUi.kpiMetricCard(
-                label: 'Active trips',
+                label: l10n.t('admin_dashboard_active_trips'),
                 value: '$activeTrips',
                 icon: Icons.route,
                 tone: AppStatusTone.info,
                 onTap: widget.onOpenDispatch,
               ),
               AppUi.kpiMetricCard(
-                label: 'Overdue settlements',
+                label: l10n.t('admin_dashboard_overdue_settlements'),
                 value: '${metrics.settlements.overdue}',
                 icon: Icons.warning_amber_outlined,
                 tone: metrics.settlements.overdue > 0 ? AppStatusTone.error : AppStatusTone.neutral,
@@ -125,25 +134,25 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           const SizedBox(height: AppTokens.spaceLg),
           AppUi.sectionHeader(
             context,
-            title: 'Operational focus',
-            subtitle: 'Tap a row to open the relevant queue.',
+            title: l10n.t('admin_dashboard_operational_focus'),
+            subtitle: l10n.t('admin_dashboard_operational_focus_sub'),
           ),
           _FocusTile(
-            label: 'Bookings needing assignment',
+            label: l10n.t('admin_dashboard_bookings_needing_assignment'),
             value: metrics.bookings.unassigned,
             tone: AppStatusTone.warning,
             onTap: widget.onOpenDispatch,
           ),
           const SizedBox(height: 8),
           _FocusTile(
-            label: 'Active trips',
+            label: l10n.t('admin_dashboard_active_trips'),
             value: activeTrips,
             tone: AppStatusTone.info,
             onTap: widget.onOpenDispatch,
           ),
           const SizedBox(height: 8),
           _FocusTile(
-            label: 'Overdue settlements',
+            label: l10n.t('admin_dashboard_overdue_settlements'),
             value: metrics.settlements.overdue,
             tone: metrics.settlements.overdue > 0 ? AppStatusTone.error : AppStatusTone.neutral,
             onTap: widget.onOpenSettlements,
@@ -151,45 +160,45 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           const SizedBox(height: AppTokens.spaceLg),
           AppUi.sectionHeader(
             context,
-            title: 'Today\'s bookings',
-            subtitle: 'Tap a card to open dispatch.',
+            title: l10n.t('admin_dashboard_today_bookings_section'),
+            subtitle: l10n.t('admin_dashboard_today_bookings_sub'),
           ),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               AppUi.metricCard(
-                label: 'Today bookings',
+                label: l10n.t('admin_dashboard_today_bookings'),
                 value: '${metrics.bookings.today}',
                 icon: Icons.today,
                 onTap: widget.onOpenDispatch,
               ),
               AppUi.metricCard(
-                label: 'Assigned',
+                label: l10n.t('admin_dashboard_assigned'),
                 value: '${metrics.bookings.assigned}',
                 icon: Icons.assignment_ind,
                 onTap: widget.onOpenDispatch,
               ),
               AppUi.metricCard(
-                label: 'On route',
+                label: l10n.t('admin_dashboard_on_route'),
                 value: '${metrics.bookings.onRoute}',
                 icon: Icons.route,
                 onTap: widget.onOpenDispatch,
               ),
               AppUi.metricCard(
-                label: 'Arrived',
+                label: l10n.t('admin_dashboard_arrived'),
                 value: '${metrics.bookings.arrived}',
                 icon: Icons.pin_drop,
                 onTap: widget.onOpenDispatch,
               ),
               AppUi.metricCard(
-                label: 'Completed',
+                label: l10n.t('admin_dashboard_completed'),
                 value: '${metrics.bookings.completed}',
                 icon: Icons.check_circle,
                 onTap: widget.onOpenDispatch,
               ),
               AppUi.metricCard(
-                label: 'Cancelled',
+                label: l10n.t('admin_dashboard_cancelled'),
                 value: '${metrics.bookings.cancelled}',
                 icon: Icons.cancel,
                 onTap: widget.onOpenDispatch,
@@ -197,25 +206,25 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ],
           ),
           const SizedBox(height: AppTokens.spaceLg),
-          AppUi.sectionHeader(context, title: 'Fleet & finance'),
+          AppUi.sectionHeader(context, title: l10n.t('admin_dashboard_fleet_finance')),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               AppUi.metricCard(
-                label: 'Online drivers',
+                label: l10n.t('admin_dashboard_online_drivers'),
                 value: '${metrics.drivers.online}',
                 icon: Icons.local_taxi,
               ),
               AppUi.metricCard(
-                label: 'Pending settlements',
+                label: l10n.t('admin_dashboard_pending_settlements'),
                 value: '${metrics.settlements.pending}',
                 icon: Icons.receipt_long,
                 onTap: widget.onOpenSettlements,
               ),
               AppUi.metricCard(
-                label: 'Today revenue',
-                value: _money(metrics.revenue.todayBooked, metrics.revenue.currency),
+                label: l10n.t('admin_dashboard_today_revenue'),
+                value: _money(l10n, metrics.revenue.todayBooked, metrics.revenue.currency),
                 icon: Icons.payments,
               ),
             ],
@@ -224,7 +233,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           AppUi.surfaceCard(
             backgroundColor: AppTokens.surfaceMuted,
             child: Text(
-              'Completed-trip revenue today: ${_money(metrics.revenue.todayCompleted, metrics.revenue.currency)}',
+              l10n
+                  .t('admin_dashboard_completed_revenue_today')
+                  .replaceAll('{amount}', _money(l10n, metrics.revenue.todayCompleted, metrics.revenue.currency)),
               style: const TextStyle(color: AppTokens.textSecondary),
             ),
           ),
@@ -234,8 +245,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  String _money(num? amount, String currency) {
-    if (amount == null) return 'Mixed currencies';
+  String _money(AppLocalizations l10n, num? amount, String currency) {
+    if (amount == null) return l10n.t('admin_dashboard_mixed_currencies');
     return '${amount.toStringAsFixed(0)} $currency';
   }
 }

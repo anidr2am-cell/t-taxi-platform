@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
@@ -76,9 +77,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = err is AdminPricingApiException
-            ? err.message
-            : 'Could not load pricing data';
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -156,14 +155,15 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Future<bool> _confirm(String title, String message) async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirm')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.t('ui_cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.t('ui_confirm_action'))),
         ],
       ),
     );
@@ -171,6 +171,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Future<void> _showRouteDialog({Map<String, dynamic>? existing}) async {
+    final l10n = context.l10n;
     final serviceType = ValueNotifier<String>(
       existing?['serviceTypeCode'] as String? ?? kServiceTypes.first,
     );
@@ -188,7 +189,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(existing == null ? 'Create route' : 'Edit route'),
+          title: Text(
+            existing == null
+                ? l10n.t('admin_pricing_dialog_create_route')
+                : l10n.t('admin_pricing_dialog_edit_route'),
+          ),
           content: SizedBox(
             width: 420,
             child: Form(
@@ -201,7 +206,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     builder: (context, selected, child) => DropdownButtonFormField<String>(
                       key: ValueKey(selected),
                       initialValue: selected,
-                      decoration: const InputDecoration(labelText: 'Service type'),
+                      decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_service_type')),
                       items: kServiceTypes
                           .map((code) => DropdownMenuItem(value: code, child: Text(code)))
                           .toList(),
@@ -231,7 +236,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                   ValueListenableBuilder(
                     valueListenable: active,
                     builder: (context, selected, child) => SwitchListTile(
-                      title: const Text('Active'),
+                      title: Text(l10n.t('ui_active')),
                       value: selected,
                       onChanged: (v) => active.value = v,
                     ),
@@ -246,7 +251,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.t('ui_cancel'))),
             FilledButton(
               onPressed: _saving
                   ? null
@@ -273,7 +278,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
                         setDialogState(() => fieldErrors = {
-                              'general': userFacingError(err, fallback: 'Could not save changes'),
+                              'general': userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
                             });
                       } finally {
                         if (mounted) setState(() => _saving = false);
@@ -285,7 +290,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save'),
+                  : Text(l10n.t('ui_save')),
             ),
           ],
         ),
@@ -299,6 +304,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Future<void> _copyRoute(Map<String, dynamic> route) async {
+    final l10n = context.l10n;
     final destCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
     Map<String, String>? fieldErrors;
@@ -307,7 +313,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text('Copy route #${route['id']}'),
+          title: Text(
+            l10n.t('admin_pricing_dialog_copy_route').replaceAll('{id}', '${route['id']}'),
+          ),
           content: Form(
             key: formKey,
             child: TextFormField(
@@ -321,7 +329,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.t('ui_cancel'))),
             FilledButton(
               onPressed: _saving
                   ? null
@@ -339,7 +347,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
                         setDialogState(() => fieldErrors = {
-                              'general': userFacingError(err, fallback: 'Could not save changes'),
+                              'general': userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
                             });
                       } finally {
                         if (mounted) setState(() => _saving = false);
@@ -355,6 +363,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Future<void> _showPriceDialog({Map<String, dynamic>? existing}) async {
+    final l10n = context.l10n;
     final routeId = ValueNotifier<String?>(
       existing != null ? '${existing['routeId']}' : (_routes.isNotEmpty ? '${_routes.first['id']}' : null),
     );
@@ -373,7 +382,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(existing == null ? 'Create vehicle price' : 'Edit vehicle price'),
+          title: Text(
+            existing == null
+                ? l10n.t('admin_pricing_dialog_create_price')
+                : l10n.t('admin_pricing_dialog_edit_price'),
+          ),
           content: SizedBox(
             width: 420,
             child: Form(
@@ -459,7 +472,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.t('ui_cancel'))),
             FilledButton(
               onPressed: _saving
                   ? null
@@ -491,13 +504,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
                         setDialogState(() => fieldErrors = {
-                              'general': userFacingError(err, fallback: 'Could not save changes'),
+                              'general': userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
                             });
                       } finally {
                         if (mounted) setState(() => _saving = false);
                       }
                     },
-              child: const Text('Save'),
+              child: Text(l10n.t('ui_save')),
             ),
           ],
         ),
@@ -514,6 +527,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Future<void> _showPolicyDialog({Map<String, dynamic>? existing}) async {
+    final l10n = context.l10n;
     final chargeType = ValueNotifier<String>(
       existing?['chargeType'] as String? ?? kChargePolicyTypes.first,
     );
@@ -529,7 +543,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'Create charge policy' : 'Edit charge policy'),
+        title: Text(
+          existing == null
+              ? l10n.t('admin_pricing_dialog_create_policy')
+              : l10n.t('admin_pricing_dialog_edit_policy'),
+        ),
         content: SizedBox(
           width: 420,
           child: Form(
@@ -583,7 +601,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                   ValueListenableBuilder(
                     valueListenable: active,
                     builder: (context, selected, child) => SwitchListTile(
-                      title: const Text('Active'),
+                      title: Text(l10n.t('ui_active')),
                       value: selected,
                       onChanged: (v) => active.value = v,
                     ),
@@ -622,7 +640,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       if (mounted) setState(() => _saving = false);
                     }
                   },
-            child: const Text('Save'),
+            child: Text(l10n.t('ui_save')),
           ),
         ],
       ),
@@ -637,13 +655,14 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Widget _summaryCards() {
+    final l10n = context.l10n;
     final summary = _summary ?? {};
     final cards = [
-      ('Active routes', summary['activeRouteCount'] ?? 0, Icons.route, AppStatusTone.info),
-      ('Active vehicle prices', summary['activeVehiclePriceCount'] ?? 0, Icons.directions_car_filled_outlined, AppStatusTone.success),
-      ('Active charge policies', summary['activeChargePolicyCount'] ?? 0, Icons.policy_outlined, AppStatusTone.neutral),
-      ('Current prices', summary['currentPriceCount'] ?? 0, Icons.payments_outlined, AppStatusTone.success),
-      ('Expiring soon', summary['expiringSoonPriceCount'] ?? 0, Icons.schedule, AppStatusTone.warning),
+      (l10n.t('admin_pricing_kpi_active_routes'), summary['activeRouteCount'] ?? 0, Icons.route, AppStatusTone.info),
+      (l10n.t('admin_pricing_kpi_active_prices'), summary['activeVehiclePriceCount'] ?? 0, Icons.directions_car_filled_outlined, AppStatusTone.success),
+      (l10n.t('admin_pricing_kpi_active_policies'), summary['activeChargePolicyCount'] ?? 0, Icons.policy_outlined, AppStatusTone.neutral),
+      (l10n.t('admin_pricing_kpi_current_prices'), summary['currentPriceCount'] ?? 0, Icons.payments_outlined, AppStatusTone.success),
+      (l10n.t('admin_pricing_kpi_expiring_soon'), summary['expiringSoonPriceCount'] ?? 0, Icons.schedule, AppStatusTone.warning),
     ];
 
     if (_isNarrow(context)) {
@@ -682,6 +701,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Widget _routesTab() {
+    final l10n = context.l10n;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 600;
@@ -695,9 +716,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_routeServiceFilter),
                     initialValue: _routeServiceFilter,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Service type', isDense: true),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_service_type'), isDense: true),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('All')),
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
                       ...kServiceTypes.map((code) => DropdownMenuItem(value: code, child: Text(code))),
                     ],
                     onChanged: (v) => setState(() => _routeServiceFilter = v),
@@ -706,14 +727,14 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 SizedBox(
                   width: _filterWidth(context, 120),
                   child: TextField(
-                    decoration: const InputDecoration(labelText: 'Origin', isDense: true),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_origin'), isDense: true),
                     onChanged: (v) => setState(() => _routeOriginFilter = v),
                   ),
                 ),
                 SizedBox(
                   width: _filterWidth(context, 120),
                   child: TextField(
-                    decoration: const InputDecoration(labelText: 'Destination', isDense: true),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_destination'), isDense: true),
                     onChanged: (v) => setState(() => _routeDestFilter = v),
                   ),
                 ),
@@ -723,11 +744,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_routeActiveFilter),
                     initialValue: _routeActiveFilter,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Active', isDense: true),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('All')),
-                      DropdownMenuItem(value: 'active', child: Text('Active')),
-                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_active'), isDense: true),
+                    items: [
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
+                      DropdownMenuItem(value: 'active', child: Text(l10n.t('ui_active'))),
+                      DropdownMenuItem(value: 'inactive', child: Text(l10n.t('ui_inactive'))),
                     ],
                     onChanged: (v) => setState(() => _routeActiveFilter = v),
                   ),
@@ -735,20 +756,20 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 SizedBox(
                   width: _filterWidth(context, 160),
                   child: TextField(
-                    decoration: const InputDecoration(labelText: 'Search', isDense: true),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_search'), isDense: true),
                     onChanged: (v) => setState(() => _routeSearch = v),
                   ),
                 ),
                 FilledButton.icon(
                   onPressed: () => _showRouteDialog(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create route'),
+                  label: Text(l10n.t('admin_pricing_create_route')),
                 ),
               ],
             ),
             Expanded(
               child: _filteredRoutes.isEmpty
-                  ? const Center(child: Text('No routes found'))
+                  ? Center(child: Text(l10n.t('admin_pricing_no_routes')))
                   : narrow
                       ? ListView.separated(
                           padding: AppUi.pagePadding(context),
@@ -844,6 +865,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Widget _routeCard(Map<String, dynamic> map) {
+    final l10n = context.l10n;
     final active = map['isActive'] == true;
     return AppUi.adminQueueCard(
       child: Column(
@@ -858,7 +880,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 ),
               ),
               AppUi.statusBadge(
-                active ? 'Active' : 'Inactive',
+                active ? l10n.t('ui_active') : l10n.t('ui_inactive'),
                 tone: active ? AppStatusTone.success : AppStatusTone.neutral,
               ),
             ],
@@ -957,6 +979,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Widget _pricesTab() {
+    final l10n = context.l10n;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 600;
@@ -970,9 +994,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_priceRouteFilter),
                     initialValue: _priceRouteFilter,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Route', isDense: true),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_route'), isDense: true),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('All routes')),
+                      DropdownMenuItem(value: null, child: Text(l10n.t('admin_pricing_filter_all_routes'))),
                       ..._routes.map((row) {
                         final map = Map<String, dynamic>.from(row as Map);
                         return DropdownMenuItem(
@@ -990,13 +1014,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_priceStatusFilter),
                     initialValue: _priceStatusFilter,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Status', isDense: true),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('All')),
-                      DropdownMenuItem(value: 'current', child: Text('Current')),
-                      DropdownMenuItem(value: 'future', child: Text('Future')),
-                      DropdownMenuItem(value: 'expired', child: Text('Expired')),
-                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_status'), isDense: true),
+                    items: [
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
+                      DropdownMenuItem(value: 'current', child: Text(l10n.t('admin_pricing_status_current'))),
+                      DropdownMenuItem(value: 'future', child: Text(l10n.t('admin_pricing_status_future'))),
+                      DropdownMenuItem(value: 'expired', child: Text(l10n.t('admin_pricing_status_expired'))),
+                      DropdownMenuItem(value: 'inactive', child: Text(l10n.t('admin_pricing_status_inactive'))),
                     ],
                     onChanged: (v) => setState(() => _priceStatusFilter = v),
                   ),
@@ -1004,13 +1028,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 FilledButton.icon(
                   onPressed: () => _showPriceDialog(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create price'),
+                  label: Text(l10n.t('admin_pricing_create_price')),
                 ),
               ],
             ),
             Expanded(
               child: _filteredPrices.isEmpty
-                  ? const Center(child: Text('No vehicle prices found'))
+                  ? Center(child: Text(l10n.t('admin_pricing_no_prices')))
                   : narrow
                       ? ListView.separated(
                           padding: AppUi.pagePadding(context),
@@ -1127,6 +1151,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Widget _policiesTab() {
+    final l10n = context.l10n;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 600;
@@ -1140,11 +1166,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     key: ValueKey(_policyActiveFilter),
                     initialValue: _policyActiveFilter,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Active', isDense: true),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('All')),
-                      DropdownMenuItem(value: 'active', child: Text('Active')),
-                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_active'), isDense: true),
+                    items: [
+                      DropdownMenuItem(value: null, child: Text(l10n.t('ui_all'))),
+                      DropdownMenuItem(value: 'active', child: Text(l10n.t('ui_active'))),
+                      DropdownMenuItem(value: 'inactive', child: Text(l10n.t('ui_inactive'))),
                     ],
                     onChanged: (v) => setState(() => _policyActiveFilter = v),
                   ),
@@ -1152,13 +1178,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                 FilledButton.icon(
                   onPressed: () => _showPolicyDialog(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create policy'),
+                  label: Text(l10n.t('admin_pricing_create_policy')),
                 ),
               ],
             ),
             Expanded(
               child: _filteredPolicies.isEmpty
-                  ? const Center(child: Text('No charge policies found'))
+                  ? Center(child: Text(l10n.t('admin_pricing_no_policies')))
                   : narrow
                       ? ListView.separated(
                           padding: AppUi.pagePadding(context),
@@ -1211,6 +1237,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     if (_loading && _summary == null) {
       return AppUi.loadingState();
     }
@@ -1218,7 +1246,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       return AppUi.errorState(
         message: _error!,
         onRetry: _loadAll,
-        retryLabel: 'Retry',
+        retryLabel: l10n.t('admin_dispatch_retry'),
       );
     }
 
@@ -1229,7 +1257,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
           padding: AppUi.pagePadding(context).copyWith(bottom: 0),
           child: AppUi.sectionHeader(
             context,
-            title: 'Pricing Manager',
+            title: l10n.t('admin_pricing_manager'),
             trailing: IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh)),
           ),
         ),
@@ -1245,11 +1273,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             labelColor: AppTokens.primary,
             unselectedLabelColor: AppTokens.textSecondary,
             indicatorColor: AppTokens.primary,
-            tabs: const [
-              Tab(text: 'Routes'),
-              Tab(text: 'Vehicle Prices'),
-              Tab(text: 'Charge Policies'),
-              Tab(text: 'Simulator'),
+            tabs: [
+              Tab(text: l10n.t('admin_pricing_tab_routes')),
+              Tab(text: l10n.t('admin_pricing_tab_prices')),
+              Tab(text: l10n.t('admin_pricing_tab_policies')),
+              Tab(text: l10n.t('admin_pricing_tab_simulator')),
             ],
           ),
         ),
@@ -1346,7 +1374,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(err, fallback: 'Could not load pricing data');
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -1354,6 +1382,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final vehicleOptions = _vehicleOptionsForRoute(_routeId);
 
     return ListView(
@@ -1367,7 +1396,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
           key: Key('simulator_route_dropdown:${_routeId ?? ''}'),
           initialValue: _routeId,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Route'),
+          decoration: InputDecoration(labelText: l10n.t('admin_pricing_filter_route')),
           items: _activeRoutes
               .map(
                 (route) => DropdownMenuItem(
@@ -1398,10 +1427,10 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
               .toList(),
           onChanged: (v) => setState(() => _vehicleTypeId = v),
         ),
-        SwitchListTile(title: const Text('Name sign'), value: _nameSign, onChanged: (v) => setState(() => _nameSign = v)),
-        SwitchListTile(title: const Text('Waiting'), value: _waiting, onChanged: (v) => setState(() => _waiting = v)),
-        SwitchListTile(title: const Text('Parking'), value: _parking, onChanged: (v) => setState(() => _parking = v)),
-        SwitchListTile(title: const Text('Toll'), value: _toll, onChanged: (v) => setState(() => _toll = v)),
+        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_name_sign')), value: _nameSign, onChanged: (v) => setState(() => _nameSign = v)),
+        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_waiting')), value: _waiting, onChanged: (v) => setState(() => _waiting = v)),
+        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_parking')), value: _parking, onChanged: (v) => setState(() => _parking = v)),
+        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_toll')), value: _toll, onChanged: (v) => setState(() => _toll = v)),
             ],
           ),
         ),
@@ -1412,7 +1441,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
             onPressed: _loading ? null : _run,
             child: _loading
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Calculate'),
+                : Text(l10n.t('admin_pricing_sim_calculate')),
           ),
         ),
         if (_error != null) ...[
@@ -1430,7 +1459,10 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Total: ${_result!['totalAmount']} ${_result!['currency']}',
+                  l10n
+                      .t('admin_pricing_sim_total')
+                      .replaceAll('{amount}', '${_result!['totalAmount']}')
+                      .replaceAll('{currency}', '${_result!['currency']}'),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: AppTokens.primaryDark,

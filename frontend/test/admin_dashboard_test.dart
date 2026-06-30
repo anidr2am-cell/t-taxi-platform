@@ -89,6 +89,24 @@ void main() {
 
     expect(find.text('Please log in'), findsOneWidget);
   });
+
+  testWidgets('dashboard has no horizontal overflow at 768px', (tester) async {
+    tester.view.physicalSize = const Size(768, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(size: Size(768, 1024)),
+        child: _wrap(AdminDashboardPage(api: _FakeDashboardApi(metrics: _metrics()))),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Today bookings'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _wrap(Widget child) {
