@@ -298,6 +298,9 @@ test('overdue blocking prevents assignment', async () => {
     driverRepo,
     {},
     settlementService,
+    null,
+    null,
+    new (require('../src/services/driverCandidateScoring.service'))(),
   );
 
   await assert.rejects(

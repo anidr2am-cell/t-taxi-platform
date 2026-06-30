@@ -89,6 +89,19 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(help),
               ),
+              if (!_cameraMode) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    l10n.t('driver_qr_manual_hint'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               if (_cameraMode && !_cameraError)
                 SizedBox(
@@ -117,6 +130,7 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                       labelText: widget.isBoarding
                           ? l10n.t('driver_qr_boarding_manual_label')
                           : l10n.t('driver_qr_dropoff_manual_label'),
+                      helperText: l10n.t('driver_qr_manual_entry'),
                     ),
                   ),
                 ),

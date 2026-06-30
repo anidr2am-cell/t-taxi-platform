@@ -145,4 +145,38 @@ class AdminDispatchApiService {
     );
     return Map<String, dynamic>.from(data as Map);
   }
+
+  Future<Map<String, dynamic>> getDriverCandidates(String bookingNumber) async {
+    final data = await _request('GET', '/admin/bookings/$bookingNumber/driver-candidates');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> autoAssignDriver(
+    String bookingNumber, {
+    int? driverId,
+    bool useTopCandidate = false,
+    int? expectedAssignmentVersion,
+  }) async {
+    final body = <String, dynamic>{};
+    if (driverId != null) body['driverId'] = driverId;
+    if (useTopCandidate) body['useTopCandidate'] = true;
+    if (expectedAssignmentVersion != null) {
+      body['expectedAssignmentVersion'] = expectedAssignmentVersion;
+    }
+    final data = await _request(
+      'POST',
+      '/admin/bookings/$bookingNumber/auto-assign',
+      body: body,
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> reissueQr(String bookingNumber, String type) async {
+    final data = await _request(
+      'POST',
+      '/admin/bookings/$bookingNumber/qr/reissue',
+      body: {'type': type},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
 }

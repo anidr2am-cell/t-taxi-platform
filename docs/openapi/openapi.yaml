@@ -1658,6 +1658,97 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
 
+  /admin/bookings/{bookingNumber}/driver-candidates:
+    get:
+      tags: [Admin]
+      summary: List scored driver candidates for automatic assignment
+      operationId: adminGetDriverCandidates
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverCandidatePreview'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Booking not eligible for driver recommendation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /admin/bookings/{bookingNumber}/auto-assign:
+    post:
+      tags: [Admin]
+      summary: Assign recommended or selected driver after eligibility re-check
+      operationId: adminAutoAssignDriver
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverAutoAssignRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverAssignmentResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Assignment conflict or driver no longer eligible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /admin/bookings/{bookingNumber}/qr/reissue:
+    post:
+      tags: [Admin]
+      summary: Reissue one-time QR token for local development testing
+      description: Requires ALLOW_DEV_QR_REISSUE=true and non-production NODE_ENV.
+      operationId: adminReissueBookingQr
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminQrReissueRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAdminQrReissueResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Booking status does not allow QR reissue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
   /admin/bookings/{bookingNumber}/unassign-driver:
     post:
       tags: [Admin]
@@ -5596,6 +5687,129 @@ components:
           type: string
         assignmentReason:
           type: string
+
+    DriverAutoAssignRequest:
+      type: object
+      properties:
+        driverId:
+          type: integer
+          format: int64
+        useTopCandidate:
+          type: boolean
+        expectedAssignmentVersion:
+          type: integer
+          format: int64
+        assignmentReason:
+          type: string
+
+    DriverCandidateItem:
+      type: object
+      properties:
+        driverId:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        vehicleTypeCode:
+          type: string
+        online:
+          type: boolean
+        activeJobCount:
+          type: integer
+        distanceKm:
+          type: number
+          nullable: true
+        locationFresh:
+          type: boolean
+        score:
+          type: integer
+        reasons:
+          type: array
+          items:
+            type: string
+        eligible:
+          type: boolean
+
+    DriverCandidateExcluded:
+      type: object
+      properties:
+        driverId:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: string
+
+    DriverCandidatePreview:
+      type: object
+      properties:
+        bookingId:
+          type: integer
+          format: int64
+        bookingNumber:
+          type: string
+        vehicleTypeCode:
+          type: string
+        assignmentVersion:
+          type: integer
+          format: int64
+        recommendedDriverId:
+          type: integer
+          format: int64
+          nullable: true
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverCandidateItem'
+        excluded:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverCandidateExcluded'
+
+    ApiResponseDriverCandidatePreview:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverCandidatePreview'
+
+    AdminQrReissueRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [BOARDING, DROPOFF]
+
+    AdminQrReissueResponse:
+      type: object
+      properties:
+        bookingNumber:
+          type: string
+        qrType:
+          type: string
+          enum: [BOARDING, DROPOFF]
+        boardingQrToken:
+          type: string
+          description: Returned once when qrType is BOARDING
+        dropoffQrToken:
+          type: string
+          description: Returned once when qrType is DROPOFF
+        expiresAt:
+          type: string
+          format: date-time
+
+    ApiResponseAdminQrReissueResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AdminQrReissueResponse'
 
     # --- Vehicle ---
     VehicleTypeInfo:

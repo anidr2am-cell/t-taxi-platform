@@ -37,6 +37,8 @@ const CommissionSettlementService = require('../services/commissionSettlement.se
 const ReviewRepository = require('../repositories/review.repository');
 const ReviewService = require('../services/review.service');
 const AdminDispatchService = require('../services/adminDispatch.service');
+const DriverCandidateScoringService = require('../services/driverCandidateScoring.service');
+const AdminQrReissueService = require('../services/adminQrReissue.service');
 const DriverQrService = require('../services/driverQr.service');
 const NotificationRepository = require('../repositories/notification.repository');
 const NotificationService = require('../services/notification.service');
@@ -185,6 +187,11 @@ container.register('reviewService', (c) => new ReviewService(
   c.get('outboxRepository'),
   c.get('outboxProcessor'),
 ));
+container.register('driverCandidateScoringService', () => new DriverCandidateScoringService());
+container.register('adminQrReissueService', (c) => new AdminQrReissueService(
+  database.pool,
+  c.get('bookingRepository'),
+));
 container.register('adminDispatchService', (c) => new AdminDispatchService(
   database.pool,
   c.get('bookingRepository'),
@@ -193,6 +200,8 @@ container.register('adminDispatchService', (c) => new AdminDispatchService(
   c.get('commissionSettlementService'),
   c.get('outboxRepository'),
   c.get('outboxProcessor'),
+  c.get('driverCandidateScoringService'),
+  c.get('adminQrReissueService'),
 ));
 container.register('driverQrService', (c) => new DriverQrService(
   database.pool,

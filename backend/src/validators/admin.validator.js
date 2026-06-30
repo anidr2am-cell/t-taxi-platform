@@ -32,9 +32,22 @@ const reassignDriverSchema = Joi.object({
   assignmentReason: Joi.string().max(255).allow('', null),
 });
 
+const autoAssignDriverSchema = Joi.object({
+  driverId: Joi.number().integer().positive().optional(),
+  useTopCandidate: Joi.boolean().optional(),
+  expectedAssignmentVersion: Joi.number().integer().min(0).optional(),
+  assignmentReason: Joi.string().max(255).allow('', null),
+}).or('driverId', 'useTopCandidate');
+
+const qrReissueSchema = Joi.object({
+  type: Joi.string().valid('BOARDING', 'DROPOFF').insensitive().required(),
+});
+
 module.exports = {
   adminBookingListQuerySchema,
   bookingNumberParamsSchema,
   assignDriverSchema,
   reassignDriverSchema,
+  autoAssignDriverSchema,
+  qrReissueSchema,
 };

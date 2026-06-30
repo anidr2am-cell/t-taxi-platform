@@ -141,6 +141,28 @@ void main() {
 
     expect(find.byKey(const Key('manualQrTokenField')), findsOneWidget);
     expect(find.text('Boarding QR token'), findsOneWidget);
+    expect(find.text('Enter code manually — no camera required'), findsOneWidget);
+    expect(find.text('Enter code manually'), findsWidgets);
+  });
+
+  testWidgets('invalid manual token shows error', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(status: 'DRIVER_ARRIVED', actions: ['SCAN_BOARDING_QR']),
+          actionError: const DriverApiException('Invalid QR token'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Scan boarding QR'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('manualQrTokenField')), 'bad-token');
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Invalid QR token'), findsOneWidget);
   });
 }
 

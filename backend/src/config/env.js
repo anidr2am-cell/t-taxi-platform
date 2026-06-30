@@ -49,9 +49,16 @@ const envSchema = Joi.object({
   SMTP_FROM_NAME: Joi.string().allow('').optional(),
   SMTP_FROM_EMAIL: Joi.string().email().allow('').optional(),
   TZ: Joi.string().default('Asia/Bangkok'),
+  ALLOW_DEV_QR_REISSUE: Joi.boolean().truthy('true', '1').falsy('false', '0').optional(),
 }).unknown(true);
 
 const { value: env, error } = envSchema.validate(process.env, { abortEarly: false });
+
+function resolveAllowDevQrReissue(nodeEnv, explicitValue) {
+  if (explicitValue === true) return true;
+  if (explicitValue === false) return false;
+  return nodeEnv === 'development';
+}
 
 const WEAK_SECRET_PATTERNS = [
   /^secret$/i,
@@ -163,4 +170,7 @@ module.exports = {
     fromEmail: env.SMTP_FROM_EMAIL || env.SMTP_FROM,
   },
   timezone: env.TZ,
+  features: {
+    allowDevQrReissue: resolveAllowDevQrReissue(env.NODE_ENV, env.ALLOW_DEV_QR_REISSUE),
+  },
 };

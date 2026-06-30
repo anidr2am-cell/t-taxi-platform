@@ -13,10 +13,12 @@ const { appEvents, EVENTS } = require('../src/events');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
 const AdminDispatchService = require('../src/services/adminDispatch.service');
+const DriverCandidateScoringService = require('../src/services/driverCandidateScoring.service');
 const container = require('../src/helpers/container');
 const app = require('../src/app');
 
 const settlementStub = { async driverHasBlockingSettlement() { return false; } };
+const scoringService = new DriverCandidateScoringService();
 
 function sign(role = 'ADMIN', id = 1) {
   return jwt.sign(
@@ -104,7 +106,7 @@ test('DRIVER and CUSTOMER are rejected', async () => {
 });
 
 test('service maps queue item without secrets', () => {
-  const service = new AdminDispatchService({}, {}, {}, {}, settlementStub);
+  const service = new AdminDispatchService({}, {}, {}, {}, settlementStub, null, null, scoringService);
   const item = service.mapQueueItem(queueRow());
   assert.equal(item.bookingNumber, 'TX202607010001');
   assert.equal(item.scheduledPickupAt, '2026-07-01 09:30:00');
@@ -129,7 +131,7 @@ test('assign rejects already assigned booking', async () => {
       return { id: 10, driver_id: 5 };
     },
   };
-  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub, null, null, scoringService);
 
   await assert.rejects(
     () => service.assignDriver('TX202607010001', { driverId: 6 }, { id: 1, role: 'ADMIN' }),
@@ -153,7 +155,7 @@ test('reassign rejects same driver', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub, null, null, scoringService);
 
   await assert.rejects(
     () => service.reassignDriver(
@@ -178,7 +180,7 @@ test('reassign rejects PICKED_UP booking', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub, null, null, scoringService);
 
   await assert.rejects(
     () => service.reassignDriver(
@@ -225,7 +227,7 @@ test('assign uses BookingStatusService transitions', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, statusService, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, statusService, settlementStub, null, null, scoringService);
 
   await service.assignDriver('TX202607010001', { driverId: 6 }, { id: 1, role: 'ADMIN' });
   assert.deepEqual(transitions, [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.DRIVER_ASSIGNED]);
@@ -283,6 +285,7 @@ test('reassign dispatches outbox only after commit', async () => {
     settlementStub,
     outboxRepository,
     outboxProcessor,
+    scoringService,
   );
 
   await service.reassignDriver(
@@ -342,7 +345,7 @@ test('booking detail never includes qr hashes', async () => {
     async findStatusLogsByBookingId() { return []; },
     async findAssignmentsByBookingId() { return []; },
   };
-  const service = new AdminDispatchService({}, bookingRepo, {}, {}, settlementStub);
+  const service = new AdminDispatchService({}, bookingRepo, {}, {}, settlementStub, null, null, scoringService);
   const detail = await service.getBookingDetail('TX202607010001');
   assert.equal(detail.bookingNumber, 'TX202607010001');
   assert.equal(detail.scheduledPickupAt, '2026-07-01 09:30:00');
@@ -359,7 +362,7 @@ test('listBookings passes search and assignment filters to repository', async ()
     },
     async findAdminBookings() { return []; },
   };
-  const service = new AdminDispatchService({}, bookingRepo, {}, {}, settlementStub);
+  const service = new AdminDispatchService({}, bookingRepo, {}, {}, settlementStub, null, null, scoringService);
   await service.listBookings({
     search: 'TG409',
     status: 'PENDING',
@@ -410,7 +413,7 @@ test('assign rejects ineligible driver', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, {}, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, {}, settlementStub, null, null, scoringService);
 
   await assert.rejects(
     () => service.assignDriver('TX202607010001', { driverId: 6 }, { id: 1, role: 'ADMIN' }),
@@ -431,7 +434,7 @@ test('assign rejects terminal booking status', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, {}, {}, settlementStub, null, null, scoringService);
 
   await assert.rejects(
     () => service.assignDriver('TX202607010001', { driverId: 6 }, { id: 1, role: 'ADMIN' }),
@@ -470,7 +473,7 @@ test('assign creates exactly one active assignment', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, statusService, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, statusService, settlementStub, null, null, scoringService);
 
   await service.assignDriver('TX202607010001', { driverId: 6 }, { id: 1, role: 'ADMIN' });
   assert.equal(insertCount, 1);
@@ -509,7 +512,7 @@ test('reassign deactivates previous assignment and creates one new active assign
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, {}, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, {}, settlementStub, null, null, scoringService);
 
   await service.reassignDriver(
     'TX202607010001',
@@ -545,7 +548,7 @@ test('assign maps ER_DUP_ENTRY to ASSIGNMENT_CONFLICT', async () => {
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
-  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, {}, settlementStub);
+  const service = new AdminDispatchService(pool, bookingRepo, driverRepo, {}, settlementStub, null, null, scoringService);
 
   await assert.rejects(
     () => service.assignDriver('TX202607010001', { driverId: 6 }, { id: 1, role: 'ADMIN' }),
@@ -593,6 +596,7 @@ test('reassign does not dispatch outbox when transaction fails', async () => {
     settlementStub,
     outboxRepository,
     outboxProcessor,
+    scoringService,
   );
 
   await assert.rejects(

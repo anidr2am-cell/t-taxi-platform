@@ -10,6 +10,8 @@ const {
   bookingNumberParamsSchema,
   assignDriverSchema,
   reassignDriverSchema,
+  autoAssignDriverSchema,
+  qrReissueSchema,
 } = require('../validators/admin.validator');
 const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
@@ -42,6 +44,27 @@ router.post(
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: reassignDriverSchema }),
   adminController.reassignDriver,
+);
+
+router.get(
+  '/bookings/:bookingNumber/driver-candidates',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema }),
+  adminController.getDriverCandidates,
+);
+
+router.post(
+  '/bookings/:bookingNumber/auto-assign',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: autoAssignDriverSchema }),
+  adminController.autoAssignDriver,
+);
+
+router.post(
+  '/bookings/:bookingNumber/qr/reissue',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: qrReissueSchema }),
+  adminController.reissueQr,
 );
 
 router.get(

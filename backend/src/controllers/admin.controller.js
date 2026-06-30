@@ -3,6 +3,7 @@ const { success, paginate } = require('../utils/apiResponse');
 const container = require('../helpers/container');
 
 const getAdminDispatchService = () => container.get('adminDispatchService');
+const getAdminQrReissueService = () => container.get('adminQrReissueService');
 
 const listBookings = asyncHandler(async (req, res) => {
   const data = await getAdminDispatchService().listBookings(req.query);
@@ -42,10 +43,36 @@ const reassignDriver = asyncHandler(async (req, res) => {
   return success(res, data, 'Driver reassigned');
 });
 
+const getDriverCandidates = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().getDriverCandidates(req.params.bookingNumber);
+  return success(res, data, 'OK');
+});
+
+const autoAssignDriver = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().autoAssignDriver(
+    req.params.bookingNumber,
+    req.body,
+    req.user,
+  );
+  return success(res, data, 'Driver assigned');
+});
+
+const reissueQr = asyncHandler(async (req, res) => {
+  const data = await getAdminQrReissueService().reissueQr(
+    req.params.bookingNumber,
+    req.body.type,
+    req.user,
+  );
+  return success(res, data, 'QR token reissued');
+});
+
 module.exports = {
   listBookings,
   getBookingDetail,
   listDrivers,
   assignDriver,
   reassignDriver,
+  getDriverCandidates,
+  autoAssignDriver,
+  reissueQr,
 };

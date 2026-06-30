@@ -80,6 +80,10 @@ function createHarness({ booking = createBooking(), commitError = null } = {}) {
       calls.insertActivityLog += 1;
       records.activityLog = { bookingId, activity };
     },
+    async completeActiveAssignment(_conn, bookingId) {
+      calls.completeActiveAssignment = (calls.completeActiveAssignment ?? 0) + 1;
+      records.completeActiveAssignment = { bookingId };
+    },
   };
   const outboxRepository = {
     async insertNotificationEvent(_conn, data) {
@@ -229,4 +233,20 @@ test('transaction failure prevents outbox dispatch', async () => {
   assert.equal(harness.calls.outboxInsert, 1);
   assert.equal(harness.calls.outboxDispatch, 0);
   assert.equal(harness.calls.rollback, 1);
+});
+
+test('COMPLETED transition closes active driver assignment', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: 'PICKED_UP' }),
+  });
+
+  const result = await harness.service.transition(
+    'TX202607010001',
+    { status: 'COMPLETED' },
+    { id: 99, role: ROLES.DRIVER },
+  );
+
+  assert.equal(result.status, 'COMPLETED');
+  assert.equal(harness.calls.completeActiveAssignment, 1);
+  assert.deepEqual(harness.records.completeActiveAssignment, { bookingId: 10 });
 });

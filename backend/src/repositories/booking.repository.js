@@ -474,6 +474,20 @@ class BookingRepository {
     );
   }
 
+  async setBoardingQr(conn, bookingId, tokenHash, expiresAt) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          boarding_qr_token_hash = ?,
+          boarding_qr_expires_at = ?,
+          boarding_qr_used_at = NULL
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [tokenHash, expiresAt, bookingId],
+    );
+  }
+
   async updateStatus(conn, bookingId, status, actorUserId, statusFields = {}) {
     await conn.query(
       `
@@ -684,6 +698,10 @@ class BookingRepository {
           b.created_at,
           b.updated_at,
           b.metadata,
+          b.boarding_qr_token_hash,
+          b.boarding_qr_used_at,
+          b.dropoff_qr_token_hash,
+          b.dropoff_qr_used_at,
           st.code AS service_type_code,
           st.name AS service_type_name,
           vt.code AS vehicle_type_code,
@@ -768,6 +786,28 @@ class BookingRepository {
     return rows;
   }
 
+  async findBookingForDriverCandidates(bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.status,
+          b.vehicle_type_id,
+          b.origin_lat,
+          b.origin_lng,
+          b.scheduled_pickup_at,
+          vt.code AS vehicle_type_code
+        FROM bookings b
+        INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
   async findActiveAssignmentForUpdate(conn, bookingId) {
     const [rows] = await conn.query(
       `
@@ -807,6 +847,24 @@ class BookingRepository {
       [reason, assignmentId],
     );
     return result.affectedRows === 1;
+  }
+
+  async completeActiveAssignment(conn, bookingId) {
+    await conn.query(
+      `
+        UPDATE booking_driver_assignments
+        SET
+          is_active = 0,
+          status = 'COMPLETED',
+          completed_at = CURRENT_TIMESTAMP,
+          unassigned_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE booking_id = ?
+          AND is_active = 1
+          AND deleted_at IS NULL
+      `,
+      [bookingId],
+    );
   }
 
   async insertDriverAssignment(conn, row) {

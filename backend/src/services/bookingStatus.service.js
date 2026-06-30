@@ -236,6 +236,10 @@ class BookingStatusService {
       }),
     });
 
+    if (toStatus === BOOKING_STATUS.COMPLETED) {
+      await this.bookingRepository.completeActiveAssignment(conn, booking.id);
+    }
+
     const domainEvent = EVENT_BY_STATUS[toStatus];
     const eventPayload = this.buildEventPayload(booking, fromStatus, toStatus, actor, {
       ...input,

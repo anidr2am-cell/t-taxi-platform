@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_booking_detail_page.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
+import 'package:frontend/features/admin_dispatch/widgets/recommend_drivers_dialog.dart';
 
 class _FakeAdminApi extends AdminDispatchApiService {
   _FakeAdminApi({
@@ -13,8 +14,13 @@ class _FakeAdminApi extends AdminDispatchApiService {
     this.driversResponse,
     this.assignCalls = 0,
     this.reassignCalls = 0,
+    this.autoAssignCalls = 0,
     this.lastAssignmentState,
     this.lastStatus,
+    this.candidatesResponse,
+    this.candidatesError,
+    this.autoAssignError,
+    this.reissueResponse,
   });
 
   final String? token;
@@ -24,8 +30,13 @@ class _FakeAdminApi extends AdminDispatchApiService {
   final List<dynamic>? driversResponse;
   int assignCalls;
   int reassignCalls;
+  int autoAssignCalls;
   String? lastAssignmentState;
   String? lastStatus;
+  final Map<String, dynamic>? candidatesResponse;
+  final Object? candidatesError;
+  final Object? autoAssignError;
+  final Map<String, dynamic>? reissueResponse;
 
   @override
   Future<String?> getSavedToken() async => token;
@@ -91,6 +102,63 @@ class _FakeAdminApi extends AdminDispatchApiService {
   ) async {
     reassignCalls += 1;
     return {'assignmentId': 2, 'driver': {'driverId': driverId}};
+  }
+
+  @override
+  Future<Map<String, dynamic>> getDriverCandidates(String bookingNumber) async {
+    if (candidatesError != null) throw candidatesError!;
+    return candidatesResponse ??
+        {
+          'bookingId': 1,
+          'bookingNumber': bookingNumber,
+          'recommendedDriverId': 6,
+          'assignmentVersion': 0,
+          'candidates': [
+            {
+              'driverId': 6,
+              'displayName': 'Driver A',
+              'vehicleTypeCode': 'SUV',
+              'online': true,
+              'activeJobCount': 0,
+              'distanceKm': 3.2,
+              'locationFresh': true,
+              'score': 92,
+              'reasons': ['VEHICLE_MATCH', 'ONLINE'],
+              'eligible': true,
+            },
+          ],
+          'excluded': [
+            {'driverId': 9, 'displayName': 'Driver B', 'reasons': ['OFFLINE']},
+          ],
+        };
+  }
+
+  @override
+  Future<Map<String, dynamic>> autoAssignDriver(
+    String bookingNumber, {
+    int? driverId,
+    bool useTopCandidate = false,
+    int? expectedAssignmentVersion,
+  }) async {
+    if (autoAssignError != null) throw autoAssignError!;
+    autoAssignCalls += 1;
+    return {
+      'assignmentId': 3,
+      'driver': {'driverId': driverId ?? 6},
+      'bookingStatus': 'DRIVER_ASSIGNED',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> reissueQr(String bookingNumber, String type) async {
+    return reissueResponse ??
+        {
+          'bookingNumber': bookingNumber,
+          'qrType': type,
+          if (type == 'BOARDING') 'boardingQrToken': 'dev-boarding-token',
+          if (type == 'DROPOFF') 'dropoffQrToken': 'dev-dropoff-token',
+          'expiresAt': '2099-01-01 00:00:00',
+        };
   }
 }
 
@@ -261,5 +329,248 @@ void main() {
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
     expect(api.reassignCalls, 1);
+  });
+
+  testWidgets('shows recommend drivers action when allowed', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'CONFIRMED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'allowedActions': ['ASSIGN_DRIVER', 'RECOMMEND_DRIVERS'],
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Recommend drivers'), findsOneWidget);
+    expect(find.text('Assign driver'), findsOneWidget);
+  });
+
+  testWidgets('recommend drivers dialog shows candidates and excluded', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showRecommendDriversDialog(
+              context: context,
+              api: _FakeAdminApi(),
+              bookingNumber: 'TX202607010001',
+            ),
+            child: const Text('Open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Recommend drivers'), findsOneWidget);
+    expect(find.text('Driver A (SUV)'), findsOneWidget);
+    expect(find.text('Recommended'), findsOneWidget);
+    expect(find.text('Excluded'), findsOneWidget);
+    expect(find.text('Driver B'), findsOneWidget);
+  });
+
+  testWidgets('assign recommended driver calls auto assign once', (tester) async {
+    final api = _FakeAdminApi(
+      detailResponse: {
+        'bookingNumber': 'TX202607010001',
+        'status': 'CONFIRMED',
+        'route': {
+          'origin': {'address': 'BKK'},
+          'destination': {'address': 'Pattaya'},
+        },
+        'customer': {'name': 'Kim', 'phone': '+66123456789'},
+        'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+        'allowedActions': ['RECOMMEND_DRIVERS'],
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recommend drivers'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Assign recommended'));
+    await tester.pumpAndSettle();
+    expect(api.autoAssignCalls, 1);
+    expect(find.text('Driver assigned successfully'), findsOneWidget);
+  });
+
+  testWidgets('recommend drivers shows error and retry', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showRecommendDriversDialog(
+              context: context,
+              api: _FakeAdminApi(
+                candidatesError: const AdminDispatchApiException('Server error'),
+              ),
+              bookingNumber: 'TX202607010001',
+            ),
+            child: const Text('Open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Server error'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('shows dev QR reissue actions when enabled', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'DRIVER_ARRIVED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'allowedActions': [],
+              'devQrTools': {
+                'qrReissueEnabled': true,
+                'disabledReason': null,
+                'boarding': {
+                  'reissueAvailable': true,
+                  'consumed': false,
+                  'previouslyIssued': true,
+                  'unavailableReason': null,
+                },
+                'dropoff': {
+                  'reissueAvailable': false,
+                  'consumed': false,
+                  'previouslyIssued': false,
+                  'unavailableReason': 'Dropoff QR reissue requires status PICKED_UP',
+                },
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('QR management'), findsOneWidget);
+    expect(find.text('Reissue boarding QR'), findsOneWidget);
+  });
+
+  testWidgets('shows QR management section when reissue disabled', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'DRIVER_ARRIVED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'allowedActions': [],
+              'devQrTools': {
+                'qrReissueEnabled': false,
+                'disabledReason': 'Set ALLOW_DEV_QR_REISSUE=true on the backend and restart',
+                'boarding': {
+                  'reissueAvailable': false,
+                  'consumed': false,
+                  'previouslyIssued': true,
+                  'unavailableReason': null,
+                },
+                'dropoff': {
+                  'reissueAvailable': false,
+                  'consumed': false,
+                  'previouslyIssued': false,
+                  'unavailableReason': null,
+                },
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('QR management'), findsOneWidget);
+    expect(find.text('Reissue boarding QR'), findsNothing);
+    expect(
+      find.text('Set ALLOW_DEV_QR_REISSUE=true on the backend and restart'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('dev QR reissue shows token once dialog', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'DRIVER_ARRIVED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'allowedActions': [],
+              'devQrTools': {
+                'qrReissueEnabled': true,
+                'disabledReason': null,
+                'boarding': {
+                  'reissueAvailable': true,
+                  'consumed': false,
+                  'previouslyIssued': true,
+                  'unavailableReason': null,
+                },
+                'dropoff': {
+                  'reissueAvailable': false,
+                  'consumed': false,
+                  'previouslyIssued': false,
+                  'unavailableReason': null,
+                },
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reissue boarding QR'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reissue'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('adminQrReissueToken')), findsOneWidget);
+    expect(find.text('dev-boarding-token'), findsOneWidget);
   });
 }

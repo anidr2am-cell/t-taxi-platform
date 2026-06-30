@@ -19,6 +19,11 @@ const TERMINAL_REASSIGN_STATUSES = new Set([
   BOOKING_STATUS.NO_SHOW,
 ]);
 
+const CANDIDATE_ASSIGN_STATUSES = new Set([
+  BOOKING_STATUS.PENDING,
+  BOOKING_STATUS.CONFIRMED,
+]);
+
 class AdminDispatchService {
   constructor(
     pool,
@@ -28,6 +33,8 @@ class AdminDispatchService {
     commissionSettlementService,
     outboxRepository,
     outboxProcessor,
+    driverCandidateScoringService,
+    adminQrReissueService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -36,6 +43,8 @@ class AdminDispatchService {
     this.commissionSettlementService = commissionSettlementService;
     this.outboxRepository = outboxRepository;
     this.outboxProcessor = outboxProcessor;
+    this.driverCandidateScoringService = driverCandidateScoringService;
+    this.adminQrReissueService = adminQrReissueService;
   }
 
   actorFromUser(user) {
@@ -174,6 +183,9 @@ class AdminDispatchService {
 
     if (!activeAssignment && !terminalAssign) {
       actions.push('ASSIGN_DRIVER');
+      if (CANDIDATE_ASSIGN_STATUSES.has(status)) {
+        actions.push('RECOMMEND_DRIVERS');
+      }
     }
     if (activeAssignment && !terminalReassign) {
       actions.push('REASSIGN_DRIVER');
@@ -321,6 +333,22 @@ class AdminDispatchService {
         createdAt: item.created_at,
       })),
       allowedActions: this.computeAllowedActions(row, activeAssignment),
+      devQrTools: this.adminQrReissueService?.buildDevTools(row) ?? {
+        qrReissueEnabled: false,
+        disabledReason: 'QR reissue service unavailable',
+        boarding: {
+          reissueAvailable: false,
+          consumed: false,
+          previouslyIssued: false,
+          unavailableReason: null,
+        },
+        dropoff: {
+          reissueAvailable: false,
+          consumed: false,
+          previouslyIssued: false,
+          unavailableReason: null,
+        },
+      },
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -361,6 +389,161 @@ class AdminDispatchService {
       });
     }
     return driver;
+  }
+
+  assertBookingSupportsCandidateRecommendation(booking, activeAssignment) {
+    if (activeAssignment) {
+      throw new AppError('Booking already has an active driver assignment', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.ALREADY_ASSIGNED,
+      });
+    }
+    if (!CANDIDATE_ASSIGN_STATUSES.has(booking.status)) {
+      throw new AppError('Booking is not eligible for driver recommendation', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+      });
+    }
+    if (TERMINAL_ASSIGN_STATUSES.has(booking.status)) {
+      throw new AppError('Booking cannot be assigned in the current status', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+      });
+    }
+  }
+
+  async buildDriverCandidatePreview(booking) {
+    const drivers = await this.driverRepository.listForCandidateEvaluation(
+      booking.scheduled_pickup_at,
+    );
+    const candidates = [];
+    const excluded = [];
+
+    for (const driver of drivers) {
+      const settlementBlocked = await this.commissionSettlementService
+        .driverHasBlockingSettlement(driver.id);
+      const candidate = this.driverCandidateScoringService.buildCandidate(
+        driver,
+        booking,
+        { settlementBlocked },
+      );
+      if (candidate.eligible) {
+        candidates.push({
+          driverId: candidate.driverId,
+          displayName: candidate.displayName,
+          vehicleTypeCode: candidate.vehicleTypeCode,
+          online: candidate.online,
+          activeJobCount: candidate.activeJobCount,
+          distanceKm: candidate.distanceKm,
+          locationFresh: candidate.locationFresh,
+          score: candidate.score,
+          reasons: candidate.reasons,
+          eligible: true,
+          lastAssignedAt: candidate.lastAssignedAt,
+        });
+      } else {
+        excluded.push({
+          driverId: candidate.driverId,
+          displayName: candidate.displayName,
+          reasons: candidate.exclusionReasons,
+        });
+      }
+    }
+
+    candidates.sort((a, b) => this.driverCandidateScoringService.compareCandidates(a, b));
+
+    return {
+      candidates,
+      excluded,
+      recommendedDriverId: candidates[0]?.driverId ?? null,
+    };
+  }
+
+  async getDriverCandidates(bookingNumber) {
+    const booking = await this.bookingRepository.findBookingForDriverCandidates(bookingNumber);
+    if (!booking) {
+      throw new AppError('Booking not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+      });
+    }
+
+    const assignments = await this.bookingRepository.findAssignmentsByBookingId(booking.id);
+    const activeAssignment = assignments.find((row) => row.is_active === 1) ?? null;
+    this.assertBookingSupportsCandidateRecommendation(booking, activeAssignment);
+
+    const preview = await this.buildDriverCandidatePreview(booking);
+
+    return {
+      bookingId: booking.id,
+      bookingNumber: booking.booking_number,
+      vehicleTypeCode: booking.vehicle_type_code,
+      assignmentVersion: activeAssignment?.id ?? 0,
+      recommendedDriverId: preview.recommendedDriverId,
+      candidates: preview.candidates,
+      excluded: preview.excluded,
+    };
+  }
+
+  async assertAutoAssignCandidate(bookingNumber, driverId, expectedAssignmentVersion) {
+    const preview = await this.getDriverCandidates(bookingNumber);
+    if (
+      expectedAssignmentVersion !== undefined
+      && Number(expectedAssignmentVersion) !== Number(preview.assignmentVersion)
+    ) {
+      throw new AppError('Assignment conflict', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.ASSIGNMENT_CONFLICT,
+      });
+    }
+
+    const candidate = preview.candidates.find(
+      (row) => Number(row.driverId) === Number(driverId),
+    );
+    if (!candidate) {
+      throw new AppError('Driver is not eligible for auto assignment', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+      });
+    }
+    return candidate;
+  }
+
+  async autoAssignDriver(bookingNumber, input, user) {
+    let driverId = input.driverId;
+    if (input.useTopCandidate) {
+      const preview = await this.getDriverCandidates(bookingNumber);
+      const top = preview.candidates[0];
+      if (!top) {
+        throw new AppError('No eligible drivers available for auto assignment', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+        });
+      }
+      driverId = top.driverId;
+    }
+
+    if (!driverId) {
+      throw new AppError('driverId or useTopCandidate is required', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
+    await this.assertAutoAssignCandidate(
+      bookingNumber,
+      driverId,
+      input.expectedAssignmentVersion,
+    );
+
+    return this.assignDriver(
+      bookingNumber,
+      {
+        driverId,
+        assignmentReason: input.assignmentReason ?? 'AUTO_ASSIGN',
+      },
+      user,
+    );
   }
 
   async transitionToDriverAssigned(conn, bookingNumber, actor, initialStatus) {

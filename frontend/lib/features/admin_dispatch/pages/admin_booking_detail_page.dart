@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../services/admin_dispatch_api_service.dart';
+import '../widgets/admin_qr_reissue_dialog.dart';
 import '../widgets/assign_driver_dialog.dart';
+import '../widgets/recommend_drivers_dialog.dart';
 
 class AdminBookingDetailPage extends StatefulWidget {
   final String bookingNumber;
@@ -56,6 +58,33 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     return actions.map((e) => e as String).toList();
   }
 
+  Map<String, dynamic>? _devQrTools() {
+    final tools = _detail?['devQrTools'];
+    if (tools is Map) return Map<String, dynamic>.from(tools);
+    return null;
+  }
+
+  Future<void> _reissueQr(String qrType) async {
+    setState(() => _submitting = true);
+    try {
+      await handleAdminQrReissue(
+        context: context,
+        api: widget.api,
+        bookingNumber: widget.bookingNumber,
+        qrType: qrType,
+      );
+      await _load();
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   Future<void> _assign() async {
     final result = await showAssignDriverDialog(
       context: context,
@@ -68,11 +97,53 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await widget.api.assignDriver(widget.bookingNumber, result.driverId);
       widget.onChanged();
       await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver assigned successfully')),
+        );
+      }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _recommendDrivers() async {
+    final result = await showRecommendDriversDialog(
+      context: context,
+      api: widget.api,
+      bookingNumber: widget.bookingNumber,
+    );
+    if (result == null) return;
+    setState(() => _submitting = true);
+    try {
+      await widget.api.autoAssignDriver(
+        widget.bookingNumber,
+        driverId: result.useTopCandidate ? null : result.driverId,
+        useTopCandidate: result.useTopCandidate,
+        expectedAssignmentVersion: result.assignmentVersion,
+      );
+      widget.onChanged();
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver assigned successfully')),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err.toString())),
+        );
+        if (err.toString().toLowerCase().contains('conflict')
+            || err.toString().toLowerCase().contains('already')) {
+          await _load();
+        }
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -97,13 +168,71 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err.toString())),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Widget _qrManagementSection(AppLocalizations l10n) {
+    final tools = _devQrTools();
+    if (tools == null) return const SizedBox.shrink();
+
+    final enabled = tools['qrReissueEnabled'] == true;
+    final disabledReason = tools['disabledReason'] as String?;
+    final boarding = Map<String, dynamic>.from(tools['boarding'] as Map? ?? {});
+    final dropoff = Map<String, dynamic>.from(tools['dropoff'] as Map? ?? {});
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.t('admin_qr_management_title'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              enabled
+                  ? l10n.t('admin_qr_management_help')
+                  : (disabledReason ?? l10n.t('admin_qr_management_disabled_help')),
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
+            if (enabled) ...[
+              const SizedBox(height: 12),
+              if (boarding['reissueAvailable'] == true)
+                OutlinedButton(
+                  onPressed: _submitting ? null : () => _reissueQr('BOARDING'),
+                  child: Text(l10n.t('admin_dev_qr_reissue_boarding')),
+                )
+              else if (boarding['unavailableReason'] != null)
+                Text(
+                  boarding['unavailableReason'] as String,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                ),
+              if (dropoff['reissueAvailable'] == true) ...[
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: _submitting ? null : () => _reissueQr('DROPOFF'),
+                  child: Text(l10n.t('admin_dev_qr_reissue_dropoff')),
+                ),
+              ] else if (dropoff['unavailableReason'] != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  dropoff['unavailableReason'] as String,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -135,6 +264,13 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 children: [
                   _infoCard(l10n, _detail!),
                   const SizedBox(height: 16),
+                  _qrManagementSection(l10n),
+                  const SizedBox(height: 16),
+                  if (actions.contains('RECOMMEND_DRIVERS'))
+                    OutlinedButton(
+                      onPressed: _submitting ? null : _recommendDrivers,
+                      child: const Text('Recommend drivers'),
+                    ),
                   if (actions.contains('ASSIGN_DRIVER'))
                     ElevatedButton(
                       onPressed: _submitting ? null : _assign,

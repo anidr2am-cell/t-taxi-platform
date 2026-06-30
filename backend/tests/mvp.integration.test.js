@@ -333,7 +333,16 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     },
   };
 
-  const adminDispatch = new AdminDispatchService(pool, bookingRepo, driverRepo, statusService, settlementStub);
+  const adminDispatch = new AdminDispatchService(
+    pool,
+    bookingRepo,
+    driverRepo,
+    statusService,
+    settlementStub,
+    null,
+    null,
+    new (require('../src/services/driverCandidateScoring.service'))(),
+  );
   const driverQr = new DriverQrService(pool, bookingRepo, statusService, new DriverJobService(bookingRepo));
   const commission = new CommissionSettlementService(
     pool,

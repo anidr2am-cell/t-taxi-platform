@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
 import '../services/driver_location_socket_service.dart';
@@ -10,10 +12,12 @@ class AdminDriverMonitorPage extends StatefulWidget {
   const AdminDriverMonitorPage({
     super.key,
     this.api,
+    this.dispatchApi,
     this.socket,
   });
 
   final DriverLocationApiService? api;
+  final AdminDispatchApiService? dispatchApi;
   final DriverLocationSocketService? socket;
 
   @override
@@ -22,14 +26,19 @@ class AdminDriverMonitorPage extends StatefulWidget {
 
 class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
   bool _loading = true;
-  bool _onlineOnly = true;
+  bool _onlineOnly = false;
+  bool _activeAccountOnly = true;
   bool _activeJobOnly = false;
   bool _staleOnly = false;
   String? _error;
-  List<DriverLocation> _items = [];
+  List<Map<String, dynamic>> _drivers = [];
+  List<DriverLocation> _locations = [];
   DriverLocation? _selected;
   late final DriverLocationApiService _api = widget.api ?? DriverLocationApiService();
-  late final DriverLocationSocketService _socket = widget.socket ?? DriverLocationSocketService();
+  late final AdminDispatchApiService _dispatchApi =
+      widget.dispatchApi ?? const AdminDispatchApiService();
+  late final DriverLocationSocketService _socket =
+      widget.socket ?? DriverLocationSocketService();
 
   @override
   void initState() {
@@ -51,11 +60,11 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
     _socket.onAdminChanged = (payload) {
       final next = DriverLocation.fromJson(payload);
       setState(() {
-        final index = _items.indexWhere((item) => item.driverId == next.driverId);
+        final index = _locations.indexWhere((item) => item.driverId == next.driverId);
         if (index >= 0) {
-          _items[index] = next;
+          _locations[index] = next;
         } else {
-          _items = [next, ..._items];
+          _locations = [next, ..._locations];
         }
       });
     };
@@ -72,14 +81,20 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
       _error = null;
     });
     try {
-      final items = await _api.listAdminLocations(
-        onlineOnly: _onlineOnly,
-        activeJobOnly: _activeJobOnly,
-        staleOnly: _staleOnly,
-      );
+      final results = await Future.wait([
+        _dispatchApi.listDrivers(),
+        _api.listAdminLocations(
+          onlineOnly: false,
+          activeJobOnly: false,
+          staleOnly: false,
+        ),
+      ]);
       if (!mounted) return;
       setState(() {
-        _items = items;
+        _drivers = (results[0] as Iterable)
+            .map((row) => Map<String, dynamic>.from(row as Map<String, dynamic>))
+            .toList(growable: false);
+        _locations = results[1] as List<DriverLocation>;
         _loading = false;
       });
     } catch (err) {
@@ -93,11 +108,57 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
 
   void _toggle(VoidCallback update) {
     setState(update);
-    _load();
+  }
+
+  List<Map<String, dynamic>> get _filteredDrivers {
+    return _drivers.where((driver) {
+      if (_activeAccountOnly && driver['activeState'] != 'ACTIVE') return false;
+      if (_onlineOnly && driver['onlineState'] != 'ONLINE') return false;
+      if (_activeJobOnly && (driver['activeAssignmentCount'] as num? ?? 0) == 0) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  List<DriverLocation> get _filteredLocations {
+    final allowedIds = _filteredDrivers.map((d) => d['driverId'] as int).toSet();
+    var items = _locations.where((item) => allowedIds.contains(item.driverId));
+    if (_onlineOnly) {
+      items = items.where((item) => item.online == true);
+    }
+    if (_activeJobOnly) {
+      items = items.where((item) => item.activeBooking != null);
+    }
+    if (_staleOnly) {
+      items = items.where((item) => item.stale);
+    }
+    return items.toList();
+  }
+
+  DriverLocation? _locationForDriver(int driverId) {
+    for (final item in _locations) {
+      if (item.driverId == driverId) return item;
+    }
+    return null;
+  }
+
+  String _vehicleLabel(Map<String, dynamic> driver) {
+    final vehicle = driver['primaryVehicle'];
+    if (vehicle is Map) {
+      final code = vehicle['vehicleTypeCode'] as String?;
+      final plate = vehicle['plateNumber'] as String?;
+      return [code, plate].whereType<String>().where((v) => v.isNotEmpty).join(' · ');
+    }
+    return '';
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final drivers = _filteredDrivers;
+    final mapLocations = _filteredLocations;
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -105,16 +166,21 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
         children: [
           Row(
             children: [
-              Text('Driver Monitor', style: Theme.of(context).textTheme.titleLarge),
+              Text(l10n.t('admin_drivers'), style: Theme.of(context).textTheme.titleLarge),
               const Spacer(),
               Icon(_socket.connected ? Icons.cloud_done : Icons.cloud_off, size: 18),
               const SizedBox(width: 8),
               IconButton(
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
+                tooltip: l10n.t('admin_dispatch_retry'),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.t('admin_driver_management_help'),
+            style: TextStyle(color: Colors.grey.shade700),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -122,17 +188,22 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
             runSpacing: 8,
             children: [
               FilterChip(
-                label: const Text('Online only'),
+                label: Text(l10n.t('admin_driver_filter_active_accounts')),
+                selected: _activeAccountOnly,
+                onSelected: (value) => _toggle(() => _activeAccountOnly = value),
+              ),
+              FilterChip(
+                label: Text(l10n.t('admin_driver_filter_online_only')),
                 selected: _onlineOnly,
                 onSelected: (value) => _toggle(() => _onlineOnly = value),
               ),
               FilterChip(
-                label: const Text('Active jobs'),
+                label: Text(l10n.t('admin_driver_filter_active_jobs')),
                 selected: _activeJobOnly,
                 onSelected: (value) => _toggle(() => _activeJobOnly = value),
               ),
               FilterChip(
-                label: const Text('Stale'),
+                label: Text(l10n.t('admin_driver_filter_stale_locations')),
                 selected: _staleOnly,
                 onSelected: (value) => _toggle(() => _staleOnly = value),
               ),
@@ -145,42 +216,85 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
               child: ListTile(
                 leading: const Icon(Icons.error_outline),
                 title: Text(_error!),
-                trailing: TextButton(onPressed: _load, child: const Text('Retry')),
+                trailing: TextButton(onPressed: _load, child: Text(l10n.t('admin_dispatch_retry'))),
               ),
-            )
-          else
-            DriverLocationMap(
-              locations: _items,
-              height: 320,
-              onTapLocation: (location) => setState(() => _selected = location),
             ),
-          const SizedBox(height: 16),
           Expanded(
-            child: _items.isEmpty && !_loading
-                ? const Center(child: Text('No active driver locations'))
-                : ListView.builder(
-                    itemCount: _items.length,
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      final selected = _selected?.driverId == item.driverId;
-                      return Card(
-                        color: selected ? Theme.of(context).colorScheme.surfaceContainerHighest : null,
-                        child: ListTile(
-                          leading: Icon(item.stale ? Icons.location_off : Icons.location_on),
-                          title: Text(item.displayName),
-                          subtitle: Text([
-                            if (item.vehicle != null) item.vehicle!,
-                            if (item.activeBooking != null)
-                              '${item.activeBooking!.bookingNumber} ${item.activeBooking!.status}',
-                            if (item.lastSeenAt != null) 'Updated ${item.lastSeenAt}',
-                          ].join('\n')),
-                          isThreeLine: true,
-                          trailing: item.stale ? const Text('Stale') : const Text('Live'),
-                          onTap: () => setState(() => _selected = item),
-                        ),
-                      );
-                    },
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => DriverLocationMap(
+                      locations: mapLocations,
+                      height: constraints.maxHeight,
+                      onTapLocation: (location) => setState(() => _selected = location),
+                    ),
                   ),
+                ),
+                if (!_loading && mapLocations.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      l10n.t('admin_no_driver_locations'),
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Expanded(
+                  flex: 3,
+                  child: _loading
+                      ? const SizedBox.shrink()
+                      : drivers.isEmpty
+                          ? Center(child: Text(l10n.t('admin_no_drivers_found')))
+                          : ListView.builder(
+                              itemCount: drivers.length,
+                              itemBuilder: (context, index) {
+                                final driver = drivers[index];
+                                final driverId = driver['driverId'] as int;
+                                final location = _locationForDriver(driverId);
+                                final selected = _selected?.driverId == driverId;
+                                final vehicleLabel = _vehicleLabel(driver);
+                                final online = driver['onlineState'] == 'ONLINE';
+                                final activeJobs = driver['activeAssignmentCount'] as num? ?? 0;
+                                return Card(
+                                  color: selected
+                                      ? Theme.of(context).colorScheme.surfaceContainerHighest
+                                      : null,
+                                  child: ListTile(
+                                    leading: Icon(
+                                      online ? Icons.person_pin_circle : Icons.person_off_outlined,
+                                      color: online ? Colors.green : Colors.grey,
+                                    ),
+                                    title: Text(driver['displayName'] as String? ?? ''),
+                                    subtitle: Text(
+                                      [
+                                        online
+                                            ? l10n.t('admin_driver_online')
+                                            : l10n.t('admin_driver_offline'),
+                                        '${l10n.t('admin_driver_active_jobs')}: $activeJobs',
+                                        if (vehicleLabel.isNotEmpty) vehicleLabel,
+                                        if (vehicleLabel.isEmpty) l10n.t('admin_driver_no_vehicle'),
+                                        if (location?.activeBooking != null)
+                                          '${location!.activeBooking!.bookingNumber} ${location.activeBooking!.status}',
+                                        if (location?.lastSeenAt != null)
+                                          '${l10n.t('admin_driver_last_seen')} ${location!.lastSeenAt}',
+                                      ].join('\n'),
+                                    ),
+                                    isThreeLine: true,
+                                    trailing: location == null
+                                        ? Text(l10n.t('admin_driver_no_location'))
+                                        : Text(location.stale
+                                            ? l10n.t('admin_driver_location_stale')
+                                            : l10n.t('admin_driver_location_live')),
+                                    onTap: () => setState(() => _selected = location),
+                                  ),
+                                );
+                              },
+                            ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

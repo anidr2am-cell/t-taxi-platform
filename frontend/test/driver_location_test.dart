@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/features/driver_location/models/driver_location.dart';
 import 'package:frontend/features/driver_location/pages/admin_driver_monitor_page.dart';
 import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
@@ -138,20 +139,24 @@ void main() {
 
   testWidgets('admin monitor shows loading, empty, and error states', (tester) async {
     SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(900, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: AdminDriverMonitorPage(
             key: const ValueKey('admin-monitor-empty'),
             api: _FakeAdminLocationApi(items: const []),
+            dispatchApi: _FakeDispatchDriversApi(drivers: const []),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Driver Monitor'), findsOneWidget);
-    expect(find.text('No active driver locations'), findsOneWidget);
+    expect(find.text('Drivers'), findsOneWidget);
+    expect(find.text('No drivers match the current filters'), findsOneWidget);
+    expect(find.text('No live driver locations on the map'), findsOneWidget);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -159,6 +164,7 @@ void main() {
           body: AdminDriverMonitorPage(
             key: const ValueKey('admin-monitor-error'),
             api: _FakeAdminLocationApi(error: 'network'),
+            dispatchApi: _FakeDispatchDriversApi(drivers: const []),
           ),
         ),
       ),
@@ -167,6 +173,36 @@ void main() {
 
     expect(find.text('network'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('admin monitor lists active offline driver without live location', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdminDriverMonitorPage(
+            api: _FakeAdminLocationApi(items: const []),
+            dispatchApi: _FakeDispatchDriversApi(
+              drivers: [
+                {
+                  'driverId': 1,
+                  'displayName': 'Local Driver',
+                  'activeState': 'ACTIVE',
+                  'onlineState': 'OFFLINE',
+                  'activeAssignmentCount': 0,
+                },
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Local Driver'), findsOneWidget);
+    expect(find.textContaining('Offline'), findsOneWidget);
+    expect(find.text('No location'), findsOneWidget);
   });
 
   testWidgets('guest tracking unavailable and terminal states render safely', (tester) async {
@@ -223,6 +259,15 @@ class _FakeLocationSocket extends DriverLocationSocketService {
 
   @override
   void disconnect() {}
+}
+
+class _FakeDispatchDriversApi extends AdminDispatchApiService {
+  _FakeDispatchDriversApi({required this.drivers});
+
+  final List<Map<String, dynamic>> drivers;
+
+  @override
+  Future<List<dynamic>> listDrivers() async => drivers;
 }
 
 class _FakeAdminLocationApi extends DriverLocationApiService {
