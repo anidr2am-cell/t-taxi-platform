@@ -183,7 +183,14 @@ class BookingWizardController extends ChangeNotifier {
   String? scheduledPickupAtIso() {
     final selected = selectedPickupDateTime();
     if (selected == null) return null;
-    return '${formatDate(selected)}T${formatTime(selected)}:00+07:00';
+    return serializeThailandPickupAt(selected);
+  }
+
+  String serializeThailandPickupAt(DateTime value) {
+    final thailandWallTime = value.isUtc
+        ? value.add(const Duration(hours: 7))
+        : value;
+    return '${formatDate(thailandWallTime)}T${formatTime(thailandWallTime)}:00+07:00';
   }
 
   bool isPickupDateTimeAllowed(DateTime value) {
@@ -303,6 +310,10 @@ class BookingWizardController extends ChangeNotifier {
   Map<String, dynamic> buildCreatePayload() {
     final locations = _pricingLocationParams();
     final airportIata = _airportIataForTransfer();
+    final scheduledPickupAt = scheduledPickupAtIso();
+    if (scheduledPickupAt == null) {
+      throw StateError('Pickup date and time are required');
+    }
 
     return {
       'serviceTypeCode': _state.serviceType!.apiCode,
@@ -318,7 +329,7 @@ class BookingWizardController extends ChangeNotifier {
         'originLocationCode': locations['originLocationCode'],
       if (locations['destinationLocationCode'] != null)
         'destinationLocationCode': locations['destinationLocationCode'],
-      'scheduledPickupAt': scheduledPickupAtIso(),
+      'scheduledPickupAt': scheduledPickupAt,
       'passengers': {
         'adults': _state.adults,
         'children': _state.children,

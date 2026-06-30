@@ -156,8 +156,37 @@ class BookingApiService {
   }
 
   Future<BookingCreateResult> createBooking(Map<String, dynamic> body) async {
-    final data = await _request('POST', '/bookings', body: body);
+    final data = await _request(
+      'POST',
+      '/bookings',
+      body: _normalizeCreateBookingBody(body),
+    );
     return BookingCreateResult.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Map<String, dynamic> _normalizeCreateBookingBody(Map<String, dynamic> body) {
+    if (!body.containsKey('scheduledPickupAt') || body['scheduledPickupAt'] == null) {
+      throw BookingApiException('Pickup date and time are required', 'VALIDATION_ERROR');
+    }
+
+    final normalized = Map<String, dynamic>.from(body);
+    final value = normalized['scheduledPickupAt'];
+    if (value is DateTime) {
+      normalized['scheduledPickupAt'] = _serializeThailandPickupAt(value);
+    } else if (value is String && value.trim().isNotEmpty) {
+      normalized['scheduledPickupAt'] = value.trim();
+    } else {
+      throw BookingApiException('Pickup date and time must be a valid ISO string', 'VALIDATION_ERROR');
+    }
+    return normalized;
+  }
+
+  String _serializeThailandPickupAt(DateTime value) {
+    final thailandWallTime = value.isUtc ? value.add(const Duration(hours: 7)) : value;
+    String two(int number) => number.toString().padLeft(2, '0');
+    String four(int number) => number.toString().padLeft(4, '0');
+    return '${four(thailandWallTime.year)}-${two(thailandWallTime.month)}-${two(thailandWallTime.day)}'
+        'T${two(thailandWallTime.hour)}:${two(thailandWallTime.minute)}:${two(thailandWallTime.second)}+07:00';
   }
 
   Future<DropoffQrIssueResult> issueDropoffQr({

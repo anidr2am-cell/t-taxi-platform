@@ -914,7 +914,10 @@ paths:
               $ref: '#/components/schemas/DriverLocationRequest'
       responses:
         '200':
-          $ref: '#/components/responses/SuccessEmpty'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverLocationAck'
 
   /driver/assignments:
     get:
@@ -1470,6 +1473,28 @@ paths:
         '200':
           $ref: '#/components/responses/SuccessEmpty'
 
+  /public/bookings/{bookingId}/driver-location:
+    get:
+      tags: [Public]
+      summary: Get assigned driver location for a guest booking
+      description: Requires X-Guest-Access-Token and only returns the actively assigned driver for this booking.
+      operationId: getGuestBookingDriverLocation
+      security:
+        - guestReviewAccessHeader: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGuestDriverLocation'
+
   /admin/dashboard/metrics:
     get:
       tags: [Admin]
@@ -1711,6 +1736,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDriver'
+
+  /admin/drivers/locations:
+    get:
+      tags: [Admin]
+      summary: List active driver locations for fleet monitoring
+      operationId: adminListDriverLocations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: onlineOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: activeJobOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: staleOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverLocationList'
 
   /admin/settlements:
     get:
@@ -4469,16 +4524,127 @@ components:
     # --- Driver ---
     DriverLocationRequest:
       type: object
-      required: [lat, lng]
+      required: [latitude, longitude]
       properties:
-        lat:
+        latitude:
           type: number
-        lng:
+          minimum: -90
+          maximum: 90
+        longitude:
           type: number
+          minimum: -180
+          maximum: 180
+        accuracyMeters:
+          type: number
+          nullable: true
         heading:
           type: number
-        speed:
+          minimum: 0
+          maximum: 359
+          nullable: true
+        speedKph:
           type: number
+          nullable: true
+        recordedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    DriverLocationAck:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+        recordedAt:
+          type: string
+          format: date-time
+
+    DriverLocation:
+      type: object
+      properties:
+        driverId:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        vehicle:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracyMeters:
+          type: number
+          nullable: true
+        heading:
+          type: number
+          nullable: true
+        speedKph:
+          type: number
+          nullable: true
+        recordedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+        online:
+          type: boolean
+        stale:
+          type: boolean
+        activeBooking:
+          type: object
+          nullable: true
+          properties:
+            bookingNumber:
+              type: string
+            status:
+              $ref: '#/components/schemas/ReservationStatus'
+
+    GuestDriverLocation:
+      type: object
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+        driver:
+          allOf:
+            - $ref: '#/components/schemas/DriverLocation'
+          nullable: true
+
+    ApiResponseDriverLocationAck:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverLocationAck'
+
+    ApiResponseDriverLocationList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DriverLocation'
+
+    ApiResponseGuestDriverLocation:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/GuestDriverLocation'
 
     DriverAssignment:
       type: object

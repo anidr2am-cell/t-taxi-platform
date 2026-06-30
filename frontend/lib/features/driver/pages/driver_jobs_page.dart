@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
@@ -94,6 +95,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
           }
 
           final grouped = DriverUx.groupBookings(data.items);
+          final hasActiveJob = data.items.any(_isLocationTrackable);
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
             child: ListView(
@@ -104,6 +106,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
+                DriverLiveLocationControl(hasActiveJob: hasActiveJob),
                 ..._buildGroup(
                   context,
                   l10n.t('driver_jobs_group_active'),
@@ -125,6 +128,10 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
         },
       ),
     );
+  }
+
+  bool _isLocationTrackable(DriverBooking booking) {
+    return const {'DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP'}.contains(booking.status);
   }
 
   List<Widget> _buildGroup(

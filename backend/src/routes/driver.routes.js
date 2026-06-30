@@ -1,14 +1,25 @@
 const express = require('express');
 const driverController = require('../controllers/driver.controller');
+const driverLocationController = require('../controllers/driverLocation.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
+const validate = require('../middlewares/validate.middleware');
+const createRateLimit = require('../middlewares/rateLimit.middleware');
 const ROLES = require('../constants/roles');
+const { locationUpdateSchema } = require('../validators/driverLocation.validator');
 
 const router = express.Router();
+const driverLocationRateLimit = createRateLimit({ windowMs: 60_000, max: 60 });
 
 router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
 
 router.get('/bookings/today', driverController.listTodayBookings);
+router.post(
+  '/location',
+  driverLocationRateLimit,
+  validate({ body: locationUpdateSchema }),
+  driverLocationController.updateDriverLocation,
+);
 router.get('/rating-summary', require('../controllers/review.controller').getDriverRatingSummary);
 router.get('/notifications', require('../controllers/notification.controller').listDriverNotifications);
 router.get('/notifications/unread-count', require('../controllers/notification.controller').driverUnreadCount);
@@ -21,6 +32,6 @@ router.get('/bookings/:bookingNumber', driverController.getBookingDetail);
 
 router.use('/settlements', require('./driver.settlement.routes'));
 
-// TODO: online, offline, location, assignments, booking actions
+// TODO: online, offline, assignments, booking actions
 
 module.exports = router;

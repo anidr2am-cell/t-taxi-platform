@@ -111,6 +111,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Active / Current'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Upcoming'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.text('Upcoming'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('TX202607010001'),

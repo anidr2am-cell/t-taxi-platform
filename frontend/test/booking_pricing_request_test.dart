@@ -70,6 +70,85 @@ void main() {
     },
   );
 
+  test('createBooking serializes DateTime scheduledPickupAt to ISO string with Bangkok offset', () async {
+    Map<String, dynamic>? body;
+    final api = BookingApiService.test(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'bookingNumber': 'TX202607010001',
+              'status': 'PENDING',
+              'paymentMethod': 'PAY_DRIVER',
+              'paymentStatus': 'UNPAID',
+              'totalAmount': 0,
+              'currency': 'THB',
+            },
+          }),
+          201,
+        );
+      }),
+    );
+
+    await api.createBooking({
+      'serviceTypeCode': 'CITY_TRANSFER',
+      'vehicleTypeCode': 'SUV',
+      'scheduledPickupAt': DateTime.parse('2026-07-01T09:30:00+07:00'),
+    });
+
+    expect(body!['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
+    expect(body!['scheduledPickupAt'], isA<String>());
+  });
+
+  test('createBooking preserves intended Bangkok wall time for local DateTime input', () async {
+    Map<String, dynamic>? body;
+    final api = BookingApiService.test(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'bookingNumber': 'TX202607010002'},
+          }),
+          201,
+        );
+      }),
+    );
+
+    await api.createBooking({
+      'serviceTypeCode': 'CITY_TRANSFER',
+      'vehicleTypeCode': 'SUV',
+      'scheduledPickupAt': DateTime(2026, 7, 1, 9, 30),
+    });
+
+    expect(body!['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
+  });
+
+  test('createBooking rejects null or missing scheduledPickupAt before request submission', () async {
+    var calls = 0;
+    final api = BookingApiService.test(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        calls += 1;
+        return http.Response('{}', 500);
+      }),
+    );
+
+    await expectLater(
+      api.createBooking({'scheduledPickupAt': null}),
+      throwsA(isA<BookingApiException>()),
+    );
+    await expectLater(
+      api.createBooking({'serviceTypeCode': 'CITY_TRANSFER'}),
+      throwsA(isA<BookingApiException>()),
+    );
+    expect(calls, 0);
+  });
+
   test(
     'wizard pricing maps Google airport place and Pattaya to MVP pricing codes',
     () async {
@@ -280,6 +359,45 @@ void main() {
     final payload = controller.buildCreatePayload();
 
     expect(payload['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
+    expect(payload['scheduledPickupAt'], isA<String>());
+  });
+
+  test('booking create payload fails before submission when pickup time is missing', () async {
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: _MemoryBookingStateStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+    );
+
+    await controller.selectService(BookingServiceType.cityTransfer);
+    await controller.setOrigin(
+      const LocationOption(
+        id: 'origin',
+        displayName: 'Bangkok',
+        kind: LocationKind.city,
+        code: 'BANGKOK',
+      ),
+    );
+    await controller.setDestination(
+      const LocationOption(
+        id: 'destination',
+        displayName: 'Pattaya',
+        kind: LocationKind.city,
+        code: 'PATTAYA',
+      ),
+    );
+    await controller.updatePassengersAndLuggage(adults: 2);
+    await controller.loadRecommendation();
+    await controller.selectVehicle('SUV');
+    await controller.updateCustomerInfo(
+      name: 'Kim',
+      email: 'kim@example.com',
+      phone: '+66123456789',
+    );
+
+    expect(controller.buildCreatePayload, throwsA(isA<StateError>()));
   });
 }
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const adminController = require('../controllers/admin.controller');
+const driverLocationController = require('../controllers/driverLocation.controller');
 const validate = require('../middlewares/validate.middleware');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
@@ -10,6 +11,7 @@ const {
   assignDriverSchema,
   reassignDriverSchema,
 } = require('../validators/admin.validator');
+const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
 const router = express.Router();
 const adminOnly = [authMiddleware, roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN])];
@@ -46,6 +48,13 @@ router.get(
   '/drivers',
   adminOnly,
   adminController.listDrivers,
+);
+
+router.get(
+  '/drivers/locations',
+  adminOnly,
+  validate({ query: adminDriverLocationQuerySchema }),
+  driverLocationController.listAdminDriverLocations,
 );
 
 module.exports = router;

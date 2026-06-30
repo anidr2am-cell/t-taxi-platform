@@ -7,6 +7,7 @@ import '../services/guest_booking_lookup_service.dart';
 import '../widgets/booking_chat_section.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
+import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 
 class GuestBookingLookupPage extends StatefulWidget {
   const GuestBookingLookupPage({
@@ -242,6 +243,13 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         ],
         if (widget.enableCustomerTools) ...[
           const SizedBox(height: 16),
+          if (result.bookingId != null)
+            GuestDriverTrackingSection(
+              bookingId: result.bookingId!,
+              guestAccessToken: result.guestAccessToken,
+              bookingStatus: result.status,
+            ),
+          if (result.bookingId != null) const SizedBox(height: 16),
           if (result.capabilities.notificationsAvailable)
             BookingNotificationSection(
               bookingNumber: result.bookingNumber,

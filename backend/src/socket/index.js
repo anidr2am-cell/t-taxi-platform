@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const container = require('../helpers/container');
 const ERROR_CODES = require('../constants/errorCodes');
 const { registerChatHandlers } = require('./handlers/chat.handler');
+const { registerDriverLocationHandlers } = require('./handlers/driverLocation.handler');
 
 function rejectUnauthorized(next, message = 'Unauthorized') {
   const err = new Error(message);
@@ -44,6 +45,7 @@ function initSocket(io) {
     logger.info('Socket connected', { id: socket.id });
 
     registerChatHandlers(io, socket);
+    registerDriverLocationHandlers(io, socket);
 
     socket.on('disconnect', (reason) => {
       logger.debug('Socket disconnected', { id: socket.id, reason });

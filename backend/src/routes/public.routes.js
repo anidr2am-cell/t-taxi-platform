@@ -2,6 +2,7 @@ const express = require('express');
 const flightController = require('../controllers/flight.controller');
 const bookingController = require('../controllers/booking.controller');
 const notificationController = require('../controllers/notification.controller');
+const driverLocationController = require('../controllers/driverLocation.controller');
 const validate = require('../middlewares/validate.middleware');
 const createRateLimit = require('../middlewares/rateLimit.middleware');
 const { guestBookingLookupSchema } = require('../validators/booking.validator');
@@ -9,6 +10,7 @@ const {
   registerNotificationDeviceSchema,
   guestNotificationDeviceParamsSchema,
 } = require('../validators/notification.validator');
+const { bookingIdParamsSchema } = require('../validators/driverLocation.validator');
 
 const router = express.Router();
 const bookingLookupRateLimit = createRateLimit({ windowMs: 60_000, max: 10 });
@@ -37,6 +39,13 @@ router.delete(
   guestDeviceRateLimit,
   validate({ params: guestNotificationDeviceParamsSchema }),
   notificationController.deleteGuestDevice,
+);
+
+router.get(
+  '/bookings/:bookingId/driver-location',
+  bookingLookupRateLimit,
+  validate({ params: bookingIdParamsSchema }),
+  driverLocationController.getGuestDriverLocation,
 );
 
 module.exports = router;
