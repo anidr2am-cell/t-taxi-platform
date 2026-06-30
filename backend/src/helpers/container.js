@@ -28,6 +28,7 @@ const AdminDashboardService = require('../services/adminDashboard.service');
 const FlightService = require('../services/flight.service');
 const PlacesService = require('../services/places.service');
 const DriverJobService = require('../services/driverJob.service');
+const DriverStatusService = require('../services/driverStatus.service');
 const DriverRepository = require('../repositories/driver.repository');
 const DriverLocationRepository = require('../repositories/driverLocation.repository');
 const DriverLocationService = require('../services/driverLocation.service');
@@ -159,6 +160,11 @@ container.register('placesService', () => new PlacesService({
 }));
 container.register('driverJobService', (c) => new DriverJobService(
   c.get('bookingRepository'),
+));
+container.register('driverStatusService', (c) => new DriverStatusService(
+  database.pool,
+  c.get('driverRepository'),
+  c.get('commissionSettlementService'),
 ));
 container.register('driverRepository', () => new DriverRepository());
 container.register('driverLocationRepository', () => new DriverLocationRepository());

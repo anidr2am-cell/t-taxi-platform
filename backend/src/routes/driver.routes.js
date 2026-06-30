@@ -13,6 +13,9 @@ const driverLocationRateLimit = createRateLimit({ windowMs: 60_000, max: 60 });
 
 router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
 
+router.get('/status', driverController.getStatus);
+router.post('/online', driverController.goOnline);
+router.post('/offline', driverController.goOffline);
 router.get('/bookings/today', driverController.listTodayBookings);
 router.post(
   '/location',

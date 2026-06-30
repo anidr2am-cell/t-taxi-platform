@@ -620,7 +620,12 @@ class BookingRepository {
         bda.driver_id AS assignment_driver_id,
         bda.status AS assignment_status,
         d.name AS driver_name,
-        d.phone AS driver_phone
+        d.phone AS driver_phone,
+        d.status AS driver_status,
+        dv.plate_number AS assigned_vehicle_plate,
+        dv.model_name AS assigned_vehicle_model,
+        av.code AS assigned_vehicle_type_code,
+        av.name AS assigned_vehicle_type_name
       FROM bookings b
       INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
       INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
@@ -631,6 +636,8 @@ class BookingRepository {
         AND bda.is_active = 1
         AND bda.deleted_at IS NULL
       LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+      LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
+      LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
     `;
   }
 
@@ -775,9 +782,16 @@ class BookingRepository {
           bda.unassigned_at,
           bda.accepted_at,
           d.name AS driver_name,
-          d.phone AS driver_phone
+          d.phone AS driver_phone,
+          d.status AS driver_status,
+          dv.plate_number AS vehicle_plate,
+          dv.model_name AS vehicle_model,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name
         FROM booking_driver_assignments bda
         LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+        LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
+        LEFT JOIN vehicle_types vt ON vt.id = dv.vehicle_type_id AND vt.deleted_at IS NULL
         WHERE bda.booking_id = ? AND bda.deleted_at IS NULL
         ORDER BY bda.assigned_at DESC, bda.id DESC
       `,

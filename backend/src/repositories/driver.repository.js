@@ -159,6 +159,62 @@ class DriverRepository {
     return rows[0] || null;
   }
 
+  async findByUserIdForUpdate(conn, userId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          d.id,
+          d.user_id,
+          d.name,
+          d.phone,
+          d.status,
+          d.is_online,
+          d.is_active,
+          d.last_seen_at,
+          u.is_active AS user_is_active
+        FROM drivers d
+        INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL
+        WHERE d.user_id = ? AND d.deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [userId],
+    );
+    return rows[0] || null;
+  }
+
+  async updateOnlineState(conn, driverId, { isOnline, status }) {
+    await conn.query(
+      `
+        UPDATE drivers
+        SET is_online = ?,
+            status = ?,
+            last_seen_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [isOnline ? 1 : 0, status, driverId],
+    );
+  }
+
+  async hasActiveJob(conn, driverId) {
+    const [rows] = await conn.query(
+      `
+        SELECT 1
+        FROM booking_driver_assignments bda
+        INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+        WHERE bda.driver_id = ?
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+          AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+          AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP')
+        LIMIT 1
+      `,
+      [driverId],
+    );
+    return rows.length > 0;
+  }
+
   async findPrimaryVehicle(conn, driverId) {
     const [rows] = await conn.query(
       `
@@ -191,9 +247,29 @@ class DriverRepository {
   async findByUserId(userId) {
     const [rows] = await this.pool.query(
       `
-        SELECT id, user_id, name, phone, status, is_online, is_active
-        FROM drivers
-        WHERE user_id = ? AND deleted_at IS NULL
+        SELECT
+          d.id,
+          d.user_id,
+          d.name,
+          d.phone,
+          d.status,
+          d.is_online,
+          d.is_active,
+          d.last_seen_at,
+          u.is_active AS user_is_active,
+          (
+            SELECT COUNT(*)
+            FROM booking_driver_assignments bda
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            WHERE bda.driver_id = d.id
+              AND bda.is_active = 1
+              AND bda.deleted_at IS NULL
+              AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+              AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP')
+          ) AS active_job_count
+        FROM drivers d
+        INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL
+        WHERE d.user_id = ? AND d.deleted_at IS NULL
         LIMIT 1
       `,
       [userId],

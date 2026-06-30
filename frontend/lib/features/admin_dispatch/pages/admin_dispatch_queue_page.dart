@@ -15,7 +15,8 @@ class AdminDispatchQueuePage extends StatefulWidget {
 }
 
 class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
-  late final AdminDispatchApiService _api = widget.api ?? const AdminDispatchApiService();
+  late final AdminDispatchApiService _api =
+      widget.api ?? const AdminDispatchApiService();
   final _searchController = TextEditingController();
 
   bool _loading = true;
@@ -147,64 +148,85 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
       body: Column(
         children: [
           Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  labelText: l10n.t('admin_dispatch_search'),
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () => _load(page: 1),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: l10n.t('admin_dispatch_search'),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () => _load(page: 1),
+                    ),
                   ),
+                  onSubmitted: (_) => _load(page: 1),
                 ),
-                onSubmitted: (_) => _load(page: 1),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  DropdownButton<String?>(
-                    value: _statusFilter,
-                    hint: Text(l10n.t('status')),
-                    items: [
-                      DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_statuses'))),
-                      DropdownMenuItem(value: 'PENDING', child: Text(l10n.t('status_pending'))),
-                      DropdownMenuItem(value: 'DRIVER_ASSIGNED', child: Text(l10n.t('status_driver_assigned'))),
-                      DropdownMenuItem(value: 'COMPLETED', child: Text(l10n.t('status_completed'))),
-                    ],
-                    onChanged: (v) {
-                      setState(() => _statusFilter = v);
-                      _load(page: 1);
-                    },
-                  ),
-                  DropdownButton<String?>(
-                    value: _assignmentFilter,
-                    hint: Text(l10n.t('admin_dispatch_assignment')),
-                    items: [
-                      DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_assignments'))),
-                      DropdownMenuItem(value: 'UNASSIGNED', child: Text(l10n.t('admin_dispatch_unassigned'))),
-                      DropdownMenuItem(value: 'ASSIGNED', child: Text(l10n.t('admin_dispatch_assigned'))),
-                    ],
-                    onChanged: (v) {
-                      setState(() => _assignmentFilter = v);
-                      _load(page: 1);
-                    },
-                  ),
-                  IconButton(
-                    tooltip: l10n.t('admin_dispatch_refresh'),
-                    onPressed: () => _load(page: 1),
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    DropdownButton<String?>(
+                      value: _statusFilter,
+                      hint: Text(l10n.t('status')),
+                      items: [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text(l10n.t('admin_dispatch_all_statuses')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'PENDING',
+                          child: Text(l10n.t('status_pending')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'DRIVER_ASSIGNED',
+                          child: Text(l10n.t('status_driver_assigned')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'COMPLETED',
+                          child: Text(l10n.t('status_completed')),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        setState(() => _statusFilter = v);
+                        _load(page: 1);
+                      },
+                    ),
+                    DropdownButton<String?>(
+                      value: _assignmentFilter,
+                      hint: Text(l10n.t('admin_dispatch_assignment')),
+                      items: [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text(l10n.t('admin_dispatch_all_assignments')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'UNASSIGNED',
+                          child: Text(l10n.t('admin_dispatch_unassigned')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'ASSIGNED',
+                          child: Text(l10n.t('admin_dispatch_assigned')),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        setState(() => _assignmentFilter = v);
+                        _load(page: 1);
+                      },
+                    ),
+                    IconButton(
+                      tooltip: l10n.t('admin_dispatch_refresh'),
+                      onPressed: () => _load(page: 1),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        Expanded(child: _buildBody(l10n)),
+          Expanded(child: _buildBody(l10n)),
         ],
       ),
     );
@@ -221,7 +243,10 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           children: [
             Text(_error!),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: () => _load(page: 1), child: Text(l10n.t('admin_dispatch_retry'))),
+            ElevatedButton(
+              onPressed: () => _load(page: 1),
+              child: Text(l10n.t('admin_dispatch_retry')),
+            ),
           ],
         ),
       );
@@ -250,7 +275,13 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           }
 
           final item = Map<String, dynamic>.from(_items[index] as Map);
-          final assignment = item['activeAssignment'] as Map?;
+          final assignment = item['activeAssignment'] is Map
+              ? Map<String, dynamic>.from(item['activeAssignment'] as Map)
+              : null;
+          final driverName = assignment?['driverDisplayName'] as String?;
+          final assignmentLabel = driverName == null || driverName.isEmpty
+              ? l10n.t('admin_dispatch_unassigned')
+              : driverName;
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: ListTile(
@@ -260,8 +291,14 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('${item['origin']} → ${item['destination']}'),
-                  Text('${item['customerDisplayName']} · ${item['scheduledPickupAt'] ?? '-'}'),
-                  if (item['flightNumber'] != null) Text(item['flightNumber'] as String),
+                  Text(
+                    '${item['customerDisplayName']} · ${item['scheduledPickupAt'] ?? '-'}',
+                  ),
+                  Text(
+                    '${l10n.t('admin_dispatch_assigned_driver')}: $assignmentLabel',
+                  ),
+                  if (item['flightNumber'] != null)
+                    Text(item['flightNumber'] as String),
                 ],
               ),
               trailing: Column(
@@ -290,40 +327,63 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 
   Widget _buildLogin(AppLocalizations l10n) {
     return Scaffold(
       body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.t('admin_dispatch_login_title'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(labelText: l10n.t('email'), border: const OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: l10n.t('password'), border: const OutlineInputBorder()),
-              ),
-              const SizedBox(height: 16),
-              if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
-              ElevatedButton(onPressed: _login, child: Text(l10n.t('admin_dispatch_login'))),
-            ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.t('admin_dispatch_login_title'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: l10n.t('email'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: l10n.t('password'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (_error != null)
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                ElevatedButton(
+                  onPressed: _login,
+                  child: Text(l10n.t('admin_dispatch_login')),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }

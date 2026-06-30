@@ -125,6 +125,21 @@ void main() {
     expect(find.byType(Switch), findsOneWidget);
   });
 
+  testWidgets('driver location control prompts when offline', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(hasActiveJob: true, online: false),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+
+    expect(find.text('Go online before sharing live location.'), findsOneWidget);
+  });
+
   testWidgets('driver location control hides when there is no active job', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

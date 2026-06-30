@@ -4,6 +4,7 @@ const container = require('../helpers/container');
 
 const getDriverJobService = () => container.get('driverJobService');
 const getDriverQrService = () => container.get('driverQrService');
+const getDriverStatusService = () => container.get('driverStatusService');
 
 const listTodayBookings = asyncHandler(async (req, res) => {
   const data = await getDriverJobService().listToday(req.user.id);
@@ -44,10 +45,28 @@ const scanDropoff = asyncHandler(async (req, res) => {
   return success(res, data, 'OK');
 });
 
+const getStatus = asyncHandler(async (req, res) => {
+  const data = await getDriverStatusService().getStatus(req.user.id);
+  return success(res, data, 'OK');
+});
+
+const goOnline = asyncHandler(async (req, res) => {
+  const data = await getDriverStatusService().goOnline(req.user.id);
+  return success(res, data, 'OK');
+});
+
+const goOffline = asyncHandler(async (req, res) => {
+  const data = await getDriverStatusService().goOffline(req.user.id);
+  return success(res, data, 'OK');
+});
+
 module.exports = {
   listTodayBookings,
   getBookingDetail,
   markArrived,
   scanBoarding,
   scanDropoff,
+  getStatus,
+  goOnline,
+  goOffline,
 };

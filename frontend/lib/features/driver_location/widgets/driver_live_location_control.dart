@@ -10,11 +10,13 @@ class DriverLiveLocationControl extends StatefulWidget {
     super.key,
     required this.hasActiveJob,
     this.api,
+    this.online,
     this.interval = const Duration(seconds: 15),
   });
 
   final bool hasActiveJob;
   final DriverLocationApiService? api;
+  final bool? online;
   final Duration interval;
 
   @override
@@ -52,6 +54,13 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
 
   Future<void> _start() async {
     if (!widget.hasActiveJob) return;
+    if (widget.online == false) {
+      setState(() {
+        _enabled = false;
+        _error = 'Go online before sharing live location.';
+      });
+      return;
+    }
     setState(() {
       _enabled = true;
       _error = null;

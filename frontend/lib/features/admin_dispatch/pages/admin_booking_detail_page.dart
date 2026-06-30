@@ -76,9 +76,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.toString())));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -104,9 +104,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.toString())));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -137,11 +137,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err.toString())),
-        );
-        if (err.toString().toLowerCase().contains('conflict')
-            || err.toString().toLowerCase().contains('already')) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.toString())));
+        if (err.toString().toLowerCase().contains('conflict') ||
+            err.toString().toLowerCase().contains('already')) {
           await _load();
         }
       }
@@ -168,9 +168,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err.toString())));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -200,7 +200,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             Text(
               enabled
                   ? l10n.t('admin_qr_management_help')
-                  : (disabledReason ?? l10n.t('admin_qr_management_disabled_help')),
+                  : (disabledReason ??
+                        l10n.t('admin_qr_management_disabled_help')),
               style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
             ),
             if (enabled) ...[
@@ -264,6 +265,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 children: [
                   _infoCard(l10n, _detail!),
                   const SizedBox(height: 16),
+                  _assignmentCard(l10n, _detail!),
+                  const SizedBox(height: 16),
                   _qrManagementSection(l10n),
                   const SizedBox(height: 16),
                   if (actions.contains('RECOMMEND_DRIVERS'))
@@ -293,7 +296,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final destination = Map<String, dynamic>.from(route['destination'] as Map);
     final customer = Map<String, dynamic>.from(detail['customer'] as Map);
     final pricing = Map<String, dynamic>.from(detail['pricing'] as Map);
-    final assignment = detail['activeAssignment'] as Map?;
 
     return Card(
       child: Padding(
@@ -326,15 +328,63 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               l10n.t('payment_method'),
               pricing['paymentMethod'] as String? ?? '',
             ),
-            if (assignment != null)
-              _row(
-                l10n.t('admin_dispatch_assigned_driver'),
-                assignment['driverDisplayName'] as String? ?? '',
-              ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _assignmentCard(AppLocalizations l10n, Map<String, dynamic> detail) {
+    final assignment = detail['activeAssignment'] is Map
+        ? Map<String, dynamic>.from(detail['activeAssignment'] as Map)
+        : null;
+    final vehicle = assignment?['vehicle'] is Map
+        ? Map<String, dynamic>.from(assignment!['vehicle'] as Map)
+        : null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.t('admin_dispatch_assigned_driver'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (assignment == null)
+              _row(
+                l10n.t('admin_dispatch_assignment'),
+                l10n.t('admin_dispatch_unassigned'),
+              )
+            else ...[
+              _row(
+                l10n.t('name'),
+                assignment['driverDisplayName'] as String? ?? '',
+              ),
+              if (assignment['driverStatus'] != null)
+                _row(l10n.t('status'), assignment['driverStatus'] as String),
+              if (vehicle != null) _row('Vehicle', _vehicleSummary(vehicle)),
+              if (assignment['assignedAt'] != null)
+                _row('Assigned at', assignment['assignedAt'] as String),
+              _row(
+                l10n.t('admin_dispatch_assignment'),
+                assignment['status'] as String? ?? '',
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _vehicleSummary(Map<String, dynamic> vehicle) {
+    return [
+      vehicle['typeCode'],
+      vehicle['plateNumber'],
+      vehicle['modelName'],
+    ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
   }
 
   Widget _row(String label, String value) {

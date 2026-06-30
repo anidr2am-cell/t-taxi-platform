@@ -863,37 +863,43 @@ paths:
     post:
       tags: [Driver]
       summary: Set driver online
+      description: Authenticated DRIVER only. Sets work status online without requiring GPS.
       operationId: driverOnline
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                isOnline:
-                  type: boolean
-                  const: true
+      security:
+        - bearerAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDriverStatus'
+        '409':
+          description: Driver suspended or settlement blocked
 
   /driver/offline:
     post:
       tags: [Driver]
       summary: Set driver offline
+      description: Authenticated DRIVER only. Rejected with 409 while an active trip is assigned.
       operationId: driverOffline
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                isOnline:
-                  type: boolean
-                  const: false
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverStatus'
+        '409':
+          description: Active job conflict
+
+  /driver/status:
+    get:
+      tags: [Driver]
+      summary: Get driver online status
+      operationId: driverStatus
+      security:
+        - bearerAuth: []
       responses:
         '200':
           content:
@@ -4388,14 +4394,33 @@ components:
         driverDisplayName:
           type: string
           nullable: true
-        driverPhone:
+        driverStatus:
           type: string
+          nullable: true
+        vehicle:
+          $ref: '#/components/schemas/AdminAssignmentVehicle'
           nullable: true
         status:
           type: string
           nullable: true
         isActive:
           type: boolean
+
+    AdminAssignmentVehicle:
+      type: object
+      properties:
+        typeCode:
+          type: string
+          nullable: true
+        typeName:
+          type: string
+          nullable: true
+        plateNumber:
+          type: string
+          nullable: true
+        modelName:
+          type: string
+          nullable: true
 
     AdminBookingQueueItem:
       type: object
@@ -4920,6 +4945,15 @@ components:
         driverId:
           type: integer
           format: int64
+        driverDisplayName:
+          type: string
+          nullable: true
+        driverStatus:
+          type: string
+          nullable: true
+        vehicle:
+          $ref: '#/components/schemas/AdminAssignmentVehicle'
+          nullable: true
         status:
           $ref: '#/components/schemas/AssignmentStatus'
         isActive:
@@ -5167,11 +5201,21 @@ components:
             data:
               type: object
               properties:
-                isOnline:
+                driverId:
+                  type: integer
+                  format: int64
+                active:
+                  type: boolean
+                online:
+                  type: boolean
+                status:
+                  $ref: '#/components/schemas/DriverStatus'
+                hasActiveJob:
                   type: boolean
                 lastSeenAt:
                   type: string
                   format: date-time
+                  nullable: true
 
     DriverCreateRequest:
       type: object

@@ -2,8 +2,10 @@ const asyncHandler = require('../utils/asyncHandler');
 const { success } = require('../utils/apiResponse');
 const HTTP_STATUS = require('../constants/httpStatus');
 const container = require('../helpers/container');
+const logger = require('../utils/logger');
 
 const getAuthService = () => container.get('authService');
+const getDriverStatusService = () => container.get('driverStatusService');
 
 const register = asyncHandler(async (req, res) => {
   const data = await getAuthService().register(req.body);
@@ -21,6 +23,16 @@ const refresh = asyncHandler(async (req, res) => {
 });
 
 const logout = asyncHandler(async (req, res) => {
+  if (req.user?.role === 'DRIVER') {
+    try {
+      await getDriverStatusService().goOfflineBestEffort(req.user.id);
+    } catch (err) {
+      logger.warn('Driver best-effort offline during logout failed', {
+        driverUserId: req.user.id,
+        errorCode: err.errorCode,
+      });
+    }
+  }
   await getAuthService().logout(req.body?.refreshToken);
   return success(res, null, 'Logged out');
 });

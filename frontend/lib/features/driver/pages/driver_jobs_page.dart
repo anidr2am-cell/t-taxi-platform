@@ -5,6 +5,7 @@ import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
+import '../models/driver_status.dart';
 import '../services/driver_api_service.dart';
 import 'driver_booking_detail_page.dart';
 
@@ -20,6 +21,7 @@ class DriverJobsPage extends StatefulWidget {
 class _DriverJobsPageState extends State<DriverJobsPage> {
   late final DriverApiService _api;
   Future<DriverJobsToday>? _future;
+  Future<DriverStatus>? _statusFuture;
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
   void _refresh() {
     setState(() {
       _future = _api.getTodayBookings();
+      _statusFuture = _api.getStatus();
     });
   }
 
@@ -106,7 +109,22 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
-                DriverLiveLocationControl(hasActiveJob: hasActiveJob),
+                FutureBuilder<DriverStatus>(
+                  future: _statusFuture,
+                  builder: (context, statusSnapshot) {
+                    if (statusSnapshot.hasError && driverIsAuthError(statusSnapshot.error!)) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          driverHandleApiError(context, statusSnapshot.error!);
+                        }
+                      });
+                    }
+                    return DriverLiveLocationControl(
+                      hasActiveJob: hasActiveJob,
+                      online: statusSnapshot.data?.online,
+                    );
+                  },
+                ),
                 ..._buildGroup(
                   context,
                   l10n.t('driver_jobs_group_active'),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/driver/driver_ux.dart';
 import 'package:frontend/features/driver/models/driver_booking.dart';
+import 'package:frontend/features/driver/models/driver_status.dart';
 import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/pages/driver_jobs_page.dart';
 import 'package:frontend/features/driver/pages/driver_login_page.dart';
@@ -306,6 +307,15 @@ class _FakeLoginApi extends DriverApiService {
   @override
   Future<DriverJobsToday> getTodayBookings() async =>
       const DriverJobsToday(date: '2026-07-01', items: []);
+
+  @override
+  Future<DriverStatus> getStatus() async => const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: false,
+        status: 'OFFLINE',
+        hasActiveJob: false,
+      );
 }
 
 class _FakeJobsApi extends DriverApiService {
@@ -323,6 +333,15 @@ class _FakeJobsApi extends DriverApiService {
     if (error != null) throw error!;
     return jobs ?? const DriverJobsToday(date: '2026-07-01', items: []);
   }
+
+  @override
+  Future<DriverStatus> getStatus() async => const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: false,
+        status: 'OFFLINE',
+        hasActiveJob: false,
+      );
 }
 
 class _FakeDetailApi extends DriverApiService {

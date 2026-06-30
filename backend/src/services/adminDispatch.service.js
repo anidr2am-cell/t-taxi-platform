@@ -92,11 +92,20 @@ class AdminDispatchService {
 
   mapActiveAssignment(row) {
     if (!row.assignment_id) return null;
+    const vehicle = row.assigned_vehicle_type_code || row.assigned_vehicle_plate || row.assigned_vehicle_model
+      ? {
+          typeCode: row.assigned_vehicle_type_code ?? null,
+          typeName: row.assigned_vehicle_type_name ?? null,
+          plateNumber: row.assigned_vehicle_plate ?? null,
+          modelName: row.assigned_vehicle_model ?? null,
+        }
+      : null;
     return {
       assignmentId: row.assignment_id,
       driverId: row.assignment_driver_id,
       driverDisplayName: row.driver_name,
-      driverPhone: row.driver_phone,
+      driverStatus: row.driver_status ?? null,
+      vehicle,
       status: row.assignment_status,
       isActive: true,
     };
@@ -203,6 +212,18 @@ class AdminDispatchService {
     }
   }
 
+  mapAssignmentVehicle(row) {
+    if (!row.vehicle_type_code && !row.vehicle_plate && !row.vehicle_model) {
+      return null;
+    }
+    return {
+      typeCode: row.vehicle_type_code ?? null,
+      typeName: row.vehicle_type_name ?? null,
+      plateNumber: row.vehicle_plate ?? null,
+      modelName: row.vehicle_model ?? null,
+    };
+  }
+
   async listBookings(query) {
     const filters = this.parseFilters(query);
     const pagination = this.parsePagination(query);
@@ -306,7 +327,8 @@ class AdminDispatchService {
             assignmentId: activeAssignment.id,
             driverId: activeAssignment.driver_id,
             driverDisplayName: activeAssignment.driver_name,
-            driverPhone: activeAssignment.driver_phone,
+            driverStatus: activeAssignment.driver_status ?? null,
+            vehicle: this.mapAssignmentVehicle(activeAssignment),
             status: activeAssignment.status,
             isActive: true,
             assignedAt: activeAssignment.assigned_at,
@@ -317,7 +339,8 @@ class AdminDispatchService {
         assignmentId: item.id,
         driverId: item.driver_id,
         driverDisplayName: item.driver_name,
-        driverPhone: item.driver_phone,
+        driverStatus: item.driver_status ?? null,
+        vehicle: this.mapAssignmentVehicle(item),
         status: item.status,
         isActive: item.is_active === 1,
         assignedAt: item.assigned_at,

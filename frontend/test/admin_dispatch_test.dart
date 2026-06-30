@@ -11,32 +11,22 @@ class _FakeAdminApi extends AdminDispatchApiService {
     this.bookingsResponse,
     this.bookingsError,
     this.detailResponse,
-    this.driversResponse,
-    this.assignCalls = 0,
-    this.reassignCalls = 0,
-    this.autoAssignCalls = 0,
-    this.lastAssignmentState,
-    this.lastStatus,
-    this.candidatesResponse,
+    this.detailResponses,
     this.candidatesError,
-    this.autoAssignError,
-    this.reissueResponse,
   });
 
   final String? token;
   final Map<String, dynamic>? bookingsResponse;
   final Object? bookingsError;
   final Map<String, dynamic>? detailResponse;
-  final List<dynamic>? driversResponse;
-  int assignCalls;
-  int reassignCalls;
-  int autoAssignCalls;
+  final List<Map<String, dynamic>>? detailResponses;
+  int detailCalls = 0;
+  int assignCalls = 0;
+  int reassignCalls = 0;
+  int autoAssignCalls = 0;
   String? lastAssignmentState;
   String? lastStatus;
-  final Map<String, dynamic>? candidatesResponse;
   final Object? candidatesError;
-  final Object? autoAssignError;
-  final Map<String, dynamic>? reissueResponse;
 
   @override
   Future<String?> getSavedToken() async => token;
@@ -59,6 +49,14 @@ class _FakeAdminApi extends AdminDispatchApiService {
 
   @override
   Future<Map<String, dynamic>> getBookingDetail(String bookingNumber) async {
+    final sequence = detailResponses;
+    if (sequence != null && sequence.isNotEmpty) {
+      final index = detailCalls < sequence.length
+          ? detailCalls
+          : sequence.length - 1;
+      detailCalls += 1;
+      return sequence[index];
+    }
     return detailResponse ??
         {
           'bookingNumber': bookingNumber,
@@ -68,30 +66,40 @@ class _FakeAdminApi extends AdminDispatchApiService {
             'destination': {'address': 'Pattaya'},
           },
           'customer': {'name': 'Kim', 'phone': '+66123456789'},
-          'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'activeAssignment': null,
           'allowedActions': ['ASSIGN_DRIVER'],
         };
   }
 
   @override
   Future<List<dynamic>> listDrivers() async {
-    return driversResponse ??
-        [
-          {
-            'driverId': 6,
-            'displayName': 'Driver A',
-            'phone': '+6600',
-            'eligibilityState': 'ACTIVE',
-            'assignmentEligible': true,
-            'activeAssignmentCount': 0,
-          },
-        ];
+    return [
+      {
+        'driverId': 6,
+        'displayName': 'Driver A',
+        'phone': '+6600',
+        'eligibilityState': 'ACTIVE',
+        'assignmentEligible': true,
+        'activeAssignmentCount': 0,
+      },
+    ];
   }
 
   @override
-  Future<Map<String, dynamic>> assignDriver(String bookingNumber, int driverId) async {
+  Future<Map<String, dynamic>> assignDriver(
+    String bookingNumber,
+    int driverId,
+  ) async {
     assignCalls += 1;
-    return {'assignmentId': 1, 'driver': {'driverId': driverId}};
+    return {
+      'assignmentId': 1,
+      'driver': {'driverId': driverId},
+    };
   }
 
   @override
@@ -101,36 +109,42 @@ class _FakeAdminApi extends AdminDispatchApiService {
     String reason,
   ) async {
     reassignCalls += 1;
-    return {'assignmentId': 2, 'driver': {'driverId': driverId}};
+    return {
+      'assignmentId': 2,
+      'driver': {'driverId': driverId},
+    };
   }
 
   @override
   Future<Map<String, dynamic>> getDriverCandidates(String bookingNumber) async {
     if (candidatesError != null) throw candidatesError!;
-    return candidatesResponse ??
+    return {
+      'bookingId': 1,
+      'bookingNumber': bookingNumber,
+      'recommendedDriverId': 6,
+      'assignmentVersion': 0,
+      'candidates': [
         {
-          'bookingId': 1,
-          'bookingNumber': bookingNumber,
-          'recommendedDriverId': 6,
-          'assignmentVersion': 0,
-          'candidates': [
-            {
-              'driverId': 6,
-              'displayName': 'Driver A',
-              'vehicleTypeCode': 'SUV',
-              'online': true,
-              'activeJobCount': 0,
-              'distanceKm': 3.2,
-              'locationFresh': true,
-              'score': 92,
-              'reasons': ['VEHICLE_MATCH', 'ONLINE'],
-              'eligible': true,
-            },
-          ],
-          'excluded': [
-            {'driverId': 9, 'displayName': 'Driver B', 'reasons': ['OFFLINE']},
-          ],
-        };
+          'driverId': 6,
+          'displayName': 'Driver A',
+          'vehicleTypeCode': 'SUV',
+          'online': true,
+          'activeJobCount': 0,
+          'distanceKm': 3.2,
+          'locationFresh': true,
+          'score': 92,
+          'reasons': ['VEHICLE_MATCH', 'ONLINE'],
+          'eligible': true,
+        },
+      ],
+      'excluded': [
+        {
+          'driverId': 9,
+          'displayName': 'Driver B',
+          'reasons': ['OFFLINE'],
+        },
+      ],
+    };
   }
 
   @override
@@ -140,7 +154,6 @@ class _FakeAdminApi extends AdminDispatchApiService {
     bool useTopCandidate = false,
     int? expectedAssignmentVersion,
   }) async {
-    if (autoAssignError != null) throw autoAssignError!;
     autoAssignCalls += 1;
     return {
       'assignmentId': 3,
@@ -150,27 +163,29 @@ class _FakeAdminApi extends AdminDispatchApiService {
   }
 
   @override
-  Future<Map<String, dynamic>> reissueQr(String bookingNumber, String type) async {
-    return reissueResponse ??
-        {
-          'bookingNumber': bookingNumber,
-          'qrType': type,
-          if (type == 'BOARDING') 'boardingQrToken': 'dev-boarding-token',
-          if (type == 'DROPOFF') 'dropoffQrToken': 'dev-dropoff-token',
-          'expiresAt': '2099-01-01 00:00:00',
-        };
+  Future<Map<String, dynamic>> reissueQr(
+    String bookingNumber,
+    String type,
+  ) async {
+    return {
+      'bookingNumber': bookingNumber,
+      'qrType': type,
+      if (type == 'BOARDING') 'boardingQrToken': 'dev-boarding-token',
+      if (type == 'DROPOFF') 'dropoffQrToken': 'dev-dropoff-token',
+      'expiresAt': '2099-01-01 00:00:00',
+    };
   }
 }
 
 Map<String, dynamic> _queueItem(String bookingNumber) => {
-      'bookingNumber': bookingNumber,
-      'status': 'PENDING',
-      'scheduledPickupAt': '2026-07-01 09:30:00',
-      'origin': 'BKK',
-      'destination': 'Pattaya',
-      'customerDisplayName': 'Kim',
-      'activeAssignment': null,
-    };
+  'bookingNumber': bookingNumber,
+  'status': 'PENDING',
+  'scheduledPickupAt': '2026-07-01 09:30:00',
+  'origin': 'BKK',
+  'destination': 'Pattaya',
+  'customerDisplayName': 'Kim',
+  'activeAssignment': null,
+};
 
 void main() {
   testWidgets('shows login when token missing', (tester) async {
@@ -187,7 +202,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: AdminDispatchQueuePage(
-          api: _FakeAdminApi(token: 'token', bookingsResponse: {'page': 1, 'total': 0, 'items': []}),
+          api: _FakeAdminApi(
+            token: 'token',
+            bookingsResponse: {'page': 1, 'total': 0, 'items': []},
+          ),
         ),
       ),
     );
@@ -247,6 +265,59 @@ void main() {
     expect(find.text('Assign driver'), findsOneWidget);
   });
 
+  testWidgets('assigned driver is rendered in booking list', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminDispatchQueuePage(
+          api: _FakeAdminApi(
+            token: 'token',
+            bookingsResponse: {
+              'page': 1,
+              'total': 1,
+              'items': [
+                {
+                  ..._queueItem('TX202607010001'),
+                  'activeAssignment': {
+                    'driverDisplayName': 'Driver A',
+                    'status': 'ASSIGNED',
+                  },
+                },
+              ],
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Assigned driver: Driver A'), findsOneWidget);
+  });
+
+  testWidgets('unassigned label is rendered in booking list and detail', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminDispatchQueuePage(
+          api: _FakeAdminApi(
+            token: 'token',
+            bookingsResponse: {
+              'page': 1,
+              'total': 1,
+              'items': [_queueItem('TX202607010001')],
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Assigned driver: Unassigned'), findsOneWidget);
+
+    await tester.tap(find.text('TX202607010001'));
+    await tester.pumpAndSettle();
+    expect(find.text('Assigned driver'), findsOneWidget);
+    expect(find.text('Unassigned'), findsWidgets);
+  });
+
   testWidgets('terminal booking hides assign action', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -261,7 +332,11 @@ void main() {
                 'destination': {'address': 'Pattaya'},
               },
               'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
               'allowedActions': [],
             },
           ),
@@ -272,6 +347,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Assign driver'), findsNothing);
     expect(find.text('Reassign driver'), findsNothing);
+  });
+
+  testWidgets('assigned driver is rendered in booking detail', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'DRIVER_ASSIGNED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': ['REASSIGN_DRIVER'],
+              'activeAssignment': {
+                'driverDisplayName': 'Driver A',
+                'driverStatus': 'AVAILABLE',
+                'status': 'ASSIGNED',
+                'assignedAt': '2026-06-30T23:14:47.000Z',
+                'vehicle': {
+                  'typeCode': 'SUV',
+                  'plateNumber': 'LOCAL-SUV-D2',
+                  'modelName': 'Local Test SUV',
+                },
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Driver A'), findsOneWidget);
+    expect(find.text('AVAILABLE'), findsOneWidget);
+    expect(find.text('SUV · LOCAL-SUV-D2 · Local Test SUV'), findsOneWidget);
+    expect(find.text('2026-06-30T23:14:47.000Z'), findsOneWidget);
+    expect(find.text('ASSIGNED'), findsOneWidget);
   });
 
   testWidgets('assign-driver flow confirms and calls API once', (tester) async {
@@ -295,7 +415,71 @@ void main() {
     expect(api.assignCalls, 1);
   });
 
-  testWidgets('reassign flow requires reason and calls API once', (tester) async {
+  testWidgets('manual assignment refresh shows assigned driver', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi(
+      token: 'token',
+      detailResponses: [
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'PENDING',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'activeAssignment': null,
+          'allowedActions': ['ASSIGN_DRIVER'],
+        },
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'DRIVER_ASSIGNED',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'activeAssignment': {
+            'driverDisplayName': 'Driver A',
+            'status': 'ASSIGNED',
+          },
+          'allowedActions': ['REASSIGN_DRIVER'],
+        },
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Assign driver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Driver A'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm Booking'));
+    await tester.pumpAndSettle();
+    expect(find.text('Driver A'), findsOneWidget);
+  });
+
+  testWidgets('reassign flow requires reason and calls API once', (
+    tester,
+  ) async {
     final api = _FakeAdminApi(
       detailResponse: {
         'bookingNumber': 'TX202607010001',
@@ -305,7 +489,11 @@ void main() {
           'destination': {'address': 'Pattaya'},
         },
         'customer': {'name': 'Kim', 'phone': '+66123456789'},
-        'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+        'pricing': {
+          'totalAmount': 1200,
+          'currency': 'THB',
+          'paymentMethod': 'PAY_DRIVER',
+        },
         'allowedActions': ['REASSIGN_DRIVER'],
         'activeAssignment': {'driverDisplayName': 'Old Driver'},
       },
@@ -331,6 +519,72 @@ void main() {
     expect(api.reassignCalls, 1);
   });
 
+  testWidgets('reassignment refresh updates displayed driver', (tester) async {
+    final api = _FakeAdminApi(
+      detailResponses: [
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'DRIVER_ASSIGNED',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'allowedActions': ['REASSIGN_DRIVER'],
+          'activeAssignment': {
+            'driverDisplayName': 'Old Driver',
+            'status': 'ASSIGNED',
+          },
+        },
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'DRIVER_ASSIGNED',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'allowedActions': ['REASSIGN_DRIVER'],
+          'activeAssignment': {
+            'driverDisplayName': 'Driver A',
+            'status': 'ASSIGNED',
+          },
+        },
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Old Driver'), findsOneWidget);
+    await tester.tap(find.text('Reassign driver'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Driver A'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Closer to pickup');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm Booking'));
+    await tester.pumpAndSettle();
+    expect(find.text('Driver A'), findsOneWidget);
+    expect(find.text('Old Driver'), findsNothing);
+  });
+
   testWidgets('shows recommend drivers action when allowed', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -345,7 +599,11 @@ void main() {
                 'destination': {'address': 'Pattaya'},
               },
               'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
               'allowedActions': ['ASSIGN_DRIVER', 'RECOMMEND_DRIVERS'],
             },
           ),
@@ -358,7 +616,9 @@ void main() {
     expect(find.text('Assign driver'), findsOneWidget);
   });
 
-  testWidgets('recommend drivers dialog shows candidates and excluded', (tester) async {
+  testWidgets('recommend drivers dialog shows candidates and excluded', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -382,7 +642,9 @@ void main() {
     expect(find.text('Driver B'), findsOneWidget);
   });
 
-  testWidgets('assign recommended driver calls auto assign once', (tester) async {
+  testWidgets('assign recommended driver calls auto assign once', (
+    tester,
+  ) async {
     final api = _FakeAdminApi(
       detailResponse: {
         'bookingNumber': 'TX202607010001',
@@ -392,7 +654,11 @@ void main() {
           'destination': {'address': 'Pattaya'},
         },
         'customer': {'name': 'Kim', 'phone': '+66123456789'},
-        'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+        'pricing': {
+          'totalAmount': 1200,
+          'currency': 'THB',
+          'paymentMethod': 'PAY_DRIVER',
+        },
         'allowedActions': ['RECOMMEND_DRIVERS'],
       },
     );
@@ -414,6 +680,65 @@ void main() {
     expect(find.text('Driver assigned successfully'), findsOneWidget);
   });
 
+  testWidgets('automatic assignment refresh shows assigned driver', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi(
+      detailResponses: [
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'CONFIRMED',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'activeAssignment': null,
+          'allowedActions': ['RECOMMEND_DRIVERS'],
+        },
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'DRIVER_ASSIGNED',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'activeAssignment': {
+            'driverDisplayName': 'Driver A',
+            'status': 'ASSIGNED',
+          },
+          'allowedActions': ['REASSIGN_DRIVER'],
+        },
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recommend drivers'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Assign recommended'));
+    await tester.pumpAndSettle();
+    expect(find.text('Driver A'), findsOneWidget);
+  });
+
   testWidgets('recommend drivers shows error and retry', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -422,7 +747,9 @@ void main() {
             onPressed: () => showRecommendDriversDialog(
               context: context,
               api: _FakeAdminApi(
-                candidatesError: const AdminDispatchApiException('Server error'),
+                candidatesError: const AdminDispatchApiException(
+                  'Server error',
+                ),
               ),
               bookingNumber: 'TX202607010001',
             ),
@@ -451,7 +778,11 @@ void main() {
                 'destination': {'address': 'Pattaya'},
               },
               'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
               'allowedActions': [],
               'devQrTools': {
                 'qrReissueEnabled': true,
@@ -466,7 +797,8 @@ void main() {
                   'reissueAvailable': false,
                   'consumed': false,
                   'previouslyIssued': false,
-                  'unavailableReason': 'Dropoff QR reissue requires status PICKED_UP',
+                  'unavailableReason':
+                      'Dropoff QR reissue requires status PICKED_UP',
                 },
               },
             },
@@ -480,7 +812,9 @@ void main() {
     expect(find.text('Reissue boarding QR'), findsOneWidget);
   });
 
-  testWidgets('shows QR management section when reissue disabled', (tester) async {
+  testWidgets('shows QR management section when reissue disabled', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: AdminBookingDetailPage(
@@ -494,11 +828,16 @@ void main() {
                 'destination': {'address': 'Pattaya'},
               },
               'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
               'allowedActions': [],
               'devQrTools': {
                 'qrReissueEnabled': false,
-                'disabledReason': 'Set ALLOW_DEV_QR_REISSUE=true on the backend and restart',
+                'disabledReason':
+                    'Set ALLOW_DEV_QR_REISSUE=true on the backend and restart',
                 'boarding': {
                   'reissueAvailable': false,
                   'consumed': false,
@@ -541,7 +880,11 @@ void main() {
                 'destination': {'address': 'Pattaya'},
               },
               'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {'totalAmount': 1200, 'currency': 'THB', 'paymentMethod': 'PAY_DRIVER'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
               'allowedActions': [],
               'devQrTools': {
                 'qrReissueEnabled': true,
@@ -566,6 +909,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Reissue boarding QR'));
     await tester.tap(find.text('Reissue boarding QR'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Reissue'));

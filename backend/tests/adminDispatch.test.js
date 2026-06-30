@@ -353,6 +353,119 @@ test('booking detail never includes qr hashes', async () => {
   assert.ok(!('guestAccessToken' in detail));
 });
 
+test('booking detail returns latest active assignment and ignores old inactive assignment', async () => {
+  const bookingRepo = {
+    async findAdminBookingDetail() {
+      return {
+        id: 1,
+        booking_number: 'TX202607010001',
+        status: 'DRIVER_ASSIGNED',
+        scheduled_pickup_at: '2026-07-01 09:30:00',
+        origin_address: 'BKK',
+        destination_address: 'Pattaya',
+        customer_name: 'Kim',
+        customer_email: 'kim@example.com',
+        customer_phone: '+66123456789',
+        customer_country_code: 'TH',
+        special_requests: null,
+        payment_method: 'PAY_DRIVER',
+        payment_status: 'UNPAID',
+        commission_status: 'NOT_DUE_YET',
+        total_amount: 1200,
+        currency: 'THB',
+        vehicle_count: 1,
+        created_at: '2026-06-30 10:00:00',
+        updated_at: '2026-06-30 10:00:00',
+        metadata: null,
+        service_type_code: 'AIRPORT_PICKUP',
+        service_type_name: 'Airport Pickup',
+        vehicle_type_code: 'SUV',
+        vehicle_type_name: 'SUV',
+        adults: 2,
+        children: 0,
+        infants: 0,
+        carriers_20_inch: 1,
+        carriers_24_inch_plus: 0,
+        golf_bags: 0,
+        special_items: null,
+        flight_number: null,
+        flight_scheduled_arrival_at: null,
+        flight_estimated_arrival_at: null,
+        delay_status: null,
+        delay_minutes: null,
+        airport_code_custom: null,
+        airport_iata: null,
+      };
+    },
+    async findChargeItemsByBookingId() { return []; },
+    async findStatusLogsByBookingId() { return []; },
+    async findAssignmentsByBookingId() {
+      return [
+        {
+          id: 12,
+          driver_id: 7,
+          driver_name: 'New Driver',
+          driver_phone: '+6601',
+          driver_status: 'AVAILABLE',
+          status: 'ASSIGNED',
+          is_active: 1,
+          assigned_at: '2026-06-30 12:00:00',
+          unassigned_at: null,
+          assignment_reason: 'AUTO_ASSIGN',
+          vehicle_type_code: 'SUV',
+          vehicle_type_name: 'SUV',
+          vehicle_plate: 'LOCAL-SUV-D2',
+          vehicle_model: 'Local Test SUV',
+        },
+        {
+          id: 11,
+          driver_id: 6,
+          driver_name: 'Old Driver',
+          driver_phone: '+6600',
+          driver_status: 'OFFLINE',
+          status: 'CANCELLED',
+          is_active: 0,
+          assigned_at: '2026-06-30 11:00:00',
+          unassigned_at: '2026-06-30 12:00:00',
+          assignment_reason: 'Reassigned',
+        },
+      ];
+    },
+  };
+  const service = new AdminDispatchService({}, bookingRepo, {}, {}, settlementStub, null, null, scoringService);
+  const detail = await service.getBookingDetail('TX202607010001');
+
+  assert.equal(detail.activeAssignment.driverId, 7);
+  assert.equal(detail.activeAssignment.driverDisplayName, 'New Driver');
+  assert.equal(detail.activeAssignment.driverStatus, 'AVAILABLE');
+  assert.equal(detail.activeAssignment.vehicle.plateNumber, 'LOCAL-SUV-D2');
+  assert.equal(detail.assignmentHistory[1].isActive, false);
+  assert.ok(!('driverEmail' in detail.activeAssignment));
+  assert.ok(!('driverPhone' in detail.activeAssignment));
+  assert.ok(!('driverPhone' in detail.assignmentHistory[0]));
+});
+
+test('queue active assignment maps driver and vehicle without private auth data', () => {
+  const service = new AdminDispatchService({}, {}, {}, {}, settlementStub, null, null, scoringService);
+  const item = service.mapQueueItem(queueRow({
+    assignment_id: 20,
+    assignment_driver_id: 7,
+    assignment_status: 'ASSIGNED',
+    driver_name: 'Driver A',
+    driver_status: 'AVAILABLE',
+    assigned_vehicle_type_code: 'SUV',
+    assigned_vehicle_type_name: 'SUV',
+    assigned_vehicle_plate: 'LOCAL-SUV-D2',
+    assigned_vehicle_model: 'Local Test SUV',
+  }));
+
+  assert.equal(item.activeAssignment.driverDisplayName, 'Driver A');
+  assert.equal(item.activeAssignment.driverStatus, 'AVAILABLE');
+  assert.equal(item.activeAssignment.vehicle.plateNumber, 'LOCAL-SUV-D2');
+  assert.ok(!('email' in item.activeAssignment));
+  assert.ok(!('driverPhone' in item.activeAssignment));
+});
+
 test('listBookings passes search and assignment filters to repository', async () => {
   let capturedFilters = null;
   const bookingRepo = {

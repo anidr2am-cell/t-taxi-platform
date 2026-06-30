@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_config.dart';
 import '../models/driver_booking.dart';
+import '../models/driver_status.dart';
 
 class DriverApiException implements Exception {
   const DriverApiException(
@@ -40,6 +41,22 @@ class DriverApiService {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_tokenKey);
+    if (token != null && token.isNotEmpty) {
+      try {
+        await http.post(
+          Uri.parse('$_base/auth/logout'),
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({}),
+        ).timeout(const Duration(seconds: 5));
+      } catch (_) {
+        // Logout is best effort; local session cleanup must still happen.
+      }
+    }
     await prefs.remove(_tokenKey);
   }
 
@@ -128,6 +145,21 @@ class DriverApiService {
   Future<Map<String, dynamic>> getRatingSummary() async {
     final data = await _get('/driver/rating-summary');
     return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<DriverStatus> getStatus() async {
+    final data = await _get('/driver/status');
+    return DriverStatus.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverStatus> goOnline() async {
+    final data = await _post('/driver/online');
+    return DriverStatus.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverStatus> goOffline() async {
+    final data = await _post('/driver/offline');
+    return DriverStatus.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   Future<DriverJobsToday> getTodayBookings() async {
