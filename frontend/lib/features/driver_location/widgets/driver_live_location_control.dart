@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../services/driver_location_api_service.dart';
 
 class DriverLiveLocationControl extends StatefulWidget {
@@ -125,31 +128,79 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
     }
   }
 
+  String _formatLastSent() {
+    if (_lastSentAt == null) {
+      return 'Only while an active job is in progress';
+    }
+    final local = _lastSentAt!.toLocal();
+    final h = local.hour.toString().padLeft(2, '0');
+    final m = local.minute.toString().padLeft(2, '0');
+    return 'Last sent $h:$m';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.hasActiveJob) {
       return const SizedBox.shrink();
     }
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+
+    final l10n = context.l10n;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTokens.spaceMd),
+      child: AppUi.surfaceCard(
+        backgroundColor: _enabled ? AppTokens.successLight : AppTokens.surface,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              secondary: const Icon(Icons.my_location),
-              title: const Text('Share live location'),
-              subtitle: Text(_lastSentAt == null
-                  ? 'Only while an active job is in progress'
-                  : 'Last sent ${_lastSentAt!.toLocal()}'),
+              secondary: Icon(
+                Icons.my_location,
+                color: _enabled ? AppTokens.success : AppTokens.textSecondary,
+              ),
+              title: const Text(
+                'Share live location',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                _lastSentAt == null
+                    ? 'Only while an active job is in progress'
+                    : _formatLastSent(),
+              ),
               value: _enabled,
               onChanged: _toggle,
             ),
             if (_sending) const LinearProgressIndicator(),
+            if (_enabled) ...[
+              const SizedBox(height: AppTokens.spaceSm),
+              Text(
+                l10n.t('driver_live_location_interval_hint').replaceAll(
+                  '{seconds}',
+                  '${widget.interval.inSeconds}',
+                ),
+                style: const TextStyle(fontSize: 12, color: AppTokens.textMuted),
+              ),
+            ],
             if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              const SizedBox(height: AppTokens.spaceSm),
+              AppUi.surfaceCard(
+                backgroundColor: AppTokens.errorLight,
+                padding: const EdgeInsets.all(AppTokens.spaceSm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.error_outline, color: AppTokens.error, size: 18),
+                    const SizedBox(width: AppTokens.spaceSm),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: AppTokens.error, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ],
         ),

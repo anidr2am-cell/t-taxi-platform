@@ -1,6 +1,9 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../services/driver_settlement_api_service.dart';
 
 typedef ReceiptPickResult = ({List<int> bytes, String filename});
@@ -73,41 +76,49 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
     }
   }
 
+  AppStatusTone _settlementTone(String status) {
+    switch (status) {
+      case 'PAID':
+      case 'APPROVED':
+        return AppStatusTone.success;
+      case 'REJECTED':
+      case 'OVERDUE':
+        return AppStatusTone.error;
+      case 'PENDING':
+      case 'RECEIPT_SUBMITTED':
+        return AppStatusTone.warning;
+      default:
+        return AppStatusTone.neutral;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Commission settlements'),
         actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? AppUi.loadingState()
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!),
-                      ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                    ],
-                  ),
-                )
+              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
               : _items.isEmpty
-                  ? const Center(child: Text('No settlements'))
+                  ? AppUi.emptyState(
+                      title: 'No settlements',
+                      icon: Icons.receipt_long_outlined,
+                    )
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(12),
+                        padding: AppUi.pagePadding(context),
                         itemCount: _items.length,
-                        separatorBuilder: (_, index) => const SizedBox(height: 8),
+                        separatorBuilder: (_, index) => const SizedBox(height: AppTokens.spaceSm),
                         itemBuilder: (context, index) {
                           final item = Map<String, dynamic>.from(_items[index] as Map);
-                          return ListTile(
-                            title: Text(item['bookingNumber'] as String? ?? ''),
-                            subtitle: Text(
-                              '${item['commissionAmount']} ${item['currency']} · ${item['commissionStatus']}',
-                            ),
-                            trailing: Text(item['dueAt'] as String? ?? ''),
+                          final status = item['commissionStatus'] as String? ?? '';
+                          return AppUi.surfaceCard(
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -116,6 +127,61 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
                                   api: _api,
                                 ),
                               ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppTokens.primaryLight,
+                                    borderRadius: AppTokens.borderRadiusSm,
+                                  ),
+                                  child: const Icon(
+                                    Icons.receipt_long_outlined,
+                                    color: AppTokens.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: AppTokens.spaceSm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item['bookingNumber'] as String? ?? '',
+                                        style: const TextStyle(fontWeight: FontWeight.w700),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${item['commissionAmount']} ${item['currency']}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTokens.textPrimary,
+                                        ),
+                                      ),
+                                      if (item['dueAt'] != null)
+                                        Text(
+                                          l10n.t('driver_settlement_due').replaceAll(
+                                            '{date}',
+                                            item['dueAt'] as String,
+                                          ),
+                                          style: const TextStyle(
+                                            color: AppTokens.textSecondary,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    AppUi.statusBadge(status, tone: _settlementTone(status)),
+                                    const SizedBox(height: 4),
+                                    const Icon(Icons.chevron_right, color: AppTokens.textMuted),
+                                  ],
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -179,6 +245,22 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
     return status == 'PENDING' || status == 'REJECTED' || status == 'OVERDUE';
   }
 
+  AppStatusTone _settlementTone(String status) {
+    switch (status) {
+      case 'PAID':
+      case 'APPROVED':
+        return AppStatusTone.success;
+      case 'REJECTED':
+      case 'OVERDUE':
+        return AppStatusTone.error;
+      case 'PENDING':
+      case 'RECEIPT_SUBMITTED':
+        return AppStatusTone.warning;
+      default:
+        return AppStatusTone.neutral;
+    }
+  }
+
   Future<void> _pickFile() async {
     if (_uploading) return;
     final picker = widget.receiptPicker ?? defaultReceiptFilePicker;
@@ -225,64 +307,100 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final status = _detail?['commissionStatus'] as String? ?? '';
     final canUpload = _canUpload(status);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.bookingNumber)),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? AppUi.loadingState()
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!),
-                      ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('Status: $status', style: const TextStyle(fontSize: 18)),
-                      const SizedBox(height: 8),
-                      Text('Amount: ${_detail?['commissionAmount']} ${_detail?['currency']}'),
-                      Text('Due: ${_detail?['dueAt'] ?? '-'}'),
-                      if (_detail?['rejectionReason'] != null)
-                        Text('Rejection: ${_detail?['rejectionReason']}'),
-                      const SizedBox(height: 16),
-                      if (canUpload) ...[
-                        OutlinedButton(
-                          onPressed: _uploading ? null : _pickFile,
-                          child: Text(
-                            _selectedFilename == null
-                                ? 'Select receipt (JPG, PNG, PDF)'
-                                : 'Replace selection',
+              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
+              : ListView(
+                  padding: AppUi.pagePadding(context),
+                  children: [
+                    AppUi.surfaceCard(
+                      backgroundColor: AppTokens.primaryLight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${_detail?['commissionAmount']} ${_detail?['currency']}',
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTokens.primaryDark,
+                                  ),
+                                ),
+                              ),
+                              AppUi.statusBadge(status, tone: _settlementTone(status)),
+                            ],
                           ),
+                          const SizedBox(height: AppTokens.spaceSm),
+                          Text('Status: $status', style: const TextStyle(fontSize: 18)),
+                          const SizedBox(height: 4),
+                          Text('Due: ${_detail?['dueAt'] ?? '-'}'),
+                          if (_detail?['rejectionReason'] != null) ...[
+                            const SizedBox(height: AppTokens.spaceSm),
+                            AppUi.summaryRow(
+                              label: 'Rejection',
+                              value: _detail?['rejectionReason'] as String,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (canUpload) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.adminDetailSection(
+                        context: context,
+                        title: l10n.t('driver_settlement_receipt_upload'),
+                        subtitle: l10n.t('driver_settlement_receipt_formats'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            AppUi.secondaryButton(
+                              label: _selectedFilename == null
+                                  ? 'Select receipt (JPG, PNG, PDF)'
+                                  : 'Replace selection',
+                              icon: Icons.upload_file,
+                              onPressed: _uploading ? null : _pickFile,
+                              fullWidth: true,
+                            ),
+                            if (_selectedFilename != null) ...[
+                              const SizedBox(height: AppTokens.spaceSm),
+                              Text('Selected: $_selectedFilename'),
+                              const SizedBox(height: AppTokens.spaceSm),
+                              SizedBox(
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: _uploading ? null : _uploadSelected,
+                                  child: Text(_uploading ? 'Uploading...' : 'Upload receipt'),
+                                ),
+                              ),
+                            ],
+                            if (_uploadError != null) ...[
+                              const SizedBox(height: AppTokens.spaceSm),
+                              Text(
+                                _uploadError!,
+                                style: const TextStyle(color: AppTokens.error),
+                              ),
+                              AppUi.secondaryButton(
+                                label: 'Retry upload',
+                                icon: Icons.refresh,
+                                onPressed: _uploading ? null : _uploadSelected,
+                                fullWidth: true,
+                              ),
+                            ],
+                          ],
                         ),
-                        if (_selectedFilename != null) ...[
-                          const SizedBox(height: 8),
-                          Text('Selected: $_selectedFilename'),
-                          const SizedBox(height: 8),
-                          ElevatedButton(
-                            onPressed: _uploading ? null : _uploadSelected,
-                            child: Text(_uploading ? 'Uploading...' : 'Upload receipt'),
-                          ),
-                        ],
-                        if (_uploadError != null) ...[
-                          const SizedBox(height: 8),
-                          Text(_uploadError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                          OutlinedButton(
-                            onPressed: _uploading ? null : _uploadSelected,
-                            child: const Text('Retry upload'),
-                          ),
-                        ],
-                      ],
+                      ),
                     ],
-                  ),
+                  ],
                 ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
@@ -8,10 +10,16 @@ import '../models/driver_status.dart';
 import '../services/driver_api_service.dart';
 
 class DriverProfilePage extends StatefulWidget {
-  const DriverProfilePage({super.key, this.api, this.deviceRegistrationService});
+  const DriverProfilePage({
+    super.key,
+    this.api,
+    this.deviceRegistrationService,
+    this.onStatusChanged,
+  });
 
   final DriverApiService? api;
   final NotificationDeviceRegistrationService? deviceRegistrationService;
+  final VoidCallback? onStatusChanged;
 
   @override
   State<DriverProfilePage> createState() => _DriverProfilePageState();
@@ -47,7 +55,9 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Go offline?'),
-          content: const Text('You have an active job. Going offline is blocked until the job is finished.'),
+          content: const Text(
+            'You have an active job. Going offline is blocked until the job is finished.',
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
             FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Try anyway')),
@@ -66,6 +76,9 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       setState(() {
         _statusFuture = Future.value(next);
         _statusUpdating = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onStatusChanged?.call();
       });
     } catch (err) {
       if (!mounted) return;
@@ -100,105 +113,205 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.t('driver_nav_profile'))),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppUi.pagePadding(context),
         children: [
           FutureBuilder<Map<String, dynamic>>(
             future: _ratingFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Card(
-                  child: ListTile(
-                    leading: CircularProgressIndicator(),
-                    title: Text('…'),
+                return AppUi.surfaceCard(
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: AppTokens.spaceMd),
+                      Text(l10n.t('driver_rating_error').replaceAll('Could not load ', 'Loading ')),
+                    ],
                   ),
                 );
               }
               if (snapshot.hasError) {
-                return Card(
-                  child: ListTile(
-                    title: Text(l10n.t('driver_rating_error')),
-                    subtitle: Text(snapshot.error.toString()),
+                return AppUi.surfaceCard(
+                  backgroundColor: AppTokens.errorLight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.t('driver_rating_error'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(snapshot.error.toString()),
+                    ],
                   ),
                 );
               }
               final rating = snapshot.data ?? {};
               final avg = rating['averageRating'];
               final count = rating['reviewCount'] ?? 0;
-              return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.star, color: Colors.amber, size: 32),
-                  title: Text(
-                    avg == null
-                        ? l10n.t('driver_no_ratings')
-                        : '$avg ${l10n.t('driver_rating_average')}',
-                  ),
-                  subtitle: Text('$count ${l10n.t('driver_rating_count')}'),
+              return AppUi.surfaceCard(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTokens.warningLight,
+                        borderRadius: AppTokens.borderRadiusSm,
+                      ),
+                      child: const Icon(Icons.star, color: AppTokens.warning, size: 28),
+                    ),
+                    const SizedBox(width: AppTokens.spaceMd),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            avg == null
+                                ? l10n.t('driver_no_ratings')
+                                : '$avg ${l10n.t('driver_rating_average')}',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text('$count ${l10n.t('driver_rating_count')}'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppTokens.spaceMd),
           FutureBuilder<DriverStatus>(
             future: _statusFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Card(
-                  child: ListTile(
-                    leading: CircularProgressIndicator(),
-                    title: Text('Loading driver status'),
+                return AppUi.surfaceCard(
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: AppTokens.spaceMd),
+                      const Expanded(child: Text('Loading driver status')),
+                    ],
                   ),
                 );
               }
               if (snapshot.hasError) {
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.error_outline),
-                    title: const Text('Driver status unavailable'),
-                    subtitle: Text(snapshot.error.toString()),
-                    trailing: IconButton(
-                      onPressed: _refreshStatus,
-                      icon: const Icon(Icons.refresh),
-                    ),
-                  ),
-                );
-              }
-              final status = snapshot.data;
-              final online = status?.online == true;
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+                return AppUi.surfaceCard(
+                  backgroundColor: AppTokens.errorLight,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            online ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                            color: online ? Colors.green : Colors.grey,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
+                          const Icon(Icons.error_outline, color: AppTokens.error),
+                          const SizedBox(width: AppTokens.spaceSm),
+                          const Expanded(
                             child: Text(
-                              online ? 'Online' : 'Offline',
-                              style: Theme.of(context).textTheme.titleMedium,
+                              'Driver status unavailable',
+                              style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),
-                          Text(status?.status ?? 'OFFLINE'),
+                          IconButton(
+                            onPressed: _refreshStatus,
+                            icon: const Icon(Icons.refresh),
+                          ),
                         ],
                       ),
-                      if (status?.lastSeenAt != null) ...[
-                        const SizedBox(height: 6),
-                        Text('Last seen ${status!.lastSeenAt}'),
+                      Text(snapshot.error.toString()),
+                    ],
+                  ),
+                );
+              }
+              final status = snapshot.data;
+              final online = status?.online == true;
+              return AppUi.surfaceCard(
+                backgroundColor: online ? AppTokens.successLight : AppTokens.surfaceMuted,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          online ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          color: online ? AppTokens.success : AppTokens.textMuted,
+                          size: 28,
+                        ),
+                        const SizedBox(width: AppTokens.spaceSm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                online ? 'Online' : 'Offline',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                status?.status ?? 'OFFLINE',
+                                style: const TextStyle(color: AppTokens.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
-                      if (_statusError != null) ...[
-                        const SizedBox(height: 8),
-                        Text(_statusError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                      ],
-                      const SizedBox(height: 12),
-                      if (_statusUpdating) const LinearProgressIndicator(),
-                      Row(
-                        children: [
-                          Expanded(
+                    ),
+                    if (status?.hasActiveJob == true) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      AppUi.surfaceCard(
+                        backgroundColor: AppTokens.warningLight,
+                        padding: const EdgeInsets.all(AppTokens.spaceSm),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: AppTokens.warning, size: 18),
+                            SizedBox(width: AppTokens.spaceSm),
+                            Expanded(
+                              child: Text(
+                                l10n.t('driver_active_job_stay_online'),
+                                style: TextStyle(
+                                  color: AppTokens.warning,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (status?.lastSeenAt != null) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(
+                        'Last seen ${status!.lastSeenAt}',
+                        style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13),
+                      ),
+                    ],
+                    if (_statusError != null) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(
+                        _statusError!,
+                        style: const TextStyle(color: AppTokens.error),
+                      ),
+                    ],
+                    if (_statusUpdating) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      const LinearProgressIndicator(),
+                    ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
                             child: FilledButton(
                               onPressed: _statusUpdating || online
                                   ? null
@@ -206,8 +319,11 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                               child: const Text('Go online'),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
+                        ),
+                        const SizedBox(width: AppTokens.spaceSm),
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
                             child: OutlinedButton(
                               onPressed: _statusUpdating || !online
                                   ? null
@@ -215,15 +331,15 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                               child: const Text('Go offline'),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               );
             },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppTokens.spaceLg),
           SizedBox(
             height: 48,
             child: OutlinedButton.icon(

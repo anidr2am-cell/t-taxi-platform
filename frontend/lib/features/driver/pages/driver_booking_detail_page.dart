@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../driver_auth.dart';
@@ -192,7 +194,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return AppUi.loadingState();
           }
           if (snapshot.hasError) {
             final err = snapshot.error!;
@@ -201,23 +203,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                 if (context.mounted) driverHandleApiError(context, err);
               });
             }
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l10n.t('driver_detail_error')),
-                    const SizedBox(height: 8),
-                    Text(err.toString(), textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadBooking,
-                      child: Text(l10n.t('driver_retry')),
-                    ),
-                  ],
-                ),
-              ),
+            return AppUi.errorState(
+              message: '${l10n.t('driver_detail_error')}\n${err.toString()}',
+              onRetry: _loadBooking,
+              retryLabel: l10n.t('driver_retry'),
             );
           }
           final booking = snapshot.data!;
@@ -237,122 +226,158 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
               Expanded(
                 child: ListView(
                   key: const Key('driverDetailScroll'),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  padding: AppUi.pagePadding(context),
                   children: [
                     _StatusHeader(booking: booking),
                     if (_actionError != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        _actionError!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                      const SizedBox(height: AppTokens.spaceSm),
+                      AppUi.surfaceCard(
+                        backgroundColor: AppTokens.errorLight,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.error_outline, color: AppTokens.error, size: 20),
+                            const SizedBox(width: AppTokens.spaceSm),
+                            Expanded(
+                              child: Text(
+                                _actionError!,
+                                style: const TextStyle(color: AppTokens.error),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    _Section(
+                    const SizedBox(height: AppTokens.spaceMd),
+                    AppUi.adminDetailSection(
+                      context: context,
                       title: l10n.t('driver_section_trip'),
-                      children: [
-                        _Line(
-                          label: l10n.t('driver_pickup_time'),
-                          value: '${booking.pickupDate} ${booking.pickupTime}',
-                        ),
-                        _Line(label: l10n.t('origin'), value: booking.origin),
-                        _Line(label: l10n.t('destination'), value: booking.destination),
-                      ],
+                      child: Column(
+                        children: [
+                          AppUi.summaryRow(
+                            label: l10n.t('driver_pickup_time'),
+                            value: '${booking.pickupDate} ${booking.pickupTime}',
+                            emphasize: true,
+                          ),
+                          AppUi.summaryRow(label: l10n.t('origin'), value: booking.origin),
+                          AppUi.summaryRow(label: l10n.t('destination'), value: booking.destination),
+                        ],
+                      ),
                     ),
-                    _Section(
+                    const SizedBox(height: AppTokens.spaceMd),
+                    AppUi.adminDetailSection(
+                      context: context,
                       title: l10n.t('customer_info'),
-                      children: [
-                        if (booking.customerDisplayName != null)
-                          _Line(label: l10n.t('name'), value: booking.customerDisplayName!),
-                        if (DriverUx.canCallCustomer(
-                          booking.status,
-                          booking.customerPhone,
-                        ))
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: SizedBox(
-                              height: 48,
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _callCustomer(booking.customerPhone!),
-                                icon: const Icon(Icons.phone),
-                                label: Text(l10n.t('driver_call_customer')),
-                              ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (booking.customerDisplayName != null)
+                            AppUi.summaryRow(
+                              label: l10n.t('name'),
+                              value: booking.customerDisplayName!,
                             ),
-                          ),
-                      ],
+                          if (DriverUx.canCallCustomer(
+                            booking.status,
+                            booking.customerPhone,
+                          ))
+                            AppUi.secondaryButton(
+                              label: l10n.t('driver_call_customer'),
+                              icon: Icons.phone,
+                              onPressed: () => _callCustomer(booking.customerPhone!),
+                              fullWidth: true,
+                            ),
+                        ],
+                      ),
                     ),
-                    _Section(
+                    const SizedBox(height: AppTokens.spaceMd),
+                    AppUi.adminDetailSection(
+                      context: context,
                       title: l10n.t('passengers'),
-                      children: [
-                        _Line(
-                          label: l10n.t('passengers'),
-                          value: booking.passengerCount.toString(),
-                        ),
-                        _Line(label: l10n.t('vehicle'), value: booking.vehicleTypeName),
-                        if (booking.luggage != null)
-                          _Line(
-                            label: l10n.t('luggage'),
-                            value: _formatLuggage(booking.luggage!),
-                          ),
-                      ],
-                    ),
-                    if (booking.flightNumber != null)
-                      _Section(
-                        title: l10n.t('flight_number'),
+                      child: Column(
                         children: [
-                          _Line(label: l10n.t('flight_number'), value: booking.flightNumber!),
-                          if (booking.flightStatus != null)
-                            _Line(label: l10n.t('status'), value: booking.flightStatus!),
-                          if (booking.latestEstimatedArrival != null)
-                            _Line(
-                              label: l10n.t('driver_estimated_arrival'),
-                              value: booking.latestEstimatedArrival!,
+                          AppUi.summaryRow(
+                            label: l10n.t('passengers'),
+                            value: booking.passengerCount.toString(),
+                          ),
+                          AppUi.summaryRow(label: l10n.t('vehicle'), value: booking.vehicleTypeName),
+                          if (booking.luggage != null)
+                            AppUi.summaryRow(
+                              label: l10n.t('luggage'),
+                              value: _formatLuggage(booking.luggage!),
                             ),
                         ],
                       ),
-                    if (booking.specialInstructions?.isNotEmpty == true)
-                      _Section(
-                        title: l10n.t('special_requests'),
-                        children: [
-                          Text(booking.specialInstructions!),
-                        ],
-                      ),
-                    _Section(
-                      title: l10n.t('driver_section_chat'),
-                      children: [
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.chat),
-                          title: Text(l10n.t('driver_open_chat')),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: _openChat,
-                        ),
-                      ],
                     ),
-                    if (booking.status == 'COMPLETED')
+                    if (booking.flightNumber != null) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.adminDetailSection(
+                        context: context,
+                        title: l10n.t('flight_number'),
+                        child: Column(
+                          children: [
+                            AppUi.summaryRow(
+                              label: l10n.t('flight_number'),
+                              value: booking.flightNumber!,
+                            ),
+                            if (booking.flightStatus != null)
+                              AppUi.summaryRow(
+                                label: l10n.t('status'),
+                                value: booking.flightStatus!,
+                              ),
+                            if (booking.latestEstimatedArrival != null)
+                              AppUi.summaryRow(
+                                label: l10n.t('driver_estimated_arrival'),
+                                value: booking.latestEstimatedArrival!,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (booking.specialInstructions?.isNotEmpty == true) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.adminDetailSection(
+                        context: context,
+                        title: l10n.t('special_requests'),
+                        child: Text(
+                          booking.specialInstructions!,
+                          style: const TextStyle(color: AppTokens.textSecondary),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    AppUi.adminDetailSection(
+                      context: context,
+                      title: l10n.t('driver_section_chat'),
+                      child: AppUi.selectionTile(
+                        title: l10n.t('driver_open_chat'),
+                        icon: Icons.chat_bubble_outline,
+                        onTap: _openChat,
+                      ),
+                    ),
+                    if (booking.status == 'COMPLETED') ...[
+                      const SizedBox(height: AppTokens.spaceMd),
                       _SettlementSection(
                         future: _settlementFuture,
                         onOpenDetail: _openSettlementDetail,
                       ),
+                    ],
                     if (readOnly)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          l10n.t(DriverUx.statusLabelKey(booking.status)),
-                          style: Theme.of(context).textTheme.titleMedium,
+                        padding: const EdgeInsets.only(top: AppTokens.spaceSm),
+                        child: Center(
+                          child: AppUi.statusBadge(
+                            l10n.t(DriverUx.statusLabelKey(booking.status)),
+                            tone: AppUi.toneForBookingStatus(booking.status),
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
               if (primaryKey != null && !readOnly)
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: SizedBox(
+                AppUi.adminStickyActions(
+                  actions: [
+                    SizedBox(
                       height: 52,
                       width: double.infinity,
                       child: FilledButton(
@@ -362,7 +387,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                         child: Text(l10n.t(primaryKey)),
                       ),
                     ),
-                  ),
+                  ],
                 ),
             ],
           );
@@ -408,31 +433,43 @@ class _StatusHeader extends StatelessWidget {
     final statusLabel = l10n.t(DriverUx.statusLabelKey(booking.status));
     final nextKey = DriverUx.nextActionKey(booking);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              statusLabel,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            if (nextKey != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                l10n.t('driver_next_action'),
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-              Text(
-                l10n.t(nextKey),
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.primaryLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  statusLabel,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppTokens.primaryDark,
+                  ),
                 ),
               ),
+              AppUi.statusBadge(
+                statusLabel,
+                tone: AppUi.toneForBookingStatus(booking.status),
+              ),
             ],
+          ),
+          if (nextKey != null) ...[
+            const SizedBox(height: AppTokens.spaceMd),
+            Text(
+              l10n.t('driver_next_action'),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppTokens.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppTokens.spaceSm),
+            AppUi.actionBanner(
+              message: l10n.t(nextKey),
+              icon: Icons.flag,
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -450,105 +487,78 @@ class _SettlementSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return _Section(
+    return AppUi.adminDetailSection(
+      context: context,
       title: l10n.t('driver_section_settlement'),
-      children: [
-        FutureBuilder<Map<String, dynamic>>(
-          future: future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: LinearProgressIndicator(),
-              );
-            }
-            final detail = snapshot.data;
-            if (detail == null || detail.isEmpty) {
-              return Text(l10n.t('driver_settlement_loading_failed'));
-            }
-            final status = detail['commissionStatus'] as String? ?? '';
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Line(
-                  label: l10n.t('status'),
-                  value: status,
-                ),
-                _Line(
-                  label: l10n.t('amount'),
-                  value: '${detail['commissionAmount']} ${detail['currency']}',
-                ),
-                if (detail['rejectionReason'] != null)
-                  _Line(
-                    label: l10n.t('driver_rejection_reason'),
-                    value: detail['rejectionReason'] as String,
+      child: FutureBuilder<Map<String, dynamic>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppTokens.spaceSm),
+              child: LinearProgressIndicator(),
+            );
+          }
+          final detail = snapshot.data;
+          if (detail == null || detail.isEmpty) {
+            return Text(l10n.t('driver_settlement_loading_failed'));
+          }
+          final status = detail['commissionStatus'] as String? ?? '';
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${detail['commissionAmount']} ${detail['currency']}',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppTokens.textPrimary,
+                      ),
+                    ),
                   ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 48,
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: onOpenDetail,
-                    child: Text(l10n.t('driver_view_settlement')),
+                  AppUi.statusBadge(
+                    status,
+                    tone: _settlementTone(status),
                   ),
+                ],
+              ),
+              if (detail['rejectionReason'] != null) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                AppUi.summaryRow(
+                  label: l10n.t('driver_rejection_reason'),
+                  value: detail['rejectionReason'] as String,
                 ),
               ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.secondaryButton(
+                label: l10n.t('driver_view_settlement'),
+                icon: Icons.receipt_long_outlined,
+                onPressed: onOpenDetail,
+                fullWidth: true,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
-}
 
-class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
+  AppStatusTone _settlementTone(String status) {
+    switch (status) {
+      case 'PAID':
+      case 'APPROVED':
+        return AppStatusTone.success;
+      case 'REJECTED':
+      case 'OVERDUE':
+        return AppStatusTone.error;
+      case 'PENDING':
+      case 'RECEIPT_SUBMITTED':
+        return AppStatusTone.warning;
+      default:
+        return AppStatusTone.neutral;
+    }
   }
 }
