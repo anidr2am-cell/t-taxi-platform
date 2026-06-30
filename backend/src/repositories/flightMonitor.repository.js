@@ -185,6 +185,72 @@ class FlightMonitorRepository {
       ],
     );
   }
+
+  async listAutoSyncCandidates({ windowStart, windowEnd, limit }) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.id AS booking_id,
+          b.booking_number,
+          b.status AS booking_status,
+          b.scheduled_pickup_at,
+          DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
+          st.code AS service_type_code,
+          btd.id AS transfer_id,
+          btd.flight_number,
+          btd.airline_code,
+          btd.flight_date,
+          btd.departure_airport_iata,
+          btd.arrival_airport_iata,
+          btd.flight_scheduled_arrival_at,
+          DATE_FORMAT(btd.flight_scheduled_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_scheduled_arrival_at_text,
+          btd.flight_estimated_arrival_at,
+          DATE_FORMAT(btd.flight_estimated_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_estimated_arrival_at_text,
+          btd.flight_actual_arrival_at,
+          DATE_FORMAT(btd.flight_actual_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_actual_arrival_at_text,
+          btd.delay_minutes,
+          btd.delay_status,
+          btd.flight_status,
+          btd.last_synced_at,
+          DATE_FORMAT(btd.last_synced_at, '%Y-%m-%d %H:%i:%s') AS last_synced_at_text,
+          btd.sync_status,
+          btd.sync_error
+        FROM bookings b
+        INNER JOIN booking_transfer_details btd ON btd.booking_id = b.id
+        INNER JOIN service_types st ON st.id = b.service_type_id
+        WHERE b.deleted_at IS NULL
+          AND btd.deleted_at IS NULL
+          AND st.deleted_at IS NULL
+          AND st.code = ?
+          AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+          AND btd.flight_number IS NOT NULL
+          AND TRIM(btd.flight_number) <> ''
+          AND COALESCE(
+            btd.flight_estimated_arrival_at,
+            btd.flight_scheduled_arrival_at,
+            b.scheduled_pickup_at
+          ) >= ?
+          AND COALESCE(
+            btd.flight_estimated_arrival_at,
+            btd.flight_scheduled_arrival_at,
+            b.scheduled_pickup_at
+          ) <= ?
+        ORDER BY
+          ABS(TIMESTAMPDIFF(
+            MINUTE,
+            COALESCE(btd.flight_estimated_arrival_at, btd.flight_scheduled_arrival_at, b.scheduled_pickup_at),
+            CURRENT_TIMESTAMP
+          )) ASC,
+          CASE WHEN btd.flight_status IN ('DELAYED', 'ACTIVE') THEN 0 ELSE 1 END ASC,
+          CASE WHEN btd.last_synced_at IS NULL THEN 0 ELSE 1 END ASC,
+          btd.last_synced_at ASC,
+          b.id ASC
+        LIMIT ?
+      `,
+      [SERVICE_TYPES.AIRPORT_PICKUP, windowStart, windowEnd, limit],
+    );
+    return rows;
+  }
 }
 
 module.exports = FlightMonitorRepository;

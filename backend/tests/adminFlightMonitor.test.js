@@ -530,6 +530,18 @@ test('notification events are created only on meaningful changes', () => {
     'TX202607010001',
   );
   assert.equal(duplicateDelay.length, 0);
+
+  const trivialDelayChange = service.buildNotificationEvents(
+    { ...previous, delay_minutes: 20, flight_status: FLIGHT_STATUS.DELAYED },
+    {
+      flightStatus: FLIGHT_STATUS.DELAYED,
+      delayMinutes: 25,
+      flightActualArrivalAt: null,
+    },
+    42,
+    'TX202607010001',
+  );
+  assert.equal(trivialDelayChange.length, 0);
 });
 
 test('flight service normalizes invalid flight numbers for booking validation path', () => {

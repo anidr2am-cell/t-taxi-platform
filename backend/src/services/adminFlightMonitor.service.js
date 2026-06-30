@@ -30,6 +30,8 @@ class AdminFlightMonitorService {
     this.outboxProcessor = outboxProcessor;
     this.syncEnabled = options.syncEnabled !== false;
     this.minSyncIntervalMs = options.minSyncIntervalMs ?? FLIGHT_SYNC_CONFIG.MIN_INTERVAL_MS;
+    this.delayNotificationDeltaMinutes = options.delayNotificationDeltaMinutes
+      ?? FLIGHT_SYNC_CONFIG.DELAY_NOTIFICATION_DELTA_MINUTES;
     this.nowFn = options.nowFn ?? (() => Date.now());
   }
 
@@ -216,7 +218,7 @@ class AdminFlightMonitorService {
 
     const prevDelay = Number(previous.delay_minutes ?? 0);
     const nextDelay = Number(next.delayMinutes ?? 0);
-    const delayChanged = prevDelay !== nextDelay;
+    const delayChanged = Math.abs(nextDelay - prevDelay) >= this.delayNotificationDeltaMinutes;
     const becameDelayed = nextDelay > 0
       && (prevDelay <= 0 || next.flightStatus === FLIGHT_STATUS.DELAYED);
     if (

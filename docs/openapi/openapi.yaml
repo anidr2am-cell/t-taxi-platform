@@ -2189,6 +2189,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedAdminFlightList'
+  /admin/flights/sync-status:
+    get:
+      tags: [Admin]
+      summary: Get automatic flight sync worker status
+      operationId: getAdminFlightSyncStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseFlightSyncStatus'
+  /admin/flights/run-sync-cycle:
+    post:
+      tags: [Admin]
+      summary: Run one automatic flight sync cycle
+      operationId: runAdminFlightSyncCycle
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseFlightSyncCycle'
   /admin/flights/{bookingId}:
     get:
       tags: [Admin]
@@ -5606,6 +5632,70 @@ components:
                   properties:
                     providerConfigured:
                       type: boolean
+
+    FlightSyncCycleSummary:
+      type: object
+      properties:
+        selected:
+          type: integer
+        succeeded:
+          type: integer
+        skipped:
+          type: integer
+        failed:
+          type: integer
+        rateLimited:
+          type: boolean
+        configMissing:
+          type: boolean
+        durationMs:
+          type: integer
+
+    FlightSyncStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        running:
+          type: boolean
+        providerConfigured:
+          type: boolean
+        intervalMs:
+          type: integer
+        batchSize:
+          type: integer
+        lastCycleStartedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastCycleCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastCycle:
+          allOf:
+            - $ref: '#/components/schemas/FlightSyncCycleSummary'
+          nullable: true
+        nextExpectedRunAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ApiResponseFlightSyncStatus:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FlightSyncStatus'
+
+    ApiResponseFlightSyncCycle:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/FlightSyncCycleSummary'
 
     NotificationDeliveryListItem:
       type: object

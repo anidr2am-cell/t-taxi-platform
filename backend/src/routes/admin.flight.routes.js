@@ -20,6 +20,18 @@ router.get(
 );
 
 router.get(
+  '/flights/sync-status',
+  adminOnly,
+  adminFlightController.getSyncStatus,
+);
+
+router.post(
+  '/flights/run-sync-cycle',
+  adminOnly,
+  adminFlightController.runSyncCycle,
+);
+
+router.get(
   '/flights/:bookingId',
   adminOnly,
   validate({ params: bookingIdParamsSchema }),

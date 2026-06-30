@@ -48,10 +48,17 @@ if (config.swagger.enabled) {
   container.get('outboxProcessor').recoverOnStartup().catch((err) => {
     logger.warn('Outbox startup recovery failed', { error: err.message });
   });
+
+  container.get('flightSyncSchedulerService').start();
 });
 
 function shutdown(signal) {
   logger.info(`${signal} received — shutting down gracefully`);
+  try {
+    container.get('flightSyncSchedulerService').stop();
+  } catch (err) {
+    logger.warn('Flight sync worker stop failed', { error: err.message });
+  }
   httpServer.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);

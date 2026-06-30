@@ -6,25 +6,29 @@ import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_ser
 
 class _FakeFlightApi extends AdminFlightApiService {
   _FakeFlightApi({
-    this.token = 'token',
     this.listResponse,
     this.listError,
     this.syncResponse,
-    this.syncError,
+    this.statusResponse,
   });
 
-  final String? token;
   Map<String, dynamic>? listResponse;
   Object? listError;
   Map<String, dynamic>? syncResponse;
   Object? syncError;
+  Map<String, dynamic>? statusResponse;
+  Object? statusError;
+  Map<String, dynamic>? runCycleResponse;
+  Object? runCycleError;
   int listCalls = 0;
   int syncCalls = 0;
+  int statusCalls = 0;
+  int runCycleCalls = 0;
   String? lastFlightNumber;
   bool? lastDelayedOnly;
 
   @override
-  Future<String?> getSavedToken() async => token;
+  Future<String?> getSavedToken() async => 'token';
 
   @override
   Future<Map<String, dynamic>> listFlights({
@@ -77,6 +81,39 @@ class _FakeFlightApi extends AdminFlightApiService {
           'lastSyncedAt': '2026-07-01 10:00:00',
         };
   }
+
+  @override
+  Future<Map<String, dynamic>> getSyncStatus() async {
+    statusCalls += 1;
+    if (statusError != null) throw statusError!;
+    return statusResponse ??
+        {
+          'enabled': false,
+          'running': false,
+          'providerConfigured': false,
+          'intervalMs': 300000,
+          'lastCycleStartedAt': null,
+          'lastCycleCompletedAt': null,
+          'lastCycle': null,
+          'nextExpectedRunAt': null,
+        };
+  }
+
+  @override
+  Future<Map<String, dynamic>> runSyncCycle() async {
+    runCycleCalls += 1;
+    if (runCycleError != null) throw runCycleError!;
+    return runCycleResponse ??
+        {
+          'selected': 1,
+          'succeeded': 1,
+          'skipped': 0,
+          'failed': 0,
+          'rateLimited': false,
+          'configMissing': false,
+          'durationMs': 12,
+        };
+  }
 }
 
 class _FakeDispatchApi extends AdminDispatchApiService {
@@ -96,6 +133,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('TX202607010001'), findsOneWidget);
     expect(find.textContaining('TG409'), findsOneWidget);
+  });
+
+  testWidgets('shows automatic sync disabled and provider missing status', (tester) async {
+    final api = _FakeFlightApi();
+    await tester.pumpWidget(_wrap(AdminFlightMonitorPage(api: api, dispatchApi: _FakeDispatchApi())));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Worker: Disabled'), findsOneWidget);
+    expect(find.textContaining('Provider: Not configured'), findsOneWidget);
+  });
+
+  testWidgets('shows last cycle summary and running indicator', (tester) async {
+    final api = _FakeFlightApi(
+      statusResponse: {
+        'enabled': true,
+        'running': true,
+        'providerConfigured': true,
+        'intervalMs': 300000,
+        'lastCycleCompletedAt': '2026-07-01T10:00:00.000Z',
+        'lastCycle': {
+          'selected': 4,
+          'succeeded': 3,
+          'failed': 1,
+          'skipped': 0,
+        },
+      },
+    );
+    await tester.pumpWidget(_wrap(AdminFlightMonitorPage(api: api, dispatchApi: _FakeDispatchApi())));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('Worker: Enabled'), findsOneWidget);
+    expect(find.textContaining('Provider: Configured'), findsOneWidget);
+    expect(find.textContaining('success 3'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
   });
 
   testWidgets('shows empty state', (tester) async {
@@ -134,6 +204,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.syncCalls, 1);
     expect(find.textContaining('Sync: SUCCESS'), findsOneWidget);
+  });
+
+  testWidgets('status refresh reloads worker status', (tester) async {
+    final api = _FakeFlightApi();
+    await tester.pumpWidget(_wrap(AdminFlightMonitorPage(api: api, dispatchApi: _FakeDispatchApi())));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Refresh worker status'));
+    await tester.pumpAndSettle();
+    expect(api.statusCalls, greaterThan(1));
+  });
+
+  testWidgets('run sync cycle calls API and refreshes list', (tester) async {
+    final api = _FakeFlightApi(
+      statusResponse: {
+        'enabled': true,
+        'running': false,
+        'providerConfigured': true,
+        'intervalMs': 300000,
+        'lastCycleCompletedAt': null,
+        'lastCycle': null,
+      },
+    );
+    await tester.pumpWidget(_wrap(AdminFlightMonitorPage(api: api, dispatchApi: _FakeDispatchApi())));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Run sync cycle'));
+    await tester.pumpAndSettle();
+    expect(api.runCycleCalls, 1);
+    expect(api.listCalls, greaterThan(1));
   });
 
   testWidgets('provider not configured shows snackbar', (tester) async {

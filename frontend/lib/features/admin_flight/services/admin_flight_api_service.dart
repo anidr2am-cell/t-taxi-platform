@@ -87,4 +87,14 @@ class AdminFlightApiService {
     final data = await _request('POST', '/admin/flights/$bookingId/sync');
     return Map<String, dynamic>.from(data as Map);
   }
+
+  Future<Map<String, dynamic>> getSyncStatus() async {
+    final data = await _request('GET', '/admin/flights/sync-status');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> runSyncCycle() async {
+    final data = await _request('POST', '/admin/flights/run-sync-cycle');
+    return Map<String, dynamic>.from(data as Map);
+  }
 }

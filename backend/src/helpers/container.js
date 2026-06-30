@@ -47,6 +47,8 @@ const OutboxRepository = require('../repositories/outbox.repository');
 const OutboxProcessor = require('../services/outboxProcessor.service');
 const FlightMonitorRepository = require('../repositories/flightMonitor.repository');
 const AdminFlightMonitorService = require('../services/adminFlightMonitor.service');
+const FlightSyncWorker = require('../workers/flightSync.worker');
+const FlightSyncSchedulerService = require('../services/flightSyncScheduler.service');
 const ChatService = require('../services/chat.service');
 const config = require('../config/env');
 const database = require('../config/database');
@@ -247,9 +249,31 @@ container.register('adminFlightMonitorService', (c) => new AdminFlightMonitorSer
   c.get('outboxRepository'),
   c.get('outboxProcessor'),
   {
-    syncEnabled: config.external.flightSyncEnabled,
+    syncEnabled: true,
     minSyncIntervalMs: config.external.flightSyncMinIntervalMs,
+    delayNotificationDeltaMinutes: config.external.flightDelayNotificationDeltaMinutes,
   },
+));
+container.register('flightSyncWorker', (c) => new FlightSyncWorker({
+  flightMonitorRepository: c.get('flightMonitorRepository'),
+  adminFlightMonitorService: c.get('adminFlightMonitorService'),
+  config: {
+    enabled: config.external.flightSyncEnabled,
+    batchSize: config.external.flightSyncBatchSize,
+    lookbackHours: config.external.flightSyncLookbackHours,
+    lookaheadHours: config.external.flightSyncLookaheadHours,
+    maxRetries: config.external.flightSyncMaxRetries,
+    retryBaseMs: config.external.flightSyncRetryBaseMs,
+  },
+}));
+container.register('flightSyncSchedulerService', (c) => new FlightSyncSchedulerService(
+  c.get('flightSyncWorker'),
+  {
+    enabled: config.external.flightSyncEnabled,
+    intervalMs: config.external.flightSyncIntervalMs,
+    batchSize: config.external.flightSyncBatchSize,
+  },
+  () => c.get('flightService').isProviderConfigured(),
 ));
 
 module.exports = container;

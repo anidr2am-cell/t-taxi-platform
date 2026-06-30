@@ -24,7 +24,11 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
   final _bookingSearchController = TextEditingController();
 
   bool _loading = true;
+  bool _statusLoading = true;
+  bool _runningCycle = false;
   String? _error;
+  String? _statusError;
+  Map<String, dynamic>? _syncStatus;
   List<dynamic> _items = [];
   int _page = 1;
   int _total = 0;
@@ -35,6 +39,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
   @override
   void initState() {
     super.initState();
+    _loadSyncStatus();
     _load();
   }
 
@@ -69,6 +74,42 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
         _error = err.toString();
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _loadSyncStatus() async {
+    setState(() {
+      _statusLoading = true;
+      _statusError = null;
+    });
+    try {
+      final status = await _api.getSyncStatus();
+      setState(() {
+        _syncStatus = status;
+        _statusLoading = false;
+      });
+    } catch (err) {
+      setState(() {
+        _statusError = err.toString();
+        _statusLoading = false;
+      });
+    }
+  }
+
+  Future<void> _runSyncCycle() async {
+    if (_runningCycle) return;
+    setState(() => _runningCycle = true);
+    try {
+      await _api.runSyncCycle();
+      await Future.wait([_loadSyncStatus(), _load()]);
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _runningCycle = false);
     }
   }
 
@@ -135,10 +176,81 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
 
   String _text(dynamic value) => value == null ? '-' : '$value';
 
+  String _cycleSummary(Map<String, dynamic>? cycle) {
+    if (cycle == null) return 'No cycle yet';
+    return 'selected ${_text(cycle['selected'])} · success ${_text(cycle['succeeded'])} · failed ${_text(cycle['failed'])} · skipped ${_text(cycle['skipped'])}';
+  }
+
+  Widget _syncStatusPanel() {
+    if (_statusLoading) {
+      return const LinearProgressIndicator();
+    }
+    if (_statusError != null) {
+      return ListTile(
+        title: const Text('Automatic flight sync status unavailable'),
+        subtitle: Text(_statusError!),
+        trailing: IconButton(
+          tooltip: 'Refresh worker status',
+          onPressed: _loadSyncStatus,
+          icon: const Icon(Icons.refresh),
+        ),
+      );
+    }
+
+    final status = _syncStatus ?? {};
+    final lastCycle = status['lastCycle'] is Map
+        ? Map<String, dynamic>.from(status['lastCycle'] as Map)
+        : null;
+    final enabled = status['enabled'] == true;
+    final providerConfigured = status['providerConfigured'] == true;
+    final running = status['running'] == true || _runningCycle;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Automatic flight sync',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (running)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                IconButton(
+                  tooltip: 'Refresh worker status',
+                  onPressed: _loadSyncStatus,
+                  icon: const Icon(Icons.refresh),
+                ),
+                OutlinedButton(
+                  onPressed: running ? null : _runSyncCycle,
+                  child: Text(running ? 'Running' : 'Run sync cycle'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('Worker: ${enabled ? 'Enabled' : 'Disabled'} · Provider: ${providerConfigured ? 'Configured' : 'Not configured'}'),
+            Text('Last completed: ${_text(status['lastCycleCompletedAt'])}'),
+            Text(_cycleSummary(lastCycle)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        _syncStatusPanel(),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Wrap(
