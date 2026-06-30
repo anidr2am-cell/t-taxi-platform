@@ -16,6 +16,7 @@ const PricingService = require('../services/pricing.service');
 const RouteAdminService = require('../services/routeAdmin.service');
 const VehiclePriceAdminService = require('../services/vehiclePriceAdmin.service');
 const ChargePolicyAdminService = require('../services/chargePolicyAdmin.service');
+const PricingAdminService = require('../services/pricingAdmin.service');
 const BookingRepository = require('../repositories/booking.repository');
 const AdminDashboardRepository = require('../repositories/adminDashboard.repository');
 const ChatRepository = require('../repositories/chat.repository');
@@ -110,6 +111,11 @@ container.register('vehiclePriceAdminService', (c) => new VehiclePriceAdminServi
   c.get('vehicleRepository'),
 ));
 container.register('chargePolicyAdminService', (c) => new ChargePolicyAdminService(
+  c.get('chargePolicyRepository'),
+));
+container.register('pricingAdminService', (c) => new PricingAdminService(
+  c.get('routeRepository'),
+  c.get('vehiclePriceRepository'),
   c.get('chargePolicyRepository'),
 ));
 container.register('bookingRepository', () => new BookingRepository());

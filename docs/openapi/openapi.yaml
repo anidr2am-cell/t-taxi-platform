@@ -2260,6 +2260,175 @@ paths:
         '204':
           description: Deleted
 
+  /admin/pricing/summary:
+    get:
+      tags: [Admin]
+      summary: Pricing manager summary counts
+      operationId: adminPricingSummary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePricingSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/pricing/simulate:
+    post:
+      tags: [Admin]
+      summary: Simulate pricing quote for admin review
+      operationId: adminPricingSimulate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingSimulateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePricingSimulate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/routes:
+    get:
+      tags: [Admin]
+      summary: List pricing routes
+      operationId: adminListRoutes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRouteList'
+    post:
+      tags: [Admin]
+      summary: Create pricing route
+      operationId: adminCreateRoute
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRoute'
+
+  /admin/routes/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update pricing route
+      operationId: adminUpdateRoute
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRoute'
+
+  /admin/routes/{id}/copy:
+    post:
+      tags: [Admin]
+      summary: Copy route and vehicle prices
+      operationId: adminCopyRoute
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteCopyRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRouteCopy'
+
+  /admin/charge-policies:
+    get:
+      tags: [Admin]
+      summary: List charge policies
+      operationId: adminListChargePolicies
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChargePolicyList'
+    post:
+      tags: [Admin]
+      summary: Create charge policy
+      operationId: adminCreateChargePolicy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargePolicyCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChargePolicy'
+
+  /admin/charge-policies/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update charge policy
+      operationId: adminUpdateChargePolicy
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargePolicyUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseChargePolicy'
+
   /admin/vehicle-prices:
     get:
       tags: [Admin]
@@ -5486,6 +5655,138 @@ components:
           type: number
         isActive:
           type: boolean
+
+    PricingSummary:
+      type: object
+      properties:
+        activeRouteCount:
+          type: integer
+        activeVehiclePriceCount:
+          type: integer
+        activeChargePolicyCount:
+          type: integer
+        currentPriceCount:
+          type: integer
+        expiringSoonPriceCount:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponsePricingSummary:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PricingSummary'
+
+    PricingSimulateRequest:
+      type: object
+      required: [serviceType, originLocationId, destinationLocationId, vehicleTypeId]
+      properties:
+        serviceType:
+          oneOf:
+            - type: string
+            - type: integer
+        originLocationId:
+          type: integer
+        destinationLocationId:
+          type: integer
+        vehicleTypeId:
+          type: integer
+        scheduledPickupAt:
+          type: string
+          format: date-time
+        options:
+          type: object
+          additionalProperties: true
+
+    ApiResponsePricingSimulate:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              additionalProperties: true
+
+    AdminRoute:
+      type: object
+      additionalProperties: true
+
+    ApiResponseRouteList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminRoute'
+
+    ApiResponseRoute:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AdminRoute'
+
+    ApiResponseRouteCopy:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                route:
+                  $ref: '#/components/schemas/AdminRoute'
+                copiedVehiclePriceCount:
+                  type: integer
+
+    RouteCreateRequest:
+      type: object
+      additionalProperties: true
+
+    RouteUpdateRequest:
+      type: object
+      additionalProperties: true
+
+    RouteCopyRequest:
+      type: object
+      additionalProperties: true
+
+    ChargePolicy:
+      type: object
+      additionalProperties: true
+
+    ApiResponseChargePolicyList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChargePolicy'
+
+    ApiResponseChargePolicy:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ChargePolicy'
+
+    ChargePolicyCreateRequest:
+      type: object
+      additionalProperties: true
+
+    ChargePolicyUpdateRequest:
+      type: object
+      additionalProperties: true
 
     PriceRuleCondition:
       type: object

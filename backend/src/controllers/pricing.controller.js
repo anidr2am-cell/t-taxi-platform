@@ -4,6 +4,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const container = require('../helpers/container');
 
 const getPricingService = () => container.get('pricingService');
+const getPricingAdminService = () => container.get('pricingAdminService');
 const getRouteAdminService = () => container.get('routeAdminService');
 const getVehiclePriceAdminService = () => container.get('vehiclePriceAdminService');
 const getChargePolicyAdminService = () => container.get('chargePolicyAdminService');
@@ -15,6 +16,11 @@ const calculatePricing = asyncHandler(async (req, res) => {
 
 const simulatePricing = asyncHandler(async (req, res) => {
   const data = await getPricingService().simulate(req.body);
+  return success(res, data, 'OK');
+});
+
+const getPricingSummary = asyncHandler(async (req, res) => {
+  const data = await getPricingAdminService().getSummary();
   return success(res, data, 'OK');
 });
 
@@ -124,6 +130,7 @@ const deleteChargePolicy = asyncHandler(async (req, res) => {
 module.exports = {
   calculatePricing,
   simulatePricing,
+  getPricingSummary,
   listRoutes,
   getRoute,
   createRoute,

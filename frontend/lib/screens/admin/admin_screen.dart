@@ -8,6 +8,7 @@ import '../../features/admin_notification/pages/admin_notification_queue_page.da
 import '../../features/admin_chat/pages/admin_chat_queue_page.dart';
 import '../../features/admin_flight/pages/admin_flight_monitor_page.dart';
 import '../../features/driver_location/pages/admin_driver_monitor_page.dart';
+import '../../features/admin_pricing/pages/admin_pricing_manager_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/language_selector.dart';
 
@@ -85,7 +86,7 @@ class _AdminScreenState extends State<AdminScreen> {
       case 3:
         return const AdminAuthGate(child: AdminDriverMonitorPage());
       case 4:
-        return _buildLegacyNotice('Pricing', 'Use admin pricing APIs (/api/v1/admin/pricing) for production configuration.');
+        return const AdminAuthGate(child: AdminPricingManagerPage());
       case 5:
         return _buildLegacyNotice('Golf courses', 'Catalog management is deferred in MVP release.');
       case 6:

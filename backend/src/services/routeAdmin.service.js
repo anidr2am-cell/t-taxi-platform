@@ -115,17 +115,27 @@ class RouteAdminService {
     );
     this.assertOriginNotDestination(originLocationId, destinationLocationId);
 
-    return this.routeRepository.create({
-      serviceTypeId,
-      originLocationId,
-      destinationLocationId,
-      isActive: input.isActive,
-      displayOrder: input.displayOrder,
-      effectiveFrom: input.effectiveFrom,
-      effectiveTo: input.effectiveTo,
-      createdBy: userId,
-      updatedBy: userId,
-    });
+    try {
+      return await this.routeRepository.create({
+        serviceTypeId,
+        originLocationId,
+        destinationLocationId,
+        isActive: input.isActive,
+        displayOrder: input.displayOrder,
+        effectiveFrom: input.effectiveFrom,
+        effectiveTo: input.effectiveTo,
+        createdBy: userId,
+        updatedBy: userId,
+      });
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('Route already exists for this service, origin, and destination', {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+      throw err;
+    }
   }
 
   async update(id, input, userId) {
@@ -200,17 +210,28 @@ class RouteAdminService {
 
     this.assertOriginNotDestination(newOriginLocationId, newDestinationLocationId);
 
-    const newRoute = await this.routeRepository.create({
-      serviceTypeId: input.serviceTypeId ?? source.serviceTypeId,
-      originLocationId: newOriginLocationId,
-      destinationLocationId: newDestinationLocationId,
-      isActive: input.isActive ?? source.isActive,
-      displayOrder: input.displayOrder ?? source.displayOrder,
-      effectiveFrom: input.effectiveFrom ?? source.effectiveFrom,
-      effectiveTo: input.effectiveTo ?? source.effectiveTo,
-      createdBy: userId,
-      updatedBy: userId,
-    });
+    let newRoute;
+    try {
+      newRoute = await this.routeRepository.create({
+        serviceTypeId: input.serviceTypeId ?? source.serviceTypeId,
+        originLocationId: newOriginLocationId,
+        destinationLocationId: newDestinationLocationId,
+        isActive: input.isActive ?? source.isActive,
+        displayOrder: input.displayOrder ?? source.displayOrder,
+        effectiveFrom: input.effectiveFrom ?? source.effectiveFrom,
+        effectiveTo: input.effectiveTo ?? source.effectiveTo,
+        createdBy: userId,
+        updatedBy: userId,
+      });
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('Route already exists for this service, origin, and destination', {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+      throw err;
+    }
 
     if (sourcePrices.length) {
       await this.vehiclePriceRepository.bulkCreate(

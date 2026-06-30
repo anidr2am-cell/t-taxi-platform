@@ -65,6 +65,11 @@ router.post(
   validate({ body: pricingSimulateSchema }),
   pricingController.simulatePricing,
 );
+router.get(
+  '/pricing/summary',
+  adminOnly,
+  pricingController.getPricingSummary,
+);
 
 router.get(
   '/vehicle-prices',
