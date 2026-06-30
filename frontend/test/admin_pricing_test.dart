@@ -178,6 +178,20 @@ void main() {
 
     expect(find.text('Total: 800 THB'), findsOneWidget);
   });
+
+  testWidgets('pricing manager routes tab has no horizontal overflow at 360px', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final api = _FakePricingApi();
+    await tester.pumpWidget(_wrap(AdminPricingManagerPage(api: api), size: const Size(360, 800)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Active routes'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _FakePricingApi implements AdminPricingApiService {

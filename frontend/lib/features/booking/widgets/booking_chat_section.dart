@@ -106,12 +106,13 @@ class _BookingChatSectionState extends State<BookingChatSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text('Booking chat', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(width: 8),
                 _ConnectionChip(state: _session.connectionState),
-                const Spacer(),
                 if (_session.unreadCount > 0) Chip(label: Text('${_session.unreadCount} unread')),
                 IconButton(onPressed: _session.refresh, icon: const Icon(Icons.refresh)),
               ],

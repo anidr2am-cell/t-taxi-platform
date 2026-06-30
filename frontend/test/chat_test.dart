@@ -125,6 +125,8 @@ class FakeAdminChatApi extends AdminChatApiService {
         'bookingNumber': 'TX202607010001',
         'customerDisplayName': 'Kim',
         'driverDisplayName': 'Driver A',
+        'lastMessageText': 'On my way to pickup',
+        'lastMessageAt': DateTime.now().toIso8601String(),
         'unreadCount': unreadOnly ? 2 : 0,
       },
     ];
@@ -371,6 +373,48 @@ void main() {
     await tester.tap(find.byIcon(Icons.send));
     await tester.pump();
     expect(find.textContaining('queued'), findsOneWidget);
+  });
+
+  testWidgets('admin chat queue has no horizontal overflow at 360px', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdminChatQueuePage(api: FakeAdminChatApi()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('TX202607010001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('customer chat has no horizontal overflow at 360px', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BookingChatSection(
+            bookingNumber: 'TX202607010001',
+            guestAccessToken: 'guest-token',
+            api: FakeBookingChatApi(),
+            socketService: TestChatSocketService(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('admin selected chat receives live message', (tester) async {

@@ -75,10 +75,19 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = err.toString();
+        _error = err is AdminPricingApiException
+            ? err.message
+            : 'Could not load pricing data';
         _loading = false;
       });
     }
+  }
+
+  bool _isNarrow(BuildContext context) => MediaQuery.sizeOf(context).width < 600;
+
+  double _filterWidth(BuildContext context, double desktopWidth) {
+    if (!_isNarrow(context)) return desktopWidth;
+    return MediaQuery.sizeOf(context).width - (AppTokens.spaceMd * 2);
   }
 
   int _priceCountForRoute(int routeId) {
@@ -630,6 +639,25 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       ('Expiring soon', summary['expiringSoonPriceCount'] ?? 0, Icons.schedule, AppStatusTone.warning),
     ];
 
+    if (_isNarrow(context)) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var i = 0; i < cards.length; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              AppUi.kpiMetricCard(
+                label: cards[i].$1,
+                value: '${cards[i].$2}',
+                icon: cards[i].$3,
+                tone: cards[i].$4,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -647,352 +675,526 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   }
 
   Widget _routesTab() {
-    return Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 600;
+        return Column(
+          children: [
+            AppUi.adminFilterBar(
+              children: [
+                SizedBox(
+                  width: _filterWidth(context, 200),
+                  child: DropdownButtonFormField<String?>(
+                    key: ValueKey(_routeServiceFilter),
+                    initialValue: _routeServiceFilter,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Service type', isDense: true),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('All')),
+                      ...kServiceTypes.map((code) => DropdownMenuItem(value: code, child: Text(code))),
+                    ],
+                    onChanged: (v) => setState(() => _routeServiceFilter = v),
+                  ),
+                ),
+                SizedBox(
+                  width: _filterWidth(context, 120),
+                  child: TextField(
+                    decoration: const InputDecoration(labelText: 'Origin', isDense: true),
+                    onChanged: (v) => setState(() => _routeOriginFilter = v),
+                  ),
+                ),
+                SizedBox(
+                  width: _filterWidth(context, 120),
+                  child: TextField(
+                    decoration: const InputDecoration(labelText: 'Destination', isDense: true),
+                    onChanged: (v) => setState(() => _routeDestFilter = v),
+                  ),
+                ),
+                SizedBox(
+                  width: _filterWidth(context, 140),
+                  child: DropdownButtonFormField<String?>(
+                    key: ValueKey(_routeActiveFilter),
+                    initialValue: _routeActiveFilter,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Active', isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('All')),
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    ],
+                    onChanged: (v) => setState(() => _routeActiveFilter = v),
+                  ),
+                ),
+                SizedBox(
+                  width: _filterWidth(context, 160),
+                  child: TextField(
+                    decoration: const InputDecoration(labelText: 'Search', isDense: true),
+                    onChanged: (v) => setState(() => _routeSearch = v),
+                  ),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _showRouteDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create route'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: _filteredRoutes.isEmpty
+                  ? const Center(child: Text('No routes found'))
+                  : narrow
+                      ? ListView.separated(
+                          padding: AppUi.pagePadding(context),
+                          itemCount: _filteredRoutes.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppTokens.spaceSm),
+                          itemBuilder: (context, index) {
+                            final map = Map<String, dynamic>.from(_filteredRoutes[index] as Map);
+                            return _routeCard(map);
+                          },
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            columns: const [
+                              DataColumn(label: Text('ID')),
+                              DataColumn(label: Text('Service')),
+                              DataColumn(label: Text('Origin')),
+                              DataColumn(label: Text('Destination')),
+                              DataColumn(label: Text('Active')),
+                              DataColumn(label: Text('Prices')),
+                              DataColumn(label: Text('Updated')),
+                              DataColumn(label: Text('Actions')),
+                            ],
+                            rows: _filteredRoutes.map((row) {
+                              final map = Map<String, dynamic>.from(row as Map);
+                              return DataRow(cells: [
+                                DataCell(Text('${map['id']}')),
+                                DataCell(Text('${map['serviceTypeCode']}')),
+                                DataCell(Text('${map['originLocationCode']}')),
+                                DataCell(Text('${map['destinationLocationCode']}')),
+                                DataCell(Text(map['isActive'] == true ? 'Yes' : 'No')),
+                                DataCell(Text('${_priceCountForRoute(map['id'] as int)}')),
+                                DataCell(Text('${map['updatedAt'] ?? '-'}')),
+                                DataCell(_routeActions(map)),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _routeActions(Map<String, dynamic> map) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+        IconButton(
+          tooltip: 'Edit',
+          icon: const Icon(Icons.edit),
+          onPressed: () => _showRouteDialog(existing: map),
+        ),
+        IconButton(
+          tooltip: 'Copy',
+          icon: const Icon(Icons.copy),
+          onPressed: () => _copyRoute(map),
+        ),
+        IconButton(
+          tooltip: 'View prices',
+          icon: const Icon(Icons.price_change),
+          onPressed: () {
+            setState(() {
+              _priceRouteFilter = '${map['id']}';
+              _tabController.index = 1;
+            });
+          },
+        ),
+        if (map['isActive'] == true)
+          IconButton(
+            tooltip: 'Deactivate',
+            icon: const Icon(Icons.block),
+            onPressed: () async {
+              if (!await _confirm(
+                'Deactivate route',
+                'This route will be excluded from customer pricing.',
+              )) {
+                return;
+              }
+              setState(() => _saving = true);
+              try {
+                await _api.updateRoute(map['id'] as int, {'isActive': false});
+                await _loadAll();
+              } finally {
+                if (mounted) setState(() => _saving = false);
+              }
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _routeCard(Map<String, dynamic> map) {
+    final active = map['isActive'] == true;
+    return AppUi.adminQueueCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              SizedBox(
-                width: 200,
-                child: DropdownButtonFormField<String?>(
-                  key: ValueKey(_routeServiceFilter),
-                  initialValue: _routeServiceFilter,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Service type', isDense: true),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('All')),
-                    ...kServiceTypes.map((code) => DropdownMenuItem(value: code, child: Text(code))),
-                  ],
-                  onChanged: (v) => setState(() => _routeServiceFilter = v),
+              Expanded(
+                child: Text(
+                  '#${map['id']}',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
               ),
-              SizedBox(
-                width: 120,
-                child: TextField(
-                  decoration: const InputDecoration(labelText: 'Origin', isDense: true),
-                  onChanged: (v) => setState(() => _routeOriginFilter = v),
-                ),
-              ),
-              SizedBox(
-                width: 120,
-                child: TextField(
-                  decoration: const InputDecoration(labelText: 'Destination', isDense: true),
-                  onChanged: (v) => setState(() => _routeDestFilter = v),
-                ),
-              ),
-              SizedBox(
-                width: 140,
-                child: DropdownButtonFormField<String?>(
-                  key: ValueKey(_routeActiveFilter),
-                  initialValue: _routeActiveFilter,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Active', isDense: true),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All')),
-                    DropdownMenuItem(value: 'active', child: Text('Active')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                  ],
-                  onChanged: (v) => setState(() => _routeActiveFilter = v),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: TextField(
-                  decoration: const InputDecoration(labelText: 'Search', isDense: true),
-                  onChanged: (v) => setState(() => _routeSearch = v),
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: () => _showRouteDialog(),
-                icon: const Icon(Icons.add),
-                label: const Text('Create route'),
+              AppUi.statusBadge(
+                active ? 'Active' : 'Inactive',
+                tone: active ? AppStatusTone.success : AppStatusTone.neutral,
               ),
             ],
           ),
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.summaryRow(label: 'Service', value: '${map['serviceTypeCode']}'),
+          AppUi.summaryRow(
+            label: 'Route',
+            value: '${map['originLocationCode']} → ${map['destinationLocationCode']}',
+          ),
+          AppUi.summaryRow(
+            label: 'Prices',
+            value: '${_priceCountForRoute(map['id'] as int)}',
+          ),
+          AppUi.summaryRow(label: 'Updated', value: '${map['updatedAt'] ?? '-'}'),
+          const SizedBox(height: AppTokens.spaceSm),
+          _routeActions(map),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceActions(Map<String, dynamic> map) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.edit),
+          onPressed: () => _showPriceDialog(existing: map),
         ),
-        Expanded(
-          child: _filteredRoutes.isEmpty
-              ? const Center(child: Text('No routes found'))
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('ID')),
-                      DataColumn(label: Text('Service')),
-                      DataColumn(label: Text('Origin')),
-                      DataColumn(label: Text('Destination')),
-                      DataColumn(label: Text('Active')),
-                      DataColumn(label: Text('Prices')),
-                      DataColumn(label: Text('Updated')),
-                      DataColumn(label: Text('Actions')),
-                    ],
-                    rows: _filteredRoutes.map((row) {
-                      final map = Map<String, dynamic>.from(row as Map);
-                      return DataRow(cells: [
-                        DataCell(Text('${map['id']}')),
-                        DataCell(Text('${map['serviceTypeCode']}')),
-                        DataCell(Text('${map['originLocationCode']}')),
-                        DataCell(Text('${map['destinationLocationCode']}')),
-                        DataCell(Text(map['isActive'] == true ? 'Yes' : 'No')),
-                        DataCell(Text('${_priceCountForRoute(map['id'] as int)}')),
-                        DataCell(Text('${map['updatedAt'] ?? '-'}')),
-                        DataCell(Row(
-                          children: [
-                            IconButton(
-                              tooltip: 'Edit',
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _showRouteDialog(existing: map),
-                            ),
-                            IconButton(
-                              tooltip: 'Copy',
-                              icon: const Icon(Icons.copy),
-                              onPressed: () => _copyRoute(map),
-                            ),
-                            IconButton(
-                              tooltip: 'View prices',
-                              icon: const Icon(Icons.price_change),
-                              onPressed: () {
-                                setState(() {
-                                  _priceRouteFilter = '${map['id']}';
-                                  _tabController.index = 1;
-                                });
-                              },
-                            ),
-                            if (map['isActive'] == true)
-                              IconButton(
-                                tooltip: 'Deactivate',
-                                icon: const Icon(Icons.block),
-                                onPressed: () async {
-                                  if (!await _confirm(
-                                    'Deactivate route',
-                                    'This route will be excluded from customer pricing.',
-                                  )) {
-                                    return;
-                                  }
-                                  setState(() => _saving = true);
-                                  try {
-                                    await _api.updateRoute(map['id'] as int, {'isActive': false});
-                                    await _loadAll();
-                                  } finally {
-                                    if (mounted) setState(() => _saving = false);
-                                  }
-                                },
-                              ),
-                          ],
-                        )),
-                      ]);
-                    }).toList(),
-                  ),
-                ),
-        ),
+        if (map['isActive'] == true)
+          IconButton(
+            icon: const Icon(Icons.block),
+            onPressed: () async {
+              if (!await _confirm(
+                'Deactivate price',
+                'This price will no longer apply to customer pricing.',
+              )) {
+                return;
+              }
+              await _api.updateVehiclePrice(map['id'] as int, {'isActive': false});
+              await _loadAll();
+            },
+          ),
       ],
+    );
+  }
+
+  AppStatusTone _toneForPriceStatus(String status) {
+    switch (status) {
+      case 'current':
+        return AppStatusTone.success;
+      case 'future':
+        return AppStatusTone.info;
+      case 'expired':
+        return AppStatusTone.warning;
+      default:
+        return AppStatusTone.neutral;
+    }
+  }
+
+  Widget _priceCard(Map<String, dynamic> map) {
+    final route = _routes.cast<Map?>().firstWhere(
+          (r) => r?['id'] == map['routeId'],
+          orElse: () => null,
+        );
+    final routeLabel =
+        route != null ? _routeLabel(Map<String, dynamic>.from(route)) : '${map['routeId']}';
+    final status = vehiclePriceStatus(map);
+
+    return AppUi.adminQueueCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  routeLabel,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                ),
+              ),
+              AppUi.statusBadge(status, tone: _toneForPriceStatus(status)),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.summaryRow(label: 'Vehicle', value: '${map['vehicleTypeCode']}'),
+          AppUi.summaryRow(label: 'Price', value: '${map['price']} ${map['currency']}'),
+          AppUi.summaryRow(label: 'Effective from', value: '${map['effectiveFrom'] ?? '-'}'),
+          AppUi.summaryRow(label: 'Effective to', value: '${map['effectiveTo'] ?? '-'}'),
+          const SizedBox(height: AppTokens.spaceSm),
+          _priceActions(map),
+        ],
+      ),
     );
   }
 
   Widget _pricesTab() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              SizedBox(
-                width: 280,
-                child: DropdownButtonFormField<String?>(
-                  key: ValueKey(_priceRouteFilter),
-                  initialValue: _priceRouteFilter,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Route', isDense: true),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('All routes')),
-                    ..._routes.map((row) {
-                      final map = Map<String, dynamic>.from(row as Map);
-                      return DropdownMenuItem(
-                        value: '${map['id']}',
-                        child: Text(_routeLabel(map)),
-                      );
-                    }),
-                  ],
-                  onChanged: (v) => setState(() => _priceRouteFilter = v),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: DropdownButtonFormField<String?>(
-                  key: ValueKey(_priceStatusFilter),
-                  initialValue: _priceStatusFilter,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Status', isDense: true),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All')),
-                    DropdownMenuItem(value: 'current', child: Text('Current')),
-                    DropdownMenuItem(value: 'future', child: Text('Future')),
-                    DropdownMenuItem(value: 'expired', child: Text('Expired')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                  ],
-                  onChanged: (v) => setState(() => _priceStatusFilter = v),
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: () => _showPriceDialog(),
-                icon: const Icon(Icons.add),
-                label: const Text('Create price'),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _filteredPrices.isEmpty
-              ? const Center(child: Text('No vehicle prices found'))
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Route')),
-                      DataColumn(label: Text('Vehicle')),
-                      DataColumn(label: Text('Price')),
-                      DataColumn(label: Text('Currency')),
-                      DataColumn(label: Text('Effective from')),
-                      DataColumn(label: Text('Effective to')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Actions')),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 600;
+        return Column(
+          children: [
+            AppUi.adminFilterBar(
+              children: [
+                SizedBox(
+                  width: _filterWidth(context, 280),
+                  child: DropdownButtonFormField<String?>(
+                    key: ValueKey(_priceRouteFilter),
+                    initialValue: _priceRouteFilter,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Route', isDense: true),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('All routes')),
+                      ..._routes.map((row) {
+                        final map = Map<String, dynamic>.from(row as Map);
+                        return DropdownMenuItem(
+                          value: '${map['id']}',
+                          child: Text(_routeLabel(map)),
+                        );
+                      }),
                     ],
-                    rows: _filteredPrices.map((row) {
-                      final map = Map<String, dynamic>.from(row as Map);
-                      final route = _routes.cast<Map?>().firstWhere(
-                            (r) => r?['id'] == map['routeId'],
-                            orElse: () => null,
-                          );
-                      final status = vehiclePriceStatus(map);
-                      return DataRow(cells: [
-                        DataCell(Text(route != null ? _routeLabel(Map<String, dynamic>.from(route)) : '${map['routeId']}')),
-                        DataCell(Text('${map['vehicleTypeCode']}')),
-                        DataCell(Text('${map['price']}')),
-                        DataCell(Text('${map['currency']}')),
-                        DataCell(Text('${map['effectiveFrom'] ?? '-'}')),
-                        DataCell(Text('${map['effectiveTo'] ?? '-'}')),
-                        DataCell(Text(status)),
-                        DataCell(Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _showPriceDialog(existing: map),
-                            ),
-                            if (map['isActive'] == true)
-                              IconButton(
-                                icon: const Icon(Icons.block),
-                                onPressed: () async {
-                                  if (!await _confirm(
-                                    'Deactivate price',
-                                    'This price will no longer apply to customer pricing.',
-                                  )) {
-                                    return;
-                                  }
-                                  await _api.updateVehiclePrice(map['id'] as int, {'isActive': false});
-                                  await _loadAll();
-                                },
-                              ),
-                          ],
-                        )),
-                      ]);
-                    }).toList(),
+                    onChanged: (v) => setState(() => _priceRouteFilter = v),
                   ),
                 ),
+                SizedBox(
+                  width: _filterWidth(context, 160),
+                  child: DropdownButtonFormField<String?>(
+                    key: ValueKey(_priceStatusFilter),
+                    initialValue: _priceStatusFilter,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Status', isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('All')),
+                      DropdownMenuItem(value: 'current', child: Text('Current')),
+                      DropdownMenuItem(value: 'future', child: Text('Future')),
+                      DropdownMenuItem(value: 'expired', child: Text('Expired')),
+                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    ],
+                    onChanged: (v) => setState(() => _priceStatusFilter = v),
+                  ),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _showPriceDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create price'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: _filteredPrices.isEmpty
+                  ? const Center(child: Text('No vehicle prices found'))
+                  : narrow
+                      ? ListView.separated(
+                          padding: AppUi.pagePadding(context),
+                          itemCount: _filteredPrices.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppTokens.spaceSm),
+                          itemBuilder: (context, index) {
+                            final map = Map<String, dynamic>.from(_filteredPrices[index] as Map);
+                            return _priceCard(map);
+                          },
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            columns: const [
+                              DataColumn(label: Text('Route')),
+                              DataColumn(label: Text('Vehicle')),
+                              DataColumn(label: Text('Price')),
+                              DataColumn(label: Text('Currency')),
+                              DataColumn(label: Text('Effective from')),
+                              DataColumn(label: Text('Effective to')),
+                              DataColumn(label: Text('Status')),
+                              DataColumn(label: Text('Actions')),
+                            ],
+                            rows: _filteredPrices.map((row) {
+                              final map = Map<String, dynamic>.from(row as Map);
+                              final route = _routes.cast<Map?>().firstWhere(
+                                    (r) => r?['id'] == map['routeId'],
+                                    orElse: () => null,
+                                  );
+                              final status = vehiclePriceStatus(map);
+                              return DataRow(cells: [
+                                DataCell(Text(route != null
+                                    ? _routeLabel(Map<String, dynamic>.from(route))
+                                    : '${map['routeId']}')),
+                                DataCell(Text('${map['vehicleTypeCode']}')),
+                                DataCell(Text('${map['price']}')),
+                                DataCell(Text('${map['currency']}')),
+                                DataCell(Text('${map['effectiveFrom'] ?? '-'}')),
+                                DataCell(Text('${map['effectiveTo'] ?? '-'}')),
+                                DataCell(Text(status)),
+                                DataCell(_priceActions(map)),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _policyActions(Map<String, dynamic> map) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.edit),
+          onPressed: () => _showPolicyDialog(existing: map),
         ),
+        if (map['isActive'] == true)
+          IconButton(
+            icon: const Icon(Icons.block),
+            onPressed: () async {
+              if (!await _confirm(
+                'Deactivate policy',
+                'This policy will be excluded from pricing calculations.',
+              )) {
+                return;
+              }
+              await _api.updateChargePolicy(map['id'] as int, {'isActive': false});
+              await _loadAll();
+            },
+          ),
       ],
     );
   }
 
-  Widget _policiesTab() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Wrap(
-            spacing: 8,
+  Widget _policyCard(Map<String, dynamic> map) {
+    final status = chargePolicyStatus(map);
+    final active = map['isActive'] == true;
+
+    return AppUi.adminQueueCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              SizedBox(
-                width: 160,
-                child: DropdownButtonFormField<String?>(
-                  key: ValueKey(_policyActiveFilter),
-                  initialValue: _policyActiveFilter,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Active', isDense: true),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All')),
-                    DropdownMenuItem(value: 'active', child: Text('Active')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                  ],
-                  onChanged: (v) => setState(() => _policyActiveFilter = v),
+              Expanded(
+                child: Text(
+                  '${map['chargeType']}',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
               ),
-              FilledButton.icon(
-                onPressed: () => _showPolicyDialog(),
-                icon: const Icon(Icons.add),
-                label: const Text('Create policy'),
+              AppUi.statusBadge(
+                status,
+                tone: active ? AppStatusTone.success : AppStatusTone.neutral,
               ),
             ],
           ),
-        ),
-        Expanded(
-          child: _filteredPolicies.isEmpty
-              ? const Center(child: Text('No charge policies found'))
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Type')),
-                      DataColumn(label: Text('Calculation')),
-                      DataColumn(label: Text('Amount')),
-                      DataColumn(label: Text('Active')),
-                      DataColumn(label: Text('Period')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Actions')),
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.summaryRow(label: 'Calculation', value: '${map['calculationType']}'),
+          AppUi.summaryRow(label: 'Amount', value: '${map['amount']}'),
+          AppUi.summaryRow(
+            label: 'Period',
+            value: '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}',
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          _policyActions(map),
+        ],
+      ),
+    );
+  }
+
+  Widget _policiesTab() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 600;
+        return Column(
+          children: [
+            AppUi.adminFilterBar(
+              children: [
+                SizedBox(
+                  width: _filterWidth(context, 160),
+                  child: DropdownButtonFormField<String?>(
+                    key: ValueKey(_policyActiveFilter),
+                    initialValue: _policyActiveFilter,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Active', isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('All')),
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
                     ],
-                    rows: _filteredPolicies.map((row) {
-                      final map = Map<String, dynamic>.from(row as Map);
-                      final status = chargePolicyStatus(map);
-                      return DataRow(cells: [
-                        DataCell(Text('${map['chargeType']}')),
-                        DataCell(Text('${map['calculationType']}')),
-                        DataCell(Text('${map['amount']}')),
-                        DataCell(Text(map['isActive'] == true ? 'Yes' : 'No')),
-                        DataCell(Text('${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}')),
-                        DataCell(Text(status)),
-                        DataCell(Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _showPolicyDialog(existing: map),
-                            ),
-                            if (map['isActive'] == true)
-                              IconButton(
-                                icon: const Icon(Icons.block),
-                                onPressed: () async {
-                                  if (!await _confirm(
-                                    'Deactivate policy',
-                                    'This policy will be excluded from pricing calculations.',
-                                  )) {
-                                    return;
-                                  }
-                                  await _api.updateChargePolicy(map['id'] as int, {'isActive': false});
-                                  await _loadAll();
-                                },
-                              ),
-                          ],
-                        )),
-                      ]);
-                    }).toList(),
+                    onChanged: (v) => setState(() => _policyActiveFilter = v),
                   ),
                 ),
-        ),
-      ],
+                FilledButton.icon(
+                  onPressed: () => _showPolicyDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create policy'),
+                ),
+              ],
+            ),
+            Expanded(
+              child: _filteredPolicies.isEmpty
+                  ? const Center(child: Text('No charge policies found'))
+                  : narrow
+                      ? ListView.separated(
+                          padding: AppUi.pagePadding(context),
+                          itemCount: _filteredPolicies.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppTokens.spaceSm),
+                          itemBuilder: (context, index) {
+                            final map = Map<String, dynamic>.from(_filteredPolicies[index] as Map);
+                            return _policyCard(map);
+                          },
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            columns: const [
+                              DataColumn(label: Text('Type')),
+                              DataColumn(label: Text('Calculation')),
+                              DataColumn(label: Text('Amount')),
+                              DataColumn(label: Text('Active')),
+                              DataColumn(label: Text('Period')),
+                              DataColumn(label: Text('Status')),
+                              DataColumn(label: Text('Actions')),
+                            ],
+                            rows: _filteredPolicies.map((row) {
+                              final map = Map<String, dynamic>.from(row as Map);
+                              final status = chargePolicyStatus(map);
+                              return DataRow(cells: [
+                                DataCell(Text('${map['chargeType']}')),
+                                DataCell(Text('${map['calculationType']}')),
+                                DataCell(Text('${map['amount']}')),
+                                DataCell(Text(map['isActive'] == true ? 'Yes' : 'No')),
+                                DataCell(Text(
+                                    '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}')),
+                                DataCell(Text(status)),
+                                DataCell(_policyActions(map)),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1032,6 +1234,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
           color: AppTokens.surface,
           child: TabBar(
             controller: _tabController,
+            isScrollable: true,
             labelColor: AppTokens.primary,
             unselectedLabelColor: AppTokens.textSecondary,
             indicatorColor: AppTokens.primary,
@@ -1136,7 +1339,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = err is AdminPricingApiException ? err.message : err.toString();
         _loading = false;
       });
     }
