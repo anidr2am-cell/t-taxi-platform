@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../admin_dispatch/pages/admin_booking_detail_page.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../services/admin_flight_api_service.dart';
@@ -183,16 +185,18 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
 
   Widget _syncStatusPanel() {
     if (_statusLoading) {
-      return const LinearProgressIndicator();
+      return const Padding(
+        padding: EdgeInsets.all(AppTokens.spaceMd),
+        child: LinearProgressIndicator(),
+      );
     }
     if (_statusError != null) {
-      return ListTile(
-        title: const Text('Automatic flight sync status unavailable'),
-        subtitle: Text(_statusError!),
-        trailing: IconButton(
-          tooltip: 'Refresh worker status',
-          onPressed: _loadSyncStatus,
-          icon: const Icon(Icons.refresh),
+      return Padding(
+        padding: AppUi.pagePadding(context).copyWith(bottom: 0),
+        child: AppUi.errorState(
+          message: 'Automatic flight sync status unavailable\n$_statusError',
+          onRetry: _loadSyncStatus,
+          retryLabel: 'Retry',
         ),
       );
     }
@@ -204,19 +208,23 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
     final enabled = status['enabled'] == true;
     final providerConfigured = status['providerConfigured'] == true;
     final running = status['running'] == true || _runningCycle;
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+
+    return Padding(
+      padding: AppUi.pagePadding(context).copyWith(bottom: 0),
+      child: AppUi.surfaceCard(
+        backgroundColor: AppTokens.primaryLight,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Automatic flight sync',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppTokens.primaryDark,
+                    ),
                   ),
                 ),
                 if (running)
@@ -236,8 +244,22 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text('Worker: ${enabled ? 'Enabled' : 'Disabled'} · Provider: ${providerConfigured ? 'Configured' : 'Not configured'}'),
+            const SizedBox(height: AppTokens.spaceSm),
+            Wrap(
+              spacing: AppTokens.spaceSm,
+              runSpacing: AppTokens.spaceSm,
+              children: [
+                AppUi.statusBadge(
+                  enabled ? 'Worker: Enabled' : 'Worker: Disabled',
+                  tone: enabled ? AppStatusTone.success : AppStatusTone.neutral,
+                ),
+                AppUi.statusBadge(
+                  providerConfigured ? 'Provider: Configured' : 'Provider: Not configured',
+                  tone: providerConfigured ? AppStatusTone.success : AppStatusTone.warning,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTokens.spaceSm),
             Text('Last completed: ${_text(status['lastCycleCompletedAt'])}'),
             Text(_cycleSummary(lastCycle)),
           ],
@@ -251,134 +273,167 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
     return Column(
       children: [
         _syncStatusPanel(),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              OutlinedButton.icon(
-                onPressed: _pickDate,
-                icon: const Icon(Icons.calendar_today),
-                label: Text(_dateFilter ?? 'Date'),
-              ),
-              if (_dateFilter != null)
-                TextButton(
-                  onPressed: () {
-                    setState(() => _dateFilter = null);
-                    _load();
-                  },
-                  child: const Text('Clear date'),
-                ),
-              SizedBox(
-                width: 160,
-                child: TextField(
-                  controller: _flightSearchController,
-                  decoration: const InputDecoration(
-                    labelText: 'Flight number',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  textCapitalization: TextCapitalization.characters,
-                  onSubmitted: (_) => _load(),
-                ),
-              ),
-              SizedBox(
-                width: 180,
-                child: TextField(
-                  controller: _bookingSearchController,
-                  decoration: const InputDecoration(
-                    labelText: 'Booking number',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (_) => _load(),
-                ),
-              ),
-              FilterChip(
-                label: const Text('Delayed only'),
-                selected: _delayedOnly,
-                onSelected: (value) {
-                  setState(() => _delayedOnly = value);
+        AppUi.adminFilterBar(
+          children: [
+            OutlinedButton.icon(
+              onPressed: _pickDate,
+              icon: const Icon(Icons.calendar_today, size: 18),
+              label: Text(_dateFilter ?? 'Date'),
+            ),
+            if (_dateFilter != null)
+              TextButton(
+                onPressed: () {
+                  setState(() => _dateFilter = null);
                   _load();
                 },
+                child: const Text('Clear date'),
               ),
-              IconButton(onPressed: () => _load(), icon: const Icon(Icons.refresh)),
-            ],
-          ),
+            SizedBox(
+              width: 160,
+              child: TextField(
+                controller: _flightSearchController,
+                decoration: const InputDecoration(
+                  labelText: 'Flight number',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                textCapitalization: TextCapitalization.characters,
+                onSubmitted: (_) => _load(),
+              ),
+            ),
+            SizedBox(
+              width: 180,
+              child: TextField(
+                controller: _bookingSearchController,
+                decoration: const InputDecoration(
+                  labelText: 'Booking number',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _load(),
+              ),
+            ),
+            FilterChip(
+              label: const Text('Delayed only'),
+              selected: _delayedOnly,
+              onSelected: (value) {
+                setState(() => _delayedOnly = value);
+                _load();
+              },
+            ),
+            IconButton(onPressed: () => _load(), icon: const Icon(Icons.refresh)),
+          ],
         ),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? AppUi.loadingState()
               : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_error!),
-                          ElevatedButton(onPressed: () => _load(), child: const Text('Retry')),
-                        ],
-                      ),
+                  ? AppUi.errorState(
+                      message: _error!,
+                      onRetry: () => _load(),
+                      retryLabel: 'Retry',
                     )
                   : _items.isEmpty
-                      ? const Center(child: Text('No airport pickup flights found'))
+                      ? AppUi.emptyState(
+                          title: 'No airport pickup flights found',
+                          icon: Icons.flight_land_outlined,
+                        )
                       : RefreshIndicator(
                           onRefresh: () => _load(),
                           child: ListView.separated(
-                            padding: const EdgeInsets.all(16),
+                            padding: AppUi.pagePadding(context),
                             itemCount: _items.length,
-                            separatorBuilder: (context, index) => const Divider(height: 1),
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: AppTokens.spaceSm),
                             itemBuilder: (context, index) {
                               final item = _items[index] as Map<String, dynamic>;
                               final bookingId = item['bookingId'] as int?;
                               final syncing = bookingId != null &&
                                   _syncingBookingIds.contains(bookingId);
-                              return ListTile(
-                                title: Text(
-                                  '${_text(item['bookingNumber'])} · ${_text(item['flightNumber'])}',
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                subtitle: Column(
+                              final flightStatus =
+                                  item['flightStatus'] as String? ?? '';
+                              final delayMinutes = item['delayMinutes'] as num? ?? 0;
+
+                              return AppUi.adminQueueCard(
+                                onTap: () => _openBooking(item),
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      '${_text(item['departureAirportIata'])} → ${_text(item['arrivalAirportIata'])}',
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '${_text(item['bookingNumber'])} · ${_text(item['flightNumber'])}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                        AppUi.statusBadge(
+                                          flightStatus.isEmpty ? 'UNKNOWN' : flightStatus,
+                                          tone: AppUi.toneForFlightRowStatus(flightStatus),
+                                        ),
+                                        if (delayMinutes > 0) ...[
+                                          const SizedBox(width: AppTokens.spaceSm),
+                                          AppUi.statusBadge(
+                                            'Delay ${delayMinutes}m',
+                                            tone: AppStatusTone.warning,
+                                          ),
+                                        ],
+                                      ],
                                     ),
-                                    Text('Pickup: ${_text(item['scheduledPickupAt'])}'),
-                                    Text('Scheduled arrival: ${_text(item['scheduledArrivalAt'])}'),
-                                    Text('Estimated arrival: ${_text(item['estimatedArrivalAt'])}'),
-                                    Text('Actual arrival: ${_text(item['actualArrivalAt'])}'),
-                                    Text(
-                                      'Delay: ${_text(item['delayMinutes'])} min · Status: ${_text(item['flightStatus'])}',
+                                    const SizedBox(height: AppTokens.spaceSm),
+                                    AppUi.summaryRow(
+                                      label: 'Route',
+                                      value:
+                                          '${_text(item['departureAirportIata'])} → ${_text(item['arrivalAirportIata'])}',
+                                    ),
+                                    AppUi.summaryRow(
+                                      label: 'Pickup',
+                                      value: _text(item['scheduledPickupAt']),
                                     ),
                                     Text(
                                       'Sync: ${_text(item['syncStatus'])} · Last: ${_text(item['lastSyncedAt'])}',
+                                      style: const TextStyle(
+                                        color: AppTokens.textSecondary,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                     if (item['syncError'] != null)
-                                      Text('Sync error: ${item['syncError']}'),
-                                  ],
-                                ),
-                                isThreeLine: true,
-                                trailing: Wrap(
-                                  spacing: 4,
-                                  children: [
-                                    IconButton(
-                                      tooltip: 'Open booking',
-                                      onPressed: () => _openBooking(item),
-                                      icon: const Icon(Icons.open_in_new),
-                                    ),
-                                    syncing
-                                        ? const SizedBox(
-                                            width: 24,
-                                            height: 24,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
-                                          )
-                                        : IconButton(
-                                            tooltip: 'Sync flight',
-                                            onPressed: () => _syncItem(item),
-                                            icon: const Icon(Icons.sync),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          'Sync error: ${item['syncError']}',
+                                          style: const TextStyle(
+                                            color: AppTokens.error,
+                                            fontSize: 13,
                                           ),
+                                        ),
+                                      ),
+                                    const SizedBox(height: AppTokens.spaceSm),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Open booking',
+                                          onPressed: () => _openBooking(item),
+                                          icon: const Icon(Icons.open_in_new),
+                                        ),
+                                        syncing
+                                            ? const SizedBox(
+                                                width: 24,
+                                                height: 24,
+                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                              )
+                                            : IconButton(
+                                                tooltip: 'Sync flight',
+                                                onPressed: () => _syncItem(item),
+                                                icon: const Icon(Icons.sync),
+                                              ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               );
@@ -388,8 +443,11 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
         ),
         if (!_loading && _error == null)
           Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text('Page $_page · Total $_total'),
+            padding: const EdgeInsets.all(AppTokens.spaceSm),
+            child: Text(
+              'Page $_page · Total $_total',
+              style: const TextStyle(color: AppTokens.textSecondary),
+            ),
           ),
       ],
     );

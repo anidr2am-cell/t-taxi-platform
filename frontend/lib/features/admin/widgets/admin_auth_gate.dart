@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 
 /// Ensures admin operational tabs have a saved JWT before rendering content.
@@ -69,27 +71,33 @@ class _AdminAuthGateState extends State<AdminAuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_checking) {
-      return const Center(child: CircularProgressIndicator());
+      return AppUi.loadingState();
     }
     if (_loggedIn) {
       return widget.child;
     }
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+    return AppUi.centeredContent(
+      child: Padding(
+        padding: AppUi.pagePadding(context),
+        child: AppUi.surfaceCard(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Admin login required', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
+              Text(
+                'Admin login required',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppTokens.primaryDark,
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
               TextField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
                 autofillHints: const [AutofillHints.username],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTokens.spaceSm),
               TextField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Password'),
@@ -98,15 +106,29 @@ class _AdminAuthGateState extends State<AdminAuthGate> {
                 onSubmitted: (_) => _login(),
               ),
               if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(_error!, style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: AppTokens.spaceSm),
+                AppUi.surfaceCard(
+                  backgroundColor: AppTokens.errorLight,
+                  padding: const EdgeInsets.all(AppTokens.spaceSm),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: AppTokens.error),
+                  ),
+                ),
               ],
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _submitting ? null : _login,
-                child: _submitting
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Sign in'),
+              const SizedBox(height: AppTokens.spaceMd),
+              SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: _submitting ? null : _login,
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Sign in'),
+                ),
               ),
             ],
           ),

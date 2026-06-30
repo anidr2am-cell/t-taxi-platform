@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../services/admin_notification_api_service.dart';
 
@@ -99,98 +101,151 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              FilterChip(
-                label: const Text('Unread only'),
-                selected: _unreadOnly,
-                onSelected: (v) {
-                  setState(() => _unreadOnly = v);
-                  _load();
-                },
-              ),
-              DropdownButton<String?>(
-                value: _typeFilter,
-                hint: const Text('Type'),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('All types')),
-                  DropdownMenuItem(value: 'BOOKING_CREATED', child: Text('Booking created')),
-                  DropdownMenuItem(value: 'RECEIPT_SUBMITTED', child: Text('Receipt submitted')),
-                  DropdownMenuItem(value: 'REVIEW_SUBMITTED', child: Text('Review submitted')),
-                ],
-                onChanged: (v) {
-                  setState(() => _typeFilter = v);
-                  _load();
-                },
-              ),
-              IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-              ElevatedButton(
-                onPressed: _markingAll ? null : _markAll,
-                child: Text(_markingAll ? 'Marking...' : 'Mark all read'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _enablingNotifications ? null : _enableNotifications,
-                icon: const Icon(Icons.notifications_active_outlined),
-                label: Text(_enablingNotifications ? 'Enabling...' : 'Enable notifications'),
-              ),
-              if (_pushStatus != null) Text(_pushStatus!),
-            ],
-          ),
+    return Scaffold(
+      body: Column(
+        children: [
+          AppUi.adminFilterBar(
+          children: [
+            FilterChip(
+              label: const Text('Unread only'),
+              selected: _unreadOnly,
+              onSelected: (v) {
+                setState(() => _unreadOnly = v);
+                _load();
+              },
+            ),
+            DropdownButton<String?>(
+              value: _typeFilter,
+              hint: const Text('Type'),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('All types')),
+                DropdownMenuItem(value: 'BOOKING_CREATED', child: Text('Booking created')),
+                DropdownMenuItem(value: 'RECEIPT_SUBMITTED', child: Text('Receipt submitted')),
+                DropdownMenuItem(value: 'REVIEW_SUBMITTED', child: Text('Review submitted')),
+              ],
+              onChanged: (v) {
+                setState(() => _typeFilter = v);
+                _load();
+              },
+            ),
+            IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+            ElevatedButton(
+              onPressed: _markingAll ? null : _markAll,
+              child: Text(_markingAll ? 'Marking...' : 'Mark all read'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _enablingNotifications ? null : _enableNotifications,
+              icon: const Icon(Icons.notifications_active_outlined),
+              label: Text(_enablingNotifications ? 'Enabling...' : 'Enable notifications'),
+            ),
+          ],
         ),
+        if (_pushStatus != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+            child: AppUi.surfaceCard(
+              backgroundColor: AppTokens.infoLight,
+              padding: const EdgeInsets.all(AppTokens.spaceSm),
+              child: Text(_pushStatus!),
+            ),
+          ),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? AppUi.loadingState()
               : _error != null
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_error!),
-                          ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                        ],
-                      ),
+                  ? AppUi.errorState(
+                      message: _error!,
+                      onRetry: _load,
+                      retryLabel: 'Retry',
                     )
                   : _items.isEmpty
-                      ? const Center(child: Text('No notifications'))
+                      ? AppUi.emptyState(
+                          title: 'No notifications',
+                          icon: Icons.notifications_none_outlined,
+                        )
                       : RefreshIndicator(
                           onRefresh: _load,
                           child: ListView.separated(
-                            padding: const EdgeInsets.all(16),
+                            padding: AppUi.pagePadding(context),
                             itemCount: _items.length,
-                            separatorBuilder: (context, index) => const Divider(),
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: AppTokens.spaceSm),
                             itemBuilder: (context, index) {
                               final item = Map<String, dynamic>.from(_items[index] as Map);
                               final read = item['read'] == true;
-                              return ListTile(
-                                title: Text(
-                                  item['title'] as String? ?? 'Notification',
-                                  style: TextStyle(
-                                    fontWeight: read ? FontWeight.normal : FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Text(item['body'] as String? ?? ''),
-                                trailing: read
-                                    ? null
-                                    : IconButton(
+                              return AppUi.adminQueueCard(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: read
+                                            ? AppTokens.surfaceMuted
+                                            : AppTokens.primaryLight,
+                                        borderRadius: AppTokens.borderRadiusSm,
+                                      ),
+                                      child: Icon(
+                                        Icons.notifications_outlined,
+                                        color: read ? AppTokens.textMuted : AppTokens.primary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppTokens.spaceSm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  item['title'] as String? ?? 'Notification',
+                                                  style: TextStyle(
+                                                    fontWeight:
+                                                        read ? FontWeight.w600 : FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (!read)
+                                                AppUi.statusBadge(
+                                                  'Unread',
+                                                  tone: AppStatusTone.info,
+                                                ),
+                                            ],
+                                          ),
+                                          if ((item['body'] as String? ?? '').isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              item['body'] as String? ?? '',
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: AppTokens.textSecondary,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    if (!read)
+                                      IconButton(
                                         icon: const Icon(Icons.check),
                                         onPressed: () async {
                                           await _api.markRead(item['notificationId'] as int);
                                           await _load();
                                         },
                                       ),
+                                  ],
+                                ),
                               );
                             },
                           ),
                         ),
         ),
       ],
+      ),
     );
   }
 }

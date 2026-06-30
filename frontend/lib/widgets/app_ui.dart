@@ -629,6 +629,72 @@ abstract final class AppUi {
         return AppStatusTone.neutral;
     }
   }
+
+  static AppStatusTone toneForCommissionStatus(String status) {
+    switch (status) {
+      case 'PAID':
+      case 'APPROVED':
+        return AppStatusTone.success;
+      case 'REJECTED':
+      case 'OVERDUE':
+        return AppStatusTone.error;
+      case 'PENDING':
+      case 'RECEIPT_SUBMITTED':
+        return AppStatusTone.warning;
+      default:
+        return AppStatusTone.neutral;
+    }
+  }
+
+  static AppStatusTone toneForModerationStatus(String status) {
+    switch (status) {
+      case 'VISIBLE':
+        return AppStatusTone.success;
+      case 'HIDDEN':
+        return AppStatusTone.error;
+      default:
+        return AppStatusTone.neutral;
+    }
+  }
+
+  static AppStatusTone toneForFlightRowStatus(String status) {
+    switch (status) {
+      case 'DELAYED':
+        return AppStatusTone.warning;
+      case 'CANCELLED':
+        return AppStatusTone.error;
+      case 'LANDED':
+      case 'ARRIVED':
+        return AppStatusTone.success;
+      default:
+        return AppStatusTone.info;
+    }
+  }
+
+  static Widget adminQueueCard({
+    required Widget child,
+    VoidCallback? onTap,
+    Color? backgroundColor,
+  }) {
+    return surfaceCard(
+      onTap: onTap,
+      backgroundColor: backgroundColor,
+      padding: const EdgeInsets.all(AppTokens.spaceMd),
+      child: child,
+    );
+  }
+
+  static Widget adminFilterBar({required List<Widget> children}) {
+    return Padding(
+      padding: const EdgeInsets.all(AppTokens.spaceMd),
+      child: Wrap(
+        spacing: AppTokens.spaceSm,
+        runSpacing: AppTokens.spaceSm,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: children,
+      ),
+    );
+  }
 }
 
 enum AppStatusTone { neutral, success, warning, error, info }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
@@ -160,32 +162,31 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
     final mapLocations = _filteredLocations;
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: AppUi.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Text(l10n.t('admin_drivers'), style: Theme.of(context).textTheme.titleLarge),
-              const Spacer(),
-              Icon(_socket.connected ? Icons.cloud_done : Icons.cloud_off, size: 18),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _load,
-                icon: const Icon(Icons.refresh),
-                tooltip: l10n.t('admin_dispatch_retry'),
-              ),
-            ],
+          AppUi.sectionHeader(
+            context,
+            title: l10n.t('admin_drivers'),
+            subtitle: l10n.t('admin_driver_management_help'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _socket.connected ? Icons.cloud_done : Icons.cloud_off,
+                  size: 18,
+                  color: _socket.connected ? AppTokens.success : AppTokens.textMuted,
+                ),
+                IconButton(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  tooltip: l10n.t('admin_dispatch_retry'),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.t('admin_driver_management_help'),
-            style: TextStyle(color: Colors.grey.shade700),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          AppUi.adminFilterBar(
             children: [
               FilterChip(
                 label: Text(l10n.t('admin_driver_filter_active_accounts')),
@@ -209,46 +210,56 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
           if (_loading) const LinearProgressIndicator(),
-          if (_error != null)
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.error_outline),
-                title: Text(_error!),
-                trailing: TextButton(onPressed: _load, child: Text(l10n.t('admin_dispatch_retry'))),
-              ),
+          if (_error != null) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            AppUi.errorState(
+              message: _error!,
+              onRetry: _load,
+              retryLabel: l10n.t('admin_dispatch_retry'),
             ),
+          ],
           Expanded(
             child: Column(
               children: [
                 Expanded(
                   flex: 2,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => DriverLocationMap(
-                      locations: mapLocations,
-                      height: constraints.maxHeight,
-                      onTapLocation: (location) => setState(() => _selected = location),
+                  child: AppUi.surfaceCard(
+                    padding: EdgeInsets.zero,
+                    child: ClipRRect(
+                      borderRadius: AppTokens.borderRadiusLg,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => DriverLocationMap(
+                          locations: mapLocations,
+                          height: constraints.maxHeight,
+                          onTapLocation: (location) => setState(() => _selected = location),
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 if (!_loading && mapLocations.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: AppTokens.spaceSm),
                     child: Text(
                       l10n.t('admin_no_driver_locations'),
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: const TextStyle(color: AppTokens.textSecondary),
                     ),
                   ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTokens.spaceSm),
                 Expanded(
                   flex: 3,
                   child: _loading
                       ? const SizedBox.shrink()
                       : drivers.isEmpty
-                          ? Center(child: Text(l10n.t('admin_no_drivers_found')))
-                          : ListView.builder(
+                          ? AppUi.emptyState(
+                              title: l10n.t('admin_no_drivers_found'),
+                              icon: Icons.person_off_outlined,
+                            )
+                          : ListView.separated(
                               itemCount: drivers.length,
+                              separatorBuilder: (_, index) =>
+                                  const SizedBox(height: AppTokens.spaceSm),
                               itemBuilder: (context, index) {
                                 final driver = drivers[index];
                                 final driverId = driver['driverId'] as int;
@@ -256,38 +267,121 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                 final selected = _selected?.driverId == driverId;
                                 final vehicleLabel = _vehicleLabel(driver);
                                 final online = driver['onlineState'] == 'ONLINE';
-                                final activeJobs = driver['activeAssignmentCount'] as num? ?? 0;
-                                return Card(
-                                  color: selected
-                                      ? Theme.of(context).colorScheme.surfaceContainerHighest
-                                      : null,
-                                  child: ListTile(
-                                    leading: Icon(
-                                      online ? Icons.person_pin_circle : Icons.person_off_outlined,
-                                      color: online ? Colors.green : Colors.grey,
-                                    ),
-                                    title: Text(driver['displayName'] as String? ?? ''),
-                                    subtitle: Text(
-                                      [
-                                        online
-                                            ? l10n.t('admin_driver_online')
-                                            : l10n.t('admin_driver_offline'),
-                                        '${l10n.t('admin_driver_active_jobs')}: $activeJobs',
-                                        if (vehicleLabel.isNotEmpty) vehicleLabel,
-                                        if (vehicleLabel.isEmpty) l10n.t('admin_driver_no_vehicle'),
-                                        if (location?.activeBooking != null)
-                                          '${location!.activeBooking!.bookingNumber} ${location.activeBooking!.status}',
-                                        if (location?.lastSeenAt != null)
-                                          '${l10n.t('admin_driver_last_seen')} ${location!.lastSeenAt}',
-                                      ].join('\n'),
-                                    ),
-                                    isThreeLine: true,
-                                    trailing: location == null
-                                        ? Text(l10n.t('admin_driver_no_location'))
-                                        : Text(location.stale
-                                            ? l10n.t('admin_driver_location_stale')
-                                            : l10n.t('admin_driver_location_live')),
-                                    onTap: () => setState(() => _selected = location),
+                                final activeJobs =
+                                    driver['activeAssignmentCount'] as num? ?? 0;
+
+                                return AppUi.adminQueueCard(
+                                  onTap: () => setState(() => _selected = location),
+                                  backgroundColor: selected
+                                      ? AppTokens.primaryLight
+                                      : AppTokens.surface,
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: online
+                                              ? AppTokens.successLight
+                                              : AppTokens.surfaceMuted,
+                                          borderRadius: AppTokens.borderRadiusSm,
+                                        ),
+                                        child: Icon(
+                                          online
+                                              ? Icons.person_pin_circle
+                                              : Icons.person_off_outlined,
+                                          color: online
+                                              ? AppTokens.success
+                                              : AppTokens.textMuted,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppTokens.spaceSm),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              driver['displayName'] as String? ?? '',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Wrap(
+                                              spacing: AppTokens.spaceSm,
+                                              runSpacing: 4,
+                                              children: [
+                                                AppUi.statusBadge(
+                                                  online
+                                                      ? l10n.t('admin_driver_online')
+                                                      : l10n.t('admin_driver_offline'),
+                                                  tone: online
+                                                      ? AppStatusTone.success
+                                                      : AppStatusTone.neutral,
+                                                ),
+                                                AppUi.statusBadge(
+                                                  '${l10n.t('admin_driver_active_jobs')}: $activeJobs',
+                                                  tone: activeJobs > 0
+                                                      ? AppStatusTone.info
+                                                      : AppStatusTone.neutral,
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              vehicleLabel.isNotEmpty
+                                                  ? vehicleLabel
+                                                  : l10n.t('admin_driver_no_vehicle'),
+                                              style: const TextStyle(
+                                                color: AppTokens.textSecondary,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            if (location?.activeBooking != null) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '${location!.activeBooking!.bookingNumber} ${location.activeBooking!.status}',
+                                                style: const TextStyle(
+                                                  color: AppTokens.primaryDark,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                            if (location?.lastSeenAt != null) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '${l10n.t('admin_driver_last_seen')} ${location!.lastSeenAt}',
+                                                style: const TextStyle(
+                                                  color: AppTokens.textMuted,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          if (location == null)
+                                            AppUi.statusBadge(
+                                              l10n.t('admin_driver_no_location'),
+                                              tone: AppStatusTone.neutral,
+                                            )
+                                          else
+                                            AppUi.statusBadge(
+                                              location.stale
+                                                  ? l10n.t('admin_driver_location_stale')
+                                                  : l10n.t('admin_driver_location_live'),
+                                              tone: location.stale
+                                                  ? AppStatusTone.warning
+                                                  : AppStatusTone.success,
+                                            ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 );
                               },

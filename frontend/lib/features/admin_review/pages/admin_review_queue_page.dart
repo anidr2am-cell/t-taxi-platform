@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../services/admin_review_api_service.dart';
 
 class AdminReviewQueuePage extends StatefulWidget {
@@ -69,89 +71,121 @@ class _AdminReviewQueuePageState extends State<AdminReviewQueuePage> {
     return Scaffold(
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                SizedBox(
-                  width: 220,
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(labelText: 'Search'),
-                    onSubmitted: (_) => _load(),
-                  ),
-                ),
-                DropdownButton<String?>(
-                  value: _statusFilter,
-                  hint: const Text('Status'),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All')),
-                    DropdownMenuItem(value: 'VISIBLE', child: Text('Visible')),
-                    DropdownMenuItem(value: 'HIDDEN', child: Text('Hidden')),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _statusFilter = v);
-                    _load();
-                  },
-                ),
-                DropdownButton<int?>(
-                  value: _ratingFilter,
-                  hint: const Text('Rating'),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('All ratings')),
-                    ...List.generate(
-                      5,
-                      (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1} stars')),
-                    ),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _ratingFilter = v);
-                    _load();
-                  },
-                ),
-                IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-              ],
+          AppUi.adminFilterBar(
+          children: [
+            SizedBox(
+              width: 220,
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(labelText: 'Search'),
+                onSubmitted: (_) => _load(),
+              ),
             ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_error!),
-                            ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                          ],
-                        ),
-                      )
-                    : _items.isEmpty
-                        ? const Center(child: Text('No reviews'))
-                        : RefreshIndicator(
-                            onRefresh: _load,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.all(12),
-                              itemCount: _items.length,
-                              separatorBuilder: (_, index) => const SizedBox(height: 8),
-                              itemBuilder: (context, index) {
-                                final item = Map<String, dynamic>.from(_items[index] as Map);
-                                return ListTile(
-                                  title: Text('${item['bookingNumber']} · ${item['rating']}★'),
-                                  subtitle: Text(
-                                    '${item['driver']?['displayName'] ?? 'Driver'} · ${item['moderationStatus']}',
-                                  ),
-                                  trailing: Text(item['customerDisplayName'] as String? ?? ''),
-                                  onTap: () => _openDetail(item['reviewId'] as int),
-                                );
-                              },
-                            ),
+            DropdownButton<String?>(
+              value: _statusFilter,
+              hint: const Text('Status'),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('All')),
+                DropdownMenuItem(value: 'VISIBLE', child: Text('Visible')),
+                DropdownMenuItem(value: 'HIDDEN', child: Text('Hidden')),
+              ],
+              onChanged: (v) {
+                setState(() => _statusFilter = v);
+                _load();
+              },
+            ),
+            DropdownButton<int?>(
+              value: _ratingFilter,
+              hint: const Text('Rating'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('All ratings')),
+                ...List.generate(
+                  5,
+                  (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1} stars')),
+                ),
+              ],
+              onChanged: (v) {
+                setState(() => _ratingFilter = v);
+                _load();
+              },
+            ),
+            IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+          ],
+        ),
+        Expanded(
+          child: _loading
+              ? AppUi.loadingState()
+              : _error != null
+                  ? AppUi.errorState(
+                      message: _error!,
+                      onRetry: _load,
+                      retryLabel: 'Retry',
+                    )
+                  : _items.isEmpty
+                      ? AppUi.emptyState(
+                          title: 'No reviews',
+                          icon: Icons.rate_review_outlined,
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          child: ListView.separated(
+                            padding: AppUi.pagePadding(context),
+                            itemCount: _items.length,
+                            separatorBuilder: (_, index) =>
+                                const SizedBox(height: AppTokens.spaceSm),
+                            itemBuilder: (context, index) {
+                              final item = Map<String, dynamic>.from(_items[index] as Map);
+                              final status = item['moderationStatus'] as String? ?? '';
+                              final rating = item['rating'] as num? ?? 0;
+                              return AppUi.adminQueueCard(
+                                onTap: () => _openDetail(item['reviewId'] as int),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppTokens.warningLight,
+                                        borderRadius: AppTokens.borderRadiusSm,
+                                      ),
+                                      child: Text(
+                                        '$rating★',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTokens.warning,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppTokens.spaceSm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${item['bookingNumber']} · ${item['rating']}★',
+                                            style: const TextStyle(fontWeight: FontWeight.w800),
+                                          ),
+                                          Text(
+                                            '${item['driver']?['displayName'] ?? 'Driver'} · $status',
+                                            style: const TextStyle(
+                                              color: AppTokens.textSecondary,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    AppUi.statusBadge(
+                                      status,
+                                      tone: AppUi.toneForModerationStatus(status),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-          ),
-        ],
+                        ),
+        ),
+      ],
       ),
     );
   }
@@ -273,39 +307,82 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
     return Scaffold(
       appBar: AppBar(title: Text('Review #${widget.reviewId}')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? AppUi.loadingState()
           : _error != null && _detail == null
-              ? Center(child: Text(_error!))
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('Rating: ${_detail?['rating']} / 5', style: const TextStyle(fontSize: 18)),
-                      Text('Status: $status'),
-                      const SizedBox(height: 8),
-                      Text(_detail?['comment'] as String? ?? '(No comment)'),
-                      if (_detail?['hiddenReason'] != null)
-                        Text('Hidden reason: ${_detail?['hiddenReason']}'),
-                      const SizedBox(height: 16),
-                      if (status == 'VISIBLE') ...[
-                        TextField(
-                          controller: _reasonController,
-                          decoration: const InputDecoration(labelText: 'Hide reason'),
-                        ),
-                        ElevatedButton(
+              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
+              : ListView(
+                  padding: AppUi.pagePadding(context),
+                  children: [
+                    AppUi.surfaceCard(
+                      backgroundColor: AppTokens.primaryLight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Rating: ${_detail?['rating']} / 5',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              AppUi.statusBadge(
+                                status,
+                                tone: AppUi.toneForModerationStatus(status),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppTokens.spaceSm),
+                          Text('Status: $status'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    AppUi.surfaceCard(
+                      child: Text(_detail?['comment'] as String? ?? '(No comment)'),
+                    ),
+                    if (_detail?['hiddenReason'] != null) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      AppUi.summaryRow(
+                        label: 'Hidden reason',
+                        value: _detail?['hiddenReason'] as String,
+                      ),
+                    ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    if (status == 'VISIBLE') ...[
+                      TextField(
+                        controller: _reasonController,
+                        decoration: const InputDecoration(labelText: 'Hide reason'),
+                      ),
+                      const SizedBox(height: AppTokens.spaceSm),
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
                           onPressed: _submitting ? null : _hide,
                           child: Text(_submitting ? 'Working...' : 'Hide review'),
                         ),
-                      ],
-                      if (status == 'HIDDEN')
-                        ElevatedButton(
+                      ),
+                    ],
+                    if (status == 'HIDDEN')
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
                           onPressed: _submitting ? null : _restore,
                           child: Text(_submitting ? 'Working...' : 'Restore review'),
                         ),
-                      if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                    ],
-                  ),
+                      ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTokens.spaceSm),
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: AppTokens.error),
+                        ),
+                      ),
+                  ],
                 ),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../services/admin_pricing_api_service.dart';
 
 class AdminPricingManagerPage extends StatefulWidget {
@@ -621,11 +623,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   Widget _summaryCards() {
     final summary = _summary ?? {};
     final cards = [
-      ('Active routes', summary['activeRouteCount'] ?? 0),
-      ('Active vehicle prices', summary['activeVehiclePriceCount'] ?? 0),
-      ('Active charge policies', summary['activeChargePolicyCount'] ?? 0),
-      ('Current prices', summary['currentPriceCount'] ?? 0),
-      ('Expiring soon', summary['expiringSoonPriceCount'] ?? 0),
+      ('Active routes', summary['activeRouteCount'] ?? 0, Icons.route, AppStatusTone.info),
+      ('Active vehicle prices', summary['activeVehiclePriceCount'] ?? 0, Icons.directions_car_filled_outlined, AppStatusTone.success),
+      ('Active charge policies', summary['activeChargePolicyCount'] ?? 0, Icons.policy_outlined, AppStatusTone.neutral),
+      ('Current prices', summary['currentPriceCount'] ?? 0, Icons.payments_outlined, AppStatusTone.success),
+      ('Expiring soon', summary['expiringSoonPriceCount'] ?? 0, Icons.schedule, AppStatusTone.warning),
     ];
 
     return Wrap(
@@ -633,21 +635,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       runSpacing: 12,
       children: cards
           .map(
-            (item) => SizedBox(
-              width: 180,
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.$1, style: Theme.of(context).textTheme.bodySmall),
-                      const SizedBox(height: 8),
-                      Text('${item.$2}', style: Theme.of(context).textTheme.headlineSmall),
-                    ],
-                  ),
-                ),
-              ),
+            (item) => AppUi.kpiMetricCard(
+              label: item.$1,
+              value: '${item.$2}',
+              icon: item.$3,
+              tone: item.$4,
             ),
           )
           .toList(),
@@ -1011,18 +1003,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   @override
   Widget build(BuildContext context) {
     if (_loading && _summary == null) {
-      return const Center(child: CircularProgressIndicator());
+      return AppUi.loadingState();
     }
     if (_error != null && _summary == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_error!, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            ElevatedButton(onPressed: _loadAll, child: const Text('Retry')),
-          ],
-        ),
+      return AppUi.errorState(
+        message: _error!,
+        onRetry: _loadAll,
+        retryLabel: 'Retry',
       );
     }
 
@@ -1030,27 +1017,31 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Row(
-            children: [
-              Text('Pricing Manager', style: Theme.of(context).textTheme.headlineSmall),
-              const Spacer(),
-              IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh)),
-            ],
+          padding: AppUi.pagePadding(context).copyWith(bottom: 0),
+          child: AppUi.sectionHeader(
+            context,
+            title: 'Pricing Manager',
+            trailing: IconButton(onPressed: _loadAll, icon: const Icon(Icons.refresh)),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: AppUi.pagePadding(context),
           child: _summaryCards(),
         ),
-        TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Routes'),
-            Tab(text: 'Vehicle Prices'),
-            Tab(text: 'Charge Policies'),
-            Tab(text: 'Simulator'),
-          ],
+        Material(
+          color: AppTokens.surface,
+          child: TabBar(
+            controller: _tabController,
+            labelColor: AppTokens.primary,
+            unselectedLabelColor: AppTokens.textSecondary,
+            indicatorColor: AppTokens.primary,
+            tabs: const [
+              Tab(text: 'Routes'),
+              Tab(text: 'Vehicle Prices'),
+              Tab(text: 'Charge Policies'),
+              Tab(text: 'Simulator'),
+            ],
+          ),
         ),
         Expanded(
           child: TabBarView(
@@ -1156,9 +1147,13 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
     final vehicleOptions = _vehicleOptionsForRoute(_routeId);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: AppUi.pagePadding(context),
       children: [
-        DropdownButtonFormField<String?>(
+        AppUi.surfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DropdownButtonFormField<String?>(
           key: Key('simulator_route_dropdown:${_routeId ?? ''}'),
           initialValue: _routeId,
           isExpanded: true,
@@ -1197,37 +1192,71 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
         SwitchListTile(title: const Text('Waiting'), value: _waiting, onChanged: (v) => setState(() => _waiting = v)),
         SwitchListTile(title: const Text('Parking'), value: _parking, onChanged: (v) => setState(() => _parking = v)),
         SwitchListTile(title: const Text('Toll'), value: _toll, onChanged: (v) => setState(() => _toll = v)),
-        const SizedBox(height: 8),
-        FilledButton(
-          onPressed: _loading ? null : _run,
-          child: _loading
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Calculate'),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceMd),
+        SizedBox(
+          height: 48,
+          child: FilledButton(
+            onPressed: _loading ? null : _run,
+            child: _loading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Calculate'),
+          ),
         ),
         if (_error != null) ...[
-          const SizedBox(height: 12),
-          Text(_error!, style: const TextStyle(color: Colors.red)),
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.errorLight,
+            child: Text(_error!, style: const TextStyle(color: AppTokens.error)),
+          ),
         ],
         if (_result != null) ...[
-          const SizedBox(height: 16),
-          Text('Total: ${_result!['totalAmount']} ${_result!['currency']}',
-              style: Theme.of(context).textTheme.titleLarge),
-          Text('Subtotal: ${_result!['subtotal']}  Discount: ${_result!['discount']}'),
-          const SizedBox(height: 8),
-          Text('Matched route: ${_result!['matchedRoute']?['id']}'),
-          Text('Base price: ${_result!['vehicleBasePrice']?['price']} ${_result!['vehicleBasePrice']?['currency']}'),
-          const SizedBox(height: 8),
-          const Text('Charge items', style: TextStyle(fontWeight: FontWeight.bold)),
-          ...((_result!['chargeItems'] as List<dynamic>? ?? []).map(
-            (item) {
-              final map = Map<String, dynamic>.from(item as Map);
-              return ListTile(
-                dense: true,
-                title: Text('${map['description'] ?? map['chargeType']}'),
-                trailing: Text('${map['amount']}'),
-              );
-            },
-          )),
+          const SizedBox(height: AppTokens.spaceMd),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.primaryLight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total: ${_result!['totalAmount']} ${_result!['currency']}',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppTokens.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceSm),
+                Text('Subtotal: ${_result!['subtotal']}  Discount: ${_result!['discount']}'),
+                const SizedBox(height: AppTokens.spaceSm),
+                Text('Matched route: ${_result!['matchedRoute']?['id']}'),
+                Text(
+                  'Base price: ${_result!['vehicleBasePrice']?['price']} ${_result!['vehicleBasePrice']?['currency']}',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.adminDetailSection(
+            context: context,
+            title: 'Charge items',
+            child: Column(
+              children: ((_result!['chargeItems'] as List<dynamic>? ?? []).map(
+                (item) {
+                  final map = Map<String, dynamic>.from(item as Map);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text('${map['description'] ?? map['chargeType']}')),
+                        Text('${map['amount']}'),
+                      ],
+                    ),
+                  );
+                },
+              )).toList(),
+            ),
+          ),
         ],
       ],
     );

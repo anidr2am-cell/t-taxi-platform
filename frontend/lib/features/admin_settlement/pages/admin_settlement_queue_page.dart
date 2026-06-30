@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../services/admin_settlement_api_service.dart';
 
 class AdminSettlementQueuePage extends StatefulWidget {
@@ -48,46 +50,48 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
     return Scaffold(
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                DropdownButton<String?>(
-                  value: _statusFilter,
-                  hint: const Text('Status'),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All')),
-                    DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-                    DropdownMenuItem(value: 'RECEIPT_SUBMITTED', child: Text('Receipt submitted')),
-                    DropdownMenuItem(value: 'OVERDUE', child: Text('Overdue')),
-                    DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
-                    DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _statusFilter = v);
-                    _load();
-                  },
-                ),
-                IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+          AppUi.adminFilterBar(
+          children: [
+            DropdownButton<String?>(
+              value: _statusFilter,
+              hint: const Text('Status'),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('All')),
+                DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
+                DropdownMenuItem(value: 'RECEIPT_SUBMITTED', child: Text('Receipt submitted')),
+                DropdownMenuItem(value: 'OVERDUE', child: Text('Overdue')),
+                DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
+                DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
               ],
+              onChanged: (v) {
+                setState(() => _statusFilter = v);
+                _load();
+              },
             ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(child: Text(_error!))
-                    : _items.isEmpty
-                        ? const Center(child: Text('No settlements'))
-                        : ListView.builder(
+            IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+          ],
+        ),
+        Expanded(
+          child: _loading
+              ? AppUi.loadingState()
+              : _error != null
+                  ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
+                  : _items.isEmpty
+                      ? AppUi.emptyState(
+                          title: 'No settlements',
+                          icon: Icons.receipt_long_outlined,
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          child: ListView.separated(
+                            padding: AppUi.pagePadding(context),
                             itemCount: _items.length,
+                            separatorBuilder: (_, index) =>
+                                const SizedBox(height: AppTokens.spaceSm),
                             itemBuilder: (context, index) {
                               final item = Map<String, dynamic>.from(_items[index] as Map);
-                              return ListTile(
-                                title: Text(item['bookingNumber'] as String? ?? ''),
-                                subtitle: Text(
-                                  '${item['driverName'] ?? ''} · ${item['commissionStatus']}',
-                                ),
+                              final status = item['commissionStatus'] as String? ?? '';
+                              return AppUi.adminQueueCard(
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -98,11 +102,71 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                                     ),
                                   ),
                                 ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppTokens.primaryLight,
+                                        borderRadius: AppTokens.borderRadiusSm,
+                                      ),
+                                      child: const Icon(
+                                        Icons.receipt_long_outlined,
+                                        color: AppTokens.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppTokens.spaceSm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item['bookingNumber'] as String? ?? '',
+                                            style: const TextStyle(fontWeight: FontWeight.w800),
+                                          ),
+                                          Text(
+                                            item['driverName'] as String? ?? '',
+                                            style: const TextStyle(
+                                              color: AppTokens.textSecondary,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          if (item['dueAt'] != null)
+                                            Text(
+                                              'Due: ${item['dueAt']}',
+                                              style: const TextStyle(
+                                                color: AppTokens.textMuted,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          '${item['commissionAmount']} ${item['currency']}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        AppUi.statusBadge(
+                                          status,
+                                          tone: AppUi.toneForCommissionStatus(status),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               );
                             },
                           ),
-          ),
-        ],
+                        ),
+        ),
+      ],
       ),
     );
   }
@@ -137,6 +201,12 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -164,7 +234,9 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
       widget.onChanged();
       await _load();
     } catch (err) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -178,7 +250,9 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
       widget.onChanged();
       await _load();
     } catch (err) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -192,39 +266,83 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.bookingNumber)),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? AppUi.loadingState()
           : _error != null
-              ? Center(child: Text(_error!))
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('Status: $status'),
-                      Text('Amount: ${_detail?['commissionAmount']} ${_detail?['currency']}'),
-                      if (_detail?['receiptUrl'] != null)
-                        Text('Receipt: ${_detail?['receiptUrl']}'),
-                      const SizedBox(height: 16),
-                      if (canReview) ...[
-                        ElevatedButton(
-                          onPressed: _submitting ? null : _approve,
-                          child: const Text('Approve'),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _reasonController,
-                          decoration: const InputDecoration(
-                            labelText: 'Rejection reason',
-                            border: OutlineInputBorder(),
+              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
+              : ListView(
+                  padding: AppUi.pagePadding(context),
+                  children: [
+                    AppUi.surfaceCard(
+                      backgroundColor: AppTokens.primaryLight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${_detail?['commissionAmount']} ${_detail?['currency']}',
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTokens.primaryDark,
+                                  ),
+                                ),
+                              ),
+                              AppUi.statusBadge(
+                                status,
+                                tone: AppUi.toneForCommissionStatus(status),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: AppTokens.spaceSm),
+                          Text('Status: $status', style: const TextStyle(fontSize: 18)),
+                          if (_detail?['dueAt'] != null)
+                            Text('Due: ${_detail?['dueAt']}'),
+                          if (_detail?['receiptUrl'] != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: AppTokens.spaceSm),
+                              child: Text('Receipt on file'),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (canReview) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.adminDetailSection(
+                        context: context,
+                        title: 'Review receipt',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height: 48,
+                              child: FilledButton(
+                                onPressed: _submitting ? null : _approve,
+                                child: const Text('Approve'),
+                              ),
+                            ),
+                            const SizedBox(height: AppTokens.spaceMd),
+                            TextField(
+                              controller: _reasonController,
+                              decoration: const InputDecoration(
+                                labelText: 'Rejection reason',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: AppTokens.spaceSm),
+                            SizedBox(
+                              height: 48,
+                              child: OutlinedButton(
+                                onPressed: _submitting ? null : _reject,
+                                child: const Text('Reject'),
+                              ),
+                            ),
+                          ],
                         ),
-                        ElevatedButton(
-                          onPressed: _submitting ? null : _reject,
-                          child: const Text('Reject'),
-                        ),
-                      ],
+                      ),
                     ],
-                  ),
+                  ],
                 ),
     );
   }
