@@ -76,6 +76,27 @@ paths:
                       version: 1.0.0
                       timestamp: '2026-07-01T10:00:00+07:00'
 
+  /health/readiness:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: Returns non-sensitive readiness checks for staging operations. Optional integrations are reported but do not fail readiness.
+      security: []
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReadiness'
+        '503':
+          description: Required dependency is degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReadiness'
+
   /auth/register:
     post:
       tags: [Authentication]
@@ -3782,6 +3803,43 @@ components:
                 timestamp:
                   type: string
                   format: date-time
+
+    ApiResponseReadiness:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [ready, degraded]
+                timestamp:
+                  type: string
+                  format: date-time
+                checks:
+                  type: object
+                  properties:
+                    database:
+                      type: string
+                      enum: [connected, disconnected]
+                    uploadDirectory:
+                      type: string
+                      enum: [writable, not_writable]
+                integrations:
+                  type: object
+                  properties:
+                    aviationstackConfigured:
+                      type: boolean
+                    flightSyncEnabled:
+                      type: boolean
+                    flightSyncRunning:
+                      type: boolean
+                    smtpConfigured:
+                      type: boolean
+                    firebaseConfigured:
+                      type: boolean
 
     # --- Customer ---
     CustomerProfile:

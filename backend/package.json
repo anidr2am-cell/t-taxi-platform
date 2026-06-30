@@ -11,6 +11,8 @@
     "dev": "node --watch src/server.js",
     "test": "node --test tests/**/*.test.js",
     "lint": "echo \"Add ESLint in a later phase\"",
+    "validate:migrations": "node scripts/validate-migrations.js",
+    "smoke:staging": "node scripts/staging-smoke-test.js",
     "create-test-driver": "node scripts/create-test-driver.js",
     "create-test-admin": "node scripts/create-test-admin.js"
   },

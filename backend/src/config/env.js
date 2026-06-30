@@ -7,7 +7,7 @@
 const Joi = require('joi');
 
 const envSchema = Joi.object({
-  NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+  NODE_ENV: Joi.string().valid('development', 'staging', 'production', 'test').default('development'),
   PORT: Joi.number().port().default(3000),
   API_VERSION: Joi.string().default('v1'),
   APP_NAME: Joi.string().default('TTaxi'),
@@ -86,23 +86,28 @@ if (error) {
   process.exit(1);
 }
 
+const isProductionLike = env.NODE_ENV === 'production' || env.NODE_ENV === 'staging';
+
 if (env.SWAGGER_ENABLED === undefined) {
-  env.SWAGGER_ENABLED = env.NODE_ENV !== 'production';
+  env.SWAGGER_ENABLED = !isProductionLike;
 }
 
-if (env.NODE_ENV === 'production') {
+if (isProductionLike) {
   const productionErrors = [];
   if (isWeakSecret(env.JWT_ACCESS_SECRET)) {
-    productionErrors.push('JWT_ACCESS_SECRET must be a strong secret in production');
+    productionErrors.push('JWT_ACCESS_SECRET must be a strong secret in production/staging');
   }
   if (isWeakSecret(env.JWT_REFRESH_SECRET)) {
-    productionErrors.push('JWT_REFRESH_SECRET must be a strong secret in production');
+    productionErrors.push('JWT_REFRESH_SECRET must be a strong secret in production/staging');
   }
   if (!env.DB_PASSWORD) {
-    productionErrors.push('DB_PASSWORD is required in production');
+    productionErrors.push('DB_PASSWORD is required in production/staging');
   }
   if (env.CORS_ORIGIN === '*' || !env.CORS_ORIGIN) {
-    productionErrors.push('CORS_ORIGIN must be an explicit allowlist in production');
+    productionErrors.push('CORS_ORIGIN must be an explicit allowlist in production/staging');
+  }
+  if (resolveAllowDevQrReissue(env.NODE_ENV, env.ALLOW_DEV_QR_REISSUE)) {
+    productionErrors.push('ALLOW_DEV_QR_REISSUE must be false in production/staging');
   }
   if (productionErrors.length) {
     // eslint-disable-next-line no-console
