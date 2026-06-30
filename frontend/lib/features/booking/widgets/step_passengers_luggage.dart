@@ -93,7 +93,7 @@ class StepPassengersLuggage extends StatelessWidget {
           ),
           const SizedBox(height: AppTokens.spaceMd),
           if (controller.isLoading)
-            const WizardLoadingView(message: 'Loading recommendation...')
+            WizardLoadingView(message: context.l10n.t('loading_recommendation'))
           else if (state.errorMessage != null)
             WizardErrorView(
               message: state.errorMessage!,

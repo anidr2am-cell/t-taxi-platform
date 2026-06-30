@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../services/admin_notification_api_service.dart';
@@ -50,7 +52,7 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -63,7 +65,7 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
       await _api.markAllRead();
       await _load();
     } catch (err) {
-      setState(() => _error = err.toString());
+      setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
     } finally {
       setState(() => _markingAll = false);
     }
@@ -156,7 +158,7 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
                   ? AppUi.errorState(
                       message: _error!,
                       onRetry: _load,
-                      retryLabel: 'Retry',
+                      retryLabel: context.l10n.t('admin_dispatch_retry'),
                     )
                   : _items.isEmpty
                       ? AppUi.emptyState(

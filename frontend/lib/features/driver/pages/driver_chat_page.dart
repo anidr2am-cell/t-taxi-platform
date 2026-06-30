@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../chat/models/chat_connection_state.dart';
 import '../../chat/services/chat_realtime_session.dart';
 import '../../chat/services/chat_socket_service.dart';
 import '../services/driver_chat_api.dart';
+
+AppStatusTone _toneForConnection(ChatConnectionState state) {
+  switch (state) {
+    case ChatConnectionState.connected:
+      return AppStatusTone.success;
+    case ChatConnectionState.connecting:
+    case ChatConnectionState.reconnecting:
+      return AppStatusTone.warning;
+    case ChatConnectionState.error:
+      return AppStatusTone.error;
+    case ChatConnectionState.offline:
+      return AppStatusTone.neutral;
+  }
+}
 
 class DriverChatPage extends StatefulWidget {
   const DriverChatPage({
@@ -73,95 +90,135 @@ class _DriverChatPageState extends State<DriverChatPage> {
     }
   }
 
+  String? _sessionErrorMessage(AppLocalizations l10n) {
+    final err = _session.error;
+    if (err == null) return null;
+    if (err.contains('Exception') || err.startsWith('Instance of')) {
+      return l10n.t('ui_load_failed');
+    }
+    return err;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final sessionError = _sessionErrorMessage(l10n);
+    final inputHint = _session.sendingAllowed
+        ? (_session.hasPendingOutbound
+            ? l10n.t('admin_chat_hint_queued')
+            : l10n.t('driver_chat_hint_message'))
+        : l10n.t('admin_chat_hint_readonly');
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Chat ${widget.bookingNumber}'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Center(child: _DriverConnectionChip(state: _session.connectionState)),
-          ),
-          if (_session.unreadCount > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Center(child: Chip(label: Text('${_session.unreadCount}'))),
-            ),
-          IconButton(onPressed: _session.refresh, icon: const Icon(Icons.refresh)),
-        ],
-      ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_session.loading) const LinearProgressIndicator(),
-          if (_session.error != null)
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
+          Padding(
+            padding: AppUi.pagePadding(context).copyWith(bottom: 0),
+            child: AppUi.sectionHeader(
+              context,
+              title: widget.bookingNumber,
+              trailing: Wrap(
+                spacing: AppTokens.spaceSm,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
-                    child: Text(_session.error!, style: const TextStyle(color: Colors.red)),
+                  AppUi.statusBadge(
+                    chatConnectionLabel(_session.connectionState),
+                    tone: _toneForConnection(_session.connectionState),
                   ),
-                  if (_session.connectionState == ChatConnectionState.error)
-                    TextButton(onPressed: _session.retryConnection, child: const Text('Retry')),
+                  if (_session.unreadCount > 0)
+                    AppUi.statusBadge(
+                      '${_session.unreadCount}',
+                      tone: AppStatusTone.info,
+                    ),
+                  IconButton(onPressed: _session.refresh, icon: const Icon(Icons.refresh)),
                 ],
+              ),
+            ),
+          ),
+          if (_session.loading) const LinearProgressIndicator(),
+          if (sessionError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+              child: AppUi.surfaceCard(
+                backgroundColor: AppTokens.errorLight,
+                padding: const EdgeInsets.all(AppTokens.spaceSm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        sessionError,
+                        style: const TextStyle(color: AppTokens.error, fontSize: 13),
+                      ),
+                    ),
+                    if (_session.connectionState == ChatConnectionState.error)
+                      TextButton(
+                        onPressed: _session.retryConnection,
+                        child: Text(l10n.t('driver_retry')),
+                      ),
+                  ],
+                ),
               ),
             ),
           Expanded(
             child: _session.messages.isEmpty && !_session.loading
-                ? const Center(child: Text('No messages yet'))
-                : ListView.builder(
+                ? AppUi.emptyState(
+                    title: l10n.t('driver_chat_no_messages'),
+                    icon: Icons.forum_outlined,
+                  )
+                : ListView.separated(
+                    padding: AppUi.pagePadding(context),
                     itemCount: _session.messages.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: AppTokens.spaceSm),
                     itemBuilder: (context, index) {
-                      final item = _session.messages[index] as Map<String, dynamic>;
-                      return ListTile(
-                        title: Text(item['senderDisplayName'] as String? ?? 'Participant'),
-                        subtitle: Text(item['text'] as String? ?? ''),
+                      final item = Map<String, dynamic>.from(_session.messages[index] as Map);
+                      final sender = item['senderDisplayName'] as String? ?? l10n.t('admin_chat_participant');
+                      final text = item['text'] as String? ?? '';
+                      return AppUi.surfaceCard(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTokens.spaceMd,
+                          vertical: AppTokens.spaceSm,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(sender, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            const SizedBox(height: 4),
+                            Text(text, style: const TextStyle(fontSize: 14)),
+                          ],
+                        ),
                       );
                     },
                   ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: AppUi.pagePadding(context),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     enabled: _session.sendingAllowed && !_session.sending,
-                    decoration: InputDecoration(
-                      hintText: _session.sendingAllowed
-                          ? (_session.hasPendingOutbound
-                              ? 'Queued — waiting for connection'
-                              : 'Message customer/admin')
-                          : 'Read-only chat',
-                    ),
+                    decoration: InputDecoration(hintText: inputHint, isDense: true),
                     onSubmitted: (_) => _send(),
                   ),
                 ),
-                IconButton(
+                const SizedBox(width: AppTokens.spaceSm),
+                FilledButton(
                   onPressed: _session.sendingAllowed && !_session.sending ? _send : null,
-                  icon: const Icon(Icons.send),
+                  child: _session.sending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.send, size: 20),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DriverConnectionChip extends StatelessWidget {
-  const _DriverConnectionChip({required this.state});
-
-  final ChatConnectionState state;
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      label: Text(chatConnectionLabel(state), style: const TextStyle(fontSize: 11)),
-      visualDensity: VisualDensity.compact,
     );
   }
 }

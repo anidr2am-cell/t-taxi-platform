@@ -123,6 +123,23 @@ void main() {
 
     expect(find.text('Unable to load booking. Please try again.'), findsOneWidget);
   });
+
+  testWidgets('lookup page has no horizontal overflow at 360px', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      home: GuestBookingLookupPage(
+        lookupService: _FakeLookupService(cached: _result()),
+        enableCustomerTools: false,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Map<String, dynamic> _lookupJson() => {

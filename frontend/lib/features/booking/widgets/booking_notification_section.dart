@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import '../../../config/app_config.dart';
 import '../../notification/services/notification_device_registration_service.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../booking/widgets/booking_review_form.dart';
 
 class BookingNotificationApi {
@@ -96,7 +97,7 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: 'Could not load notifications');
         _loading = false;
       });
     }

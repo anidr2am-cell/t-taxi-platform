@@ -33,7 +33,7 @@ class StepVehicleSelect extends StatelessWidget {
     final recommendation = state.recommendation;
 
     if (controller.isLoading) {
-      return const WizardLoadingView(message: 'Calculating price...');
+      return WizardLoadingView(message: context.l10n.t('calculating_price'));
     }
 
     if (state.errorMessage != null && state.pricing == null) {

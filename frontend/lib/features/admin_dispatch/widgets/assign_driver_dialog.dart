@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../utils/user_facing_error.dart';
 import '../services/admin_dispatch_api_service.dart';
 
 class AssignDriverDialogResult {
@@ -70,7 +71,7 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: 'Could not load drivers');
         _loading = false;
       });
     }

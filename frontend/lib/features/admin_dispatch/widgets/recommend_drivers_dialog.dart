@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../utils/user_facing_error.dart';
 import '../services/admin_dispatch_api_service.dart';
 
 class RecommendDriversDialogResult {
@@ -68,7 +69,7 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: 'Could not load recommendations');
         _loading = false;
       });
     }

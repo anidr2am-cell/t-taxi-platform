@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../admin_dispatch/pages/admin_booking_detail_page.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
@@ -73,7 +75,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -92,7 +94,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
       });
     } catch (err) {
       setState(() {
-        _statusError = err.toString();
+        _statusError = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _statusLoading = false;
       });
     }
@@ -107,7 +109,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err.toString())),
+          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
         );
       }
     } finally {
@@ -152,7 +154,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err.toString())),
+          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
         );
       }
     } finally {
@@ -216,9 +218,13 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              spacing: AppTokens.spaceSm,
+              runSpacing: AppTokens.spaceSm,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
+                SizedBox(
+                  width: double.infinity,
                   child: Text(
                     'Automatic flight sync',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(

@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+
+import '../../../utils/user_facing_error.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/booking_create_result.dart';
 import '../models/location_option.dart';
@@ -399,7 +401,7 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return result;
     } catch (e) {
-      _state = _state.copyWith(errorMessage: e.toString());
+      _state = _state.copyWith(errorMessage: userFacingError(e));
       notifyListeners();
       return null;
     } finally {
@@ -430,7 +432,7 @@ class BookingWizardController extends ChangeNotifier {
       );
     } catch (e) {
       _state = _state.copyWith(
-        errorMessage: e.toString(),
+        errorMessage: userFacingError(e),
         clearRecommendation: true,
       );
     } finally {
@@ -624,7 +626,7 @@ class BookingWizardController extends ChangeNotifier {
       );
       _state = _state.copyWith(pricing: pricing, clearError: true);
     } catch (e) {
-      _state = _state.copyWith(errorMessage: e.toString(), clearPricing: true);
+      _state = _state.copyWith(errorMessage: userFacingError(e), clearPricing: true);
     } finally {
       _setLoading(false);
       await _persist();

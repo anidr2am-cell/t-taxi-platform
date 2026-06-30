@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../utils/user_facing_error.dart';
 import '../pages/driver_shell_page.dart';
 import '../services/driver_api_service.dart';
 
@@ -61,7 +63,7 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
     } on DriverApiException catch (err) {
       if (mounted) setState(() => _error = err.message);
     } catch (err) {
-      if (mounted) setState(() => _error = err.toString());
+      if (mounted) setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

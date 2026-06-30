@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../utils/user_facing_error.dart';
 import '../services/driver_settlement_api_service.dart';
 
 typedef ReceiptPickResult = ({List<int> bytes, String filename});
@@ -70,7 +71,7 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -235,7 +236,7 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -299,7 +300,7 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
       });
       await _load();
     } catch (err) {
-      setState(() => _uploadError = err.toString());
+      setState(() => _uploadError = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
 import 'admin_booking_detail_page.dart';
@@ -76,7 +77,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
     } catch (err) {
       setState(() {
         _loading = false;
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
       });
     }
   }
@@ -116,7 +117,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           _needsLogin = true;
           _error = null;
         } else {
-          _error = err.toString();
+          _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
         }
         _loading = false;
         _loadingMore = false;
@@ -255,11 +256,12 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         borderRadius: AppTokens.borderRadiusMd,
         border: Border.all(color: AppTokens.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(label, style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
-          const SizedBox(width: 8),
+          const SizedBox(height: 4),
           child,
         ],
       ),

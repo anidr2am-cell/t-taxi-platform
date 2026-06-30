@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../utils/user_facing_error.dart';
 import '../services/driver_location_api_service.dart';
 
 class DriverLiveLocationControl extends StatefulWidget {
@@ -123,7 +124,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
       if (!mounted) return;
       setState(() {
         _sending = false;
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
       });
     }
   }

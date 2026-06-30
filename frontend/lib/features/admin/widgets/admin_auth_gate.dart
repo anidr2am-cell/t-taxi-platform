@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 
@@ -62,7 +64,7 @@ class _AdminAuthGateState extends State<AdminAuthGate> {
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
         _submitting = false;
       });
     }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../utils/user_facing_error.dart';
 import '../../../config/app_config.dart';
 
 class BookingReviewApi {
@@ -153,7 +154,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: 'Could not load review');
         _loading = false;
       });
     }
@@ -183,7 +184,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
         return;
       }
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: 'Could not load review');
         _submitting = false;
       });
     }

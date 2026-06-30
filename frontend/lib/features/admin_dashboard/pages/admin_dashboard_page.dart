@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/admin_dashboard_metrics.dart';
 import '../services/admin_dashboard_api_service.dart';
@@ -47,7 +49,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }

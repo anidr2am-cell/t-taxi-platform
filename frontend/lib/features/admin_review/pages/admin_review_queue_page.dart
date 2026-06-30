@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_review_api_service.dart';
 
@@ -51,7 +53,7 @@ class _AdminReviewQueuePageState extends State<AdminReviewQueuePage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -119,7 +121,7 @@ class _AdminReviewQueuePageState extends State<AdminReviewQueuePage> {
                   ? AppUi.errorState(
                       message: _error!,
                       onRetry: _load,
-                      retryLabel: 'Retry',
+                      retryLabel: context.l10n.t('admin_dispatch_retry'),
                     )
                   : _items.isEmpty
                       ? AppUi.emptyState(
@@ -237,7 +239,7 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -267,7 +269,7 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _submitting = false;
       });
     }
@@ -295,7 +297,7 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _submitting = false;
       });
     }

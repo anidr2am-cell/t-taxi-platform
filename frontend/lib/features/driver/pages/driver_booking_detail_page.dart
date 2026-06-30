@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
@@ -99,7 +100,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       if (!mounted) return;
       setState(() {
         _processing = false;
-        _actionError = err.toString();
+        _actionError = userFacingError(err, fallback: l10n.t('ui_action_failed'));
       });
     }
   }
@@ -204,7 +205,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
               });
             }
             return AppUi.errorState(
-              message: '${l10n.t('driver_detail_error')}\n${err.toString()}',
+              message: l10n.t('driver_detail_error'),
               onRetry: _loadBooking,
               retryLabel: l10n.t('driver_retry'),
             );

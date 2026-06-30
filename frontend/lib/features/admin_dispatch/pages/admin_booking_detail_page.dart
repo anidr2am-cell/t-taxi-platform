@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../widgets/admin_qr_reissue_dialog.dart';
@@ -48,8 +49,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         _loading = false;
       });
     } catch (err) {
+      if (!mounted) return;
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -78,7 +80,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -104,7 +108,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -135,9 +141,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
-        if (err.toString().toLowerCase().contains('conflict') ||
-            err.toString().toLowerCase().contains('already')) {
+        final message = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        if (message.toLowerCase().contains('conflict') ||
+            message.toLowerCase().contains('already')) {
           await _load();
         }
       }
@@ -164,7 +171,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

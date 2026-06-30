@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_create_result.dart';
 import '../services/booking_api_service.dart';
@@ -86,7 +87,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       if (!mounted) return;
       setState(() {
         _loadingDropoffQr = false;
-        _dropoffQrError = err.toString();
+        _dropoffQrError = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
       });
     }
   }

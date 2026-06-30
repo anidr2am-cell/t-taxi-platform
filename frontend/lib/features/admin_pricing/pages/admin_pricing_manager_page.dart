@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_pricing_api_service.dart';
@@ -271,7 +272,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       } on AdminPricingApiException catch (err) {
                         setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
-                        setDialogState(() => fieldErrors = {'general': err.toString()});
+                        setDialogState(() => fieldErrors = {
+                              'general': userFacingError(err, fallback: 'Could not save changes'),
+                            });
                       } finally {
                         if (mounted) setState(() => _saving = false);
                       }
@@ -335,7 +338,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       } on AdminPricingApiException catch (err) {
                         setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
-                        setDialogState(() => fieldErrors = {'general': err.toString()});
+                        setDialogState(() => fieldErrors = {
+                              'general': userFacingError(err, fallback: 'Could not save changes'),
+                            });
                       } finally {
                         if (mounted) setState(() => _saving = false);
                       }
@@ -485,7 +490,9 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       } on AdminPricingApiException catch (err) {
                         setDialogState(() => fieldErrors = err.fieldErrors ?? {'general': err.message});
                       } catch (err) {
-                        setDialogState(() => fieldErrors = {'general': err.toString()});
+                        setDialogState(() => fieldErrors = {
+                              'general': userFacingError(err, fallback: 'Could not save changes'),
+                            });
                       } finally {
                         if (mounted) setState(() => _saving = false);
                       }
@@ -1339,7 +1346,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
       });
     } catch (err) {
       setState(() {
-        _error = err is AdminPricingApiException ? err.message : err.toString();
+        _error = userFacingError(err, fallback: 'Could not load pricing data');
         _loading = false;
       });
     }

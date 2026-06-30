@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_settlement_api_service.dart';
 
@@ -39,7 +41,7 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -75,7 +77,7 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
           child: _loading
               ? AppUi.loadingState()
               : _error != null
-                  ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
+                  ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: context.l10n.t('admin_dispatch_retry'))
                   : _items.isEmpty
                       ? AppUi.emptyState(
                           title: 'No settlements',
@@ -220,7 +222,7 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
       });
     } catch (err) {
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -235,7 +237,9 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -251,7 +255,9 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

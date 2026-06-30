@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
@@ -88,7 +89,7 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       }
       setState(() {
         _statusUpdating = false;
-        _statusError = err.toString();
+        _statusError = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
         _statusFuture = _api.getStatus();
       });
     }

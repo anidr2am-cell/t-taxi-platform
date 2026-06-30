@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../utils/user_facing_error.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
 import '../services/driver_location_socket_service.dart';
@@ -84,7 +86,7 @@ class _GuestDriverTrackingSectionState extends State<GuestDriverTrackingSection>
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: 'Could not load driver location');
         _loading = false;
       });
     }
@@ -100,12 +102,13 @@ class _GuestDriverTrackingSectionState extends State<GuestDriverTrackingSection>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Icon(Icons.local_taxi),
-                const SizedBox(width: 8),
                 Text('Track driver', style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
                 Icon(_socket.connected ? Icons.cloud_done : Icons.cloud_off, size: 18),
               ],
             ),
@@ -113,11 +116,7 @@ class _GuestDriverTrackingSectionState extends State<GuestDriverTrackingSection>
             if (_loading)
               const LinearProgressIndicator()
             else if (_error != null)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(_error!),
-                trailing: TextButton(onPressed: _load, child: const Text('Retry')),
-              )
+              AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
             else if (_result?.available != true || driver == null)
               const Text('Driver location is not available yet.')
             else ...[

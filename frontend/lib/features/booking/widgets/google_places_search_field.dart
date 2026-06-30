@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../utils/user_facing_error.dart';
 import '../models/airport_shortcuts.dart';
 import '../models/location_option.dart';
 import '../models/place_prediction.dart';
@@ -146,7 +147,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = userFacingError(e, fallback: context.l10n.t('ui_load_failed'));
         _predictions = [];
       });
     }
@@ -168,7 +169,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loadingDetails = false;
-        _error = e.toString();
+        _error = userFacingError(e, fallback: context.l10n.t('ui_load_failed'));
       });
     }
   }

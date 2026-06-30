@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../utils/user_facing_error.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
@@ -89,7 +90,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
               });
             }
             return AppUi.errorState(
-              message: err.toString(),
+              message: userFacingError(err, fallback: l10n.t('ui_load_failed')),
               onRetry: _refresh,
               retryLabel: l10n.t('driver_retry'),
             );

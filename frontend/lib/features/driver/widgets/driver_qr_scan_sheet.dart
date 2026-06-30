@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 
 /// Full-screen QR capture for boarding or dropoff tokens.
@@ -47,7 +48,7 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
       if (mounted) {
         setState(() {
           _submitting = false;
-          _error = err.toString();
+          _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
         });
       }
     }

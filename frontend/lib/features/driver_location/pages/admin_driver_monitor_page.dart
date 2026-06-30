@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
@@ -103,7 +104,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
       });
     }
   }

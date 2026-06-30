@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../driver_auth.dart';
@@ -56,7 +57,7 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
         });
       }
       setState(() {
-        _error = err.toString();
+        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
         _loading = false;
       });
     }
@@ -69,7 +70,7 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
       await _api.markAllNotificationsRead();
       await _load();
     } catch (err) {
-      setState(() => _error = err.toString());
+      setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
     } finally {
       setState(() => _markingAll = false);
     }
@@ -80,7 +81,7 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
       await _api.markNotificationRead(id);
       await _load();
     } catch (err) {
-      setState(() => _error = err.toString());
+      setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
     }
   }
 

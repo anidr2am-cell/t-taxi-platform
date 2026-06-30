@@ -917,4 +917,40 @@ void main() {
     expect(find.byKey(const Key('adminQrReissueToken')), findsOneWidget);
     expect(find.text('dev-boarding-token'), findsOneWidget);
   });
+
+  testWidgets('dispatch queue has no horizontal overflow at 360px', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminDispatchQueuePage(
+          api: _FakeAdminApi(
+            token: 'admin-token',
+            bookingsResponse: {
+              'page': 1,
+              'total': 1,
+              'items': [
+                {
+                  'bookingNumber': 'TX202607010001',
+                  'status': 'CONFIRMED',
+                  'serviceTypeName': 'Airport Pickup',
+                  'scheduledPickupAt': '2026-07-01T09:30:00+07:00',
+                  'originAddress': 'Suvarnabhumi Airport Terminal 1 International Arrivals',
+                  'destinationAddress': 'Pattaya Beach Road Hotel Resort Thailand',
+                  'assignmentState': 'UNASSIGNED',
+                },
+              ],
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('TX202607010001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
