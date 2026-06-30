@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../theme/app_theme.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/booking_create_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
@@ -97,156 +98,221 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.t('booking_complete'))),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Icon(Icons.check_circle, color: AppTheme.success, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              result.trustMessage.isNotEmpty
-                  ? result.trustMessage
-                  : l10n.t('booking_trust_message'),
-              style: TextStyle(color: Colors.grey.shade800, fontSize: 15),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+      body: AppUi.centeredContent(
+        child: SingleChildScrollView(
+          padding: AppUi.pagePadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SuccessHero(l10n: l10n, trustMessage: result.trustMessage),
+              const SizedBox(height: AppTokens.spaceLg),
+              _BookingNumberCard(
+                bookingNumber: result.bookingNumber,
+                statusLabel: l10n.t('status_pending'),
+                total: '${result.totalAmount} ${result.currency}',
+                paymentLabel: l10n.t('pay_driver_at_destination'),
+                l10n: l10n,
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.sectionHeader(context, title: l10n.t('booking_summary')),
+              AppUi.surfaceCard(
                 child: Column(
                   children: [
-                    _row(l10n.t('reservation_number'), result.bookingNumber),
-                    _row(l10n.t('status'), l10n.t('status_pending')),
-                    _row(
-                      l10n.t('total'),
-                      '${result.totalAmount} ${result.currency}',
-                      bold: true,
-                    ),
-                    _row(
-                      l10n.t('payment_method'),
-                      l10n.t('pay_driver_at_destination'),
-                    ),
+                    AppUi.summaryRow(label: l10n.t('service_type'), value: widget.serviceLabel),
+                    AppUi.summaryRow(label: l10n.t('origin'), value: widget.originLabel),
+                    AppUi.summaryRow(label: l10n.t('destination'), value: widget.destinationLabel),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.t('booking_summary'),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+              const SizedBox(height: AppTokens.spaceLg),
+              if (_isCompleted) ...[
+                AppUi.surfaceCard(
+                  backgroundColor: AppTokens.successLight,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline, color: AppTokens.success),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Trip completed',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: AppTokens.success,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _row(l10n.t('service_type'), widget.serviceLabel),
-                    _row(l10n.t('origin'), widget.originLabel),
-                    _row(l10n.t('destination'), widget.destinationLabel),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_isCompleted) ...[
-              const _QrStatusMessage(message: 'Trip completed'),
-              const SizedBox(height: 16),
-              BookingNotificationSection(
-                bookingNumber: result.bookingNumber,
-                bookingId: result.bookingId,
-                guestAccessToken: result.guestAccessToken,
-              ),
-              const SizedBox(height: 16),
-              BookingReviewForm(
-                bookingNumber: result.bookingNumber,
-                guestAccessToken: result.guestAccessToken,
-              ),
-            ] else if (_dropoffQrToken != null)
-              _QrDisplay(
-                title: 'Dropoff QR',
-                hint: 'Show this QR to your driver at destination.',
-                token: _dropoffQrToken!,
-              )
-            else
-              _QrDisplay(
-                title: l10n.t('boarding_qr_title'),
-                hint: l10n.t('boarding_qr_hint'),
-                token: result.boardingQrToken,
-              ),
-            const SizedBox(height: 16),
-            BookingChatSection(
-              bookingNumber: result.bookingNumber,
-              guestAccessToken: result.guestAccessToken,
-              api: widget.chatApi,
-              socketService: widget.chatSocketService,
-            ),
-            const SizedBox(height: 16),
-            if (!_isCompleted) ...[
-              if (_dropoffQrError != null) ...[
-                Text(
-                  _dropoffQrError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  textAlign: TextAlign.center,
+                const SizedBox(height: AppTokens.spaceMd),
+                BookingNotificationSection(
+                  bookingNumber: result.bookingNumber,
+                  bookingId: result.bookingId,
+                  guestAccessToken: result.guestAccessToken,
                 ),
-                const SizedBox(height: 8),
-              ],
-              OutlinedButton.icon(
-                onPressed: _loadingDropoffQr ? null : _loadDropoffQr,
-                icon: _loadingDropoffQr
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh),
-                label: Text(
-                  _dropoffQrToken == null
+                const SizedBox(height: AppTokens.spaceMd),
+                BookingReviewForm(
+                  bookingNumber: result.bookingNumber,
+                  guestAccessToken: result.guestAccessToken,
+                ),
+              ] else if (_dropoffQrToken != null)
+                _QrDisplay(
+                  title: 'Dropoff QR',
+                  hint: 'Show this QR to your driver at destination.',
+                  token: _dropoffQrToken!,
+                )
+              else
+                _QrDisplay(
+                  title: l10n.t('boarding_qr_title'),
+                  hint: l10n.t('boarding_qr_hint'),
+                  token: result.boardingQrToken,
+                ),
+              const SizedBox(height: AppTokens.spaceMd),
+              BookingChatSection(
+                bookingNumber: result.bookingNumber,
+                guestAccessToken: result.guestAccessToken,
+                api: widget.chatApi,
+                socketService: widget.chatSocketService,
+              ),
+              if (!_isCompleted) ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                if (_dropoffQrError != null)
+                  AppUi.errorState(message: _dropoffQrError!),
+                AppUi.secondaryButton(
+                  label: _dropoffQrToken == null
                       ? 'Refresh dropoff QR'
                       : 'Issue new dropoff QR',
+                  icon: Icons.refresh,
+                  onPressed: _loadingDropoffQr ? null : _loadDropoffQr,
+                  fullWidth: true,
+                ),
+              ],
+              const SizedBox(height: AppTokens.spaceLg),
+              SizedBox(
+                width: double.infinity,
+                child: AppUi.primaryButton(
+                  label: l10n.t('app_title'),
+                  icon: Icons.home_outlined,
+                  onPressed: () =>
+                      Navigator.of(context).popUntil((route) => route.isFirst),
                 ),
               ),
+              const SizedBox(height: AppTokens.spaceSm),
+              AppUi.secondaryButton(
+                label: l10n.t('chat_after_driver_assignment'),
+                icon: Icons.chat_bubble_outline,
+                onPressed: null,
+                fullWidth: true,
+              ),
             ],
-            const SizedBox(height: 24),
-            OutlinedButton.icon(
-              onPressed: null,
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: Text(l10n.t('chat_after_driver_assignment')),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () =>
-                  Navigator.of(context).popUntil((route) => route.isFirst),
-              child: Text(l10n.t('app_title')),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _row(String label, String value, {bool bold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+class _SuccessHero extends StatelessWidget {
+  const _SuccessHero({required this.l10n, required this.trustMessage});
+
+  final AppLocalizations l10n;
+  final String trustMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.successLight,
+      padding: const EdgeInsets.all(AppTokens.spaceLg),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTokens.success.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check_circle, color: AppTokens.success, size: 48),
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          Text(
+            l10n.t('booking_complete'),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTokens.success,
+                  fontWeight: FontWeight.w700,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          Text(
+            trustMessage.isNotEmpty ? trustMessage : l10n.t('booking_trust_message'),
+            style: const TextStyle(color: AppTokens.textSecondary, height: 1.5),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingNumberCard extends StatelessWidget {
+  const _BookingNumberCard({
+    required this.bookingNumber,
+    required this.statusLabel,
+    required this.total,
+    required this.paymentLabel,
+    required this.l10n,
+  });
+
+  final String bookingNumber;
+  final String statusLabel;
+  final String total;
+  final String paymentLabel;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.primaryLight,
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(label, style: TextStyle(color: Colors.grey.shade700)),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-              ),
+          Text(
+            l10n.t('reservation_number'),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            bookingNumber,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+              color: AppTokens.primaryDark,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              AppUi.statusBadge(statusLabel, tone: AppStatusTone.warning),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          const Divider(height: 1),
+          const SizedBox(height: AppTokens.spaceMd),
+          AppUi.summaryRow(
+            label: l10n.t('total'),
+            value: total,
+            emphasize: true,
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('payment_method'),
+            value: paymentLabel,
           ),
         ],
       ),
@@ -267,52 +333,40 @@ class _QrDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          hint,
-          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: QrImageView(
-              data: token,
-              size: 200,
-              backgroundColor: Colors.white,
+    return AppUi.surfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hint,
+            style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13, height: 1.4),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(AppTokens.spaceMd),
+              decoration: BoxDecoration(
+                color: AppTokens.surface,
+                borderRadius: AppTokens.borderRadiusLg,
+                border: Border.all(color: AppTokens.border),
+                boxShadow: AppTokens.cardShadow(),
+              ),
+              child: QrImageView(
+                data: token,
+                size: 200,
+                backgroundColor: AppTokens.surface,
+              ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QrStatusMessage extends StatelessWidget {
-  const _QrStatusMessage({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      message,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      textAlign: TextAlign.center,
+        ],
+      ),
     );
   }
 }

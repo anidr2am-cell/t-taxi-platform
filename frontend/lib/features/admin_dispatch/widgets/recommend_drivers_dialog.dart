@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
 
 class RecommendDriversDialogResult {
@@ -72,81 +74,61 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
     }
   }
 
-  List<dynamic> get _candidates =>
-      _data?['candidates'] as List<dynamic>? ?? [];
+  List<dynamic> get _candidates => _data?['candidates'] as List<dynamic>? ?? [];
 
-  List<dynamic> get _excluded =>
-      _data?['excluded'] as List<dynamic>? ?? [];
+  List<dynamic> get _excluded => _data?['excluded'] as List<dynamic>? ?? [];
 
   @override
   Widget build(BuildContext context) {
     final recommendedId = _data?['recommendedDriverId'] as int?;
 
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: AppTokens.borderRadiusLg),
       title: const Text('Recommend drivers'),
       content: SizedBox(
-        width: 520,
+        width: 560,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? AppUi.loadingState(message: 'Loading candidates...')
             : _error != null
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      OutlinedButton(onPressed: _load, child: const Text('Retry')),
-                    ],
-                  )
+                ? AppUi.errorState(message: _error!, onRetry: _load)
                 : SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (_candidates.isEmpty)
-                          const Text('No eligible drivers found for this booking.'),
-                        ..._candidates.map((row) {
-                          final map = Map<String, dynamic>.from(row as Map);
-                          final driverId = map['driverId'] as int;
-                          final isRecommended = driverId == recommendedId;
-                          final selected = _selectedDriverId == driverId;
-                          return Card(
-                            color: isRecommended ? Colors.green.shade50 : null,
-                            child: ListTile(
-                              selected: selected,
-                              onTap: () => setState(() => _selectedDriverId = driverId),
-                              leading: Icon(
-                                selected
-                                    ? Icons.radio_button_checked
-                                    : Icons.radio_button_off,
-                              ),
-                              title: Text(
-                                '${map['displayName']} (${map['vehicleTypeCode'] ?? '-'})',
-                                style: TextStyle(
-                                  fontWeight: isRecommended ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'Score ${map['score']} · '
-                                '${map['online'] == true ? 'Online' : 'Offline'} · '
-                                'Jobs ${map['activeJobCount']} · '
-                                '${map['distanceKm'] != null ? '${map['distanceKm']} km' : 'No distance'} · '
-                                '${(map['reasons'] as List<dynamic>? ?? []).join(', ')}',
-                              ),
-                              trailing: isRecommended
-                                  ? const Chip(label: Text('Recommended'))
-                                  : null,
-                            ),
+                          AppUi.emptyState(title: 'No eligible drivers found for this booking.'),
+                        ..._candidates.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final map = Map<String, dynamic>.from(entry.value as Map);
+                          return _CandidateCard(
+                            map: map,
+                            rank: index + 1,
+                            recommendedId: recommendedId,
+                            selectedDriverId: _selectedDriverId,
+                            onSelect: (id) => setState(() => _selectedDriverId = id),
                           );
                         }),
                         if (_excluded.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          const Text('Excluded', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: AppTokens.spaceMd),
+                          AppUi.sectionHeader(context, title: 'Excluded'),
                           ..._excluded.map((row) {
                             final map = Map<String, dynamic>.from(row as Map);
-                            return ListTile(
-                              dense: true,
-                              title: Text('${map['displayName']}'),
-                              subtitle: Text(
-                                (map['reasons'] as List<dynamic>? ?? []).join(', '),
+                            return AppUi.surfaceCard(
+                              backgroundColor: AppTokens.surfaceMuted,
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${map['displayName']}',
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    (map['reasons'] as List<dynamic>? ?? []).join(', '),
+                                    style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13),
+                                  ),
+                                ],
                               ),
                             );
                           }),
@@ -158,7 +140,9 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         if (!_loading && _error == null && _candidates.isNotEmpty) ...[
-          OutlinedButton(
+          AppUi.secondaryButton(
+            label: 'Assign recommended',
+            icon: Icons.star_outline,
             onPressed: recommendedId == null
                 ? null
                 : () => Navigator.pop(
@@ -169,9 +153,11 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
                         assignmentVersion: _data?['assignmentVersion'] as int? ?? 0,
                       ),
                     ),
-            child: const Text('Assign recommended'),
           ),
-          FilledButton(
+          const SizedBox(width: 8),
+          AppUi.primaryButton(
+            label: 'Assign selected',
+            icon: Icons.check,
             onPressed: _selectedDriverId == null
                 ? null
                 : () => Navigator.pop(
@@ -182,10 +168,116 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
                         assignmentVersion: _data?['assignmentVersion'] as int? ?? 0,
                       ),
                     ),
-            child: const Text('Assign selected'),
           ),
         ],
       ],
+    );
+  }
+}
+
+class _CandidateCard extends StatelessWidget {
+  const _CandidateCard({
+    required this.map,
+    required this.rank,
+    required this.recommendedId,
+    required this.selectedDriverId,
+    required this.onSelect,
+  });
+
+  final Map<String, dynamic> map;
+  final int rank;
+  final int? recommendedId;
+  final int? selectedDriverId;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final driverId = map['driverId'] as int;
+    final isRecommended = driverId == recommendedId;
+    final selected = selectedDriverId == driverId;
+    final online = map['online'] == true;
+    final reasons = (map['reasons'] as List<dynamic>? ?? []).join(', ');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AppUi.surfaceCard(
+        onTap: () => onSelect(driverId),
+        backgroundColor: isRecommended ? AppTokens.accentLight : (selected ? AppTokens.primaryLight : AppTokens.surface),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isRecommended ? AppTokens.accent.withValues(alpha: 0.15) : AppTokens.surfaceMuted,
+                    borderRadius: AppTokens.borderRadiusSm,
+                  ),
+                  child: Text(
+                    '#$rank',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: isRecommended ? AppTokens.accent : AppTokens.textSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${map['displayName']} (${map['vehicleTypeCode'] ?? '-'})',
+                    style: TextStyle(
+                      fontWeight: isRecommended ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                if (isRecommended) AppUi.statusBadge('Recommended', tone: AppStatusTone.warning),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AppUi.statusBadge('Score ${map['score']}', tone: AppStatusTone.info),
+                AppUi.statusBadge(
+                  online ? 'Online' : 'Offline',
+                  tone: online ? AppStatusTone.success : AppStatusTone.neutral,
+                ),
+                AppUi.statusBadge('Jobs ${map['activeJobCount']}', tone: AppStatusTone.neutral),
+                if (map['distanceKm'] != null)
+                  AppUi.statusBadge('${map['distanceKm']} km', tone: AppStatusTone.info),
+              ],
+            ),
+            if (reasons.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(reasons, style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13, height: 1.4)),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                  color: selected ? AppTokens.primary : AppTokens.textMuted,
+                  size: 20,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  selected ? 'Selected' : 'Tap to select',
+                  style: TextStyle(
+                    color: selected ? AppTokens.primaryDark : AppTokens.textMuted,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

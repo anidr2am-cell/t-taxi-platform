@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/location_option.dart';
 import '../models/service_type_option.dart';
 import 'google_places_search_field.dart';
@@ -23,15 +24,15 @@ class StepDestinationSelect extends StatelessWidget {
     final l10n = context.l10n;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppUi.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            l10n.t('destination'),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          AppUi.sectionHeader(
+            context,
+            title: l10n.t('destination'),
+            subtitle: l10n.t('search_place'),
           ),
-          const SizedBox(height: 16),
           GooglePlacesSearchField(
             label: l10n.t('search_place'),
             languageCode: languageCode,

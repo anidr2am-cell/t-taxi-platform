@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/service_type_option.dart';
 
@@ -72,15 +73,12 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     final l10n = context.l10n;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppUi.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            l10n.t('customer_info'),
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
+          AppUi.sectionHeader(context, title: l10n.t('customer_info')),
+          const SizedBox(height: 8),
           if (widget.state.serviceType == BookingServiceType.airportPickup &&
               widget.onFlightNumberChanged != null) ...[
             TextField(

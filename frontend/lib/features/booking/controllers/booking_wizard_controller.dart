@@ -139,7 +139,23 @@ class BookingWizardController extends ChangeNotifier {
     notifyListeners();
   }
 
-  DateTime thailandNow() => _now().toUtc().add(const Duration(hours: 7));
+  DateTime _bangkokWallTime(DateTime value) {
+    return DateTime(
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second,
+      value.millisecond,
+      value.microsecond,
+    );
+  }
+
+  DateTime thailandNow() {
+    final adjusted = _now().toUtc().add(const Duration(hours: 7));
+    return _bangkokWallTime(adjusted);
+  }
 
   DateTime minimumPickupDateTime() {
     return thailandNow().add(const Duration(hours: 2));
@@ -194,13 +210,13 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   bool isPickupDateTimeAllowed(DateTime value) {
-    return !value.isBefore(minimumPickupDateTime());
+    return !_bangkokWallTime(value).isBefore(minimumPickupDateTime());
   }
 
   Future<bool> setPickupDateTime(DateTime value) async {
-    if (value.isBefore(
-      DateTime(thailandNow().year, thailandNow().month, thailandNow().day),
-    )) {
+    final bangkokValue = _bangkokWallTime(value);
+    final today = DateTime(thailandNow().year, thailandNow().month, thailandNow().day);
+    if (bangkokValue.isBefore(today)) {
       _state = _state.copyWith(
         errorMessage: 'Pickup date cannot be in the past',
       );
@@ -208,7 +224,7 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    if (!isPickupDateTimeAllowed(value)) {
+    if (!isPickupDateTimeAllowed(bangkokValue)) {
       _state = _state.copyWith(
         errorMessage: 'Pickup time must be at least 2 hours from now',
       );
@@ -217,8 +233,8 @@ class BookingWizardController extends ChangeNotifier {
       return false;
     }
     _state = _state.copyWith(
-      pickupDate: formatDate(value),
-      pickupTime: formatTime(value),
+      pickupDate: formatDate(bangkokValue),
+      pickupTime: formatTime(bangkokValue),
       clearPricing: true,
       clearError: true,
     );
@@ -575,6 +591,17 @@ class BookingWizardController extends ChangeNotifier {
   Future<void> loadPricing() async {
     if (_state.serviceType == null || _state.selectedVehicle == null) return;
 
+    final scheduledPickupAt = scheduledPickupAtIso();
+    if (scheduledPickupAt == null) {
+      _state = _state.copyWith(
+        errorMessage: 'Pickup date and time are required',
+        clearPricing: true,
+      );
+      await _persist();
+      notifyListeners();
+      return;
+    }
+
     final locations = _pricingLocationParams();
     _setLoading(true);
     try {
@@ -585,7 +612,7 @@ class BookingWizardController extends ChangeNotifier {
         destinationRegion: locations['destinationRegion'],
         originLocationCode: locations['originLocationCode'],
         destinationLocationCode: locations['destinationLocationCode'],
-        scheduledPickupAt: scheduledPickupAtIso(),
+        scheduledPickupAt: scheduledPickupAt,
         nameSign: _state.nameSign,
         adults: _state.adults,
         children: _state.children,

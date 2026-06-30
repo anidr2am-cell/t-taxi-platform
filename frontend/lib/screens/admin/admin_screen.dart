@@ -10,6 +10,8 @@ import '../../features/admin_flight/pages/admin_flight_monitor_page.dart';
 import '../../features/driver_location/pages/admin_driver_monitor_page.dart';
 import '../../features/admin_pricing/pages/admin_pricing_manager_page.dart';
 import '../../l10n/app_localizations.dart';
+import '../../theme/app_tokens.dart';
+import '../../widgets/app_ui.dart';
 import '../../widgets/language_selector.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -40,12 +42,24 @@ class _AdminScreenState extends State<AdminScreen> {
       'Flights',
     ];
 
+    final icons = [
+      Icons.dashboard_outlined,
+      Icons.list_alt_outlined,
+      Icons.chat_bubble_outline,
+      Icons.local_taxi_outlined,
+      Icons.price_change_outlined,
+      Icons.golf_course_outlined,
+      Icons.flight_outlined,
+      Icons.receipt_long_outlined,
+      Icons.rate_review_outlined,
+      Icons.notifications_outlined,
+      Icons.flight_land_outlined,
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.t('admin_dashboard')),
-        actions: [
-          const LanguageSelector(),
-        ],
+        title: Text(menuItems[_selectedIndex.clamp(0, menuItems.length - 1)]),
+        actions: const [LanguageSelector()],
       ),
       body: Row(
         children: [
@@ -53,15 +67,16 @@ class _AdminScreenState extends State<AdminScreen> {
             selectedIndex: _selectedIndex,
             onDestinationSelected: (i) => setState(() => _selectedIndex = i),
             labelType: NavigationRailLabelType.all,
-            destinations: menuItems
-                .map((label) => NavigationRailDestination(
-                      icon: const Icon(Icons.circle_outlined),
-                      selectedIcon: const Icon(Icons.circle),
-                      label: Text(label, style: const TextStyle(fontSize: 11)),
-                    ))
-                .toList(),
+            backgroundColor: AppTokens.surface,
+            destinations: List.generate(menuItems.length, (index) {
+              return NavigationRailDestination(
+                icon: Icon(icons[index]),
+                selectedIcon: Icon(icons[index], color: AppTokens.primary),
+                label: Text(menuItems[index], style: const TextStyle(fontSize: 11)),
+              );
+            }),
           ),
-          const VerticalDivider(width: 1),
+          const VerticalDivider(width: 1, color: AppTokens.border),
           Expanded(
             child: _buildContent(l10n),
           ),
@@ -108,13 +123,10 @@ class _AdminScreenState extends State<AdminScreen> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-          ],
+        child: AppUi.emptyState(
+          title: title,
+          message: message,
+          icon: Icons.construction_outlined,
         ),
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
 
 class AssignDriverDialogResult {
@@ -95,63 +97,87 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
         : l10n.t('admin_dispatch_assign_driver');
 
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: AppTokens.borderRadiusLg),
       title: Text(title),
       content: SizedBox(
-        width: 420,
+        width: 460,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? AppUi.loadingState(message: 'Loading drivers...')
             : _error != null
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!),
-                      ElevatedButton(onPressed: _loadDrivers, child: Text(l10n.t('admin_dispatch_retry'))),
-                    ],
-                  )
+                ? AppUi.errorState(message: _error!, onRetry: _loadDrivers, retryLabel: l10n.t('admin_dispatch_retry'))
                 : _drivers.isEmpty
-                    ? Text(l10n.t('admin_dispatch_no_drivers'))
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ..._drivers.map((raw) {
-                            final driver = Map<String, dynamic>.from(raw as Map);
-                            final eligible = driver['assignmentEligible'] == true;
-                            final id = driver['driverId'] as int;
-                            final selected = _selectedDriverId == id;
-                            return ListTile(
-                              enabled: eligible,
-                              selected: selected,
-                              onTap: eligible
-                                  ? () => setState(() => _selectedDriverId = id)
-                                  : null,
-                              leading: Icon(
-                                selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                                color: eligible ? null : Colors.grey,
+                    ? AppUi.emptyState(title: l10n.t('admin_dispatch_no_drivers'))
+                    : SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ..._drivers.map((raw) {
+                              final driver = Map<String, dynamic>.from(raw as Map);
+                              final eligible = driver['assignmentEligible'] == true;
+                              final id = driver['driverId'] as int;
+                              final selected = _selectedDriverId == id;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: AppUi.surfaceCard(
+                                  onTap: eligible ? () => setState(() => _selectedDriverId = id) : null,
+                                  backgroundColor: selected ? AppTokens.primaryLight : AppTokens.surface,
+                                  padding: const EdgeInsets.all(12),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                        color: eligible
+                                            ? (selected ? AppTokens.primary : AppTokens.textSecondary)
+                                            : AppTokens.textMuted,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              driver['displayName'] as String? ?? '',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                color: eligible ? AppTokens.textPrimary : AppTokens.textMuted,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '${driver['phone']} · ${driver['eligibilityState']} · active ${driver['activeAssignmentCount']}',
+                                              style: const TextStyle(
+                                                color: AppTokens.textSecondary,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                            if (widget.isReassign) ...[
+                              const SizedBox(height: AppTokens.spaceSm),
+                              TextField(
+                                controller: _reasonController,
+                                decoration: InputDecoration(
+                                  labelText: l10n.t('admin_dispatch_reassign_reason'),
+                                ),
                               ),
-                              title: Text(driver['displayName'] as String? ?? ''),
-                              subtitle: Text(
-                                '${driver['phone']} · ${driver['eligibilityState']} · active ${driver['activeAssignmentCount']}',
-                              ),
-                            );
-                          }),
-                          if (widget.isReassign) ...[
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _reasonController,
-                              decoration: InputDecoration(
-                                labelText: l10n.t('admin_dispatch_reassign_reason'),
-                                border: const OutlineInputBorder(),
-                              ),
-                            ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.t('back'))),
-        ElevatedButton(
+        AppUi.primaryButton(
+          label: l10n.t('confirm'),
+          icon: Icons.check,
           onPressed: _submitting ? null : _confirm,
-          child: Text(l10n.t('confirm')),
         ),
       ],
     );

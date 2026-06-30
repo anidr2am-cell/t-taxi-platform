@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/booking_provider.dart';
+import '../../../widgets/app_ui.dart';
 import '../../../widgets/language_selector.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
@@ -217,36 +218,28 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final canProceed =
         _controller.canProceedFromCurrentStep() && !_controller.isLoading;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            if (state.step > 0)
-              OutlinedButton(
-                onPressed: _controller.isLoading ? null : _controller.goBack,
-                child: Text(l10n.t('back')),
-              ),
-            const Spacer(),
-            if (isLast)
-              ElevatedButton(
-                onPressed: canProceed ? _handleSubmit : null,
-                child: _controller.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.t('confirm')),
-              )
-            else
-              ElevatedButton(
-                onPressed: canProceed ? _handleNext : null,
-                child: Text(l10n.t('next')),
-              ),
-          ],
-        ),
-      ),
+    return AppUi.wizardFooter(
+      leading: state.step > 0
+          ? OutlinedButton(
+              onPressed: _controller.isLoading ? null : _controller.goBack,
+              child: Text(l10n.t('back')),
+            )
+          : const SizedBox.shrink(),
+      primaryAction: isLast
+          ? ElevatedButton(
+              onPressed: canProceed ? _handleSubmit : null,
+              child: _controller.isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.t('confirm')),
+            )
+          : ElevatedButton(
+              onPressed: canProceed ? _handleNext : null,
+              child: Text(l10n.t('next')),
+            ),
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../widgets/app_ui.dart';
+
 class WizardLoadingView extends StatelessWidget {
   final String? message;
 
@@ -7,18 +9,7 @@ class WizardLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(message!, textAlign: TextAlign.center),
-          ],
-        ],
-      ),
-    );
+    return AppUi.loadingState(message: message);
   }
 }
 
@@ -30,23 +21,7 @@ class WizardErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
-            ],
-          ],
-        ),
-      ),
-    );
+    return AppUi.errorState(message: message, onRetry: onRetry);
   }
 }
 
@@ -57,11 +32,6 @@ class WizardEmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(message, textAlign: TextAlign.center),
-      ),
-    );
+    return AppUi.emptyState(title: message, icon: Icons.search_off_outlined);
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/pricing_result.dart';
@@ -14,6 +16,16 @@ class StepVehicleSelect extends StatelessWidget {
     required this.state,
     required this.controller,
   });
+
+  IconData _iconForVehicle(String vehicle) {
+    if (vehicle.contains('Van') || vehicle.contains('VAN')) {
+      return Icons.airport_shuttle_outlined;
+    }
+    if (vehicle.contains('SUV')) {
+      return Icons.directions_car_filled_outlined;
+    }
+    return Icons.directions_car_outlined;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,32 +48,37 @@ class StepVehicleSelect extends StatelessWidget {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppUi.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(l10n.t('select_vehicle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
+          AppUi.sectionHeader(
+            context,
+            title: l10n.t('select_vehicle'),
+            subtitle: recommendation.multipleVehicles
+                ? null
+                : '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+          ),
           ...BookingWizardController.vehicleTierOrder.map((vehicle) {
             final enabled = controller.isVehicleEnabled(vehicle);
             final selected = state.selectedVehicle == vehicle;
-            return Card(
-              color: selected ? Theme.of(context).colorScheme.primaryContainer : null,
-              child: ListTile(
-                enabled: enabled,
-                title: Text(vehicle),
+            final isRecommended = recommendation.recommendedVehicle == vehicle;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: AppUi.selectionTile(
+                title: vehicle,
                 subtitle: enabled
-                    ? null
-                    : Text(l10n.t('vehicle_not_available')),
-                trailing: selected ? const Icon(Icons.check_circle) : null,
+                    ? (isRecommended ? recommendation.message : null)
+                    : l10n.t('vehicle_not_available'),
+                icon: _iconForVehicle(vehicle),
+                selected: selected,
                 onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
               ),
             );
           }),
           if (state.pricing != null) ...[
-            const SizedBox(height: 24),
-            Text(l10n.t('pricing_summary'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppTokens.spaceMd),
+            AppUi.sectionHeader(context, title: l10n.t('pricing_summary')),
             _PricingBreakdown(pricing: state.pricing!, l10n: l10n),
           ],
         ],
@@ -78,44 +95,25 @@ class _PricingBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _row(l10n.t('base_price'), pricing.basePrice, pricing.currency),
-            ...pricing.additionalCharges.map<Widget>((item) => _row(
-                  item.description,
-                  item.amount,
-                  pricing.currency,
-                )),
-            const Divider(),
-            _row(
-              l10n.t('total'),
-              pricing.totalAmount,
-              pricing.currency,
-              bold: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _row(String label, num amount, String currency, {bool bold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.primaryLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal),
-            ),
+          AppUi.summaryRow(
+            label: l10n.t('base_price'),
+            value: '${pricing.basePrice} ${pricing.currency}',
           ),
-          Text(
-            '$amount $currency',
-            style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal),
+          for (final item in pricing.additionalCharges)
+            AppUi.summaryRow(
+              label: item.description,
+              value: '${item.amount} ${pricing.currency}',
+            ),
+          const Divider(height: 24),
+          AppUi.summaryRow(
+            label: l10n.t('total'),
+            value: '${pricing.totalAmount} ${pricing.currency}',
+            emphasize: true,
           ),
         ],
       ),

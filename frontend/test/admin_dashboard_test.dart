@@ -19,7 +19,7 @@ void main() {
     await tester.pumpWidget(_wrap(AdminDashboardPage(api: _FakeDashboardApi(metrics: _metricsZero()))));
     await tester.pumpAndSettle();
 
-    expect(find.text('Operations for 2026-06-29 (Asia/Bangkok)'), findsOneWidget);
+    expect(find.textContaining('Operations for 2026-06-29'), findsOneWidget);
     expect(find.text('Today bookings'), findsOneWidget);
     expect(find.text('Unassigned'), findsOneWidget);
     expect(find.text('0'), findsWidgets);

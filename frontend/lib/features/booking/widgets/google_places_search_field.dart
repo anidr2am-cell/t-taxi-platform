@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../theme/app_theme.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/airport_shortcuts.dart';
 import '../models/location_option.dart';
 import '../models/place_prediction.dart';
@@ -200,25 +201,21 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   Widget _locationIcon(LocationKind kind) {
-    if (kind == LocationKind.airport) {
-      return Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(Icons.flight, color: Colors.blue.shade700, size: 22),
-      );
-    }
+    final isAirport = kind == LocationKind.airport;
     return Container(
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
+        color: isAirport
+            ? AppTokens.primary.withValues(alpha: 0.1)
+            : AppTokens.accent.withValues(alpha: 0.12),
+        borderRadius: AppTokens.borderRadiusSm,
       ),
-      child: Icon(Icons.place, color: Colors.red.shade700, size: 22),
+      child: Icon(
+        isAirport ? Icons.flight : Icons.place_outlined,
+        color: isAirport ? AppTokens.primary : AppTokens.accent,
+        size: 22,
+      ),
     );
   }
 
@@ -228,7 +225,11 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       children: [
         Text(
           l10n.t('airport_shortcuts'),
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppTokens.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -264,22 +265,44 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       children: [
         Text(
           l10n.t('recent_locations'),
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppTokens.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 8),
         ..._recentLocations.map((location) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 6),
-            child: ListTile(
-              leading: _locationIcon(location.kind),
-              title: Text(
-                location.name ?? location.displayName,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: location.address != null && location.address!.isNotEmpty
-                  ? Text(location.address!)
-                  : null,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: AppUi.surfaceCard(
               onTap: _loadingDetails ? null : () => _applyLocation(location),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  _locationIcon(location.kind),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          location.name ?? location.displayName,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        if (location.address != null && location.address!.isNotEmpty)
+                          Text(
+                            location.address!,
+                            style: const TextStyle(
+                              color: AppTokens.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }),
@@ -290,46 +313,16 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
 
   Widget _selectedCard(AppLocalizations l10n) {
     final location = widget.selected!;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _locationIcon(location.kind),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    location.name ?? location.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                  if (location.address != null && location.address!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      location.address!,
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                  ],
-                  if (location.latitude != null && location.longitude != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      '${location.latitude!.toStringAsFixed(5)}, ${location.longitude!.toStringAsFixed(5)}',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: _loadingDetails ? null : _startEditing,
-              child: Text(l10n.t('change_location')),
-            ),
-          ],
-        ),
-      ),
+    return AppUi.selectedInfoCard(
+      title: location.name ?? location.displayName,
+      subtitle: location.address,
+      meta: location.latitude != null && location.longitude != null
+          ? '${location.latitude!.toStringAsFixed(5)}, ${location.longitude!.toStringAsFixed(5)}'
+          : null,
+      icon: location.kind == LocationKind.airport ? Icons.flight : Icons.place_outlined,
+      changeLabel: l10n.t('change_location'),
+      onChange: _startEditing,
+      loading: _loadingDetails,
     );
   }
 
@@ -353,7 +346,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(_error!, style: TextStyle(color: Colors.red.shade700)),
+              child: AppUi.errorState(message: _error!),
             ),
         ],
       );
@@ -412,9 +405,10 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
             margin: const EdgeInsets.only(top: 4),
             constraints: const BoxConstraints(maxHeight: 280),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
+              color: AppTokens.surface,
+              borderRadius: AppTokens.borderRadiusMd,
+              border: Border.all(color: AppTokens.border),
+              boxShadow: AppTokens.cardShadow(),
             ),
             child: ListView.builder(
               shrinkWrap: true,
@@ -423,7 +417,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
                 final item = _predictions[index];
                 final highlighted = index == _highlightedIndex;
                 return Material(
-                  color: highlighted ? AppTheme.primary.withValues(alpha: 0.08) : null,
+                  color: highlighted ? AppTokens.primary.withValues(alpha: 0.08) : null,
                   child: ListTile(
                     leading: _locationIcon(LocationKind.place),
                     title: Text(

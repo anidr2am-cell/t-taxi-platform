@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
@@ -138,18 +140,18 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _result == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Find my booking')),
+        body: AppUi.loadingState(message: 'Loading saved booking...'),
+      );
     }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Find my booking')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: _result == null ? _lookupForm() : _bookingDetail(_result!),
-          ),
+      body: AppUi.centeredContent(
+        child: SingleChildScrollView(
+          padding: AppUi.pagePadding(context),
+          child: _result == null ? _lookupForm() : _bookingDetail(_result!),
         ),
       ),
     );
@@ -161,46 +163,57 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextFormField(
-            key: const ValueKey('guest_lookup_booking_number'),
-            controller: _bookingNumberController,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              labelText: 'Booking number',
-              hintText: 'TX202607010001',
-            ),
-            validator: (value) {
-              final normalized = (value ?? '').trim().toUpperCase();
-              return RegExp(r'^TX\d{12}$').hasMatch(normalized)
-                  ? null
-                  : 'Enter a valid booking number';
-            },
+          AppUi.sectionHeader(
+            context,
+            title: 'Find my booking',
+            subtitle: 'Enter your booking number and phone to view trip details.',
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            key: const ValueKey('guest_lookup_phone'),
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'Phone number'),
-            validator: (value) {
-              final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-              return digits.length >= 4 ? null : 'Enter the booking phone number';
-            },
+          AppUi.surfaceCard(
+            child: Column(
+              children: [
+                TextFormField(
+                  key: const ValueKey('guest_lookup_booking_number'),
+                  controller: _bookingNumberController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Booking number',
+                    hintText: 'TX202607010001',
+                    prefixIcon: Icon(Icons.confirmation_number_outlined),
+                  ),
+                  validator: (value) {
+                    final normalized = (value ?? '').trim().toUpperCase();
+                    return RegExp(r'^TX\d{12}$').hasMatch(normalized)
+                        ? null
+                        : 'Enter a valid booking number';
+                  },
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
+                TextFormField(
+                  key: const ValueKey('guest_lookup_phone'),
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone number',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                  validator: (value) {
+                    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+                    return digits.length >= 4 ? null : 'Enter the booking phone number';
+                  },
+                ),
+              ],
+            ),
           ),
           if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            const SizedBox(height: AppTokens.spaceMd),
+            AppUi.errorState(message: _error!),
           ],
-          const SizedBox(height: 16),
-          ElevatedButton(
+          const SizedBox(height: AppTokens.spaceLg),
+          AppUi.primaryButton(
+            label: 'Find booking',
+            icon: Icons.search,
+            loading: _loading,
             onPressed: _loading ? null : _lookup,
-            child: _loading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Find booking'),
           ),
         ],
       ),
@@ -211,45 +224,85 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(result.bookingNumber, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                _row('Status', result.status),
-                _row('Pickup', result.scheduledPickupAt ?? '-'),
-                _row('Service', result.serviceTypeName),
-                _row('From', result.originAddress),
-                _row('To', result.destinationAddress),
-                _row('Total', '${result.totalAmount} ${result.currency}'),
-                _row('Payment', result.paymentMethod),
-                if (result.driverName != null) ...[
-                  const Divider(),
-                  _row('Driver', result.driverName!),
-                  if (result.driverPhone != null) _row('Driver phone', result.driverPhone!),
-                ],
-              ],
-            ),
+        AppUi.surfaceCard(
+          backgroundColor: AppTokens.primaryLight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Booking number',
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SelectableText(
+                result.bookingNumber,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                  color: AppTokens.primaryDark,
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.statusBadge(
+                result.status,
+                tone: AppUi.toneForBookingStatus(result.status),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppTokens.spaceMd),
+        AppUi.sectionHeader(context, title: 'Trip details'),
+        AppUi.surfaceCard(
+          child: Column(
+            children: [
+              AppUi.summaryRow(label: 'Pickup', value: result.scheduledPickupAt ?? '-'),
+              AppUi.summaryRow(label: 'Service', value: result.serviceTypeName),
+              AppUi.summaryRow(label: 'From', value: result.originAddress),
+              AppUi.summaryRow(label: 'To', value: result.destinationAddress),
+              if (result.driverName != null) ...[
+                const Divider(height: 24),
+                AppUi.summaryRow(label: 'Driver', value: result.driverName!),
+                if (result.driverPhone != null)
+                  AppUi.summaryRow(label: 'Driver phone', value: result.driverPhone!),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceMd),
+        AppUi.sectionHeader(context, title: 'Payment'),
+        AppUi.surfaceCard(
+          backgroundColor: AppTokens.accentLight,
+          child: Column(
+            children: [
+              AppUi.summaryRow(
+                label: 'Total',
+                value: '${result.totalAmount} ${result.currency}',
+                emphasize: true,
+              ),
+              AppUi.summaryRow(label: 'Payment', value: result.paymentMethod),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceMd),
         _qrSection(result),
         if (_error != null) ...[
-          const SizedBox(height: 12),
-          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          const SizedBox(height: AppTokens.spaceMd),
+          AppUi.errorState(message: _error!),
         ],
         if (widget.enableCustomerTools) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTokens.spaceMd),
           if (result.bookingId != null)
             GuestDriverTrackingSection(
               bookingId: result.bookingId!,
               guestAccessToken: result.guestAccessToken,
               bookingStatus: result.status,
             ),
-          if (result.bookingId != null) const SizedBox(height: 16),
+          if (result.bookingId != null) const SizedBox(height: AppTokens.spaceMd),
           if (result.capabilities.notificationsAvailable)
             BookingNotificationSection(
               bookingNumber: result.bookingNumber,
@@ -257,7 +310,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               guestAccessToken: result.guestAccessToken,
             ),
           if (result.capabilities.chatAvailable) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.spaceMd),
             BookingChatSection(
               bookingNumber: result.bookingNumber,
               guestAccessToken: result.guestAccessToken,
@@ -265,17 +318,19 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
           ],
           if (result.capabilities.reviewAvailable) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.spaceMd),
             BookingReviewForm(
               bookingNumber: result.bookingNumber,
               guestAccessToken: result.guestAccessToken,
             ),
           ],
         ],
-        const SizedBox(height: 16),
-        OutlinedButton(
+        const SizedBox(height: AppTokens.spaceLg),
+        AppUi.secondaryButton(
+          label: 'Look up another booking',
+          icon: Icons.search,
           onPressed: _clear,
-          child: const Text('Look up another booking'),
+          fullWidth: true,
         ),
       ],
     );
@@ -283,65 +338,41 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
 
   Widget _qrSection(GuestBookingLookupResult result) {
     if (result.status == 'COMPLETED') {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Trip completed. Active QR codes are hidden.'),
+      return AppUi.surfaceCard(
+        backgroundColor: AppTokens.surfaceMuted,
+        child: const Text(
+          'Trip completed. Active QR codes are hidden.',
+          style: TextStyle(color: AppTokens.textSecondary),
         ),
       );
     }
 
     if (_dropoffQrToken != null) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SelectableText('Dropoff QR token: $_dropoffQrToken'),
-        ),
+      return AppUi.surfaceCard(
+        child: SelectableText('Dropoff QR token: $_dropoffQrToken'),
       );
     }
 
     if (result.capabilities.dropoffQrIssueAvailable) {
-      return ElevatedButton.icon(
+      return AppUi.primaryButton(
+        label: 'Issue dropoff QR',
+        icon: Icons.qr_code,
+        loading: _loadingDropoffQr,
         onPressed: _loadingDropoffQr ? null : _issueDropoffQr,
-        icon: _loadingDropoffQr
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.qr_code),
-        label: const Text('Issue dropoff QR'),
       );
     }
 
     if (result.capabilities.boardingQrPreviouslyIssued) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'Boarding QR was issued when the booking was created. '
-            'For security, it cannot be recovered from lookup.',
-          ),
+      return AppUi.surfaceCard(
+        backgroundColor: AppTokens.infoLight,
+        child: const Text(
+          'Boarding QR was issued when the booking was created. '
+          'For security, it cannot be recovered from lookup.',
+          style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
         ),
       );
     }
 
     return const SizedBox.shrink();
-  }
-
-  Widget _row(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(label, style: TextStyle(color: Colors.grey.shade700)),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
   }
 }

@@ -148,7 +148,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Could not load jobs'), findsOneWidget);
+    expect(find.textContaining('network'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
 

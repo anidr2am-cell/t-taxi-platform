@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../theme/app_theme.dart';
+import '../../../theme/app_tokens.dart';
 
 class LandingHero extends StatelessWidget {
   final VoidCallback onBook;
@@ -21,16 +21,15 @@ class LandingHero extends StatelessWidget {
 
     return Container(
       width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: EdgeInsets.symmetric(
-        horizontal: isWide ? 48 : 24,
-        vertical: isWide ? 56 : 32,
+        horizontal: isWide ? 40 : 24,
+        vertical: isWide ? 48 : 32,
       ),
-      decoration: const BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+      decoration: BoxDecoration(
+        gradient: AppTokens.heroGradient,
+        borderRadius: AppTokens.borderRadiusLg,
+        boxShadow: AppTokens.cardShadow(color: AppTokens.primary),
       ),
       child: isWide
           ? Row(
@@ -56,15 +55,31 @@ class LandingHero extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.local_taxi, size: 48, color: Colors.white),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: AppTokens.borderRadiusMd,
+          ),
+          child: const Icon(Icons.flight_land, size: 32, color: Colors.white),
+        ),
         const SizedBox(height: 16),
         Text(
           l10n.t('landing_hero_title'),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 28,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
             height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.t('landing_services_title'),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.88),
+            fontSize: 15,
+            height: 1.4,
           ),
         ),
         const SizedBox(height: 16),
@@ -72,12 +87,12 @@ class LandingHero extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppTheme.accent, size: 20),
+                  const Icon(Icons.check_circle, color: AppTokens.accent, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       item,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
                   ),
                 ],
@@ -88,15 +103,10 @@ class LandingHero extends StatelessWidget {
   }
 
   Widget _ctaButton(AppLocalizations l10n, VoidCallback onBook, {required bool fullWidth}) {
-    final button = ElevatedButton(
+    final button = FilledButton.icon(
       onPressed: onBook,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppTheme.accent,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      ),
-      child: Text(l10n.t('book_your_ride')),
+      icon: const Icon(Icons.arrow_forward),
+      label: Text(l10n.t('book_your_ride')),
     );
 
     if (fullWidth) {

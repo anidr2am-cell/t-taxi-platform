@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../theme/app_theme.dart';
+
+import '../../../theme/app_tokens.dart';
 
 class WizardStepIndicator extends StatelessWidget {
   final int currentStep;
@@ -14,21 +15,38 @@ class WizardStepIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: List.generate(totalSteps, (index) {
-          final active = index <= currentStep;
-          return Expanded(
-            child: Container(
-              margin: EdgeInsets.only(right: index < totalSteps - 1 ? 4 : 0),
-              height: 4,
-              decoration: BoxDecoration(
-                color: active ? AppTheme.primary : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Step ${currentStep + 1} of $totalSteps',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTokens.textSecondary,
+                    ),
               ),
+              Text(
+                '${((currentStep + 1) / totalSteps * 100).round()}%',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTokens.primary,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: (currentStep + 1) / totalSteps,
+              minHeight: 6,
+              backgroundColor: AppTokens.border,
+              color: AppTokens.primary,
             ),
-          );
-        }),
+          ),
+        ],
       ),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/admin_dashboard_metrics.dart';
 import '../services/admin_dashboard_api_service.dart';
 
@@ -54,100 +56,178 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _metrics == null) {
-      return const Center(child: CircularProgressIndicator());
+      return AppUi.loadingState(message: 'Loading dashboard...');
     }
     if (_error != null && _metrics == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              ElevatedButton(onPressed: _load, child: const Text('Retry')),
-            ],
-          ),
-        ),
-      );
+      return AppUi.errorState(message: _error!, onRetry: _load);
     }
 
     final metrics = _metrics!;
+    final activeTrips = metrics.bookings.onRoute + metrics.bookings.arrived;
+
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Operations for ${metrics.date} (${metrics.timezone})',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Refresh',
-                onPressed: _loading ? null : _load,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: AppUi.pagePadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          AppUi.sectionHeader(
+            context,
+            title: 'Operations for ${metrics.date}',
+            subtitle: '${metrics.timezone} · Last updated ${metrics.updatedAt}',
+            trailing: IconButton(
+              tooltip: 'Refresh',
+              onPressed: _loading ? null : _load,
+              icon: const Icon(Icons.refresh),
+            ),
           ),
-          Text('Last updated: ${metrics.updatedAt}'),
           if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            const SizedBox(height: AppTokens.spaceSm),
+            AppUi.errorState(message: _error!),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: AppTokens.spaceMd),
+          AppUi.sectionHeader(
+            context,
+            title: 'Needs attention',
+            subtitle: 'Prioritize unassigned bookings, active trips, and settlement issues.',
+          ),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
-              _MetricCard('Today bookings', metrics.bookings.today, Icons.today, widget.onOpenDispatch),
-              _MetricCard('Unassigned', metrics.bookings.unassigned, Icons.person_add_alt, widget.onOpenDispatch),
-              _MetricCard('Assigned', metrics.bookings.assigned, Icons.assignment_ind, widget.onOpenDispatch),
-              _MetricCard('On route', metrics.bookings.onRoute, Icons.route, widget.onOpenDispatch),
-              _MetricCard('Arrived', metrics.bookings.arrived, Icons.pin_drop, widget.onOpenDispatch),
-              _MetricCard('Completed', metrics.bookings.completed, Icons.check_circle, widget.onOpenDispatch),
-              _MetricCard('Cancelled', metrics.bookings.cancelled, Icons.cancel, widget.onOpenDispatch),
-              _MetricCard('Online drivers', metrics.drivers.online, Icons.local_taxi, null),
-              _MetricCard(
-                'Pending settlements',
-                metrics.settlements.pending,
-                Icons.receipt_long,
-                widget.onOpenSettlements,
+              AppUi.kpiMetricCard(
+                label: 'Unassigned',
+                value: '${metrics.bookings.unassigned}',
+                icon: Icons.person_add_alt,
+                tone: AppStatusTone.warning,
+                onTap: widget.onOpenDispatch,
               ),
-              _MetricCard(
-                'Today revenue',
-                _money(metrics.revenue.todayBooked, metrics.revenue.currency),
-                Icons.payments,
-                null,
+              AppUi.kpiMetricCard(
+                label: 'Active trips',
+                value: '$activeTrips',
+                icon: Icons.route,
+                tone: AppStatusTone.info,
+                onTap: widget.onOpenDispatch,
+              ),
+              AppUi.kpiMetricCard(
+                label: 'Overdue settlements',
+                value: '${metrics.settlements.overdue}',
+                icon: Icons.warning_amber_outlined,
+                tone: metrics.settlements.overdue > 0 ? AppStatusTone.error : AppStatusTone.neutral,
+                onTap: widget.onOpenSettlements,
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          Text('Operational focus', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTokens.spaceLg),
+          AppUi.sectionHeader(
+            context,
+            title: 'Operational focus',
+            subtitle: 'Tap a row to open the relevant queue.',
+          ),
           _FocusTile(
             label: 'Bookings needing assignment',
             value: metrics.bookings.unassigned,
+            tone: AppStatusTone.warning,
             onTap: widget.onOpenDispatch,
           ),
+          const SizedBox(height: 8),
           _FocusTile(
             label: 'Active trips',
-            value: metrics.bookings.onRoute + metrics.bookings.arrived,
+            value: activeTrips,
+            tone: AppStatusTone.info,
             onTap: widget.onOpenDispatch,
           ),
+          const SizedBox(height: 8),
           _FocusTile(
             label: 'Overdue settlements',
             value: metrics.settlements.overdue,
+            tone: metrics.settlements.overdue > 0 ? AppStatusTone.error : AppStatusTone.neutral,
             onTap: widget.onOpenSettlements,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Completed-trip revenue today: ${_money(metrics.revenue.todayCompleted, metrics.revenue.currency)}',
+          const SizedBox(height: AppTokens.spaceLg),
+          AppUi.sectionHeader(
+            context,
+            title: 'Today\'s bookings',
+            subtitle: 'Tap a card to open dispatch.',
+          ),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              AppUi.metricCard(
+                label: 'Today bookings',
+                value: '${metrics.bookings.today}',
+                icon: Icons.today,
+                onTap: widget.onOpenDispatch,
+              ),
+              AppUi.metricCard(
+                label: 'Assigned',
+                value: '${metrics.bookings.assigned}',
+                icon: Icons.assignment_ind,
+                onTap: widget.onOpenDispatch,
+              ),
+              AppUi.metricCard(
+                label: 'On route',
+                value: '${metrics.bookings.onRoute}',
+                icon: Icons.route,
+                onTap: widget.onOpenDispatch,
+              ),
+              AppUi.metricCard(
+                label: 'Arrived',
+                value: '${metrics.bookings.arrived}',
+                icon: Icons.pin_drop,
+                onTap: widget.onOpenDispatch,
+              ),
+              AppUi.metricCard(
+                label: 'Completed',
+                value: '${metrics.bookings.completed}',
+                icon: Icons.check_circle,
+                onTap: widget.onOpenDispatch,
+              ),
+              AppUi.metricCard(
+                label: 'Cancelled',
+                value: '${metrics.bookings.cancelled}',
+                icon: Icons.cancel,
+                onTap: widget.onOpenDispatch,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceLg),
+          AppUi.sectionHeader(context, title: 'Fleet & finance'),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              AppUi.metricCard(
+                label: 'Online drivers',
+                value: '${metrics.drivers.online}',
+                icon: Icons.local_taxi,
+              ),
+              AppUi.metricCard(
+                label: 'Pending settlements',
+                value: '${metrics.settlements.pending}',
+                icon: Icons.receipt_long,
+                onTap: widget.onOpenSettlements,
+              ),
+              AppUi.metricCard(
+                label: 'Today revenue',
+                value: _money(metrics.revenue.todayBooked, metrics.revenue.currency),
+                icon: Icons.payments,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.surfaceMuted,
+            child: Text(
+              'Completed-trip revenue today: ${_money(metrics.revenue.todayCompleted, metrics.revenue.currency)}',
+              style: const TextStyle(color: AppTokens.textSecondary),
+            ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -158,61 +238,39 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard(this.label, this.value, this.icon, this.onTap);
-
-  final String label;
-  final Object value;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 180,
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(height: 12),
-                Text(
-                  '$value',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(label),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _FocusTile extends StatelessWidget {
   const _FocusTile({
     required this.label,
     required this.value,
+    required this.tone,
     this.onTap,
   });
 
   final String label;
   final int value;
+  final AppStatusTone tone;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      trailing: Text('$value'),
+    return AppUi.surfaceCard(
       onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          AppUi.statusBadge('$value', tone: tone),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: AppTokens.textMuted, size: 18),
+          ],
+        ],
+      ),
     );
   }
 }

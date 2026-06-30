@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
@@ -67,7 +69,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return AppUi.loadingState();
           }
           if (snapshot.hasError) {
             final err = snapshot.error!;
@@ -76,24 +78,18 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
                 if (context.mounted) driverHandleApiError(context, err);
               });
             }
-            return _StateMessage(
-              title: l10n.t('driver_jobs_error_title'),
+            return AppUi.errorState(
               message: err.toString(),
-              action: ElevatedButton(
-                onPressed: _refresh,
-                child: Text(l10n.t('driver_retry')),
-              ),
+              onRetry: _refresh,
+              retryLabel: l10n.t('driver_retry'),
             );
           }
           final data = snapshot.data;
           if (data == null || data.items.isEmpty) {
-            return _StateMessage(
+            return AppUi.emptyState(
               title: l10n.t('driver_jobs_empty_title'),
               message: l10n.t('driver_jobs_empty_message'),
-              action: ElevatedButton(
-                onPressed: _refresh,
-                child: Text(l10n.t('driver_refresh')),
-              ),
+              icon: Icons.work_off_outlined,
             );
           }
 
@@ -185,6 +181,11 @@ class _JobCard extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppTokens.borderRadiusLg,
+        side: const BorderSide(color: AppTokens.border),
+      ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -201,7 +202,10 @@ class _JobCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
-                  _StatusChip(label: l10n.t(statusKey)),
+                  AppUi.statusBadge(
+                    l10n.t(statusKey),
+                    tone: AppUi.toneForBookingStatus(booking.status),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
@@ -230,78 +234,10 @@ class _JobCard extends StatelessWidget {
                 Text('${l10n.t('flight_number')}: ${booking.flightNumber}'),
               if (actionKey != null) ...[
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.touch_app,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        l10n.t(actionKey),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
+                AppUi.actionBanner(message: l10n.t(actionKey)),
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
-    );
-  }
-}
-
-class _StateMessage extends StatelessWidget {
-  const _StateMessage({
-    required this.title,
-    required this.message,
-    required this.action,
-  });
-
-  final String title;
-  final String message;
-  final Widget action;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            action,
-          ],
         ),
       ),
     );

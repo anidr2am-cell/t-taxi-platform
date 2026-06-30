@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
 
@@ -22,55 +24,36 @@ class StepPickupDateTime extends StatelessWidget {
     final min = controller.minimumPickupDateTime();
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: AppUi.pagePadding(context),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.t('pickup_datetime'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(l10n.t('pickup_minimum_notice')),
-                const SizedBox(height: 20),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today),
-                  title: Text(l10n.t('pickup_date')),
-                  subtitle: Text(
-                    state.pickupDate ?? controller.formatDate(selected),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _pickDate(context, selected, min),
-                ),
-                const Divider(),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.schedule),
-                  title: Text(l10n.t('pickup_time')),
-                  subtitle: Text(
-                    state.pickupTime ?? controller.formatTime(selected),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _pickTime(context, selected),
-                ),
-                if (state.errorMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    state.errorMessage!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+        AppUi.sectionHeader(
+          context,
+          title: l10n.t('pickup_datetime'),
+          subtitle: l10n.t('pickup_minimum_notice'),
+        ),
+        AppUi.surfaceCard(
+          child: Column(
+            children: [
+              _PickerRow(
+                icon: Icons.calendar_today_outlined,
+                title: l10n.t('pickup_date'),
+                value: state.pickupDate ?? controller.formatDate(selected),
+                onTap: () => _pickDate(context, selected, min),
+              ),
+              const Divider(height: 1),
+              _PickerRow(
+                icon: Icons.schedule_outlined,
+                title: l10n.t('pickup_time'),
+                value: state.pickupTime ?? controller.formatTime(selected),
+                onTap: () => _pickTime(context, selected),
+              ),
+            ],
           ),
         ),
+        if (state.errorMessage != null) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          AppUi.errorState(message: state.errorMessage!),
+        ],
       ],
     );
   }
@@ -118,6 +101,67 @@ class StepPickupDateTime extends StatelessWidget {
         selected.day,
         time.hour,
         time.minute,
+      ),
+    );
+  }
+}
+
+class _PickerRow extends StatelessWidget {
+  const _PickerRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppTokens.borderRadiusMd,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTokens.primary.withValues(alpha: 0.1),
+                borderRadius: AppTokens.borderRadiusSm,
+              ),
+              child: Icon(icon, color: AppTokens.primary, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppTokens.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppTokens.textMuted),
+          ],
+        ),
       ),
     );
   }

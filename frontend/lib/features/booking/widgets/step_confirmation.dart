@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
+import '../../../widgets/app_ui.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/location_option.dart';
 import '../models/service_type_option.dart';
@@ -15,57 +17,76 @@ class StepConfirmation extends StatelessWidget {
     final pricing = state.pricing;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.t('booking_summary'),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Divider(height: 24),
-              _row(
-                l10n.t('service_type'),
-                l10n.t(state.serviceType?.labelKey ?? ''),
-              ),
-              _row(l10n.t('origin'), _formatLocation(state.origin)),
-              _row(l10n.t('destination'), _formatLocation(state.destination)),
-              _row(
-                l10n.t('pickup_datetime'),
-                '${state.pickupDate ?? '-'} ${state.pickupTime ?? ''}'.trim(),
-              ),
-              _row(l10n.t('adults'), '${state.adults}'),
-              _row(l10n.t('children'), '${state.children}'),
-              _row(l10n.t('infants'), '${state.infants}'),
-              _row(l10n.t('small_carriers'), '${state.luggage20}'),
-              _row(l10n.t('large_carriers'), '${state.luggage24}'),
-              _row(l10n.t('golf_bags'), '${state.golfBags}'),
-              _row(l10n.t('special_luggage'), '${state.specialLuggageCount}'),
-              if (state.nameSign) _row(l10n.t('name_sign'), l10n.t('yes')),
-              _row(l10n.t('vehicle'), state.selectedVehicle ?? '-'),
-              if (pricing != null) ...[
-                const Divider(height: 24),
-                _row(
-                  l10n.t('base_price'),
-                  '${pricing.basePrice} ${pricing.currency}',
-                ),
-                for (final item in pricing.additionalCharges)
-                  _row(item.description, '${item.amount} ${pricing.currency}'),
-                _row(
-                  l10n.t('total'),
-                  '${pricing.totalAmount} ${pricing.currency}',
-                  bold: true,
-                ),
-              ],
-            ],
+      padding: AppUi.pagePadding(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppUi.sectionHeader(
+            context,
+            title: l10n.t('booking_summary'),
+            subtitle: l10n.t('landing_highlight_fixed_price'),
           ),
-        ),
+          AppUi.surfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppUi.summaryRow(
+                  label: l10n.t('service_type'),
+                  value: l10n.t(state.serviceType?.labelKey ?? ''),
+                ),
+                AppUi.summaryRow(label: l10n.t('origin'), value: _formatLocation(state.origin)),
+                AppUi.summaryRow(label: l10n.t('destination'), value: _formatLocation(state.destination)),
+                AppUi.summaryRow(
+                  label: l10n.t('pickup_datetime'),
+                  value: '${state.pickupDate ?? '-'} ${state.pickupTime ?? ''}'.trim(),
+                ),
+                AppUi.summaryRow(label: l10n.t('adults'), value: '${state.adults}'),
+                AppUi.summaryRow(label: l10n.t('children'), value: '${state.children}'),
+                AppUi.summaryRow(label: l10n.t('infants'), value: '${state.infants}'),
+                AppUi.summaryRow(label: l10n.t('small_carriers'), value: '${state.luggage20}'),
+                AppUi.summaryRow(label: l10n.t('large_carriers'), value: '${state.luggage24}'),
+                AppUi.summaryRow(label: l10n.t('golf_bags'), value: '${state.golfBags}'),
+                AppUi.summaryRow(label: l10n.t('special_luggage'), value: '${state.specialLuggageCount}'),
+                if (state.nameSign)
+                  AppUi.summaryRow(label: l10n.t('name_sign'), value: l10n.t('yes')),
+                AppUi.summaryRow(label: l10n.t('vehicle'), value: state.selectedVehicle ?? '-'),
+              ],
+            ),
+          ),
+          if (pricing != null) ...[
+            const SizedBox(height: 16),
+            AppUi.surfaceCard(
+              backgroundColor: AppTokens.primaryLight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.t('total'),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppTokens.primaryDark,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppUi.summaryRow(
+                    label: l10n.t('base_price'),
+                    value: '${pricing.basePrice} ${pricing.currency}',
+                  ),
+                  for (final item in pricing.additionalCharges)
+                    AppUi.summaryRow(
+                      label: item.description,
+                      value: '${item.amount} ${pricing.currency}',
+                    ),
+                  const Divider(height: 24),
+                  AppUi.summaryRow(
+                    label: l10n.t('total'),
+                    value: '${pricing.totalAmount} ${pricing.currency}',
+                    emphasize: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -77,29 +98,5 @@ class StepConfirmation extends StatelessWidget {
       return '$name — ${location.address}';
     }
     return name;
-  }
-
-  Widget _row(String label, String value, {bool bold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(label, style: TextStyle(color: Colors.grey.shade700)),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
