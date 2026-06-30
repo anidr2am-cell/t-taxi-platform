@@ -252,20 +252,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseBookingSummaryPagination'
 
-  /customer/fcm-token:
-    post:
-      tags: [Customer]
-      summary: Register FCM token
-      operationId: registerCustomerFcmToken
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FcmTokenRequest'
-      responses:
-        '200':
-          $ref: '#/components/responses/SuccessEmpty'
-
   /bookings/vehicle/recommend:
     post:
       tags: [Booking]
@@ -1380,16 +1366,106 @@ paths:
         '200':
           $ref: '#/components/responses/SuccessEmpty'
 
-  /notifications/fcm-token:
+  /notifications/devices:
+    get:
+      tags: [Notification]
+      summary: List registered notification devices
+      description: Returns metadata only. Raw FCM tokens are never returned.
+      operationId: listNotificationDevices
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationDeviceList'
     post:
       tags: [Notification]
-      summary: Register FCM token
-      operationId: registerFcmToken
+      summary: Register FCM device token
+      description: ADMIN, SUPER_ADMIN, and DRIVER users may register device tokens. Re-registering the same token updates ownership and lastSeenAt.
+      operationId: registerNotificationDevice
+      security:
+        - bearerAuth: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FcmTokenRequest'
+              $ref: '#/components/schemas/NotificationDeviceRegistrationRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationDevice'
+
+  /notifications/devices/{deviceId}:
+    delete:
+      tags: [Notification]
+      summary: Deactivate registered notification device
+      operationId: deleteNotificationDevice
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessEmpty'
+
+  /public/bookings/{bookingId}/notification-devices:
+    post:
+      tags: [Notification]
+      summary: Register guest booking FCM device token
+      description: Requires X-Guest-Access-Token for the same booking. Raw FCM tokens are never returned.
+      operationId: registerGuestBookingNotificationDevice
+      security:
+        - guestReviewAccessHeader: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationDeviceRegistrationRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationDevice'
+
+  /public/bookings/{bookingId}/notification-devices/{deviceId}:
+    delete:
+      tags: [Notification]
+      summary: Deactivate guest booking notification device
+      operationId: deleteGuestBookingNotificationDevice
+      security:
+        - guestReviewAccessHeader: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
           $ref: '#/components/responses/SuccessEmpty'
@@ -3391,17 +3467,74 @@ components:
             data:
               $ref: '#/components/schemas/CustomerProfile'
 
-    FcmTokenRequest:
+    NotificationDeviceRegistrationRequest:
       type: object
-      required: [fcmToken, platform]
+      required: [token, platform]
       properties:
-        fcmToken:
+        token:
           type: string
+          minLength: 20
+          maxLength: 4096
+          description: FCM registration token. Never send this in URLs or logs.
         platform:
           type: string
           enum: [WEB, ANDROID, IOS]
-        deviceId:
+        deviceName:
           type: string
+          maxLength: 100
+        appVersion:
+          type: string
+          maxLength: 50
+
+    NotificationDevice:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+          format: int64
+        platform:
+          type: string
+          enum: [WEB, ANDROID, IOS]
+        token:
+          type: string
+          description: Masked token hash prefix only; raw FCM token is never returned.
+        deviceName:
+          type: string
+          nullable: true
+        appVersion:
+          type: string
+          nullable: true
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponseNotificationDevice:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/NotificationDevice'
+
+    ApiResponseNotificationDeviceList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NotificationDevice'
 
     # --- Booking DTOs ---
     PlaceLocation:
@@ -3656,6 +3789,9 @@ components:
     BookingCreatedResponse:
       type: object
       properties:
+        bookingId:
+          type: integer
+          format: int64
         bookingNumber:
           type: string
           pattern: '^TX[0-9]{14}$'
@@ -3729,6 +3865,9 @@ components:
     GuestBookingLookupResponse:
       type: object
       properties:
+        bookingId:
+          type: integer
+          format: int64
         bookingNumber:
           type: string
         status:

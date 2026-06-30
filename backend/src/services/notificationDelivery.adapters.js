@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const CONFIG_MISSING = 'CONFIG_MISSING';
 const INVALID_RECIPIENT = 'PERMANENT_INVALID_RECIPIENT';
 const FCM_TOKEN_MISSING = 'CONFIG_MISSING_FCM_TOKEN';
+const FCM_INVALID_TOKEN = 'PERMANENT_FCM_INVALID_TOKEN';
 
 class InAppNotificationAdapter {
   async send(_notification, _recipient) {
@@ -167,9 +168,20 @@ class FcmNotificationAdapter {
   }
 
   getToken(notification) {
-    return typeof notification.fcm_token === 'string' && notification.fcm_token.trim()
-      ? notification.fcm_token.trim()
+    const token = notification.fcm_token ?? notification.fcmToken;
+    return typeof token === 'string' && token.trim()
+      ? token.trim()
       : null;
+  }
+
+  isInvalidTokenError(err) {
+    const code = String(err?.code || err?.errorInfo?.code || '');
+    const message = String(err?.message || '').toLowerCase();
+    return code === 'messaging/registration-token-not-registered'
+      || code === 'messaging/invalid-registration-token'
+      || code === 'messaging/invalid-argument'
+      || message.includes('registration token is not a valid')
+      || message.includes('requested entity was not found');
   }
 
   async getAdmin() {
@@ -215,11 +227,18 @@ class FcmNotificationAdapter {
       });
     }
 
-    await admin.messaging().send({
-      token,
-      ...this.buildMessage(notification),
-    });
-    return { status: DELIVERY_STATUS.DELIVERED };
+    try {
+      await admin.messaging().send({
+        token,
+        ...this.buildMessage(notification),
+      });
+      return { status: DELIVERY_STATUS.DELIVERED };
+    } catch (err) {
+      if (this.isInvalidTokenError(err)) {
+        return { status: DELIVERY_STATUS.FAILED, error: FCM_INVALID_TOKEN, permanent: true };
+      }
+      throw err;
+    }
   }
 }
 
@@ -236,4 +255,5 @@ module.exports = {
   EmailNotificationAdapter,
   FcmNotificationAdapter,
   createDeliveryAdapters,
+  FCM_INVALID_TOKEN,
 };

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../notification/services/notification_device_registration_service.dart';
 import '../driver_auth.dart';
 import '../services/driver_api_service.dart';
 
 class DriverProfilePage extends StatefulWidget {
-  const DriverProfilePage({super.key, this.api});
+  const DriverProfilePage({super.key, this.api, this.deviceRegistrationService});
 
   final DriverApiService? api;
+  final NotificationDeviceRegistrationService? deviceRegistrationService;
 
   @override
   State<DriverProfilePage> createState() => _DriverProfilePageState();
@@ -15,6 +17,8 @@ class DriverProfilePage extends StatefulWidget {
 
 class _DriverProfilePageState extends State<DriverProfilePage> {
   late final DriverApiService _api = widget.api ?? DriverApiService();
+  late final NotificationDeviceRegistrationService _deviceRegistration =
+      widget.deviceRegistrationService ?? NotificationDeviceRegistrationService();
   Future<Map<String, dynamic>>? _ratingFuture;
 
   @override
@@ -24,6 +28,13 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
   }
 
   Future<void> _logout() async {
+    try {
+      await _deviceRegistration.deactivateAuthenticated(
+        accessTokenLoader: _api.getSavedToken,
+      );
+    } catch (_) {
+      // Push cleanup is best effort; never block logout.
+    }
     await _api.logout();
     if (!mounted) return;
     driverRedirectToLogin(context);
@@ -65,7 +76,7 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                   title: Text(
                     avg == null
                         ? l10n.t('driver_no_ratings')
-                        : '${avg} ${l10n.t('driver_rating_average')}',
+                        : '$avg ${l10n.t('driver_rating_average')}',
                   ),
                   subtitle: Text('$count ${l10n.t('driver_rating_count')}'),
                 ),

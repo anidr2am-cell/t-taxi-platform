@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../../../config/app_config.dart';
+import '../../notification/services/notification_device_registration_service.dart';
 import '../../booking/widgets/booking_review_form.dart';
 
 class BookingNotificationApi {
@@ -45,13 +46,17 @@ class BookingNotificationSection extends StatefulWidget {
   const BookingNotificationSection({
     super.key,
     required this.bookingNumber,
+    this.bookingId,
     this.guestAccessToken,
     this.api,
+    this.deviceRegistrationService,
   });
 
   final String bookingNumber;
+  final int? bookingId;
   final String? guestAccessToken;
   final BookingNotificationApi? api;
+  final NotificationDeviceRegistrationService? deviceRegistrationService;
 
   @override
   State<BookingNotificationSection> createState() => _BookingNotificationSectionState();
@@ -59,8 +64,12 @@ class BookingNotificationSection extends StatefulWidget {
 
 class _BookingNotificationSectionState extends State<BookingNotificationSection> {
   late final BookingNotificationApi _api = widget.api ?? const BookingNotificationApi();
+  late final NotificationDeviceRegistrationService _deviceRegistration =
+      widget.deviceRegistrationService ?? NotificationDeviceRegistrationService();
   bool _loading = true;
+  bool _enablingNotifications = false;
   String? _error;
+  String? _pushStatus;
   List<dynamic> _items = [];
 
   @override
@@ -93,6 +102,39 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
     }
   }
 
+  Future<void> _enableNotifications() async {
+    if (_enablingNotifications) return;
+    setState(() {
+      _enablingNotifications = true;
+      _pushStatus = null;
+    });
+    final token = widget.guestAccessToken
+        ?? await const BookingReviewApi().loadGuestToken(widget.bookingNumber);
+    final result = await _deviceRegistration.enableGuest(
+      bookingId: widget.bookingId,
+      guestAccessToken: token,
+    );
+    setState(() {
+      _pushStatus = _messageForPushResult(result);
+      _enablingNotifications = false;
+    });
+  }
+
+  String _messageForPushResult(NotificationDeviceRegistrationResult result) {
+    switch (result.status) {
+      case NotificationDeviceRegistrationStatus.registered:
+        return 'Notifications enabled';
+      case NotificationDeviceRegistrationStatus.permissionDenied:
+        return 'Notification permission was denied';
+      case NotificationDeviceRegistrationStatus.unsupported:
+        return 'Push notifications are not supported in this browser';
+      case NotificationDeviceRegistrationStatus.configMissing:
+        return 'Push notifications are not configured for this environment';
+      case NotificationDeviceRegistrationStatus.failed:
+        return result.message ?? 'Notification registration failed';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -109,30 +151,46 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
         ],
       );
     }
-    if (_items.isEmpty) return const SizedBox.shrink();
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Updates', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            ..._items.take(5).map((item) {
-              final map = Map<String, dynamic>.from(item as Map);
-              final read = map['read'] == true;
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  map['title'] as String? ?? 'Notification',
-                  style: TextStyle(
-                    fontWeight: read ? FontWeight.normal : FontWeight.bold,
-                  ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Updates', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                subtitle: Text(map['body'] as String? ?? ''),
-              );
-            }),
+                TextButton.icon(
+                  onPressed: _enablingNotifications ? null : _enableNotifications,
+                  icon: const Icon(Icons.notifications_active_outlined),
+                  label: Text(_enablingNotifications ? 'Enabling...' : 'Enable notifications'),
+                ),
+              ],
+            ),
+            if (_pushStatus != null) ...[
+              const SizedBox(height: 4),
+              Text(_pushStatus!),
+            ],
+            const SizedBox(height: 8),
+            if (_items.isEmpty)
+              const Text('No updates yet')
+            else
+              ..._items.take(5).map((item) {
+                final map = Map<String, dynamic>.from(item as Map);
+                final read = map['read'] == true;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    map['title'] as String? ?? 'Notification',
+                    style: TextStyle(
+                      fontWeight: read ? FontWeight.normal : FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(map['body'] as String? ?? ''),
+                );
+              }),
           ],
         ),
       ),

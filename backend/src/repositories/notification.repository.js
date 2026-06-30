@@ -7,6 +7,14 @@ class NotificationRepository {
     this.pool = pool;
   }
 
+  assertDeviceOwnership(data) {
+    const hasUser = data.userId != null;
+    const hasBooking = data.bookingId != null;
+    if (hasUser === hasBooking) {
+      throw new Error('notification_devices owner must be exactly one of user_id or booking_id');
+    }
+  }
+
   async findByIdempotencyKey(conn, idempotencyKey) {
     const executor = conn ?? this.pool;
     const [rows] = await executor.query(
@@ -125,7 +133,6 @@ class NotificationRepository {
             ELSE NULL
           END AS recipient_email,
           u.locale AS recipient_locale,
-          d.fcm_token AS fcm_token,
           b.booking_number,
           b.scheduled_pickup_at,
           b.origin_address,
@@ -134,12 +141,7 @@ class NotificationRepository {
         FROM notifications n
         LEFT JOIN users u ON u.id = n.user_id AND u.deleted_at IS NULL
         LEFT JOIN bookings b ON b.id = n.booking_id AND b.deleted_at IS NULL
-        LEFT JOIN notification_devices d
-          ON d.user_id = n.user_id
-          AND d.is_active = 1
-          AND d.deleted_at IS NULL
         WHERE n.id = ? AND n.deleted_at IS NULL
-        ORDER BY d.last_used_at DESC, d.id DESC
         LIMIT 1
       `,
       [notificationId],
@@ -150,6 +152,157 @@ class NotificationRepository {
       try { row.payload = JSON.parse(row.payload); } catch { row.payload = {}; }
     }
     return row;
+  }
+
+  async upsertDevice(conn, data) {
+    this.assertDeviceOwnership(data);
+    const executor = conn ?? this.pool;
+    const [existing] = await executor.query(
+      `
+        SELECT id
+        FROM notification_devices
+        WHERE fcm_token_hash = ?
+        LIMIT 1
+      `,
+      [data.tokenHash],
+    );
+
+    if (existing[0]) {
+      await executor.query(
+        `
+          UPDATE notification_devices
+          SET user_id = ?,
+              booking_id = ?,
+              platform = ?,
+              fcm_token = ?,
+              device_id = ?,
+              device_name = ?,
+              app_version = ?,
+              is_active = 1,
+              last_seen_at = CURRENT_TIMESTAMP,
+              last_used_at = CURRENT_TIMESTAMP,
+              deleted_at = NULL,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `,
+        [
+          data.userId ?? null,
+          data.bookingId ?? null,
+          data.platform,
+          data.token,
+          data.deviceId ?? null,
+          data.deviceName ?? null,
+          data.appVersion ?? null,
+          existing[0].id,
+        ],
+      );
+      return existing[0].id;
+    }
+
+    const [result] = await executor.query(
+      `
+        INSERT INTO notification_devices (
+          user_id, booking_id, platform, fcm_token, fcm_token_hash,
+          device_id, device_name, app_version, is_active, last_seen_at, last_used_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `,
+      [
+        data.userId ?? null,
+        data.bookingId ?? null,
+        data.platform,
+        data.token,
+        data.tokenHash,
+        data.deviceId ?? null,
+        data.deviceName ?? null,
+        data.appVersion ?? null,
+      ],
+    );
+    return result.insertId;
+  }
+
+  async listDevices(filters) {
+    const where = ['is_active = 1', 'deleted_at IS NULL'];
+    const params = [];
+    if (filters.userId !== undefined) {
+      where.push('user_id = ?');
+      params.push(filters.userId);
+    }
+    if (filters.bookingId !== undefined) {
+      where.push('booking_id = ?');
+      params.push(filters.bookingId);
+    }
+    const [rows] = await this.pool.query(
+      `
+        SELECT id, user_id, booking_id, platform, fcm_token_hash, device_name,
+               app_version, last_seen_at, created_at, updated_at
+        FROM notification_devices
+        WHERE ${where.join(' AND ')}
+        ORDER BY last_seen_at DESC, id DESC
+      `,
+      params,
+    );
+    return rows;
+  }
+
+  async deactivateDevice(conn, filters) {
+    const executor = conn ?? this.pool;
+    const where = ['id = ?', 'is_active = 1', 'deleted_at IS NULL'];
+    const params = [filters.deviceId];
+    if (filters.userId !== undefined) {
+      where.push('user_id = ?');
+      params.push(filters.userId);
+    }
+    if (filters.bookingId !== undefined) {
+      where.push('booking_id = ?');
+      params.push(filters.bookingId);
+    }
+    const [result] = await executor.query(
+      `
+        UPDATE notification_devices
+        SET is_active = 0,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE ${where.join(' AND ')}
+      `,
+      params,
+    );
+    return result.affectedRows > 0;
+  }
+
+  async deactivateDeviceById(conn, deviceId) {
+    const executor = conn ?? this.pool;
+    await executor.query(
+      `
+        UPDATE notification_devices
+        SET is_active = 0,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [deviceId],
+    );
+  }
+
+  async findActiveFcmDevicesForRecipient(recipient) {
+    const where = ['is_active = 1', 'deleted_at IS NULL'];
+    const params = [];
+    if (recipient.userId) {
+      where.push('user_id = ?');
+      params.push(recipient.userId);
+    } else if (recipient.bookingId) {
+      where.push('booking_id = ?');
+      params.push(recipient.bookingId);
+    } else {
+      return [];
+    }
+    const [rows] = await this.pool.query(
+      `
+        SELECT id, fcm_token
+        FROM notification_devices
+        WHERE ${where.join(' AND ')}
+        ORDER BY last_seen_at DESC, id DESC
+      `,
+      params,
+    );
+    return rows;
   }
 
   buildDeliveryFilters(filters = {}) {

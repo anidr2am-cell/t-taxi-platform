@@ -1,5 +1,6 @@
 class GuestBookingLookupResult {
   const GuestBookingLookupResult({
+    this.bookingId,
     required this.bookingNumber,
     required this.status,
     required this.scheduledPickupAt,
@@ -16,6 +17,7 @@ class GuestBookingLookupResult {
     this.driverPhone,
   });
 
+  final int? bookingId;
   final String bookingNumber;
   final String status;
   final String? scheduledPickupAt;
@@ -49,6 +51,7 @@ class GuestBookingLookupResult {
     }
 
     return GuestBookingLookupResult(
+      bookingId: json['bookingId'] as int?,
       bookingNumber: bookingNumber,
       status: json['status'] as String? ?? '',
       scheduledPickupAt: json['scheduledPickupAt'] as String?,
@@ -69,6 +72,7 @@ class GuestBookingLookupResult {
   }
 
   Map<String, dynamic> toJson() => {
+        'bookingId': bookingId,
         'bookingNumber': bookingNumber,
         'status': status,
         'scheduledPickupAt': scheduledPickupAt,

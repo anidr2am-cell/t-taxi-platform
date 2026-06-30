@@ -245,6 +245,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           if (result.capabilities.notificationsAvailable)
             BookingNotificationSection(
               bookingNumber: result.bookingNumber,
+              bookingId: result.bookingId,
               guestAccessToken: result.guestAccessToken,
             ),
           if (result.capabilities.chatAvailable) ...[

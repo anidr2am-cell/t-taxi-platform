@@ -6,12 +6,14 @@ import '../driver_ux.dart';
 import '../pages/driver_booking_detail_page.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
+import '../../notification/services/notification_device_registration_service.dart';
 import '../services/driver_api_service.dart';
 
 class DriverNotificationsPage extends StatefulWidget {
-  const DriverNotificationsPage({super.key, this.api});
+  const DriverNotificationsPage({super.key, this.api, this.deviceRegistrationService});
 
   final DriverApiService? api;
+  final NotificationDeviceRegistrationService? deviceRegistrationService;
 
   @override
   State<DriverNotificationsPage> createState() => _DriverNotificationsPageState();
@@ -19,9 +21,13 @@ class DriverNotificationsPage extends StatefulWidget {
 
 class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
   late final DriverApiService _api = widget.api ?? const DriverApiService();
+  late final NotificationDeviceRegistrationService _deviceRegistration =
+      widget.deviceRegistrationService ?? NotificationDeviceRegistrationService();
   bool _loading = true;
   bool _markingAll = false;
+  bool _enablingNotifications = false;
   String? _error;
+  String? _pushStatus;
   List<dynamic> _items = [];
 
   @override
@@ -76,6 +82,36 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
     }
   }
 
+  Future<void> _enableNotifications() async {
+    if (_enablingNotifications) return;
+    setState(() {
+      _enablingNotifications = true;
+      _pushStatus = null;
+    });
+    final result = await _deviceRegistration.enableAuthenticated(
+      accessTokenLoader: _api.getSavedToken,
+    );
+    setState(() {
+      _pushStatus = _messageForPushResult(result);
+      _enablingNotifications = false;
+    });
+  }
+
+  String _messageForPushResult(NotificationDeviceRegistrationResult result) {
+    switch (result.status) {
+      case NotificationDeviceRegistrationStatus.registered:
+        return 'Notifications enabled';
+      case NotificationDeviceRegistrationStatus.permissionDenied:
+        return 'Notification permission was denied';
+      case NotificationDeviceRegistrationStatus.unsupported:
+        return 'Push notifications are not supported in this browser';
+      case NotificationDeviceRegistrationStatus.configMissing:
+        return 'Push notifications are not configured for this environment';
+      case NotificationDeviceRegistrationStatus.failed:
+        return result.message ?? 'Notification registration failed';
+    }
+  }
+
   void _openTarget(Map<String, dynamic> item) {
     final payload = Map<String, dynamic>.from(
       item['payload'] as Map? ?? {},
@@ -123,6 +159,11 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
         actions: [
           IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
           IconButton(
+            onPressed: _enablingNotifications ? null : _enableNotifications,
+            icon: const Icon(Icons.notifications_active_outlined),
+            tooltip: 'Enable notifications',
+          ),
+          IconButton(
             onPressed: _markingAll ? null : _markAll,
             icon: const Icon(Icons.done_all),
             tooltip: l10n.t('driver_mark_all_read'),
@@ -144,9 +185,17 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
                     ],
                   ),
                 )
-              : _items.isEmpty
-                  ? Center(child: Text(l10n.t('driver_notifications_empty')))
-                  : RefreshIndicator(
+              : Column(
+                  children: [
+                    if (_pushStatus != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: Text(_pushStatus!),
+                      ),
+                    Expanded(
+                      child: _items.isEmpty
+                          ? Center(child: Text(l10n.t('driver_notifications_empty')))
+                          : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
@@ -179,6 +228,9 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
                         },
                       ),
                     ),
+                    ),
+                  ],
+                ),
     );
   }
 }

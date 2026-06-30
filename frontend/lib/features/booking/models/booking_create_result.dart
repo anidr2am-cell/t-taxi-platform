@@ -1,4 +1,5 @@
 class BookingCreateResult {
+  final int? bookingId;
   final String bookingNumber;
   final String status;
   final String paymentMethod;
@@ -11,6 +12,7 @@ class BookingCreateResult {
   final String trustMessage;
 
   const BookingCreateResult({
+    this.bookingId,
     required this.bookingNumber,
     required this.status,
     required this.paymentMethod,
@@ -25,6 +27,7 @@ class BookingCreateResult {
 
   factory BookingCreateResult.fromJson(Map<String, dynamic> json) {
     return BookingCreateResult(
+      bookingId: json['bookingId'] as int?,
       bookingNumber: json['bookingNumber'] as String? ?? '',
       status: json['status'] as String? ?? 'PENDING',
       paymentMethod: json['paymentMethod'] as String? ?? 'PAY_DRIVER',

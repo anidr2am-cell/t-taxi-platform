@@ -110,6 +110,42 @@ const listAdminNotificationDeliveries = asyncHandler(async (req, res) => {
   });
 });
 
+const registerAuthenticatedDevice = asyncHandler(async (req, res) => {
+  const data = await getNotificationService().registerDeviceForUser(req.user, req.body);
+  return success(res, data, 'Notification device registered', 201);
+});
+
+const listAuthenticatedDevices = asyncHandler(async (req, res) => {
+  const data = await getNotificationService().listDevicesForUser(req.user);
+  return success(res, data);
+});
+
+const deleteAuthenticatedDevice = asyncHandler(async (req, res) => {
+  const data = await getNotificationService().deactivateDeviceForUser(
+    req.user,
+    Number(req.params.deviceId),
+  );
+  return success(res, data, 'Notification device deactivated');
+});
+
+const registerGuestDevice = asyncHandler(async (req, res) => {
+  const data = await getNotificationService().registerDeviceForGuestBooking(
+    Number(req.params.bookingId),
+    extractGuestAccessTokenFromHeader(req),
+    req.body,
+  );
+  return success(res, data, 'Notification device registered', 201);
+});
+
+const deleteGuestDevice = asyncHandler(async (req, res) => {
+  const data = await getNotificationService().deactivateDeviceForGuestBooking(
+    Number(req.params.bookingId),
+    extractGuestAccessTokenFromHeader(req),
+    Number(req.params.deviceId),
+  );
+  return success(res, data, 'Notification device deactivated');
+});
+
 const adminUnreadCount = asyncHandler(async (req, res) => {
   const data = await getNotificationService().unreadCountForUser(req.user.id, req.user.role);
   return success(res, data);
@@ -144,4 +180,9 @@ module.exports = {
   adminUnreadCount,
   markAdminRead,
   markAdminReadAll,
+  registerAuthenticatedDevice,
+  listAuthenticatedDevices,
+  deleteAuthenticatedDevice,
+  registerGuestDevice,
+  deleteGuestDevice,
 };

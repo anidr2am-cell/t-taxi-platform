@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../notification/services/notification_device_registration_service.dart';
 import '../services/admin_notification_api_service.dart';
 
 class AdminNotificationQueuePage extends StatefulWidget {
-  const AdminNotificationQueuePage({super.key, this.api});
+  const AdminNotificationQueuePage({super.key, this.api, this.deviceRegistrationService});
 
   final AdminNotificationApiService? api;
+  final NotificationDeviceRegistrationService? deviceRegistrationService;
 
   @override
   State<AdminNotificationQueuePage> createState() => _AdminNotificationQueuePageState();
@@ -13,9 +15,13 @@ class AdminNotificationQueuePage extends StatefulWidget {
 
 class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage> {
   late final AdminNotificationApiService _api = widget.api ?? const AdminNotificationApiService();
+  late final NotificationDeviceRegistrationService _deviceRegistration =
+      widget.deviceRegistrationService ?? NotificationDeviceRegistrationService();
   bool _loading = true;
   bool _markingAll = false;
+  bool _enablingNotifications = false;
   String? _error;
+  String? _pushStatus;
   List<dynamic> _items = [];
   bool _unreadOnly = false;
   String? _typeFilter;
@@ -61,6 +67,36 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
     }
   }
 
+  Future<void> _enableNotifications() async {
+    if (_enablingNotifications) return;
+    setState(() {
+      _enablingNotifications = true;
+      _pushStatus = null;
+    });
+    final result = await _deviceRegistration.enableAuthenticated(
+      accessTokenLoader: _api.getSavedToken,
+    );
+    setState(() {
+      _pushStatus = _messageForPushResult(result);
+      _enablingNotifications = false;
+    });
+  }
+
+  String _messageForPushResult(NotificationDeviceRegistrationResult result) {
+    switch (result.status) {
+      case NotificationDeviceRegistrationStatus.registered:
+        return 'Notifications enabled';
+      case NotificationDeviceRegistrationStatus.permissionDenied:
+        return 'Notification permission was denied';
+      case NotificationDeviceRegistrationStatus.unsupported:
+        return 'Push notifications are not supported in this browser';
+      case NotificationDeviceRegistrationStatus.configMissing:
+        return 'Push notifications are not configured for this environment';
+      case NotificationDeviceRegistrationStatus.failed:
+        return result.message ?? 'Notification registration failed';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -99,6 +135,12 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
                 onPressed: _markingAll ? null : _markAll,
                 child: Text(_markingAll ? 'Marking...' : 'Mark all read'),
               ),
+              OutlinedButton.icon(
+                onPressed: _enablingNotifications ? null : _enableNotifications,
+                icon: const Icon(Icons.notifications_active_outlined),
+                label: Text(_enablingNotifications ? 'Enabling...' : 'Enable notifications'),
+              ),
+              if (_pushStatus != null) Text(_pushStatus!),
             ],
           ),
         ),

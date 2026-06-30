@@ -160,6 +160,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               const SizedBox(height: 16),
               BookingNotificationSection(
                 bookingNumber: result.bookingNumber,
+                bookingId: result.bookingId,
                 guestAccessToken: result.guestAccessToken,
               ),
               const SizedBox(height: 16),

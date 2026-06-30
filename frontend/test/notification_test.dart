@@ -5,6 +5,7 @@ import 'package:frontend/features/driver/pages/driver_notifications_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/admin_notification/pages/admin_notification_queue_page.dart';
 import 'package:frontend/features/admin_notification/services/admin_notification_api_service.dart';
+import 'package:frontend/features/notification/services/notification_device_registration_service.dart';
 
 void main() {
   testWidgets('guest booking notifications loading and list', (tester) async {
@@ -13,8 +14,10 @@ void main() {
         home: Scaffold(
           body: BookingNotificationSection(
             bookingNumber: 'TX202607010001',
+            bookingId: 10,
             guestAccessToken: 'guest-token',
             api: _FakeBookingNotificationApi(),
+            deviceRegistrationService: _FakeDeviceRegistrationService(),
           ),
         ),
       ),
@@ -31,14 +34,17 @@ void main() {
         home: Scaffold(
           body: BookingNotificationSection(
             bookingNumber: 'TX202607010001',
+            bookingId: 10,
             guestAccessToken: 'guest-token',
             api: _FakeBookingNotificationApi(empty: true),
+            deviceRegistrationService: _FakeDeviceRegistrationService(),
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Updates'), findsNothing);
+    expect(find.text('Updates'), findsOneWidget);
+    expect(find.text('No updates yet'), findsOneWidget);
   });
 
   testWidgets('guest booking notifications error retry', (tester) async {
@@ -49,6 +55,7 @@ void main() {
             bookingNumber: 'TX202607010001',
             guestAccessToken: 'guest-token',
             api: _FakeBookingNotificationApi(error: true),
+            deviceRegistrationService: _FakeDeviceRegistrationService(),
           ),
         ),
       ),
@@ -60,7 +67,10 @@ void main() {
   testWidgets('driver notification list', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: DriverNotificationsPage(api: _FakeDriverNotificationApi()),
+        home: DriverNotificationsPage(
+          api: _FakeDriverNotificationApi(),
+          deviceRegistrationService: _FakeDeviceRegistrationService(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -96,6 +106,96 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.markAllCalls, 1);
   });
+
+  testWidgets('notification permission is not requested automatically on launch', (tester) async {
+    final service = _FakeDeviceRegistrationService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdminNotificationQueuePage(
+            api: _FakeAdminNotificationApi(),
+            deviceRegistrationService: service,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(service.authEnableCalls, 0);
+  });
+
+  testWidgets('admin enable notifications action reports success', (tester) async {
+    final service = _FakeDeviceRegistrationService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdminNotificationQueuePage(
+            api: _FakeAdminNotificationApi(),
+            deviceRegistrationService: service,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enable notifications'));
+    await tester.pumpAndSettle();
+    expect(service.authEnableCalls, 1);
+    expect(find.text('Notifications enabled'), findsOneWidget);
+  });
+
+  testWidgets('guest enable notifications handles config missing', (tester) async {
+    final service = _FakeDeviceRegistrationService(
+      result: const NotificationDeviceRegistrationResult(
+        NotificationDeviceRegistrationStatus.configMissing,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BookingNotificationSection(
+            bookingNumber: 'TX202607010001',
+            bookingId: 10,
+            guestAccessToken: 'guest-token',
+            api: _FakeBookingNotificationApi(empty: true),
+            deviceRegistrationService: service,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enable notifications'));
+    await tester.pumpAndSettle();
+    expect(service.guestEnableCalls, 1);
+    expect(find.text('Push notifications are not configured for this environment'), findsOneWidget);
+  });
+}
+
+class _FakeDeviceRegistrationService extends NotificationDeviceRegistrationService {
+  _FakeDeviceRegistrationService({
+    this.result = const NotificationDeviceRegistrationResult(
+      NotificationDeviceRegistrationStatus.registered,
+    ),
+  });
+
+  final NotificationDeviceRegistrationResult result;
+  int authEnableCalls = 0;
+  int guestEnableCalls = 0;
+
+  @override
+  Future<NotificationDeviceRegistrationResult> enableAuthenticated({
+    required Future<String?> Function() accessTokenLoader,
+  }) async {
+    authEnableCalls += 1;
+    return result;
+  }
+
+  @override
+  Future<NotificationDeviceRegistrationResult> enableGuest({
+    required int? bookingId,
+    required String? guestAccessToken,
+  }) async {
+    guestEnableCalls += 1;
+    return result;
+  }
 }
 
 class _FakeBookingNotificationApi extends BookingNotificationApi {

@@ -337,6 +337,7 @@ class BookingService {
       const booking = await this.bookingRepository.findById(bookingId);
 
       return {
+        bookingId: booking.id,
         bookingNumber: booking.booking_number,
         status: booking.status,
         paymentMethod: booking.payment_method,

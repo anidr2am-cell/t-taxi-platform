@@ -11,6 +11,8 @@ const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
 const { EVENTS } = require('../events');
 const { createDeliveryAdapters } = require('./notificationDelivery.adapters');
 
+const TOKEN_HASH_LOG_LENGTH = 8;
+
 const FORBIDDEN_PAYLOAD_KEYS = new Set([
   'guestAccessToken',
   'guest_access_token',
@@ -168,6 +170,159 @@ class NotificationService {
       safe[key] = value;
     }
     return safe;
+  }
+
+  hashDeviceToken(token) {
+    return createHash('sha256').update(String(token)).digest('hex');
+  }
+
+  maskTokenHash(tokenHash) {
+    return `${String(tokenHash).slice(0, 8)}...`;
+  }
+
+  mapDevice(row) {
+    return {
+      deviceId: row.id,
+      platform: row.platform,
+      token: this.maskTokenHash(row.fcm_token_hash),
+      deviceName: row.device_name,
+      appVersion: row.app_version,
+      lastSeenAt: row.last_seen_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  buildDeviceId(tokenHash, platform) {
+    return `${platform}:${tokenHash.slice(0, 32)}`;
+  }
+
+  async upsertDeviceInTransaction(data) {
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const deviceId = await this.notificationRepository.upsertDevice(conn, data);
+      await conn.commit();
+      return deviceId;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async registerDeviceForUser(user, input) {
+    const tokenHash = this.hashDeviceToken(input.token);
+    const deviceId = await this.upsertDeviceInTransaction({
+      userId: user.id,
+      bookingId: null,
+      platform: input.platform,
+      token: input.token,
+      tokenHash,
+      deviceId: this.buildDeviceId(tokenHash, input.platform),
+      deviceName: input.deviceName || null,
+      appVersion: input.appVersion || null,
+    });
+    logger.info('Notification device registered', {
+      ownerType: 'USER',
+      userId: user.id,
+      role: user.role,
+      deviceId,
+      tokenHashPrefix: tokenHash.slice(0, TOKEN_HASH_LOG_LENGTH),
+    });
+    const devices = await this.notificationRepository.listDevices({ userId: user.id });
+    return this.mapDevice(devices.find((device) => device.id === deviceId) ?? devices[0]);
+  }
+
+  async listDevicesForUser(user) {
+    const rows = await this.notificationRepository.listDevices({ userId: user.id });
+    return { items: rows.map((row) => this.mapDevice(row)) };
+  }
+
+  async deactivateDeviceForUser(user, deviceId) {
+    const updated = await this.notificationRepository.deactivateDevice(null, {
+      userId: user.id,
+      deviceId,
+    });
+    if (!updated) {
+      throw new AppError('Notification device not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.NOT_FOUND,
+      });
+    }
+    logger.info('Notification device deactivated', {
+      ownerType: 'USER',
+      userId: user.id,
+      role: user.role,
+      deviceId,
+    });
+    return { deviceId, active: false };
+  }
+
+  async resolveGuestBooking(bookingId, guestAccessToken) {
+    const booking = await this.bookingRepository.findById(Number(bookingId));
+    if (!booking) {
+      throw new AppError('Booking not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+      });
+    }
+    const conn = await this.pool.getConnection();
+    try {
+      await this.bookingService.assertCustomerOrGuestAccess(
+        conn,
+        booking,
+        null,
+        guestAccessToken,
+      );
+    } finally {
+      conn.release();
+    }
+    return booking;
+  }
+
+  async registerDeviceForGuestBooking(bookingId, guestAccessToken, input) {
+    const booking = await this.resolveGuestBooking(bookingId, guestAccessToken);
+    const tokenHash = this.hashDeviceToken(input.token);
+    const deviceId = await this.upsertDeviceInTransaction({
+      userId: null,
+      bookingId: booking.id,
+      platform: input.platform,
+      token: input.token,
+      tokenHash,
+      deviceId: this.buildDeviceId(tokenHash, input.platform),
+      deviceName: input.deviceName || null,
+      appVersion: input.appVersion || null,
+    });
+    logger.info('Notification device registered', {
+      ownerType: 'GUEST_BOOKING',
+      bookingId: booking.id,
+      deviceId,
+      tokenHashPrefix: tokenHash.slice(0, TOKEN_HASH_LOG_LENGTH),
+    });
+    const devices = await this.notificationRepository.listDevices({ bookingId: booking.id });
+    return this.mapDevice(devices.find((device) => device.id === deviceId) ?? devices[0]);
+  }
+
+  async deactivateDeviceForGuestBooking(bookingId, guestAccessToken, deviceId) {
+    const booking = await this.resolveGuestBooking(bookingId, guestAccessToken);
+    const updated = await this.notificationRepository.deactivateDevice(null, {
+      bookingId: booking.id,
+      deviceId,
+    });
+    if (!updated) {
+      throw new AppError('Notification device not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.NOT_FOUND,
+      });
+    }
+    logger.info('Notification device deactivated', {
+      ownerType: 'GUEST_BOOKING',
+      bookingId: booking.id,
+      deviceId,
+    });
+    return { deviceId, active: false };
   }
 
   buildIdempotencyKey(eventId, notificationType, recipientKey) {
@@ -474,7 +629,9 @@ class NotificationService {
       if (!adapter) continue;
 
       try {
-        const result = await adapter.send(notification, recipient);
+        const result = delivery.channel === NOTIFICATION_CHANNELS.FCM
+          ? await this.sendFcmToActiveDevices(notification, recipient)
+          : await adapter.send(notification, recipient);
         await this.recordDeliveryResult(notificationId, delivery, result);
       } catch (err) {
         await this.recordDeliveryResult(notificationId, delivery, {
@@ -488,6 +645,53 @@ class NotificationService {
         });
       }
     }
+  }
+
+  async sendFcmToActiveDevices(notification, recipient) {
+    const adapter = this.adapters[NOTIFICATION_CHANNELS.FCM];
+    if (!adapter) return { status: DELIVERY_STATUS.SKIPPED, error: 'CONFIG_MISSING' };
+    if (typeof this.notificationRepository.findActiveFcmDevicesForRecipient !== 'function') {
+      return { status: DELIVERY_STATUS.SKIPPED, error: 'CONFIG_MISSING_FCM_TOKEN' };
+    }
+
+    const devices = await this.notificationRepository.findActiveFcmDevicesForRecipient(recipient);
+    if (!devices.length) {
+      return { status: DELIVERY_STATUS.SKIPPED, error: 'CONFIG_MISSING_FCM_TOKEN' };
+    }
+
+    let delivered = 0;
+    let transientError = null;
+    let permanentFailures = 0;
+
+    for (const device of devices) {
+      try {
+        const result = await adapter.send({
+          ...notification,
+          fcmToken: device.fcm_token,
+        }, recipient);
+        if (result.status === DELIVERY_STATUS.DELIVERED) {
+          delivered += 1;
+        } else if (result.permanent) {
+          permanentFailures += 1;
+          await this.notificationRepository.deactivateDeviceById(null, device.id);
+        } else if (result.status === DELIVERY_STATUS.FAILED) {
+          transientError = result.error ?? 'FCM_DELIVERY_FAILED';
+        }
+      } catch (err) {
+        transientError = this.safeDeliveryError(err);
+      }
+    }
+
+    if (delivered > 0) {
+      return { status: DELIVERY_STATUS.DELIVERED };
+    }
+    if (transientError) {
+      return { status: DELIVERY_STATUS.FAILED, error: transientError };
+    }
+    if (permanentFailures > 0) {
+      return { status: DELIVERY_STATUS.FAILED, error: 'PERMANENT_FCM_INVALID_TOKEN', permanent: true };
+    }
+    return { status: DELIVERY_STATUS.SKIPPED, error: 'CONFIG_MISSING_FCM_TOKEN' };
   }
 
   safeDeliveryError(err) {

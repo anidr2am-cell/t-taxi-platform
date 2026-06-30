@@ -8,6 +8,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
+const NotificationRepository = require('../src/repositories/notification.repository');
 const NotificationService = require('../src/services/notification.service');
 const NOTIFICATION_TYPES = require('../src/constants/notificationTypes');
 const NOTIFICATION_CHANNELS = require('../src/constants/notificationChannels');
@@ -54,6 +55,8 @@ function makeService(overrides = {}) {
       ];
     },
     async updateDeliveryStatus() {},
+    async findActiveFcmDevicesForRecipient() { return []; },
+    async deactivateDeviceById() {},
     async findById(id) {
       return {
         id,
@@ -132,6 +135,28 @@ function makeService(overrides = {}) {
     bookingService,
     overrides.adapters,
   );
+}
+
+function makeDeviceRepositoryHarness(existingId = 7) {
+  const updates = [];
+  const inserts = [];
+  const conn = {
+    async query(sql, params) {
+      if (sql.includes('SELECT id') && sql.includes('FROM notification_devices')) {
+        return [[{ id: existingId }]];
+      }
+      if (sql.includes('UPDATE notification_devices')) {
+        updates.push(params);
+        return [{ affectedRows: 1 }];
+      }
+      if (sql.includes('INSERT INTO notification_devices')) {
+        inserts.push(params);
+        return [{ insertId: 11 }];
+      }
+      return [[]];
+    },
+  };
+  return { repository: new NotificationRepository({}), conn, updates, inserts };
 }
 
 test('notification created from booking.created event', async () => {
@@ -216,6 +241,30 @@ test('configured FCM adapter skips safely when no device token exists', async ()
   });
   const result = await adapter.send({ id: 1, title: 'Title', body: 'Body' }, {});
   assert.equal(result.status, DELIVERY_STATUS.SKIPPED);
+});
+
+test('FCM adapter marks invalid registration token as permanent failure', async () => {
+  const adapter = new FcmNotificationAdapter({
+    firebase: { projectId: 'ttaxi-test', clientEmail: 'firebase@example.com' },
+    admin: {
+      apps: [{}],
+      messaging: () => ({
+        async send() {
+          const err = new Error('Requested entity was not found.');
+          err.code = 'messaging/registration-token-not-registered';
+          throw err;
+        },
+      }),
+    },
+  });
+  const result = await adapter.send({
+    id: 1,
+    title: 'Title',
+    body: 'Body',
+    fcmToken: 'fcm-token-value-for-test',
+  }, {});
+  assert.equal(result.status, DELIVERY_STATUS.FAILED);
+  assert.equal(result.permanent, true);
 });
 
 test('payload sanitization removes secrets', () => {
@@ -332,6 +381,152 @@ test('ADMIN can list notification delivery statuses without sensitive payloads',
   assert.equal('body' in item, false);
   assert.equal('recipientEmail' in item, false);
   assert.equal('fcmToken' in item, false);
+});
+
+test('ADMIN can register and list notification devices without raw token', async () => {
+  const token = sign('ADMIN', 1);
+  container.register('notificationService', () => ({
+    async registerDeviceForUser(user, body) {
+      assert.equal(user.role, ROLES.ADMIN);
+      assert.equal(body.token, 'fcm-token-value-for-admin-test');
+      return {
+        deviceId: 10,
+        platform: body.platform,
+        token: 'abcd1234...',
+        deviceName: body.deviceName,
+      };
+    },
+    async listDevicesForUser(user) {
+      assert.equal(user.id, 1);
+      return {
+        items: [{
+          deviceId: 10,
+          platform: 'WEB',
+          token: 'abcd1234...',
+          deviceName: 'Browser',
+        }],
+      };
+    },
+  }));
+
+  const create = await request(app)
+    .post('/api/v1/notifications/devices')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      token: 'fcm-token-value-for-admin-test',
+      platform: 'WEB',
+      deviceName: 'Browser',
+    });
+  assert.equal(create.status, 201);
+  assert.equal(create.body.data.token, 'abcd1234...');
+  assert.equal(create.text.includes('fcm-token-value-for-admin-test'), false);
+
+  const list = await request(app)
+    .get('/api/v1/notifications/devices')
+    .set('Authorization', `Bearer ${token}`);
+  assert.equal(list.status, 200);
+  assert.equal(list.text.includes('fcm-token-value-for-admin-test'), false);
+});
+
+test('duplicate token transfer from user to guest clears user owner', async () => {
+  const h = makeDeviceRepositoryHarness();
+  const id = await h.repository.upsertDevice(h.conn, {
+    userId: null,
+    bookingId: 10,
+    platform: 'WEB',
+    token: 'token-value',
+    tokenHash: 'hash-value',
+  });
+  assert.equal(id, 7);
+  assert.equal(h.updates[0][0], null);
+  assert.equal(h.updates[0][1], 10);
+});
+
+test('duplicate token transfer from guest to user clears booking owner', async () => {
+  const h = makeDeviceRepositoryHarness();
+  const id = await h.repository.upsertDevice(h.conn, {
+    userId: 8,
+    bookingId: null,
+    platform: 'WEB',
+    token: 'token-value',
+    tokenHash: 'hash-value',
+  });
+  assert.equal(id, 7);
+  assert.equal(h.updates[0][0], 8);
+  assert.equal(h.updates[0][1], null);
+});
+
+test('notification device ownership rejects both user and booking owners', async () => {
+  const repository = new NotificationRepository({});
+  await assert.rejects(
+    () => repository.upsertDevice(null, {
+      userId: 8,
+      bookingId: 10,
+      platform: 'WEB',
+      token: 'token-value',
+      tokenHash: 'hash-value',
+    }),
+    /exactly one/,
+  );
+});
+
+test('notification device ownership rejects missing user and booking owners', async () => {
+  const repository = new NotificationRepository({});
+  await assert.rejects(
+    () => repository.upsertDevice(null, {
+      userId: null,
+      bookingId: null,
+      platform: 'WEB',
+      token: 'token-value',
+      tokenHash: 'hash-value',
+    }),
+    /exactly one/,
+  );
+});
+
+test('CUSTOMER cannot register authenticated notification device', async () => {
+  const res = await request(app)
+    .post('/api/v1/notifications/devices')
+    .set('Authorization', `Bearer ${sign('CUSTOMER', 8)}`)
+    .send({ token: 'fcm-token-value-for-customer-test', platform: 'WEB' });
+  assert.equal(res.status, 403);
+});
+
+test('guest can register and delete device with valid booking access header', async () => {
+  container.register('notificationService', () => ({
+    async registerDeviceForGuestBooking(bookingId, guestAccessToken, body) {
+      assert.equal(bookingId, 10);
+      assert.equal(guestAccessToken, 'guest-token');
+      assert.equal(body.token, 'fcm-token-value-for-guest-test');
+      return { deviceId: 22, platform: 'WEB', token: 'eeff0011...' };
+    },
+    async deactivateDeviceForGuestBooking(bookingId, guestAccessToken, deviceId) {
+      assert.equal(bookingId, 10);
+      assert.equal(guestAccessToken, 'guest-token');
+      assert.equal(deviceId, 22);
+      return { deviceId, active: false };
+    },
+  }));
+
+  const create = await request(app)
+    .post('/api/v1/public/bookings/10/notification-devices')
+    .set('X-Guest-Access-Token', 'guest-token')
+    .send({ token: 'fcm-token-value-for-guest-test', platform: 'WEB' });
+  assert.equal(create.status, 201);
+  assert.equal(create.text.includes('fcm-token-value-for-guest-test'), false);
+
+  const del = await request(app)
+    .delete('/api/v1/public/bookings/10/notification-devices/22')
+    .set('X-Guest-Access-Token', 'guest-token');
+  assert.equal(del.status, 200);
+});
+
+test('guest device registration rejects invalid token shape before service', async () => {
+  const res = await request(app)
+    .post('/api/v1/public/bookings/10/notification-devices')
+    .set('X-Guest-Access-Token', 'guest-token')
+    .send({ token: 'short', platform: 'WEB' });
+  assert.equal(res.status, 400);
 });
 
 test('DRIVER cannot list notification delivery statuses', async () => {
@@ -452,6 +647,68 @@ test('adapter failure updates delivery as failed for retry', async () => {
     status: DELIVERY_STATUS.FAILED,
     lastError: 'smtp temporarily unavailable',
   }]);
+});
+
+test('inactive devices are excluded and invalid FCM token deactivates device', async () => {
+  const deactivated = [];
+  const sends = [];
+  const service = makeService({
+    adapters: {
+      [NOTIFICATION_CHANNELS.FCM]: {
+        async send(notification) {
+          sends.push(notification.fcmToken);
+          return {
+            status: DELIVERY_STATUS.FAILED,
+            error: 'PERMANENT_FCM_INVALID_TOKEN',
+            permanent: true,
+          };
+        },
+      },
+    },
+    notificationRepository: {
+      async findActiveFcmDevicesForRecipient(recipient) {
+        assert.equal(recipient.userId, 8);
+        return [{ id: 31, fcm_token: 'active-token' }];
+      },
+      async deactivateDeviceById(_conn, deviceId) {
+        deactivated.push(deviceId);
+      },
+    },
+  });
+  const result = await service.sendFcmToActiveDevices(
+    { id: 1, title: 'Title', body: 'Body' },
+    { userId: 8 },
+  );
+  assert.deepEqual(sends, ['active-token']);
+  assert.deepEqual(deactivated, [31]);
+  assert.equal(result.permanent, true);
+});
+
+test('transient FCM error remains retryable', async () => {
+  const service = makeService({
+    adapters: {
+      [NOTIFICATION_CHANNELS.FCM]: {
+        async send() {
+          throw new Error('fcm temporarily unavailable');
+        },
+      },
+    },
+    notificationRepository: {
+      async findActiveFcmDevicesForRecipient() {
+        return [{ id: 41, fcm_token: 'active-token' }];
+      },
+      async deactivateDeviceById() {
+        throw new Error('should not deactivate transient errors');
+      },
+    },
+  });
+  const result = await service.sendFcmToActiveDevices(
+    { id: 1, title: 'Title', body: 'Body' },
+    { userId: 8 },
+  );
+  assert.equal(result.status, DELIVERY_STATUS.FAILED);
+  assert.equal(result.error, 'fcm temporarily unavailable');
+  assert.equal(result.permanent, undefined);
 });
 
 test('handler failure propagates to caller for outbox retry', async () => {

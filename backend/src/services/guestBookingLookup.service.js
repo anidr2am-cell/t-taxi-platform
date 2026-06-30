@@ -60,6 +60,7 @@ class GuestBookingLookupService {
     ].includes(row.status);
 
     return {
+      bookingId: row.id,
       bookingNumber: row.booking_number,
       status: row.status,
       scheduledPickupAt: this.formatThailandIso(row.scheduled_pickup_at_text),

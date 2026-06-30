@@ -14,12 +14,27 @@ class AppConfig {
     defaultValue: 'http://localhost:3000',
   );
 
+  static const String firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+  static const String firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
+  static const String firebaseMessagingSenderId =
+      String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+  static const String firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+  static const String firebaseAuthDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
+  static const String firebaseStorageBucket = String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
+  static const String firebaseVapidKey = String.fromEnvironment('FIREBASE_VAPID_KEY');
+
   static String get apiBaseUrl => _normalizeLocalHost(_apiBaseUrl);
 
   static String get socketUrl => _normalizeLocalHost(_socketUrl);
 
   static bool get isDevelopment =>
       apiBaseUrl.contains('localhost') || apiBaseUrl.contains('127.0.0.1');
+
+  static bool get hasFirebaseWebConfig =>
+      firebaseApiKey.isNotEmpty &&
+      firebaseAppId.isNotEmpty &&
+      firebaseMessagingSenderId.isNotEmpty &&
+      firebaseProjectId.isNotEmpty;
 
   static String _normalizeLocalHost(String value) {
     final uri = Uri.tryParse(value);
