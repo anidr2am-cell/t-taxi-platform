@@ -223,11 +223,9 @@ class BookingService {
         commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
         customerUserId,
         customerName: input.customer.name,
-        customerEmail: input.customer.email,
+        customerEmail: input.customer?.email ?? null,
         customerPhone: input.customer.phone,
-        customerCountryCode: input.customer.countryCode
-          ? input.customer.countryCode.toUpperCase()
-          : null,
+        customerCountryCode: input.customer.countryCode,
         specialRequests: input.additionalRequests ?? input.specialRequests ?? null,
         metadata: Object.keys(metadata).length ? metadata : null,
         boardingQrTokenHash: hashToken(boardingQrToken),

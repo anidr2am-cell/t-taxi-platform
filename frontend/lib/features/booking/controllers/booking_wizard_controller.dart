@@ -382,10 +382,11 @@ class BookingWizardController extends ChangeNotifier {
         },
       'customer': {
         'name': _state.customerName.trim(),
-        'email': _state.customerEmail.trim(),
         'phone': _state.customerPhone.trim(),
         if (_state.customerCountryCode.trim().isNotEmpty)
           'countryCode': _state.customerCountryCode.trim().toUpperCase(),
+        if (_state.customerEmail.trim().isNotEmpty)
+          'email': _state.customerEmail.trim(),
         if (_state.messengerType.trim().isNotEmpty)
           'messengerType': _state.messengerType.trim(),
         if (_state.messengerId.trim().isNotEmpty)
@@ -734,6 +735,19 @@ class BookingWizardController extends ChangeNotifier {
     }
   }
 
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
+  }
+
+  bool _isCustomerStepValid() {
+    if (_state.customerName.trim().isEmpty) return false;
+    if (_state.customerPhone.trim().isEmpty) return false;
+    if (_state.customerCountryCode.trim().isEmpty) return false;
+    final email = _state.customerEmail.trim();
+    if (email.isNotEmpty && !_isValidEmail(email)) return false;
+    return true;
+  }
+
   bool canProceedFromStep(int step) {
     switch (step) {
       case 0:
@@ -750,9 +764,7 @@ class BookingWizardController extends ChangeNotifier {
       case 5:
         return _state.selectedVehicle != null && _state.pricing != null;
       case 6:
-        return _state.customerName.trim().isNotEmpty &&
-            _state.customerEmail.trim().isNotEmpty &&
-            _state.customerPhone.trim().isNotEmpty;
+        return _isCustomerStepValid();
       default:
         return false;
     }
@@ -846,6 +858,10 @@ class BookingWizardController extends ChangeNotifier {
         }
         return 'wizard_pricing_after_vehicle';
       case 6:
+        if (_state.customerEmail.trim().isNotEmpty &&
+            !_isValidEmail(_state.customerEmail.trim())) {
+          return 'wizard_customer_email_invalid';
+        }
         return 'wizard_required_customer';
       default:
         return null;

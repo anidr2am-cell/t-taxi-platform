@@ -6,6 +6,7 @@ import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/vehicle_recommendation.dart';
 import 'wizard_compact.dart';
+import 'name_sign_info_card.dart';
 import 'wizard_status_views.dart';
 import 'wizard_ui.dart';
 
@@ -138,6 +139,7 @@ class StepPassengersLuggage extends StatelessWidget {
             onChanged: (v) => controller.updatePassengersAndLuggage(nameSign: v),
           ),
         ),
+        NameSignInfoCard(visible: state.nameSign),
         if (!embedded) ...[
           SizedBox(height: gap),
           if (controller.isLoading)

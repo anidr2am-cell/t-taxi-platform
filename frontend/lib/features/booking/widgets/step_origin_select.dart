@@ -23,6 +23,12 @@ class StepOriginSelect extends StatelessWidget {
     this.focusNode,
   });
 
+  bool get _showAirportShortcuts =>
+      serviceType == BookingServiceType.airportPickup;
+
+  bool get _recentNonAirportOnly =>
+      serviceType == BookingServiceType.airportDropoff;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -31,7 +37,9 @@ class StepOriginSelect extends StatelessWidget {
       label: l10n.t('search_place'),
       languageCode: languageCode,
       selected: selected,
-      showAirportShortcuts: true,
+      showAirportShortcuts: _showAirportShortcuts,
+      recentNonAirportOnly: _recentNonAirportOnly,
+      airportShortcutsLabelKey: _showAirportShortcuts ? 'airport_shortcuts_origin' : null,
       compact: embedded,
       focusNode: focusNode,
       onSelected: onSelected,

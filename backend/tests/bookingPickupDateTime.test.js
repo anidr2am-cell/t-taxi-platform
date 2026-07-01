@@ -39,6 +39,7 @@ function validPayload(overrides = {}) {
       name: 'Kim',
       email: 'kim@example.com',
       phone: '+66123456789',
+      countryCode: 'TH',
     },
     ...overrides,
   };

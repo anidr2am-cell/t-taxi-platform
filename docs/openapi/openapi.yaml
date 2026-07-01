@@ -4014,13 +4014,14 @@ components:
 
     CustomerSnapshotDto:
       type: object
-      required: [name, email, phone]
+      required: [name, phone, countryCode]
       properties:
         name:
           type: string
         email:
           type: string
           format: email
+          nullable: true
         phone:
           type: string
         countryCode:

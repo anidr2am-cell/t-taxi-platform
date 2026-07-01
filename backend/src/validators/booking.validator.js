@@ -8,6 +8,26 @@ const BOOKING_STATUS = require('../constants/reservationStatus');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 
+function normalizeOptionalEmail(value) {
+  if (value == null) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+}
+
+const optionalEmailField = Joi.string().max(255).allow(null, '').custom((value, helpers) => {
+  const normalized = normalizeOptionalEmail(value);
+  if (normalized == null) return null;
+  const { error } = Joi.string().email().validate(normalized);
+  if (error) return helpers.error('string.email');
+  return normalized;
+}).default(null);
+
+const requiredCountryCodeField = Joi.string()
+  .trim()
+  .uppercase()
+  .length(2)
+  .required();
+
 function validateScheduledPickupAt(value, helpers) {
   const timestamp = Date.parse(value);
   if (Number.isNaN(timestamp)) {
@@ -85,9 +105,9 @@ const createBookingSchema = Joi.object({
   }).default({}),
   customer: Joi.object({
     name: Joi.string().max(100).required(),
-    email: Joi.string().email().max(255).required(),
+    email: optionalEmailField,
     phone: Joi.string().max(30).required(),
-    countryCode: Joi.string().length(2).uppercase().allow(null, ''),
+    countryCode: requiredCountryCodeField,
     messengerType: Joi.string().max(30).allow(null, ''),
     messengerId: Joi.string().max(100).allow(null, ''),
   }).required(),
@@ -111,4 +131,5 @@ module.exports = {
   createBookingSchema,
   updateBookingStatusSchema,
   guestBookingLookupSchema,
+  normalizeOptionalEmail,
 };

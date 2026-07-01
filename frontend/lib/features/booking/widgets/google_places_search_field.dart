@@ -19,6 +19,8 @@ class GooglePlacesSearchField extends StatefulWidget {
   final LocationOption? selected;
   final String languageCode;
   final bool showAirportShortcuts;
+  final bool recentNonAirportOnly;
+  final String? airportShortcutsLabelKey;
   final bool compact;
   final FocusNode? focusNode;
   final ValueChanged<LocationOption> onSelected;
@@ -31,6 +33,8 @@ class GooglePlacesSearchField extends StatefulWidget {
     required this.onSelected,
     this.selected,
     this.showAirportShortcuts = false,
+    this.recentNonAirportOnly = false,
+    this.airportShortcutsLabelKey,
     this.compact = false,
     this.focusNode,
     this.placesApi,
@@ -231,12 +235,20 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     );
   }
 
+  List<LocationOption> get _visibleRecents {
+    if (!widget.recentNonAirportOnly) return _recentLocations;
+    return _recentLocations
+        .where((location) => location.kind != LocationKind.airport)
+        .toList();
+  }
+
   Widget _airportShortcuts(AppLocalizations l10n) {
+    final labelKey = widget.airportShortcutsLabelKey ?? 'airport_shortcuts';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.t('airport_shortcuts'),
+          l10n.t(labelKey),
           style: const TextStyle(
             fontSize: 13,
             color: AppTokens.textSecondary,
@@ -247,7 +259,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: AirportShortcuts.all.map((airport) {
+          children: AirportShortcuts.thailandAirports.map((airport) {
             return OutlinedButton(
               onPressed: _loadingDetails ? null : () => _selectShortcut(airport),
               child: Text(airport.code ?? airport.displayName),
@@ -260,6 +272,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   Widget _recentSection(AppLocalizations l10n) {
+    final recents = _visibleRecents;
     if (_loadingRecents) {
       return const Padding(
         padding: EdgeInsets.only(bottom: 12),
@@ -270,13 +283,17 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         ),
       );
     }
-    if (_recentLocations.isEmpty) return const SizedBox.shrink();
+    if (recents.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.t('recent_locations'),
+          l10n.t(
+            widget.recentNonAirportOnly
+                ? 'recent_non_airport_places'
+                : 'recent_locations',
+          ),
           style: const TextStyle(
             fontSize: 13,
             color: AppTokens.textSecondary,
@@ -284,7 +301,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           ),
         ),
         const SizedBox(height: 8),
-        ..._recentLocations.map((location) {
+        ...recents.map((location) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: AppUi.surfaceCard(

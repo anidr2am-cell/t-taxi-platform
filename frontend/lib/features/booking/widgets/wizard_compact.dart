@@ -17,11 +17,39 @@ class WizardCompact {
     required String label,
     String? hint,
     Widget? prefixIcon,
+    bool required = false,
+    String? requiredLabel,
   }) {
+    final requiredMark = required && requiredLabel != null
+        ? Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Text(
+              requiredLabel,
+              style: const TextStyle(
+                color: AppTokens.error,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                height: 1.1,
+              ),
+            ),
+          )
+        : null;
+
+    Widget? prefix;
+    if (requiredMark != null && prefixIcon != null) {
+      prefix = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [requiredMark, prefixIcon],
+      );
+    } else if (requiredMark != null) {
+      prefix = requiredMark;
+    }
+
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: prefixIcon,
+      prefixIcon: prefix != null ? null : prefixIcon,
+      prefix: prefix,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       border: const OutlineInputBorder(),

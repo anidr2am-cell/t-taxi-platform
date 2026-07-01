@@ -1,7 +1,10 @@
 import 'location_option.dart';
 
 /// Static Thailand airport shortcuts — no Google API calls.
+/// All entries are Thailand airports (see [LocationOption.address] / id prefix `airport:`).
 class AirportShortcuts {
+  static List<LocationOption> get thailandAirports => all;
+
   static const List<LocationOption> all = [
     LocationOption(
       id: 'airport:BKK',

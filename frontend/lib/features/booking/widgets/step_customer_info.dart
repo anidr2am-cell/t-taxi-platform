@@ -67,17 +67,32 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     super.dispose();
   }
 
-  InputDecoration _fieldDecoration(String label, {String? hint}) {
+  InputDecoration _fieldDecoration(
+    AppLocalizations l10n,
+    String label, {
+    String? hint,
+    bool required = false,
+  }) {
+    final requiredLabel = required ? l10n.t('field_required') : null;
     if (widget.embedded) {
-      return WizardCompact.inputDecoration(label: label, hint: hint);
+      return WizardCompact.inputDecoration(
+        label: label,
+        hint: hint,
+        required: required,
+        requiredLabel: requiredLabel,
+      );
     }
     return InputDecoration(
-      labelText: label,
+      labelText: required ? '$requiredLabel $label' : label,
       hintText: hint,
       border: const OutlineInputBorder(),
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
     );
+  }
+
+  String _requiredSemanticsLabel(AppLocalizations l10n, String fieldKey) {
+    return '${l10n.t('field_required')} ${l10n.t(fieldKey)}';
   }
 
   @override
@@ -92,43 +107,58 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
           AppUi.sectionHeader(context, title: l10n.t('customer_info')),
           const SizedBox(height: 8),
         ],
-        TextField(
-          controller: _nameController,
-          focusNode: widget.nameFocusNode,
-          decoration: _fieldDecoration(l10n.t('name')),
-          textInputAction: TextInputAction.next,
-          onChanged: widget.onNameChanged,
+        Semantics(
+          label: _requiredSemanticsLabel(l10n, 'name'),
+          textField: true,
+          child: TextField(
+            controller: _nameController,
+            focusNode: widget.nameFocusNode,
+            decoration: _fieldDecoration(l10n, l10n.t('name'), required: true),
+            textInputAction: TextInputAction.next,
+            onChanged: widget.onNameChanged,
+          ),
         ),
         SizedBox(height: gap),
         TextField(
           controller: _emailController,
-          decoration: _fieldDecoration(l10n.t('email')),
+          decoration: _fieldDecoration(l10n, l10n.t('email')),
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           onChanged: widget.onEmailChanged,
         ),
         SizedBox(height: gap),
-        TextField(
-          controller: _phoneController,
-          decoration: _fieldDecoration(l10n.t('phone')),
-          keyboardType: TextInputType.phone,
-          textInputAction: TextInputAction.next,
-          onChanged: widget.onPhoneChanged,
+        Semantics(
+          label: _requiredSemanticsLabel(l10n, 'phone'),
+          textField: true,
+          child: TextField(
+            controller: _phoneController,
+            decoration: _fieldDecoration(l10n, l10n.t('phone'), required: true),
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.next,
+            onChanged: widget.onPhoneChanged,
+          ),
         ),
         SizedBox(height: gap),
-        TextField(
-          controller: _countryController,
-          decoration: _fieldDecoration(
-            l10n.t('country'),
-            hint: l10n.t('country_code_hint'),
+        Semantics(
+          label: _requiredSemanticsLabel(l10n, 'country'),
+          textField: true,
+          child: TextField(
+            controller: _countryController,
+            decoration: _fieldDecoration(
+              l10n,
+              l10n.t('country'),
+              hint: l10n.t('country_code_hint'),
+              required: true,
+            ),
+            textInputAction: TextInputAction.next,
+            onChanged: widget.onCountryChanged,
           ),
-          textInputAction: TextInputAction.next,
-          onChanged: widget.onCountryChanged,
         ),
         SizedBox(height: gap),
         TextField(
           controller: _messengerTypeController,
           decoration: _fieldDecoration(
+            l10n,
             l10n.t('messenger_type'),
             hint: l10n.t('messenger_type_hint'),
           ),
@@ -138,14 +168,14 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
         SizedBox(height: gap),
         TextField(
           controller: _messengerIdController,
-          decoration: _fieldDecoration(l10n.t('messenger_id')),
+          decoration: _fieldDecoration(l10n, l10n.t('messenger_id')),
           textInputAction: TextInputAction.next,
           onChanged: widget.onMessengerIdChanged,
         ),
         SizedBox(height: gap),
         TextField(
           controller: _requestsController,
-          decoration: _fieldDecoration(l10n.t('additional_requests')),
+          decoration: _fieldDecoration(l10n, l10n.t('additional_requests')),
           maxLines: 3,
           onChanged: widget.onAdditionalRequestsChanged,
         ),
