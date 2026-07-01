@@ -69,7 +69,7 @@ class CustomerLandingPage extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () => _openBookingLookup(context),
                       icon: const Icon(Icons.search),
-                      label: const Text('Find my booking'),
+                      label: Text(l10n.t('guest_lookup_title')),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(48),
                         side: const BorderSide(color: AppTokens.border),

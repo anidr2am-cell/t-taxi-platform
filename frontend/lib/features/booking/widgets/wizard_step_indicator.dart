@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 
 class WizardStepIndicator extends StatelessWidget {
@@ -14,6 +15,7 @@ class WizardStepIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
@@ -23,7 +25,10 @@ class WizardStepIndicator extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step ${currentStep + 1} of $totalSteps',
+                l10n
+                    .t('wizard_step_progress')
+                    .replaceAll('{current}', '${currentStep + 1}')
+                    .replaceAll('{total}', '$totalSteps'),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: AppTokens.textSecondary,
                     ),

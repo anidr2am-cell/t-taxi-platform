@@ -182,7 +182,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                   textCapitalization: TextCapitalization.characters,
                   decoration: InputDecoration(
                     labelText: l10n.t('guest_lookup_booking_number'),
-                    hintText: 'TX202607010001',
+                    hintText: l10n.t('guest_lookup_booking_number_hint'),
                     prefixIcon: const Icon(Icons.confirmation_number_outlined),
                   ),
                   validator: (value) {

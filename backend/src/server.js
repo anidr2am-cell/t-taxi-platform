@@ -29,7 +29,7 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   path: config.socket.path,
   cors: {
-    origin: config.cors.origin,
+    origin: config.cors.options.origin,
     methods: ['GET', 'POST'],
     credentials: true,
   },

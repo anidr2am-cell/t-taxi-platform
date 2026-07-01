@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../widgets/app_ui.dart';
 
 class WizardLoadingView extends StatelessWidget {
@@ -21,7 +22,12 @@ class WizardErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppUi.errorState(message: message, onRetry: onRetry);
+    final l10n = context.l10n;
+    return AppUi.errorState(
+      message: l10n.t(message),
+      onRetry: onRetry,
+      retryLabel: l10n.t('ui_retry'),
+    );
   }
 }
 

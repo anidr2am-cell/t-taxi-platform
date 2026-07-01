@@ -159,6 +159,7 @@ void main() {
         recentLocationsStorage: RecentLocationsStorage(
           guestRepository: _MemoryRecentLocationsRepository(),
         ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
       );
 
       await controller.selectService(BookingServiceType.airportPickup);
@@ -289,7 +290,7 @@ void main() {
 
     expect(ok, false);
     expect(controller.canProceedFromCurrentStep(), false);
-    expect(controller.state.errorMessage, contains('2 hours'));
+    expect(controller.state.errorMessage, 'pickup_time_minimum');
   });
 
   test('pickup date and time persist in wizard state', () async {

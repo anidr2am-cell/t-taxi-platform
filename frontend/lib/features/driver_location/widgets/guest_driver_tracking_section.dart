@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/driver_location.dart';
@@ -86,7 +87,7 @@ class _GuestDriverTrackingSectionState extends State<GuestDriverTrackingSection>
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = userFacingError(err, fallback: 'Could not load driver location');
+        _error = userFacingError(err, fallback: 'track_driver_load_error');
         _loading = false;
       });
     }
@@ -95,6 +96,7 @@ class _GuestDriverTrackingSectionState extends State<GuestDriverTrackingSection>
   @override
   Widget build(BuildContext context) {
     if (!_trackable) return const SizedBox.shrink();
+    final l10n = context.l10n;
     final driver = _result?.driver;
     return Card(
       child: Padding(
@@ -108,7 +110,7 @@ class _GuestDriverTrackingSectionState extends State<GuestDriverTrackingSection>
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Icon(Icons.local_taxi),
-                Text('Track driver', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.t('track_driver_title'), style: Theme.of(context).textTheme.titleMedium),
                 Icon(_socket.connected ? Icons.cloud_done : Icons.cloud_off, size: 18),
               ],
             ),
@@ -116,16 +118,21 @@ class _GuestDriverTrackingSectionState extends State<GuestDriverTrackingSection>
             if (_loading)
               const LinearProgressIndicator()
             else if (_error != null)
-              AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
+              AppUi.errorState(
+                message: l10n.t(_error!),
+                onRetry: _load,
+                retryLabel: l10n.t('ui_retry'),
+              )
             else if (_result?.available != true || driver == null)
-              const Text('Driver location is not available yet.')
+              Text(l10n.t('track_driver_unavailable'))
             else ...[
               DriverLocationMap(locations: [driver], height: 220),
               const SizedBox(height: 12),
               Text(driver.displayName, style: Theme.of(context).textTheme.titleSmall),
               if (driver.vehicle != null) Text(driver.vehicle!),
-              Text(driver.stale ? 'Location may be stale' : 'Location is live'),
-              if (driver.lastSeenAt != null) Text('Updated ${driver.lastSeenAt}'),
+              Text(driver.stale ? l10n.t('track_driver_stale') : l10n.t('track_driver_live')),
+              if (driver.lastSeenAt != null)
+                Text(l10n.t('track_driver_updated').replaceAll('{time}', driver.lastSeenAt!)),
             ],
           ],
         ),

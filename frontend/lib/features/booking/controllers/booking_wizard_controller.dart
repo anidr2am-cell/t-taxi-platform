@@ -220,7 +220,7 @@ class BookingWizardController extends ChangeNotifier {
     final today = DateTime(thailandNow().year, thailandNow().month, thailandNow().day);
     if (bangkokValue.isBefore(today)) {
       _state = _state.copyWith(
-        errorMessage: 'Pickup date cannot be in the past',
+        errorMessage: 'pickup_date_past',
       );
       await _persist();
       notifyListeners();
@@ -228,7 +228,7 @@ class BookingWizardController extends ChangeNotifier {
     }
     if (!isPickupDateTimeAllowed(bangkokValue)) {
       _state = _state.copyWith(
-        errorMessage: 'Pickup time must be at least 2 hours from now',
+        errorMessage: 'pickup_time_minimum',
       );
       await _persist();
       notifyListeners();
@@ -401,7 +401,7 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return result;
     } catch (e) {
-      _state = _state.copyWith(errorMessage: userFacingError(e));
+      _state = _state.copyWith(errorMessage: userFacingError(e, fallback: 'ui_load_failed'));
       notifyListeners();
       return null;
     } finally {
@@ -432,7 +432,7 @@ class BookingWizardController extends ChangeNotifier {
       );
     } catch (e) {
       _state = _state.copyWith(
-        errorMessage: userFacingError(e),
+        errorMessage: userFacingError(e, fallback: 'ui_load_failed'),
         clearRecommendation: true,
       );
     } finally {
@@ -596,7 +596,7 @@ class BookingWizardController extends ChangeNotifier {
     final scheduledPickupAt = scheduledPickupAtIso();
     if (scheduledPickupAt == null) {
       _state = _state.copyWith(
-        errorMessage: 'Pickup date and time are required',
+        errorMessage: 'pickup_datetime_required',
         clearPricing: true,
       );
       await _persist();
@@ -626,7 +626,7 @@ class BookingWizardController extends ChangeNotifier {
       );
       _state = _state.copyWith(pricing: pricing, clearError: true);
     } catch (e) {
-      _state = _state.copyWith(errorMessage: userFacingError(e), clearPricing: true);
+      _state = _state.copyWith(errorMessage: userFacingError(e, fallback: 'ui_action_failed'), clearPricing: true);
     } finally {
       _setLoading(false);
       await _persist();

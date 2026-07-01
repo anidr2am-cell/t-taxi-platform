@@ -52,7 +52,7 @@ class StepPickupDateTime extends StatelessWidget {
         ),
         if (state.errorMessage != null) ...[
           const SizedBox(height: AppTokens.spaceMd),
-          AppUi.errorState(message: state.errorMessage!),
+          AppUi.errorState(message: l10n.t(state.errorMessage!)),
         ],
       ],
     );

@@ -65,12 +65,18 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     }
   }
 
+  String _wizardErrorText(AppLocalizations l10n, String? message) {
+    if (message == null || message.isEmpty) return '';
+    return l10n.t(message);
+  }
+
   Future<void> _handleNext() async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     final ok = await _controller.goNext();
     if (!ok && _controller.state.errorMessage != null) {
       messenger.showSnackBar(
-        SnackBar(content: Text(_controller.state.errorMessage!)),
+        SnackBar(content: Text(_wizardErrorText(l10n, _controller.state.errorMessage))),
       );
     }
   }
@@ -89,7 +95,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     if (result == null) {
       if (_controller.state.errorMessage != null) {
         messenger.showSnackBar(
-          SnackBar(content: Text(_controller.state.errorMessage!)),
+          SnackBar(content: Text(_wizardErrorText(l10n, _controller.state.errorMessage))),
         );
       }
       return;

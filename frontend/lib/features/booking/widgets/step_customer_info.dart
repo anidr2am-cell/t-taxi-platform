@@ -85,7 +85,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
               controller: _flightController,
               decoration: InputDecoration(
                 labelText: l10n.t('flight_number'),
-                hintText: 'TG401',
+                hintText: l10n.t('flight_number_hint'),
                 border: const OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.characters,

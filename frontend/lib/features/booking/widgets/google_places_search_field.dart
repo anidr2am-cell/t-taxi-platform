@@ -147,7 +147,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = userFacingError(e, fallback: context.l10n.t('ui_load_failed'));
+        _error = userFacingError(e, fallback: 'ui_load_failed');
         _predictions = [];
       });
     }
@@ -169,7 +169,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     } catch (e) {
       setState(() {
         _loadingDetails = false;
-        _error = userFacingError(e, fallback: context.l10n.t('ui_load_failed'));
+        _error = userFacingError(e, fallback: 'ui_load_failed');
       });
     }
   }
@@ -347,7 +347,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: AppUi.errorState(message: _error!),
+              child: AppUi.errorState(message: l10n.t(_error!)),
             ),
         ],
       );

@@ -17,8 +17,13 @@ String userFacingError(
       text.startsWith('Instance of') ||
       text.contains('Stack trace') ||
       text.contains('failed host lookup') ||
-      text.contains('SocketException')) {
-    return fallback ?? 'Something went wrong. Please try again.';
+      text.contains('SocketException') ||
+      text.contains('Failed to fetch') ||
+      text.contains('ClientException') ||
+      text.contains('Connection refused') ||
+      text.contains('NetworkError') ||
+      text.contains('XMLHttpRequest')) {
+    return fallback ?? 'ui_generic_error';
   }
   return text;
 }

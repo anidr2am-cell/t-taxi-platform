@@ -8,7 +8,7 @@ class PlacesApiService {
   factory PlacesApiService() => _instance;
   PlacesApiService._({http.Client? client, String? baseUrl})
       : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? 'http://localhost:3000';
+        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
   PlacesApiService.test({
     required http.Client client,
