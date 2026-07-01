@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/app_tokens.dart';
 
 class PwaInstallBanner extends StatefulWidget {
   const PwaInstallBanner({super.key});
@@ -34,20 +35,29 @@ class _PwaInstallBannerState extends State<PwaInstallBanner> {
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade300),
+        color: AppTokens.accentLight,
+        borderRadius: AppTokens.borderRadiusMd,
+        border: Border.all(color: AppTokens.accent.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.install_mobile, color: Color(0xFFF57F17)),
+          const Icon(Icons.install_mobile, color: AppTokens.accent),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.t('install_app'), style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(l10n.t('install_app_desc'), style: const TextStyle(fontSize: 12)),
+                Text(
+                  l10n.t('install_app'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppTokens.textPrimary,
+                  ),
+                ),
+                Text(
+                  l10n.t('install_app_desc'),
+                  style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+                ),
               ],
             ),
           ),

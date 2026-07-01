@@ -213,6 +213,45 @@ void main() {
     },
   );
 
+  test('airport pickup create payload includes flight number in transfer', () async {
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: _MemoryBookingStateStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.selectService(BookingServiceType.airportPickup);
+    await controller.setOrigin(
+      const LocationOption(
+        id: 'bkk',
+        displayName: 'Suvarnabhumi Airport',
+        kind: LocationKind.airport,
+        code: 'BKK',
+      ),
+    );
+    await controller.setDestination(
+      const LocationOption(
+        id: 'pattaya',
+        displayName: 'Pattaya',
+        kind: LocationKind.city,
+        code: 'PATTAYA',
+      ),
+    );
+    await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+    await controller.updateCustomerInfo(flightNumber: 'tg 401');
+    await controller.updatePassengersAndLuggage(adults: 2);
+    await controller.loadRecommendation();
+    await controller.selectVehicle('SUV');
+
+    final payload = controller.buildCreatePayload();
+
+    expect(payload['transfer'], isA<Map>());
+    expect(payload['transfer']['flightNumber'], 'TG401');
+  });
+
   test(
     'place details keep localized display text while storing MVP internal code',
     () {

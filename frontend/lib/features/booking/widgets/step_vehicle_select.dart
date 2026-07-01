@@ -5,16 +5,20 @@ import '../../../widgets/app_ui.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/pricing_result.dart';
+import 'wizard_compact.dart';
 import 'wizard_status_views.dart';
+import 'wizard_ui.dart';
 
 class StepVehicleSelect extends StatelessWidget {
   final BookingWizardState state;
   final BookingWizardController controller;
+  final bool embedded;
 
   const StepVehicleSelect({
     super.key,
     required this.state,
     required this.controller,
+    this.embedded = false,
   });
 
   IconData _iconForVehicle(String vehicle) {
@@ -32,57 +36,100 @@ class StepVehicleSelect extends StatelessWidget {
     final l10n = context.l10n;
     final recommendation = state.recommendation;
 
-    if (controller.isLoading) {
-      return WizardLoadingView(message: context.l10n.t('calculating_price'));
+    if (!controller.canLoadRecommendation()) {
+      return const SizedBox.shrink();
     }
 
-    if (state.errorMessage != null && state.pricing == null) {
+    if (controller.isLoading && recommendation == null) {
+      return WizardLoadingView(message: l10n.t('loading_recommendation'));
+    }
+
+    if (state.errorMessage != null &&
+        recommendation == null &&
+        !controller.isLoading) {
       return WizardErrorView(
         message: state.errorMessage!,
-        onRetry: () => controller.loadPricing(),
+        onRetry: controller.loadRecommendation,
       );
     }
 
     if (recommendation == null) {
-      return WizardEmptyView(message: l10n.t('complete_passengers_first'));
+      return const SizedBox.shrink();
     }
 
-    return SingleChildScrollView(
-      padding: AppUi.pagePadding(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!embedded && !recommendation.multipleVehicles)
           AppUi.sectionHeader(
             context,
             title: l10n.t('select_vehicle'),
-            subtitle: recommendation.multipleVehicles
-                ? null
-                : '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+            subtitle: '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
           ),
-          ...BookingWizardController.vehicleTierOrder.map((vehicle) {
-            final enabled = controller.isVehicleEnabled(vehicle);
-            final selected = state.selectedVehicle == vehicle;
-            final isRecommended = recommendation.recommendedVehicle == vehicle;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppUi.selectionTile(
-                title: vehicle,
-                subtitle: enabled
-                    ? (isRecommended ? recommendation.message : null)
-                    : l10n.t('vehicle_not_available'),
-                icon: _iconForVehicle(vehicle),
-                selected: selected,
-                onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
-              ),
-            );
-          }),
-          if (state.pricing != null) ...[
-            const SizedBox(height: AppTokens.spaceMd),
+        if (embedded && !recommendation.multipleVehicles)
+          Padding(
+            padding: const EdgeInsets.only(bottom: WizardCompact.fieldGap),
+            child: Text(
+              '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+              style: WizardCompact.hintTextStyle,
+            ),
+          ),
+        ...BookingWizardController.vehicleTierOrder.map((vehicle) {
+          final enabled = controller.isVehicleEnabled(vehicle);
+          final selected = state.selectedVehicle == vehicle;
+          final isRecommended = recommendation.recommendedVehicle == vehicle;
+          return Padding(
+            padding: EdgeInsets.only(bottom: embedded ? WizardCompact.fieldGap : 10),
+            child: embedded
+                ? WizardUi.selectionTile(
+                    title: vehicle,
+                    subtitle: enabled
+                        ? (isRecommended ? recommendation.message : null)
+                        : l10n.t('vehicle_not_available'),
+                    icon: _iconForVehicle(vehicle),
+                    selected: selected,
+                    onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
+                  )
+                : AppUi.selectionTile(
+                    title: vehicle,
+                    subtitle: enabled
+                        ? (isRecommended ? recommendation.message : null)
+                        : l10n.t('vehicle_not_available'),
+                    icon: _iconForVehicle(vehicle),
+                    selected: selected,
+                    onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
+                  ),
+          );
+        }),
+        if (state.selectedVehicle == null)
+          WizardUi.infoHint(l10n.t('wizard_pricing_after_vehicle'))
+        else if (controller.isLoading && state.pricing == null)
+          Padding(
+            padding: const EdgeInsets.only(top: WizardCompact.fieldGap),
+            child: WizardLoadingView(message: l10n.t('calculating_price')),
+          )
+        else if (state.errorMessage != null && state.pricing == null)
+          Padding(
+            padding: const EdgeInsets.only(top: WizardCompact.fieldGap),
+            child: WizardErrorView(
+              message: state.errorMessage!,
+              onRetry: controller.loadPricing,
+            ),
+          )
+        else if (state.pricing != null) ...[
+          const SizedBox(height: WizardCompact.fieldGap),
+          if (!embedded)
             AppUi.sectionHeader(context, title: l10n.t('pricing_summary')),
-            _PricingBreakdown(pricing: state.pricing!, l10n: l10n),
-          ],
+          _PricingBreakdown(pricing: state.pricing!, l10n: l10n, compact: embedded),
         ],
-      ),
+      ],
+    );
+
+    if (embedded) return content;
+
+    return SingleChildScrollView(
+      padding: AppUi.pagePadding(context),
+      child: content,
     );
   }
 }
@@ -90,13 +137,21 @@ class StepVehicleSelect extends StatelessWidget {
 class _PricingBreakdown extends StatelessWidget {
   final PricingResult pricing;
   final AppLocalizations l10n;
+  final bool compact;
 
-  const _PricingBreakdown({required this.pricing, required this.l10n});
+  const _PricingBreakdown({
+    required this.pricing,
+    required this.l10n,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AppUi.surfaceCard(
       backgroundColor: AppTokens.primaryLight,
+      padding: compact
+          ? const EdgeInsets.all(WizardCompact.cardPadding)
+          : const EdgeInsets.all(AppTokens.spaceMd),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -109,7 +164,7 @@ class _PricingBreakdown extends StatelessWidget {
               label: item.description,
               value: '${item.amount} ${pricing.currency}',
             ),
-          const Divider(height: 24),
+          Divider(height: compact ? 16 : 24),
           AppUi.summaryRow(
             label: l10n.t('total'),
             value: '${pricing.totalAmount} ${pricing.currency}',

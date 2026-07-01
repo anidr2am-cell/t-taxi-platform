@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
+import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
 import '../../chat/services/chat_socket_service.dart';
@@ -17,6 +20,7 @@ class BookingCompletePage extends StatefulWidget {
   final String serviceLabel;
   final String originLabel;
   final String destinationLabel;
+  final BookingCompleteReview? review;
   final Future<DropoffQrIssueResult> Function()? issueDropoffQr;
   final BookingChatApi? chatApi;
   final ChatSocketService? chatSocketService;
@@ -27,6 +31,7 @@ class BookingCompletePage extends StatefulWidget {
     required this.serviceLabel,
     required this.originLabel,
     required this.destinationLabel,
+    this.review,
     this.issueDropoffQr,
     this.chatApi,
     this.chatSocketService,
@@ -53,6 +58,23 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   }
 
   bool get _isCompleted => _status == 'COMPLETED';
+
+  Future<void> _copyBookingNumber() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    try {
+      await Clipboard.setData(ClipboardData(text: widget.result.bookingNumber));
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.t('booking_number_copied'))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.t('booking_number_copy_failed'))),
+      );
+    }
+  }
 
   Future<void> _loadDropoffQr() async {
     setState(() {
@@ -113,6 +135,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 total: '${result.totalAmount} ${result.currency}',
                 paymentLabel: l10n.t('pay_driver_at_destination'),
                 l10n: l10n,
+                onCopy: _copyBookingNumber,
               ),
               const SizedBox(height: AppTokens.spaceMd),
               AppUi.sectionHeader(context, title: l10n.t('booking_summary')),
@@ -125,6 +148,10 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   ],
                 ),
               ),
+              if (widget.review != null) ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                BookingCompleteReviewSection(review: widget.review!),
+              ],
               const SizedBox(height: AppTokens.spaceLg),
               if (_isCompleted) ...[
                 AppUi.surfaceCard(
@@ -262,6 +289,7 @@ class _BookingNumberCard extends StatelessWidget {
     required this.total,
     required this.paymentLabel,
     required this.l10n,
+    required this.onCopy,
   });
 
   final String bookingNumber;
@@ -269,6 +297,7 @@ class _BookingNumberCard extends StatelessWidget {
   final String total;
   final String paymentLabel;
   final AppLocalizations l10n;
+  final Future<void> Function() onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -286,13 +315,37 @@ class _BookingNumberCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          SelectableText(
-            bookingNumber,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-              color: AppTokens.primaryDark,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: SelectableText(
+                  bookingNumber,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: AppTokens.primaryDark,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: onCopy,
+                tooltip: l10n.t('booking_number_copy'),
+                icon: const Icon(Icons.copy_outlined),
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.t('booking_number_save_notice'),
+            style: TextStyle(
+              color: AppTokens.primaryDark.withValues(alpha: 0.85),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 1.45,
             ),
           ),
           const SizedBox(height: AppTokens.spaceMd),

@@ -60,7 +60,7 @@ class BookingWizardState {
     this.flightNumber = '',
   });
 
-  static const int stepCount = 8;
+  static const int stepCount = 7;
 
   BookingWizardState copyWith({
     int? step,

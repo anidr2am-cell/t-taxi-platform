@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 
@@ -13,105 +14,137 @@ class LandingHero extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= 900;
 
-    final highlights = [
-      l10n.t('landing_highlight_fixed_price'),
-      l10n.t('landing_highlight_flight'),
-      l10n.t('landing_highlight_support'),
-    ];
-
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: EdgeInsets.symmetric(
-        horizontal: isWide ? 40 : 24,
-        vertical: isWide ? 48 : 32,
+        horizontal: isWide ? 36 : 20,
+        vertical: isWide ? 40 : 24,
       ),
       decoration: BoxDecoration(
         gradient: AppTokens.heroGradient,
         borderRadius: AppTokens.borderRadiusLg,
-        boxShadow: AppTokens.cardShadow(color: AppTokens.primary),
       ),
       child: isWide
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(child: _heroText(l10n, highlights)),
+                Expanded(child: _heroCopy(l10n, compact: false)),
                 const SizedBox(width: 32),
-                _ctaButton(l10n, onBook, fullWidth: false),
+                _ctaColumn(l10n, onBook, fullWidth: false),
               ],
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _heroText(l10n, highlights),
-                const SizedBox(height: 24),
-                _ctaButton(l10n, onBook, fullWidth: true),
+                _heroCopy(l10n, compact: true),
+                const SizedBox(height: 20),
+                _ctaColumn(l10n, onBook, fullWidth: true),
               ],
             ),
     );
   }
 
-  Widget _heroText(AppLocalizations l10n, List<String> highlights) {
+  Widget _heroCopy(AppLocalizations l10n, {required bool compact}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: AppTokens.borderRadiusMd,
+        Text(
+          l10n.t('landing_hero_eyebrow'),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.82),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+            height: 1.3,
           ),
-          child: const Icon(Icons.flight_land, size: 32, color: Colors.white),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         Text(
           l10n.t('landing_hero_title'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            height: 1.25,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.t('landing_services_title'),
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.88),
-            fontSize: 15,
-            height: 1.4,
+            color: Colors.white,
+            fontSize: compact ? 24 : 30,
+            fontWeight: FontWeight.w700,
+            height: 1.2,
           ),
         ),
-        const SizedBox(height: 16),
-        ...highlights.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppTokens.accent, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
-                    ),
+        const SizedBox(height: 10),
+        Text(
+          l10n.t('landing_hero_body'),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontSize: compact ? 14 : 15,
+            height: 1.45,
+          ),
+        ),
+        if (!compact) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.verified_outlined, size: 16, color: Colors.white.withValues(alpha: 0.75)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.t('landing_hero_helper'),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 13,
+                    height: 1.3,
                   ),
-                ],
+                ),
               ),
-            )),
+            ],
+          ),
+        ],
       ],
     );
   }
 
-  Widget _ctaButton(AppLocalizations l10n, VoidCallback onBook, {required bool fullWidth}) {
-    final button = FilledButton.icon(
-      onPressed: onBook,
-      icon: const Icon(Icons.arrow_forward),
-      label: Text(l10n.t('book_your_ride')),
+  Widget _ctaColumn(AppLocalizations l10n, VoidCallback onBook, {required bool fullWidth}) {
+    final button = Semantics(
+      button: true,
+      label: l10n.t('landing_hero_cta'),
+      child: FilledButton(
+        onPressed: onBook,
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+        ),
+        child: Text(l10n.t('landing_hero_cta')),
+      ),
+    );
+
+    final helper = Text(
+      l10n.t('landing_hero_helper'),
+      textAlign: fullWidth ? TextAlign.center : TextAlign.start,
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.78),
+        fontSize: 12,
+        height: 1.3,
+      ),
     );
 
     if (fullWidth) {
-      return SizedBox(width: double.infinity, child: button);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: double.infinity, child: button),
+          const SizedBox(height: 8),
+          helper,
+        ],
+      );
     }
-    return button;
+
+    return IntrinsicWidth(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          button,
+          const SizedBox(height: 8),
+          helper,
+        ],
+      ),
+    );
   }
 }

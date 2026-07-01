@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../booking/models/service_type_option.dart';
 
-class LandingServiceCards extends StatelessWidget {
+class LandingServiceCards extends StatefulWidget {
   final VoidCallback onBook;
 
   const LandingServiceCards({
@@ -12,82 +13,124 @@ class LandingServiceCards extends StatelessWidget {
     required this.onBook,
   });
 
+  @override
+  State<LandingServiceCards> createState() => _LandingServiceCardsState();
+}
+
+class _LandingServiceCardsState extends State<LandingServiceCards> {
+  BookingServiceType? _selected;
+
   static const _services = [
-    _ServiceItem(
-      type: BookingServiceType.airportPickup,
-      icon: Icons.flight_land,
-      color: AppTokens.info,
-    ),
-    _ServiceItem(
-      type: BookingServiceType.airportDropoff,
-      icon: Icons.flight_takeoff,
-      color: AppTokens.accent,
-    ),
-    _ServiceItem(
-      type: BookingServiceType.cityTransfer,
-      icon: Icons.location_city,
-      color: AppTokens.primary,
-    ),
-    _ServiceItem(
-      type: BookingServiceType.golfTransfer,
-      icon: Icons.golf_course,
-      color: AppTokens.success,
-    ),
+    _ServiceItem(type: BookingServiceType.airportPickup, icon: Icons.flight_land),
+    _ServiceItem(type: BookingServiceType.airportDropoff, icon: Icons.flight_takeoff),
+    _ServiceItem(type: BookingServiceType.cityTransfer, icon: Icons.route_outlined),
+    _ServiceItem(type: BookingServiceType.golfTransfer, icon: Icons.sports_golf),
   ];
+
+  void _onServiceTap(BookingServiceType type) {
+    setState(() => _selected = type);
+    widget.onBook();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final width = MediaQuery.sizeOf(context).width;
-    final columns = width >= 900 ? 4 : (width >= 600 ? 2 : 1);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppUi.sectionHeader(
             context,
             title: l10n.t('landing_services_title'),
-            subtitle: l10n.t('landing_highlight_fixed_price'),
+            subtitle: l10n.t('landing_services_subtitle'),
           ),
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: columns,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: columns == 1 ? 2.8 : 1.55,
-            children: _services.map((service) {
-              return AppUi.surfaceCard(
-                onTap: onBook,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: service.color.withValues(alpha: 0.12),
-                        borderRadius: AppTokens.borderRadiusSm,
-                      ),
-                      child: Icon(service.icon, color: service.color, size: 26),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.t(service.type.labelKey),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+          Row(
+            key: const Key('landing_service_row'),
+            children: [
+              for (var index = 0; index < _services.length; index++) ...[
+                if (index > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _ServiceTile(
+                    label: l10n.t(_services[index].type.labelKey),
+                    icon: _services[index].icon,
+                    selected: _selected == _services[index].type,
+                    onTap: () => _onServiceTap(_services[index].type),
+                  ),
                 ),
-              );
-            }).toList(),
+              ],
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ServiceTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ServiceTile({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppTokens.borderRadiusMd,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected ? AppTokens.primaryLight : AppTokens.surface,
+                borderRadius: AppTokens.borderRadiusMd,
+                border: Border.all(
+                  color: selected ? AppTokens.primary : AppTokens.border,
+                  width: selected ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 22,
+                    color: selected ? AppTokens.primary : AppTokens.textSecondary,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.25,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? AppTokens.primaryDark : AppTokens.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -96,11 +139,6 @@ class LandingServiceCards extends StatelessWidget {
 class _ServiceItem {
   final BookingServiceType type;
   final IconData icon;
-  final Color color;
 
-  const _ServiceItem({
-    required this.type,
-    required this.icon,
-    required this.color,
-  });
+  const _ServiceItem({required this.type, required this.icon});
 }

@@ -10,6 +10,8 @@ class StepOriginSelect extends StatelessWidget {
   final LocationOption? selected;
   final String languageCode;
   final ValueChanged<LocationOption> onSelected;
+  final bool embedded;
+  final FocusNode? focusNode;
 
   const StepOriginSelect({
     super.key,
@@ -17,11 +19,25 @@ class StepOriginSelect extends StatelessWidget {
     required this.selected,
     required this.languageCode,
     required this.onSelected,
+    this.embedded = false,
+    this.focusNode,
   });
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+
+    final content = GooglePlacesSearchField(
+      label: l10n.t('search_place'),
+      languageCode: languageCode,
+      selected: selected,
+      showAirportShortcuts: true,
+      compact: embedded,
+      focusNode: focusNode,
+      onSelected: onSelected,
+    );
+
+    if (embedded) return content;
 
     return SingleChildScrollView(
       padding: AppUi.pagePadding(context),
@@ -33,13 +49,7 @@ class StepOriginSelect extends StatelessWidget {
             title: l10n.t('origin'),
             subtitle: l10n.t('search_place'),
           ),
-          GooglePlacesSearchField(
-            label: l10n.t('search_place'),
-            languageCode: languageCode,
-            selected: selected,
-            showAirportShortcuts: true,
-            onSelected: onSelected,
-          ),
+          content,
         ],
       ),
     );

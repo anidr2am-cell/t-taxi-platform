@@ -8,24 +8,28 @@ import '../models/service_type_option.dart';
 
 class StepConfirmation extends StatelessWidget {
   final BookingWizardState state;
+  final bool embedded;
 
-  const StepConfirmation({super.key, required this.state});
+  const StepConfirmation({
+    super.key,
+    required this.state,
+    this.embedded = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final pricing = state.pricing;
 
-    return SingleChildScrollView(
-      padding: AppUi.pagePadding(context),
-      child: Column(
+    final content = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppUi.sectionHeader(
-            context,
-            title: l10n.t('booking_summary'),
-            subtitle: l10n.t('landing_highlight_fixed_price'),
-          ),
+          if (!embedded)
+            AppUi.sectionHeader(
+              context,
+              title: l10n.t('booking_summary'),
+              subtitle: l10n.t('landing_highlight_fixed_price'),
+            ),
           AppUi.surfaceCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,6 +44,12 @@ class StepConfirmation extends StatelessWidget {
                   label: l10n.t('pickup_datetime'),
                   value: '${state.pickupDate ?? '-'} ${state.pickupTime ?? ''}'.trim(),
                 ),
+                if (state.serviceType == BookingServiceType.airportPickup &&
+                    state.flightNumber.trim().isNotEmpty)
+                  AppUi.summaryRow(
+                    label: l10n.t('flight_number'),
+                    value: state.flightNumber.trim(),
+                  ),
                 AppUi.summaryRow(label: l10n.t('adults'), value: '${state.adults}'),
                 AppUi.summaryRow(label: l10n.t('children'), value: '${state.children}'),
                 AppUi.summaryRow(label: l10n.t('infants'), value: '${state.infants}'),
@@ -87,7 +97,13 @@ class StepConfirmation extends StatelessWidget {
             ),
           ],
         ],
-      ),
+      );
+
+    if (embedded) return content;
+
+    return SingleChildScrollView(
+      padding: AppUi.pagePadding(context),
+      child: content,
     );
   }
 
