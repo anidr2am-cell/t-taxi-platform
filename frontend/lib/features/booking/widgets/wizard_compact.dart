@@ -13,6 +13,41 @@ class WizardCompact {
   static const bodyPadding = EdgeInsets.fromLTRB(12, 0, 12, 12);
   static const minTouchHeight = 44.0;
 
+  static const _requiredLabelStyle = TextStyle(
+    color: AppTokens.error,
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    height: 1.1,
+  );
+
+  static const _fieldLabelStyle = TextStyle(
+    color: AppTokens.textSecondary,
+    fontSize: 12,
+    height: 1.1,
+  );
+
+  static Widget buildFieldLabel({
+    required String label,
+    bool required = false,
+    String? requiredLabel,
+  }) {
+    if (!required || requiredLabel == null) {
+      return Text(label, style: _fieldLabelStyle);
+    }
+
+    return Text.rich(
+      TextSpan(
+        style: _fieldLabelStyle,
+        children: [
+          TextSpan(text: requiredLabel, style: _requiredLabelStyle),
+          TextSpan(text: ' $label'),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   static InputDecoration inputDecoration({
     required String label,
     String? hint,
@@ -20,36 +55,15 @@ class WizardCompact {
     bool required = false,
     String? requiredLabel,
   }) {
-    final requiredMark = required && requiredLabel != null
-        ? Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Text(
-              requiredLabel,
-              style: const TextStyle(
-                color: AppTokens.error,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                height: 1.1,
-              ),
-            ),
-          )
-        : null;
-
-    Widget? prefix;
-    if (requiredMark != null && prefixIcon != null) {
-      prefix = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [requiredMark, prefixIcon],
-      );
-    } else if (requiredMark != null) {
-      prefix = requiredMark;
-    }
-
     return InputDecoration(
-      labelText: label,
+      label: buildFieldLabel(
+        label: label,
+        required: required,
+        requiredLabel: requiredLabel,
+      ),
       hintText: hint,
-      prefixIcon: prefix != null ? null : prefixIcon,
-      prefix: prefix,
+      prefixIcon: prefixIcon,
+      floatingLabelBehavior: FloatingLabelBehavior.always,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       border: const OutlineInputBorder(),

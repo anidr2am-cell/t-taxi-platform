@@ -47,6 +47,26 @@ class BookingWizardController extends ChangeNotifier {
     'LUXURY',
   ];
 
+  static const customerHiddenVehicleCodes = {'VIP_SUV', 'VIP_VAN'};
+
+  static List<String> get customerVehicleTierOrder => vehicleTierOrder
+      .where((code) => !customerHiddenVehicleCodes.contains(code))
+      .toList(growable: false);
+
+  bool _isCustomerVisibleVehicle(String? vehicleCode) {
+    return vehicleCode != null &&
+        !customerHiddenVehicleCodes.contains(vehicleCode);
+  }
+
+  void _sanitizeCustomerVehicleSelection() {
+    if (!_isCustomerVisibleVehicle(_state.selectedVehicle)) {
+      _state = _state.copyWith(
+        clearSelectedVehicle: true,
+        clearPricing: true,
+      );
+    }
+  }
+
   static const Map<String, String> _knownAirportIataByText = {
     'BKK': 'BKK',
     'SUVARNABHUMI': 'BKK',
@@ -91,6 +111,7 @@ class BookingWizardController extends ChangeNotifier {
           ? BookingWizardState.stepCount - 1
           : restored.step;
       _state = restored.copyWith(step: step);
+      _sanitizeCustomerVehicleSelection();
     } else {
       final initialPickup = defaultPickupDateTime();
       _state = _state.copyWith(
@@ -467,15 +488,18 @@ class BookingWizardController extends ChangeNotifier {
         golfBags: _state.golfBags,
         specialLuggageCount: _state.specialLuggageCount,
       );
-      final selected = recommendation.multipleVehicles
+      final autoSelected = recommendation.multipleVehicles
           ? null
-          : recommendation.recommendedVehicle;
+          : (_isCustomerVisibleVehicle(recommendation.recommendedVehicle)
+              ? recommendation.recommendedVehicle
+              : null);
       _state = _state.copyWith(
         recommendation: recommendation,
-        selectedVehicle: selected,
+        selectedVehicle: autoSelected,
         clearPricing: true,
         clearError: true,
       );
+      _sanitizeCustomerVehicleSelection();
       await _persist();
     } catch (e) {
       _state = _state.copyWith(
@@ -492,6 +516,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   bool isVehicleEnabled(String vehicleCode) {
+    if (!_isCustomerVisibleVehicle(vehicleCode)) return false;
     final recommendation = _state.recommendation;
     if (recommendation == null) return false;
     if (!recommendation.selectableVehicles.contains(vehicleCode)) return false;
@@ -510,7 +535,9 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<void> selectVehicle(String vehicleCode) async {
-    if (!isVehicleEnabled(vehicleCode)) return;
+    if (!_isCustomerVisibleVehicle(vehicleCode) || !isVehicleEnabled(vehicleCode)) {
+      return;
+    }
     _state = _state.copyWith(
       selectedVehicle: vehicleCode,
       clearPricing: true,

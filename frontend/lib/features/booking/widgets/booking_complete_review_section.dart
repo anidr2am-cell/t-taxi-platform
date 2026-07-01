@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../utils/pricing_display.dart';
 import '../models/booking_complete_review.dart';
 
 class BookingCompleteReviewSection extends StatelessWidget {
@@ -119,7 +120,7 @@ class BookingCompleteReviewSection extends StatelessWidget {
                 ),
                 for (final item in pricing.additionalCharges)
                   AppUi.summaryRow(
-                    label: item.description,
+                    label: PricingDisplay.chargeItemLabel(l10n, item),
                     value: '${item.amount} ${pricing.currency}',
                   ),
               ],

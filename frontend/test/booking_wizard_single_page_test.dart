@@ -100,7 +100,7 @@ void main() {
     testWidgets('allows customer input before pickup step is complete', (tester) async {
       await pumpWizard(tester);
 
-      await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Jane Doe');
+      await tester.enterText(find.bySemanticsLabel('(Required) Name'), 'Jane Doe');
       await tester.pump();
 
       expect(find.text('Jane Doe'), findsOneWidget);

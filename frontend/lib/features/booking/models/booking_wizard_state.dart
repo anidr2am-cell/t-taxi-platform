@@ -82,6 +82,7 @@ class BookingWizardState {
     bool? nameSign,
     VehicleRecommendation? recommendation,
     bool clearRecommendation = false,
+    bool clearSelectedVehicle = false,
     String? selectedVehicle,
     PricingResult? pricing,
     bool clearPricing = false,
@@ -114,7 +115,9 @@ class BookingWizardState {
       recommendation: clearRecommendation
           ? null
           : (recommendation ?? this.recommendation),
-      selectedVehicle: selectedVehicle ?? this.selectedVehicle,
+      selectedVehicle: clearSelectedVehicle
+          ? null
+          : (selectedVehicle ?? this.selectedVehicle),
       pricing: clearPricing ? null : (pricing ?? this.pricing),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       customerName: customerName ?? this.customerName,

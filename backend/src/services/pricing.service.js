@@ -12,6 +12,11 @@ const {
   roundMoney,
 } = require('../utils/pricing.util');
 
+const CUSTOMER_EXCLUDED_POLICY_TYPES = new Set([
+  CHARGE_POLICY_TYPES.NIGHT,
+  CHARGE_POLICY_TYPES.AIRPORT,
+]);
+
 class PricingService {
   constructor(
     serviceTypeRepository,
@@ -204,6 +209,7 @@ class PricingService {
     vehicleCount = 1,
     options = {},
     scheduledPickupAt,
+    customerFacing = false,
   }) {
     if (originLocationId === destinationLocationId) {
       throw new AppError('Origin and destination must be different', {
@@ -271,6 +277,9 @@ class PricingService {
     };
 
     for (const policy of policies) {
+      if (customerFacing && CUSTOMER_EXCLUDED_POLICY_TYPES.has(policy.chargeType)) {
+        continue;
+      }
       if (!isEffectiveAt(policy, at) || !this.shouldApplyPolicy(policy, context)) {
         continue;
       }
@@ -336,6 +345,7 @@ class PricingService {
       vehicleCount: 1,
       options: input.options ?? {},
       scheduledPickupAt: input.scheduledPickupAt,
+      customerFacing: false,
     });
 
     const responseChargeItems = quote.chargeItems.map((item) => ({
@@ -399,6 +409,7 @@ class PricingService {
       vehicleCount: input.vehicleCount ?? 1,
       options: input.options ?? {},
       scheduledPickupAt: input.scheduledPickupAt,
+      customerFacing: true,
     });
 
     const responseItems = quote.chargeItems.map((item) => ({
@@ -423,3 +434,4 @@ class PricingService {
 }
 
 module.exports = PricingService;
+module.exports.CUSTOMER_EXCLUDED_POLICY_TYPES = CUSTOMER_EXCLUDED_POLICY_TYPES;

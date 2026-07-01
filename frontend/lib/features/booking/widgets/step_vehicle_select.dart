@@ -5,6 +5,7 @@ import '../../../widgets/app_ui.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/pricing_result.dart';
+import '../utils/pricing_display.dart';
 import 'wizard_compact.dart';
 import 'wizard_status_views.dart';
 import 'wizard_ui.dart';
@@ -74,7 +75,7 @@ class StepVehicleSelect extends StatelessWidget {
               style: WizardCompact.hintTextStyle,
             ),
           ),
-        ...BookingWizardController.vehicleTierOrder.map((vehicle) {
+        ...BookingWizardController.customerVehicleTierOrder.map((vehicle) {
           final enabled = controller.isVehicleEnabled(vehicle);
           final selected = state.selectedVehicle == vehicle;
           final isRecommended = recommendation.recommendedVehicle == vehicle;
@@ -161,7 +162,7 @@ class _PricingBreakdown extends StatelessWidget {
           ),
           for (final item in pricing.additionalCharges)
             AppUi.summaryRow(
-              label: item.description,
+              label: PricingDisplay.chargeItemLabel(l10n, item),
               value: '${item.amount} ${pricing.currency}',
             ),
           Divider(height: compact ? 16 : 24),

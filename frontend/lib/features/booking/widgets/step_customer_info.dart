@@ -73,21 +73,11 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     String? hint,
     bool required = false,
   }) {
-    final requiredLabel = required ? l10n.t('field_required') : null;
-    if (widget.embedded) {
-      return WizardCompact.inputDecoration(
-        label: label,
-        hint: hint,
-        required: required,
-        requiredLabel: requiredLabel,
-      );
-    }
-    return InputDecoration(
-      labelText: required ? '$requiredLabel $label' : label,
-      hintText: hint,
-      border: const OutlineInputBorder(),
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+    return WizardCompact.inputDecoration(
+      label: label,
+      hint: hint,
+      required: required,
+      requiredLabel: required ? l10n.t('field_required') : null,
     );
   }
 
