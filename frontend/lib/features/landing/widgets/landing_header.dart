@@ -9,6 +9,8 @@ import 'landing_clickable_styles.dart';
 class LandingHeader extends StatelessWidget {
   final VoidCallback onLookup;
 
+  static const logoAssetPath = 'assets/images/logo.png';
+
   const LandingHeader({super.key, required this.onLookup});
 
   @override
@@ -26,32 +28,7 @@ class LandingHeader extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
-            Semantics(
-              header: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.t('app_title'),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: AppTokens.primaryDark,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  Text(
-                    l10n.t('app_subtitle'),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTokens.textSecondary,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            Flexible(child: _BrandBlock(subtitle: l10n.t('app_subtitle'))),
             const Spacer(),
             _HeaderIconButton(
               tooltip: l10n.t('landing_booking_lookup_action'),
@@ -61,6 +38,60 @@ class LandingHeader extends StatelessWidget {
             _LanguageButton(
               languageName: languageName,
               label: l10n.t('landing_language_label'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandBlock extends StatelessWidget {
+  final String subtitle;
+
+  const _BrandBlock({required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isCompact = width < 600;
+    final logoHeight = isCompact ? 34.0 : 42.0;
+    final logoMaxWidth = isCompact ? 116.0 : 152.0;
+
+    return Semantics(
+      header: true,
+      label: 'T-Ride',
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: logoMaxWidth),
+        child: Column(
+          key: const Key('landing_brand_block'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: logoHeight,
+              width: logoMaxWidth,
+              child: Image.asset(
+                LandingHeader.logoAssetPath,
+                key: const Key('landing_header_logo'),
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                semanticLabel: 'T-Ride',
+                errorBuilder: (context, error, stackTrace) {
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isCompact ? 10 : 11,
+                color: AppTokens.textSecondary,
+                height: 1.15,
+              ),
             ),
           ],
         ),

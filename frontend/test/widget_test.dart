@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/landing/widgets/landing_header.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend/main.dart';
 import 'package:frontend/providers/booking_provider.dart';
@@ -18,7 +20,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('T-Ride'), findsOneWidget);
+    expect(find.byKey(const Key('landing_header_logo')), findsOneWidget);
+    expect(find.text('T-Ride'), findsNothing);
+    final logo = tester.widget<Image>(
+      find.byKey(const Key('landing_header_logo')),
+    );
+    expect((logo.image as AssetImage).assetName, LandingHeader.logoAssetPath);
   });
 
   test('web metadata uses T-Ride brand', () {

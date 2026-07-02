@@ -5,6 +5,7 @@ import 'package:frontend/features/booking/pages/booking_wizard_page.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
 import 'package:frontend/features/landing/pages/customer_landing_page.dart';
 import 'package:frontend/features/landing/widgets/landing_clickable_styles.dart';
+import 'package:frontend/features/landing/widgets/landing_header.dart';
 import 'package:frontend/features/landing/widgets/landing_hero.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
@@ -18,22 +19,28 @@ Widget _wrapLanding({
   Locale locale = const Locale('en'),
 }) {
   return ChangeNotifierProvider(
+    key: ValueKey(locale.languageCode),
     create: (_) => LocaleState()..setLanguage(locale.languageCode),
-    child: MaterialApp(
-      locale: locale,
-      supportedLocales: AppLocalizations.supportedLanguages
-          .map((code) => Locale(code))
-          .toList(),
-      localizationsDelegates: [
-        AppLocalizationsDelegate(locale.languageCode),
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: MediaQuery(
-        data: MediaQueryData(size: Size(width, height)),
-        child: Scaffold(body: child),
-      ),
+    child: Consumer<LocaleState>(
+      builder: (context, localeState, _) {
+        final activeLocale = Locale(localeState.languageCode);
+        return MaterialApp(
+          locale: activeLocale,
+          supportedLocales: AppLocalizations.supportedLanguages
+              .map((code) => Locale(code))
+              .toList(),
+          localizationsDelegates: [
+            AppLocalizationsDelegate(activeLocale.languageCode),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: MediaQuery(
+            data: MediaQueryData(size: Size(width, height)),
+            child: Scaffold(body: child),
+          ),
+        );
+      },
     ),
   );
 }
@@ -93,6 +100,62 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(GuestBookingLookupPage), findsOneWidget);
+    });
+
+    testWidgets('header renders logo asset instead of text brand', (
+      tester,
+    ) async {
+      await pumpLanding(tester, locale: const Locale('ko'));
+
+      final logo = tester.widget<Image>(
+        find.byKey(const Key('landing_header_logo')),
+      );
+      final logoSize = tester.getSize(
+        find.byKey(const Key('landing_header_logo')),
+      );
+
+      expect((logo.image as AssetImage).assetName, LandingHeader.logoAssetPath);
+      expect(logo.fit, BoxFit.contain);
+      expect(logo.semanticLabel, 'T-Ride');
+      expect(logoSize.height, inInclusiveRange(30, 36));
+      expect(logoSize.width, lessThanOrEqualTo(116));
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('landing_brand_block')),
+          matching: find.text('T-Ride'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.text(AppLocalizations('ko').t('app_subtitle')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('header keeps localized subtitle when language changes', (
+      tester,
+    ) async {
+      await pumpLanding(tester, locale: const Locale('en'));
+
+      expect(
+        find.text(AppLocalizations('en').t('app_subtitle')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('landing_language_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppLocalizations.languageNames['ko']!).last);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(AppLocalizations('ko').t('app_subtitle')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('landing_header_lookup_button')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('landing_language_button')), findsOneWidget);
     });
 
     testWidgets('service tap triggers booking wizard', (tester) async {
