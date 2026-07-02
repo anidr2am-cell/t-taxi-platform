@@ -7,7 +7,7 @@ self.addEventListener('push', function(event) {
   }
 
   var notification = payload.notification || {};
-  var title = notification.title || 'TTaxi';
+  var title = notification.title || 'T-Ride';
   var options = {
     body: notification.body || '',
     data: payload.data || {}

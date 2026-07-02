@@ -81,7 +81,7 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
             children: [
               const SizedBox(height: 24),
               Text(
-                'TTaxi Driver',
+                'T-Ride Driver',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 24),

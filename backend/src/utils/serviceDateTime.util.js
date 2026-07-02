@@ -1,7 +1,7 @@
 /**
  * Service-local datetime helpers.
  *
- * TTaxi stores naive MySQL DATETIME strings as Asia/Bangkok wall-clock values
+ * T-Ride stores naive MySQL DATETIME strings as Asia/Bangkok wall-clock values
  * (see BookingService.formatThailandDateTime). Do not parse those with `new Date(str)`.
  */
 const SERVICE_TIME_ZONE = 'Asia/Bangkok';

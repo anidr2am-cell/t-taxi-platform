@@ -199,7 +199,7 @@ test('configured EMAIL adapter sends without logging raw recipient data', async 
       host: 'smtp.example.com',
       port: 587,
       fromEmail: 'noreply@ttaxi.example',
-      fromName: 'TTaxi',
+      fromName: 'T-Ride',
     },
     transportFactory: () => ({
       async sendMail(message) {
@@ -216,7 +216,7 @@ test('configured EMAIL adapter sends without logging raw recipient data', async 
   });
   assert.equal(result.status, DELIVERY_STATUS.DELIVERED);
   assert.equal(sent.to, 'customer@example.com');
-  assert.equal(sent.from, '"TTaxi" <noreply@ttaxi.example>');
+  assert.equal(sent.from, '"T-Ride" <noreply@ttaxi.example>');
 });
 
 test('EMAIL adapter marks malformed recipient as permanent failure', async () => {

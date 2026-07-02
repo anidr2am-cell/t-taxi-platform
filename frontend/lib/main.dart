@@ -30,7 +30,7 @@ class TTaxiApp extends StatelessWidget {
     final locale = context.watch<LocaleState>();
 
     return MaterialApp(
-      title: 'TTaxi',
+      title: 'T-Ride',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       locale: Locale(locale.languageCode),

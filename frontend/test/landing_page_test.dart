@@ -108,29 +108,42 @@ void main() {
     testWidgets('primary CTA is localized for supported landing locales', (
       tester,
     ) async {
+      for (final code in AppLocalizations.supportedLanguages) {
+        await pumpLanding(tester, locale: Locale(code));
+
+        expect(
+          find.text(AppLocalizations(code).t('landing_hero_cta')),
+          findsWidgets,
+          reason: 'CTA for $code',
+        );
+      }
+    });
+
+    testWidgets('hero title includes T-Ride across supported landing locales', (
+      tester,
+    ) async {
       const expected = {
-        'en': 'Book now',
-        'ko': '예약하기',
-        'zh': '立即预订',
-        'ja': '予約する',
-        'th': 'จองเลย',
+        'en': 'A comfortable start in Thailand with T-Ride',
+        'ko': '태국에서 만나는 편안한 출발 T-Ride',
+        'zh': '在泰国，和 T-Ride 一起舒适出发',
+        'ja': 'タイで始まる快適な旅 T-Ride',
+        'th': 'เริ่มต้นการเดินทางในไทยอย่างสบายใจกับ T-Ride',
       };
 
       for (final entry in expected.entries) {
         await pumpLanding(tester, locale: Locale(entry.key));
 
-        expect(
-          find.text(entry.value),
-          findsWidgets,
-          reason: 'CTA for ${entry.key}',
-        );
+        expect(find.text(entry.value), findsOneWidget);
       }
     });
 
     testWidgets('renders localized hero copy', (tester) async {
       await pumpLanding(tester, locale: const Locale('ko'));
 
-      expect(find.text('예약하기'), findsWidgets);
+      expect(
+        find.text(AppLocalizations('ko').t('landing_hero_cta')),
+        findsWidgets,
+      );
       expect(
         find.text(AppLocalizations('ko').t('landing_hero_title')),
         findsOneWidget,

@@ -1,6 +1,6 @@
 {
-    "name": "TTaxi - Thailand Airport Transfer",
-    "short_name": "TTaxi",
+    "name": "T-Ride - Thailand Airport Transfer",
+    "short_name": "T-Ride",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#1A237E",

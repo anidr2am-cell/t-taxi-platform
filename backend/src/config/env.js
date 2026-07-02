@@ -10,7 +10,7 @@ const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'staging', 'production', 'test').default('development'),
   PORT: Joi.number().port().default(3000),
   API_VERSION: Joi.string().default('v1'),
-  APP_NAME: Joi.string().default('TTaxi'),
+  APP_NAME: Joi.string().default('T-Ride'),
   CORS_ORIGIN: Joi.string().default('http://localhost:8080'),
   PUBLIC_API_URL: Joi.string().uri().optional(),
   DB_HOST: Joi.string().default('localhost'),

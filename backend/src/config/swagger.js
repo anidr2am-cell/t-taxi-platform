@@ -16,7 +16,7 @@ const OPENAPI_PATH = path.resolve(__dirname, '../../../docs/openapi/openapi.yaml
 function loadOpenApiSpec() {
   if (!fs.existsSync(OPENAPI_PATH)) {
     logger.warn(`OpenAPI file not found: ${OPENAPI_PATH}`);
-    return { openapi: '3.1.0', info: { title: 'TTaxi API', version: '1.0.0' }, paths: {} };
+    return { openapi: '3.1.0', info: { title: 'T-Ride API', version: '1.0.0' }, paths: {} };
   }
   const raw = fs.readFileSync(OPENAPI_PATH, 'utf8');
   return yaml.parse(raw);
@@ -32,7 +32,7 @@ function setupSwagger(app) {
   const route = env.swagger.route;
 
   app.use(route, swaggerUi.serve, swaggerUi.setup(spec, {
-    customSiteTitle: 'TTaxi API Docs',
+    customSiteTitle: 'T-Ride API Docs',
     swaggerOptions: {
       persistAuthorization: true,
     },

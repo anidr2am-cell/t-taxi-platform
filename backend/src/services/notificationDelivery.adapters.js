@@ -63,8 +63,8 @@ class EmailNotificationAdapter {
       status,
       '',
       isKorean
-        ? 'TTaxi에서 예약번호와 전화번호로 예약 상태를 확인할 수 있습니다.'
-        : 'You can check your booking status in TTaxi with your booking number and phone number.',
+        ? 'T-Ride에서 예약번호와 전화번호로 예약 상태를 확인할 수 있습니다.'
+        : 'You can check your booking status in T-Ride with your booking number and phone number.',
     ].filter((line) => line != null);
 
     return {

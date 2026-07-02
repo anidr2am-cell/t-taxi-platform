@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// TTaxi design tokens — premium airport transfer / Thailand travel tone.
+/// T-Ride design tokens — premium airport transfer / Thailand travel tone.
 abstract final class AppTokens {
   // Brand
   static const Color primary = Color(0xFF0B6E6E);

@@ -38,7 +38,7 @@ const io = new Server(httpServer, {
 initSocket(io);
 
 httpServer.listen(PORT, () => {
-  logger.info(`TTaxi API listening on http://localhost:${PORT}`);
+  logger.info(`T-Ride API listening on http://localhost:${PORT}`);
   logger.info(`Environment: ${config.server.nodeEnv}`);
 if (config.swagger.enabled) {
     logger.info(`Swagger UI: http://localhost:${PORT}${config.swagger.route}`);

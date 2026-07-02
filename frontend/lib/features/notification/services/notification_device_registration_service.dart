@@ -193,7 +193,7 @@ class NotificationDeviceRegistrationService {
   Map<String, dynamic> _body(String token) => {
         'token': token,
         'platform': kIsWeb ? 'WEB' : defaultTargetPlatform.name.toUpperCase(),
-        'deviceName': 'TTaxi Web',
+        'deviceName': 'T-Ride Web',
         'appVersion': '1.0.0',
       };
 
