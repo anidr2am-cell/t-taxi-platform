@@ -4295,13 +4295,29 @@ components:
             origin:
               type: object
               properties:
+                code:
+                  type: string
+                  nullable: true
+                  description: Internal origin location code when the booking is tied to a configured route.
+                  example: BKK
                 address:
                   type: string
             destination:
               type: object
               properties:
+                code:
+                  type: string
+                  nullable: true
+                  description: Internal destination location code when the booking is tied to a configured route.
+                  example: PATTAYA
                 address:
                   type: string
+        options:
+          type: object
+          properties:
+            nameSignRequested:
+              type: boolean
+              description: Whether the booking includes the name sign meeting option.
         vehicle:
           type: object
           properties:
@@ -4360,6 +4376,25 @@ components:
             phone:
               type: string
               nullable: true
+            vehicle:
+              type: object
+              nullable: true
+              properties:
+                typeCode:
+                  type: string
+                  nullable: true
+                typeName:
+                  type: string
+                  nullable: true
+                plateNumber:
+                  type: string
+                  nullable: true
+                modelName:
+                  type: string
+                  nullable: true
+                color:
+                  type: string
+                  nullable: true
         capabilities:
           type: object
           properties:

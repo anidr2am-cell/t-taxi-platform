@@ -31,6 +31,7 @@ function bookingRow(overrides = {}) {
     boarding_qr_used_at: '2026-07-01 09:45:00',
     dropoff_qr_token_hash: null,
     dropoff_qr_used_at: null,
+    route_id: 30,
     service_type_code: 'AIRPORT_PICKUP',
     service_type_name: 'Airport Pickup',
     vehicle_type_code: 'SUV',
@@ -43,8 +44,16 @@ function bookingRow(overrides = {}) {
     golf_bags: 0,
     special_items: null,
     flight_number: 'TG409',
+    origin_location_code: 'BKK',
+    destination_location_code: 'PATTAYA',
+    name_sign_requested: 0,
     driver_name: 'Driver A',
     driver_phone: '+66 80 000 0000',
+    assigned_vehicle_plate: '1กข1234',
+    assigned_vehicle_model: 'Camry',
+    assigned_vehicle_color: 'Black',
+    assigned_vehicle_type_code: 'SUV',
+    assigned_vehicle_type_name: 'SUV',
     ...overrides,
   };
 }
@@ -98,12 +107,66 @@ test('guest lookup returns safe summary and fresh guest access token', async () 
   assert.equal(result.bookingNumber, 'TX202607010001');
   assert.equal(result.scheduledPickupAt, '2026-07-01T09:30:00+07:00');
   assert.equal(result.pricing.paymentMethod, 'PAY_DRIVER');
+  assert.equal(result.serviceType.code, 'AIRPORT_PICKUP');
+  assert.equal(result.route.origin.code, 'BKK');
+  assert.equal(result.route.destination.code, 'PATTAYA');
+  assert.equal(result.options.nameSignRequested, false);
   assert.equal(result.capabilities.dropoffQrIssueAvailable, true);
   assert.equal(result.capabilities.boardingQrRecoverable, false);
   assert.equal(result.assignedDriver.name, 'Driver A');
+  assert.equal(result.assignedDriver.vehicle.plateNumber, '1กข1234');
+  assert.equal(result.assignedDriver.vehicle.color, 'Black');
   assert.ok(!JSON.stringify(result).includes('customer_phone'));
   assert.ok(!JSON.stringify(result).includes('customer_email'));
   assert.ok(!JSON.stringify(result).includes('boarding-hash'));
+  assert.ok(!JSON.stringify(result).includes('"route_id"'));
+  assert.ok(!JSON.stringify(result).includes('"driver_id"'));
+});
+
+test('guest lookup includes BKK name sign option for airport pickup guide', async () => {
+  const { service } = buildService(bookingRow({ name_sign_requested: 1 }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.serviceType.code, 'AIRPORT_PICKUP');
+  assert.equal(result.route.origin.code, 'BKK');
+  assert.equal(result.options.nameSignRequested, true);
+});
+
+test('guest lookup exposes other airport code without forcing BKK guide', async () => {
+  const { service } = buildService(bookingRow({ origin_location_code: 'DMK' }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.serviceType.code, 'AIRPORT_PICKUP');
+  assert.equal(result.route.origin.code, 'DMK');
+  assert.equal(result.options.nameSignRequested, false);
+});
+
+test('guest lookup exposes dropoff service code so airport pickup guide remains hidden', async () => {
+  const { service } = buildService(bookingRow({
+    service_type_code: 'AIRPORT_DROPOFF',
+    service_type_name: 'Airport Dropoff',
+    origin_location_code: 'PATTAYA',
+    destination_location_code: 'BKK',
+    name_sign_requested: 0,
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.serviceType.code, 'AIRPORT_DROPOFF');
+  assert.equal(result.route.origin.code, 'PATTAYA');
+  assert.equal(result.route.destination.code, 'BKK');
+  assert.equal(result.options.nameSignRequested, false);
 });
 
 test('guest lookup rejects wrong phone with generic booking not found and no token insert', async () => {

@@ -13,6 +13,7 @@ import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
 import '../../chat/services/chat_socket_service.dart';
+import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/booking_chat_section.dart';
 
 class BookingCompletePage extends StatefulWidget {
@@ -24,6 +25,10 @@ class BookingCompletePage extends StatefulWidget {
   final Future<DropoffQrIssueResult> Function()? issueDropoffQr;
   final BookingChatApi? chatApi;
   final ChatSocketService? chatSocketService;
+  final String? serviceTypeCode;
+  final String? originAirportCode;
+  final bool nameSignRequested;
+  final AirportMeetingVehicleInfo? meetingVehicleInfo;
 
   const BookingCompletePage({
     super.key,
@@ -35,6 +40,10 @@ class BookingCompletePage extends StatefulWidget {
     this.issueDropoffQr,
     this.chatApi,
     this.chatSocketService,
+    this.serviceTypeCode,
+    this.originAirportCode,
+    this.nameSignRequested = false,
+    this.meetingVehicleInfo,
   });
 
   @override
@@ -103,13 +112,19 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
         _dropoffQrToken = null;
         _dropoffQrError = err.errorCode == 'INVALID_STATUS_TRANSITION'
             ? context.l10n.t('booking_dropoff_qr_unavailable')
-            : userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+            : userFacingError(
+                err,
+                fallback: context.l10n.t('ui_action_failed'),
+              );
       });
     } catch (err) {
       if (!mounted) return;
       setState(() {
         _loadingDropoffQr = false;
-        _dropoffQrError = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+        _dropoffQrError = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        );
       });
     }
   }
@@ -142,12 +157,33 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               AppUi.surfaceCard(
                 child: Column(
                   children: [
-                    AppUi.summaryRow(label: l10n.t('service_type'), value: widget.serviceLabel),
-                    AppUi.summaryRow(label: l10n.t('origin'), value: widget.originLabel),
-                    AppUi.summaryRow(label: l10n.t('destination'), value: widget.destinationLabel),
+                    AppUi.summaryRow(
+                      label: l10n.t('service_type'),
+                      value: widget.serviceLabel,
+                    ),
+                    AppUi.summaryRow(
+                      label: l10n.t('origin'),
+                      value: widget.originLabel,
+                    ),
+                    AppUi.summaryRow(
+                      label: l10n.t('destination'),
+                      value: widget.destinationLabel,
+                    ),
                   ],
                 ),
               ),
+              if (AirportMeetingGuideCard.shouldShow(
+                serviceTypeCode: widget.serviceTypeCode,
+                originAirportCode: widget.originAirportCode,
+              )) ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                AirportMeetingGuideCard(
+                  serviceTypeCode: widget.serviceTypeCode,
+                  originAirportCode: widget.originAirportCode,
+                  nameSignRequested: widget.nameSignRequested,
+                  vehicleInfo: widget.meetingVehicleInfo,
+                ),
+              ],
               if (widget.review != null) ...[
                 const SizedBox(height: AppTokens.spaceMd),
                 BookingCompleteReviewSection(review: widget.review!),
@@ -158,12 +194,16 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   backgroundColor: AppTokens.successLight,
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle_outline, color: AppTokens.success),
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: AppTokens.success,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           l10n.t('booking_trip_completed'),
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
                                 color: AppTokens.success,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -259,20 +299,26 @@ class _SuccessHero extends StatelessWidget {
               color: AppTokens.success.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle, color: AppTokens.success, size: 48),
+            child: const Icon(
+              Icons.check_circle,
+              color: AppTokens.success,
+              size: 48,
+            ),
           ),
           const SizedBox(height: AppTokens.spaceMd),
           Text(
             l10n.t('booking_complete'),
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTokens.success,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppTokens.success,
+              fontWeight: FontWeight.w700,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppTokens.spaceSm),
           Text(
-            trustMessage.isNotEmpty ? trustMessage : l10n.t('booking_trust_message'),
+            trustMessage.isNotEmpty
+                ? trustMessage
+                : l10n.t('booking_trust_message'),
             style: const TextStyle(color: AppTokens.textSecondary, height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -399,7 +445,11 @@ class _QrDisplay extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             hint,
-            style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13, height: 1.4),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 13,
+              height: 1.4,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppTokens.spaceMd),

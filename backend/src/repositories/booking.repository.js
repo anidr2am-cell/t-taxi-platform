@@ -249,6 +249,7 @@ class BookingRepository {
           b.total_amount,
           b.currency,
           b.vehicle_count,
+          b.route_id,
           b.boarding_qr_token_hash,
           b.boarding_qr_used_at,
           b.dropoff_qr_token_hash,
@@ -265,11 +266,29 @@ class BookingRepository {
           bl.golf_bags,
           bl.special_items,
           btd.flight_number,
+          lo.code AS origin_location_code,
+          ld.code AS destination_location_code,
+          EXISTS (
+            SELECT 1
+            FROM booking_charge_items bci
+            WHERE bci.booking_id = b.id
+              AND bci.charge_type = 'NAME_SIGN'
+              AND bci.deleted_at IS NULL
+            LIMIT 1
+          ) AS name_sign_requested,
           d.name AS driver_name,
-          d.phone AS driver_phone
+          d.phone AS driver_phone,
+          dv.plate_number AS assigned_vehicle_plate,
+          dv.model_name AS assigned_vehicle_model,
+          dv.color AS assigned_vehicle_color,
+          av.code AS assigned_vehicle_type_code,
+          av.name AS assigned_vehicle_type_name
         FROM bookings b
         INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
         INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+        LEFT JOIN routes r ON r.id = b.route_id AND r.deleted_at IS NULL
+        LEFT JOIN locations lo ON lo.id = r.origin_location_id AND lo.deleted_at IS NULL
+        LEFT JOIN locations ld ON ld.id = r.destination_location_id AND ld.deleted_at IS NULL
         LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
         LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
         LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
@@ -277,6 +296,8 @@ class BookingRepository {
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL
         LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+        LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
+        LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
         WHERE b.booking_number = ? AND b.deleted_at IS NULL
         LIMIT 1
       `,

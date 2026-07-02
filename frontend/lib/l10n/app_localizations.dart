@@ -19,16 +19,17 @@ class AppLocalizations {
     'en': {
       'app_title': 'T-Ride',
       'app_subtitle': 'Thailand Airport Transfer',
-      'landing_hero_eyebrow': 'Professional airport & city transfers in Thailand',
+      'landing_hero_eyebrow':
+          'Professional airport & city transfers in Thailand',
       'landing_hero_title': 'A comfortable start in Thailand with T-Ride',
       'landing_hero_body':
           'Travel safely and smoothly from the airport to your destination with experienced drivers.',
       'landing_hero_cta': 'Book now',
       'landing_hero_helper': 'Quick booking, no account required',
-      'landing_hero_subtitle':
-          'Travel safely, smoothly, and with confidence.',
+      'landing_hero_subtitle': 'Travel safely, smoothly, and with confidence.',
       'landing_highlight_fixed_price': 'Fixed Price',
-      'landing_highlight_fixed_price_desc': 'See your fare upfront with no hidden extras.',
+      'landing_highlight_fixed_price_desc':
+          'See your fare upfront with no hidden extras.',
       'landing_highlight_flight': 'Flight Tracking',
       'landing_highlight_flight_desc':
           'We track your flight and adjust pickup if it\'s delayed.',
@@ -192,7 +193,8 @@ class AppLocalizations {
       'admin_reviews': 'Reviews',
       'admin_flights': 'Flights',
       'admin_logout': 'Log out',
-      'admin_placeholder_deferred': 'Catalog management is deferred in MVP release.',
+      'admin_placeholder_deferred':
+          'Catalog management is deferred in MVP release.',
       'admin_translations': 'Translations',
       'admin_settings': 'Settings',
       'today_bookings': 'Today Bookings',
@@ -220,6 +222,47 @@ class AppLocalizations {
       'booking_trust_message':
           'Your booking has been received. Please show your boarding QR to the driver when you get in.',
       'chat_after_driver_assignment': 'Chat available after driver assignment',
+      'airport_meeting_semantics': 'BKK airport meeting guide, Gate {gate}',
+      'airport_meeting_gate_3_title': 'Name sign meeting guide · Gate 3',
+      'airport_meeting_gate_7_title': 'Vehicle pickup guide · Gate 7',
+      'airport_meeting_gate_inside': 'Gate inside',
+      'airport_meeting_gate_outside': 'Gate outside',
+      'airport_meeting_no_picket_highlight':
+          'After collecting your luggage, notify pickup before leaving the airport.',
+      'airport_meeting_picket_highlight':
+          'Please stay inside Gate 3 and look for the name sign.',
+      'airport_meeting_no_picket_body_1':
+          'Your driver needs time to move the vehicle to the Gate 7 curbside pickup area.',
+      'airport_meeting_no_picket_body_2':
+          'Check the vehicle number and driver before boarding.',
+      'airport_meeting_picket_body_1':
+          'After collecting luggage, move to the inside of Gate 3 and find the sign with your name.',
+      'airport_meeting_picket_body_2':
+          'Our staff will guide the driver and vehicle to the front of Gate 3.',
+      'airport_meeting_step_luggage': 'Collect all luggage.',
+      'airport_meeting_step_notify_driver':
+          'Notify the driver that you are ready for pickup.',
+      'airport_meeting_step_vehicle_number':
+          'Check the vehicle number you receive.',
+      'airport_meeting_step_gate_7': 'Move outside Arrival Gate 7.',
+      'airport_meeting_step_board':
+          'Confirm the vehicle and driver, then board.',
+      'airport_meeting_step_gate_3': 'Move inside Arrival Gate 3.',
+      'airport_meeting_step_find_picket': 'Find the name sign with your name.',
+      'airport_meeting_step_wait_staff': 'Wait briefly with staff guidance.',
+      'airport_meeting_step_board_after_staff':
+          'After the vehicle arrival notice, go outside and board.',
+      'airport_meeting_do_not_exit': 'Do not go outside before staff guidance.',
+      'airport_meeting_vehicle_pending':
+          'Driver and vehicle details are pending. They will appear after assignment.',
+      'airport_meeting_vehicle_info': 'Driver and vehicle',
+      'airport_meeting_driver': 'Driver',
+      'airport_meeting_driver_phone': 'Driver phone',
+      'airport_meeting_vehicle_type': 'Vehicle type',
+      'airport_meeting_vehicle_color': 'Vehicle color',
+      'airport_meeting_vehicle_plate': 'Plate number',
+      'airport_meeting_notify_unavailable':
+          'Pickup notification is not connected yet. Use the chat section below if you need help.',
       'password': 'Password',
       'admin_dispatch_search': 'Search bookings',
       'admin_dispatch_all_statuses': 'All statuses',
@@ -321,13 +364,15 @@ class AppLocalizations {
       'ui_action_failed': 'Action failed. Please try again.',
       'guest_lookup_title': 'Find my booking',
       'guest_lookup_loading': 'Loading saved booking...',
-      'guest_lookup_subtitle': 'Enter your booking number and phone to view trip details.',
+      'guest_lookup_subtitle':
+          'Enter your booking number and phone to view trip details.',
       'guest_lookup_booking_number': 'Booking number',
       'guest_lookup_phone': 'Phone number',
       'guest_lookup_invalid_number': 'Enter a valid booking number',
       'guest_lookup_invalid_phone': 'Enter the booking phone number',
       'guest_lookup_find': 'Find booking',
-      'guest_lookup_not_found': 'Booking not found. Please check your booking number and phone.',
+      'guest_lookup_not_found':
+          'Booking not found. Please check your booking number and phone.',
       'guest_lookup_load_error': 'Unable to load booking. Please try again.',
       'guest_lookup_trip_details': 'Trip details',
       'guest_lookup_pickup': 'Pickup',
@@ -368,8 +413,10 @@ class AppLocalizations {
       'admin_dashboard_active_trips': 'Active trips',
       'admin_dashboard_overdue_settlements': 'Overdue settlements',
       'admin_dashboard_operational_focus': 'Operational focus',
-      'admin_dashboard_operational_focus_sub': 'Tap a row to open the relevant queue.',
-      'admin_dashboard_bookings_needing_assignment': 'Bookings needing assignment',
+      'admin_dashboard_operational_focus_sub':
+          'Tap a row to open the relevant queue.',
+      'admin_dashboard_bookings_needing_assignment':
+          'Bookings needing assignment',
       'admin_dashboard_today_bookings_section': 'Today\'s bookings',
       'admin_dashboard_today_bookings_sub': 'Tap a card to open dispatch.',
       'admin_dashboard_today_bookings': 'Today bookings',
@@ -382,7 +429,8 @@ class AppLocalizations {
       'admin_dashboard_online_drivers': 'Online drivers',
       'admin_dashboard_pending_settlements': 'Pending settlements',
       'admin_dashboard_today_revenue': 'Today revenue',
-      'admin_dashboard_completed_revenue_today': 'Completed-trip revenue today: {amount}',
+      'admin_dashboard_completed_revenue_today':
+          'Completed-trip revenue today: {amount}',
       'admin_dashboard_mixed_currencies': 'Mixed currencies',
       'admin_pricing_manager': 'Pricing Manager',
       'admin_pricing_tab_routes': 'Routes',
@@ -445,7 +493,8 @@ class AppLocalizations {
       'admin_flight_sync_error': 'Sync error: {message}',
       'admin_flight_delay_minutes': 'Delay {minutes}m',
       'admin_flight_provider_missing': 'Flight provider is not configured',
-      'admin_flight_sync_unavailable': 'Automatic flight sync status unavailable',
+      'admin_flight_sync_unavailable':
+          'Automatic flight sync status unavailable',
       'booking_trip_completed': 'Trip completed',
       'booking_dropoff_qr_title': 'Dropoff QR',
       'booking_dropoff_qr_hint': 'Show this QR to your driver at destination.',
@@ -471,12 +520,14 @@ class AppLocalizations {
       'booking_notification_default_title': 'Notification',
       'booking_notification_load_error': 'Could not load notifications',
       'booking_notification_enabled': 'Notifications enabled',
-      'booking_notification_permission_denied': 'Notification permission was denied',
+      'booking_notification_permission_denied':
+          'Notification permission was denied',
       'booking_notification_unsupported':
           'Push notifications are not supported in this browser',
       'booking_notification_config_missing':
           'Push notifications are not configured for this environment',
-      'booking_notification_register_failed': 'Notification registration failed',
+      'booking_notification_register_failed':
+          'Notification registration failed',
       'guest_lookup_trip_completed_qr_hidden':
           'Trip completed. Active QR codes are hidden.',
       'guest_lookup_dropoff_qr_token': 'Dropoff QR token: {token}',
@@ -501,7 +552,8 @@ class AppLocalizations {
       'field_required': '(Required)',
       'name_sign_info_before_price':
           'When you choose the name sign service, an additional fee of ',
-      'name_sign_info_after_price': ' will apply and the pick-up gate moves to ',
+      'name_sign_info_after_price':
+          ' will apply and the pick-up gate moves to ',
       'name_sign_info_after_gate': '.',
       'name_sign_service_price_highlight': '100 THB',
       'name_sign_service_gate_highlight': 'Gate 3',
@@ -516,8 +568,10 @@ class AppLocalizations {
       'booking_number_save_notice':
           'Please save your reservation number — you will need it to look up your booking.',
       'wizard_edit_section': 'Edit',
-      'wizard_section_incomplete': 'Please complete this section before continuing.',
-      'wizard_completion_progress': '{completed} of {total} required fields complete',
+      'wizard_section_incomplete':
+          'Please complete this section before continuing.',
+      'wizard_completion_progress':
+          '{completed} of {total} required fields complete',
       'wizard_required_service': 'Please select a service type.',
       'wizard_required_origin': 'Please select an origin.',
       'wizard_required_destination': 'Please select a destination.',
@@ -526,7 +580,8 @@ class AppLocalizations {
       'wizard_required_customer': 'Please enter name, phone, and country.',
       'wizard_vehicle_prerequisites':
           'Complete service, origin, destination, pick-up time, and passengers first.',
-      'wizard_pricing_after_vehicle': 'Price is calculated after you select a vehicle.',
+      'wizard_pricing_after_vehicle':
+          'Price is calculated after you select a vehicle.',
       'guest_lookup_booking_number_hint': 'TX202607010001',
     },
     'ko': {
@@ -606,8 +661,7 @@ class AppLocalizations {
       'recent_locations': '최근 장소',
       'landing_hero_eyebrow': '태국 전문 공항·도시 이동 서비스',
       'landing_hero_title': '태국에서 만나는 편안한 출발 T-Ride',
-      'landing_hero_body':
-          '숙련된 기사와 함께 공항에서 목적지까지 안전하고 편안하게 이동하세요.',
+      'landing_hero_body': '숙련된 기사와 함께 공항에서 목적지까지 안전하고 편안하게 이동하세요.',
       'landing_hero_cta': '예약하기',
       'landing_hero_helper': '회원가입 없이 간편 예약',
       'landing_hero_subtitle': '즐겁고 안전한 여행을 약속드립니다.',
@@ -659,9 +713,41 @@ class AppLocalizations {
       'country_code_hint': 'TH, US, KR…',
       'boarding_qr_title': '탑승 QR',
       'boarding_qr_hint': '픽업 시 기사에게 이 QR을 보여주세요.',
-      'booking_trust_message':
-          '예약이 접수되었습니다. 탑승 시 기사에게 탑승 QR을 보여주세요.',
+      'booking_trust_message': '예약이 접수되었습니다. 탑승 시 기사에게 탑승 QR을 보여주세요.',
       'chat_after_driver_assignment': '기사 배정 후 채팅 가능',
+      'airport_meeting_semantics': 'BKK 공항 미팅 안내, {gate}번 게이트',
+      'airport_meeting_gate_3_title': '네임사인 미팅 안내 · 3번 게이트',
+      'airport_meeting_gate_7_title': '차량 픽업 안내 · 7번 게이트',
+      'airport_meeting_gate_inside': '게이트 안쪽',
+      'airport_meeting_gate_outside': '게이트 밖',
+      'airport_meeting_no_picket_highlight': '수하물을 찾은 직후, 먼저 픽업 알림을 보내주세요.',
+      'airport_meeting_picket_highlight': '공항 밖으로 나가지 말고 3번 게이트 안쪽에서 기다려 주세요.',
+      'airport_meeting_no_picket_body_1':
+          '기사가 7번 게이트 차량 픽업 구역으로 이동하는 데 시간이 필요합니다.',
+      'airport_meeting_no_picket_body_2': '전달받은 차량번호와 기사를 확인한 뒤 탑승해 주세요.',
+      'airport_meeting_picket_body_1':
+          '수하물을 찾은 뒤 3번 게이트 안쪽으로 이동해 고객님의 이름이 적힌 네임사인을 찾아주세요.',
+      'airport_meeting_picket_body_2': '직원이 기사와 차량을 3번 게이트 앞으로 안내합니다.',
+      'airport_meeting_step_luggage': '수하물을 모두 찾습니다.',
+      'airport_meeting_step_notify_driver': '기사에게 픽업 알림을 보냅니다.',
+      'airport_meeting_step_vehicle_number': '전달받은 차량번호를 확인합니다.',
+      'airport_meeting_step_gate_7': '입국층 7번 게이트 밖으로 이동합니다.',
+      'airport_meeting_step_board': '차량과 기사를 확인한 후 탑승합니다.',
+      'airport_meeting_step_gate_3': '3번 게이트 안쪽으로 이동합니다.',
+      'airport_meeting_step_find_picket': '고객님의 이름이 적힌 네임사인을 찾습니다.',
+      'airport_meeting_step_wait_staff': '직원의 안내를 받으며 잠시 기다립니다.',
+      'airport_meeting_step_board_after_staff': '차량 도착 안내를 받은 뒤 밖으로 나가 탑승합니다.',
+      'airport_meeting_do_not_exit': '직원 안내 전에는 공항 밖으로 나가지 마세요.',
+      'airport_meeting_vehicle_pending':
+          '기사와 차량 정보는 아직 배정 대기 중입니다. 배정 후 이곳에 표시됩니다.',
+      'airport_meeting_vehicle_info': '기사 및 차량 정보',
+      'airport_meeting_driver': '기사',
+      'airport_meeting_driver_phone': '기사 전화',
+      'airport_meeting_vehicle_type': '차량 종류',
+      'airport_meeting_vehicle_color': '차량 색상',
+      'airport_meeting_vehicle_plate': '차량번호',
+      'airport_meeting_notify_unavailable':
+          '픽업 알림 기능은 아직 연결되어 있지 않습니다. 도움이 필요하면 아래 채팅을 이용해 주세요.',
       'wizard_step_progress': '단계 {current} / {total}',
       'pickup_date_past': '픽업 날짜는 과거일 수 없습니다',
       'pickup_time_minimum': '픽업 시간은 현재 시각 기준 최소 2시간 이후여야 합니다',
@@ -685,8 +771,7 @@ class AppLocalizations {
       'booking_number_copied': '예약번호가 복사되었습니다',
       'booking_number_copy_failed': '예약번호를 복사하지 못했습니다',
       'booking_number_copy': '예약번호 복사',
-      'booking_number_save_notice':
-          '예약번호는 예약 조회 시 필요하오니 반드시 저장해두시기 바랍니다.',
+      'booking_number_save_notice': '예약번호는 예약 조회 시 필요하오니 반드시 저장해두시기 바랍니다.',
       'wizard_edit_section': '수정',
       'wizard_section_incomplete': '계속하기 전에 이 단계를 완료해 주세요.',
       'wizard_completion_progress': '필수 입력 {completed}/{total} 완료',
@@ -1066,6 +1151,35 @@ class AppLocalizations {
       'boarding_qr_hint': '上车时请向司机出示此 QR。',
       'booking_trust_message': '您的预订已收到。上车时请向司机出示登车 QR。',
       'chat_after_driver_assignment': '司机分配后可聊天',
+      'airport_meeting_semantics': 'BKK 机场接机指南，{gate} 号门',
+      'airport_meeting_gate_3_title': '举牌接机指南 · 3 号门',
+      'airport_meeting_gate_7_title': '车辆接机指南 · 7 号门',
+      'airport_meeting_gate_inside': '门内',
+      'airport_meeting_gate_outside': '门外',
+      'airport_meeting_no_picket_highlight': '取到行李后，请先通知司机准备接您。',
+      'airport_meeting_picket_highlight': '请不要走出机场，在 3 号门内等候并寻找姓名牌。',
+      'airport_meeting_no_picket_body_1': '司机需要时间把车辆开到 7 号门外的上车区。',
+      'airport_meeting_no_picket_body_2': '上车前请确认车牌号和司机。',
+      'airport_meeting_picket_body_1': '取到行李后，请前往 3 号门内，寻找写有您姓名的接机牌。',
+      'airport_meeting_picket_body_2': '工作人员会引导司机和车辆到 3 号门前。',
+      'airport_meeting_step_luggage': '取齐所有行李。',
+      'airport_meeting_step_notify_driver': '通知司机您已准备好上车。',
+      'airport_meeting_step_vehicle_number': '确认收到的车牌号。',
+      'airport_meeting_step_gate_7': '前往到达层 7 号门外。',
+      'airport_meeting_step_board': '确认车辆和司机后上车。',
+      'airport_meeting_step_gate_3': '前往到达层 3 号门内。',
+      'airport_meeting_step_find_picket': '寻找写有您姓名的接机牌。',
+      'airport_meeting_step_wait_staff': '按照工作人员指引稍候。',
+      'airport_meeting_step_board_after_staff': '收到车辆到达提示后，再到门外上车。',
+      'airport_meeting_do_not_exit': '在工作人员指引前，请不要走出机场。',
+      'airport_meeting_vehicle_pending': '司机和车辆信息尚未分配，分配后会显示在这里。',
+      'airport_meeting_vehicle_info': '司机和车辆信息',
+      'airport_meeting_driver': '司机',
+      'airport_meeting_driver_phone': '司机电话',
+      'airport_meeting_vehicle_type': '车型',
+      'airport_meeting_vehicle_color': '车辆颜色',
+      'airport_meeting_vehicle_plate': '车牌号',
+      'airport_meeting_notify_unavailable': '接机通知功能尚未连接。如需帮助，请使用下方聊天。',
       'ui_load_failed': '无法加载数据，请重试。',
       'ui_action_failed': '操作失败，请重试。',
       'ui_generic_error': '出现问题，请重试。',
@@ -1297,8 +1411,7 @@ class AppLocalizations {
       'landing_how_step_2_desc': 'おすすめ車両と料金を確認してから予約します。',
       'landing_how_step_3_title': '快適に移動',
       'landing_how_step_3_desc': 'ドライバーが安全に目的地までお送りします。',
-      'landing_reassurance_body':
-          'タイが初めてでもご安心ください。予約から到着まで、必要な情報を丁寧にお伝えします。',
+      'landing_reassurance_body': 'タイが初めてでもご安心ください。予約から到着まで、必要な情報を丁寧にお伝えします。',
       'landing_booking_lookup_title': 'すでに予約済みですか？',
       'landing_booking_lookup_desc': '予約番号で行程とドライバー情報を確認できます。',
       'landing_booking_lookup_action': '予約を検索',
@@ -1323,6 +1436,38 @@ class AppLocalizations {
       'boarding_qr_hint': 'ピックアップ時にドライバーへこの QR を提示してください。',
       'booking_trust_message': '予約を受け付けました。乗車時にドライバーへ乗車 QR を提示してください。',
       'chat_after_driver_assignment': 'ドライバー割当後にチャット可能',
+      'airport_meeting_semantics': 'BKK空港ミーティング案内、ゲート{gate}',
+      'airport_meeting_gate_3_title': 'ネームサイン集合案内 · 3番ゲート',
+      'airport_meeting_gate_7_title': '車両ピックアップ案内 · 7番ゲート',
+      'airport_meeting_gate_inside': 'ゲート内側',
+      'airport_meeting_gate_outside': 'ゲート外側',
+      'airport_meeting_no_picket_highlight':
+          '荷物を受け取ったら、空港を出る前にピックアップ準備を知らせてください。',
+      'airport_meeting_picket_highlight': '空港の外へ出ず、3番ゲート内側でネームサインを探してください。',
+      'airport_meeting_no_picket_body_1': 'ドライバーが7番ゲート外の乗車エリアへ車を移動する時間が必要です。',
+      'airport_meeting_no_picket_body_2': '乗車前に車両番号とドライバーを確認してください。',
+      'airport_meeting_picket_body_1':
+          '荷物を受け取った後、3番ゲート内側へ移動し、お名前のネームサインを探してください。',
+      'airport_meeting_picket_body_2': 'スタッフがドライバーと車両を3番ゲート前へ案内します。',
+      'airport_meeting_step_luggage': '荷物をすべて受け取ります。',
+      'airport_meeting_step_notify_driver': 'ピックアップ準備ができたことをドライバーへ知らせます。',
+      'airport_meeting_step_vehicle_number': '受け取った車両番号を確認します。',
+      'airport_meeting_step_gate_7': '到着階7番ゲートの外へ移動します。',
+      'airport_meeting_step_board': '車両とドライバーを確認して乗車します。',
+      'airport_meeting_step_gate_3': '到着階3番ゲートの内側へ移動します。',
+      'airport_meeting_step_find_picket': 'お名前が書かれたネームサインを探します。',
+      'airport_meeting_step_wait_staff': 'スタッフの案内に従って少しお待ちください。',
+      'airport_meeting_step_board_after_staff': '車両到着の案内後、外へ出て乗車します。',
+      'airport_meeting_do_not_exit': 'スタッフの案内前に空港の外へ出ないでください。',
+      'airport_meeting_vehicle_pending': 'ドライバーと車両情報は未割当です。割当後ここに表示されます。',
+      'airport_meeting_vehicle_info': 'ドライバーと車両',
+      'airport_meeting_driver': 'ドライバー',
+      'airport_meeting_driver_phone': 'ドライバー電話',
+      'airport_meeting_vehicle_type': '車種',
+      'airport_meeting_vehicle_color': '車両色',
+      'airport_meeting_vehicle_plate': '車両番号',
+      'airport_meeting_notify_unavailable':
+          'ピックアップ通知機能はまだ接続されていません。必要な場合は下のチャットをご利用ください。',
       'ui_load_failed': 'データを読み込めませんでした。もう一度お試しください。',
       'ui_action_failed': '操作に失敗しました。もう一度お試しください。',
       'ui_generic_error': '問題が発生しました。もう一度お試しください。',
@@ -1352,7 +1497,8 @@ class AppLocalizations {
       'guest_lookup_issue_dropoff_qr': '降車 QR を発行',
       'guest_lookup_trip_completed_qr_hidden': '行程完了。QR コードは非表示です。',
       'guest_lookup_dropoff_qr_token': '降車 QR トークン: {token}',
-      'guest_lookup_boarding_qr_security': '乗車 QR は予約作成時に発行され、セキュリティ上ここでは復元できません。',
+      'guest_lookup_boarding_qr_security':
+          '乗車 QR は予約作成時に発行され、セキュリティ上ここでは復元できません。',
       'guest_lookup_booking_number_hint': 'TX202607010001',
       'booking_trip_completed': '行程完了',
       'booking_dropoff_qr_title': '降車 QR',
@@ -1419,8 +1565,7 @@ class AppLocalizations {
       'wizard_required_passengers': '乗客情報を入力してください。',
       'wizard_required_vehicle': '車両を選択してください。',
       'wizard_required_customer': '名前、電話番号、国を入力してください。',
-      'wizard_vehicle_prerequisites':
-          'サービス、出発地、目的地、ピックアップ時間、乗客情報を先に入力してください。',
+      'wizard_vehicle_prerequisites': 'サービス、出発地、目的地、ピックアップ時間、乗客情報を先に入力してください。',
       'wizard_pricing_after_vehicle': '車両選択後に料金が計算されます。',
       'admin_dispatch_retry': '再試行',
       'admin_chat_participant': '参加者',
@@ -1534,11 +1679,14 @@ class AppLocalizations {
       'landing_hero_helper': 'จองง่าย ไม่ต้องสมัครสมาชิก',
       'landing_hero_subtitle': 'เดินทางอย่างปลอดภัย ราบรื่น และมั่นใจ',
       'landing_highlight_fixed_price': 'ราคาคงที่',
-      'landing_highlight_fixed_price_desc': 'เห็นราคาชัดเจนตั้งแต่จอง ไม่มีค่าใช้จ่ายแอบแฝง',
+      'landing_highlight_fixed_price_desc':
+          'เห็นราคาชัดเจนตั้งแต่จอง ไม่มีค่าใช้จ่ายแอบแฝง',
       'landing_highlight_flight': 'ติดตามเที่ยวบิน',
-      'landing_highlight_flight_desc': 'ติดตามเที่ยวบินและปรับเวลารับอัตโนมัติเมื่อล่าช้า',
+      'landing_highlight_flight_desc':
+          'ติดตามเที่ยวบินและปรับเวลารับอัตโนมัติเมื่อล่าช้า',
       'landing_highlight_support': 'สนับสนุน 24/7',
-      'landing_highlight_support_desc': 'พร้อมช่วยเหลือก่อนและระหว่างการเดินทาง',
+      'landing_highlight_support_desc':
+          'พร้อมช่วยเหลือก่อนและระหว่างการเดินทาง',
       'book_your_ride': 'จองเลย',
       'landing_services_title': 'บริการของเรา',
       'landing_services_subtitle': 'รับส่งสนามบินและระหว่างเมือง',
@@ -1547,9 +1695,11 @@ class AppLocalizations {
       'landing_trust_drivers_title': 'คนขับมืออาชีพ',
       'landing_trust_drivers_desc': 'คนขับที่คุ้นเคยกับถนนไทยและเส้นทางสนามบิน',
       'landing_trust_confirmed_title': 'ยืนยันการจองล่วงหน้า',
-      'landing_trust_confirmed_desc': 'ตรวจสอบข้อมูลรับและตารางเดินทางก่อนถึงวัน',
+      'landing_trust_confirmed_desc':
+          'ตรวจสอบข้อมูลรับและตารางเดินทางก่อนถึงวัน',
       'landing_trust_comfort_title': 'การเดินทางที่สบาย',
-      'landing_trust_comfort_desc': 'ไม่ต้องกังวลเรื่องการเดินทาง โฟกัสกับทริปของคุณ',
+      'landing_trust_comfort_desc':
+          'ไม่ต้องกังวลเรื่องการเดินทาง โฟกัสกับทริปของคุณ',
       'landing_how_it_works_title': 'วิธีการจอง',
       'landing_how_step_1_title': 'กรอกข้อมูลการเดินทาง',
       'landing_how_step_1_desc': 'เลือกบริการ เวลารับ และจุดหมาย',
@@ -1569,7 +1719,8 @@ class AppLocalizations {
       'trust_fixed_pricing': 'ราคาคงที่',
       'trust_fixed_pricing_desc': 'ราคาที่จองคือราคาที่จ่ายจริง',
       'trust_professional_drivers': 'คนขับมืออาชีพ',
-      'trust_professional_drivers_desc': 'คนขับมืออาชีพที่ผ่านการตรวจสอบ ปลอดภัยและสบาย',
+      'trust_professional_drivers_desc':
+          'คนขับมืออาชีพที่ผ่านการตรวจสอบ ปลอดภัยและสบาย',
       'trust_multilingual': 'รองรับหลายภาษา',
       'trust_multilingual_desc': 'จองได้ด้วยอังกฤษ เกาหลี จีน ญี่ปุ่น และไทย',
       'payment_method': 'วิธีชำระเงิน',
@@ -1581,8 +1732,47 @@ class AppLocalizations {
       'country_code_hint': 'TH, US, KR…',
       'boarding_qr_title': 'QR ขึ้นรถ',
       'boarding_qr_hint': 'แสดง QR นี้ให้คนขับเมื่อขึ้นรถ',
-      'booking_trust_message': 'ได้รับการจองแล้ว กรุณาแสดง QR ขึ้นรถให้คนขับเมื่อขึ้นรถ',
+      'booking_trust_message':
+          'ได้รับการจองแล้ว กรุณาแสดง QR ขึ้นรถให้คนขับเมื่อขึ้นรถ',
       'chat_after_driver_assignment': 'แชทได้หลังมอบหมายคนขับ',
+      'airport_meeting_semantics': 'คำแนะนำจุดนัดพบสนามบิน BKK ประตู {gate}',
+      'airport_meeting_gate_3_title': 'คำแนะนำป้ายชื่อ · ประตู 3',
+      'airport_meeting_gate_7_title': 'คำแนะนำจุดรับรถ · ประตู 7',
+      'airport_meeting_gate_inside': 'ด้านในประตู',
+      'airport_meeting_gate_outside': 'ด้านนอกประตู',
+      'airport_meeting_no_picket_highlight':
+          'หลังรับกระเป๋าแล้ว กรุณาแจ้งพร้อมรับรถก่อนออกจากสนามบิน',
+      'airport_meeting_picket_highlight':
+          'กรุณาอย่าออกนอกสนามบิน ให้รอด้านในประตู 3 และมองหาป้ายชื่อ',
+      'airport_meeting_no_picket_body_1':
+          'คนขับต้องใช้เวลาเคลื่อนรถไปยังจุดรับรถด้านนอกประตู 7',
+      'airport_meeting_no_picket_body_2':
+          'กรุณาตรวจสอบทะเบียนรถและคนขับก่อนขึ้นรถ',
+      'airport_meeting_picket_body_1':
+          'หลังรับกระเป๋าแล้ว ไปที่ด้านในประตู 3 และมองหาป้ายชื่อของคุณ',
+      'airport_meeting_picket_body_2':
+          'เจ้าหน้าที่จะประสานให้คนขับและรถมาที่หน้าประตู 3',
+      'airport_meeting_step_luggage': 'รับกระเป๋าทั้งหมดให้เรียบร้อย',
+      'airport_meeting_step_notify_driver': 'แจ้งคนขับว่าคุณพร้อมรับรถแล้ว',
+      'airport_meeting_step_vehicle_number': 'ตรวจสอบหมายเลขทะเบียนรถที่ได้รับ',
+      'airport_meeting_step_gate_7': 'ไปด้านนอกประตู 7 ชั้นผู้โดยสารขาเข้า',
+      'airport_meeting_step_board': 'ยืนยันรถและคนขับ แล้วขึ้นรถ',
+      'airport_meeting_step_gate_3': 'ไปด้านในประตู 3 ชั้นผู้โดยสารขาเข้า',
+      'airport_meeting_step_find_picket': 'มองหาป้ายชื่อที่มีชื่อของคุณ',
+      'airport_meeting_step_wait_staff': 'รอสักครู่ตามคำแนะนำของเจ้าหน้าที่',
+      'airport_meeting_step_board_after_staff':
+          'เมื่อได้รับแจ้งว่ารถมาถึงแล้ว ค่อยออกไปขึ้นรถ',
+      'airport_meeting_do_not_exit': 'อย่าออกนอกสนามบินก่อนเจ้าหน้าที่แนะนำ',
+      'airport_meeting_vehicle_pending':
+          'ข้อมูลคนขับและรถยังรอการมอบหมาย จะแสดงที่นี่หลังมอบหมายแล้ว',
+      'airport_meeting_vehicle_info': 'ข้อมูลคนขับและรถ',
+      'airport_meeting_driver': 'คนขับ',
+      'airport_meeting_driver_phone': 'เบอร์คนขับ',
+      'airport_meeting_vehicle_type': 'ประเภทรถ',
+      'airport_meeting_vehicle_color': 'สีรถ',
+      'airport_meeting_vehicle_plate': 'ทะเบียนรถ',
+      'airport_meeting_notify_unavailable':
+          'ยังไม่ได้เชื่อมต่อปุ่มแจ้งรับรถ หากต้องการความช่วยเหลือ กรุณาใช้แชทด้านล่าง',
       'ui_load_failed': 'โหลดข้อมูลไม่ได้ กรุณาลองอีกครั้ง',
       'ui_action_failed': 'ดำเนินการไม่สำเร็จ กรุณาลองอีกครั้ง',
       'ui_generic_error': 'เกิดข้อผิดพลาด กรุณาลองอีกครั้ง',
@@ -1610,7 +1800,8 @@ class AppLocalizations {
       'guest_lookup_total': 'รวม',
       'guest_lookup_another': 'ค้นหาการจองอื่น',
       'guest_lookup_issue_dropoff_qr': 'ออก QR ลงรถ',
-      'guest_lookup_trip_completed_qr_hidden': 'ทริปเสร็จสิ้น QR ที่ใช้งานอยู่จะถูกซ่อน',
+      'guest_lookup_trip_completed_qr_hidden':
+          'ทริปเสร็จสิ้น QR ที่ใช้งานอยู่จะถูกซ่อน',
       'guest_lookup_dropoff_qr_token': 'โทเค็น QR ลงรถ: {token}',
       'guest_lookup_boarding_qr_security':
           'QR ขึ้นรถออกเมื่อสร้างการจอง ไม่สามารถกู้คืนจากหน้าค้นหาได้',
@@ -1618,7 +1809,8 @@ class AppLocalizations {
       'booking_trip_completed': 'ทริปเสร็จสิ้น',
       'booking_dropoff_qr_title': 'QR ลงรถ',
       'booking_dropoff_qr_hint': 'แสดง QR นี้ให้คนขับเมื่อถึงปลายทาง',
-      'booking_dropoff_qr_unavailable': 'QR ลงรถใช้ได้หลังขึ้นรถและก่อนทริปเสร็จ',
+      'booking_dropoff_qr_unavailable':
+          'QR ลงรถใช้ได้หลังขึ้นรถและก่อนทริปเสร็จ',
       'booking_refresh_dropoff_qr': 'รีเฟรช QR ลงรถ',
       'booking_issue_new_dropoff_qr': 'ออก QR ลงรถใหม่',
       'booking_chat_title': 'แชทการจอง',
@@ -1640,8 +1832,10 @@ class AppLocalizations {
       'booking_notification_load_error': 'โหลดการแจ้งเตือนไม่ได้',
       'booking_notification_enabled': 'เปิดการแจ้งเตือนแล้ว',
       'booking_notification_permission_denied': 'สิทธิ์การแจ้งเตือนถูกปฏิเสธ',
-      'booking_notification_unsupported': 'เบราว์เซอร์นี้ไม่รองรับ push notification',
-      'booking_notification_config_missing': 'ไม่ได้ตั้งค่า push notification ในสภาพแวดล้อมนี้',
+      'booking_notification_unsupported':
+          'เบราว์เซอร์นี้ไม่รองรับ push notification',
+      'booking_notification_config_missing':
+          'ไม่ได้ตั้งค่า push notification ในสภาพแวดล้อมนี้',
       'booking_notification_register_failed': 'ลงทะเบียนการแจ้งเตือนไม่สำเร็จ',
       'track_driver_title': 'ติดตามคนขับ',
       'track_driver_unavailable': 'ยังไม่มีตำแหน่งคนขับ',
@@ -1659,7 +1853,8 @@ class AppLocalizations {
       'pickup_time_invalid': 'กรุณากรอกเวลาที่ถูกต้อง เช่น 09:30 AM',
       'pickup_time_apply_manual': 'ใช้',
       'field_required': '(จำเป็น)',
-      'name_sign_info_before_price': 'หากเลือกบริการป้ายชื่อ จะมีค่าบริการเพิ่ม ',
+      'name_sign_info_before_price':
+          'หากเลือกบริการป้ายชื่อ จะมีค่าบริการเพิ่ม ',
       'name_sign_info_after_price': ' และจุดรับจะเปลี่ยนเป็น ',
       'name_sign_info_after_gate': '。',
       'name_sign_service_price_highlight': '100 บาท',

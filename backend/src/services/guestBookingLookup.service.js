@@ -43,6 +43,10 @@ class GuestBookingLookupService {
     return `${String(value).replace(' ', 'T')}Z`;
   }
 
+  boolean(value) {
+    return value === true || value === 1 || value === '1';
+  }
+
   mapBooking(row, guestAccessToken, guestAccessExpiresAt) {
     const adults = Number(row.adults ?? 0);
     const children = Number(row.children ?? 0);
@@ -51,6 +55,15 @@ class GuestBookingLookupService {
       ? {
         name: row.driver_name,
         phone: row.driver_phone ?? null,
+        vehicle: row.assigned_vehicle_plate || row.assigned_vehicle_type_code || row.assigned_vehicle_type_name
+          ? {
+            typeCode: row.assigned_vehicle_type_code ?? null,
+            typeName: row.assigned_vehicle_type_name ?? null,
+            plateNumber: row.assigned_vehicle_plate ?? null,
+            modelName: row.assigned_vehicle_model ?? null,
+            color: row.assigned_vehicle_color ?? null,
+          }
+          : null,
       }
       : null;
     const terminalStatus = [
@@ -69,8 +82,17 @@ class GuestBookingLookupService {
         name: row.service_type_name,
       },
       route: {
-        origin: { address: row.origin_address },
-        destination: { address: row.destination_address },
+        origin: {
+          code: row.origin_location_code ?? null,
+          address: row.origin_address,
+        },
+        destination: {
+          code: row.destination_location_code ?? null,
+          address: row.destination_address,
+        },
+      },
+      options: {
+        nameSignRequested: this.boolean(row.name_sign_requested),
       },
       vehicle: {
         typeCode: row.vehicle_type_code,

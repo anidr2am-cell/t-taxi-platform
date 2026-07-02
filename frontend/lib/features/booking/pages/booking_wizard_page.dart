@@ -8,8 +8,10 @@ import '../../../widgets/app_ui.dart';
 import '../../../widgets/language_selector.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
+import '../models/location_option.dart';
 import '../models/service_type_option.dart';
 import '../pages/booking_complete_page.dart';
+import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/step_customer_info.dart';
 import '../widgets/step_destination_select.dart';
 import '../widgets/step_origin_select.dart';
@@ -32,10 +34,14 @@ class BookingWizardPage extends StatefulWidget {
 class _BookingWizardPageState extends State<BookingWizardPage> {
   late final BookingWizardController _controller;
   final ScrollController _scrollController = ScrollController();
-  late final List<GlobalKey> _sectionKeys =
-      List.generate(BookingWizardState.stepCount, (_) => GlobalKey());
-  late final List<FocusNode> _sectionFocusNodes =
-      List.generate(BookingWizardState.stepCount, (_) => FocusNode());
+  late final List<GlobalKey> _sectionKeys = List.generate(
+    BookingWizardState.stepCount,
+    (_) => GlobalKey(),
+  );
+  late final List<FocusNode> _sectionFocusNodes = List.generate(
+    BookingWizardState.stepCount,
+    (_) => FocusNode(),
+  );
 
   @override
   void initState() {
@@ -119,13 +125,19 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final review = _controller.buildCompleteReview();
     final serviceLabel = l10n.t(snapshot.serviceType?.labelKey ?? '');
     final originLabel = _controller.formatLocationLabel(snapshot.origin);
-    final destinationLabel = _controller.formatLocationLabel(snapshot.destination);
+    final destinationLabel = _controller.formatLocationLabel(
+      snapshot.destination,
+    );
 
     final result = await _controller.submitBooking();
     if (result == null) {
       if (_controller.state.errorMessage != null) {
         messenger.showSnackBar(
-          SnackBar(content: Text(_wizardErrorText(l10n, _controller.state.errorMessage))),
+          SnackBar(
+            content: Text(
+              _wizardErrorText(l10n, _controller.state.errorMessage),
+            ),
+          ),
         );
         final errorStep = _controller.firstIncompleteStep() ?? 6;
         _scrollToSection(errorStep);
@@ -142,6 +154,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           originLabel: originLabel,
           destinationLabel: destinationLabel,
           review: review,
+          serviceTypeCode: snapshot.serviceType?.apiCode,
+          originAirportCode: snapshot.origin?.kind == LocationKind.airport
+              ? snapshot.origin?.code
+              : null,
+          nameSignRequested: snapshot.nameSign,
+          meetingVehicleInfo: AirportMeetingVehicleInfo(
+            vehicleType: snapshot.selectedVehicle,
+          ),
         ),
       ),
     );
@@ -203,10 +223,12 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           onNameChanged: (v) => _controller.updateCustomerInfo(name: v),
           onEmailChanged: (v) => _controller.updateCustomerInfo(email: v),
           onPhoneChanged: (v) => _controller.updateCustomerInfo(phone: v),
-          onCountryChanged: (v) => _controller.updateCustomerInfo(countryCode: v),
+          onCountryChanged: (v) =>
+              _controller.updateCustomerInfo(countryCode: v),
           onMessengerTypeChanged: (v) =>
               _controller.updateCustomerInfo(messengerType: v),
-          onMessengerIdChanged: (v) => _controller.updateCustomerInfo(messengerId: v),
+          onMessengerIdChanged: (v) =>
+              _controller.updateCustomerInfo(messengerId: v),
           onAdditionalRequestsChanged: (v) =>
               _controller.updateCustomerInfo(additionalRequests: v),
         );
@@ -219,7 +241,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final locale = context.watch<LocaleState>().languageCode;
-    final maxWidth = MediaQuery.sizeOf(context).width > 720 ? 720.0 : double.infinity;
+    final maxWidth = MediaQuery.sizeOf(context).width > 720
+        ? 720.0
+        : double.infinity;
 
     return ListenableBuilder(
       listenable: _controller,
@@ -229,7 +253,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         }
 
         final state = _controller.state;
-        final canSubmit = _controller.canSubmitAll() &&
+        final canSubmit =
+            _controller.canSubmitAll() &&
             !_controller.isLoading &&
             !_controller.isSubmitting;
 
@@ -253,16 +278,21 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                       padding: AppUi.pagePadding(context),
                       child: Column(
                         children: [
-                          for (var i = 0; i < BookingWizardState.stepCount; i++) ...[
+                          for (
+                            var i = 0;
+                            i < BookingWizardState.stepCount;
+                            i++
+                          ) ...[
                             KeyedSubtree(
                               key: _sectionKeys[i],
                               child: WizardSectionCard(
                                 stepNumber: i + 1,
                                 title: _stepTitle(l10n, i),
-                                validationHint: !_controller.canProceedFromStep(i)
+                                validationHint:
+                                    !_controller.canProceedFromStep(i)
                                     ? () {
-                                        final key =
-                                            _controller.stepValidationMessageKey(i);
+                                        final key = _controller
+                                            .stepValidationMessageKey(i);
                                         return key != null ? l10n.t(key) : null;
                                       }()
                                     : null,
@@ -300,7 +330,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : Text(l10n.t('confirm')),
                           ),

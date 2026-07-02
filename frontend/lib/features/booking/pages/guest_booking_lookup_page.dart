@@ -11,6 +11,7 @@ import '../services/guest_booking_lookup_service.dart';
 import '../widgets/booking_chat_section.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
+import '../widgets/airport_meeting_guide_card.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 
 class GuestBookingLookupPage extends StatefulWidget {
@@ -203,7 +204,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                   ),
                   validator: (value) {
                     final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
-                    return digits.length >= 4 ? null : l10n.t('guest_lookup_invalid_phone');
+                    return digits.length >= 4
+                        ? null
+                        : l10n.t('guest_lookup_invalid_phone');
                   },
                 ),
               ],
@@ -262,23 +265,62 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           ),
         ),
         const SizedBox(height: AppTokens.spaceMd),
-        AppUi.sectionHeader(context, title: l10n.t('guest_lookup_trip_details')),
+        AppUi.sectionHeader(
+          context,
+          title: l10n.t('guest_lookup_trip_details'),
+        ),
         AppUi.surfaceCard(
           child: Column(
             children: [
-              AppUi.summaryRow(label: l10n.t('guest_lookup_pickup'), value: result.scheduledPickupAt ?? '-'),
-              AppUi.summaryRow(label: l10n.t('guest_lookup_service'), value: result.serviceTypeName),
-              AppUi.summaryRow(label: l10n.t('guest_lookup_from'), value: result.originAddress),
-              AppUi.summaryRow(label: l10n.t('guest_lookup_to'), value: result.destinationAddress),
+              AppUi.summaryRow(
+                label: l10n.t('guest_lookup_pickup'),
+                value: result.scheduledPickupAt ?? '-',
+              ),
+              AppUi.summaryRow(
+                label: l10n.t('guest_lookup_service'),
+                value: result.serviceTypeName,
+              ),
+              AppUi.summaryRow(
+                label: l10n.t('guest_lookup_from'),
+                value: result.originAddress,
+              ),
+              AppUi.summaryRow(
+                label: l10n.t('guest_lookup_to'),
+                value: result.destinationAddress,
+              ),
               if (result.driverName != null) ...[
                 const Divider(height: 24),
-                AppUi.summaryRow(label: l10n.t('guest_lookup_driver'), value: result.driverName!),
+                AppUi.summaryRow(
+                  label: l10n.t('guest_lookup_driver'),
+                  value: result.driverName!,
+                ),
                 if (result.driverPhone != null)
-                  AppUi.summaryRow(label: l10n.t('guest_lookup_driver_phone'), value: result.driverPhone!),
+                  AppUi.summaryRow(
+                    label: l10n.t('guest_lookup_driver_phone'),
+                    value: result.driverPhone!,
+                  ),
               ],
             ],
           ),
         ),
+        if (AirportMeetingGuideCard.shouldShow(
+          serviceTypeCode: result.serviceTypeCode,
+          originAirportCode: result.originAirportCode,
+        )) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          AirportMeetingGuideCard(
+            serviceTypeCode: result.serviceTypeCode,
+            originAirportCode: result.originAirportCode,
+            nameSignRequested: result.nameSignRequested,
+            vehicleInfo: AirportMeetingVehicleInfo(
+              driverName: result.driverName,
+              driverPhone: result.driverPhone,
+              vehicleType: result.vehicleType,
+              vehicleColor: result.vehicleColor,
+              vehiclePlateNumber: result.vehiclePlateNumber,
+            ),
+          ),
+        ],
         const SizedBox(height: AppTokens.spaceMd),
         AppUi.sectionHeader(context, title: l10n.t('guest_lookup_payment')),
         AppUi.surfaceCard(
@@ -290,7 +332,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                 value: '${result.totalAmount} ${result.currency}',
                 emphasize: true,
               ),
-              AppUi.summaryRow(label: l10n.t('guest_lookup_payment'), value: result.paymentMethod),
+              AppUi.summaryRow(
+                label: l10n.t('guest_lookup_payment'),
+                value: result.paymentMethod,
+              ),
             ],
           ),
         ),
@@ -308,7 +353,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               guestAccessToken: result.guestAccessToken,
               bookingStatus: result.status,
             ),
-          if (result.bookingId != null) const SizedBox(height: AppTokens.spaceMd),
+          if (result.bookingId != null)
+            const SizedBox(height: AppTokens.spaceMd),
           if (result.capabilities.notificationsAvailable)
             BookingNotificationSection(
               bookingNumber: result.bookingNumber,
@@ -356,7 +402,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     if (_dropoffQrToken != null) {
       return AppUi.surfaceCard(
         child: SelectableText(
-          context.l10n.t('guest_lookup_dropoff_qr_token').replaceAll('{token}', _dropoffQrToken!),
+          context.l10n
+              .t('guest_lookup_dropoff_qr_token')
+              .replaceAll('{token}', _dropoffQrToken!),
         ),
       );
     }
