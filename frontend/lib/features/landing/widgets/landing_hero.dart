@@ -8,7 +8,10 @@ class LandingHero extends StatelessWidget {
   final VoidCallback onBook;
 
   static const pattayaHeroAssetPath = 'assets/images/pattaya_hero.jpg';
-  static const hasPattayaHeroAsset = false;
+  static const hasPattayaHeroAsset = true;
+  static const overlayColor = Color(0xFF052E34);
+  static const mobileImageAlignment = Alignment(0.18, -0.18);
+  static const desktopImageAlignment = Alignment(0.10, -0.12);
 
   const LandingHero({super.key, required this.onBook});
 
@@ -22,29 +25,20 @@ class LandingHero extends StatelessWidget {
       key: const Key('landing_hero'),
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: EdgeInsets.symmetric(
-        horizontal: isWide ? 36 : 20,
-        vertical: isWide ? 40 : 24,
-      ),
       decoration: BoxDecoration(
-        image: hasPattayaHeroAsset
-            ? const DecorationImage(
-                image: AssetImage(pattayaHeroAssetPath),
-                fit: BoxFit.cover,
-              )
-            : null,
-        gradient: hasPattayaHeroAsset ? null : AppTokens.heroGradient,
+        gradient: AppTokens.heroGradient,
         borderRadius: AppTokens.borderRadiusLg,
       ),
+      clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
+          const Positioned.fill(child: _HeroBackgroundImage()),
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(
-                  0xFF062D33,
-                ).withValues(alpha: hasPattayaHeroAsset ? 0.54 : 0.18),
-                borderRadius: AppTokens.borderRadiusLg,
+                color: overlayColor.withValues(
+                  alpha: hasPattayaHeroAsset ? 0.56 : 0.18,
+                ),
               ),
             ),
           ),
@@ -52,35 +46,45 @@ class LandingHero extends StatelessWidget {
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: AppTokens.borderRadiusLg,
                   gradient: LinearGradient(
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      const Color(0xFF052E34).withValues(alpha: 0.62),
-                      const Color(0xFF052E34).withValues(alpha: 0.45),
+                      overlayColor.withValues(alpha: isWide ? 0.62 : 0.50),
+                      overlayColor.withValues(alpha: isWide ? 0.42 : 0.34),
                     ],
                   ),
                 ),
               ),
             ),
-          isWide
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(child: _heroCopy(l10n, compact: false)),
-                    const SizedBox(width: 32),
-                    _ctaColumn(l10n, onBook, fullWidth: false, compact: false),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _heroCopy(l10n, compact: true),
-                    const SizedBox(height: 20),
-                    _ctaColumn(l10n, onBook, fullWidth: true, compact: true),
-                  ],
-                ),
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isWide ? 36 : 20,
+              vertical: isWide ? 40 : 24,
+            ),
+            child: isWide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(child: _heroCopy(l10n, compact: false)),
+                      const SizedBox(width: 32),
+                      _ctaColumn(
+                        l10n,
+                        onBook,
+                        fullWidth: false,
+                        compact: false,
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _heroCopy(l10n, compact: true),
+                      const SizedBox(height: 20),
+                      _ctaColumn(l10n, onBook, fullWidth: true, compact: true),
+                    ],
+                  ),
+          ),
         ],
       ),
     );
@@ -202,6 +206,34 @@ class LandingHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [button, const SizedBox(height: 8), helper],
       ),
+    );
+  }
+}
+
+class _HeroBackgroundImage extends StatelessWidget {
+  const _HeroBackgroundImage();
+
+  @override
+  Widget build(BuildContext context) {
+    if (!LandingHero.hasPattayaHeroAsset) {
+      return const DecoratedBox(
+        decoration: BoxDecoration(gradient: AppTokens.heroGradient),
+      );
+    }
+
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
+
+    return Image.asset(
+      LandingHero.pattayaHeroAssetPath,
+      fit: BoxFit.cover,
+      alignment: isWide
+          ? LandingHero.desktopImageAlignment
+          : LandingHero.mobileImageAlignment,
+      errorBuilder: (context, error, stackTrace) {
+        return const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppTokens.heroGradient),
+        );
+      },
     );
   }
 }

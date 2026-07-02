@@ -143,25 +143,32 @@ void main() {
       expect(find.text(AppLocalizations.languageNames['ko']!), findsOneWidget);
     });
 
-    testWidgets(
-      'hero keeps image fallback inactive while Pattaya asset is missing',
-      (tester) async {
-        await pumpLanding(tester);
+    testWidgets('hero uses Pattaya image with cover fit and safe fallback', (
+      tester,
+    ) async {
+      await pumpLanding(tester);
 
-        final hero = tester.widget<Container>(
-          find.byKey(const Key('landing_hero')),
-        );
-        final decoration = hero.decoration! as BoxDecoration;
+      final hero = tester.widget<Container>(
+        find.byKey(const Key('landing_hero')),
+      );
+      final decoration = hero.decoration! as BoxDecoration;
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const Key('landing_hero')),
+          matching: find.byType(Image),
+        ),
+      );
 
-        expect(
-          LandingHero.pattayaHeroAssetPath,
-          'assets/images/pattaya_hero.jpg',
-        );
-        expect(LandingHero.hasPattayaHeroAsset, isFalse);
-        expect(decoration.image, isNull);
-        expect(decoration.gradient, isNotNull);
-      },
-    );
+      expect(
+        LandingHero.pattayaHeroAssetPath,
+        'assets/images/pattaya_hero.jpg',
+      );
+      expect(LandingHero.hasPattayaHeroAsset, isTrue);
+      expect(decoration.gradient, isNotNull);
+      expect(image.fit, BoxFit.cover);
+      expect(image.alignment, LandingHero.mobileImageAlignment);
+      expect(image.errorBuilder, isNotNull);
+    });
 
     testWidgets(
       'language and booking lookup controls use visible clickable surfaces',
