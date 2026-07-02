@@ -23,7 +23,7 @@ class AppLocalizations {
       'landing_hero_title': 'A comfortable start in Thailand',
       'landing_hero_body':
           'Travel safely and smoothly from the airport to your destination with experienced drivers.',
-      'landing_hero_cta': 'Book your comfortable ride',
+      'landing_hero_cta': 'Book now',
       'landing_hero_helper': 'Quick booking, no account required',
       'landing_hero_subtitle':
           'Travel safely, smoothly, and with confidence.',
@@ -608,7 +608,7 @@ class AppLocalizations {
       'landing_hero_title': '태국에서 만나는 편안한 출발',
       'landing_hero_body':
           '숙련된 기사와 함께 공항에서 목적지까지 안전하고 편안하게 이동하세요.',
-      'landing_hero_cta': '편안한 이동 예약하기',
+      'landing_hero_cta': '예약하기',
       'landing_hero_helper': '회원가입 없이 간편 예약',
       'landing_hero_subtitle': '즐겁고 안전한 여행을 약속드립니다.',
       'landing_highlight_fixed_price': '정액 요금',
@@ -1014,7 +1014,7 @@ class AppLocalizations {
       'landing_hero_eyebrow': '泰国专业机场与城市接送',
       'landing_hero_title': '在泰国，从容开启旅程',
       'landing_hero_body': '经验丰富的司机，从机场到目的地，安全顺畅。',
-      'landing_hero_cta': '预约舒适出行',
+      'landing_hero_cta': '立即预订',
       'landing_hero_helper': '无需注册，快速预约',
       'landing_hero_subtitle': '安心、顺畅，值得信赖。',
       'landing_highlight_fixed_price': '固定价格',
@@ -1270,7 +1270,7 @@ class AppLocalizations {
       'landing_hero_eyebrow': 'タイのプロ空港・市内送迎',
       'landing_hero_title': 'タイで、安心して旅を始める',
       'landing_hero_body': '経験豊富なドライバーが、空港から目的地まで安全・快適にお送りします。',
-      'landing_hero_cta': '快適な移動を予約する',
+      'landing_hero_cta': '予約する',
       'landing_hero_helper': '会員登録不要、かんたん予約',
       'landing_hero_subtitle': '安全でスムーズな旅をお約束します。',
       'landing_highlight_fixed_price': '定額料金',
@@ -1530,7 +1530,7 @@ class AppLocalizations {
       'landing_hero_title': 'เริ่มต้นการเดินทางในไทยอย่างสบายใจ',
       'landing_hero_body':
           'คนขับมืออาชีพพาคุณจากสนามบินถึงที่พักอย่างปลอดภัยและสบาย',
-      'landing_hero_cta': 'จองการเดินทางที่สบายใจ',
+      'landing_hero_cta': 'จองเลย',
       'landing_hero_helper': 'จองง่าย ไม่ต้องสมัครสมาชิก',
       'landing_hero_subtitle': 'เดินทางอย่างปลอดภัย ราบรื่น และมั่นใจ',
       'landing_highlight_fixed_price': 'ราคาคงที่',

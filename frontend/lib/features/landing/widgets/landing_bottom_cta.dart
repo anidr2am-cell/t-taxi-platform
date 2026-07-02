@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import 'landing_clickable_styles.dart';
 
 class LandingBottomCta extends StatelessWidget {
   final VoidCallback onBook;
@@ -18,7 +19,7 @@ class LandingBottomCta extends StatelessWidget {
         label: l10n.t('landing_hero_cta'),
         child: FilledButton(
           onPressed: onBook,
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+          style: LandingClickableStyles.heroCtaStyle(compact: true),
           child: Text(l10n.t('landing_hero_cta')),
         ),
       ),

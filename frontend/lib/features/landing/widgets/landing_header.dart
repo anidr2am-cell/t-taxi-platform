@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/booking_provider.dart';
 import '../../../theme/app_tokens.dart';
+import 'landing_clickable_styles.dart';
 
 class LandingHeader extends StatelessWidget {
   final VoidCallback onLookup;
@@ -14,7 +15,9 @@ class LandingHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final locale = context.watch<LocaleState>();
-    final languageName = AppLocalizations.languageNames[locale.languageCode] ?? locale.languageCode;
+    final languageName =
+        AppLocalizations.languageNames[locale.languageCode] ??
+        locale.languageCode;
 
     return Container(
       color: AppTokens.surface,
@@ -55,7 +58,10 @@ class LandingHeader extends StatelessWidget {
               icon: Icons.search_outlined,
               onPressed: onLookup,
             ),
-            _LanguageButton(languageName: languageName, label: l10n.t('landing_language_label')),
+            _LanguageButton(
+              languageName: languageName,
+              label: l10n.t('landing_language_label'),
+            ),
           ],
         ),
       ),
@@ -84,9 +90,11 @@ class _HeaderIconButton extends StatelessWidget {
         child: SizedBox(
           width: 44,
           height: 44,
-          child: IconButton(
+          child: IconButton.filledTonal(
+            key: const Key('landing_header_lookup_button'),
             onPressed: onPressed,
-            icon: Icon(icon, color: AppTokens.textPrimary, size: 22),
+            style: LandingClickableStyles.iconButtonStyle(),
+            icon: Icon(icon, size: 22),
           ),
         ),
       ),
@@ -119,7 +127,11 @@ class _LanguageButton extends StatelessWidget {
                 child: Row(
                   children: [
                     if (locale.languageCode == code)
-                      const Icon(Icons.check, size: 18, color: AppTokens.primary)
+                      const Icon(
+                        Icons.check,
+                        size: 18,
+                        color: AppTokens.primary,
+                      )
                     else
                       const SizedBox(width: 18),
                     const SizedBox(width: 8),
@@ -129,26 +141,41 @@ class _LanguageButton extends StatelessWidget {
               ),
             )
             .toList(),
-        child: ConstrainedBox(
+        child: Container(
+          key: const Key('landing_language_button'),
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.language, size: 18, color: AppTokens.primary),
-                const SizedBox(width: 4),
-                Text(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: LandingClickableStyles.background,
+            borderRadius: AppTokens.borderRadiusMd,
+            border: Border.all(color: LandingClickableStyles.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.language,
+                size: 18,
+                color: LandingClickableStyles.icon,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
                   languageName,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: AppTokens.textPrimary,
                   ),
                 ),
-                const Icon(Icons.expand_more, size: 18, color: AppTokens.textSecondary),
-              ],
-            ),
+              ),
+              const Icon(
+                Icons.expand_more,
+                size: 18,
+                color: AppTokens.textSecondary,
+              ),
+            ],
           ),
         ),
       ),

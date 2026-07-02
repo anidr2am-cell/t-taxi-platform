@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import 'landing_clickable_styles.dart';
 
 class LandingFooter extends StatelessWidget {
   final VoidCallback? onAdmin;
   final VoidCallback? onDriver;
 
-  const LandingFooter({
-    super.key,
-    this.onAdmin,
-    this.onDriver,
-  });
+  const LandingFooter({super.key, this.onAdmin, this.onDriver});
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +31,7 @@ class LandingFooter extends StatelessWidget {
           Text(
             '© ${DateTime.now().year} ${l10n.t('app_title')}',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppTokens.textMuted,
-            ),
+            style: const TextStyle(fontSize: 11, color: AppTokens.textMuted),
           ),
           if (onAdmin != null || onDriver != null) ...[
             const SizedBox(height: 8),
@@ -48,21 +42,16 @@ class LandingFooter extends StatelessWidget {
                 if (onAdmin != null)
                   TextButton(
                     onPressed: onAdmin,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(44, 36),
-                      foregroundColor: AppTokens.textMuted,
-                      textStyle: const TextStyle(fontSize: 11),
+                    style: LandingClickableStyles.iconButtonStyle(),
+                    child: const Icon(
+                      Icons.admin_panel_settings_outlined,
+                      size: 16,
                     ),
-                    child: const Icon(Icons.admin_panel_settings_outlined, size: 16),
                   ),
                 if (onDriver != null)
                   TextButton(
                     onPressed: onDriver,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(44, 36),
-                      foregroundColor: AppTokens.textMuted,
-                      textStyle: const TextStyle(fontSize: 11),
-                    ),
+                    style: LandingClickableStyles.iconButtonStyle(),
                     child: const Icon(Icons.local_taxi_outlined, size: 16),
                   ),
               ],

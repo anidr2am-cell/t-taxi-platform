@@ -4,14 +4,12 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../booking/models/service_type_option.dart';
+import 'landing_clickable_styles.dart';
 
 class LandingServiceCards extends StatefulWidget {
   final VoidCallback onBook;
 
-  const LandingServiceCards({
-    super.key,
-    required this.onBook,
-  });
+  const LandingServiceCards({super.key, required this.onBook});
 
   @override
   State<LandingServiceCards> createState() => _LandingServiceCardsState();
@@ -21,10 +19,22 @@ class _LandingServiceCardsState extends State<LandingServiceCards> {
   BookingServiceType? _selected;
 
   static const _services = [
-    _ServiceItem(type: BookingServiceType.airportPickup, icon: Icons.flight_land),
-    _ServiceItem(type: BookingServiceType.airportDropoff, icon: Icons.flight_takeoff),
-    _ServiceItem(type: BookingServiceType.cityTransfer, icon: Icons.route_outlined),
-    _ServiceItem(type: BookingServiceType.golfTransfer, icon: Icons.sports_golf),
+    _ServiceItem(
+      type: BookingServiceType.airportPickup,
+      icon: Icons.flight_land,
+    ),
+    _ServiceItem(
+      type: BookingServiceType.airportDropoff,
+      icon: Icons.flight_takeoff,
+    ),
+    _ServiceItem(
+      type: BookingServiceType.cityTransfer,
+      icon: Icons.route_outlined,
+    ),
+    _ServiceItem(
+      type: BookingServiceType.golfTransfer,
+      icon: Icons.sports_golf,
+    ),
   ];
 
   void _onServiceTap(BookingServiceType type) {
@@ -53,6 +63,7 @@ class _LandingServiceCardsState extends State<LandingServiceCards> {
                 if (index > 0) const SizedBox(width: 6),
                 Expanded(
                   child: _ServiceTile(
+                    key: Key('landing_service_${_services[index].type.name}'),
                     label: l10n.t(_services[index].type.labelKey),
                     icon: _services[index].icon,
                     selected: _selected == _services[index].type,
@@ -75,6 +86,7 @@ class _ServiceTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ServiceTile({
+    super.key,
     required this.label,
     required this.icon,
     required this.selected,
@@ -89,44 +101,60 @@ class _ServiceTile extends StatelessWidget {
       label: label,
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AppTokens.borderRadiusMd,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              decoration: BoxDecoration(
-                color: selected ? AppTokens.primaryLight : AppTokens.surface,
-                borderRadius: AppTokens.borderRadiusMd,
-                border: Border.all(
-                  color: selected ? AppTokens.primary : AppTokens.border,
-                  width: selected ? 2 : 1,
-                ),
+        child: Ink(
+          decoration: ShapeDecoration(
+            color: selected
+                ? LandingClickableStyles.selectedBackground
+                : LandingClickableStyles.background,
+            shape: RoundedRectangleBorder(
+              borderRadius: AppTokens.borderRadiusMd,
+              side: BorderSide(
+                color: selected
+                    ? LandingClickableStyles.selectedBackground
+                    : LandingClickableStyles.border,
+                width: selected ? 2 : 1,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    size: 22,
-                    color: selected ? AppTokens.primary : AppTokens.textSecondary,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      height: 1.25,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? AppTokens.primaryDark : AppTokens.textPrimary,
+            ),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            hoverColor: LandingClickableStyles.hover,
+            focusColor: LandingClickableStyles.hover,
+            splashColor: LandingClickableStyles.pressed,
+            highlightColor: LandingClickableStyles.pressed,
+            borderRadius: AppTokens.borderRadiusMd,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 10,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 22,
+                      color: selected
+                          ? Colors.white
+                          : LandingClickableStyles.icon,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.25,
+                        fontWeight: FontWeight.w600,
+                        color: selected ? Colors.white : AppTokens.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
+import 'package:frontend/features/landing/widgets/landing_clickable_styles.dart';
 import 'package:frontend/features/landing/widgets/landing_service_cards.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 
@@ -23,10 +24,7 @@ Widget _wrap({
     ],
     home: Scaffold(
       body: Center(
-        child: SizedBox(
-          width: width,
-          child: child,
-        ),
+        child: SizedBox(width: width, child: child),
       ),
     ),
   );
@@ -36,22 +34,29 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('LandingServiceCards', () {
-    testWidgets('shows four compact tiles in one row at 360px without overflow', (tester) async {
-      await tester.pumpWidget(
-        _wrap(child: LandingServiceCards(onBook: () {})),
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'shows four compact tiles in one row at 360px without overflow',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(child: LandingServiceCards(onBook: () {})),
+        );
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-      final serviceRow = tester.widget<Row>(find.byKey(const Key('landing_service_row')));
-      expect(serviceRow.children.whereType<Expanded>().length, 4);
-      expect(find.text('Airport Pickup'), findsOneWidget);
-      expect(find.text('Airport Dropoff'), findsOneWidget);
-      expect(find.text('City Transfer'), findsOneWidget);
-      expect(find.text('Golf Transfer'), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        final serviceRow = tester.widget<Row>(
+          find.byKey(const Key('landing_service_row')),
+        );
+        expect(serviceRow.children.whereType<Expanded>().length, 4);
+        expect(find.text('Airport Pickup'), findsOneWidget);
+        expect(find.text('Airport Dropoff'), findsOneWidget);
+        expect(find.text('City Transfer'), findsOneWidget);
+        expect(find.text('Golf Transfer'), findsOneWidget);
+      },
+    );
 
-    testWidgets('tap selects service and triggers booking callback', (tester) async {
+    testWidgets('tap selects service and triggers booking callback', (
+      tester,
+    ) async {
       var booked = false;
 
       await tester.pumpWidget(
@@ -64,6 +69,43 @@ void main() {
 
       expect(booked, isTrue);
     });
+
+    testWidgets(
+      'service tiles expose unselected and selected clickable surfaces',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(child: LandingServiceCards(onBook: () {})),
+        );
+        await tester.pumpAndSettle();
+
+        ShapeDecoration decorationFor(String key) {
+          final ink = tester.widget<Ink>(
+            find.descendant(
+              of: find.byKey(Key(key)),
+              matching: find.byType(Ink),
+            ),
+          );
+          return ink.decoration! as ShapeDecoration;
+        }
+
+        expect(
+          decorationFor('landing_service_airportPickup').color,
+          LandingClickableStyles.background,
+        );
+
+        await tester.tap(find.text('Airport Pickup'));
+        await tester.pumpAndSettle();
+
+        expect(
+          decorationFor('landing_service_airportPickup').color,
+          LandingClickableStyles.selectedBackground,
+        );
+        expect(
+          decorationFor('landing_service_airportDropoff').color,
+          LandingClickableStyles.background,
+        );
+      },
+    );
 
     testWidgets('each service tile opens booking flow', (tester) async {
       for (final type in BookingServiceType.values) {
@@ -82,7 +124,9 @@ void main() {
       }
     });
 
-    testWidgets('labels render across supported locales without overflow', (tester) async {
+    testWidgets('labels render across supported locales without overflow', (
+      tester,
+    ) async {
       for (final code in AppLocalizations.supportedLanguages) {
         await tester.pumpWidget(
           _wrap(
@@ -92,15 +136,17 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(tester.takeException(), isNull, reason: 'Overflow for locale $code');
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Overflow for locale $code',
+        );
         expect(find.byKey(const Key('landing_service_row')), findsOneWidget);
       }
     });
 
     testWidgets('compact tiles meet minimum touch height', (tester) async {
-      await tester.pumpWidget(
-        _wrap(child: LandingServiceCards(onBook: () {})),
-      );
+      await tester.pumpWidget(_wrap(child: LandingServiceCards(onBook: () {})));
       await tester.pumpAndSettle();
 
       final tileFinder = find.byType(ConstrainedBox).first;

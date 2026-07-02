@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import 'landing_clickable_styles.dart';
 
 class LandingBookingLookupCard extends StatelessWidget {
   final VoidCallback onLookup;
@@ -37,12 +38,12 @@ class LandingBookingLookupCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
+                key: const Key('landing_booking_lookup_button'),
                 onPressed: onLookup,
                 icon: const Icon(Icons.search_outlined),
                 label: Text(l10n.t('landing_booking_lookup_action')),
-                style: OutlinedButton.styleFrom(
+                style: LandingClickableStyles.iconButtonStyle(
                   minimumSize: const Size.fromHeight(48),
-                  side: const BorderSide(color: AppTokens.border),
                 ),
               ),
             ),
