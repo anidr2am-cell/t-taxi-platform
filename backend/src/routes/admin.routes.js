@@ -7,6 +7,7 @@ const adminReviewRoutes = require('./admin.review.routes');
 const adminNotificationRoutes = require('./admin.notification.routes');
 const adminChatRoutes = require('./admin.chat.routes');
 const adminFlightRoutes = require('./admin.flight.routes');
+const adminDriverApplicationRoutes = require('./admin.driver.application.routes');
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ router.use(adminReviewRoutes);
 router.use(adminNotificationRoutes);
 router.use(adminChatRoutes);
 router.use(adminFlightRoutes);
+router.use(adminDriverApplicationRoutes);
 
 // TODO: golf, airports, users, translations, settings
 

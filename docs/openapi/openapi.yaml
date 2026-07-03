@@ -149,6 +149,10 @@ paths:
                 value:
                   email: user@example.com
                   password: secret123
+              driverPhone:
+                value:
+                  phone: '+66123456789'
+                  password: secret123
       responses:
         '200':
           description: Login successful
@@ -3168,6 +3172,261 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimit'
 
+  /driver-applications:
+    post:
+      tags: [Driver]
+      summary: Submit driver registration application
+      description: >
+        Public intake endpoint for prospective drivers. Creates only a
+        driver_applications row; users and drivers are created later by admin
+        approval. The status token is returned only in this response.
+      security: []
+      operationId: submitDriverApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverApplicationCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DriverApplicationMultipartRequest'
+      responses:
+        '201':
+          description: Driver application submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverApplicationSubmit'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/DuplicateError'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
+  /driver-applications/status:
+    get:
+      tags: [Driver]
+      summary: Check driver application status
+      security: []
+      operationId: getDriverApplicationStatus
+      parameters:
+        - name: applicationNumber
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^DA[0-9A-F]{14}$'
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 32
+            maxLength: 128
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverApplicationStatus'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
+  /driver-applications/{applicationNumber}/resubmit:
+    post:
+      tags: [Driver]
+      summary: Resubmit rejected driver application
+      security: []
+      operationId: resubmitDriverApplication
+      parameters:
+        - name: applicationNumber
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^DA[0-9A-F]{14}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/DriverApplicationCreateRequest'
+                - type: object
+                  required: [token]
+                  properties:
+                    token:
+                      type: string
+                      minLength: 32
+                      maxLength: 128
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/DriverApplicationMultipartRequest'
+                - type: object
+                  required: [token]
+                  properties:
+                    token:
+                      type: string
+                      minLength: 32
+                      maxLength: 128
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverApplicationSubmit'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DuplicateError'
+        '422':
+          $ref: '#/components/responses/InvalidStatusTransition'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
+  /admin/driver-applications:
+    get:
+      tags: [Admin]
+      summary: List driver registration applications
+      operationId: adminListDriverApplications
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DriverApplicationStatus'
+        - name: countryCode
+          in: query
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+        - name: vehicleTypeCode
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverApplicationAdminList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/driver-applications/{id}:
+    get:
+      tags: [Admin]
+      summary: Get driver application detail
+      operationId: adminGetDriverApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverApplicationAdminDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/driver-applications/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve driver application and create driver account
+      operationId: adminApproveDriverApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverApplicationApproveRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverApplicationApprove'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DuplicateError'
+        '422':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
+  /admin/driver-applications/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject driver application
+      operationId: adminRejectDriverApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverApplicationRejectRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseDriverApplicationReject'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/InvalidStatusTransition'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3711,11 +3970,19 @@ components:
 
     LoginRequest:
       type: object
-      required: [email, password]
+      required: [password]
+      oneOf:
+        - required: [email]
+        - required: [phone]
       properties:
         email:
           type: string
           format: email
+        phone:
+          type: string
+          minLength: 5
+          maxLength: 30
+          description: Approved driver phone login ID.
         password:
           type: string
 
@@ -6038,6 +6305,514 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/AdminQrReissueResponse'
+
+    # --- Driver Application ---
+    DriverApplicationStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED]
+
+    DriverApplicationCreateRequest:
+      type: object
+      required:
+        - fullName
+        - email
+        - password
+        - passwordConfirm
+        - phone
+        - drivingLicenseNumber
+        - yearsOfDrivingExperience
+        - vehicleOwnershipType
+        - vehicleTypeCode
+        - vehiclePlateNumber
+        - serviceAreas
+        - personalDataConsent
+        - driverTermsConsent
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+        passwordConfirm:
+          type: string
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+        phone:
+          type: string
+          minLength: 5
+          maxLength: 30
+        phoneCountryCode:
+          type: string
+          nullable: true
+          maxLength: 5
+        countryCode:
+          type: string
+          nullable: true
+          minLength: 2
+          maxLength: 2
+        locale:
+          $ref: '#/components/schemas/Locale'
+        drivingLicenseNumber:
+          type: string
+          minLength: 3
+          maxLength: 50
+        drivingLicenseCountry:
+          type: string
+          nullable: true
+          minLength: 2
+          maxLength: 2
+        drivingLicenseExpiryDate:
+          type: string
+          format: date
+          nullable: true
+        yearsOfDrivingExperience:
+          type: integer
+          minimum: 0
+          maximum: 80
+        vehicleOwnershipType:
+          type: string
+          enum: [OWNED, RENTED, COMPANY, OTHER]
+        vehicleTypeCode:
+          type: string
+          maxLength: 30
+        vehicleMake:
+          type: string
+          nullable: true
+          maxLength: 50
+        vehicleModel:
+          type: string
+          nullable: true
+          maxLength: 100
+        vehicleYear:
+          type: integer
+          nullable: true
+          minimum: 1980
+          maximum: 2100
+        vehicleColor:
+          type: string
+          nullable: true
+          maxLength: 30
+        vehiclePlateNumber:
+          type: string
+          minLength: 2
+          maxLength: 20
+        serviceAreas:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items:
+            type: string
+            maxLength: 100
+        languages:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 10
+        notes:
+          type: string
+          nullable: true
+          maxLength: 2000
+        personalDataConsent:
+          type: boolean
+          const: true
+        driverTermsConsent:
+          type: boolean
+          const: true
+
+    DriverApplicationMultipartRequest:
+      type: object
+      required:
+        - applicantName
+        - phone
+        - password
+        - passwordConfirmation
+        - licenseNumber
+        - licenseExpiryDate
+        - bankName
+        - bankAccountNumber
+        - bankAccountHolder
+        - lineId
+        - primaryServiceArea
+        - vehicleTypeId
+        - lineQr
+        - vehiclePhotos
+        - insuranceCertificate
+        - vehicleRegistration
+        - taxCertificate
+      properties:
+        applicantName:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          minLength: 5
+          maxLength: 30
+          description: Driver login ID after approval.
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+          writeOnly: true
+        passwordConfirmation:
+          type: string
+          minLength: 6
+          maxLength: 128
+          writeOnly: true
+        licenseNumber:
+          type: string
+          maxLength: 50
+        licenseExpiryDate:
+          type: string
+          format: date
+        bankName:
+          type: string
+          maxLength: 100
+        bankAccountNumber:
+          type: string
+          maxLength: 80
+        bankAccountHolder:
+          type: string
+          maxLength: 100
+        lineId:
+          type: string
+          example: '@driver'
+        primaryServiceArea:
+          type: string
+          maxLength: 100
+        vehicleTypeId:
+          type: integer
+          format: int64
+        lineQr:
+          type: string
+          format: binary
+          description: jpg, jpeg, png, or webp.
+        vehiclePhotos:
+          type: array
+          minItems: 3
+          maxItems: 6
+          items:
+            type: string
+            format: binary
+        insuranceCertificate:
+          type: string
+          format: binary
+        vehicleRegistration:
+          type: string
+          format: binary
+        taxCertificate:
+          type: string
+          format: binary
+
+    DriverApplicationSubmitResponse:
+      type: object
+      properties:
+        applicationNumber:
+          type: string
+          pattern: '^DA[0-9A-F]{14}$'
+        status:
+          $ref: '#/components/schemas/DriverApplicationStatus'
+        statusToken:
+          type: string
+          description: Raw lookup token returned once at initial submit or resubmit.
+        submittedAt:
+          type: string
+          format: date-time
+
+    DriverApplicationStatusResponse:
+      type: object
+      properties:
+        applicationNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/DriverApplicationStatus'
+        submittedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+
+    DriverApplicationAdminListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        applicationNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/DriverApplicationStatus'
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        phone:
+          type: string
+        countryCode:
+          type: string
+          nullable: true
+        locale:
+          $ref: '#/components/schemas/Locale'
+        vehicleTypeCode:
+          type: string
+        vehiclePlateNumber:
+          type: string
+        primaryServiceArea:
+          type: string
+          nullable: true
+        submittedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedBy:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              format: int64
+            email:
+              type: string
+              format: email
+              nullable: true
+
+    DriverApplicationAdminDetail:
+      allOf:
+        - $ref: '#/components/schemas/DriverApplicationAdminListItem'
+        - type: object
+          properties:
+            phoneCountryCode:
+              type: string
+              nullable: true
+            drivingLicenseNumber:
+              type: string
+            drivingLicenseCountry:
+              type: string
+              nullable: true
+            drivingLicenseExpiryDate:
+              type: string
+              format: date
+              nullable: true
+            yearsOfDrivingExperience:
+              type: integer
+            vehicleOwnershipType:
+              type: string
+            vehicleMake:
+              type: string
+              nullable: true
+            vehicleModel:
+              type: string
+              nullable: true
+            vehicleYear:
+              type: integer
+              nullable: true
+            vehicleColor:
+              type: string
+              nullable: true
+            serviceAreas:
+              type: array
+              items:
+                type: string
+            languages:
+              type: array
+              items:
+                type: string
+            notes:
+              type: string
+              nullable: true
+            bankName:
+              type: string
+              nullable: true
+            bankAccountNumber:
+              type: string
+              nullable: true
+            bankAccountHolder:
+              type: string
+              nullable: true
+            lineId:
+              type: string
+              nullable: true
+            files:
+              type: array
+              items:
+                $ref: '#/components/schemas/DriverApplicationFile'
+            personalDataConsentAt:
+              type: string
+              format: date-time
+            driverTermsConsentAt:
+              type: string
+              format: date-time
+            rejectionReason:
+              type: string
+              nullable: true
+            adminNote:
+              type: string
+              nullable: true
+            approvedUserId:
+              type: integer
+              format: int64
+              nullable: true
+            approvedDriverId:
+              type: integer
+              format: int64
+              nullable: true
+            resubmittedFromApplicationId:
+              type: integer
+              format: int64
+              nullable: true
+
+    DriverApplicationFile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        category:
+          type: string
+          enum:
+            - DRIVER_LINE_QR
+            - DRIVER_VEHICLE_PHOTO
+            - DRIVER_INSURANCE_CERTIFICATE
+            - DRIVER_VEHICLE_REGISTRATION
+            - DRIVER_TAX_CERTIFICATE
+        sortOrder:
+          type: integer
+        originalFilename:
+          type: string
+        mimeType:
+          type: string
+        fileSize:
+          type: integer
+        url:
+          type: string
+
+    DriverApplicationApproveRequest:
+      type: object
+      properties:
+        adminNote:
+          type: string
+          nullable: true
+          maxLength: 2000
+
+    DriverApplicationApproveResponse:
+      type: object
+      properties:
+        applicationNumber:
+          type: string
+        status:
+          type: string
+          enum: [APPROVED]
+        approvedUserId:
+          type: integer
+          format: int64
+        approvedDriverId:
+          type: integer
+          format: int64
+        vehicleId:
+          type: integer
+          format: int64
+
+    DriverApplicationRejectRequest:
+      type: object
+      required: [rejectionReason]
+      properties:
+        rejectionReason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        adminNote:
+          type: string
+          nullable: true
+          maxLength: 2000
+
+    DriverApplicationRejectResponse:
+      type: object
+      properties:
+        applicationNumber:
+          type: string
+        status:
+          type: string
+          enum: [REJECTED]
+        reviewedBy:
+          type: integer
+          format: int64
+
+    ApiResponseDriverApplicationSubmit:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverApplicationSubmitResponse'
+
+    ApiResponseDriverApplicationStatus:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverApplicationStatusResponse'
+
+    ApiResponseDriverApplicationAdminList:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                page:
+                  type: integer
+                page_size:
+                  type: integer
+                total:
+                  type: integer
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DriverApplicationAdminListItem'
+
+    ApiResponseDriverApplicationAdminDetail:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverApplicationAdminDetail'
+
+    ApiResponseDriverApplicationApprove:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverApplicationApproveResponse'
+
+    ApiResponseDriverApplicationReject:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverApplicationRejectResponse'
 
     # --- Vehicle ---
     VehicleTypeInfo:

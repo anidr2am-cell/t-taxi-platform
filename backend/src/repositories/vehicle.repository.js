@@ -17,6 +17,18 @@ class VehicleRepository {
     return rows;
   }
 
+  async findPublicTypesOrdered() {
+    const [rows] = await this.pool.query(
+      `
+        SELECT id, code, name, max_passengers, max_luggage, is_active
+        FROM vehicle_types
+        WHERE is_active = 1 AND deleted_at IS NULL
+        ORDER BY id ASC
+      `,
+    );
+    return rows;
+  }
+
   async findTypeById(id) {
     const [rows] = await this.pool.query(
       `

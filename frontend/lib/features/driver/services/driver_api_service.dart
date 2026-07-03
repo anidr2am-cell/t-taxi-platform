@@ -8,11 +8,7 @@ import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 
 class DriverApiException implements Exception {
-  const DriverApiException(
-    this.message, {
-    this.errorCode,
-    this.statusCode,
-  });
+  const DriverApiException(this.message, {this.errorCode, this.statusCode});
 
   final String message;
   final String? errorCode;
@@ -44,15 +40,17 @@ class DriverApiService {
     final token = prefs.getString(_tokenKey);
     if (token != null && token.isNotEmpty) {
       try {
-        await http.post(
-          Uri.parse('$_base/auth/logout'),
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({}),
-        ).timeout(const Duration(seconds: 5));
+        await http
+            .post(
+              Uri.parse('$_base/auth/logout'),
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({}),
+            )
+            .timeout(const Duration(seconds: 5));
       } catch (_) {
         // Logout is best effort; local session cleanup must still happen.
       }
@@ -61,13 +59,18 @@ class DriverApiService {
   }
 
   Future<void> login({required String email, required String password}) async {
+    final loginId = email.trim();
+    final isPhone = !loginId.contains('@');
     final response = await http.post(
       Uri.parse('$_base/auth/login'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({
+        if (isPhone) 'phone': loginId else 'email': loginId,
+        'password': password,
+      }),
     );
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
 

@@ -9,6 +9,7 @@ import '../../features/admin_review/pages/admin_review_queue_page.dart';
 import '../../features/admin_notification/pages/admin_notification_queue_page.dart';
 import '../../features/admin_chat/pages/admin_chat_queue_page.dart';
 import '../../features/admin_flight/pages/admin_flight_monitor_page.dart';
+import '../../features/admin_driver_application/pages/admin_driver_application_list_page.dart';
 import '../../features/driver_location/pages/admin_driver_monitor_page.dart';
 import '../../features/admin_pricing/pages/admin_pricing_manager_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -28,15 +29,15 @@ class _AdminScreenState extends State<AdminScreen> {
   int _sessionEpoch = 0;
   final _drawerKey = GlobalKey<ScaffoldState>();
 
-  static const _authGatedIndices = {0, 2, 3, 4, 7, 8, 9, 10};
+  static const _authGatedIndices = {0, 2, 3, 4, 5, 8, 9, 10, 11};
 
   Future<void> _logout() async {
     await const AdminDispatchApiService().logout();
     if (!mounted) return;
     setState(() => _sessionEpoch++);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.t('admin_logout'))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.t('admin_logout'))));
   }
 
   @override
@@ -50,6 +51,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_reservations'),
       l10n.t('admin_chats'),
       l10n.t('admin_drivers'),
+      l10n.t('admin_driver_application_menu'),
       l10n.t('admin_pricing'),
       l10n.t('admin_golf'),
       l10n.t('admin_airports'),
@@ -64,6 +66,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.list_alt_outlined,
       Icons.chat_bubble_outline,
       Icons.local_taxi_outlined,
+      Icons.person_add_alt_1_outlined,
       Icons.price_change_outlined,
       Icons.golf_course_outlined,
       Icons.flight_outlined,
@@ -78,6 +81,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.list_alt,
       Icons.chat_bubble,
       Icons.local_taxi,
+      Icons.person_add_alt_1,
       Icons.price_change,
       Icons.golf_course,
       Icons.flight,
@@ -98,7 +102,9 @@ class _AdminScreenState extends State<AdminScreen> {
         extended: extended,
         minExtendedWidth: 200,
         onDestinationSelected: selectIndex,
-        labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+        labelType: extended
+            ? NavigationRailLabelType.none
+            : NavigationRailLabelType.all,
         backgroundColor: AppTokens.surface,
         selectedIconTheme: const IconThemeData(color: AppTokens.primary),
         selectedLabelTextStyle: const TextStyle(
@@ -111,7 +117,6 @@ class _AdminScreenState extends State<AdminScreen> {
           fontSize: 11,
         ),
         destinations: List.generate(menuItems.length, (index) {
-          final selected = index == _selectedIndex;
           return NavigationRailDestination(
             icon: Icon(icons[index]),
             selectedIcon: Icon(selectedIcons[index], color: AppTokens.primary),
@@ -211,7 +216,7 @@ class _AdminScreenState extends State<AdminScreen> {
         return AdminAuthGate(
           child: AdminDashboardPage(
             onOpenDispatch: () => setState(() => _selectedIndex = 1),
-            onOpenSettlements: () => setState(() => _selectedIndex = 7),
+            onOpenSettlements: () => setState(() => _selectedIndex = 8),
           ),
         );
       case 1:
@@ -221,18 +226,20 @@ class _AdminScreenState extends State<AdminScreen> {
       case 3:
         return const AdminAuthGate(child: AdminDriverMonitorPage());
       case 4:
-        return const AdminAuthGate(child: AdminPricingManagerPage());
+        return const AdminAuthGate(child: AdminDriverApplicationListPage());
       case 5:
-        return _buildLegacyNotice(l10n.t('admin_golf'));
+        return const AdminAuthGate(child: AdminPricingManagerPage());
       case 6:
-        return _buildLegacyNotice(l10n.t('admin_airports'));
+        return _buildLegacyNotice(l10n.t('admin_golf'));
       case 7:
-        return const AdminAuthGate(child: AdminSettlementQueuePage());
+        return _buildLegacyNotice(l10n.t('admin_airports'));
       case 8:
-        return const AdminAuthGate(child: AdminReviewQueuePage());
+        return const AdminAuthGate(child: AdminSettlementQueuePage());
       case 9:
-        return const AdminAuthGate(child: AdminNotificationQueuePage());
+        return const AdminAuthGate(child: AdminReviewQueuePage());
       case 10:
+        return const AdminAuthGate(child: AdminNotificationQueuePage());
+      case 11:
         return const AdminAuthGate(child: AdminFlightMonitorPage());
       default:
         return const SizedBox.shrink();

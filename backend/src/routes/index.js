@@ -24,6 +24,7 @@ const translationRoutes = require('./translation.routes');
 const placesRoutes = require('./places.routes');
 const flightsRoutes = require('./flights.routes');
 const publicRoutes = require('./public.routes');
+const driverApplicationRoutes = require('./driver.application.routes');
 
 const router = express.Router();
 
@@ -44,5 +45,6 @@ router.use('/translations', translationRoutes);
 router.use('/places', placesRoutes);
 router.use('/flights', flightsRoutes);
 router.use('/public', publicRoutes);
+router.use('/driver-applications', driverApplicationRoutes);
 
 module.exports = router;

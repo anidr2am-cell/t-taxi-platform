@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
+import '../../driver_application/services/driver_application_storage.dart';
 import '../pages/driver_shell_page.dart';
 import '../services/driver_api_service.dart';
 
@@ -15,17 +16,25 @@ class DriverLoginPage extends StatefulWidget {
 }
 
 class _DriverLoginPageState extends State<DriverLoginPage> {
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   late final DriverApiService _api;
   bool _loading = false;
   String? _error;
+  bool _hasSavedApplication = false;
 
   @override
   void initState() {
     super.initState();
     _api = widget.api ?? DriverApiService();
     _openJobsIfLoggedIn();
+    _checkSavedApplication();
+  }
+
+  Future<void> _checkSavedApplication() async {
+    final saved = await const DriverApplicationStorage().load();
+    if (!mounted) return;
+    setState(() => _hasSavedApplication = saved != null);
   }
 
   Future<void> _openJobsIfLoggedIn() async {
@@ -36,7 +45,7 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -56,17 +65,36 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
     });
     try {
       await _api.login(
-        email: _emailController.text.trim(),
+        email: _phoneController.text.trim(),
         password: _passwordController.text,
       );
       if (mounted) _openHome();
     } on DriverApiException catch (err) {
       if (mounted) setState(() => _error = err.message);
     } catch (err) {
-      if (mounted) setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
+      if (mounted) {
+        setState(
+          () => _error = userFacingError(
+            err,
+            fallback: context.l10n.t('ui_action_failed'),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _openApplicationForm() {
+    Navigator.pushNamed(context, '/driver/apply').then((_) {
+      if (mounted) _checkSavedApplication();
+    });
+  }
+
+  void _openApplicationStatus() {
+    Navigator.pushNamed(context, '/driver/application-status').then((_) {
+      if (mounted) _checkSavedApplication();
+    });
   }
 
   @override
@@ -86,10 +114,10 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
               ),
               const SizedBox(height: 24),
               TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                decoration: const InputDecoration(labelText: 'Email'),
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                decoration: InputDecoration(labelText: context.l10n.t('phone')),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -117,6 +145,23 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Log in'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: _openApplicationForm,
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: Text(context.l10n.t('driver_application_cta')),
+                ),
+              ),
+              TextButton(
+                onPressed: _openApplicationStatus,
+                child: Text(
+                  _hasSavedApplication
+                      ? context.l10n.t('driver_application_status_saved_cta')
+                      : context.l10n.t('driver_application_status_cta'),
                 ),
               ),
             ],

@@ -77,18 +77,21 @@ class AuthService {
   }
 
   async login(input) {
-    const email = input.email.trim().toLowerCase();
-    const user = await this.userRepository.findByEmail(email);
+    const email = input.email?.trim().toLowerCase();
+    const phone = input.phone?.trim();
+    const user = phone
+      ? await this.userRepository.findDriverByPhone(phone)
+      : await this.userRepository.findByEmail(email);
 
     if (!user || !user.password_hash) {
-      throw new AppError('Invalid email or password', {
+      throw new AppError(phone ? 'Invalid phone or password' : 'Invalid email or password', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
         errorCode: ERROR_CODES.AUTH_INVALID,
       });
     }
 
     if (!LOGIN_ALLOWED_ROLES.includes(user.role)) {
-      throw new AppError('Invalid email or password', {
+      throw new AppError(phone ? 'Invalid phone or password' : 'Invalid email or password', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
         errorCode: ERROR_CODES.AUTH_INVALID,
       });
@@ -103,7 +106,7 @@ class AuthService {
 
     const valid = await bcrypt.compare(input.password, user.password_hash);
     if (!valid) {
-      throw new AppError('Invalid email or password', {
+      throw new AppError(phone ? 'Invalid phone or password' : 'Invalid email or password', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
         errorCode: ERROR_CODES.AUTH_INVALID,
       });

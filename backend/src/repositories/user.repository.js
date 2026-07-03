@@ -29,6 +29,31 @@ class UserRepository {
     return rows[0] || null;
   }
 
+  async findDriverByPhone(phone) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          u.id,
+          u.email,
+          u.password_hash,
+          u.role,
+          u.phone,
+          u.phone_country_code,
+          u.country_code,
+          u.locale,
+          u.is_active,
+          up.display_name AS name
+        FROM users u
+        LEFT JOIN user_profiles up
+          ON up.user_id = u.id AND up.deleted_at IS NULL
+        WHERE u.phone = ? AND u.role = 'DRIVER' AND u.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [phone],
+    );
+    return rows[0] || null;
+  }
+
   async findById(id) {
     const [rows] = await this.pool.query(
       `

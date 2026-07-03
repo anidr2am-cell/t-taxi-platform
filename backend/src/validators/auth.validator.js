@@ -12,9 +12,10 @@ const registerSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().trim().lowercase().email().required(),
+  email: Joi.string().trim().lowercase().email().optional(),
+  phone: Joi.string().trim().min(5).max(30).optional(),
   password: Joi.string().required(),
-});
+}).xor('email', 'phone');
 
 const refreshSchema = Joi.object({
   refreshToken: Joi.string().trim().required(),

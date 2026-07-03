@@ -1,6 +1,8 @@
 const express = require('express');
+const vehicleController = require('../controllers/vehicle.controller');
+
 const router = express.Router();
 
-// TODO: GET /types, GET /prices
+router.get('/types', vehicleController.listTypes);
 
 module.exports = router;

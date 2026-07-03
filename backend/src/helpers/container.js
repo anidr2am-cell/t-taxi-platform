@@ -3,6 +3,7 @@
  */
 const UserRepository = require('../repositories/user.repository');
 const VehicleRepository = require('../repositories/vehicle.repository');
+const VehicleService = require('../services/vehicle.service');
 const LocationRepository = require('../repositories/location.repository');
 const ServiceTypeRepository = require('../repositories/serviceType.repository');
 const RouteRepository = require('../repositories/route.repository');
@@ -46,10 +47,12 @@ const NotificationService = require('../services/notification.service');
 const OutboxRepository = require('../repositories/outbox.repository');
 const OutboxProcessor = require('../services/outboxProcessor.service');
 const FlightMonitorRepository = require('../repositories/flightMonitor.repository');
+const DriverApplicationRepository = require('../repositories/driverApplication.repository');
 const AdminFlightMonitorService = require('../services/adminFlightMonitor.service');
 const FlightSyncWorker = require('../workers/flightSync.worker');
 const FlightSyncSchedulerService = require('../services/flightSyncScheduler.service');
 const ChatService = require('../services/chat.service');
+const DriverApplicationService = require('../services/driverApplication.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -88,6 +91,9 @@ container.register('authService', (c) => new AuthService(
   c.get('tokenService'),
 ));
 container.register('vehicleRepository', () => new VehicleRepository());
+container.register('vehicleService', (c) => new VehicleService(
+  c.get('vehicleRepository'),
+));
 container.register('vehicleRecommendationService', (c) => new VehicleRecommendationService(
   c.get('vehicleRepository'),
 ));
@@ -241,6 +247,7 @@ container.register('chatService', (c) => new ChatService(
   c.get('outboxProcessor'),
 ));
 container.register('flightMonitorRepository', () => new FlightMonitorRepository());
+container.register('driverApplicationRepository', () => new DriverApplicationRepository());
 container.register('adminFlightMonitorService', (c) => new AdminFlightMonitorService(
   database.pool,
   c.get('flightMonitorRepository'),
@@ -274,6 +281,12 @@ container.register('flightSyncSchedulerService', (c) => new FlightSyncSchedulerS
     batchSize: config.external.flightSyncBatchSize,
   },
   () => c.get('flightService').isProviderConfigured(),
+));
+container.register('driverApplicationService', (c) => new DriverApplicationService(
+  database.pool,
+  c.get('driverApplicationRepository'),
+  c.get('fileRepository'),
+  c.get('userRepository'),
 ));
 
 module.exports = container;
