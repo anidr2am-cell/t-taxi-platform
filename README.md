@@ -1,145 +1,90 @@
-<<<<<<< HEAD
-# TTaxi - Thailand Airport Transfer Platform
+# T-Ride (TTaxi) — Thailand Airport Transfer Platform
 
-PWA-based airport transfer booking platform for tourists visiting Thailand.
+MVP scope: **guest booking → admin manual dispatch → driver trip flow → guest status lookup**.
 
-## Tech Stack
+## Quick links
+
+| Document | Purpose |
+|----------|---------|
+| **[docs/MVP_DEMO_GUIDE.md](docs/MVP_DEMO_GUIDE.md)** | Start here — full demo/test setup for a new operator |
+| [docs/MVP_DEV_SETUP.md](docs/MVP_DEV_SETUP.md) | Developer reference (accounts, scripts, URLs) |
+| [docs/MVP_MANUAL_E2E_CHECKLIST.md](docs/MVP_MANUAL_E2E_CHECKLIST.md) | Manual verification checklist |
+
+## Tech stack
 
 | Layer | Technology |
 |-------|------------|
 | Frontend | Flutter Web (PWA) |
-| Backend | Node.js + Express |
-| Database | MySQL |
-| Real-time | Socket.IO |
-| Maps | Google Maps / Places API |
-| Flights | AviationStack API |
-| Push | Firebase FCM (configured separately) |
+| Backend | Node.js 22+ / Express |
+| Database | MySQL 8.x |
 
-## Project Structure
+## Project structure
 
 ```
 TTaxi/
-├── backend/          # Express API + Socket.IO
-├── frontend/         # Flutter Web PWA
-├── database/         # MySQL schema & seed data
-└── README.md
+├── backend/     # REST API
+├── frontend/    # Flutter Web
+├── database/    # Migrations & seeds
+└── docs/        # MVP guides & OpenAPI
 ```
 
-## Quick Start
+## Minimum commands (local demo)
 
-### 1. Database Setup
+```powershell
+# 1. Database + demo data
+cd C:\TTaxi\database
+.\setup-mvp-demo.ps1
 
-```bash
-mysql -u root -p < database/schema.sql
-```
-
-### 2. Backend
-
-```bash
-cd backend
-cp .env.example .env
-# Edit .env with your DB credentials and API keys
+# 2. Backend
+cd C:\TTaxi\backend
+copy .env.example .env   # edit DB + JWT secrets — see MVP_DEMO_GUIDE.md
 npm install
 npm start
-```
 
-API runs at `http://localhost:3000`
-
-### 3. Frontend
-
-```bash
-cd frontend
+# 3. Frontend (dev)
+cd C:\TTaxi\frontend
 flutter pub get
 flutter run -d chrome --web-port=8080
+
+# 4. Verify
+cd C:\TTaxi\backend
+npm test
+npm run rehearsal:mvp-e2e
+cd C:\TTaxi\frontend
+flutter test
+flutter build web
 ```
 
-## Environment Variables
+## MVP direct URLs (dev)
 
-| Variable | Description |
-|----------|-------------|
-| `DB_HOST` | MySQL host |
-| `DB_USER` | MySQL user |
-| `DB_PASSWORD` | MySQL password |
-| `DB_NAME` | Database name (ttaxi) |
-| `GOOGLE_MAPS_API_KEY` | Google Places autocomplete |
-| `AVIATIONSTACK_API_KEY` | Flight status lookup |
-| `FCM_SERVER_KEY` | Firebase push notifications |
-| `CORS_ORIGIN` | Frontend URL (default: http://localhost:8080) |
+| Screen | URL |
+|--------|-----|
+| Customer landing | http://localhost:8080/ |
+| Guest lookup | http://localhost:8080/booking/lookup |
+| Admin dispatch | http://localhost:8080/admin |
+| Driver login | http://localhost:8080/driver |
 
-## Features
+## Demo accounts (dev/staging only)
 
-### Customer (PWA)
-- 4 service types: Airport Pickup, Dropoff, City Transfer, Golf Transfer
-- Passenger & luggage input with automatic vehicle recommendation
-- Name sign service (+100 THB)
-- Google Places destination search
-- AviationStack flight lookup (pickup)
-- Vehicle selection with pricing tiers
-- 3-step booking flow
-- Real-time chat with driver (Socket.IO)
-- 5 languages: EN, KO, ZH, JA, TH
-- PWA install banner
+| Role | Login | Password |
+|------|-------|----------|
+| Super Admin | `admin@ttaxi.dev` | `Admin123456!` |
+| Driver | `+66810000001` (phone) | `Driver123456!` |
 
-### Admin Panel
-- Dashboard (today bookings, revenue, status stats)
-- Reservation management & status updates
-- Live chat monitoring & participation
-- Drivers, vehicle pricing, golf courses, airports
-- Driver assignment workflow
+Created by `npm run seed:mvp-demo`. **Never use in production.**
 
-## API Endpoints
+## MVP known limitations
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/airports` | List airports |
-| GET | `/api/golf-courses` | List golf courses |
-| POST | `/api/vehicle/recommend` | Vehicle recommendation |
-| GET | `/api/vehicle/prices` | Vehicle pricing |
-| GET | `/api/flight` | Flight info lookup |
-| GET | `/api/places/autocomplete` | Google Places search |
-| POST | `/api/reservations` | Create reservation |
-| GET | `/api/reservations/:number` | Get reservation |
-| GET | `/api/admin/dashboard` | Admin dashboard stats |
-| GET | `/api/admin/chats` | Active chat rooms |
+Not included in the current MVP demo:
 
-## Vehicle Recommendation Logic
-
-| Condition | Vehicle |
-|-----------|---------|
-| ≤2 pax, ≤4 luggage, no 24"+ carrier | SEDAN |
-| ≤2 pax, ≤4 luggage, has 24"+ carrier | SUV |
-| ≤3 pax, ≤4 luggage | SUV |
-| 4–8 pax, ≤8 luggage | VAN |
-| >8 pax | Multiple vehicles auto-assigned |
-
-## Reservation Number Format
-
-`TXYYYYMMDD0001` (e.g. `TX202607010001`)
-
-## Chat Rooms
-
-Format: `room_TX202607010001` — created automatically on reservation.
-
-Participants: customer, driver, admin (all can read and send).
-
-## Production Build
-
-```bash
-# Frontend PWA
-cd frontend
-flutter build web --release
-
-# Backend
-cd backend
-NODE_ENV=production npm start
-```
-
-Deploy frontend build output from `frontend/build/web` to Gabia Cloud Server with the backend API on the same or separate host.
+- Payment processing
+- Customer signup / member accounts
+- Chat (customer–driver–admin)
+- QR boarding / dropoff completion
+- Socket.IO live sync (guest refresh is manual)
+- Auto-dispatch
+- Driver live GPS map
 
 ## License
 
-Proprietary - TTaxi
-=======
-# t-taxi-platform
-88택시 프로젝트
->>>>>>> 86ded538d3b418dbe66b6eb1fc126dae5a6a56df
+Proprietary — T-Ride / TTaxi

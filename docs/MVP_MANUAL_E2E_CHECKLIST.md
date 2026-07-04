@@ -8,11 +8,12 @@ Scope: no payment, no Socket.IO sync, no chat, no QR, no auto-dispatch, no live 
 
 ## Before you start
 
-- [ ] MySQL migrated (`database/migrate.ps1`)
+- [ ] Follow [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) §1–3 (migrate, seed, start services)
+- [ ] MySQL migrated (`database/migrate.ps1` or `setup-mvp-demo.ps1`)
 - [ ] Backend running (`npm start` in `backend/`)
-- [ ] Frontend running (`flutter run -d chrome` in `frontend/`)
-- [ ] Demo data seeded (`npm run seed:mvp-demo` in `backend/`) **or** you will create a fresh booking in step 1
-- [ ] Credentials from [MVP_DEV_SETUP.md](./MVP_DEV_SETUP.md) available
+- [ ] Frontend running (`flutter run -d chrome --web-port=8080` in `frontend/`)
+- [ ] Demo data seeded (`npm run seed:mvp-demo`) **or** fresh booking in step A
+- [ ] Credentials from [MVP_DEMO_GUIDE.md §4](./MVP_DEMO_GUIDE.md) available
 
 ---
 
@@ -115,8 +116,9 @@ cd C:\TTaxi\frontend
 flutter test
 ```
 
-- [x] Backend tests pass (428 tests, 2026-07-04)
-- [x] Frontend tests pass (250 tests, 2026-07-04)
+- [x] Backend tests pass (428 tests, Phase 10 — 2026-07-04)
+- [x] Frontend tests pass (250 tests, Phase 10 — 2026-07-04)
+- [x] `flutter build web` succeeds (Phase 10)
 
 ### API E2E rehearsal (optional automation)
 
@@ -255,6 +257,44 @@ flutter run -d chrome --web-port=8080
 ### Manual Chrome checklist (operator)
 
 Sections **A–F** and **H** rows above remain for live demo sign-off. API flow is verified; UI labels/actions should be confirmed once in Chrome before presenting.
+
+---
+
+## K. Phase 10 — Final packaging (2026-07-04)
+
+### Build & test verification
+
+| Check | Result |
+|-------|--------|
+| `flutter build web` | Pass — output `frontend/build/web/` |
+| `npm test` | Pass — 428 tests |
+| `flutter test` | Pass — 250 tests |
+| `npm run seed:mvp-demo` | Pass |
+| `npm run rehearsal:mvp-e2e` | Pass — 19/19 |
+| Direct URLs `/booking/lookup`, `/admin`, `/driver` | Pass (Phase 9) |
+
+### Documentation
+
+| Document | Status |
+|----------|--------|
+| [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) | Added — third-party runnable guide |
+| [MVP_DEV_SETUP.md](./MVP_DEV_SETUP.md) | Updated — execution order + env summary |
+| [README.md](../README.md) | Updated — MVP entry point, merge conflict resolved |
+| `backend/.env.example` | Local demo pointer added |
+
+### Pre-deploy checklist
+
+- [ ] `backend/.env` configured for target environment (not demo secrets in production)
+- [ ] Database migrated on target host
+- [ ] `flutter build web --dart-define=API_BASE_URL=...` with correct API URL
+- [ ] Static host configured with SPA fallback (`index.html` for path routes)
+- [ ] `CORS_ORIGIN` matches frontend origin
+- [ ] Demo seed run **only** on isolated demo/staging DB
+- [ ] Run `npm test` + `npm run rehearsal:mvp-e2e` against staging DB before demo
+
+### Known limitations (ship as-is for MVP)
+
+Documented in [MVP_DEMO_GUIDE.md §8](./MVP_DEMO_GUIDE.md): no payment, signup, chat, QR, live sync, auto-dispatch, driver map.
 
 ---
 

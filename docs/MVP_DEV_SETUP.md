@@ -1,98 +1,112 @@
-# MVP Dev Setup (Phase 6)
+# MVP Dev Setup
 
-Local/staging guide for running the **manual dispatch + guest status lookup** MVP flow.
+Developer reference for the **manual dispatch + guest lookup** MVP.
 
-> Dev-only credentials below. Never use in production.
+> **New to the project?** Start with **[MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md)** — step-by-step setup a third party can follow without reading the codebase.
 
-## Prerequisites
+---
 
-- MySQL 8.x
-- Node.js 22+
-- Flutter SDK (frontend)
-- `backend/.env` configured (copy from `backend/.env.example`)
-
-## 1. Database migration
-
-From repo root (Windows):
+## Execution order (local demo)
 
 ```powershell
-cd C:\TTaxi\database
-.\migrate.ps1
-```
-
-Optional idempotency smoke test:
-
-```powershell
-.\smoke-test.ps1
-```
-
-### What migrations already seed
-
-| Data | Source | Notes |
-|------|--------|-------|
-| Service types | `11_seed.sql` | AIRPORT_PICKUP, AIRPORT_DROPOFF, CITY_TRANSFER, GOLF_TRANSFER |
-| Vehicle types | `11_seed.sql` | SEDAN, SUV, VAN, … |
-| Airports | `11_seed.sql` | BKK, DMK, CNX, HKT |
-| Route BKK → Pattaya | `15_pricing_architecture.sql` | AIRPORT_PICKUP + SUV/VAN prices |
-| Charge policies | `15_pricing_architecture.sql` | NAME_SIGN, NIGHT, AIRPORT surcharges |
-| Settlement defaults | `17_settlement_settings_seed.sql` | Commission rate |
-
-No extra migration is required for MVP E2E if `migrate.ps1` completes successfully.
-
-## 2. Backend
-
-```powershell
-cd C:\TTaxi\backend
-npm install
-npm start
-```
-
-Health check: `GET http://localhost:3000/api/v1/health`
-
-## 3. MVP demo accounts + bookings (one command)
-
-```powershell
-cd C:\TTaxi\backend
-npm run seed:mvp-demo
-```
-
-Or full setup (migrate + seed):
-
-```powershell
+# Step 1 — DB migrate + demo seed
 cd C:\TTaxi\database
 .\setup-mvp-demo.ps1
+
+# Step 2 — Backend
+cd C:\TTaxi\backend
+copy .env.example .env    # set DB_* and JWT_* — see MVP_DEMO_GUIDE §2.2
+npm install
+npm start                 # http://localhost:3000
+
+# Step 3 — Frontend (dev)
+cd C:\TTaxi\frontend
+flutter pub get
+flutter run -d chrome --web-port=8080
+
+# Step 4 — Automated checks
+cd C:\TTaxi\backend
+npm test
+npm run rehearsal:mvp-e2e
+
+cd C:\TTaxi\frontend
+flutter test
+flutter build web
 ```
 
-### Default test accounts
+---
+
+## Environment variables
+
+Full template: `backend/.env.example`
+
+**Local demo minimum:**
+
+```env
+NODE_ENV=development
+PORT=3000
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=ttaxi
+DB_USER=root
+DB_PASSWORD=your-password
+JWT_ACCESS_SECRET=replace-with-random-string-at-least-32-chars
+JWT_REFRESH_SECRET=replace-with-another-random-string-32-chars
+CORS_ORIGIN=http://localhost:8080
+```
+
+Optional: `GOOGLE_MAPS_API_KEY`, `AVIATIONSTACK_API_KEY` (wizard Places/flight features).
+
+Production/staging: use all sections in `.env.example`; never commit real `.env`.
+
+---
+
+## Direct URLs (path routing)
+
+| Screen | URL |
+|--------|-----|
+| Landing | http://localhost:8080/ |
+| Guest lookup | http://localhost:8080/booking/lookup |
+| Admin dispatch | http://localhost:8080/admin |
+| Driver login | http://localhost:8080/driver |
+
+Requires `usePathUrlStrategy()` in `frontend/lib/main.dart` (included since Phase 9).
+
+---
+
+## Demo accounts (dev/staging only)
 
 | Role | Login | Password |
 |------|-------|----------|
 | Super Admin | `admin@ttaxi.dev` (email) | `Admin123456!` |
 | Driver | `+66810000001` (phone) | `Driver123456!` |
 
-Admin login: Admin app → **Dispatch** tab → email + password.
+Admin: `/admin` opens **Reservations/Dispatch** tab. Driver: phone + password.
 
-Driver login: Driver app → phone + password.
+---
 
-### Seed script options
+## Seed & rehearsal scripts
 
 ```powershell
-# All 6 status scenarios (default)
-node scripts/seed-mvp-demo.js
+cd C:\TTaxi\backend
 
-# Subset only
+# Default: admin + driver + 6 status bookings
+npm run seed:mvp-demo
+
+# Subset
 node scripts/seed-mvp-demo.js --scenarios=PENDING,COMPLETED,CANCELLED
 
-# Accounts only (no bookings)
+# Accounts only
 node scripts/seed-mvp-demo.js --skip-bookings
+
+# API E2E (after seed)
+npm run rehearsal:mvp-e2e
 ```
 
-### Seeded booking scenarios
+### Seeded guest phones (booking numbers vary each run)
 
-After `seed:mvp-demo`, the script prints a table like:
-
-| Status | Guest phone pattern |
-|--------|---------------------|
+| Status | Phone |
+|--------|-------|
 | PENDING | `+66820000001` |
 | DRIVER_ASSIGNED | `+66820000002` |
 | ON_ROUTE | `+66820000003` |
@@ -100,75 +114,52 @@ After `seed:mvp-demo`, the script prints a table like:
 | COMPLETED | `+66820000005` |
 | CANCELLED | `+66820000006` |
 
-Use **bookingNumber + phone** on the guest lookup screen (`/booking/lookup`).
+---
 
-## 4. Manual account scripts (alternative)
+## Database
 
 ```powershell
-# Admin / Super Admin
-npm run create-admin-user -- --email admin@ttaxi.dev --password "Admin123456!" --name "MVP Admin" --role SUPER_ADMIN --force
-
-# Driver (email stored; login uses phone)
-npm run create-test-driver -- --email=driver@ttaxi.dev --name="MVP Demo Driver" --phone=+66810000001 --password=Driver123456!
+cd C:\TTaxi\database
+.\migrate.ps1          # migrations only
+.\setup-mvp-demo.ps1   # migrate + seed
+.\smoke-test.ps1       # optional idempotency check
 ```
 
-## 5. Frontend
+Migrations seed service types, vehicle types, BKK→Pattaya pricing, etc. No extra SQL needed for MVP if `migrate.ps1` succeeds.
+
+---
+
+## Production web build
 
 ```powershell
 cd C:\TTaxi\frontend
-flutter pub get
-flutter run -d chrome --web-port=8080
+flutter build web --release --dart-define=API_BASE_URL=https://api.your-domain.com
 ```
 
-Guest lookup route: `/booking/lookup` (full URL: `http://localhost:8080/booking/lookup`)
+Deploy `frontend/build/web/` with SPA fallback to `index.html`. See [MVP_DEMO_GUIDE.md §7](./MVP_DEMO_GUIDE.md).
 
-Admin dispatch route: `/admin` (opens Reservations/Dispatch tab)
+---
 
-Driver login route: `/driver`
+## Final test commands
 
-## 6. Create a fresh test booking (UI)
+| Command | Location | Expected |
+|---------|----------|----------|
+| `npm test` | `backend/` | 428 pass |
+| `flutter test` | `frontend/` | 250 pass |
+| `npm run rehearsal:mvp-e2e` | `backend/` | 19/19 pass |
+| `flutter build web` | `frontend/` | `build/web` created |
 
-1. Landing → **Book now**
-2. Service: **Airport Pickup**
-3. Origin: **BKK**, Destination: **Pattaya**
-4. Pickup time: at least **2 hours** ahead
-5. Customer phone: any valid number (used for lookup)
-6. Complete booking → copy **bookingNumber** → **Track my booking**
+---
 
-## 7. Automated tests
+## MVP scope (out of bounds)
 
-```powershell
-cd C:\TTaxi\backend
-npm test
+Payment, customer signup, chat, QR, Socket.IO live sync, auto-dispatch, driver GPS map.
 
-cd C:\TTaxi\frontend
-flutter test
-```
+Details: [MVP_DEMO_GUIDE.md §8](./MVP_DEMO_GUIDE.md)
 
-### API-level E2E rehearsal (Phase 8)
+---
 
-After seeding, run the automated MVP flow rehearsal (creates one fresh booking + verifies all 6 seeded statuses via HTTP):
+## Related
 
-```powershell
-cd C:\TTaxi\backend
-npm run seed:mvp-demo
-npm run rehearsal:mvp-e2e
-```
-
-Requires migrated DB and demo accounts. Does not replace manual UI walkthrough in the checklist, but validates booking → assign → driver trip → guest lookup end-to-end.
-
-## Out of scope (Phase 6)
-
-Payment, Socket.IO live sync, chat, QR boarding/completion, auto-dispatch, driver GPS tracking, customer signup.
-
-See also: [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)
-
-## 8. Pre-demo polish checklist (Phase 7)
-
-Before a live demo, quickly verify:
-
-1. `flutter test` and `npm test` pass
-2. Guest complete/lookup pages show **no QR or chat** without explicit dev flags
-3. Admin dispatch: empty/error/retry states render correctly
-4. Driver completes trip and can still open read-only detail (no post-action 404)
-5. Run section **H** in [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)
+- [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) — operator-facing setup
+- [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md) — manual sign-off
