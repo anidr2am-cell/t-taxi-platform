@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
-import '../../driver_application/services/driver_application_storage.dart';
 import '../pages/driver_shell_page.dart';
 import '../services/driver_api_service.dart';
 
@@ -21,20 +20,12 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
   late final DriverApiService _api;
   bool _loading = false;
   String? _error;
-  bool _hasSavedApplication = false;
 
   @override
   void initState() {
     super.initState();
     _api = widget.api ?? DriverApiService();
     _openJobsIfLoggedIn();
-    _checkSavedApplication();
-  }
-
-  Future<void> _checkSavedApplication() async {
-    final saved = await const DriverApplicationStorage().load();
-    if (!mounted) return;
-    setState(() => _hasSavedApplication = saved != null);
   }
 
   Future<void> _openJobsIfLoggedIn() async {
@@ -86,15 +77,7 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
   }
 
   void _openApplicationForm() {
-    Navigator.pushNamed(context, '/driver/apply').then((_) {
-      if (mounted) _checkSavedApplication();
-    });
-  }
-
-  void _openApplicationStatus() {
-    Navigator.pushNamed(context, '/driver/application-status').then((_) {
-      if (mounted) _checkSavedApplication();
-    });
+    Navigator.pushNamed(context, '/driver/apply');
   }
 
   @override
@@ -154,14 +137,6 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
                   onPressed: _openApplicationForm,
                   icon: const Icon(Icons.person_add_alt_1_outlined),
                   label: Text(context.l10n.t('driver_application_cta')),
-                ),
-              ),
-              TextButton(
-                onPressed: _openApplicationStatus,
-                child: Text(
-                  _hasSavedApplication
-                      ? context.l10n.t('driver_application_status_saved_cta')
-                      : context.l10n.t('driver_application_status_cta'),
                 ),
               ),
             ],

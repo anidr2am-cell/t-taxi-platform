@@ -453,7 +453,7 @@ class DriverApplicationRepository {
         ) VALUES (
           'USER', ?, 'ADMIN', ?, 'driver_application.submitted',
           ?, 'IN_APP', 'DRIVER_APPLICATION_SUBMITTED',
-          '드라이버 신규 가입 신청',
+          '드라이버 신규 가입 요청',
           ?, ?, 'SENT', NULL
         )
         ON DUPLICATE KEY UPDATE updated_at = updated_at
@@ -462,10 +462,11 @@ class DriverApplicationRepository {
         adminUserId,
         `driver-application-${application.id}`,
         `driver-application-submitted:${application.id}:${adminUserId}`,
-        `${application.full_name || '신규 기사'}님의 신규 기사 가입 신청이 접수되었습니다.`,
+        `${application.full_name || '신규 기사'}님의 신규 기사 가입 요청이 접수되었습니다.`,
         JSON.stringify({
           applicationId: application.id,
           applicationNumber: application.application_number,
+          route: `/admin/driver-applications/${application.id}`,
         }),
       ],
     );

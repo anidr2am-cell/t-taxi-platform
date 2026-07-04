@@ -1915,6 +1915,79 @@ class AppLocalizations {
       'driver_application_cta': 'Apply as a driver',
       'driver_application_status_cta': 'Check application status',
       'driver_application_status_saved_cta': 'Check saved application status',
+      'driver_apply_title': 'สมัครคนขับ (기사 등록 신청)',
+      'driver_apply_resubmit_title': 'ส่งใบสมัครคนขับอีกครั้ง (기사 신청 재신청)',
+      'driver_apply_section_account': 'ข้อมูลบัญชี (계정 정보)',
+      'driver_apply_section_driver_info': 'ข้อมูลคนขับ (기사 정보)',
+      'driver_apply_section_documents': 'เอกสารและ SNS (문서 및 SNS)',
+      'driver_apply_full_name': 'ชื่อ (이름)',
+      'driver_apply_phone': 'เบอร์โทรศัพท์ (전화번호)',
+      'driver_apply_password': 'รหัสผ่าน (비밀번호)',
+      'driver_apply_password_confirm': 'ยืนยันรหัสผ่าน (비밀번호 확인)',
+      'driver_apply_phone_country_code': 'รหัสประเทศโทรศัพท์ (전화 국가번호)',
+      'driver_apply_country': 'ประเทศ (국가)',
+      'driver_apply_language': 'ภาษา (언어)',
+      'driver_apply_license_number': 'เลขที่ใบขับขี่ (면허번호)',
+      'driver_apply_license_country': 'ประเทศที่ออกใบขับขี่ (면허 발급 국가)',
+      'driver_apply_license_expiry': 'วันหมดอายุใบขับขี่ (면허만료일)',
+      'driver_apply_license_expiry_picker': 'เลือกวันที่ (날짜 선택)',
+      'driver_apply_license_expiry_invalid':
+          'กรุณากรอกวันที่ในรูปแบบ YYYY-MM-DD (날짜는 YYYY-MM-DD 형식으로 입력해 주세요.)',
+      'driver_apply_license_expiry_past':
+          'วันหมดอายุใบขับขี่ต้องไม่เป็นวันที่ผ่านมาแล้ว (면허만료일은 오늘 이전 날짜일 수 없습니다.)',
+      'driver_apply_bank_name': 'ชื่อธนาคาร (은행명)',
+      'driver_apply_bank_account_number': 'เลขที่บัญชี (계좌번호)',
+      'driver_apply_bank_account_holder': 'ชื่อบัญชี (예금주)',
+      'driver_apply_vehicle_type': 'ประเภทรถ (차량 유형)',
+      'driver_apply_vehicle_make': 'ยี่ห้อรถ (제조사)',
+      'driver_apply_vehicle_model': 'รุ่นรถ (모델)',
+      'driver_apply_vehicle_year': 'ปีรถ (연식)',
+      'driver_apply_vehicle_color': 'สีรถ (색상)',
+      'driver_apply_vehicle_plate': 'ทะเบียนรถ (차량번호)',
+      'driver_apply_service_areas': 'พื้นที่ที่ขับเป็นหลัก (주로 운행 하는 지역)',
+      'driver_apply_service_areas_hint': 'กรุงเทพ, พัทยา (방콕, 파타야)',
+      'driver_apply_line_id': 'LINE ID (라인 ID)',
+      'driver_apply_line_qr': 'QR Code LINE (라인 QR코드)',
+      'driver_apply_vehicle_photos': 'รูปรถ (차량 사진)',
+      'driver_apply_insurance_certificate': 'หลักฐานประกันภัย (보험가입증명서)',
+      'driver_apply_vehicle_registration': 'เล่มทะเบียนรถ (차량등록증)',
+      'driver_apply_tax_certificate': 'หลักฐานการชำระภาษี (세금납부증명서)',
+      'driver_apply_signup_submit': 'ส่งคำขอสมัคร (가입 요청)',
+      'driver_apply_resubmit': 'ส่งคำขออีกครั้ง (다시 신청)',
+      'driver_apply_no_file': 'ยังไม่ได้แนบไฟล์ (첨부된 파일 없음)',
+      'driver_apply_vehicle_photo_count_error':
+          'แนบรูปรถอย่างน้อย 3 รูป และไม่เกิน 6 รูป (차량 사진은 최소 3장, 최대 6장 첨부해야 합니다.)',
+      'driver_apply_file_required': 'กรุณาแนบไฟล์นี้ (필수 파일을 첨부해 주세요.)',
+      'driver_apply_invalid_file_type':
+          'ประเภทไฟล์ไม่ถูกต้อง กรุณาแนบไฟล์ JPG, PNG, WEBP หรือ PDF ตามช่องที่กำหนด (파일 형식이 올바르지 않습니다. 항목에 맞는 JPG, PNG, WEBP 또는 PDF 파일을 첨부해 주세요.)',
+      'driver_apply_personal_consent':
+          'ยินยอมให้เก็บและตรวจสอบข้อมูลส่วนบุคคล (개인정보 수집 및 검토에 동의합니다.)',
+      'driver_apply_terms_consent':
+          'ยินยอมตามกฎการตรวจสอบและการให้บริการคนขับ (기사 심사 및 운영 규정에 동의합니다.)',
+      'driver_apply_false_info_notice':
+          'หากส่งข้อมูลเท็จ การอนุมัติอาจถูกยกเลิก (허위 정보 제출 시 승인이 취소될 수 있습니다.)',
+      'driver_apply_submit_failed':
+          'ไม่สามารถส่งคำขอสมัครได้ (신청을 제출하지 못했습니다.)',
+      'driver_apply_vehicle_load_error':
+          'ไม่สามารถโหลดประเภทรถได้ (차량 유형을 불러오지 못했습니다.)',
+      'driver_apply_vehicle_required': 'กรุณาเลือกประเภทรถ (차량 유형을 선택해 주세요.)',
+      'driver_apply_consent_required':
+          'กรุณายอมรับข้อกำหนดที่จำเป็น (필수 동의가 필요합니다.)',
+      'driver_apply_service_area_required':
+          'กรุณาระบุพื้นที่ที่ขับเป็นหลัก (주로 운행 하는 지역을 입력해 주세요.)',
+      'driver_apply_validation_required': 'กรุณากรอกข้อมูลนี้ (필수 입력입니다.)',
+      'driver_apply_password_min':
+          'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร (비밀번호는 6자리 이상 입력해야 합니다.)',
+      'driver_apply_password_mismatch': 'รหัสผ่านไม่ตรงกัน (비밀번호가 일치하지 않습니다.)',
+      'driver_apply_submitted_message':
+          'ส่งคำขอให้ผู้ดูแลอนุมัติแล้ว (관리자에게 승인 요청 했습니다.)',
+      'driver_apply_simple_submitted_message':
+          'ส่งคำขอให้ผู้ดูแลอนุมัติแล้ว (관리자에게 승인 요청 했습니다.)',
+      'driver_apply_line_group_instruction':
+          'สแกน QR Code ด้านล่างเพื่อเข้ากลุ่ม LINE คนขับ และแจ้งว่าได้ส่งคำขอสมัครแล้ว (아래 QR 코드를 스캔하여 드라이버 LINE 단체방에 입장하고 가입 신청했다고 알려주세요.)',
+      'driver_apply_line_qr_unavailable':
+          'QR Code LINE จะปรากฏที่นี่เมื่อพร้อมใช้งาน (LINE 단체방 QR 코드가 준비되면 여기에 표시됩니다.)',
+      'driver_apply_open_line_group': 'เปิดกลุ่ม LINE (LINE 단체방 열기)',
       'driver_application_title': 'Driver application',
       'driver_application_resubmit_title': 'Resubmit driver application',
       'driver_application_section_account': 'Account information',

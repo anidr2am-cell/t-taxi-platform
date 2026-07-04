@@ -4,23 +4,32 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../../admin_driver_application/pages/admin_driver_application_detail_page.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../services/admin_notification_api_service.dart';
 
 class AdminNotificationQueuePage extends StatefulWidget {
-  const AdminNotificationQueuePage({super.key, this.api, this.deviceRegistrationService});
+  const AdminNotificationQueuePage({
+    super.key,
+    this.api,
+    this.deviceRegistrationService,
+  });
 
   final AdminNotificationApiService? api;
   final NotificationDeviceRegistrationService? deviceRegistrationService;
 
   @override
-  State<AdminNotificationQueuePage> createState() => _AdminNotificationQueuePageState();
+  State<AdminNotificationQueuePage> createState() =>
+      _AdminNotificationQueuePageState();
 }
 
-class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage> {
-  late final AdminNotificationApiService _api = widget.api ?? const AdminNotificationApiService();
+class _AdminNotificationQueuePageState
+    extends State<AdminNotificationQueuePage> {
+  late final AdminNotificationApiService _api =
+      widget.api ?? const AdminNotificationApiService();
   late final NotificationDeviceRegistrationService _deviceRegistration =
-      widget.deviceRegistrationService ?? NotificationDeviceRegistrationService();
+      widget.deviceRegistrationService ??
+      NotificationDeviceRegistrationService();
   bool _loading = true;
   bool _markingAll = false;
   bool _enablingNotifications = false;
@@ -52,7 +61,10 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_load_failed'),
+        );
         _loading = false;
       });
     }
@@ -65,7 +77,12 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
       await _api.markAllRead();
       await _load();
     } catch (err) {
-      setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
+      setState(
+        () => _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        ),
+      );
     } finally {
       setState(() => _markingAll = false);
     }
@@ -101,152 +118,208 @@ class _AdminNotificationQueuePageState extends State<AdminNotificationQueuePage>
     }
   }
 
+  int? _driverApplicationId(Map<String, dynamic> item) {
+    if (item['type'] != 'DRIVER_APPLICATION_SUBMITTED') return null;
+    final payload = item['payload'];
+    if (payload is! Map) return null;
+    final value = payload['applicationId'];
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  Future<void> _openNotification(Map<String, dynamic> item) async {
+    final applicationId = _driverApplicationId(item);
+    if (applicationId == null) return;
+    if (item['read'] != true) {
+      await _api.markRead(item['notificationId'] as int);
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminDriverApplicationDetailPage(id: applicationId),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
           AppUi.adminFilterBar(
-          children: [
-            FilterChip(
-              label: const Text('Unread only'),
-              selected: _unreadOnly,
-              onSelected: (v) {
-                setState(() => _unreadOnly = v);
-                _load();
-              },
-            ),
-            DropdownButton<String?>(
-              value: _typeFilter,
-              hint: const Text('Type'),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All types')),
-                DropdownMenuItem(value: 'BOOKING_CREATED', child: Text('Booking created')),
-                DropdownMenuItem(value: 'RECEIPT_SUBMITTED', child: Text('Receipt submitted')),
-                DropdownMenuItem(value: 'REVIEW_SUBMITTED', child: Text('Review submitted')),
-              ],
-              onChanged: (v) {
-                setState(() => _typeFilter = v);
-                _load();
-              },
-            ),
-            IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-            ElevatedButton(
-              onPressed: _markingAll ? null : _markAll,
-              child: Text(_markingAll ? 'Marking...' : 'Mark all read'),
-            ),
-            OutlinedButton.icon(
-              onPressed: _enablingNotifications ? null : _enableNotifications,
-              icon: const Icon(Icons.notifications_active_outlined),
-              label: Text(_enablingNotifications ? 'Enabling...' : 'Enable notifications'),
-            ),
-          ],
-        ),
-        if (_pushStatus != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
-            child: AppUi.surfaceCard(
-              backgroundColor: AppTokens.infoLight,
-              padding: const EdgeInsets.all(AppTokens.spaceSm),
-              child: Text(_pushStatus!),
-            ),
+            children: [
+              FilterChip(
+                label: const Text('Unread only'),
+                selected: _unreadOnly,
+                onSelected: (v) {
+                  setState(() => _unreadOnly = v);
+                  _load();
+                },
+              ),
+              DropdownButton<String?>(
+                value: _typeFilter,
+                hint: const Text('Type'),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('All types')),
+                  DropdownMenuItem(
+                    value: 'BOOKING_CREATED',
+                    child: Text('Booking created'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'RECEIPT_SUBMITTED',
+                    child: Text('Receipt submitted'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'REVIEW_SUBMITTED',
+                    child: Text('Review submitted'),
+                  ),
+                ],
+                onChanged: (v) {
+                  setState(() => _typeFilter = v);
+                  _load();
+                },
+              ),
+              IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+              ElevatedButton(
+                onPressed: _markingAll ? null : _markAll,
+                child: Text(_markingAll ? 'Marking...' : 'Mark all read'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _enablingNotifications ? null : _enableNotifications,
+                icon: const Icon(Icons.notifications_active_outlined),
+                label: Text(
+                  _enablingNotifications
+                      ? 'Enabling...'
+                      : 'Enable notifications',
+                ),
+              ),
+            ],
           ),
-        Expanded(
-          child: _loading
-              ? AppUi.loadingState()
-              : _error != null
-                  ? AppUi.errorState(
-                      message: _error!,
-                      onRetry: _load,
-                      retryLabel: context.l10n.t('admin_dispatch_retry'),
-                    )
-                  : _items.isEmpty
-                      ? AppUi.emptyState(
-                          title: 'No notifications',
-                          icon: Icons.notifications_none_outlined,
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          child: ListView.separated(
-                            padding: AppUi.pagePadding(context),
-                            itemCount: _items.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: AppTokens.spaceSm),
-                            itemBuilder: (context, index) {
-                              final item = Map<String, dynamic>.from(_items[index] as Map);
-                              final read = item['read'] == true;
-                              return AppUi.adminQueueCard(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: read
-                                            ? AppTokens.surfaceMuted
-                                            : AppTokens.primaryLight,
-                                        borderRadius: AppTokens.borderRadiusSm,
-                                      ),
-                                      child: Icon(
-                                        Icons.notifications_outlined,
-                                        color: read ? AppTokens.textMuted : AppTokens.primary,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppTokens.spaceSm),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+          if (_pushStatus != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTokens.spaceMd,
+              ),
+              child: AppUi.surfaceCard(
+                backgroundColor: AppTokens.infoLight,
+                padding: const EdgeInsets.all(AppTokens.spaceSm),
+                child: Text(_pushStatus!),
+              ),
+            ),
+          Expanded(
+            child: _loading
+                ? AppUi.loadingState()
+                : _error != null
+                ? AppUi.errorState(
+                    message: _error!,
+                    onRetry: _load,
+                    retryLabel: context.l10n.t('admin_dispatch_retry'),
+                  )
+                : _items.isEmpty
+                ? AppUi.emptyState(
+                    title: 'No notifications',
+                    icon: Icons.notifications_none_outlined,
+                  )
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView.separated(
+                      padding: AppUi.pagePadding(context),
+                      itemCount: _items.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: AppTokens.spaceSm),
+                      itemBuilder: (context, index) {
+                        final item = Map<String, dynamic>.from(
+                          _items[index] as Map,
+                        );
+                        final read = item['read'] == true;
+                        final canOpen = _driverApplicationId(item) != null;
+                        return AppUi.adminQueueCard(
+                          child: InkWell(
+                            onTap: canOpen
+                                ? () => _openNotification(item)
+                                : null,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: read
+                                        ? AppTokens.surfaceMuted
+                                        : AppTokens.primaryLight,
+                                    borderRadius: AppTokens.borderRadiusSm,
+                                  ),
+                                  child: Icon(
+                                    Icons.notifications_outlined,
+                                    color: read
+                                        ? AppTokens.textMuted
+                                        : AppTokens.primary,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: AppTokens.spaceSm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
                                         children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  item['title'] as String? ?? 'Notification',
-                                                  style: TextStyle(
-                                                    fontWeight:
-                                                        read ? FontWeight.w600 : FontWeight.w800,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (!read)
-                                                AppUi.statusBadge(
-                                                  'Unread',
-                                                  tone: AppStatusTone.info,
-                                                ),
-                                            ],
-                                          ),
-                                          if ((item['body'] as String? ?? '').isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              item['body'] as String? ?? '',
-                                              maxLines: 3,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: AppTokens.textSecondary,
-                                                fontSize: 13,
+                                          Expanded(
+                                            child: Text(
+                                              item['title'] as String? ??
+                                                  'Notification',
+                                              style: TextStyle(
+                                                fontWeight: read
+                                                    ? FontWeight.w600
+                                                    : FontWeight.w800,
                                               ),
                                             ),
-                                          ],
+                                          ),
+                                          if (!read)
+                                            AppUi.statusBadge(
+                                              'Unread',
+                                              tone: AppStatusTone.info,
+                                            ),
                                         ],
                                       ),
-                                    ),
-                                    if (!read)
-                                      IconButton(
-                                        icon: const Icon(Icons.check),
-                                        onPressed: () async {
-                                          await _api.markRead(item['notificationId'] as int);
-                                          await _load();
-                                        },
-                                      ),
-                                  ],
+                                      if ((item['body'] as String? ?? '')
+                                          .isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item['body'] as String? ?? '',
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: AppTokens.textSecondary,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                              );
-                            },
+                                if (!read)
+                                  IconButton(
+                                    icon: const Icon(Icons.check),
+                                    onPressed: () async {
+                                      await _api.markRead(
+                                        item['notificationId'] as int,
+                                      );
+                                      await _load();
+                                    },
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-        ),
-      ],
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }

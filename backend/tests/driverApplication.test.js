@@ -26,7 +26,6 @@ function sign(role = 'ADMIN', id = 1) {
 function validInput(overrides = {}) {
   return {
     fullName: 'Driver Kim',
-    email: ' Driver.Local@Example.com ',
     password: 'strongpass123',
     passwordConfirm: 'strongpass123',
     phone: '+66123456789',
@@ -74,6 +73,7 @@ class MemoryDriverApplicationRepository {
     this.driverVehicles = [];
     this.drivers = [];
     this.auditLogs = [];
+    this.notifications = [];
     this.vehicleTypes = [{ id: 11, code: 'SEDAN', name: 'Sedan' }];
     this.lastCreate = null;
   }
@@ -232,13 +232,54 @@ class MemoryDriverApplicationRepository {
   async insertAuditLog(_conn, log) {
     this.auditLogs.push(log);
   }
+
+  async insertAdminNotification(_conn, adminUserId, application) {
+    const idempotencyKey = `driver-application-submitted:${application.id}:${adminUserId}`;
+    if (this.notifications.some((row) => row.idempotencyKey === idempotencyKey)) return;
+    this.notifications.push({
+      adminUserId,
+      eventId: `driver-application-${application.id}`,
+      idempotencyKey,
+      title: '드라이버 신규 가입 요청',
+      body: `${application.full_name || '신규 기사'}님의 신규 기사 가입 요청이 접수되었습니다.`,
+      payload: {
+        applicationId: application.id,
+        applicationNumber: application.application_number,
+        route: `/admin/driver-applications/${application.id}`,
+      },
+    });
+  }
 }
 
 function createHarness() {
   const calls = { begin: 0, commit: 0, rollback: 0, release: 0 };
   const repository = new MemoryDriverApplicationRepository();
-  const service = new DriverApplicationService(createPool(calls), repository);
+  const userRepository = {
+    async findActiveByRoles(roles) {
+      return [
+        { id: 7, role: 'ADMIN' },
+        { id: 8, role: 'SUPER_ADMIN' },
+      ].filter((user) => roles.includes(user.role));
+    },
+  };
+  const service = new DriverApplicationService(
+    createPool(calls),
+    repository,
+    null,
+    userRepository,
+  );
   return { calls, repository, service };
+}
+
+function uploadFile(field, filename, mimetype = 'image/jpeg') {
+  return {
+    fieldname: field,
+    originalname: filename,
+    filename: `stored-${filename}`,
+    mimetype,
+    path: `/tmp/${filename}`,
+    size: 10,
+  };
 }
 
 describe('Driver application public routes', () => {
@@ -277,6 +318,48 @@ describe('Driver application public routes', () => {
     assert.ok(!('statusTokenHash' in res.body.data));
   });
 
+  test('JSON application accepts phone and password without email', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ email: undefined }))
+      .expect(201);
+
+    assert.equal(res.body.success, true);
+  });
+
+  test('JSON application treats blank email as omitted', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ email: '' }))
+      .expect(201);
+
+    assert.equal(res.body.success, true);
+  });
+
+  test('JSON application rejects explicitly invalid email', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ email: 'not-an-email' }))
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'email');
+  });
+
+  test('JSON application still requires phone password and confirmation', async () => {
+    for (const field of ['phone', 'password', 'passwordConfirm']) {
+      const input = validInput();
+      delete input[field];
+      const res = await request(app)
+        .post('/api/v1/driver-applications')
+        .send(input)
+        .expect(400);
+
+      assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+      assert.equal(res.body.errors[0].field, field);
+    }
+  });
+
   test('submit rejects false consent before service call', async () => {
     const res = await request(app)
       .post('/api/v1/driver-applications')
@@ -284,6 +367,63 @@ describe('Driver application public routes', () => {
       .expect(400);
 
     assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+  });
+
+  test('multipart invalid file type reports field and file name', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .field('applicantName', 'Driver Kim')
+      .field('phone', '+66123456789')
+      .field('password', 'strongpass123')
+      .field('passwordConfirmation', 'strongpass123')
+      .field('licenseNumber', 'DL12345')
+      .field('licenseExpiryDate', '2030-01-01')
+      .field('bankName', 'Kasikorn')
+      .field('bankAccountNumber', '1234567890')
+      .field('bankAccountHolder', 'Driver Kim')
+      .field('lineId', '@driver')
+      .field('primaryServiceArea', 'Bangkok')
+      .field('vehicleTypeId', '11')
+      .attach('lineQr', Buffer.from('bad'), {
+        filename: 'line.exe',
+        contentType: 'application/octet-stream',
+      })
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.INVALID_FILE_TYPE);
+    assert.equal(res.body.errors[0].field, 'lineQr');
+    assert.equal(res.body.errors[0].fileName, 'line.exe');
+  });
+
+  test('multipart application accepts phone and password without email', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .field('applicantName', 'Driver Kim')
+      .field('phone', '+66123456789')
+      .field('password', 'strongpass123')
+      .field('passwordConfirmation', 'strongpass123')
+      .field('licenseNumber', 'DL12345')
+      .field('licenseExpiryDate', '2030-01-01')
+      .field('bankName', 'Kasikorn')
+      .field('bankAccountNumber', '1234567890')
+      .field('bankAccountHolder', 'Driver Kim')
+      .field('lineId', '@driver')
+      .field('primaryServiceArea', 'Bangkok')
+      .field('vehicleTypeId', '11')
+      .field('vehiclePlateNumber', 'AB1234')
+      .field('serviceAreas', 'Bangkok')
+      .field('personalDataConsent', 'true')
+      .field('driverTermsConsent', 'true')
+      .attach('lineQr', Buffer.from('qr'), { filename: 'line.png', contentType: 'image/png' })
+      .attach('vehiclePhotos', Buffer.from('car1'), { filename: 'car1.jpg', contentType: 'image/jpeg' })
+      .attach('vehiclePhotos', Buffer.from('car2'), { filename: 'car2.jpg', contentType: 'image/jpeg' })
+      .attach('vehiclePhotos', Buffer.from('car3'), { filename: 'car3.jpg', contentType: 'image/jpeg' })
+      .attach('insuranceCertificate', Buffer.from('pdf'), { filename: 'insurance.pdf', contentType: 'application/pdf' })
+      .attach('vehicleRegistration', Buffer.from('pdf'), { filename: 'registration.pdf', contentType: 'application/pdf' })
+      .attach('taxCertificate', Buffer.from('pdf'), { filename: 'tax.pdf', contentType: 'application/pdf' })
+      .expect(201);
+
+    assert.equal(res.body.success, true);
   });
 });
 
@@ -322,6 +462,73 @@ describe('Driver application admin routes', () => {
 });
 
 describe('DriverApplicationService', () => {
+  test('file validation allows supported image MIME types for image fields', () => {
+    const { service } = createHarness();
+
+    assert.doesNotThrow(() => service.validateFile(uploadFile('lineQr', 'line.jpg', 'image/jpeg'), {
+      imageOnly: true,
+      field: 'lineQr',
+    }));
+    assert.doesNotThrow(() => service.validateFile(uploadFile('vehiclePhotos', 'car.png', 'image/png'), {
+      imageOnly: true,
+      field: 'vehiclePhotos',
+    }));
+    assert.doesNotThrow(() => service.validateFile(uploadFile('vehiclePhotos', 'car.webp', 'image/webp'), {
+      imageOnly: true,
+      field: 'vehiclePhotos',
+    }));
+  });
+
+  test('file validation allows pdf only for document fields', () => {
+    const { service } = createHarness();
+
+    assert.doesNotThrow(() => service.validateFile(uploadFile('insuranceCertificate', 'insurance.pdf', 'application/pdf'), {
+      imageOnly: false,
+      field: 'insuranceCertificate',
+    }));
+    assert.throws(
+      () => service.validateFile(uploadFile('vehiclePhotos', 'car.pdf', 'application/pdf'), {
+        imageOnly: true,
+        field: 'vehiclePhotos',
+      }),
+      (err) => err.errorCode === ERROR_CODES.INVALID_FILE_TYPE
+        && err.errors[0].field === 'vehiclePhotos'
+        && err.errors[0].fileName === 'car.pdf',
+    );
+  });
+
+  test('file validation allows generic MIME when extension matches field policy', () => {
+    const { service } = createHarness();
+
+    assert.doesNotThrow(() => service.validateFile(uploadFile('lineQr', 'line.JPG', ''), {
+      imageOnly: true,
+      field: 'lineQr',
+    }));
+    assert.doesNotThrow(() => service.validateFile(uploadFile('vehiclePhotos', 'car.PNG', 'application/octet-stream'), {
+      imageOnly: true,
+      field: 'vehiclePhotos',
+    }));
+    assert.doesNotThrow(() => service.validateFile(uploadFile('taxCertificate', 'tax.PDF', 'application/octet-stream'), {
+      imageOnly: false,
+      field: 'taxCertificate',
+    }));
+  });
+
+  test('file validation blocks unsafe or mismatched extensions', () => {
+    const { service } = createHarness();
+    for (const filename of ['driver.exe', 'script.js', 'page.html', 'vector.svg']) {
+      assert.throws(
+        () => service.validateFile(uploadFile('insuranceCertificate', filename, 'application/octet-stream'), {
+          imageOnly: false,
+          field: 'insuranceCertificate',
+        }),
+        (err) => err.errorCode === ERROR_CODES.INVALID_FILE_TYPE
+          && err.errors[0].field === 'insuranceCertificate'
+          && err.errors[0].fileName === filename,
+      );
+    }
+  });
+
   test('submit hashes password, stores only token hash, and returns raw status token once', async () => {
     const { calls, repository, service } = createHarness();
 
@@ -334,7 +541,7 @@ describe('DriverApplicationService', () => {
     assert.equal(calls.rollback, 0);
 
     const stored = repository.applications[0];
-    assert.equal(stored.email, 'driver.local@example.com');
+    assert.equal(stored.email, 'driver+66123456789@driver.local');
     assert.equal(stored.vehicle_type_code, 'SEDAN');
     assert.equal(stored.vehicle_plate_number, 'AB-1234');
     assert.notEqual(stored.password_hash, 'strongpass123');
@@ -343,12 +550,60 @@ describe('DriverApplicationService', () => {
     assert.equal(stored.status_lookup_token_hash.length, 64);
   });
 
-  test('submit blocks duplicate pending email and rolls back', async () => {
+  test('submit creates admin notifications for new driver applications', async () => {
+    const { repository, service } = createHarness();
+
+    const result = await service.submit(validInput({ fullName: 'Driver Park' }));
+
+    assert.equal(repository.notifications.length, 2);
+    assert.deepEqual(
+      repository.notifications.map((row) => row.adminUserId),
+      [7, 8],
+    );
+    assert.equal(repository.notifications[0].title, '드라이버 신규 가입 요청');
+    assert.equal(
+      repository.notifications[0].body,
+      'Driver Park님의 신규 기사 가입 요청이 접수되었습니다.',
+    );
+    assert.equal(repository.notifications[0].payload.applicationNumber, result.applicationNumber);
+    assert.equal(repository.notifications[0].payload.route, '/admin/driver-applications/1');
+
+    await repository.insertAdminNotification(null, 7, {
+      id: 1,
+      application_number: result.applicationNumber,
+      full_name: 'Driver Park',
+    });
+    assert.equal(repository.notifications.length, 2);
+  });
+
+  test('submit blocks duplicate pending phone and rolls back', async () => {
     const { calls, service } = createHarness();
     await service.submit(validInput());
 
     await assert.rejects(
       () => service.submit(validInput({ vehiclePlateNumber: 'ZZ-9999' })),
+      (err) => err.statusCode === 409,
+    );
+    assert.equal(calls.rollback, 1);
+  });
+
+  test('submit keeps optional legacy email when provided', async () => {
+    const { repository, service } = createHarness();
+    await service.submit(validInput({ email: ' Driver.Local@Example.com ' }));
+
+    assert.equal(repository.applications[0].email, 'driver.local@example.com');
+  });
+
+  test('submit blocks duplicate pending email when legacy email is provided', async () => {
+    const { calls, service } = createHarness();
+    await service.submit(validInput({ email: 'driver.local@example.com' }));
+
+    await assert.rejects(
+      () => service.submit(validInput({
+        email: 'driver.local@example.com',
+        phone: '+66999999999',
+        vehiclePlateNumber: 'ZZ-9999',
+      })),
       (err) => err.statusCode === 409,
     );
     assert.equal(calls.rollback, 1);

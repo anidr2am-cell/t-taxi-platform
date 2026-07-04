@@ -315,7 +315,6 @@ class _DriverApplicationStatusPageState
                     MaterialPageRoute(
                       builder: (_) => DriverApplicationFormPage(
                         api: _api,
-                        storage: widget.storage,
                         resubmitApplicationNumber: _numberController.text
                             .trim(),
                         resubmitToken: _tokenController.text.trim(),
