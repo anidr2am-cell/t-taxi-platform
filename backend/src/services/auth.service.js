@@ -1,8 +1,8 @@
-const bcrypt = require('bcryptjs');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const ROLES = require('../constants/roles');
+const { hashPassword, verifyPassword } = require('../utils/passwordHash.util');
 
 const LOGIN_ALLOWED_ROLES = [
   ROLES.CUSTOMER,
@@ -51,7 +51,7 @@ class AuthService {
       });
     }
 
-    const passwordHash = await bcrypt.hash(input.password, 12);
+    const passwordHash = await hashPassword(input.password);
 
     try {
       const user = await this.userRepository.createCustomerWithProfile({
@@ -104,7 +104,7 @@ class AuthService {
       });
     }
 
-    const valid = await bcrypt.compare(input.password, user.password_hash);
+    const valid = await verifyPassword(input.password, user.password_hash);
     if (!valid) {
       throw new AppError(phone ? 'Invalid phone or password' : 'Invalid email or password', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
