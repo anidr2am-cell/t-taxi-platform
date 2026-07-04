@@ -2,7 +2,18 @@
 
 Prepare **T-Ride MVP** for a **test/staging server** (e.g. Gabia cloud VPS). No new product features — configuration, layout, and verification only.
 
-**Related:** [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) (local demo) · [MVP_DEV_SETUP.md](./MVP_DEV_SETUP.md) · [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)
+**Related:** [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md) (Phase 12 operator runbook) · [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) · [MVP_DEV_SETUP.md](./MVP_DEV_SETUP.md) · [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)
+
+---
+
+## 0. Local vs Gabia server (Phase 12)
+
+| Location | Tasks |
+|----------|--------|
+| **Local / CI** | Run `npm test`, `flutter test`, `flutter build web --dart-define=API_BASE_URL=https://<domain>`, push git or create release tarball |
+| **Gabia VPS** | Install Node 22 / nginx / PM2, write `backend/.env`, `./database/migrate.sh`, `npm ci`, PM2, copy `build/web`, nginx, seed, smoke |
+
+**Operator checklist:** follow [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md) step-by-step.
 
 ---
 
@@ -13,7 +24,7 @@ Prepare **T-Ride MVP** for a **test/staging server** (e.g. Gabia cloud VPS). No 
 | Backend `npm start` | Ready | `src/server.js` → Express on `PORT` (default 3000) |
 | Env validation | Ready | Joi in `src/config/env.js`; **staging/production** enforce strong JWT, DB password, explicit CORS |
 | CORS | Ready | Comma-separated allowlist; localhost auto-allowed only in `development`/`test` |
-| DB migrations | Ready | `database/migrate.ps1` (Windows) or manual SQL order — 29 migration files |
+| DB migrations | Ready | `database/migrate.ps1` (Windows) · **`database/migrate.sh`** (Linux/Gabia) |
 | Flutter web build | Ready | `usePathUrlStrategy()` in `main.dart` |
 | SPA deep links | Ready | `/booking/lookup`, `/admin`, `/driver` need `try_files … /index.html` |
 | Uploads | Ready | Local disk under `UPLOAD_DIR`; **not** served as public static files — admin API download only |
@@ -25,7 +36,7 @@ Prepare **T-Ride MVP** for a **test/staging server** (e.g. Gabia cloud VPS). No 
 ### Gaps / operator responsibilities
 
 - **HTTPS** — example nginx config includes TLS; certificate install is manual (Phase 11+).
-- **Linux migrate script** — repo ships `database/migrate.ps1`; on Linux run equivalent `mysql` loop or migrate from a Windows admin machine once.
+- **Linux migrate script** — use `./database/migrate.sh` (reads `backend/.env`); see [GABIA_STAGING_DEPLOY_CHECKLIST.md §G](./GABIA_STAGING_DEPLOY_CHECKLIST.md).
 - **PM2 paths** — edit `cwd`, log paths in `deploy/pm2/ecosystem.config.cjs` to match server layout (`/srv/ttaxi/current/…`).
 - **Same-origin vs split API** — choose one model below before setting `CORS_ORIGIN` and `API_BASE_URL`.
 
@@ -402,10 +413,32 @@ Document for stakeholders — not deployment blockers:
 
 | Path | Purpose |
 |------|---------|
+| **[GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md)** | **Phase 12 — step-by-step Gabia deploy** |
+| `database/migrate.sh` | Linux migration runner |
 | `backend/.env.example` | Env template + staging comments |
 | `backend/src/config/env.js` | Validation rules |
 | `backend/src/config/cors.js` | CORS allowlist |
-| `deploy/nginx/ttaxi-staging.conf` | Same-origin nginx sample |
+| `deploy/nginx/ttaxi-staging.conf` | HTTPS + SPA fallback |
+| `deploy/nginx/ttaxi-staging-http.conf` | HTTP-only first boot |
+| `deploy/nginx/README.md` | nginx file guide |
 | `deploy/pm2/ecosystem.config.cjs` | PM2 process definition |
 | `backend/scripts/staging-smoke-test.js` | Post-deploy HTTP checks |
 | `backend/tests/deploymentReadiness.test.js` | CI guardrails for deploy artifacts |
+
+---
+
+## 15. Phase 12 execution checklist (summary)
+
+Copy of deploy order — full commands in [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md):
+
+1. [ ] Gabia VPS: Node 22, nginx, mysql-client, PM2
+2. [ ] Code at `/srv/ttaxi/current`
+3. [ ] MySQL: `ttaxi_staging` + app user
+4. [ ] `backend/.env` (chmod 600, strong secrets)
+5. [ ] `./database/migrate.sh`
+6. [ ] `npm ci --omit=dev` → PM2 `--env staging`
+7. [ ] `flutter build web --dart-define=API_BASE_URL=https://<domain>`
+8. [ ] nginx (HTTP first, then HTTPS) → `nginx -t` → reload
+9. [ ] `seed:mvp-demo` (staging only)
+10. [ ] `npm run smoke:staging` + `npm run rehearsal:mvp-e2e`
+11. [ ] Manual UI checklist A–F

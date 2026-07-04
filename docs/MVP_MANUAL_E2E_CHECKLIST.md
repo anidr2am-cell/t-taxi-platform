@@ -309,7 +309,20 @@ Documented in [MVP_DEMO_GUIDE.md §8](./MVP_DEMO_GUIDE.md): no payment, signup, 
 | `staging-smoke-test.js` | Path URLs `/booking/lookup`, `/admin`, `/driver` |
 | `deploymentReadiness.test.js` | CI guards for env/PM2/migrations |
 
-Pre-deploy: complete checklist in [MVP_DEPLOYMENT_PREP.md §10](./MVP_DEPLOYMENT_PREP.md).
+Pre-deploy: complete checklist in [MVP_DEPLOYMENT_PREP.md §15](./MVP_DEPLOYMENT_PREP.md) or [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md).
+
+---
+
+## M. Phase 12 — Gabia staging deploy (2026-07-04)
+
+| Item | Status |
+|------|--------|
+| [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md) | Created — full operator runbook |
+| `database/migrate.sh` | Linux migration script |
+| `deploy/nginx/ttaxi-staging-http.conf` | HTTP-first nginx (pre-TLS) |
+| `deploy/nginx/README.md` | nginx file guide |
+
+Server sign-off: [GABIA_STAGING_DEPLOY_CHECKLIST.md §Q](./GABIA_STAGING_DEPLOY_CHECKLIST.md).
 
 ---
 

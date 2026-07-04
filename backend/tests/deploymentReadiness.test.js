@@ -77,6 +77,14 @@ test('PM2 config is parseable and uses one instance for worker safety', () => {
   assert.equal(JSON.stringify(config).includes('replace-with'), false);
 });
 
+test('Linux migrate script exists and is documented', () => {
+  const migrateSh = path.join(repoRoot, 'database', 'migrate.sh');
+  assert.ok(fs.existsSync(migrateSh));
+  const content = fs.readFileSync(migrateSh, 'utf8');
+  assert.match(content, /migrate\.sh/);
+  assert.match(content, /DB_NAME/);
+});
+
 test('.env.example contains placeholders only and staging-sensitive defaults are safe', () => {
   const envExample = fs.readFileSync(path.join(backendRoot, '.env.example'), 'utf8');
 
