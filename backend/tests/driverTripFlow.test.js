@@ -132,6 +132,23 @@ test('DRIVER_ASSIGNED -> ON_ROUTE -> DRIVER_ARRIVED -> COMPLETED flow', async ()
   assert.equal(completeHarness.calls.emitted, 1);
 });
 
+test('completeTrip returns summary when active driver job is no longer listed', async () => {
+  const { service } = buildHarness({
+    fromStatus: BOOKING_STATUS.DRIVER_ARRIVED,
+    detailStatus: BOOKING_STATUS.COMPLETED,
+  });
+  service.driverJobService.getDetail = async () => {
+    throw Object.assign(new Error('Booking not found'), {
+      statusCode: 404,
+      errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+    });
+  };
+
+  const completed = await service.completeTrip(44, 'TX202607010001');
+  assert.equal(completed.status, BOOKING_STATUS.COMPLETED);
+  assert.equal(completed.bookingNumber, 'TX202607010001');
+});
+
 test('markArrived rejects DRIVER_ASSIGNED without ON_ROUTE', async () => {
   const { service } = buildHarness({
     fromStatus: BOOKING_STATUS.DRIVER_ASSIGNED,

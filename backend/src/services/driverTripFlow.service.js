@@ -80,6 +80,19 @@ class DriverTripFlowService {
       transition.domainEvent,
       transition.eventPayload,
     );
+
+    if (
+      toStatus === BOOKING_STATUS.COMPLETED
+      || toStatus === BOOKING_STATUS.CANCELLED
+      || toStatus === BOOKING_STATUS.NO_SHOW
+    ) {
+      return {
+        bookingNumber: normalizedBookingNumber,
+        status: toStatus,
+        idempotent: transition.result.idempotent,
+      };
+    }
+
     return this.getUpdatedDetail(driverUserId, normalizedBookingNumber, {
       idempotent: transition.result.idempotent,
     });
