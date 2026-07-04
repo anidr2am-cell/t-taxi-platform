@@ -131,8 +131,33 @@ void main() {
     await tester.pump();
 
     expect(find.text('Vehicle pickup guide · Gate 7'), findsOneWidget);
-    expect(find.text('Boarding QR'), findsOneWidget);
+    expect(find.text('Boarding QR'), findsNothing);
   });
+
+  testWidgets(
+    'booking complete screen shows boarding QR only when customer tools enabled',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrapPage(
+          BookingCompletePage(
+            result: _bookingResult(),
+            serviceLabel: 'Airport Pickup',
+            originLabel: 'BKK Airport',
+            destinationLabel: 'Pattaya',
+            serviceTypeCode: 'AIRPORT_PICKUP',
+            originAirportCode: 'BKK',
+            nameSignRequested: false,
+            enableCustomerTools: true,
+            chatApi: _FakeBookingChatApi(),
+            chatSocketService: _FakeChatSocketService(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Boarding QR'), findsOneWidget);
+    },
+  );
 
   testWidgets('guest lookup screen displays BKK name sign meeting guide', (
     tester,
