@@ -3,6 +3,7 @@ const { success } = require('../utils/apiResponse');
 const container = require('../helpers/container');
 
 const getDriverJobService = () => container.get('driverJobService');
+const getDriverTripFlowService = () => container.get('driverTripFlowService');
 const getDriverQrService = () => container.get('driverQrService');
 const getDriverStatusService = () => container.get('driverStatusService');
 
@@ -19,8 +20,24 @@ const getBookingDetail = asyncHandler(async (req, res) => {
   return success(res, data, 'OK');
 });
 
+const startOnRoute = asyncHandler(async (req, res) => {
+  const data = await getDriverTripFlowService().startOnRoute(
+    req.user.id,
+    req.params.bookingNumber,
+  );
+  return success(res, data, 'OK');
+});
+
 const markArrived = asyncHandler(async (req, res) => {
-  const data = await getDriverQrService().markArrived(
+  const data = await getDriverTripFlowService().markArrived(
+    req.user.id,
+    req.params.bookingNumber,
+  );
+  return success(res, data, 'OK');
+});
+
+const completeTrip = asyncHandler(async (req, res) => {
+  const data = await getDriverTripFlowService().completeTrip(
     req.user.id,
     req.params.bookingNumber,
   );
@@ -63,7 +80,9 @@ const goOffline = asyncHandler(async (req, res) => {
 module.exports = {
   listTodayBookings,
   getBookingDetail,
+  startOnRoute,
   markArrived,
+  completeTrip,
   scanBoarding,
   scanDropoff,
   getStatus,

@@ -7,21 +7,21 @@ import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 
 void main() {
-  testWidgets('shows correct action by status', (tester) async {
+  testWidgets('shows start route action when assigned', (tester) async {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
           detail: _booking(
             status: 'DRIVER_ASSIGNED',
-            actions: ['VIEW_DETAILS', 'MARK_ARRIVED'],
+            actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Scan boarding QR'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Start route'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsNothing);
   });
 
   testWidgets('shows loading state', (tester) async {
@@ -40,7 +40,7 @@ void main() {
       _wrap(
         _FakeDriverApi(
           detail: _booking(
-            status: 'DRIVER_ASSIGNED',
+            status: 'ON_ROUTE',
             actions: ['MARK_ARRIVED'],
           ),
           actionError: const DriverApiException('Invalid status transition'),
@@ -55,114 +55,28 @@ void main() {
     expect(find.text('Invalid status transition'), findsOneWidget);
   });
 
-  testWidgets('successful arrival refreshes detail', (tester) async {
+  testWidgets('shows mark arrived after on route', (tester) async {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
-          detail: _booking(
-            status: 'DRIVER_ASSIGNED',
-            actions: ['MARK_ARRIVED'],
-          ),
-          arrived: _booking(
-            status: 'DRIVER_ARRIVED',
-            actions: ['SCAN_BOARDING_QR'],
-          ),
+          detail: _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']),
         ),
       ),
     );
     await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Mark arrived'));
-    await tester.pumpAndSettle();
-
-    expect(find.widgetWithText(FilledButton, 'Scan boarding QR'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsOneWidget);
   });
 
-  testWidgets('successful boarding refreshes detail', (tester) async {
-    final api = _FakeDriverApi(
-      detail: _booking(status: 'DRIVER_ARRIVED', actions: ['SCAN_BOARDING_QR']),
-      boarded: _booking(status: 'PICKED_UP', actions: ['SCAN_DROPOFF_QR']),
-    );
-    await tester.pumpWidget(_wrap(api));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Scan boarding QR'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('manualQrTokenField')),
-      'boarding-token',
-    );
-    await tester.tap(find.text('Submit'));
-    await tester.pumpAndSettle();
-
-    expect(api.lastToken, 'boarding-token');
-    expect(find.widgetWithText(FilledButton, 'Scan dropoff QR'), findsOneWidget);
-  });
-
-  testWidgets('successful completion shows completed state', (tester) async {
+  testWidgets('shows complete trip after arrival', (tester) async {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
-          detail: _booking(status: 'PICKED_UP', actions: ['SCAN_DROPOFF_QR']),
-          completed: _booking(status: 'COMPLETED', actions: []),
+          detail: _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']),
         ),
       ),
     );
     await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Scan dropoff QR'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const Key('manualQrTokenField')),
-      'dropoff-token',
-    );
-    await tester.tap(find.text('Submit'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Completed'), findsWidgets);
-  });
-
-  testWidgets('manual token fallback is available', (tester) async {
-    await tester.pumpWidget(
-      _wrap(
-        _FakeDriverApi(
-          detail: _booking(
-            status: 'DRIVER_ARRIVED',
-            actions: ['SCAN_BOARDING_QR'],
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Scan boarding QR'));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('manualQrTokenField')), findsOneWidget);
-    expect(find.text('Boarding QR token'), findsOneWidget);
-    expect(find.text('Enter code manually — no camera required'), findsOneWidget);
-    expect(find.text('Enter code manually'), findsWidgets);
-  });
-
-  testWidgets('invalid manual token shows error', (tester) async {
-    await tester.pumpWidget(
-      _wrap(
-        _FakeDriverApi(
-          detail: _booking(status: 'DRIVER_ARRIVED', actions: ['SCAN_BOARDING_QR']),
-          actionError: const DriverApiException('Invalid QR token'),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Scan boarding QR'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('manualQrTokenField')), 'bad-token');
-    await tester.tap(find.text('Submit'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Invalid QR token'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Complete trip'), findsOneWidget);
   });
 }
 
@@ -196,12 +110,12 @@ class _FakeDriverApi extends DriverApiService {
   _FakeDriverApi({
     DriverBooking? detail,
     Future<DriverBooking>? detailFuture,
+    this.onRoute,
     this.arrived,
-    this.boarded,
     this.completed,
     this.actionError,
   }) {
-  _current = detail ?? _booking();
+    _current = detail ?? _booking();
     if (detailFuture != null) {
       _detailFuture = detailFuture;
     }
@@ -209,11 +123,10 @@ class _FakeDriverApi extends DriverApiService {
 
   late DriverBooking _current;
   Future<DriverBooking>? _detailFuture;
+  final DriverBooking? onRoute;
   final DriverBooking? arrived;
-  final DriverBooking? boarded;
   final DriverBooking? completed;
   final Exception? actionError;
-  String? lastToken;
 
   @override
   Future<DriverBooking> getBookingDetail(String bookingNumber) async {
@@ -222,25 +135,22 @@ class _FakeDriverApi extends DriverApiService {
   }
 
   @override
+  Future<DriverBooking> startOnRoute(String bookingNumber) async {
+    if (actionError != null) throw actionError!;
+    _current = onRoute ?? _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']);
+    return _current;
+  }
+
+  @override
   Future<DriverBooking> markArrived(String bookingNumber) async {
     if (actionError != null) throw actionError!;
     _current = arrived ??
-        _booking(status: 'DRIVER_ARRIVED', actions: ['SCAN_BOARDING_QR']);
+        _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']);
     return _current;
   }
 
   @override
-  Future<DriverBooking> scanBoarding(String bookingNumber, String token) async {
-    lastToken = token;
-    if (actionError != null) throw actionError!;
-    _current = boarded ??
-        _booking(status: 'PICKED_UP', actions: ['SCAN_DROPOFF_QR']);
-    return _current;
-  }
-
-  @override
-  Future<DriverBooking> scanDropoff(String bookingNumber, String token) async {
-    lastToken = token;
+  Future<DriverBooking> completeTrip(String bookingNumber) async {
     if (actionError != null) throw actionError!;
     _current = completed ?? _booking(status: 'COMPLETED', actions: []);
     return _current;

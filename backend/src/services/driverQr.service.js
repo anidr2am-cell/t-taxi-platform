@@ -109,40 +109,6 @@ class DriverQrService {
     return { ...detail, ...extra };
   }
 
-  async markArrived(driverUserId, bookingNumber) {
-    const conn = await this.pool.getConnection();
-    let transition;
-    let normalizedBookingNumber;
-
-    try {
-      await conn.beginTransaction();
-      const row = await this.loadActiveBookingForUpdate(conn, driverUserId, bookingNumber);
-      normalizedBookingNumber = row.booking_number;
-      transition = await this.transitionInTransaction(
-        conn,
-        normalizedBookingNumber,
-        BOOKING_STATUS.DRIVER_ARRIVED,
-        this.actor(driverUserId),
-        'DRIVER_MARK_ARRIVED',
-      );
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
-
-    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
-    this.bookingStatusService.emitDomainEvent(
-      transition.domainEvent,
-      transition.eventPayload,
-    );
-    return this.getUpdatedDetail(driverUserId, normalizedBookingNumber, {
-      idempotent: transition.result.idempotent,
-    });
-  }
-
   async scanBoarding(driverUserId, bookingNumber, token) {
     const value = this.validateToken(token);
     const tokenHash = hashToken(value);

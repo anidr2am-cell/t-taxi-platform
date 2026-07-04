@@ -192,9 +192,6 @@ class AdminDispatchService {
 
     if (!activeAssignment && !terminalAssign) {
       actions.push('ASSIGN_DRIVER');
-      if (CANDIDATE_ASSIGN_STATUSES.has(status)) {
-        actions.push('RECOMMEND_DRIVERS');
-      }
     }
     if (activeAssignment && !terminalReassign) {
       actions.push('REASSIGN_DRIVER');

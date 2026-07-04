@@ -1,0 +1,116 @@
+const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/httpStatus');
+const ERROR_CODES = require('../constants/errorCodes');
+const BOOKING_STATUS = require('../constants/reservationStatus');
+const ROLES = require('../constants/roles');
+
+class DriverTripFlowService {
+  constructor(pool, bookingRepository, bookingStatusService, driverJobService) {
+    this.pool = pool;
+    this.bookingRepository = bookingRepository;
+    this.bookingStatusService = bookingStatusService;
+    this.driverJobService = driverJobService;
+  }
+
+  actor(driverUserId) {
+    return { id: driverUserId, role: ROLES.DRIVER };
+  }
+
+  notFound() {
+    return new AppError('Booking not found', {
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+    });
+  }
+
+  async loadActiveBookingForUpdate(conn, driverUserId, bookingNumber) {
+    const normalizedBookingNumber = this.driverJobService.validateBookingNumber(bookingNumber);
+    const row = await this.bookingRepository.findActiveDriverBookingByNumberForUpdate(
+      conn,
+      driverUserId,
+      normalizedBookingNumber,
+    );
+    if (!row) {
+      throw this.notFound();
+    }
+    return row;
+  }
+
+  async transitionInTransaction(conn, bookingNumber, status, actor, reason) {
+    return this.bookingStatusService.transitionInTransaction(
+      conn,
+      bookingNumber,
+      { status, reason },
+      actor,
+      { skipAccessCheck: true },
+    );
+  }
+
+  async getUpdatedDetail(driverUserId, bookingNumber, extra = {}) {
+    const detail = await this.driverJobService.getDetail(driverUserId, bookingNumber);
+    return { ...detail, ...extra };
+  }
+
+  async runTransition(driverUserId, bookingNumber, toStatus, reason) {
+    const conn = await this.pool.getConnection();
+    let transition;
+    let normalizedBookingNumber;
+
+    try {
+      await conn.beginTransaction();
+      const row = await this.loadActiveBookingForUpdate(conn, driverUserId, bookingNumber);
+      normalizedBookingNumber = row.booking_number;
+      transition = await this.transitionInTransaction(
+        conn,
+        normalizedBookingNumber,
+        toStatus,
+        this.actor(driverUserId),
+        reason,
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    this.bookingStatusService.emitDomainEvent(
+      transition.domainEvent,
+      transition.eventPayload,
+    );
+    return this.getUpdatedDetail(driverUserId, normalizedBookingNumber, {
+      idempotent: transition.result.idempotent,
+    });
+  }
+
+  startOnRoute(driverUserId, bookingNumber) {
+    return this.runTransition(
+      driverUserId,
+      bookingNumber,
+      BOOKING_STATUS.ON_ROUTE,
+      'DRIVER_START_ON_ROUTE',
+    );
+  }
+
+  markArrived(driverUserId, bookingNumber) {
+    return this.runTransition(
+      driverUserId,
+      bookingNumber,
+      BOOKING_STATUS.DRIVER_ARRIVED,
+      'DRIVER_MARK_ARRIVED',
+    );
+  }
+
+  completeTrip(driverUserId, bookingNumber) {
+    return this.runTransition(
+      driverUserId,
+      bookingNumber,
+      BOOKING_STATUS.COMPLETED,
+      'DRIVER_COMPLETE_TRIP',
+    );
+  }
+}
+
+module.exports = DriverTripFlowService;

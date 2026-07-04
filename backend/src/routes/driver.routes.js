@@ -28,7 +28,9 @@ router.get('/notifications', require('../controllers/notification.controller').l
 router.get('/notifications/unread-count', require('../controllers/notification.controller').driverUnreadCount);
 router.post('/notifications/:notificationId/read', require('../controllers/notification.controller').markDriverRead);
 router.post('/notifications/read-all', require('../controllers/notification.controller').markDriverReadAll);
+router.post('/bookings/:bookingNumber/start-route', driverController.startOnRoute);
 router.post('/bookings/:bookingNumber/arrive', driverController.markArrived);
+router.post('/bookings/:bookingNumber/complete', driverController.completeTrip);
 router.post('/bookings/:bookingNumber/scan-boarding', driverController.scanBoarding);
 router.post('/bookings/:bookingNumber/scan-dropoff', driverController.scanDropoff);
 router.get('/bookings/:bookingNumber', driverController.getBookingDetail);

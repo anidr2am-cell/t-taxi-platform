@@ -42,6 +42,7 @@ const AdminDispatchService = require('../services/adminDispatch.service');
 const DriverCandidateScoringService = require('../services/driverCandidateScoring.service');
 const AdminQrReissueService = require('../services/adminQrReissue.service');
 const DriverQrService = require('../services/driverQr.service');
+const DriverTripFlowService = require('../services/driverTripFlow.service');
 const NotificationRepository = require('../repositories/notification.repository');
 const NotificationService = require('../services/notification.service');
 const OutboxRepository = require('../repositories/outbox.repository');
@@ -216,6 +217,12 @@ container.register('adminDispatchService', (c) => new AdminDispatchService(
   c.get('outboxProcessor'),
   c.get('driverCandidateScoringService'),
   c.get('adminQrReissueService'),
+));
+container.register('driverTripFlowService', (c) => new DriverTripFlowService(
+  database.pool,
+  c.get('bookingRepository'),
+  c.get('bookingStatusService'),
+  c.get('driverJobService'),
 ));
 container.register('driverQrService', (c) => new DriverQrService(
   database.pool,

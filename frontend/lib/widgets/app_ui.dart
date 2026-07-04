@@ -619,6 +619,7 @@ abstract final class AppUi {
       case 'NO_SHOW':
         return AppStatusTone.error;
       case 'DRIVER_ASSIGNED':
+      case 'ON_ROUTE':
       case 'DRIVER_ARRIVED':
       case 'PICKED_UP':
         return AppStatusTone.info;

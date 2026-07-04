@@ -10,10 +10,7 @@ import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
-import '../pages/driver_chat_page.dart';
 import '../services/driver_api_service.dart';
-import '../services/driver_chat_api.dart';
-import '../widgets/driver_qr_scan_sheet.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
   const DriverBookingDetailPage({
@@ -31,9 +28,8 @@ class DriverBookingDetailPage extends StatefulWidget {
 }
 
 class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
-  late Future<DriverBooking> _future;
+  late   Future<DriverBooking> _future;
   Future<Map<String, dynamic>>? _settlementFuture;
-  Future<int>? _chatUnreadFuture;
   bool _processing = false;
   String? _actionError;
 
@@ -48,9 +44,6 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       _actionError = null;
       _future = widget.api.getBookingDetail(widget.bookingNumber);
       _settlementFuture = null;
-      _chatUnreadFuture = const DriverChatApi().getRoom(widget.bookingNumber).then(
-        (room) => (room['unreadCount'] as num?)?.toInt() ?? 0,
-      ).catchError((_) => 0);
     });
   }
 
@@ -105,32 +98,6 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     }
   }
 
-  Future<void> _openQrScan({required bool isBoarding}) async {
-    if (_processing) return;
-    final l10n = context.l10n;
-    final result = await showDriverQrScanSheet(
-      context: context,
-      isBoarding: isBoarding,
-      onSubmit: (token) async {
-        if (isBoarding) {
-          await widget.api.scanBoarding(widget.bookingNumber, token);
-        } else {
-          await widget.api.scanDropoff(widget.bookingNumber, token);
-        }
-      },
-    );
-    if (result == true && mounted) {
-      _loadBooking();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isBoarding ? l10n.t('driver_success_boarding') : l10n.t('driver_success_completed'),
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> _callCustomer(String phone) async {
     final uri = Uri(scheme: 'tel', path: phone.replaceAll(' ', ''));
     if (!await launchUrl(uri)) {
@@ -138,14 +105,6 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
         SnackBar(content: Text(context.l10n.t('driver_call_failed'))),
       );
     }
-  }
-
-  void _openChat() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DriverChatPage(bookingNumber: widget.bookingNumber),
-      ),
-    ).then((_) => _loadBooking());
   }
 
   void _openSettlementDetail() {
@@ -169,21 +128,6 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       appBar: AppBar(
         title: Text(widget.bookingNumber),
         actions: [
-          FutureBuilder<int>(
-            future: _chatUnreadFuture,
-            builder: (context, snapshot) {
-              final count = snapshot.data ?? 0;
-              return IconButton(
-                tooltip: l10n.t('driver_open_chat'),
-                onPressed: _openChat,
-                icon: Badge(
-                  isLabelVisible: count > 0,
-                  label: Text('$count'),
-                  child: const Icon(Icons.chat_bubble_outline),
-                ),
-              );
-            },
-          ),
           IconButton(
             onPressed: _loadBooking,
             icon: const Icon(Icons.refresh),
@@ -345,16 +289,6 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: AppTokens.spaceMd),
-                    AppUi.adminDetailSection(
-                      context: context,
-                      title: l10n.t('driver_section_chat'),
-                      child: AppUi.selectionTile(
-                        title: l10n.t('driver_open_chat'),
-                        icon: Icons.chat_bubble_outline,
-                        onTap: _openChat,
-                      ),
-                    ),
                     if (booking.status == 'COMPLETED') ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       _SettlementSection(
@@ -398,6 +332,13 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   }
 
   void _onPrimaryAction(DriverBooking booking, String actionKey) {
+    if (booking.allowedActions.contains('START_ON_ROUTE')) {
+      _runAction(
+        () => widget.api.startOnRoute(widget.bookingNumber),
+        'driver_success_on_route',
+      );
+      return;
+    }
     if (booking.allowedActions.contains('MARK_ARRIVED')) {
       _runAction(
         () => widget.api.markArrived(widget.bookingNumber),
@@ -405,12 +346,11 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       );
       return;
     }
-    if (booking.allowedActions.contains('SCAN_BOARDING_QR')) {
-      _openQrScan(isBoarding: true);
-      return;
-    }
-    if (booking.allowedActions.contains('SCAN_DROPOFF_QR')) {
-      _openQrScan(isBoarding: false);
+    if (booking.allowedActions.contains('COMPLETE_TRIP')) {
+      _runAction(
+        () => widget.api.completeTrip(widget.bookingNumber),
+        'driver_success_completed',
+      );
     }
   }
 

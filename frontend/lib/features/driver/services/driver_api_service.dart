@@ -175,8 +175,18 @@ class DriverApiService {
     return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  Future<DriverBooking> startOnRoute(String bookingNumber) async {
+    final data = await _post('/driver/bookings/$bookingNumber/start-route');
+    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
   Future<DriverBooking> markArrived(String bookingNumber) async {
     final data = await _post('/driver/bookings/$bookingNumber/arrive');
+    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverBooking> completeTrip(String bookingNumber) async {
+    final data = await _post('/driver/bookings/$bookingNumber/complete');
     return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
   }
 

@@ -160,7 +160,7 @@ void main() {
           api: _FakeDetailApi(
             detail: _booking(
               status: 'DRIVER_ASSIGNED',
-              actions: ['MARK_ARRIVED'],
+              actions: ['START_ON_ROUTE'],
               phone: '+66123456789',
             ),
           ),
@@ -179,7 +179,7 @@ void main() {
           api: _FakeDetailApi(
             detail: _booking(
               status: 'DRIVER_ASSIGNED',
-              actions: ['MARK_ARRIVED'],
+              actions: ['START_ON_ROUTE'],
               phone: '',
             ),
           ),
@@ -203,18 +203,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Mark arrived'), findsNothing);
+    expect(find.text('Start route'), findsNothing);
     expect(find.text('Cancelled'), findsWidgets);
   });
 
   testWidgets('stale status error refreshes booking', (tester) async {
     final api = _FakeDetailApi(
-      detail: _booking(status: 'DRIVER_ASSIGNED', actions: ['MARK_ARRIVED']),
+      detail: _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']),
       arrivedError: const DriverApiException(
         'Invalid status transition',
         errorCode: 'INVALID_STATUS_TRANSITION',
       ),
-      refreshed: _booking(status: 'DRIVER_ARRIVED', actions: ['SCAN_BOARDING_QR']),
+      refreshed: _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -231,7 +231,7 @@ void main() {
 
     expect(find.text('Invalid status transition'), findsOneWidget);
     expect(
-      find.widgetWithText(FilledButton, 'Scan boarding QR'),
+      find.widgetWithText(FilledButton, 'Complete trip'),
       findsOneWidget,
     );
   });

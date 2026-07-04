@@ -12,6 +12,7 @@ class DriverUx {
   static DriverJobGroup groupForStatus(String status) {
     switch (status) {
       case 'DRIVER_ASSIGNED':
+      case 'ON_ROUTE':
       case 'DRIVER_ARRIVED':
       case 'PICKED_UP':
         return DriverJobGroup.active;
@@ -35,6 +36,7 @@ class DriverUx {
   static bool canCallCustomer(String status, String? phone) {
     if (phone == null || phone.trim().isEmpty) return false;
     return status == 'DRIVER_ASSIGNED' ||
+        status == 'ON_ROUTE' ||
         status == 'DRIVER_ARRIVED' ||
         status == 'PICKED_UP' ||
         status == 'CONFIRMED';
@@ -43,14 +45,14 @@ class DriverUx {
   /// Next action hint for job cards (operational label key suffix).
   static String? nextActionKey(DriverBooking booking) {
     if (isReadOnly(booking.status)) return null;
+    if (booking.allowedActions.contains('START_ON_ROUTE')) {
+      return 'driver_action_start_on_route';
+    }
     if (booking.allowedActions.contains('MARK_ARRIVED')) {
       return 'driver_action_mark_arrived';
     }
-    if (booking.allowedActions.contains('SCAN_BOARDING_QR')) {
-      return 'driver_action_scan_boarding';
-    }
-    if (booking.allowedActions.contains('SCAN_DROPOFF_QR')) {
-      return 'driver_action_scan_dropoff';
+    if (booking.allowedActions.contains('COMPLETE_TRIP')) {
+      return 'driver_action_complete_trip';
     }
     if (booking.status == 'DRIVER_ASSIGNED') {
       return 'driver_job_assigned_hint';
@@ -60,14 +62,14 @@ class DriverUx {
 
   static String? primaryActionKey(DriverBooking booking) {
     if (isReadOnly(booking.status)) return null;
+    if (booking.allowedActions.contains('START_ON_ROUTE')) {
+      return 'driver_action_start_on_route';
+    }
     if (booking.allowedActions.contains('MARK_ARRIVED')) {
       return 'driver_action_mark_arrived';
     }
-    if (booking.allowedActions.contains('SCAN_BOARDING_QR')) {
-      return 'driver_action_scan_boarding';
-    }
-    if (booking.allowedActions.contains('SCAN_DROPOFF_QR')) {
-      return 'driver_action_scan_dropoff';
+    if (booking.allowedActions.contains('COMPLETE_TRIP')) {
+      return 'driver_action_complete_trip';
     }
     return null;
   }
@@ -106,6 +108,8 @@ class DriverUx {
         return 'status_confirmed';
       case 'DRIVER_ASSIGNED':
         return 'status_driver_assigned';
+      case 'ON_ROUTE':
+        return 'driver_status_on_route';
       case 'DRIVER_ARRIVED':
         return 'driver_status_arrived';
       case 'PICKED_UP':

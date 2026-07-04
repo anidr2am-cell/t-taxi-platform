@@ -55,13 +55,13 @@ class DriverJobService {
 
   allowedActions(status) {
     if (status === 'DRIVER_ASSIGNED') {
+      return ['VIEW_DETAILS', 'START_ON_ROUTE'];
+    }
+    if (status === 'ON_ROUTE') {
       return ['VIEW_DETAILS', 'MARK_ARRIVED'];
     }
     if (status === 'DRIVER_ARRIVED') {
-      return ['VIEW_DETAILS', 'SCAN_BOARDING_QR'];
-    }
-    if (status === 'PICKED_UP') {
-      return ['VIEW_DETAILS', 'SCAN_DROPOFF_QR'];
+      return ['VIEW_DETAILS', 'COMPLETE_TRIP'];
     }
     return [];
   }

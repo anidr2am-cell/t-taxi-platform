@@ -148,54 +148,20 @@ function buildHarness(options = {}) {
   return { service, calls };
 }
 
-test('DRIVER_ASSIGNED -> DRIVER_ARRIVED uses BookingStatusService', async () => {
-  const { service, calls } = buildHarness({
-    row: { status: BOOKING_STATUS.DRIVER_ASSIGNED },
-    detailRow: row({ status: BOOKING_STATUS.DRIVER_ARRIVED }),
-  });
-
-  const result = await service.markArrived(44, 'TX202607010001');
-
-  assert.equal(result.status, BOOKING_STATUS.DRIVER_ARRIVED);
-  assert.equal(calls.transitions[0].input.status, BOOKING_STATUS.DRIVER_ARRIVED);
-  assert.equal(calls.emitted, 1);
-});
-
-test('repeated arrive request is idempotent', async () => {
-  const { service, calls } = buildHarness({
-    row: { status: BOOKING_STATUS.DRIVER_ARRIVED },
-  });
-
-  const result = await service.markArrived(44, 'TX202607010001');
-
-  assert.equal(result.idempotent, true);
-  assert.equal(calls.transitions.length, 1);
-  assert.equal(calls.boardingUsed, 0);
-  assert.equal(calls.emitted, 0);
-});
-
 test('wrong role is rejected before driver QR controller', async () => {
   container.register('driverQrService', () => ({
-    async markArrived() {
+    async scanBoarding() {
       throw new Error('should not be called');
     },
   }));
 
   const res = await request(app)
-    .post('/api/v1/driver/bookings/TX202607010001/arrive')
-    .set('Authorization', `Bearer ${sign('CUSTOMER', 55)}`);
+    .post('/api/v1/driver/bookings/TX202607010001/scan-boarding')
+    .set('Authorization', `Bearer ${sign('CUSTOMER', 55)}`)
+    .send({ token: 'boarding-token' });
 
   assert.equal(res.status, 403);
   assert.equal(res.body.error_code, ERROR_CODES.FORBIDDEN);
-});
-
-test('other-driver booking is hidden', async () => {
-  const { service } = buildHarness({ lockedRow: null });
-
-  await assert.rejects(
-    () => service.markArrived(44, 'TX202607010001'),
-    (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_FOUND,
-  );
 });
 
 test('valid boarding scan consumes token, transitions, and makes dropoff QR eligible', async () => {
@@ -313,10 +279,10 @@ test('valid dropoff scan completes the trip', async () => {
   assert.equal(calls.emitted, 1);
 });
 
-test('dropoff scan requires PICKED_UP', async () => {
+test('dropoff scan requires PICKED_UP or DRIVER_ARRIVED', async () => {
   const { service } = buildHarness({
     row: {
-      status: BOOKING_STATUS.DRIVER_ARRIVED,
+      status: BOOKING_STATUS.ON_ROUTE,
       dropoff_qr_token_hash: hashToken('dropoff-token'),
       dropoff_qr_expires_at: '2099-01-01 00:00:00',
     },

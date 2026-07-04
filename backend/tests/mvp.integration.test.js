@@ -14,6 +14,7 @@ const COMMISSION_STATUS = require('../src/constants/commissionStatus');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const { hashToken } = require('../src/utils/tokenHash.util');
 const AdminDispatchService = require('../src/services/adminDispatch.service');
+const DriverTripFlowService = require('../src/services/driverTripFlow.service');
 const DriverQrService = require('../src/services/driverQr.service');
 const DriverJobService = require('../src/services/driverJob.service');
 const BookingStatusService = require('../src/services/bookingStatus.service');
@@ -343,7 +344,9 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     null,
     new (require('../src/services/driverCandidateScoring.service'))(),
   );
-  const driverQr = new DriverQrService(pool, bookingRepo, statusService, new DriverJobService(bookingRepo));
+  const driverJobService = new DriverJobService(bookingRepo);
+  const driverTripFlow = new DriverTripFlowService(pool, bookingRepo, statusService, driverJobService);
+  const driverQr = new DriverQrService(pool, bookingRepo, statusService, driverJobService);
   const commission = new CommissionSettlementService(
     pool,
     bookingRepo,
@@ -367,6 +370,7 @@ function buildMvpHarness(initialState = createLifecycleState()) {
   return {
     state,
     adminDispatch,
+    driverTripFlow,
     driverQr,
     commission,
     review,
@@ -389,11 +393,11 @@ test('MVP lifecycle — booking through review with commission, notifications, a
   assert.equal(state.status, BOOKING_STATUS.DRIVER_ASSIGNED);
   assert.equal(state.activeDriverUserId, DRIVER_USER_ID);
 
-  await h.driverQr.markArrived(DRIVER_USER_ID, BOOKING_NUMBER);
-  assert.equal(state.status, BOOKING_STATUS.DRIVER_ARRIVED);
+  await h.driverTripFlow.startOnRoute(DRIVER_USER_ID, BOOKING_NUMBER);
+  assert.equal(state.status, BOOKING_STATUS.ON_ROUTE);
 
-  await h.driverQr.scanBoarding(DRIVER_USER_ID, BOOKING_NUMBER, state.boardingToken);
-  assert.equal(state.status, BOOKING_STATUS.PICKED_UP);
+  await h.driverTripFlow.markArrived(DRIVER_USER_ID, BOOKING_NUMBER);
+  assert.equal(state.status, BOOKING_STATUS.DRIVER_ARRIVED);
 
   const guestRoom = await h.chat.getRoom(BOOKING_NUMBER, null, GUEST_TOKEN);
   assert.ok(guestRoom.roomId);
@@ -412,8 +416,7 @@ test('MVP lifecycle — booking through review with commission, notifications, a
   assert.equal(state.chatMessages.length, 1);
   assert.equal(duplicate.message.messageId, sent.message.messageId);
 
-  state.dropoffToken = 'dropoff-qr-token';
-  await h.driverQr.scanDropoff(DRIVER_USER_ID, BOOKING_NUMBER, state.dropoffToken);
+  await h.driverTripFlow.completeTrip(DRIVER_USER_ID, BOOKING_NUMBER);
   assert.equal(state.status, BOOKING_STATUS.COMPLETED);
 
   await h.commission.activateObligationForCompletedBooking(state.bookingId);
@@ -453,7 +456,7 @@ test('MVP failure paths — wrong driver, guest, reassignment, notification isol
   h.state.activeDriverUserId = DRIVER_USER_ID;
 
   await assert.rejects(
-    () => h.driverQr.markArrived(OLD_DRIVER_USER_ID, BOOKING_NUMBER),
+    () => h.driverTripFlow.markArrived(OLD_DRIVER_USER_ID, BOOKING_NUMBER),
     (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_FOUND || err.statusCode === 404,
   );
 
