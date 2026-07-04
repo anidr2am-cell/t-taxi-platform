@@ -408,9 +408,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Assign driver'));
     await tester.pumpAndSettle();
+    final confirm = find.widgetWithText(ElevatedButton, 'Confirm Booking');
+    expect(tester.widget<ElevatedButton>(confirm).onPressed, isNull);
     await tester.tap(find.text('Driver A'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Confirm Booking'));
+    expect(tester.widget<ElevatedButton>(confirm).onPressed, isNotNull);
+    await tester.tap(confirm);
     await tester.pumpAndSettle();
     expect(api.assignCalls, 1);
   });

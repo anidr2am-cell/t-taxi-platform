@@ -183,6 +183,21 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('lookup page shows cancelled guidance', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: GuestBookingLookupPage(
+        lookupService: _FakeLookupService(
+          cached: _result().copyWith(status: 'CANCELLED'),
+        ),
+        enableCustomerTools: false,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancelled'), findsOneWidget);
+    expect(find.text('This booking was cancelled.'), findsOneWidget);
+  });
 }
 
 Map<String, dynamic> _lookupJson() => {

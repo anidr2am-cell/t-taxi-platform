@@ -120,6 +120,47 @@ flutter test
 
 ---
 
+## H. Phase 7 — UX polish (demo readiness)
+
+### Customer
+
+- [ ] Wizard: incomplete sections show validation hints before confirm
+- [ ] Wizard: submit failure shows SnackBar (not silent failure)
+- [ ] Complete page: booking number prominent; **Track my booking** visible
+- [ ] Complete page: no QR / chat / payment UI by default
+- [ ] Lookup: invalid booking number / phone shows field validation
+- [ ] Lookup: not-found vs network error messages are distinct
+- [ ] Lookup: refresh updates status without losing cached phone
+- [ ] Lookup: cancelled/completed guidance text readable on mobile (360px)
+
+### Admin
+
+- [ ] Dispatch queue: empty state when no bookings match filters
+- [ ] Dispatch queue: loading spinner on first load; retry on error
+- [ ] Dispatch queue: status filter includes ON_ROUTE / CANCELLED / etc.
+- [ ] Dispatch queue: assignment chips localized (not raw UNASSIGNED)
+- [ ] Assign dialog: confirm disabled until driver selected (reassign: reason required)
+- [ ] Assign dialog: empty drivers list shows helpful message
+- [ ] Booking detail: status label localized in summary and basic info
+- [ ] Booking detail: terminal booking hides dispatch actions
+
+### Driver
+
+- [ ] Jobs: empty state when no assignments today
+- [ ] Jobs: error state with retry
+- [ ] Detail: only one primary action per status (Start route / Mark arrived / Complete)
+- [ ] Detail: COMPLETED / CANCELLED / NO_SHOW — no action buttons
+- [ ] Detail: complete trip does not show error after successful completion
+- [ ] Detail: load failure shows backend message + retry
+
+### Layout
+
+- [ ] Customer pages: no horizontal overflow at 360px width
+- [ ] Admin dispatch list: readable on narrow mobile width
+- [ ] Driver jobs/detail: sticky action bar does not overlap content
+
+---
+
 ## Sign-off
 
 | Role | Name | Date | Pass |

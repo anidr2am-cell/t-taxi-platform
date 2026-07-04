@@ -78,6 +78,47 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'Complete trip'), findsOneWidget);
   });
+
+  testWidgets('hides primary action for completed booking', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(status: 'COMPLETED', actions: []),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.widgetWithText(FilledButton, 'Start route'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Complete trip'), findsNothing);
+  });
+
+  testWidgets('hides primary action for no-show booking', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(status: 'NO_SHOW', actions: []),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilledButton, 'Start route'), findsNothing);
+  });
+
+  testWidgets('shows backend message on initial load failure', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detailError: const DriverApiException('Booking not found'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Booking not found'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+  });
 }
 
 Widget _wrap(DriverApiService api) {
@@ -110,6 +151,7 @@ class _FakeDriverApi extends DriverApiService {
   _FakeDriverApi({
     DriverBooking? detail,
     Future<DriverBooking>? detailFuture,
+    this.detailError,
     this.onRoute,
     this.arrived,
     this.completed,
@@ -123,6 +165,7 @@ class _FakeDriverApi extends DriverApiService {
 
   late DriverBooking _current;
   Future<DriverBooking>? _detailFuture;
+  final Exception? detailError;
   final DriverBooking? onRoute;
   final DriverBooking? arrived;
   final DriverBooking? completed;
@@ -130,6 +173,7 @@ class _FakeDriverApi extends DriverApiService {
 
   @override
   Future<DriverBooking> getBookingDetail(String bookingNumber) async {
+    if (detailError != null) throw detailError!;
     if (_detailFuture != null) return _detailFuture!;
     return _current;
   }

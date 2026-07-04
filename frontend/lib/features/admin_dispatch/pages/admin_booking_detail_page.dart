@@ -220,7 +220,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     _pricingSection(l10n, detail),
                     if (_statusHistory(detail).isNotEmpty) ...[
                       const SizedBox(height: AppTokens.spaceMd),
-                      _activitySection(detail),
+                      _activitySection(l10n, detail),
                     ],
                     const SizedBox(height: AppTokens.spaceMd),
                     _qrManagementSection(l10n),
@@ -302,7 +302,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           ),
           const SizedBox(height: AppTokens.spaceSm),
           Text(
-            _nextActionHint(actions),
+            _nextActionHint(l10n, actions),
             style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
         ],
@@ -310,17 +310,17 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     );
   }
 
-  String _nextActionHint(List<String> actions) {
+  String _nextActionHint(AppLocalizations l10n, List<String> actions) {
     if (actions.contains('RECOMMEND_DRIVERS')) {
-      return 'Review driver recommendations or assign manually.';
+      return l10n.t('admin_dispatch_next_action_recommend');
     }
     if (actions.contains('ASSIGN_DRIVER')) {
-      return 'Assign a driver to this booking.';
+      return l10n.t('admin_dispatch_next_action_assign');
     }
     if (actions.contains('REASSIGN_DRIVER')) {
-      return 'Reassign if the current driver cannot complete the trip.';
+      return l10n.t('admin_dispatch_next_action_reassign');
     }
-    return 'No dispatch actions available for the current status.';
+    return l10n.t('admin_dispatch_next_action_none');
   }
 
   Widget _basicInfoSection(AppLocalizations l10n, Map<String, dynamic> detail) {
@@ -330,7 +330,13 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       title: 'Basic information',
       child: Column(
         children: [
-          AppUi.summaryRow(label: l10n.t('status'), value: detail['status'] as String? ?? ''),
+          AppUi.summaryRow(
+            label: l10n.t('status'),
+            value: BookingStatusDisplay.label(
+              l10n,
+              detail['status'] as String? ?? '',
+            ),
+          ),
           AppUi.summaryRow(label: l10n.t('service_type'), value: serviceType['name'] as String? ?? '-'),
           AppUi.summaryRow(label: l10n.t('pickup_datetime'), value: detail['scheduledPickupAt'] as String? ?? ''),
           if (detail['createdAt'] != null)
@@ -495,7 +501,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         .toList();
   }
 
-  Widget _activitySection(Map<String, dynamic> detail) {
+  Widget _activitySection(AppLocalizations l10n, Map<String, dynamic> detail) {
     final history = _statusHistory(detail);
     return AppUi.adminDetailSection(
       context: context,
@@ -506,6 +512,12 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           final to = entry['toStatus'] as String? ?? '-';
           final when = entry['createdAt'] as String? ?? '';
           final role = entry['changedByRole'] as String? ?? '';
+          final fromLabel = from == '-'
+              ? from
+              : BookingStatusDisplay.label(l10n, from);
+          final toLabel = to == '-'
+              ? to
+              : BookingStatusDisplay.label(l10n, to);
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -517,7 +529,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('$from → $to', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text(
+                        '$fromLabel → $toLabel',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                       if (when.isNotEmpty)
                         Text(when, style: const TextStyle(color: AppTokens.textSecondary, fontSize: 12)),
                       if (role.isNotEmpty)
@@ -528,7 +543,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                   ),
                 ),
                 AppUi.statusBadge(
-                  BookingStatusDisplay.label(context.l10n, to),
+                  toLabel,
                   tone: AppUi.toneForBookingStatus(to),
                 ),
               ],

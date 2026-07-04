@@ -146,3 +146,13 @@ flutter test
 Payment, Socket.IO live sync, chat, QR boarding/completion, auto-dispatch, driver GPS tracking, customer signup.
 
 See also: [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)
+
+## 8. Pre-demo polish checklist (Phase 7)
+
+Before a live demo, quickly verify:
+
+1. `flutter test` and `npm test` pass
+2. Guest complete/lookup pages show **no QR or chat** without explicit dev flags
+3. Admin dispatch: empty/error/retry states render correctly
+4. Driver completes trip without a post-action 404 error
+5. Run section **H** in [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)

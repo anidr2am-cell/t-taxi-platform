@@ -33,6 +33,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
   String? _assignmentFilter;
   String? _dateFrom;
   String? _dateTo;
+  String? _loadMoreError;
   bool _needsLogin = false;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -110,9 +111,21 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         _items = append ? [..._items, ...items] : items;
         _loading = false;
         _loadingMore = false;
+        _loadMoreError = null;
       });
     } catch (err) {
       final token = await _api.getSavedToken();
+      if (append) {
+        if (!mounted) return;
+        setState(() {
+          _loadingMore = false;
+          _loadMoreError = userFacingError(
+            err,
+            fallback: context.l10n.t('admin_dispatch_load_more_failed'),
+          );
+        });
+        return;
+      }
       setState(() {
         if (token == null || token.isEmpty) {
           _needsLogin = true;
@@ -191,12 +204,32 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                               child: Text(l10n.t('status_pending')),
                             ),
                             DropdownMenuItem(
+                              value: 'CONFIRMED',
+                              child: Text(l10n.t('status_confirmed')),
+                            ),
+                            DropdownMenuItem(
                               value: 'DRIVER_ASSIGNED',
                               child: Text(l10n.t('status_driver_assigned')),
                             ),
                             DropdownMenuItem(
+                              value: 'ON_ROUTE',
+                              child: Text(l10n.t('status_on_route')),
+                            ),
+                            DropdownMenuItem(
+                              value: 'DRIVER_ARRIVED',
+                              child: Text(l10n.t('status_driver_arrived')),
+                            ),
+                            DropdownMenuItem(
                               value: 'COMPLETED',
                               child: Text(l10n.t('status_completed')),
+                            ),
+                            DropdownMenuItem(
+                              value: 'CANCELLED',
+                              child: Text(l10n.t('status_cancelled')),
+                            ),
+                            DropdownMenuItem(
+                              value: 'NO_SHOW',
+                              child: Text(l10n.t('status_no_show')),
                             ),
                           ],
                           onChanged: (v) {
@@ -302,10 +335,16 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                   child: Center(
                     child: _loadingMore
                         ? const CircularProgressIndicator()
-                        : OutlinedButton(
-                            onPressed: () => _load(page: _page + 1, append: true),
-                            child: Text(l10n.t('admin_dispatch_load_more')),
-                          ),
+                        : _loadMoreError != null
+                            ? AppUi.errorState(
+                                message: _loadMoreError!,
+                                onRetry: () => _load(page: _page + 1, append: true),
+                                retryLabel: l10n.t('admin_dispatch_retry'),
+                              )
+                            : OutlinedButton(
+                                onPressed: () => _load(page: _page + 1, append: true),
+                                child: Text(l10n.t('admin_dispatch_load_more')),
+                              ),
                   ),
                 );
               }
@@ -429,7 +468,9 @@ class _BookingListCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             AppUi.statusBadge(
-              unassigned ? 'UNASSIGNED' : 'ASSIGNED',
+              unassigned
+                  ? l10n.t('admin_dispatch_unassigned')
+                  : l10n.t('admin_dispatch_assigned'),
               tone: unassigned ? AppStatusTone.warning : AppStatusTone.success,
             ),
           ],

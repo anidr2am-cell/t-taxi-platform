@@ -189,7 +189,21 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       if (!mounted) return;
       setState(() {
         _loadingDropoffQr = false;
-        _error = err.message;
+        _error = err.errorCode == 'INVALID_STATUS_TRANSITION'
+            ? context.l10n.t('booking_dropoff_qr_unavailable')
+            : userFacingError(
+                err,
+                fallback: context.l10n.t('guest_lookup_load_error'),
+              );
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _loadingDropoffQr = false;
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('guest_lookup_load_error'),
+        );
       });
     }
   }

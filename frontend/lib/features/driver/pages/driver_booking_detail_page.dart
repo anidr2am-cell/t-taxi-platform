@@ -148,8 +148,11 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                 if (context.mounted) driverHandleApiError(context, err);
               });
             }
+            final message = err is DriverApiException
+                ? err.message
+                : userFacingError(err, fallback: l10n.t('driver_detail_error'));
             return AppUi.errorState(
-              message: l10n.t('driver_detail_error'),
+              message: message,
               onRetry: _loadBooking,
               retryLabel: l10n.t('driver_retry'),
             );

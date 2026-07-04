@@ -285,6 +285,16 @@ class AppLocalizations {
       'admin_dispatch_assigned_driver': 'Assigned driver',
       'admin_dispatch_reassign_reason': 'Reassignment reason',
       'admin_dispatch_no_drivers': 'No drivers available',
+      'admin_dispatch_loading_drivers': 'Loading drivers...',
+      'admin_dispatch_loading_drivers_failed': 'Could not load drivers',
+      'admin_dispatch_load_more_failed': 'Could not load more bookings',
+      'admin_dispatch_next_action_recommend':
+          'Review driver recommendations or assign manually.',
+      'admin_dispatch_next_action_assign': 'Assign a driver to this booking.',
+      'admin_dispatch_next_action_reassign':
+          'Reassign if the current driver cannot complete the trip.',
+      'admin_dispatch_next_action_none':
+          'No dispatch actions available for the current status.',
       'driver_nav_jobs': 'Jobs',
       'driver_nav_notifications': 'Notifications',
       'driver_nav_settlement': 'Settlement',

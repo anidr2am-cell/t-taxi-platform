@@ -360,15 +360,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                       Navigator.of(context).popUntil((route) => route.isFirst),
                 ),
               ),
-              if (widget.enableCustomerTools) ...[
-                const SizedBox(height: AppTokens.spaceSm),
-                AppUi.secondaryButton(
-                  label: l10n.t('chat_after_driver_assignment'),
-                  icon: Icons.chat_bubble_outline,
-                  onPressed: null,
-                  fullWidth: true,
-                ),
-              ],
             ],
           ),
         ),

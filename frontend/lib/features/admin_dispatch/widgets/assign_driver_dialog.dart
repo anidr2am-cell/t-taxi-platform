@@ -49,7 +49,20 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
   @override
   void initState() {
     super.initState();
+    _reasonController.addListener(_onFormChanged);
     _loadDrivers();
+  }
+
+  void _onFormChanged() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _canConfirm {
+    if (_selectedDriverId == null) return false;
+    if (widget.isReassign && _reasonController.text.trim().isEmpty) {
+      return false;
+    }
+    return true;
   }
 
   @override
@@ -70,8 +83,12 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
         _loading = false;
       });
     } catch (err) {
+      if (!mounted) return;
       setState(() {
-        _error = userFacingError(err, fallback: 'Could not load drivers');
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('admin_dispatch_loading_drivers_failed'),
+        );
         _loading = false;
       });
     }
@@ -103,7 +120,7 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
       content: SizedBox(
         width: 460,
         child: _loading
-            ? AppUi.loadingState(message: 'Loading drivers...')
+            ? AppUi.loadingState(message: l10n.t('admin_dispatch_loading_drivers'))
             : _error != null
                 ? AppUi.errorState(message: _error!, onRetry: _loadDrivers, retryLabel: l10n.t('admin_dispatch_retry'))
                 : _drivers.isEmpty
@@ -178,7 +195,7 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
         AppUi.primaryButton(
           label: l10n.t('confirm'),
           icon: Icons.check,
-          onPressed: _submitting ? null : _confirm,
+          onPressed: _submitting || !_canConfirm ? null : _confirm,
         ),
       ],
     );
