@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_config.dart';
@@ -35,6 +36,34 @@ class DriverApplicationApiService {
   final Future<String?> Function()? _adminTokenProvider;
 
   String get _base => '$_baseUrl/api/v1';
+
+  static const _imageExtensions = {'jpg', 'jpeg', 'png', 'webp'};
+  static const _documentExtensions = {'jpg', 'jpeg', 'png', 'webp', 'pdf'};
+
+  String _extension(String filename) {
+    final safeName = filename
+        .split(RegExp(r'[?#]'))
+        .first
+        .split(RegExp(r'[\\/]'))
+        .last;
+    final dot = safeName.lastIndexOf('.');
+    if (dot < 0 || dot == safeName.length - 1) return '';
+    return safeName.substring(dot + 1).toLowerCase();
+  }
+
+  MediaType? _contentTypeFor(String filename, {required bool imageOnly}) {
+    final ext = _extension(filename);
+    final allowed = imageOnly ? _imageExtensions : _documentExtensions;
+    if (!allowed.contains(ext)) return null;
+    final mimeType = switch (ext) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'pdf' => 'application/pdf',
+      _ => 'application/octet-stream',
+    };
+    return MediaType.parse(mimeType);
+  }
 
   Future<String?> _adminToken() async {
     final provider = _adminTokenProvider;
@@ -102,20 +131,45 @@ class DriverApplicationApiService {
     request.fields.addAll(fields);
     if (token != null) request.fields['token'] = token;
 
-    Future<void> add(String field, DriverApplicationUploadFile? file) async {
+    Future<void> add(
+      String field,
+      DriverApplicationUploadFile? file, {
+      required bool imageOnly,
+    }) async {
       if (file == null) return;
+      final contentType = _contentTypeFor(file.name, imageOnly: imageOnly);
+      if (contentType == null) {
+        throw DriverApplicationApiException(
+          'Invalid file type',
+          errorCode: 'INVALID_FILE_TYPE',
+          statusCode: 400,
+        );
+      }
       request.files.add(
-        http.MultipartFile.fromBytes(field, file.bytes, filename: file.name),
+        http.MultipartFile.fromBytes(
+          field,
+          file.bytes,
+          filename: file.name,
+          contentType: contentType,
+        ),
       );
     }
 
-    await add('lineQr', draft.files.lineQr);
+    await add('lineQr', draft.files.lineQr, imageOnly: true);
     for (final file in draft.files.vehiclePhotos) {
-      await add('vehiclePhotos', file);
+      await add('vehiclePhotos', file, imageOnly: true);
     }
-    await add('insuranceCertificate', draft.files.insuranceCertificate);
-    await add('vehicleRegistration', draft.files.vehicleRegistration);
-    await add('taxCertificate', draft.files.taxCertificate);
+    await add(
+      'insuranceCertificate',
+      draft.files.insuranceCertificate,
+      imageOnly: false,
+    );
+    await add(
+      'vehicleRegistration',
+      draft.files.vehicleRegistration,
+      imageOnly: false,
+    );
+    await add('taxCertificate', draft.files.taxCertificate, imageOnly: false);
 
     final streamed = await _client.send(request);
     final response = await http.Response.fromStream(streamed);

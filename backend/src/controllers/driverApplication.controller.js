@@ -2,10 +2,34 @@ const asyncHandler = require('../utils/asyncHandler');
 const path = require('path');
 const { success, paginate } = require('../utils/apiResponse');
 const HTTP_STATUS = require('../constants/httpStatus');
+const ERROR_CODES = require('../constants/errorCodes');
 const container = require('../helpers/container');
 const { uploadDir } = require('../config/multer');
+const AppError = require('../utils/AppError');
 
 const getService = () => container.get('driverApplicationService');
+
+const handleUploadError = (err, req, res, next) => {
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    return next(new AppError('File too large', {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      errorCode: ERROR_CODES.FILE_TOO_LARGE,
+    }));
+  }
+  if (err?.message === 'INVALID_FILE_TYPE') {
+    return next(new AppError('Invalid file type', {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      errorCode: ERROR_CODES.INVALID_FILE_TYPE,
+      errors: [{
+        field: err.fieldName || 'file',
+        fileName: err.fileName || undefined,
+        mimeType: err.mimeType || undefined,
+        message: err.reason || 'invalid_file_type',
+      }],
+    }));
+  }
+  return next(err);
+};
 
 const normalizeMultipartBody = (req, res, next) => {
   if (!req.is('multipart/form-data')) return next();
@@ -14,7 +38,6 @@ const normalizeMultipartBody = (req, res, next) => {
     body.passwordConfirm = body.passwordConfirmation;
   }
   if (body.applicantName && !body.fullName) body.fullName = body.applicantName;
-  if (!body.email && body.phone) body.email = `${String(body.phone).replace(/\D/g, '')}@driver.local`;
   if (body.licenseNumber && !body.drivingLicenseNumber) {
     body.drivingLicenseNumber = body.licenseNumber;
   }
@@ -105,6 +128,7 @@ const reject = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  handleUploadError,
   normalizeMultipartBody,
   submit,
   status,

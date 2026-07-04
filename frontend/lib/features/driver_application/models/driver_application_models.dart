@@ -67,7 +67,6 @@ class DriverApplicationDraft {
     return {
       'fullName': fullName.trim(),
       'applicantName': fullName.trim(),
-      'email': '${phone.replaceAll(RegExp(r'[^0-9+]'), '')}@driver.local',
       'password': password,
       'passwordConfirm': passwordConfirm,
       'passwordConfirmation': passwordConfirm,

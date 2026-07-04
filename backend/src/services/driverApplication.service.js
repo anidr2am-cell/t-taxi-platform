@@ -11,6 +11,9 @@ const REVIEWABLE_STATUS = 'PENDING';
 const REJECTED_STATUS = 'REJECTED';
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const DOCUMENT_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.pdf']);
+const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const DOCUMENT_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+const GENERIC_MIME_TYPES = new Set(['', 'application/octet-stream']);
 const FILE_CATEGORIES = {
   lineQr: 'DRIVER_LINE_QR',
   vehiclePhotos: 'DRIVER_VEHICLE_PHOTO',
@@ -29,6 +32,11 @@ function parseJson(value, fallback) {
   }
 }
 
+function driverLocalEmail(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return `driver+${digits}@driver.local`;
+}
+
 class DriverApplicationService {
   constructor(pool, driverApplicationRepository, fileRepository = null, userRepository = null) {
     this.pool = pool;
@@ -38,11 +46,12 @@ class DriverApplicationService {
   }
 
   normalizeInput(input) {
+    const phone = input.phone.trim();
     return {
       ...input,
-      email: input.email.trim().toLowerCase(),
+      email: input.email?.trim().toLowerCase() || driverLocalEmail(phone),
       fullName: input.fullName.trim(),
-      phone: input.phone.trim(),
+      phone,
       phoneCountryCode: input.phoneCountryCode?.trim() || null,
       countryCode: input.countryCode?.trim().toUpperCase() || null,
       locale: input.locale || 'ko',
@@ -112,6 +121,21 @@ class DriverApplicationService {
     });
   }
 
+  invalidFileType({ field, file, message, allowedExtensions }) {
+    const safeName = path.basename(String(file?.originalname || file?.filename || '').split(/[?#]/)[0]);
+    throw new AppError('Invalid file type', {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      errorCode: ERROR_CODES.INVALID_FILE_TYPE,
+      errors: [{
+        field,
+        fileName: safeName || undefined,
+        mimeType: file?.mimetype || undefined,
+        allowedExtensions: Array.from(allowedExtensions).map((ext) => ext.slice(1)),
+        message,
+      }],
+    });
+  }
+
   normalizeFiles(files = {}) {
     return {
       lineQr: files.lineQr?.[0] ? [files.lineQr[0]] : [],
@@ -123,17 +147,26 @@ class DriverApplicationService {
   }
 
   validateFile(file, { imageOnly = false, field }) {
-    const ext = path.extname(file.originalname || file.filename || '').toLowerCase();
+    const safeName = path.basename(String(file.originalname || file.filename || '').split(/[?#]/)[0]);
+    const ext = path.extname(safeName).toLowerCase();
     const allowed = imageOnly ? IMAGE_EXTENSIONS : DOCUMENT_EXTENSIONS;
-    if (!allowed.has(ext)) this.validation('Unsupported file extension', field);
-    if (imageOnly && !String(file.mimetype || '').startsWith('image/')) {
-      this.validation('Unsupported file MIME type', field);
+    const allowedMimes = imageOnly ? IMAGE_MIME_TYPES : DOCUMENT_MIME_TYPES;
+    const mime = String(file.mimetype || '').toLowerCase();
+    if (!allowed.has(ext)) {
+      this.invalidFileType({
+        field,
+        file,
+        allowedExtensions: allowed,
+        message: 'Unsupported file extension',
+      });
     }
-    if (!imageOnly) {
-      const mime = String(file.mimetype || '');
-      if (!(mime.startsWith('image/') || mime === 'application/pdf')) {
-        this.validation('Unsupported file MIME type', field);
-      }
+    if (!GENERIC_MIME_TYPES.has(mime) && !allowedMimes.has(mime)) {
+      this.invalidFileType({
+        field,
+        file,
+        allowedExtensions: allowed,
+        message: 'Unsupported file MIME type',
+      });
     }
   }
 

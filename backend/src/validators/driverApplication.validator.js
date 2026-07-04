@@ -6,10 +6,11 @@ const localeValues = ['ko', 'en', 'th', 'ja', 'zh'];
 
 const applicationNumberSchema = Joi.string().trim().pattern(/^DA[0-9A-F]{14}$/).required();
 const tokenSchema = Joi.string().trim().min(32).max(128).required();
+const optionalEmailSchema = Joi.string().trim().lowercase().email().max(255).empty('').optional();
 
 const driverApplicationCreateSchema = Joi.object({
   fullName: Joi.string().trim().min(1).max(100).required(),
-  email: Joi.string().trim().lowercase().email().max(255).required(),
+  email: optionalEmailSchema,
   password: Joi.string().min(6).max(128).required(),
   passwordConfirm: Joi.string().valid(Joi.ref('password')).required().messages({
     'any.only': '"passwordConfirm" must match "password"',

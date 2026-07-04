@@ -6315,7 +6315,6 @@ components:
       type: object
       required:
         - fullName
-        - email
         - password
         - passwordConfirm
         - phone
@@ -6336,14 +6335,16 @@ components:
           type: string
           format: email
           maxLength: 255
+          nullable: true
+          description: Optional legacy contact email. New driver applications use phone + password login.
         password:
           type: string
-          minLength: 8
+          minLength: 6
           maxLength: 128
           writeOnly: true
         passwordConfirm:
           type: string
-          minLength: 8
+          minLength: 6
           maxLength: 128
           writeOnly: true
         phone:
@@ -6500,18 +6501,22 @@ components:
           type: array
           minItems: 3
           maxItems: 6
+          description: jpg, jpeg, png, or webp. PDF is not allowed for vehicle photos.
           items:
             type: string
             format: binary
         insuranceCertificate:
           type: string
           format: binary
+          description: jpg, jpeg, png, webp, or pdf.
         vehicleRegistration:
           type: string
           format: binary
+          description: jpg, jpeg, png, webp, or pdf.
         taxCertificate:
           type: string
           format: binary
+          description: jpg, jpeg, png, webp, or pdf.
 
     DriverApplicationSubmitResponse:
       type: object

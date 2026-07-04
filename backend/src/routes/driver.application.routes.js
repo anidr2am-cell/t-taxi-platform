@@ -24,6 +24,7 @@ router.post(
   '/',
   publicLimiter,
   applicationFiles,
+  driverApplicationController.handleUploadError,
   driverApplicationController.normalizeMultipartBody,
   validate({ body: driverApplicationCreateSchema }),
   driverApplicationController.submit,
@@ -40,6 +41,7 @@ router.post(
   '/:applicationNumber/resubmit',
   publicLimiter,
   applicationFiles,
+  driverApplicationController.handleUploadError,
   driverApplicationController.normalizeMultipartBody,
   validate({
     params: driverApplicationResubmitParamsSchema,
