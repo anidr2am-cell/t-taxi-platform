@@ -115,8 +115,18 @@ cd C:\TTaxi\frontend
 flutter test
 ```
 
-- [ ] Backend tests pass
-- [ ] Frontend tests pass
+- [x] Backend tests pass (428 tests, 2026-07-04)
+- [x] Frontend tests pass (250 tests, 2026-07-04)
+
+### API E2E rehearsal (optional automation)
+
+```powershell
+cd C:\TTaxi\backend
+npm run seed:mvp-demo
+npm run rehearsal:mvp-e2e
+```
+
+- [x] All 19 API checks passed (2026-07-04): 6 seeded status lookups + full happy path
 
 ---
 
@@ -158,6 +168,35 @@ flutter test
 - [ ] Customer pages: no horizontal overflow at 360px width
 - [ ] Admin dispatch list: readable on narrow mobile width
 - [ ] Driver jobs/detail: sticky action bar does not overlap content
+
+---
+
+## I. Phase 8 — E2E rehearsal results (2026-07-04)
+
+### Automated API rehearsal (`npm run rehearsal:mvp-e2e`)
+
+| Area | Result |
+|------|--------|
+| Seeded PENDING → CANCELLED guest lookups | Pass (6/6) |
+| Fresh booking create → assign → driver trip → guest refresh | Pass |
+| Backend unit/widget tests | Pass (428 + 250) |
+
+### Bugs fixed during rehearsal
+
+| Issue | Fix |
+|-------|-----|
+| Guest lookup returned **429** after ~10 refreshes in one E2E session | Non-production rate limit raised to 30/min (`public.routes.js`) |
+| Driver **GET detail 404** after completing trip (assignment deactivated) | Terminal assignment fallback in `driverJob.service.js` + `findDriverTerminalBookingByNumber` |
+
+### Manual UI walkthrough (operator)
+
+Sections **A–F** and **H** should still be spot-checked in Chrome before a live demo. API rehearsal validates backend routes and status transitions; UI polish (labels, layout, empty states) requires browser verification.
+
+### Notes
+
+- Re-running `seed:mvp-demo` creates **new** booking numbers; use the latest script output for B2 spot-checks.
+- Guest lookup rate limit in **production** remains 10/min per IP (abuse protection).
+- QR, chat, payment, Socket.IO, auto-dispatch remain out of scope.
 
 ---
 

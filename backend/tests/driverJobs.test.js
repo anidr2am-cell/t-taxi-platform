@@ -181,12 +181,51 @@ test('driver cannot access another driver booking', async () => {
     async findActiveDriverBookingByNumber() {
       return null;
     },
+    async findDriverTerminalBookingByNumber() {
+      return null;
+    },
   });
 
   await assert.rejects(
     () => service.getDetail(44, 'TX202607010001'),
     (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_FOUND,
   );
+});
+
+test('driver can read completed booking detail after assignment closes', async () => {
+  const service = new DriverJobService({
+    async findActiveDriverBookingByNumber() {
+      return null;
+    },
+    async findDriverTerminalBookingByNumber(driverUserId, bookingNumber) {
+      assert.equal(driverUserId, 44);
+      assert.equal(bookingNumber, 'TX202607010001');
+      return row({ status: 'COMPLETED' });
+    },
+  });
+
+  const detail = await service.getDetail(44, 'TX202607010001');
+
+  assert.equal(detail.status, 'COMPLETED');
+  assert.deepEqual(detail.allowedActions, []);
+});
+
+test('repository terminal detail uses completed assignment for this driver only', async () => {
+  const calls = [];
+  const repo = new BookingRepository({
+    async query(sql, params) {
+      calls.push({ sql, params });
+      return [[]];
+    },
+  });
+
+  await repo.findDriverTerminalBookingByNumber(44, 'TX202607010001');
+
+  const { sql, params } = calls[0];
+  assert.match(sql, /d\.user_id = \?/);
+  assert.match(sql, /bda\.status = 'COMPLETED'/);
+  assert.match(sql, /b\.status IN \('COMPLETED', 'CANCELLED', 'NO_SHOW'\)/);
+  assert.deepEqual(params, [44, 'TX202607010001']);
 });
 
 test('invalid booking number is rejected', async () => {

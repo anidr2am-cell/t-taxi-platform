@@ -342,7 +342,7 @@ class BookingRepository {
     return rows[0] || null;
   }
 
-  driverJobSelectSql() {
+  driverJobSelectCoreSql() {
     return `
       SELECT
         b.id,
@@ -387,6 +387,11 @@ class BookingRepository {
       LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
       LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
       LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+    `;
+  }
+
+  driverJobActiveWhereSql() {
+    return `
       WHERE
         d.user_id = ?
         AND d.is_active = 1
@@ -394,6 +399,10 @@ class BookingRepository {
         AND bda.deleted_at IS NULL
         AND bda.status IN ('ASSIGNED', 'ACCEPTED')
     `;
+  }
+
+  driverJobSelectSql() {
+    return `${this.driverJobSelectCoreSql()}${this.driverJobActiveWhereSql()}`;
   }
 
   async findActiveDriverBookingsForDate(driverUserId, dateRange) {
@@ -415,6 +424,24 @@ class BookingRepository {
       `
         ${this.driverJobSelectSql()}
         AND b.booking_number = ?
+        LIMIT 1
+      `,
+      [driverUserId, bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async findDriverTerminalBookingByNumber(driverUserId, bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.driverJobSelectCoreSql()}
+        WHERE
+          d.user_id = ?
+          AND d.is_active = 1
+          AND bda.deleted_at IS NULL
+          AND bda.status = 'COMPLETED'
+          AND b.status IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+          AND b.booking_number = ?
         LIMIT 1
       `,
       [driverUserId, bookingNumber],

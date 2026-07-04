@@ -141,6 +141,18 @@ cd C:\TTaxi\frontend
 flutter test
 ```
 
+### API-level E2E rehearsal (Phase 8)
+
+After seeding, run the automated MVP flow rehearsal (creates one fresh booking + verifies all 6 seeded statuses via HTTP):
+
+```powershell
+cd C:\TTaxi\backend
+npm run seed:mvp-demo
+npm run rehearsal:mvp-e2e
+```
+
+Requires migrated DB and demo accounts. Does not replace manual UI walkthrough in the checklist, but validates booking → assign → driver trip → guest lookup end-to-end.
+
 ## Out of scope (Phase 6)
 
 Payment, Socket.IO live sync, chat, QR boarding/completion, auto-dispatch, driver GPS tracking, customer signup.
@@ -154,5 +166,5 @@ Before a live demo, quickly verify:
 1. `flutter test` and `npm test` pass
 2. Guest complete/lookup pages show **no QR or chat** without explicit dev flags
 3. Admin dispatch: empty/error/retry states render correctly
-4. Driver completes trip without a post-action 404 error
+4. Driver completes trip and can still open read-only detail (no post-action 404)
 5. Run section **H** in [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)

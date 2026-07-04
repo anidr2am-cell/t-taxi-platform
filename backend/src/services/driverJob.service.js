@@ -145,10 +145,17 @@ class DriverJobService {
 
   async getDetail(driverUserId, bookingNumber) {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
-    const row = await this.bookingRepository.findActiveDriverBookingByNumber(
+    let row = await this.bookingRepository.findActiveDriverBookingByNumber(
       driverUserId,
       normalizedBookingNumber,
     );
+
+    if (!row) {
+      row = await this.bookingRepository.findDriverTerminalBookingByNumber(
+        driverUserId,
+        normalizedBookingNumber,
+      );
+    }
 
     if (!row) {
       throw new AppError('Booking not found', {

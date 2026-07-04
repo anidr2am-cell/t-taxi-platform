@@ -13,7 +13,10 @@ const {
 const { bookingIdParamsSchema } = require('../validators/driverLocation.validator');
 
 const router = express.Router();
-const bookingLookupRateLimit = createRateLimit({ windowMs: 60_000, max: 10 });
+const bookingLookupRateLimit = createRateLimit({
+  windowMs: 60_000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 30,
+});
 const guestDeviceRateLimit = createRateLimit({ windowMs: 60_000, max: 10 });
 
 router.get('/flights/search', flightController.searchFlights);
