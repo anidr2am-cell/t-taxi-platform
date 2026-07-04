@@ -7,6 +7,7 @@ MVP scope: **guest booking → admin manual dispatch → driver trip flow → gu
 | Document | Purpose |
 |----------|---------|
 | **[docs/MVP_DEMO_GUIDE.md](docs/MVP_DEMO_GUIDE.md)** | Start here — full demo/test setup for a new operator |
+| **[docs/MVP_DEPLOYMENT_PREP.md](docs/MVP_DEPLOYMENT_PREP.md)** | Staging/test server deploy checklist (Phase 11) |
 | [docs/MVP_DEV_SETUP.md](docs/MVP_DEV_SETUP.md) | Developer reference (accounts, scripts, URLs) |
 | [docs/MVP_MANUAL_E2E_CHECKLIST.md](docs/MVP_MANUAL_E2E_CHECKLIST.md) | Manual verification checklist |
 

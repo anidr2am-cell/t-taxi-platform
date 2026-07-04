@@ -44,8 +44,9 @@ async function main() {
   const webBase = frontendUrl.replace(/\/$/, '');
 
   await expectStatus('Frontend root', webBase, [200]);
-  await expectStatus('Admin route fallback', `${webBase}/#/admin`, [200]);
-  await expectStatus('Driver route fallback', `${webBase}/#/driver/login`, [200]);
+  await expectStatus('Guest lookup route', `${webBase}/booking/lookup`, [200]);
+  await expectStatus('Admin route', `${webBase}/admin`, [200]);
+  await expectStatus('Driver route', `${webBase}/driver`, [200]);
   await expectStatus('Health', `${apiBase}/api/v1/health`, [200]);
   await expectStatus('Readiness', `${apiBase}/api/v1/health/readiness`, [200, 503]);
   await expectStatus('Unauthenticated admin boundary', `${apiBase}/api/v1/admin/bookings`, [401, 403]);

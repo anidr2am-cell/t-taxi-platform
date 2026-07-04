@@ -14,6 +14,14 @@ module.exports = {
       error_file: '/var/log/ttaxi/api-error.log',
       out_file: '/var/log/ttaxi/api-out.log',
       env: {
+        NODE_ENV: 'staging',
+        TZ: 'Asia/Bangkok',
+      },
+      env_staging: {
+        NODE_ENV: 'staging',
+        TZ: 'Asia/Bangkok',
+      },
+      env_production: {
         NODE_ENV: 'production',
         TZ: 'Asia/Bangkok',
       },

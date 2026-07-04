@@ -298,6 +298,21 @@ Documented in [MVP_DEMO_GUIDE.md §8](./MVP_DEMO_GUIDE.md): no payment, signup, 
 
 ---
 
+## L. Phase 11 — Deployment prep (2026-07-04)
+
+| Item | Status |
+|------|--------|
+| [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) | Created |
+| `deploy/nginx/ttaxi-staging.conf` | Example same-origin nginx + SPA fallback |
+| `deploy/pm2/ecosystem.config.cjs` | PM2 fork, staging/production env profiles |
+| `backend/.env.example` | Staging block + no localhost in template |
+| `staging-smoke-test.js` | Path URLs `/booking/lookup`, `/admin`, `/driver` |
+| `deploymentReadiness.test.js` | CI guards for env/PM2/migrations |
+
+Pre-deploy: complete checklist in [MVP_DEPLOYMENT_PREP.md §10](./MVP_DEPLOYMENT_PREP.md).
+
+---
+
 ## Sign-off
 
 | Role | Name | Date | Pass |

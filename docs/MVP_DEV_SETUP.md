@@ -162,4 +162,5 @@ Details: [MVP_DEMO_GUIDE.md §8](./MVP_DEMO_GUIDE.md)
 ## Related
 
 - [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) — operator-facing setup
+- [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) — staging server deploy
 - [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md) — manual sign-off
