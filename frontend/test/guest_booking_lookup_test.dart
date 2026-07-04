@@ -51,6 +51,26 @@ void main() {
     );
   });
 
+  test('lookup persists customer phone for refresh', () async {
+    final service = GuestBookingLookupService(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        return http.Response(jsonEncode({
+          'success': true,
+          'data': _lookupJson(),
+        }), 200);
+      }),
+    );
+
+    await service.lookup(
+      bookingNumber: 'TX202607010001',
+      phone: '+66 81 234 5678',
+    );
+
+    final cached = await service.loadCached();
+    expect(cached?.customerPhone, '+66 81 234 5678');
+  });
+
   testWidgets('lookup page restores cached booking on refresh', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: GuestBookingLookupPage(
@@ -61,8 +81,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TX202607010001'), findsOneWidget);
-    expect(find.text('PICKED_UP'), findsOneWidget);
-    expect(find.text('Issue dropoff QR'), findsOneWidget);
+    expect(find.text('In progress'), findsOneWidget);
+    expect(find.text('Issue dropoff QR'), findsNothing);
+    expect(find.text('Your trip is in progress.'), findsOneWidget);
+  });
+
+  testWidgets('lookup page refresh updates status', (tester) async {
+    final service = _FakeLookupService(
+      cached: _result().copyWith(customerPhone: '+66 81 234 5678'),
+      refreshedStatus: 'ON_ROUTE',
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: GuestBookingLookupPage(
+        lookupService: service,
+        enableCustomerTools: false,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('In progress'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('guest_lookup_refresh')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('On the way'), findsOneWidget);
+    expect(service.refreshCount, 1);
   });
 
   testWidgets('lookup page shows controlled not-found error', (tester) async {
@@ -176,14 +219,19 @@ GuestBookingLookupResult _result() {
 }
 
 class _FakeLookupService extends GuestBookingLookupService {
-  _FakeLookupService({this.cached, this.errorCode})
-      : super(
+  _FakeLookupService({
+    this.cached,
+    this.errorCode,
+    this.refreshedStatus,
+  }) : super(
           baseUrl: 'http://localhost:3000',
           client: MockClient((_) async => http.Response('{}', 200)),
         );
 
   final GuestBookingLookupResult? cached;
   final String? errorCode;
+  final String? refreshedStatus;
+  int refreshCount = 0;
 
   @override
   Future<GuestBookingLookupResult?> loadCached() async => cached;
@@ -196,6 +244,11 @@ class _FakeLookupService extends GuestBookingLookupService {
     if (errorCode != null) {
       throw BookingApiException('Booking not found', errorCode);
     }
-    return cached ?? _result();
+    refreshCount += 1;
+    final base = cached ?? _result();
+    if (refreshedStatus != null && refreshCount > 0) {
+      return base.copyWith(status: refreshedStatus);
+    }
+    return base;
   }
 }

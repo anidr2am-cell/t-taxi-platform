@@ -178,6 +178,7 @@ BookingCompletePage _page({
     issueDropoffQr: issueDropoffQr,
     chatApi: _FakeBookingChatApi(),
     chatSocketService: _FakeChatSocketService(),
+    enableCustomerTools: true,
   );
 }
 

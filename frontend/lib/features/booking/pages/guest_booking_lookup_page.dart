@@ -8,6 +8,7 @@ import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
 import '../services/guest_booking_lookup_service.dart';
+import '../utils/booking_status_display.dart';
 import '../widgets/booking_chat_section.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
@@ -19,7 +20,7 @@ class GuestBookingLookupPage extends StatefulWidget {
     super.key,
     this.lookupService,
     this.bookingApiService,
-    this.enableCustomerTools = true,
+    this.enableCustomerTools = false,
   });
 
   final GuestBookingLookupService? lookupService;
@@ -41,6 +42,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
 
   GuestBookingLookupResult? _result;
   bool _loading = true;
+  bool _refreshing = false;
   String? _error;
   bool _loadingDropoffQr = false;
   String? _dropoffQrToken;
@@ -61,10 +63,61 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   Future<void> _loadCached() async {
     final cached = await _lookupService.loadCached();
     if (!mounted) return;
+    if (cached != null) {
+      _bookingNumberController.text = cached.bookingNumber;
+      if (cached.customerPhone != null && cached.customerPhone!.isNotEmpty) {
+        _phoneController.text = cached.customerPhone!;
+      }
+    }
     setState(() {
       _result = cached;
       _loading = false;
     });
+  }
+
+  Future<void> _refresh() async {
+    final result = _result;
+    if (result == null) return;
+    final phone = result.customerPhone?.trim();
+    if (phone == null || phone.isEmpty) {
+      setState(() {
+        _error = context.l10n.t('guest_lookup_refresh_needs_phone');
+      });
+      return;
+    }
+
+    setState(() {
+      _refreshing = true;
+      _error = null;
+    });
+
+    try {
+      final refreshed = await _lookupService.lookup(
+        bookingNumber: result.bookingNumber,
+        phone: phone,
+      );
+      if (!mounted) return;
+      setState(() {
+        _result = refreshed;
+        _refreshing = false;
+        _dropoffQrToken = null;
+      });
+    } on BookingApiException catch (err) {
+      if (!mounted) return;
+      final l10n = context.l10n;
+      setState(() {
+        _refreshing = false;
+        _error = err.errorCode == 'BOOKING_NOT_FOUND'
+            ? l10n.t('guest_lookup_not_found')
+            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _refreshing = false;
+        _error = context.l10n.t('guest_lookup_load_error');
+      });
+    }
   }
 
   Future<void> _lookup() async {
@@ -152,7 +205,24 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('guest_lookup_title'))),
+      appBar: AppBar(
+        title: Text(l10n.t('guest_lookup_title')),
+        actions: [
+          if (_result != null)
+            IconButton(
+              key: const ValueKey('guest_lookup_refresh'),
+              onPressed: _loading || _refreshing ? null : _refresh,
+              tooltip: l10n.t('guest_lookup_refresh'),
+              icon: _refreshing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
+            ),
+        ],
+      ),
       body: AppUi.centeredContent(
         child: SingleChildScrollView(
           padding: AppUi.pagePadding(context),
@@ -258,12 +328,35 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               ),
               const SizedBox(height: AppTokens.spaceMd),
               AppUi.statusBadge(
-                result.status,
+                BookingStatusDisplay.label(l10n, result.status),
                 tone: AppUi.toneForBookingStatus(result.status),
               ),
             ],
           ),
         ),
+        if (BookingStatusDisplay.customerGuidance(l10n, result.status) !=
+            null) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.infoLight,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: AppTokens.info, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    BookingStatusDisplay.customerGuidance(l10n, result.status)!,
+                    style: const TextStyle(
+                      color: AppTokens.textSecondary,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: AppTokens.spaceMd),
         AppUi.sectionHeader(
           context,
@@ -340,7 +433,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           ),
         ),
         const SizedBox(height: AppTokens.spaceMd),
-        _qrSection(result),
+        if (widget.enableCustomerTools) _qrSection(result),
         if (_error != null) ...[
           const SizedBox(height: AppTokens.spaceMd),
           AppUi.errorState(message: _error!),

@@ -159,6 +159,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               ? snapshot.origin?.code
               : null,
           nameSignRequested: snapshot.nameSign,
+          customerPhone: snapshot.customerPhone,
           meetingVehicleInfo: AirportMeetingVehicleInfo(
             vehicleType: snapshot.selectedVehicle,
           ),

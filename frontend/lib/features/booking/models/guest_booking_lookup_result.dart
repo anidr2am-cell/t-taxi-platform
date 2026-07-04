@@ -21,6 +21,7 @@ class GuestBookingLookupResult {
     this.vehiclePlateNumber,
     this.driverName,
     this.driverPhone,
+    this.customerPhone,
   });
 
   final int? bookingId;
@@ -44,6 +45,7 @@ class GuestBookingLookupResult {
   final String? vehiclePlateNumber;
   final String? driverName;
   final String? driverPhone;
+  final String? customerPhone;
 
   factory GuestBookingLookupResult.fromJson(Map<String, dynamic> json) {
     final route = Map<String, dynamic>.from(json['route'] as Map? ?? {});
@@ -122,6 +124,81 @@ class GuestBookingLookupResult {
       ]),
       driverName: driver?['name'] as String?,
       driverPhone: driver?['phone'] as String?,
+      customerPhone: json['customerPhone'] as String?,
+    );
+  }
+
+  GuestBookingLookupResult copyWith({
+    String? customerPhone,
+    String? status,
+  }) {
+    return GuestBookingLookupResult(
+      bookingId: bookingId,
+      bookingNumber: bookingNumber,
+      status: status ?? this.status,
+      scheduledPickupAt: scheduledPickupAt,
+      serviceTypeName: serviceTypeName,
+      originAddress: originAddress,
+      destinationAddress: destinationAddress,
+      totalAmount: totalAmount,
+      currency: currency,
+      paymentMethod: paymentMethod,
+      guestAccessToken: guestAccessToken,
+      guestAccessExpiresAt: guestAccessExpiresAt,
+      capabilities: capabilities,
+      serviceTypeCode: serviceTypeCode,
+      originAirportCode: originAirportCode,
+      nameSignRequested: nameSignRequested,
+      vehicleType: vehicleType,
+      vehicleColor: vehicleColor,
+      vehiclePlateNumber: vehiclePlateNumber,
+      driverName: driverName,
+      driverPhone: driverPhone,
+      customerPhone: customerPhone ?? this.customerPhone,
+    );
+  }
+
+  factory GuestBookingLookupResult.fromCreateSummary({
+    required int? bookingId,
+    required String bookingNumber,
+    required String status,
+    required num totalAmount,
+    required String currency,
+    required String paymentMethod,
+    required String guestAccessToken,
+    required String customerPhone,
+    required String serviceTypeName,
+    required String originAddress,
+    required String destinationAddress,
+    String? serviceTypeCode,
+    String? originAirportCode,
+    bool nameSignRequested = false,
+  }) {
+    return GuestBookingLookupResult(
+      bookingId: bookingId,
+      bookingNumber: bookingNumber,
+      status: status,
+      scheduledPickupAt: null,
+      serviceTypeName: serviceTypeName,
+      originAddress: originAddress,
+      destinationAddress: destinationAddress,
+      totalAmount: totalAmount,
+      currency: currency,
+      paymentMethod: paymentMethod,
+      guestAccessToken: guestAccessToken,
+      guestAccessExpiresAt: null,
+      capabilities: const GuestBookingCapabilities(
+        chatAvailable: false,
+        notificationsAvailable: false,
+        dropoffQrIssueAvailable: false,
+        reviewAvailable: false,
+        boardingQrRecoverable: false,
+        boardingQrPreviouslyIssued: false,
+      ),
+      serviceTypeCode: serviceTypeCode,
+      originAirportCode: originAirportCode,
+      nameSignRequested: nameSignRequested,
+      customerPhone: customerPhone,
     );
   }
 
@@ -162,6 +239,7 @@ class GuestBookingLookupResult {
               'plateNumber': vehiclePlateNumber,
             },
           },
+    if (customerPhone != null) 'customerPhone': customerPhone,
   };
 
   bool get hasValidGuestAccess {

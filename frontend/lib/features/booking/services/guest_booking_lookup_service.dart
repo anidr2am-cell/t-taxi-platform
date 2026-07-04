@@ -47,9 +47,13 @@ class GuestBookingLookupService {
 
     final result = GuestBookingLookupResult.fromJson(
       Map<String, dynamic>.from((decoded as Map)['data'] as Map),
-    );
+    ).copyWith(customerPhone: phone.trim());
     await persist(result);
     return result;
+  }
+
+  Future<void> persistFromCreateSummary(GuestBookingLookupResult result) async {
+    await persist(result);
   }
 
   Future<void> persist(GuestBookingLookupResult result) async {

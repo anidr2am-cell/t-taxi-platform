@@ -7,14 +7,18 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
+import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
+import '../services/guest_booking_lookup_service.dart';
+import '../utils/booking_status_display.dart';
 import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
 import '../../chat/services/chat_socket_service.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/booking_chat_section.dart';
+import 'guest_booking_lookup_page.dart';
 
 class BookingCompletePage extends StatefulWidget {
   final BookingCreateResult result;
@@ -29,6 +33,9 @@ class BookingCompletePage extends StatefulWidget {
   final String? originAirportCode;
   final bool nameSignRequested;
   final AirportMeetingVehicleInfo? meetingVehicleInfo;
+  final String? customerPhone;
+  final bool enableCustomerTools;
+  final GuestBookingLookupService? lookupService;
 
   const BookingCompletePage({
     super.key,
@@ -44,6 +51,9 @@ class BookingCompletePage extends StatefulWidget {
     this.originAirportCode,
     this.nameSignRequested = false,
     this.meetingVehicleInfo,
+    this.customerPhone,
+    this.enableCustomerTools = false,
+    this.lookupService,
   });
 
   @override
@@ -63,6 +73,44 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     BookingReviewApi().persistGuestToken(
       widget.result.bookingNumber,
       widget.result.guestAccessToken,
+    );
+    _persistGuestLookup();
+  }
+
+  Future<void> _persistGuestLookup() async {
+    final phone = widget.customerPhone?.trim();
+    final token = widget.result.guestAccessToken;
+    if (phone == null || phone.isEmpty || token == null || token.isEmpty) {
+      return;
+    }
+    final summary = GuestBookingLookupResult.fromCreateSummary(
+      bookingId: widget.result.bookingId,
+      bookingNumber: widget.result.bookingNumber,
+      status: widget.result.status,
+      totalAmount: widget.result.totalAmount,
+      currency: widget.result.currency,
+      paymentMethod: widget.result.paymentMethod,
+      guestAccessToken: token,
+      customerPhone: phone,
+      serviceTypeName: widget.serviceLabel,
+      originAddress: widget.originLabel,
+      destinationAddress: widget.destinationLabel,
+      serviceTypeCode: widget.serviceTypeCode,
+      originAirportCode: widget.originAirportCode,
+      nameSignRequested: widget.nameSignRequested,
+    );
+    await (widget.lookupService ?? GuestBookingLookupService())
+        .persistFromCreateSummary(summary);
+  }
+
+  void _openBookingLookup() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GuestBookingLookupPage(
+          lookupService: widget.lookupService,
+          enableCustomerTools: widget.enableCustomerTools,
+        ),
+      ),
     );
   }
 
@@ -146,11 +194,56 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               const SizedBox(height: AppTokens.spaceLg),
               _BookingNumberCard(
                 bookingNumber: result.bookingNumber,
-                statusLabel: l10n.t('status_pending'),
+                statusLabel: BookingStatusDisplay.label(
+                  l10n,
+                  _status ?? result.status,
+                ),
                 total: '${result.totalAmount} ${result.currency}',
                 paymentLabel: l10n.t('pay_driver_at_destination'),
                 l10n: l10n,
                 onCopy: _copyBookingNumber,
+                statusTone: AppUi.toneForBookingStatus(
+                  _status ?? result.status,
+                ),
+              ),
+              if (BookingStatusDisplay.customerGuidance(
+                    l10n,
+                    _status ?? result.status,
+                  ) !=
+                  null) ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                AppUi.surfaceCard(
+                  backgroundColor: AppTokens.infoLight,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppTokens.info,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          BookingStatusDisplay.customerGuidance(
+                            l10n,
+                            _status ?? result.status,
+                          )!,
+                          style: const TextStyle(
+                            color: AppTokens.textSecondary,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.primaryButton(
+                label: l10n.t('booking_complete_track_cta'),
+                icon: Icons.search,
+                onPressed: _openBookingLookup,
               ),
               const SizedBox(height: AppTokens.spaceMd),
               AppUi.sectionHeader(context, title: l10n.t('booking_summary')),
@@ -189,71 +282,73 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 BookingCompleteReviewSection(review: widget.review!),
               ],
               const SizedBox(height: AppTokens.spaceLg),
-              if (_isCompleted) ...[
-                AppUi.surfaceCard(
-                  backgroundColor: AppTokens.successLight,
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: AppTokens.success,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          l10n.t('booking_trip_completed'),
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(
-                                color: AppTokens.success,
-                                fontWeight: FontWeight.w700,
-                              ),
+              if (widget.enableCustomerTools) ...[
+                if (_isCompleted) ...[
+                  AppUi.surfaceCard(
+                    backgroundColor: AppTokens.successLight,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: AppTokens.success,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l10n.t('booking_trip_completed'),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: AppTokens.success,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: AppTokens.spaceMd),
+                  BookingNotificationSection(
+                    bookingNumber: result.bookingNumber,
+                    bookingId: result.bookingId,
+                    guestAccessToken: result.guestAccessToken,
+                  ),
+                  const SizedBox(height: AppTokens.spaceMd),
+                  BookingReviewForm(
+                    bookingNumber: result.bookingNumber,
+                    guestAccessToken: result.guestAccessToken,
+                  ),
+                ] else if (_dropoffQrToken != null)
+                  _QrDisplay(
+                    title: l10n.t('booking_dropoff_qr_title'),
+                    hint: l10n.t('booking_dropoff_qr_hint'),
+                    token: _dropoffQrToken!,
+                  )
+                else
+                  _QrDisplay(
+                    title: l10n.t('boarding_qr_title'),
+                    hint: l10n.t('boarding_qr_hint'),
+                    token: result.boardingQrToken,
+                  ),
                 const SizedBox(height: AppTokens.spaceMd),
-                BookingNotificationSection(
+                BookingChatSection(
                   bookingNumber: result.bookingNumber,
-                  bookingId: result.bookingId,
                   guestAccessToken: result.guestAccessToken,
+                  api: widget.chatApi,
+                  socketService: widget.chatSocketService,
                 ),
-                const SizedBox(height: AppTokens.spaceMd),
-                BookingReviewForm(
-                  bookingNumber: result.bookingNumber,
-                  guestAccessToken: result.guestAccessToken,
-                ),
-              ] else if (_dropoffQrToken != null)
-                _QrDisplay(
-                  title: l10n.t('booking_dropoff_qr_title'),
-                  hint: l10n.t('booking_dropoff_qr_hint'),
-                  token: _dropoffQrToken!,
-                )
-              else
-                _QrDisplay(
-                  title: l10n.t('boarding_qr_title'),
-                  hint: l10n.t('boarding_qr_hint'),
-                  token: result.boardingQrToken,
-                ),
-              const SizedBox(height: AppTokens.spaceMd),
-              BookingChatSection(
-                bookingNumber: result.bookingNumber,
-                guestAccessToken: result.guestAccessToken,
-                api: widget.chatApi,
-                socketService: widget.chatSocketService,
-              ),
-              if (!_isCompleted) ...[
-                const SizedBox(height: AppTokens.spaceMd),
-                if (_dropoffQrError != null)
-                  AppUi.errorState(message: _dropoffQrError!),
-                AppUi.secondaryButton(
-                  label: _dropoffQrToken == null
-                      ? l10n.t('booking_refresh_dropoff_qr')
-                      : l10n.t('booking_issue_new_dropoff_qr'),
-                  icon: Icons.refresh,
-                  onPressed: _loadingDropoffQr ? null : _loadDropoffQr,
-                  fullWidth: true,
-                ),
+                if (!_isCompleted) ...[
+                  const SizedBox(height: AppTokens.spaceMd),
+                  if (_dropoffQrError != null)
+                    AppUi.errorState(message: _dropoffQrError!),
+                  AppUi.secondaryButton(
+                    label: _dropoffQrToken == null
+                        ? l10n.t('booking_refresh_dropoff_qr')
+                        : l10n.t('booking_issue_new_dropoff_qr'),
+                    icon: Icons.refresh,
+                    onPressed: _loadingDropoffQr ? null : _loadDropoffQr,
+                    fullWidth: true,
+                  ),
+                ],
               ],
               const SizedBox(height: AppTokens.spaceLg),
               SizedBox(
@@ -265,13 +360,15 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                       Navigator.of(context).popUntil((route) => route.isFirst),
                 ),
               ),
-              const SizedBox(height: AppTokens.spaceSm),
-              AppUi.secondaryButton(
-                label: l10n.t('chat_after_driver_assignment'),
-                icon: Icons.chat_bubble_outline,
-                onPressed: null,
-                fullWidth: true,
-              ),
+              if (widget.enableCustomerTools) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                AppUi.secondaryButton(
+                  label: l10n.t('chat_after_driver_assignment'),
+                  icon: Icons.chat_bubble_outline,
+                  onPressed: null,
+                  fullWidth: true,
+                ),
+              ],
             ],
           ),
         ),
@@ -336,6 +433,7 @@ class _BookingNumberCard extends StatelessWidget {
     required this.paymentLabel,
     required this.l10n,
     required this.onCopy,
+    required this.statusTone,
   });
 
   final String bookingNumber;
@@ -344,6 +442,7 @@ class _BookingNumberCard extends StatelessWidget {
   final String paymentLabel;
   final AppLocalizations l10n;
   final Future<void> Function() onCopy;
+  final AppStatusTone statusTone;
 
   @override
   Widget build(BuildContext context) {
@@ -399,7 +498,7 @@ class _BookingNumberCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              AppUi.statusBadge(statusLabel, tone: AppStatusTone.warning),
+              AppUi.statusBadge(statusLabel, tone: statusTone),
             ],
           ),
           const SizedBox(height: AppTokens.spaceMd),

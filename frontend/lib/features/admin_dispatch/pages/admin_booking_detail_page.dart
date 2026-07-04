@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../booking/utils/booking_status_display.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
@@ -293,7 +294,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              AppUi.statusBadge(status, tone: AppUi.toneForBookingStatus(status)),
+              AppUi.statusBadge(
+                BookingStatusDisplay.label(l10n, status),
+                tone: AppUi.toneForBookingStatus(status),
+              ),
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
@@ -523,7 +527,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     ],
                   ),
                 ),
-                AppUi.statusBadge(to, tone: AppUi.toneForBookingStatus(to)),
+                AppUi.statusBadge(
+                  BookingStatusDisplay.label(context.l10n, to),
+                  tone: AppUi.toneForBookingStatus(to),
+                ),
               ],
             ),
           );

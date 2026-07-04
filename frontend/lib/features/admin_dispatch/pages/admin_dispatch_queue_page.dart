@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../booking/utils/booking_status_display.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
@@ -422,7 +423,10 @@ class _BookingListCard extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            AppUi.statusBadge(status, tone: AppUi.toneForBookingStatus(status)),
+            AppUi.statusBadge(
+              BookingStatusDisplay.label(l10n, status),
+              tone: AppUi.toneForBookingStatus(status),
+            ),
             const SizedBox(height: 6),
             AppUi.statusBadge(
               unassigned ? 'UNASSIGNED' : 'ASSIGNED',

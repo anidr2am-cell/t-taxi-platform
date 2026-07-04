@@ -1,3 +1,4 @@
+import '../booking/utils/booking_status_display.dart';
 import 'services/driver_api_service.dart';
 import 'models/driver_booking.dart';
 
@@ -100,30 +101,8 @@ class DriverUx {
     return grouped;
   }
 
-  static String statusLabelKey(String status) {
-    switch (status) {
-      case 'PENDING':
-        return 'status_pending';
-      case 'CONFIRMED':
-        return 'status_confirmed';
-      case 'DRIVER_ASSIGNED':
-        return 'status_driver_assigned';
-      case 'ON_ROUTE':
-        return 'driver_status_on_route';
-      case 'DRIVER_ARRIVED':
-        return 'driver_status_arrived';
-      case 'PICKED_UP':
-        return 'driver_status_picked_up';
-      case 'COMPLETED':
-        return 'status_completed';
-      case 'CANCELLED':
-        return 'status_cancelled';
-      case 'NO_SHOW':
-        return 'driver_status_no_show';
-      default:
-        return 'status';
-    }
-  }
+  static String statusLabelKey(String status) =>
+      BookingStatusDisplay.statusLabelKey(status);
 }
 
 bool driverIsAuthError(Object err) {
