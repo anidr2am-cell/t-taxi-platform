@@ -58,7 +58,9 @@ class CustomerLandingPage extends StatelessWidget {
                 LandingFooter(
                   onAdmin: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AdminScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const AdminScreen(initialTab: 1),
+                    ),
                   ),
                   onDriver: () => Navigator.push(
                     context,

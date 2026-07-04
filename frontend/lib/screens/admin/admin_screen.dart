@@ -18,18 +18,27 @@ import '../../widgets/app_ui.dart';
 import '../../widgets/language_selector.dart';
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  const AdminScreen({super.key, this.initialTab = 0});
+
+  /// MVP demo: open Reservations/Dispatch tab directly (`1`).
+  final int initialTab;
 
   @override
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   int _sessionEpoch = 0;
   final _drawerKey = GlobalKey<ScaffoldState>();
 
   static const _authGatedIndices = {0, 2, 3, 4, 5, 8, 9, 10, 11};
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialTab.clamp(0, 11);
+  }
 
   Future<void> _logout() async {
     await const AdminDispatchApiService().logout();

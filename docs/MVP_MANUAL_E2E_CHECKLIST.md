@@ -171,7 +171,7 @@ npm run rehearsal:mvp-e2e
 
 ---
 
-## I. Phase 8 — E2E rehearsal results (2026-07-04)
+## I. Phase 8 — API E2E rehearsal results (2026-07-04)
 
 ### Automated API rehearsal (`npm run rehearsal:mvp-e2e`)
 
@@ -188,15 +188,73 @@ npm run rehearsal:mvp-e2e
 | Guest lookup returned **429** after ~10 refreshes in one E2E session | Non-production rate limit raised to 30/min (`public.routes.js`) |
 | Driver **GET detail 404** after completing trip (assignment deactivated) | Terminal assignment fallback in `driverJob.service.js` + `findDriverTerminalBookingByNumber` |
 
-### Manual UI walkthrough (operator)
-
-Sections **A–F** and **H** should still be spot-checked in Chrome before a live demo. API rehearsal validates backend routes and status transitions; UI polish (labels, layout, empty states) requires browser verification.
-
 ### Notes
 
 - Re-running `seed:mvp-demo` creates **new** booking numbers; use the latest script output for B2 spot-checks.
 - Guest lookup rate limit in **production** remains 10/min per IP (abuse protection).
 - QR, chat, payment, Socket.IO, auto-dispatch remain out of scope.
+
+---
+
+## J. Phase 9 — Chrome UI rehearsal (2026-07-04)
+
+### Preparation
+
+```powershell
+cd C:\TTaxi\backend
+npm start
+npm run seed:mvp-demo
+
+cd C:\TTaxi\frontend
+flutter run -d chrome --web-port=8080
+```
+
+**Latest seed (example):**
+
+| Status | Booking | Phone |
+|--------|---------|-------|
+| PENDING | TX202607040042 | +66820000001 |
+| DRIVER_ASSIGNED | TX202607040043 | +66820000002 |
+| ON_ROUTE | TX202607040044 | +66820000003 |
+| DRIVER_ARRIVED | TX202607040045 | +66820000004 |
+| COMPLETED | TX202607040046 | +66820000005 |
+| CANCELLED | TX202607040047 | +66820000006 |
+
+**Direct URLs (after path URL strategy fix):**
+
+| Screen | URL |
+|--------|-----|
+| Customer landing | http://localhost:8080/ |
+| Guest lookup | http://localhost:8080/booking/lookup |
+| Admin dispatch | http://localhost:8080/admin |
+| Driver login | http://localhost:8080/driver |
+
+### Chrome walkthrough order
+
+1. **A** Customer wizard → complete page (fresh booking)
+2. **B** Guest lookup — seeded statuses + refresh
+3. **C** Admin dispatch — login → assign driver
+4. **D** Driver jobs — status transitions to COMPLETED
+5. **E** End-to-end happy path (single fresh booking)
+6. **F** Cancelled guidance (seed `+66820000006`)
+7. **H** UX polish spot-check at 360px width (DevTools device toolbar)
+
+### Widget / overflow verification (automated)
+
+- [x] Landing, wizard, lookup, admin dispatch, driver jobs — no horizontal overflow at 360px (`flutter test`)
+- [x] All 5 locales on landing — no overflow (`landing_page_test.dart`)
+
+### UI bugs fixed during Phase 9
+
+| Issue | Fix |
+|-------|-----|
+| `/booking/lookup`, `/admin` deep links opened landing page (hash routing) | `usePathUrlStrategy()` in `main.dart` |
+| Admin footer opened Dashboard instead of Dispatch queue | `AdminScreen(initialTab: 1)` from landing + `/admin` route |
+| Driver complete trip showed empty detail (sparse API response) | `completeTrip()` reloads full detail via `getBookingDetail` |
+
+### Manual Chrome checklist (operator)
+
+Sections **A–F** and **H** rows above remain for live demo sign-off. API flow is verified; UI labels/actions should be confirmed once in Chrome before presenting.
 
 ---
 

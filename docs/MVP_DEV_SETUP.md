@@ -120,7 +120,11 @@ flutter pub get
 flutter run -d chrome --web-port=8080
 ```
 
-Guest lookup route: `/booking/lookup`
+Guest lookup route: `/booking/lookup` (full URL: `http://localhost:8080/booking/lookup`)
+
+Admin dispatch route: `/admin` (opens Reservations/Dispatch tab)
+
+Driver login route: `/driver`
 
 ## 6. Create a fresh test booking (UI)
 

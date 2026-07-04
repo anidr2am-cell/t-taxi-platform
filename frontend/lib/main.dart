@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 import 'l10n/app_localizations.dart';
 import 'features/booking/pages/guest_booking_lookup_page.dart';
@@ -12,6 +14,9 @@ import 'theme/app_theme.dart';
 import 'screens/admin/admin_screen.dart';
 
 void main() {
+  if (kIsWeb) {
+    usePathUrlStrategy();
+  }
   runApp(
     MultiProvider(
       providers: [
@@ -45,7 +50,7 @@ class TTaxiApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routes: {
-        '/admin': (_) => const AdminScreen(),
+        '/admin': (_) => const AdminScreen(initialTab: 1),
         '/booking/lookup': (_) => const GuestBookingLookupPage(),
         '/driver': (_) => const DriverLoginPage(),
         '/driver/login': (_) => const DriverLoginPage(),

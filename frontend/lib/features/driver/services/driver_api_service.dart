@@ -186,8 +186,8 @@ class DriverApiService {
   }
 
   Future<DriverBooking> completeTrip(String bookingNumber) async {
-    final data = await _post('/driver/bookings/$bookingNumber/complete');
-    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+    await _post('/driver/bookings/$bookingNumber/complete');
+    return getBookingDetail(bookingNumber);
   }
 
   Future<DriverBooking> scanBoarding(String bookingNumber, String token) async {
