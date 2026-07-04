@@ -115,6 +115,10 @@ class MemoryDriverApplicationRepository {
       reviewed_by: null,
       approved_user_id: null,
       approved_driver_id: null,
+      approved_at: null,
+      approved_by: null,
+      rejected_at: null,
+      rejected_by: null,
       resubmitted_from_application_id: data.resubmittedFromApplicationId ?? null,
       created_at: '2026-07-03 10:00:00',
       updated_at: '2026-07-03 10:00:00',
@@ -214,10 +218,13 @@ class MemoryDriverApplicationRepository {
     const row = this.applications.find((item) => item.id === applicationId);
     row.status = 'APPROVED';
     row.password_hash = null;
+    row.rejection_reason = null;
     row.reviewed_by = data.reviewedBy;
+    row.reviewed_at = '2026-07-03 11:00:00';
+    row.approved_at = '2026-07-03 11:00:00';
+    row.approved_by = data.reviewedBy;
     row.approved_user_id = data.approvedUserId;
     row.approved_driver_id = data.approvedDriverId;
-    row.reviewed_at = '2026-07-03 11:00:00';
   }
 
   async reject(_conn, applicationId, data) {
@@ -227,6 +234,8 @@ class MemoryDriverApplicationRepository {
     row.admin_note = data.adminNote;
     row.reviewed_by = data.reviewedBy;
     row.reviewed_at = '2026-07-03 11:00:00';
+    row.rejected_at = '2026-07-03 11:00:00';
+    row.rejected_by = data.reviewedBy;
   }
 
   async insertAuditLog(_conn, log) {
@@ -663,6 +672,8 @@ describe('DriverApplicationService', () => {
     assert.equal(result.status, 'REJECTED');
     assert.equal(repository.applications[0].status, 'REJECTED');
     assert.equal(repository.applications[0].rejection_reason, 'License expired');
+    assert.equal(repository.applications[0].rejected_at, '2026-07-03 11:00:00');
+    assert.equal(repository.applications[0].rejected_by, 7);
     assert.equal(repository.users.length, 0);
     assert.equal(repository.drivers.length, 0);
     assert.equal(repository.applications[0].application_number, submitted.applicationNumber);
@@ -715,6 +726,13 @@ describe('DriverApplicationService', () => {
     assert.equal(repository.applications[0].password_hash, null);
     assert.equal(repository.applications[0].approved_user_id, result.approvedUserId);
     assert.equal(repository.applications[0].approved_driver_id, result.approvedDriverId);
+    assert.equal(repository.applications[0].approved_at, '2026-07-03 11:00:00');
+    assert.equal(repository.applications[0].approved_by, 7);
     assert.equal(repository.auditLogs[0].action, 'driver_application.approved');
+
+    await assert.rejects(
+      () => service.approve(1, { adminNote: 'Again' }, { id: 7, role: 'ADMIN' }),
+      (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+    );
   });
 });
