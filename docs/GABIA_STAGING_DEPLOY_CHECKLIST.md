@@ -1,448 +1,411 @@
-# Gabia Staging Deploy Checklist (Phase 12)
+# Gabia Staging Deploy Checklist — T-Ride (tride-staging)
 
-Operator runbook for **T-Ride MVP** on a **Gabia Linux VPS** (single domain).
+Operator runbook to deploy **T-Ride MVP** on the **same Gabia VPS** as the existing **KTaxi/TTaxi** stack **without interrupting production**.
 
-> Replace every `staging.example.com` with your real staging hostname.  
-> **Never** paste real passwords or JWT secrets into Git, docs, or chat logs.
+> **Never** paste real passwords, JWT secrets, or API keys into Git, docs, or chat.
 
-**Prerequisites docs:** [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) · [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) · [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)
-
----
-
-## A. Work split — local vs Gabia server
-
-| Where | What |
-|-------|------|
-| **Local / CI** | `git push`, `flutter build web`, optional `npm test`, upload release tarball or `git pull` on server |
-| **Gabia VPS** | Node/MySQL/nginx/PM2 install, `.env`, migrate, `npm ci`, PM2, nginx, seed, smoke, browser check |
+**Architecture doc:** [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md)  
+**Local demo:** [MVP_DEMO_GUIDE.md](./MVP_DEMO_GUIDE.md) · **E2E sign-off:** [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md)
 
 ---
 
-## B. Variables (fill before deploy)
+## 0. Two projects on one server — do not confuse
 
-| Symbol | Example placeholder | Your value |
-|--------|---------------------|------------|
-| `STAGING_DOMAIN` | `staging.example.com` | |
-| `DEPLOY_USER` | `deploy` | |
-| `APP_ROOT` | `/srv/ttaxi/current` | |
-| `DB_NAME` | `ttaxi_staging` | |
-| `DB_USER` | `ttaxi_app` | |
+| | **Existing KTaxi / TTaxi (DO NOT TOUCH)** | **New T-Ride MVP (this deploy)** |
+|---|-------------------------------------------|----------------------------------|
+| Product | Legacy TTaxi/KTaxi web | T-Ride MVP (this repo) |
+| Server path | `/opt/ktaxi` | **`/opt/t-ride`** |
+| Orchestration | `/opt/ktaxi/infra/docker-compose.yml` | **`/opt/t-ride/deploy/docker/docker-compose.staging.yml`** |
+| Container prefix | `ktaxi-*` | **`tride-*`** |
+| Docker network | `infra_ktaxi-net` (ktaxi internal) | **`tride-net`** |
+| Database | **Postgres** (`ktaxi-postgres`) | **MySQL 8** (`tride-db`) — **separate** |
+| DB name | (ktaxi Postgres DBs) | **`tride_staging`** |
+| Edge / TLS | **`ktaxi-nginx`** → host **80/443** | **No host 80/443** in Phase 1–3 |
+| Domains | `88taxi.net`, `driver.88taxi.net`, `admin.88taxi.net`, `api.88taxi.net`, `ws.88taxi.net` | **`tride-staging.88taxi.net`** (Phase 4+) |
+| Internal ports (reference) | api **8787**, realtime **8788** | backend host **3100**→3000, frontend host **3101**→80 |
+
+### Absolute prohibitions
+
+- Do **not** modify `/opt/ktaxi` or `/opt/ktaxi/infra/docker-compose.yml`
+- Do **not** stop, restart, or delete **`ktaxi-*`** containers
+- Do **not** add T-Ride services to the ktaxi compose file
+- Do **not** install **host** nginx or bind host **80/443**
+- Do **not** install host Node.js, npm, or PM2 for T-Ride (use Docker)
+- Do **not** run T-Ride migrations against **`ktaxi-postgres`**
+- Do **not** edit existing **`88taxi.net`** server blocks until Phase 4 review
 
 ---
 
-## C. Gabia server — first-time setup
+## 1. T-Ride naming rules (mandatory)
 
-SSH as root or sudo user, then:
+| Item | Value |
+|------|-------|
+| Deploy name | `tride-staging` |
+| Server root | `/opt/t-ride` |
+| Compose project | `tride-staging` |
+| Compose file | `/opt/t-ride/deploy/docker/docker-compose.staging.yml` |
+| Env file | `/opt/t-ride/deploy/docker/.env` |
+| Docker network | `tride-net` |
+| DB container | `tride-db` |
+| DB name | `tride_staging` |
+| DB user (example) | `tride_app` |
+| Backend container | `tride-backend` |
+| Frontend container | `tride-frontend` |
+| Uploads (host volume) | `/opt/t-ride/uploads` |
+| Staging domain (target) | `tride-staging.88taxi.net` |
+| Temp host port — API | **`3100`** → `tride-backend:3000` |
+| Temp host port — web | **`3101`** → `tride-frontend:80` |
 
-### C1. OS packages
+Local repo path `C:\TTaxi` is **source code only** — on the server always use **`/opt/t-ride`**.
 
-```bash
-sudo apt update
-sudo apt install -y curl git nginx mysql-client
+---
 
-# Node.js 22 (NodeSource — verify version on your image)
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
+## 2. Deployment phases (recommended order)
 
-node -v    # expect v22.x
-npm -v
 ```
-
-### C2. PM2 (global)
-
-```bash
-sudo npm install -g pm2
-pm2 -v
-```
-
-### C3. MySQL 8.x
-
-Use Gabia managed MySQL **or** local MySQL on VPS. Confirm client works:
-
-```bash
-mysql --version
-mysql -h 127.0.0.1 -u root -p -e "SELECT VERSION();"
-```
-
-### C4. Deploy user & directories
-
-```bash
-sudo useradd -m -s /bin/bash deploy || true
-sudo mkdir -p /srv/ttaxi/current /var/lib/ttaxi/uploads /var/log/ttaxi
-sudo chown -R deploy:deploy /srv/ttaxi /var/lib/ttaxi /var/log/ttaxi
-```
-
-### C5. Firewall (if ufw enabled)
-
-```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw enable
-sudo ufw status
+Phase 1  Docker Compose at /opt/t-ride (tride-db + tride-backend + tride-frontend)
+Phase 2  Smoke on host :3100 / :3101 — no 80/443, no ktaxi changes
+Phase 3  Migration + seed:mvp-demo + rehearsal:mvp-e2e on tride_staging
+Phase 4  Plan tride-staging.88taxi.net → ktaxi-nginx upstream (review only)
+Phase 5  Apply ktaxi-nginx change (last, with rollback plan)
 ```
 
 ---
 
-## D. Deploy application code
+## 3. Work split — local vs server
 
-As `deploy` user:
-
-```bash
-sudo su - deploy
-cd /srv/ttaxi
-
-# Option 1 — git
-git clone https://github.com/anidr2am-cell/t-taxi-platform.git current
-cd current
-
-# Option 2 — upload tarball from local machine, then:
-# tar xzf ttaxi-release.tgz -C /srv/ttaxi/current
-```
+| Where | Tasks |
+|-------|--------|
+| **Local (`C:\TTaxi`)** | `npm test`, `flutter test`, `flutter build web`, commit/push, build Docker images (optional CI) |
+| **Gabia VPS** | `git clone` → `/opt/t-ride`, `deploy/docker/.env`, `docker compose -f deploy/docker/docker-compose.staging.yml up`, migrate, seed, port smoke |
+| **Phase 4–5 only** | DNS + **ktaxi-nginx** vhost for `tride-staging.88taxi.net` |
 
 ---
 
-## E. MySQL — database & user
+## 4. Phase 1 — Prepare `/opt/t-ride` (Docker only)
 
-Connect as MySQL admin (adjust host if remote):
-
-```bash
-mysql -h 127.0.0.1 -u root -p
-```
-
-```sql
-CREATE DATABASE ttaxi_staging CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-CREATE USER 'ttaxi_app'@'localhost' IDENTIFIED BY 'REPLACE_WITH_STRONG_PASSWORD';
-GRANT ALL PRIVILEGES ON ttaxi_staging.* TO 'ttaxi_app'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-Test app user:
+### 4.1 Prerequisites on server
 
 ```bash
-mysql -h 127.0.0.1 -u ttaxi_app -p ttaxi_staging -e "SELECT 1;"
+docker --version
+docker compose version
+# Confirm ktaxi is running — do not restart it
+docker ps --format 'table {{.Names}}\t{{.Ports}}' | grep ktaxi
 ```
 
----
+**Do not install:** host nginx, PM2, Node.js (unless needed for local admin tasks unrelated to T-Ride runtime).
 
-## F. Backend `.env`
+### 4.2 Directory layout
 
 ```bash
-cd /srv/ttaxi/current/backend
+sudo mkdir -p /opt/t-ride/uploads
+sudo chown -R "$USER":"$USER" /opt/t-ride
+cd /opt/t-ride
+
+git clone https://github.com/anidr2am-cell/t-taxi-platform.git .
+# or rsync/scp release tarball — never into /opt/ktaxi
+```
+
+Expected tree:
+
+```text
+/opt/t-ride/
+  backend/
+  frontend/
+  database/
+  deploy/
+    docker/
+      docker-compose.staging.yml
+      Dockerfile.backend
+      Dockerfile.frontend
+      .env.example          # copy to .env on server (chmod 600)
+  uploads/                    # optional bind-mount override (see deploy/docker/README.md)
+```
+
+**Compose quick reference:** [deploy/docker/README.md](../deploy/docker/README.md)
+
+### 4.3 Compose services (repo)
+
+| Service | Container name | Image / build | Notes |
+|---------|----------------|---------------|-------|
+| `tride-db` | `tride-db` | `mysql:8.4` | DB `tride_staging`; volume `tride_mysql_data` |
+| `tride-backend` | `tride-backend` | `deploy/docker/Dockerfile.backend` | Node 22, host **3100**→3000 |
+| `tride-frontend` | `tride-frontend` | `deploy/docker/Dockerfile.frontend` | nginx, host **3101**→80 |
+
+Network: **`tride-net`** only. Do **not** attach to `infra_ktaxi-net` in this phase.
+
+### 4.4 Server `.env` (placeholders only — edit on server)
+
+```bash
+cd /opt/t-ride/deploy/docker
 cp .env.example .env
 chmod 600 .env
-nano .env   # or vim — never commit this file
+# edit .env — replace SERVER_IP and all REPLACE_* secrets
 ```
 
-**Staging template** (replace placeholders only on the server):
+Template: `deploy/docker/.env.example`. Key values for **split-port smoke**:
 
 ```env
-NODE_ENV=staging
-PORT=3000
-TZ=Asia/Bangkok
-API_VERSION=v1
-APP_NAME=T-Ride
-
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=ttaxi_staging
-DB_USER=ttaxi_app
+MYSQL_ROOT_PASSWORD=REPLACE_WITH_STRONG_ROOT_PASSWORD
+DB_NAME=tride_staging
+DB_USER=tride_app
 DB_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
-DB_CONNECTION_LIMIT=10
 
 JWT_ACCESS_SECRET=REPLACE_WITH_RANDOM_32_PLUS_CHARS
 JWT_REFRESH_SECRET=REPLACE_WITH_RANDOM_32_PLUS_CHARS
-JWT_ACCESS_EXPIRES_IN=1h
-JWT_REFRESH_EXPIRES_IN=7d
 
-CORS_ORIGIN=https://STAGING_DOMAIN
-PUBLIC_API_URL=https://STAGING_DOMAIN
+CORS_ORIGIN=http://SERVER_IP:3101
+PUBLIC_API_URL=http://SERVER_IP:3100
+TRIDE_API_BASE_URL=http://SERVER_IP:3100
 
-UPLOAD_DIR=/var/lib/ttaxi/uploads
-UPLOAD_MAX_FILE_SIZE_MB=10
-LOG_LEVEL=info
-LOG_DIR=/var/log/ttaxi
-
-SWAGGER_ENABLED=false
-FLIGHT_SYNC_ENABLED=false
-ALLOW_DEV_QR_REISSUE=false
-SOCKET_PATH=/socket.io
+TRIDE_BACKEND_HOST_PORT=3100
+TRIDE_FRONTEND_HOST_PORT=3101
 ```
 
-Generate secrets on the server (example):
+Phase 5+ (public domain — future ktaxi-nginx step):
 
-```bash
-openssl rand -base64 48
+```env
+CORS_ORIGIN=https://tride-staging.88taxi.net
+PUBLIC_API_URL=https://tride-staging.88taxi.net
+TRIDE_API_BASE_URL=https://tride-staging.88taxi.net
 ```
 
-Validate env loads:
-
-```bash
-cd /srv/ttaxi/current/backend
-node -e "require('./src/config/env'); console.log('env ok')"
-```
+Generate secrets on server: `openssl rand -base64 48`
 
 ---
 
-## G. Database migrations
+## 5. Phase 2 — Temp port smoke (no 80/443)
+
+Publish T-Ride to **host ports that do not conflict with ktaxi-nginx**:
+
+| Host port | Maps to | Purpose |
+|-----------|---------|---------|
+| **3100** | `tride-backend:3000` | REST API / health (direct) |
+| **3101** | `tride-frontend:80` | Flutter SPA (UI smoke) |
 
 ```bash
-cd /srv/ttaxi/current/database
-chmod +x migrate.sh
-./migrate.sh
-# reads ../backend/.env automatically
+cd /opt/t-ride/deploy/docker
+docker compose -f docker-compose.staging.yml up -d --build
+docker compose -f docker-compose.staging.yml ps
 ```
 
-Windows alternative: run `migrate.ps1` from a dev machine pointing at staging DB (not recommended for production DB).
+Smoke from your workstation (replace `SERVER_IP`):
+
+```bash
+curl -s http://SERVER_IP:3100/api/v1/health
+curl -s http://SERVER_IP:3100/api/v1/health/readiness
+curl -s -o /dev/null -w "%{http_code}" http://SERVER_IP:3101/
+curl -s -o /dev/null -w "%{http_code}" http://SERVER_IP:3101/booking/lookup
+curl -s -o /dev/null -w "%{http_code}" http://SERVER_IP:3101/admin
+curl -s -o /dev/null -w "%{http_code}" http://SERVER_IP:3101/driver
+```
+
+Browser (Phase 2):
+
+- `http://SERVER_IP:3101/`
+- `http://SERVER_IP:3101/booking/lookup`
+- `http://SERVER_IP:3101/admin`
+- `http://SERVER_IP:3101/driver`
+
+**Frontend image build** uses `TRIDE_API_BASE_URL` from `deploy/docker/.env` (API on **:3100**). Rebuild after changing:
+
+```bash
+docker compose -f docker-compose.staging.yml up -d --build tride-frontend
+```
+
+After Phase 5 (HTTPS domain), update `.env` and rebuild frontend with `TRIDE_API_BASE_URL=https://tride-staging.88taxi.net`.
+
+---
+
+## 6. Phase 3 — Migration, seed, automated tests
+
+Run **inside** `tride-backend` container (or one-off migrate job) — **never** against ktaxi-postgres.
+
+### 6.1 MySQL bootstrap
+
+Compose creates `tride_staging` and `tride_app` from `deploy/docker/.env` on first `tride-db` start. Manual SQL is only needed if the volume already exists with different credentials.
+
+### 6.2 Migrations
+
+```bash
+cd /opt/t-ride/deploy/docker
+docker compose -f docker-compose.staging.yml exec tride-backend \
+  sh -c 'cd /srv/tride/database && ./migrate.sh'
+```
 
 Verify:
 
 ```bash
-mysql -h 127.0.0.1 -u ttaxi_app -p ttaxi_staging -e "SHOW TABLES LIKE 'bookings';"
+docker compose -f docker-compose.staging.yml exec tride-db \
+  mysql -u tride_app -p tride_staging -e "SHOW TABLES LIKE 'bookings';"
 ```
 
----
-
-## H. Backend install & PM2
+### 6.3 Demo seed (tride_staging only)
 
 ```bash
-cd /srv/ttaxi/current/backend
-npm ci --omit=dev
-
-# Foreground smoke (Ctrl+C after OK)
-npm start
-# In another SSH session:
-curl -s http://127.0.0.1:3000/api/v1/health | head
+docker compose -f docker-compose.staging.yml exec tride-backend npm run seed:mvp-demo
 ```
 
-PM2 (edit paths in `deploy/pm2/ecosystem.config.cjs` if `APP_ROOT` differs):
+Demo accounts (change if staging is public):
 
-```bash
-cd /srv/ttaxi/current
-pm2 start deploy/pm2/ecosystem.config.cjs --env staging
-pm2 save
-pm2 startup    # run the command it prints (sudo)
-pm2 status
-pm2 logs ttaxi-api-staging --lines 50
-```
-
-Readiness (503 until DB + uploads OK):
-
-```bash
-curl -s http://127.0.0.1:3000/api/v1/health/readiness
-```
-
----
-
-## I. Frontend build & deploy
-
-**On a machine with Flutter SDK** (local or CI):
-
-```powershell
-cd frontend
-flutter pub get
-flutter build web --release `
-  --dart-define=API_BASE_URL=https://STAGING_DOMAIN
-```
-
-Copy `frontend/build/web/` to server:
-
-```bash
-# from local (example)
-scp -r frontend/build/web deploy@STAGING_DOMAIN:/srv/ttaxi/current/frontend/build/
-```
-
-Or build on server if Flutter is installed there.
-
-Confirm files:
-
-```bash
-ls /srv/ttaxi/current/frontend/build/web/index.html
-```
-
----
-
-## J. nginx
-
-### J1. HTTP first (no TLS yet)
-
-Edit domain and root in repo file, then:
-
-```bash
-sudo sed -e 's/staging.example.com/STAGING_DOMAIN/g' \
-  /srv/ttaxi/current/deploy/nginx/ttaxi-staging-http.conf \
-  | sudo tee /etc/nginx/sites-available/ttaxi-staging
-
-sudo ln -sf /etc/nginx/sites-available/ttaxi-staging /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### J2. HTTPS (after certbot)
-
-```bash
-# After certificates exist under /etc/letsencrypt/live/STAGING_DOMAIN/
-sudo cp /srv/ttaxi/current/deploy/nginx/ttaxi-staging.conf /etc/nginx/sites-available/ttaxi-staging
-# edit server_name + ssl_certificate paths
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-Update `CORS_ORIGIN` and rebuild frontend if you switch HTTP → HTTPS.
-
-### J3. SPA routes to verify
-
-| URL | Expected |
-|-----|----------|
-| `https://STAGING_DOMAIN/` | Landing |
-| `https://STAGING_DOMAIN/booking/lookup` | Guest lookup form |
-| `https://STAGING_DOMAIN/admin` | Admin dispatch login |
-| `https://STAGING_DOMAIN/driver` | Driver login |
-
----
-
-## K. Demo seed (staging test DB only)
-
-```bash
-cd /srv/ttaxi/current/backend
-NODE_ENV=staging npm run seed:mvp-demo
-```
-
-Save printed booking numbers. Demo accounts:
-
-| Role | Login | Password (dev default) |
-|------|-------|------------------------|
+| Role | Login | Default password |
+|------|-------|------------------|
 | Admin | `admin@ttaxi.dev` | `Admin123456!` |
 | Driver | `+66810000001` | `Driver123456!` |
 
-Change demo passwords if staging is public.
-
----
-
-## L. Automated smoke tests
-
-From any machine that can reach staging:
+### 6.4 Rehearsal (from dev machine or exec into backend)
 
 ```bash
-cd backend
-export STAGING_BASE_URL=https://STAGING_DOMAIN
-export STAGING_FRONTEND_URL=https://STAGING_DOMAIN
-npm run smoke:staging
-```
-
-On server (full API rehearsal against DB):
-
-```bash
-cd /srv/ttaxi/current/backend
-npm run rehearsal:mvp-e2e
+docker compose -f docker-compose.staging.yml exec tride-backend npm run rehearsal:mvp-e2e
 # expect 19/19 pass
 ```
 
----
-
-## M. Operator manual verification
-
-Use [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md) sections **A–F**:
-
-- [ ] Customer booking wizard → complete page
-- [ ] Guest lookup + Refresh after driver status change
-- [ ] Admin assign driver
-- [ ] Driver ON_ROUTE → ARRIVED → COMPLETED
-- [ ] Cancelled seed guidance (optional)
-
----
-
-## N. Rollback & troubleshooting
-
-### Stop / rollback app
+Port-based smoke (Phase 2 — API direct + UI):
 
 ```bash
-pm2 stop ttaxi-api-staging
-# restore previous release directory, then:
-pm2 restart ttaxi-api-staging
-```
-
-### Logs
-
-| Source | Command |
-|--------|---------|
-| PM2 stdout/stderr | `pm2 logs ttaxi-api-staging` |
-| PM2 files | `tail -f /var/log/ttaxi/api-error.log` |
-| Backend winston | `tail -f /var/log/ttaxi/combined.log` |
-| nginx error | `sudo tail -f /var/log/nginx/ttaxi-staging-error.log` |
-| nginx access | `sudo tail -f /var/log/nginx/ttaxi-staging-access.log` |
-
-### Common issues
-
-| Symptom | Check |
-|---------|--------|
-| 502 on `/api/` | `pm2 status`; `curl localhost:3000/api/v1/health` |
-| SPA 404 on refresh | nginx `try_files … /index.html` in `location /` |
-| CORS error in browser | `CORS_ORIGIN` must match `https://STAGING_DOMAIN` exactly |
-| Env boot failure | `node -e "require('./src/config/env')"` — weak JWT or missing DB password |
-| Readiness 503 | DB credentials; `UPLOAD_DIR` writable by PM2 user |
-| Wrong API host in UI | Rebuild with `--dart-define=API_BASE_URL=https://STAGING_DOMAIN` |
-| MySQL refused | `systemctl status mysql`; security group / bind-address |
-
-### MySQL connectivity
-
-```bash
-mysql -h 127.0.0.1 -u ttaxi_app -p ttaxi_staging -e "SELECT 1;"
-cd /srv/ttaxi/current/backend && node -e "require('./src/config/database').ping().then(console.log)"
+export STAGING_BASE_URL=http://SERVER_IP:3100
+export STAGING_FRONTEND_URL=http://SERVER_IP:3101
+npm run smoke:staging
 ```
 
 ---
 
-## O. Required environment variables (summary)
+## 7. Phase 4 — Plan public domain (review before any ktaxi change)
 
-| Variable | Required | Notes |
-|----------|----------|-------|
-| `NODE_ENV` | Yes | `staging` on test server |
-| `PORT` | Yes | `3000` (internal; nginx proxies) |
-| `DB_*` | Yes | Host, name, user, password |
-| `JWT_*_SECRET` | Yes | Strong random, ≥16 chars |
-| `CORS_ORIGIN` | Yes | `https://STAGING_DOMAIN` |
-| `UPLOAD_DIR` | Yes | Writable path |
-| `LOG_DIR` | Recommended | `/var/log/ttaxi` |
-| `PUBLIC_API_URL` | Optional | Same as staging domain |
-| `GOOGLE_MAPS_API_KEY` | Optional | Places autocomplete |
-| `AVIATIONSTACK_API_KEY` | Optional | Flight lookup |
+**Target:** `https://tride-staging.88taxi.net` → T-Ride stack **without** stopping ktaxi-nginx.
 
-**Frontend build:**
+### 7.1 DNS
 
-| Define | Required |
-|--------|----------|
-| `API_BASE_URL` | Yes — `https://STAGING_DOMAIN` |
+Add **A/AAAA** record: `tride-staging.88taxi.net` → same server IP as `88taxi.net`.
+
+### 7.2 Routing model (recommended)
+
+Keep T-Ride on **host port 3101** (frontend). Add a **new** server block in **ktaxi-nginx** (Phase 5 only):
+
+```nginx
+# PLANNED — do not apply until Phase 5 sign-off
+# New server block ONLY for tride-staging.88taxi.net
+# Do NOT modify 88taxi.net / admin / driver / api / ws blocks
+
+upstream tride_staging_web {
+    server host.docker.internal:3101;
+    # or: server 172.17.0.1:3101;  # Docker bridge to host — verify on server
+}
+
+server {
+    listen 443 ssl http2;
+    server_name tride-staging.88taxi.net;
+    # reuse existing wildcard cert or issue cert for subdomain
+
+    location / {
+        proxy_pass http://tride_staging_web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+T-Ride **frontend nginx** handles SPA fallback and optional `/api/` proxy — ktaxi-nginx proxies to **:3101** (frontend).
+
+### 7.3 Pre-change checklist (Phase 4 review)
+
+- [ ] Document current `ktaxi-nginx` config (backup)
+- [ ] Confirm port **3101** reachable from inside `ktaxi-nginx` container
+- [ ] Confirm **no** port 80/443 binding outside ktaxi stack
+- [ ] Update T-Ride `CORS_ORIGIN` + rebuild frontend for `https://tride-staging.88taxi.net`
+- [ ] Rollback plan: remove new server block only; `docker compose down` for T-Ride does **not** affect ktaxi
 
 ---
 
-## P. Deploy order (quick reference)
+## 8. Phase 5 — Apply ktaxi-nginx change (last step)
 
-1. Server packages (Node 22, nginx, mysql-client, PM2)
-2. Clone/upload code → `/srv/ttaxi/current`
-3. MySQL create DB + user
-4. `backend/.env` (chmod 600)
-5. `./database/migrate.sh`
-6. `backend`: `npm ci --omit=dev` → PM2 start
-7. Local: `flutter build web` → copy to `frontend/build/web`
-8. nginx config → `nginx -t` → `reload`
-9. `seed:mvp-demo` (optional)
-10. `smoke:staging` + `rehearsal:mvp-e2e`
-11. Manual UI checklist
+1. Backup ktaxi nginx config volume / file
+2. Add **only** `tride-staging.88taxi.net` server block
+3. `docker exec ktaxi-nginx nginx -t`
+4. Reload **ktaxi-nginx** container only (not host nginx)
+5. Verify:
+
+| URL | Expected |
+|-----|----------|
+| `https://tride-staging.88taxi.net/` | T-Ride landing |
+| `https://tride-staging.88taxi.net/booking/lookup` | Guest lookup |
+| `https://tride-staging.88taxi.net/admin` | Admin dispatch |
+| `https://tride-staging.88taxi.net/driver` | Driver login |
+| `https://88taxi.net/` | **Unchanged** — existing KTaxi |
+
+If anything breaks on **88taxi.net**, **revert ktaxi-nginx** immediately — do not debug by stopping T-Ride first.
 
 ---
 
-## Q. Sign-off
+## 9. Operator manual verification
 
-| Step | Done | Date | Operator |
-|------|------|------|----------|
-| Health `/api/v1/health` | [ ] | | |
-| Readiness OK | [ ] | | |
-| smoke:staging pass | [ ] | | |
-| rehearsal 19/19 | [ ] | | |
-| Direct URLs work | [ ] | | |
+Use [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md) sections **A–F** against:
+
+- Phase 2 UI: `http://SERVER_IP:3101` (API health: `:3100`)
+- Phase 5: `https://tride-staging.88taxi.net`
+
+---
+
+## 10. Logs & rollback
+
+### T-Ride only
+
+```bash
+cd /opt/t-ride/deploy/docker
+docker compose -f docker-compose.staging.yml logs -f tride-backend
+docker compose -f docker-compose.staging.yml logs -f tride-frontend
+docker compose -f docker-compose.staging.yml logs -f tride-db
+docker compose -f docker-compose.staging.yml down
+docker compose -f docker-compose.staging.yml up -d --build
+```
+
+### KTaxi (troubleshooting reference only — do not run unless ops owns KTaxi)
+
+```bash
+docker logs ktaxi-nginx --tail 100
+docker logs ktaxi-api --tail 100
+```
+
+### Rollback summary
+
+| Scope | Action |
+|-------|--------|
+| T-Ride bad deploy | `docker compose down`; fix `/opt/t-ride`; `up -d` again |
+| ktaxi-nginx bad vhost | Restore backed-up config; reload **ktaxi-nginx** only |
+| Never | `docker stop ktaxi-*` as T-Ride rollback step |
+
+---
+
+## 11. Required environment variables (T-Ride)
+
+| Variable | Example (Docker) |
+|----------|------------------|
+| `NODE_ENV` | `staging` |
+| `DB_HOST` | `tride-db` |
+| `DB_NAME` | `tride_staging` |
+| `DB_USER` / `DB_PASSWORD` | `tride_app` / (secret) |
+| `JWT_*_SECRET` | strong random |
+| `CORS_ORIGIN` | `http://SERVER_IP:3101` or `https://tride-staging.88taxi.net` |
+| `PUBLIC_API_URL` | `http://SERVER_IP:3100` or public HTTPS URL |
+| `UPLOAD_DIR` | `/srv/tride/uploads` (volume `tride_uploads`) |
+| `TRIDE_API_BASE_URL` | Flutter build arg in `deploy/docker/.env` |
+
+**Flutter (Docker build):** `TRIDE_API_BASE_URL` — split smoke uses **`http://SERVER_IP:3100`**; same-origin domain phase uses **`https://tride-staging.88taxi.net`**
+
+---
+
+## 12. Sign-off
+
+| Phase | Done | Date | Operator |
+|-------|------|------|----------|
+| 1 — compose at `/opt/t-ride` | [ ] | | |
+| 2 — `:3100` API + `:3101` UI smoke | [ ] | | |
+| 3 — migrate + seed + rehearsal | [ ] | | |
+| 4 — ktaxi-nginx plan reviewed | [ ] | | |
+| 5 — `tride-staging.88taxi.net` live | [ ] | | |
+| KTaxi `88taxi.net` still OK | [ ] | | |
 | Manual E2E A–F | [ ] | | |
 
 Notes:

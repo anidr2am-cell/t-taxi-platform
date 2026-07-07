@@ -313,16 +313,19 @@ Pre-deploy: complete checklist in [MVP_DEPLOYMENT_PREP.md §15](./MVP_DEPLOYMENT
 
 ---
 
-## M. Phase 12 — Gabia staging deploy (2026-07-04)
+## M. Phase 12 — Gabia T-Ride staging (tride-staging)
 
 | Item | Status |
 |------|--------|
-| [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md) | Created — full operator runbook |
-| `database/migrate.sh` | Linux migration script |
-| `deploy/nginx/ttaxi-staging-http.conf` | HTTP-first nginx (pre-TLS) |
-| `deploy/nginx/README.md` | nginx file guide |
+| [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md) | T-Ride Docker at **`/opt/t-ride`** — coexist with **`/opt/ktaxi`** |
+| [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) | Architecture, **`tride-*`** naming, phased **:3100** → **ktaxi-nginx** |
+| `database/migrate.sh` | Run inside **`tride-backend`** against **`tride_staging`** only |
+| `deploy/docker/docker-compose.staging.yml` | **T-Ride staging Compose** — `tride-*`, ports **3100/3101** |
+| `deploy/docker/README.md` | Compose operator guide |
 
-Server sign-off: [GABIA_STAGING_DEPLOY_CHECKLIST.md §Q](./GABIA_STAGING_DEPLOY_CHECKLIST.md).
+**Naming:** deploy name **`tride-staging`**, domain **`tride-staging.88taxi.net`**, containers **`tride-db`** / **`tride-backend`** / **`tride-frontend`**. **Never** touch **`ktaxi-*`** or **`ktaxi-postgres`**.
+
+Server sign-off: [GABIA_STAGING_DEPLOY_CHECKLIST.md §12](./GABIA_STAGING_DEPLOY_CHECKLIST.md).
 
 ---
 

@@ -1,0 +1,16 @@
+**/.git
+**/.gitignore
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/uploads
+**/logs
+backend/uploads
+backend/logs
+frontend/build
+frontend/.dart_tool
+**/*.md
+docs
+deploy/pm2
+.cursor

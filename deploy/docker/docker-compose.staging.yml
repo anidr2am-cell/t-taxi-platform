@@ -1,0 +1,103 @@
+# T-Ride staging — isolated Docker stack (coexists with legacy /opt/ktaxi)
+#
+# Usage (from deploy/docker/):
+#   cp .env.example .env   # edit secrets on server only
+#   docker compose -f docker-compose.staging.yml up -d --build
+#
+# Smoke ports (host → container):
+#   3100 → tride-backend:3000
+#   3101 → tride-frontend:80
+#
+# Does NOT use host 80/443, ktaxi-nginx, or ktaxi-postgres.
+
+name: tride-staging
+
+services:
+  tride-db:
+    image: mysql:8.4
+    container_name: tride-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${DB_NAME:-tride_staging}
+      MYSQL_USER: ${DB_USER:-tride_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      TZ: ${TZ:-Asia/Bangkok}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+07:00
+    volumes:
+      - tride_mysql_data:/var/lib/mysql
+    networks:
+      - tride-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  tride-backend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.backend
+    container_name: tride-backend
+    restart: unless-stopped
+    depends_on:
+      tride-db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: staging
+      PORT: 3000
+      DB_HOST: tride-db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-tride_staging}
+      DB_USER: ${DB_USER:-tride_app}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      UPLOAD_DIR: /srv/tride/uploads
+      LOG_DIR: /srv/tride/logs
+      TZ: ${TZ:-Asia/Bangkok}
+    ports:
+      - "${TRIDE_BACKEND_HOST_PORT:-3100}:3000"
+    volumes:
+      - tride_uploads:/srv/tride/uploads
+      - tride_logs:/srv/tride/logs
+    networks:
+      - tride-net
+
+  tride-frontend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.frontend
+      args:
+        API_BASE_URL: ${TRIDE_API_BASE_URL:-http://localhost:3100}
+        SOCKET_URL: ${TRIDE_SOCKET_URL:-}
+    container_name: tride-frontend
+    restart: unless-stopped
+    depends_on:
+      tride-backend:
+        condition: service_healthy
+    ports:
+      - "${TRIDE_FRONTEND_HOST_PORT:-3101}:80"
+    networks:
+      - tride-net
+
+networks:
+  tride-net:
+    name: tride-net
+    driver: bridge
+
+volumes:
+  tride_mysql_data:
+    name: tride_mysql_data
+  tride_uploads:
+    name: tride_uploads
+  tride_logs:
+    name: tride_logs

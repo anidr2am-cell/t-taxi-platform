@@ -145,7 +145,7 @@ Expected (2026-07-04 baseline):
 
 ## 7. Production / staging web build
 
-> **Deploying to a test server?** Follow [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) for nginx, PM2, CORS, env, and smoke tests.
+> **Deploying T-Ride staging on Gabia?** Follow [GABIA_STAGING_DEPLOY_CHECKLIST.md](./GABIA_STAGING_DEPLOY_CHECKLIST.md) and [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) — Docker at **`/opt/t-ride`**, **`tride-*`** containers, coexist with legacy **`/opt/ktaxi`** (do not modify **`ktaxi-*`**).
 
 ### Build frontend
 
@@ -210,7 +210,7 @@ Ensure `CORS_ORIGIN` matches the frontend origin. Run migrations on the target D
 
 ## 10. Related docs
 
-- [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) — **staging/test server deploy** (Gabia, nginx, PM2, CORS, env)
+- [MVP_DEPLOYMENT_PREP.md](./MVP_DEPLOYMENT_PREP.md) — **T-Ride staging deploy** (Gabia Docker `/opt/t-ride`, phased `:3100` → `tride-staging.88taxi.net`)
 - [MVP_DEV_SETUP.md](./MVP_DEV_SETUP.md) — script options, migration notes
 - [MVP_MANUAL_E2E_CHECKLIST.md](./MVP_MANUAL_E2E_CHECKLIST.md) — sign-off checklist
 - [openapi/README.md](./openapi/README.md) — API reference

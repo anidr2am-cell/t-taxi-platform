@@ -7,8 +7,9 @@ MVP scope: **guest booking → admin manual dispatch → driver trip flow → gu
 | Document | Purpose |
 |----------|---------|
 | **[docs/MVP_DEMO_GUIDE.md](docs/MVP_DEMO_GUIDE.md)** | Start here — full demo/test setup for a new operator |
-| **[docs/GABIA_STAGING_DEPLOY_CHECKLIST.md](docs/GABIA_STAGING_DEPLOY_CHECKLIST.md)** | **Gabia VPS staging deploy — operator runbook (Phase 12)** |
-| **[docs/MVP_DEPLOYMENT_PREP.md](docs/MVP_DEPLOYMENT_PREP.md)** | Staging architecture, CORS, env, smoke tests |
+| **[docs/GABIA_STAGING_DEPLOY_CHECKLIST.md](docs/GABIA_STAGING_DEPLOY_CHECKLIST.md)** | **Gabia — T-Ride `tride-staging` at `/opt/t-ride` (coexist with `/opt/ktaxi`)** |
+| **[deploy/docker/README.md](deploy/docker/README.md)** | **Docker Compose staging — `3100` API / `3101` UI** |
+| **[docs/MVP_DEPLOYMENT_PREP.md](docs/MVP_DEPLOYMENT_PREP.md)** | Staging architecture, Docker/`tride-*` naming, CORS, env, smoke tests |
 | [docs/MVP_DEV_SETUP.md](docs/MVP_DEV_SETUP.md) | Developer reference (accounts, scripts, URLs) |
 | [docs/MVP_MANUAL_E2E_CHECKLIST.md](docs/MVP_MANUAL_E2E_CHECKLIST.md) | Manual verification checklist |
 
