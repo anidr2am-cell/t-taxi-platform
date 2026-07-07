@@ -166,7 +166,32 @@ SELECT
   (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '$SmokeDatabase' AND TABLE_NAME = 'chat_messages' AND CONSTRAINT_NAME = 'fk_chat_messages_sender_participant_id'),
   (SELECT COUNT(*) FROM $SmokeDatabase.service_types WHERE code = 'AIRPORT_PICKUP'),
   (SELECT COUNT(*) FROM $SmokeDatabase.vehicle_types WHERE code = 'SEDAN'),
-  (SELECT COUNT(*) FROM $SmokeDatabase.settings WHERE group_name = 'settlement' AND key_name = 'commission_rate_percent');
+  (SELECT COUNT(*) FROM $SmokeDatabase.settings WHERE group_name = 'settlement' AND key_name = 'commission_rate_percent'),
+  (
+    SELECT COUNT(*)
+    FROM $SmokeDatabase.routes r
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    WHERE st.code = 'AIRPORT_PICKUP'
+      AND lo.code = 'BKK'
+      AND ld.code = 'PATTAYA'
+      AND r.is_active = 1
+      AND r.deleted_at IS NULL
+  ),
+  (
+    SELECT COUNT(*)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    WHERE st.code = 'AIRPORT_PICKUP'
+      AND lo.code = 'BKK'
+      AND ld.code = 'PATTAYA'
+      AND vp.is_active = 1
+      AND vp.deleted_at IS NULL
+  );
 "@
 
     $result = Invoke-MysqlScalar -Sql $checks -DefaultsFile $defaults -MysqlPath $MysqlPath
@@ -180,6 +205,8 @@ SELECT
     Assert-Equals -Name "AIRPORT_PICKUP seed count" -Actual $parts[6] -Expected "1"
     Assert-Equals -Name "SEDAN seed count" -Actual $parts[7] -Expected "1"
     Assert-Equals -Name "settlement commission setting count" -Actual $parts[8] -Expected "1"
+    Assert-Equals -Name "BKK to Pattaya airport pickup route count" -Actual $parts[9] -Expected "1"
+    Assert-Equals -Name "BKK to Pattaya active vehicle price count" -Actual $parts[10] -Expected "6"
 
     Write-Host "Migration smoke test completed."
     Write-Host "Smoke database left in place for inspection: $SmokeDatabase"
