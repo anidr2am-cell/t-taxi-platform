@@ -609,10 +609,13 @@ class BookingWizardController extends ChangeNotifier {
           ? _regionFromLocation(destination)
           : null;
     } else if (service == BookingServiceType.airportDropoff) {
-      originAirportIata = _airportIataFromOption(destination);
-      destinationLocationCode = _internalLocationCodeFromOption(origin);
+      originLocationCode = _internalLocationCodeFromOption(origin) ??
+          _regionFromLocation(origin);
+      final destinationAirportIata = _airportIataFromOption(destination);
+      destinationLocationCode =
+          _internalLocationCodeFromOption(destination) ?? destinationAirportIata;
       destinationRegion = destinationLocationCode == null
-          ? _regionFromLocation(origin)
+          ? _regionFromLocation(destination)
           : null;
     } else if (service == BookingServiceType.cityTransfer) {
       originAirportIata = _airportIataFromOption(origin);

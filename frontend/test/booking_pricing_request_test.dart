@@ -223,6 +223,54 @@ void main() {
   );
 
   test(
+    'airport dropoff pricing request uses Pattaya origin and BKK destination codes',
+    () async {
+      final api = _CapturingBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.selectService(BookingServiceType.airportDropoff);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'place:pattaya',
+          displayName: '파타야',
+          kind: LocationKind.place,
+          code: 'PATTAYA',
+          placeId: 'google-pattaya',
+          name: '파타야',
+          address: '파타야 촌 부리 태국',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'bkk',
+          displayName: 'Suvarnabhumi Airport',
+          kind: LocationKind.airport,
+          code: 'BKK',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+
+      final body = api.lastPricingRequest!;
+      expect(body['serviceTypeCode'], 'AIRPORT_DROPOFF');
+      expect(body['vehicleTypeCode'], 'SUV');
+      expect(body['originLocationCode'], 'PATTAYA');
+      expect(body['destinationLocationCode'], 'BKK');
+      expect(body.containsKey('originAirportIata'), false);
+      expect(body.containsKey('destinationRegion'), false);
+    },
+  );
+
+  test(
     'airport pickup create payload includes flight number in transfer',
     () async {
       final controller = BookingWizardController(
