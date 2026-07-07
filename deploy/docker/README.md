@@ -8,7 +8,7 @@ Isolated **T-Ride** stack for Gabia VPS staging. Runs beside legacy **KTaxi** at
 | Compose file | `deploy/docker/docker-compose.staging.yml` |
 | Server path | `/opt/t-ride` (clone repo; run compose from `deploy/docker/`) |
 | Network | `tride-net` |
-| DB | MySQL 8.4 (`tride-db`), database `tride_staging` |
+| DB | MariaDB 10.11 (`tride-db`), database `tride_staging` |
 | Backend | `tride-backend` — container **3000**, host **3100** |
 | Frontend | `tride-frontend` — nginx **80**, host **3101** |
 | Volumes | `tride_mysql_data`, `tride_uploads`, `tride_logs` |
@@ -60,6 +60,35 @@ Rebuild frontend after changing `TRIDE_API_BASE_URL`:
 docker compose -f docker-compose.staging.yml up -d --build tride-frontend
 ```
 
+## Database image — MariaDB (not MySQL 8.4)
+
+`tride-db` uses **`mariadb:10.11`** so the MariaDB **mysql client** inside `tride-backend` can authenticate without MySQL 8.4’s `caching_sha2_password` plugin (which Alpine/MariaDB clients do not load).
+
+Env vars (`MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`) and charset/timezone `command` flags are compatible with the official MariaDB image.
+
+## Reset DB volume after image change (or failed first migration)
+
+If `tride-db` previously ran as **`mysql:8.4`**, or migration failed partway, **delete only the T-Ride data volume** and recreate the stack **before** re-running `migrate.sh`:
+
+```bash
+cd /opt/t-ride/deploy/docker
+docker compose -f docker-compose.staging.yml down
+
+# T-Ride ONLY — never remove ktaxi / infra volumes
+docker volume rm tride_mysql_data
+
+docker compose -f docker-compose.staging.yml up -d --build
+docker compose -f docker-compose.staging.yml ps
+```
+
+**Never delete:** `ktaxi_*`, `infra_*`, or any volume attached to `/opt/ktaxi` containers.
+
+Verify T-Ride volumes only:
+
+```bash
+docker volume ls | grep tride
+```
+
 ## Migration and seed
 
 Wait until `tride-db` is healthy, then:
@@ -69,7 +98,7 @@ docker compose -f docker-compose.staging.yml exec tride-backend \
   sh -c 'cd /srv/tride/database && ./migrate.sh'
 ```
 
-Compose injects `DB_*` and JWT vars from `deploy/docker/.env` into the container environment; no host `backend/.env` mount is required.
+Compose injects `DB_*` and JWT vars from `deploy/docker/.env` into the container environment. `database/migrate.sh` passes **`--skip-ssl`** for MariaDB client compatibility inside the container.
 
 Seed demo data (**tride_staging only**):
 
@@ -94,7 +123,7 @@ services:
 | File | Purpose |
 |------|---------|
 | `docker-compose.staging.yml` | `tride-db`, `tride-backend`, `tride-frontend` |
-| `Dockerfile.backend` | Node 22 + mysql-client + migrate.sh |
+| `Dockerfile.backend` | Node 22 + MariaDB-compatible mysql client + migrate.sh |
 | `Dockerfile.frontend` | Flutter web build + nginx |
 | `nginx.frontend.conf` | SPA fallback + `/api/` proxy (future same-origin) |
 | `.env.example` | Staging secrets template — copy to `.env` |
@@ -106,6 +135,11 @@ docker compose -f docker-compose.staging.yml logs -f tride-backend
 docker compose -f docker-compose.staging.yml down        # stops tride-* only
 docker compose -f docker-compose.staging.yml down -v     # also removes volumes — destructive
 ```
+
+## Static validation
+
+- **Gabia server:** `docker compose -f docker-compose.staging.yml config` (requires populated `.env`)
+- **Local dev machine:** Docker CLI may be unavailable — run `config` / `up` on the server
 
 ## Future step — public domain (not this phase)
 

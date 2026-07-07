@@ -64,7 +64,7 @@ if ! command -v mysql >/dev/null 2>&1; then
   exit 1
 fi
 
-MYSQL_ARGS=(--host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" --default-character-set=utf8mb4)
+MYSQL_ARGS=(--host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" --default-character-set=utf8mb4 --skip-ssl)
 if [[ -n "$DB_PASSWORD" ]]; then
   MYSQL_ARGS+=(--password="$DB_PASSWORD")
 fi

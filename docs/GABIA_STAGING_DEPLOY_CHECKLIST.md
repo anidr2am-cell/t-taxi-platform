@@ -18,7 +18,7 @@ Operator runbook to deploy **T-Ride MVP** on the **same Gabia VPS** as the exist
 | Orchestration | `/opt/ktaxi/infra/docker-compose.yml` | **`/opt/t-ride/deploy/docker/docker-compose.staging.yml`** |
 | Container prefix | `ktaxi-*` | **`tride-*`** |
 | Docker network | `infra_ktaxi-net` (ktaxi internal) | **`tride-net`** |
-| Database | **Postgres** (`ktaxi-postgres`) | **MySQL 8** (`tride-db`) — **separate** |
+| Database | **Postgres** (`ktaxi-postgres`) | **MariaDB 10.11** (`tride-db`) — **separate** |
 | DB name | (ktaxi Postgres DBs) | **`tride_staging`** |
 | Edge / TLS | **`ktaxi-nginx`** → host **80/443** | **No host 80/443** in Phase 1–3 |
 | Domains | `88taxi.net`, `driver.88taxi.net`, `admin.88taxi.net`, `api.88taxi.net`, `ws.88taxi.net` | **`tride-staging.88taxi.net`** (Phase 4+) |
@@ -128,7 +128,7 @@ Expected tree:
 
 | Service | Container name | Image / build | Notes |
 |---------|----------------|---------------|-------|
-| `tride-db` | `tride-db` | `mysql:8.4` | DB `tride_staging`; volume `tride_mysql_data` |
+| `tride-db` | `tride-db` | `mariadb:10.11` | DB `tride_staging`; volume `tride_mysql_data` |
 | `tride-backend` | `tride-backend` | `deploy/docker/Dockerfile.backend` | Node 22, host **3100**→3000 |
 | `tride-frontend` | `tride-frontend` | `deploy/docker/Dockerfile.frontend` | nginx, host **3101**→80 |
 
@@ -221,9 +221,18 @@ After Phase 5 (HTTPS domain), update `.env` and rebuild frontend with `TRIDE_API
 
 Run **inside** `tride-backend` container (or one-off migrate job) — **never** against ktaxi-postgres.
 
-### 6.1 MySQL bootstrap
+### 6.1 MariaDB bootstrap
 
-Compose creates `tride_staging` and `tride_app` from `deploy/docker/.env` on first `tride-db` start. Manual SQL is only needed if the volume already exists with different credentials.
+Compose creates `tride_staging` and `tride_app` from `deploy/docker/.env` on first `tride-db` start (`mariadb:10.11`). Manual SQL is only needed if the volume already exists with different credentials.
+
+**If `tride-db` previously used `mysql:8.4` or migration failed:** stop the stack, remove **only** `tride_mysql_data`, then `up` again. **Never** delete ktaxi / `infra_*` volumes.
+
+```bash
+cd /opt/t-ride/deploy/docker
+docker compose -f docker-compose.staging.yml down
+docker volume rm tride_mysql_data
+docker compose -f docker-compose.staging.yml up -d --build
+```
 
 ### 6.2 Migrations
 

@@ -9,12 +9,13 @@
 #   3101 → tride-frontend:80
 #
 # Does NOT use host 80/443, ktaxi-nginx, or ktaxi-postgres.
+# tride-db: mariadb:10.11 (matches MariaDB mysql client in tride-backend)
 
 name: tride-staging
 
 services:
   tride-db:
-    image: mysql:8.4
+    image: mariadb:10.11
     container_name: tride-db
     restart: unless-stopped
     environment:
