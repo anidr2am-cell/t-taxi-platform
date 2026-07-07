@@ -60,10 +60,7 @@ class BookingWizardController extends ChangeNotifier {
 
   void _sanitizeCustomerVehicleSelection() {
     if (!_isCustomerVisibleVehicle(_state.selectedVehicle)) {
-      _state = _state.copyWith(
-        clearSelectedVehicle: true,
-        clearPricing: true,
-      );
+      _state = _state.copyWith(clearSelectedVehicle: true, clearPricing: true);
     }
   }
 
@@ -110,7 +107,10 @@ class BookingWizardController extends ChangeNotifier {
       final step = restored.step >= BookingWizardState.stepCount
           ? BookingWizardState.stepCount - 1
           : restored.step;
-      _state = restored.copyWith(step: step);
+      _state = restored.copyWith(
+        step: step,
+        pickupTime: _normalizePickupTime(restored.pickupTime),
+      );
       _sanitizeCustomerVehicleSelection();
     } else {
       final initialPickup = defaultPickupDateTime();
@@ -210,6 +210,44 @@ class BookingWizardController extends ChangeNotifier {
     return '$h:$m';
   }
 
+  String? _normalizePickupTime(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    final match = RegExp(
+      r'^(\d{1,2}):(\d{2})(?:\s*(.*))?$',
+    ).firstMatch(trimmed);
+    if (match == null) return value;
+
+    final rawHour = int.tryParse(match.group(1)!);
+    final minute = int.tryParse(match.group(2)!);
+    if (rawHour == null || minute == null || minute < 0 || minute > 59) {
+      return value;
+    }
+
+    final suffix = (match.group(3) ?? '').trim().toLowerCase();
+    var hour = rawHour;
+    if (suffix.isNotEmpty) {
+      final isPm =
+          suffix.contains('pm') ||
+          suffix.contains('오후') ||
+          suffix.contains('午後') ||
+          suffix.contains('下午');
+      final isAm =
+          suffix.contains('am') ||
+          suffix.contains('오전') ||
+          suffix.contains('午前') ||
+          suffix.contains('上午');
+      if (!isPm && !isAm) return value;
+      if (rawHour < 1 || rawHour > 12) return value;
+      hour = rawHour % 12;
+      if (isPm) hour += 12;
+    } else if (hour < 0 || hour > 23) {
+      return value;
+    }
+
+    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+  }
+
   DateTime? selectedPickupDateTime() {
     final date = _state.pickupDate;
     final time = _state.pickupTime;
@@ -249,19 +287,19 @@ class BookingWizardController extends ChangeNotifier {
 
   Future<bool> setPickupDateTime(DateTime value) async {
     final bangkokValue = _bangkokWallTime(value);
-    final today = DateTime(thailandNow().year, thailandNow().month, thailandNow().day);
+    final today = DateTime(
+      thailandNow().year,
+      thailandNow().month,
+      thailandNow().day,
+    );
     if (bangkokValue.isBefore(today)) {
-      _state = _state.copyWith(
-        errorMessage: 'pickup_date_past',
-      );
+      _state = _state.copyWith(errorMessage: 'pickup_date_past');
       await _persist();
       notifyListeners();
       return false;
     }
     if (!isPickupDateTimeAllowed(bangkokValue)) {
-      _state = _state.copyWith(
-        errorMessage: 'pickup_time_minimum',
-      );
+      _state = _state.copyWith(errorMessage: 'pickup_time_minimum');
       await _persist();
       notifyListeners();
       return false;
@@ -399,7 +437,10 @@ class BookingWizardController extends ChangeNotifier {
           'airportIata': airportIata,
           if (_state.serviceType == BookingServiceType.airportPickup &&
               _state.flightNumber.trim().isNotEmpty)
-            'flightNumber': _state.flightNumber.trim().replaceAll(' ', '').toUpperCase(),
+            'flightNumber': _state.flightNumber
+                .trim()
+                .replaceAll(' ', '')
+                .toUpperCase(),
         },
       'customer': {
         'name': _state.customerName.trim(),
@@ -466,7 +507,9 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return result;
     } catch (e) {
-      _state = _state.copyWith(errorMessage: userFacingError(e, fallback: 'ui_load_failed'));
+      _state = _state.copyWith(
+        errorMessage: userFacingError(e, fallback: 'ui_load_failed'),
+      );
       notifyListeners();
       return null;
     } finally {
@@ -491,8 +534,8 @@ class BookingWizardController extends ChangeNotifier {
       final autoSelected = recommendation.multipleVehicles
           ? null
           : (_isCustomerVisibleVehicle(recommendation.recommendedVehicle)
-              ? recommendation.recommendedVehicle
-              : null);
+                ? recommendation.recommendedVehicle
+                : null);
       _state = _state.copyWith(
         recommendation: recommendation,
         selectedVehicle: autoSelected,
@@ -535,7 +578,8 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<void> selectVehicle(String vehicleCode) async {
-    if (!_isCustomerVisibleVehicle(vehicleCode) || !isVehicleEnabled(vehicleCode)) {
+    if (!_isCustomerVisibleVehicle(vehicleCode) ||
+        !isVehicleEnabled(vehicleCode)) {
       return;
     }
     _state = _state.copyWith(
@@ -704,7 +748,10 @@ class BookingWizardController extends ChangeNotifier {
       );
       _state = _state.copyWith(pricing: pricing, clearError: true);
     } catch (e) {
-      _state = _state.copyWith(errorMessage: userFacingError(e, fallback: 'ui_action_failed'), clearPricing: true);
+      _state = _state.copyWith(
+        errorMessage: userFacingError(e, fallback: 'ui_action_failed'),
+        clearPricing: true,
+      );
     } finally {
       _setLoading(false);
       await _persist();
@@ -755,9 +802,7 @@ class BookingWizardController extends ChangeNotifier {
     if (step == 4 && _state.recommendation == null) {
       await loadRecommendation();
     }
-    if (step == 5 &&
-        _state.selectedVehicle != null &&
-        _state.pricing == null) {
+    if (step == 5 && _state.selectedVehicle != null && _state.pricing == null) {
       await loadPricing();
     }
   }

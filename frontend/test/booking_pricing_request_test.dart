@@ -70,84 +70,93 @@ void main() {
     },
   );
 
-  test('createBooking serializes DateTime scheduledPickupAt to ISO string with Bangkok offset', () async {
-    Map<String, dynamic>? body;
-    final api = BookingApiService.test(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
-        return http.Response(
-          jsonEncode({
-            'success': true,
-            'data': {
-              'bookingNumber': 'TX202607010001',
-              'status': 'PENDING',
-              'paymentMethod': 'PAY_DRIVER',
-              'paymentStatus': 'UNPAID',
-              'totalAmount': 0,
-              'currency': 'THB',
-            },
-          }),
-          201,
-        );
-      }),
-    );
+  test(
+    'createBooking serializes DateTime scheduledPickupAt to ISO string with Bangkok offset',
+    () async {
+      Map<String, dynamic>? body;
+      final api = BookingApiService.test(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'bookingNumber': 'TX202607010001',
+                'status': 'PENDING',
+                'paymentMethod': 'PAY_DRIVER',
+                'paymentStatus': 'UNPAID',
+                'totalAmount': 0,
+                'currency': 'THB',
+              },
+            }),
+            201,
+          );
+        }),
+      );
 
-    await api.createBooking({
-      'serviceTypeCode': 'CITY_TRANSFER',
-      'vehicleTypeCode': 'SUV',
-      'scheduledPickupAt': DateTime.parse('2026-07-01T09:30:00+07:00'),
-    });
+      await api.createBooking({
+        'serviceTypeCode': 'CITY_TRANSFER',
+        'vehicleTypeCode': 'SUV',
+        'scheduledPickupAt': DateTime.parse('2026-07-01T09:30:00+07:00'),
+      });
 
-    expect(body!['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
-    expect(body!['scheduledPickupAt'], isA<String>());
-  });
+      expect(body!['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
+      expect(body!['scheduledPickupAt'], isA<String>());
+    },
+  );
 
-  test('createBooking preserves intended Bangkok wall time for local DateTime input', () async {
-    Map<String, dynamic>? body;
-    final api = BookingApiService.test(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
-        return http.Response(
-          jsonEncode({
-            'success': true,
-            'data': {'bookingNumber': 'TX202607010002'},
-          }),
-          201,
-        );
-      }),
-    );
+  test(
+    'createBooking preserves intended Bangkok wall time for local DateTime input',
+    () async {
+      Map<String, dynamic>? body;
+      final api = BookingApiService.test(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {'bookingNumber': 'TX202607010002'},
+            }),
+            201,
+          );
+        }),
+      );
 
-    await api.createBooking({
-      'serviceTypeCode': 'CITY_TRANSFER',
-      'vehicleTypeCode': 'SUV',
-      'scheduledPickupAt': DateTime(2026, 7, 1, 9, 30),
-    });
+      await api.createBooking({
+        'serviceTypeCode': 'CITY_TRANSFER',
+        'vehicleTypeCode': 'SUV',
+        'scheduledPickupAt': DateTime(2026, 7, 1, 9, 30),
+      });
 
-    expect(body!['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
-  });
+      expect(body!['scheduledPickupAt'], '2026-07-01T09:30:00+07:00');
+    },
+  );
 
-  test('createBooking rejects null or missing scheduledPickupAt before request submission', () async {
-    var calls = 0;
-    final api = BookingApiService.test(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        calls += 1;
-        return http.Response('{}', 500);
-      }),
-    );
+  test(
+    'createBooking rejects null or missing scheduledPickupAt before request submission',
+    () async {
+      var calls = 0;
+      final api = BookingApiService.test(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          calls += 1;
+          return http.Response('{}', 500);
+        }),
+      );
 
-    await expectLater(
-      api.createBooking({'scheduledPickupAt': null}),
-      throwsA(isA<BookingApiException>()),
-    );
-    await expectLater(
-      api.createBooking({'serviceTypeCode': 'CITY_TRANSFER'}),
-      throwsA(isA<BookingApiException>()),
-    );
-    expect(calls, 0);
-  });
+      await expectLater(
+        api.createBooking({'scheduledPickupAt': null}),
+        throwsA(isA<BookingApiException>()),
+      );
+      await expectLater(
+        api.createBooking({'serviceTypeCode': 'CITY_TRANSFER'}),
+        throwsA(isA<BookingApiException>()),
+      );
+      expect(calls, 0);
+    },
+  );
 
   test(
     'wizard pricing maps Google airport place and Pattaya to MVP pricing codes',
@@ -213,44 +222,47 @@ void main() {
     },
   );
 
-  test('airport pickup create payload includes flight number in transfer', () async {
-    final controller = BookingWizardController(
-      apiService: _CapturingBookingApi(),
-      storage: _MemoryBookingStateStorage(),
-      recentLocationsStorage: RecentLocationsStorage(
-        guestRepository: _MemoryRecentLocationsRepository(),
-      ),
-      now: () => DateTime.utc(2026, 6, 29, 3),
-    );
+  test(
+    'airport pickup create payload includes flight number in transfer',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _CapturingBookingApi(),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
 
-    await controller.selectService(BookingServiceType.airportPickup);
-    await controller.setOrigin(
-      const LocationOption(
-        id: 'bkk',
-        displayName: 'Suvarnabhumi Airport',
-        kind: LocationKind.airport,
-        code: 'BKK',
-      ),
-    );
-    await controller.setDestination(
-      const LocationOption(
-        id: 'pattaya',
-        displayName: 'Pattaya',
-        kind: LocationKind.city,
-        code: 'PATTAYA',
-      ),
-    );
-    await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
-    await controller.updateCustomerInfo(flightNumber: 'tg 401');
-    await controller.updatePassengersAndLuggage(adults: 2);
-    await controller.loadRecommendation();
-    await controller.selectVehicle('SUV');
+      await controller.selectService(BookingServiceType.airportPickup);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'bkk',
+          displayName: 'Suvarnabhumi Airport',
+          kind: LocationKind.airport,
+          code: 'BKK',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'pattaya',
+          displayName: 'Pattaya',
+          kind: LocationKind.city,
+          code: 'PATTAYA',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updateCustomerInfo(flightNumber: 'tg 401');
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
 
-    final payload = controller.buildCreatePayload();
+      final payload = controller.buildCreatePayload();
 
-    expect(payload['transfer'], isA<Map>());
-    expect(payload['transfer']['flightNumber'], 'TG401');
-  });
+      expect(payload['transfer'], isA<Map>());
+      expect(payload['transfer']['flightNumber'], 'TG401');
+    },
+  );
 
   test(
     'place details keep localized display text while storing MVP internal code',
@@ -359,6 +371,49 @@ void main() {
     expect(restored.scheduledPickupAtIso(), '2026-07-01T09:30:00+07:00');
   });
 
+  test(
+    'restored localized pickup time is normalized for recommendation validation',
+    () async {
+      final storage = _MemoryBookingStateStorage()
+        ..value = const BookingWizardState(
+          serviceType: BookingServiceType.airportPickup,
+          origin: LocationOption(
+            id: 'bkk',
+            displayName: 'Suvarnabhumi Airport',
+            kind: LocationKind.airport,
+            code: 'BKK',
+          ),
+          destination: LocationOption(
+            id: 'pattaya',
+            displayName: '파타야',
+            kind: LocationKind.place,
+            code: 'PATTAYA',
+            placeId: 'google-pattaya',
+            name: '파타야',
+            address: '파타야 촌 부리 태국',
+          ),
+          pickupDate: '2026-07-08',
+          pickupTime: '12:04 오전',
+          adults: 2,
+        );
+      final controller = BookingWizardController(
+        apiService: _CapturingBookingApi(),
+        storage: storage,
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 7, 7, 10),
+      );
+
+      await controller.initialize();
+
+      expect(controller.state.pickupTime, '00:04');
+      expect(controller.selectedPickupDateTime(), DateTime(2026, 7, 8, 0, 4));
+      expect(controller.canLoadRecommendation(), true);
+      expect(controller.stepValidationMessageKey(5), 'wizard_required_vehicle');
+    },
+  );
+
   test('booking payload includes scheduledPickupAt ISO-8601 field', () async {
     final controller = BookingWizardController(
       apiService: _CapturingBookingApi(),
@@ -402,43 +457,46 @@ void main() {
     expect(payload['scheduledPickupAt'], isA<String>());
   });
 
-  test('booking create payload fails before submission when pickup time is missing', () async {
-    final controller = BookingWizardController(
-      apiService: _CapturingBookingApi(),
-      storage: _MemoryBookingStateStorage(),
-      recentLocationsStorage: RecentLocationsStorage(
-        guestRepository: _MemoryRecentLocationsRepository(),
-      ),
-    );
+  test(
+    'booking create payload fails before submission when pickup time is missing',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _CapturingBookingApi(),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+      );
 
-    await controller.selectService(BookingServiceType.cityTransfer);
-    await controller.setOrigin(
-      const LocationOption(
-        id: 'origin',
-        displayName: 'Bangkok',
-        kind: LocationKind.city,
-        code: 'BANGKOK',
-      ),
-    );
-    await controller.setDestination(
-      const LocationOption(
-        id: 'destination',
-        displayName: 'Pattaya',
-        kind: LocationKind.city,
-        code: 'PATTAYA',
-      ),
-    );
-    await controller.updatePassengersAndLuggage(adults: 2);
-    await controller.loadRecommendation();
-    await controller.selectVehicle('SUV');
-    await controller.updateCustomerInfo(
-      name: 'Kim',
-      email: 'kim@example.com',
-      phone: '+66123456789',
-    );
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'origin',
+          displayName: 'Bangkok',
+          kind: LocationKind.city,
+          code: 'BANGKOK',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'destination',
+          displayName: 'Pattaya',
+          kind: LocationKind.city,
+          code: 'PATTAYA',
+        ),
+      );
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+      await controller.updateCustomerInfo(
+        name: 'Kim',
+        email: 'kim@example.com',
+        phone: '+66123456789',
+      );
 
-    expect(controller.buildCreatePayload, throwsA(isA<StateError>()));
-  });
+      expect(controller.buildCreatePayload, throwsA(isA<StateError>()));
+    },
+  );
 }
 
 class _CapturingBookingApi implements BookingApiService {

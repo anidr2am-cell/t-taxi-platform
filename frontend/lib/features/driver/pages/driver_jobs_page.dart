@@ -26,6 +26,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
   late final DriverApiService _api;
   Future<DriverJobsToday>? _future;
   Future<DriverStatus>? _statusFuture;
+  String? _processingBookingNumber;
 
   @override
   void initState() {
@@ -60,6 +61,47 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
         ),
       ),
     ).then((_) => _refresh());
+  }
+
+  Future<void> _runListAction(DriverBooking booking) async {
+    if (_processingBookingNumber != null) return;
+    setState(() => _processingBookingNumber = booking.bookingNumber);
+    try {
+      if (booking.allowedActions.contains('START_ON_ROUTE')) {
+        await _api.startOnRoute(booking.bookingNumber);
+      } else if (booking.allowedActions.contains('MARK_ARRIVED')) {
+        await _api.markArrived(booking.bookingNumber);
+      } else if (booking.allowedActions.contains('COMPLETE_TRIP')) {
+        await _api.completeTrip(booking.bookingNumber);
+      } else {
+        _openDetail(booking);
+        return;
+      }
+      if (!mounted) return;
+      _loadData(notifySession: true);
+    } on DriverApiException catch (err) {
+      if (!mounted) return;
+      if (driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(err.message)));
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processingBookingNumber = null);
+      }
+    }
   }
 
   @override
@@ -109,16 +151,21 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
             child: ListView(
-              padding: AppUi.pagePadding(context).copyWith(bottom: AppTokens.spaceLg),
+              padding: AppUi.pagePadding(
+                context,
+              ).copyWith(bottom: AppTokens.spaceLg),
               children: [
                 AppUi.sectionHeader(
                   context,
-                  title: l10n.t('driver_jobs_today_date').replaceAll('{date}', data.date),
+                  title: l10n
+                      .t('driver_jobs_today_date')
+                      .replaceAll('{date}', data.date),
                 ),
                 FutureBuilder<DriverStatus>(
                   future: _statusFuture,
                   builder: (context, statusSnapshot) {
-                    if (statusSnapshot.hasError && driverIsAuthError(statusSnapshot.error!)) {
+                    if (statusSnapshot.hasError &&
+                        driverIsAuthError(statusSnapshot.error!)) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (context.mounted) {
                           driverHandleApiError(context, statusSnapshot.error!);
@@ -158,7 +205,11 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
   }
 
   bool _isLocationTrackable(DriverBooking booking) {
-    return const {'DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP'}.contains(booking.status);
+    return const {
+      'DRIVER_ASSIGNED',
+      'DRIVER_ARRIVED',
+      'PICKED_UP',
+    }.contains(booking.status);
   }
 
   List<Widget> _buildGroup(
@@ -170,14 +221,18 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
     if (items.isEmpty) return [];
     return [
       AppUi.sectionHeader(context, title: title),
-      ...items.map((b) => Padding(
-        padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
-        child: _JobCard(
-          booking: b,
-          group: group,
-          onTap: () => _openDetail(b),
+      ...items.map(
+        (b) => Padding(
+          padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+          child: _JobCard(
+            booking: b,
+            group: group,
+            onTap: () => _openDetail(b),
+            onAction: () => _runListAction(b),
+            processing: _processingBookingNumber == b.bookingNumber,
+          ),
         ),
-      )),
+      ),
     ];
   }
 }
@@ -187,11 +242,15 @@ class _JobCard extends StatelessWidget {
     required this.booking,
     required this.group,
     required this.onTap,
+    required this.onAction,
+    required this.processing,
   });
 
   final DriverBooking booking;
   final DriverJobGroup group;
   final VoidCallback onTap;
+  final VoidCallback onAction;
+  final bool processing;
 
   @override
   Widget build(BuildContext context) {
@@ -231,9 +290,8 @@ class _JobCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             booking.bookingNumber,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
                         AppUi.statusBadge(
@@ -245,14 +303,17 @@ class _JobCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.schedule, size: 16, color: AppTokens.textSecondary),
+                        const Icon(
+                          Icons.schedule,
+                          size: 16,
+                          color: AppTokens.textSecondary,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             '${booking.pickupDate} ${booking.pickupTime}',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -274,7 +335,9 @@ class _JobCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: isCompleted ? AppTokens.textMuted : AppTokens.textPrimary,
+                    color: isCompleted
+                        ? AppTokens.textMuted
+                        : AppTokens.textPrimary,
                   ),
                 ),
               ),
@@ -284,7 +347,11 @@ class _JobCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.place_outlined, size: 16, color: AppTokens.textSecondary),
+              const Icon(
+                Icons.place_outlined,
+                size: 16,
+                color: AppTokens.textSecondary,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -292,7 +359,9 @@ class _JobCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: isCompleted ? AppTokens.textMuted : AppTokens.textSecondary,
+                    color: isCompleted
+                        ? AppTokens.textMuted
+                        : AppTokens.textSecondary,
                   ),
                 ),
               ),
@@ -330,7 +399,20 @@ class _JobCard extends StatelessWidget {
           ),
           if (actionKey != null && !isCompleted) ...[
             const SizedBox(height: AppTokens.spaceSm),
-            AppUi.actionBanner(message: l10n.t(actionKey)),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: processing ? null : onAction,
+                icon: processing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.touch_app, size: 18),
+                label: Text(l10n.t(actionKey)),
+              ),
+            ),
           ],
         ],
       ),
@@ -359,7 +441,11 @@ class _MetaChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: muted ? AppTokens.textMuted : AppTokens.textSecondary),
+        Icon(
+          icon,
+          size: 14,
+          color: muted ? AppTokens.textMuted : AppTokens.textSecondary,
+        ),
         const SizedBox(width: 4),
         Text(
           label,

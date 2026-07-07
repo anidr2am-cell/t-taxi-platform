@@ -26,7 +26,11 @@ void main() {
     test('groupBookings sorts active before upcoming and completed', () {
       final items = [
         _booking(status: 'COMPLETED', time: '18:00'),
-        _booking(status: 'DRIVER_ASSIGNED', time: '10:00', number: 'TX202607010002'),
+        _booking(
+          status: 'DRIVER_ASSIGNED',
+          time: '10:00',
+          number: 'TX202607010002',
+        ),
         _booking(status: 'CONFIRMED', time: '12:00', number: 'TX202607010003'),
         _booking(status: 'PICKED_UP', time: '09:00', number: 'TX202607010004'),
       ];
@@ -46,9 +50,7 @@ void main() {
 
   testWidgets('login success routes to Jobs shell', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: DriverLoginPage(api: _FakeLoginApi()),
-      ),
+      MaterialApp(home: DriverLoginPage(api: _FakeLoginApi())),
     );
     await tester.pumpAndSettle();
 
@@ -62,7 +64,9 @@ void main() {
     expect(find.text('No jobs today'), findsOneWidget);
   });
 
-  testWidgets('saved token opens Jobs shell on login page load', (tester) async {
+  testWidgets('saved token opens Jobs shell on login page load', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DriverLoginPage(api: _FakeLoginApi(initialToken: 'tok')),
@@ -91,7 +95,9 @@ void main() {
     expect(find.text('Driver Login'), findsOneWidget);
   });
 
-  testWidgets('jobs list groups active, upcoming, and completed', (tester) async {
+  testWidgets('jobs list groups active, upcoming, and completed', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DriverJobsPage(
@@ -100,9 +106,21 @@ void main() {
               date: '2026-07-01',
               items: [
                 _booking(status: 'COMPLETED', time: '18:00'),
-                _booking(status: 'DRIVER_ASSIGNED', time: '10:00', number: 'TX202607010002'),
-                _booking(status: 'PENDING', time: '12:00', number: 'TX202607010003'),
-                _booking(status: 'PICKED_UP', time: '09:00', number: 'TX202607010004'),
+                _booking(
+                  status: 'DRIVER_ASSIGNED',
+                  time: '10:00',
+                  number: 'TX202607010002',
+                ),
+                _booking(
+                  status: 'PENDING',
+                  time: '12:00',
+                  number: 'TX202607010003',
+                ),
+                _booking(
+                  status: 'PICKED_UP',
+                  time: '09:00',
+                  number: 'TX202607010004',
+                ),
               ],
             ),
           ),
@@ -143,13 +161,31 @@ void main() {
 
   testWidgets('jobs error state with retry', (tester) async {
     final api = _FakeJobsApi(error: Exception('network'));
-    await tester.pumpWidget(
-      MaterialApp(home: DriverJobsPage(api: api)),
-    );
+    await tester.pumpWidget(MaterialApp(home: DriverJobsPage(api: api)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('network'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('jobs list action calls mutation and refreshes', (tester) async {
+    final api = _FakeJobsApi(
+      jobs: DriverJobsToday(
+        date: '2026-07-01',
+        items: [
+          _booking(status: 'DRIVER_ASSIGNED', actions: ['START_ON_ROUTE']),
+        ],
+      ),
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverJobsPage(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Start route'));
+    await tester.pumpAndSettle();
+
+    expect(api.startRouteCalls, 1);
+    expect(api.todayCalls, 2);
+    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsOneWidget);
   });
 
   testWidgets('call button when phone exists', (tester) async {
@@ -190,7 +226,9 @@ void main() {
     expect(find.text('Call customer'), findsNothing);
   });
 
-  testWidgets('cancelled booking is read-only without primary action', (tester) async {
+  testWidgets('cancelled booking is read-only without primary action', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DriverBookingDetailPage(
@@ -230,13 +268,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid status transition'), findsOneWidget);
-    expect(
-      find.widgetWithText(FilledButton, 'Complete trip'),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(FilledButton, 'Complete trip'), findsOneWidget);
   });
 
-  testWidgets('jobs layout has no horizontal overflow at 360px', (tester) async {
+  testWidgets('jobs layout has no horizontal overflow at 360px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -251,8 +288,10 @@ void main() {
               items: [
                 _booking(
                   status: 'DRIVER_ASSIGNED',
-                  origin: 'Suvarnabhumi Airport Terminal 1 International Arrivals Hall',
-                  destination: 'Pattaya Beach Road Hotel Resort and Spa Thailand',
+                  origin:
+                      'Suvarnabhumi Airport Terminal 1 International Arrivals Hall',
+                  destination:
+                      'Pattaya Beach Road Hotel Resort and Spa Thailand',
                 ),
               ],
             ),
@@ -310,38 +349,64 @@ class _FakeLoginApi extends DriverApiService {
 
   @override
   Future<DriverStatus> getStatus() async => const DriverStatus(
-        driverId: 7,
-        active: true,
-        online: false,
-        status: 'OFFLINE',
-        hasActiveJob: false,
-      );
+    driverId: 7,
+    active: true,
+    online: false,
+    status: 'OFFLINE',
+    hasActiveJob: false,
+  );
 }
 
 class _FakeJobsApi extends DriverApiService {
-  _FakeJobsApi({this.jobs, this.error, String? initialToken}) : _token = initialToken;
+  _FakeJobsApi({this.jobs, this.error, String? initialToken})
+    : _token = initialToken;
 
-  final DriverJobsToday? jobs;
+  DriverJobsToday? jobs;
   final Object? error;
   final String? _token;
+  int todayCalls = 0;
+  int startRouteCalls = 0;
 
   @override
   Future<String?> getSavedToken() async => _token;
 
   @override
   Future<DriverJobsToday> getTodayBookings() async {
+    todayCalls += 1;
     if (error != null) throw error!;
     return jobs ?? const DriverJobsToday(date: '2026-07-01', items: []);
   }
 
   @override
-  Future<DriverStatus> getStatus() async => const DriverStatus(
-        driverId: 7,
-        active: true,
-        online: false,
-        status: 'OFFLINE',
-        hasActiveJob: false,
+  Future<DriverBooking> startOnRoute(String bookingNumber) async {
+    startRouteCalls += 1;
+    final current =
+        jobs ?? const DriverJobsToday(date: '2026-07-01', items: []);
+    final updatedItems = current.items.map((booking) {
+      if (booking.bookingNumber != bookingNumber) return booking;
+      return _booking(
+        status: 'ON_ROUTE',
+        number: booking.bookingNumber,
+        actions: ['MARK_ARRIVED'],
+        time: booking.pickupTime,
+        origin: booking.origin,
+        destination: booking.destination,
       );
+    }).toList();
+    jobs = DriverJobsToday(date: current.date, items: updatedItems);
+    return updatedItems.firstWhere(
+      (booking) => booking.bookingNumber == bookingNumber,
+    );
+  }
+
+  @override
+  Future<DriverStatus> getStatus() async => const DriverStatus(
+    driverId: 7,
+    active: true,
+    online: false,
+    status: 'OFFLINE',
+    hasActiveJob: false,
+  );
 }
 
 class _FakeDetailApi extends DriverApiService {
