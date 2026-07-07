@@ -20,15 +20,26 @@ BEGIN
       FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE()
         AND TABLE_NAME = 'booking_driver_assignments'
+        AND COLUMN_NAME = 'active_booking_id'
+    ) THEN
+      ALTER TABLE booking_driver_assignments
+        ADD UNIQUE KEY uk_bda_one_active_per_booking (active_booking_id);
+    ELSEIF EXISTS (
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'booking_driver_assignments'
         AND COLUMN_NAME = 'active_booking_key'
     ) THEN
       ALTER TABLE booking_driver_assignments
         ADD UNIQUE KEY uk_bda_one_active_per_booking (active_booking_key);
     ELSE
-      CREATE UNIQUE INDEX uk_bda_one_active_per_booking
-        ON booking_driver_assignments (
-          (IF(is_active = 1 AND deleted_at IS NULL, booking_id, NULL))
-        );
+      ALTER TABLE booking_driver_assignments
+        ADD COLUMN active_booking_id BIGINT UNSIGNED GENERATED ALWAYS AS (
+          CASE WHEN is_active = 1 AND deleted_at IS NULL THEN booking_id ELSE NULL END
+        ) STORED;
+      ALTER TABLE booking_driver_assignments
+        ADD UNIQUE KEY uk_bda_one_active_per_booking (active_booking_id);
     END IF;
   END IF;
 

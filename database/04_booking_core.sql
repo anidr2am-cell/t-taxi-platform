@@ -1,4 +1,4 @@
--- TTaxi Platform — Booking core (MySQL 8)
+-- TTaxi Platform — Booking core (MySQL 8 / MariaDB 10.11)
 -- Depends on: 00_database.sql through 03_fleet_places.sql
 
 USE ttaxi;
@@ -240,10 +240,11 @@ CREATE TABLE IF NOT EXISTS booking_driver_assignments (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL DEFAULT NULL,
+  active_booking_id BIGINT UNSIGNED GENERATED ALWAYS AS (
+    CASE WHEN is_active = 1 AND deleted_at IS NULL THEN booking_id ELSE NULL END
+  ) STORED,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_bda_one_active_per_booking (
-    (IF(is_active = 1 AND deleted_at IS NULL, booking_id, NULL))
-  ),
+  UNIQUE KEY uk_bda_one_active_per_booking (active_booking_id),
   KEY idx_booking_driver_assignments_booking_active (booking_id, is_active),
   KEY idx_booking_driver_assignments_driver_active (driver_id, is_active),
   KEY idx_booking_driver_assignments_driver_status (driver_id, status),

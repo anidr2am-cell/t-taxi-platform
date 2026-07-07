@@ -66,6 +66,8 @@ docker compose -f docker-compose.staging.yml up -d --build tride-frontend
 
 Env vars (`MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`) and charset/timezone `command` flags are compatible with the official MariaDB image.
 
+**Migrations:** `database/04_booking_core.sql` enforces one active assignment per booking via **`active_booking_id`** (STORED generated column + unique index). This replaces MySQL-only functional unique indexes so migrations succeed on MariaDB 10.11.
+
 ## Reset DB volume after image change (or failed first migration)
 
 If `tride-db` previously ran as **`mysql:8.4`**, or migration failed partway, **delete only the T-Ride data volume** and recreate the stack **before** re-running `migrate.sh`:
