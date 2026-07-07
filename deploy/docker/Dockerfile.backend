@@ -8,7 +8,10 @@ RUN apk add --no-cache bash mysql-client tini
 WORKDIR /srv/tride
 
 COPY backend/package.json backend/package-lock.json ./backend/
-RUN cd backend && npm ci --omit=dev
+# Staging runs npm scripts such as rehearsal:mvp-e2e inside this container.
+# Keep devDependencies available here; production runtime images should use a
+# separate Dockerfile or build target with npm ci --omit=dev.
+RUN cd backend && npm ci --include=dev
 
 COPY backend/ ./backend/
 COPY database/ ./database/

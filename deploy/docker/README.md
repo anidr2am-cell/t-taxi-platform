@@ -130,6 +130,11 @@ services:
 | `nginx.frontend.conf` | SPA fallback + `/api/` proxy (future same-origin) |
 | `.env.example` | Staging secrets template — copy to `.env` |
 
+`Dockerfile.backend` installs devDependencies intentionally because this
+staging image runs `npm run rehearsal:mvp-e2e`, which depends on `supertest`.
+Do not use this Dockerfile as a trimmed production runtime image without adding
+a separate production install stage.
+
 ## Logs and teardown
 
 ```bash
