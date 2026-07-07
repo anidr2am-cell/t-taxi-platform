@@ -20,6 +20,15 @@ BEGIN
       FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE()
         AND TABLE_NAME = 'booking_driver_assignments'
+        AND COLUMN_NAME = 'active_assignment_guard'
+    ) THEN
+      ALTER TABLE booking_driver_assignments
+        ADD UNIQUE KEY uk_bda_one_active_per_booking (booking_id, active_assignment_guard);
+    ELSEIF EXISTS (
+      SELECT 1
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'booking_driver_assignments'
         AND COLUMN_NAME = 'active_booking_id'
     ) THEN
       ALTER TABLE booking_driver_assignments
@@ -35,11 +44,11 @@ BEGIN
         ADD UNIQUE KEY uk_bda_one_active_per_booking (active_booking_key);
     ELSE
       ALTER TABLE booking_driver_assignments
-        ADD COLUMN active_booking_id BIGINT UNSIGNED GENERATED ALWAYS AS (
-          CASE WHEN is_active = 1 AND deleted_at IS NULL THEN booking_id ELSE NULL END
+        ADD COLUMN active_assignment_guard TINYINT GENERATED ALWAYS AS (
+          CASE WHEN is_active = 1 AND deleted_at IS NULL THEN 1 ELSE NULL END
         ) STORED;
       ALTER TABLE booking_driver_assignments
-        ADD UNIQUE KEY uk_bda_one_active_per_booking (active_booking_id);
+        ADD UNIQUE KEY uk_bda_one_active_per_booking (booking_id, active_assignment_guard);
     END IF;
   END IF;
 

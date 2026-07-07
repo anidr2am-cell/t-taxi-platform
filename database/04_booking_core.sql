@@ -240,11 +240,11 @@ CREATE TABLE IF NOT EXISTS booking_driver_assignments (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL DEFAULT NULL,
-  active_booking_id BIGINT UNSIGNED GENERATED ALWAYS AS (
-    CASE WHEN is_active = 1 AND deleted_at IS NULL THEN booking_id ELSE NULL END
+  active_assignment_guard TINYINT GENERATED ALWAYS AS (
+    CASE WHEN is_active = 1 AND deleted_at IS NULL THEN 1 ELSE NULL END
   ) STORED,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_bda_one_active_per_booking (active_booking_id),
+  UNIQUE KEY uk_bda_one_active_per_booking (booking_id, active_assignment_guard),
   KEY idx_booking_driver_assignments_booking_active (booking_id, is_active),
   KEY idx_booking_driver_assignments_driver_active (driver_id, is_active),
   KEY idx_booking_driver_assignments_driver_status (driver_id, status),

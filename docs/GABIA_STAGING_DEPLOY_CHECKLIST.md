@@ -223,7 +223,7 @@ Run **inside** `tride-backend` container (or one-off migrate job) — **never** 
 
 ### 6.1 MariaDB bootstrap
 
-Compose creates `tride_staging` and `tride_app` from `deploy/docker/.env` on first `tride-db` start (`mariadb:10.11`). Migrations use a **STORED generated column** (`active_booking_id`) for one-active-assignment-per-booking — compatible with MariaDB 10.11 and MySQL 8.x (functional unique indexes are not used).
+Compose creates `tride_staging` and `tride_app` from `deploy/docker/.env` on first `tride-db` start (`mariadb:10.11`). Migrations use **`active_assignment_guard`** + `UNIQUE(booking_id, active_assignment_guard)` for one-active-assignment-per-booking (MariaDB 10.11 / MySQL 8.x compatible).
 
 **If `tride-db` previously used `mysql:8.4` or migration failed:** stop the stack, remove **only** `tride_mysql_data`, then `up` again. **Never** delete ktaxi / `infra_*` volumes.
 

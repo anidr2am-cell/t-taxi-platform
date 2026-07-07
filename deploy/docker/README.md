@@ -66,7 +66,7 @@ docker compose -f docker-compose.staging.yml up -d --build tride-frontend
 
 Env vars (`MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`) and charset/timezone `command` flags are compatible with the official MariaDB image.
 
-**Migrations:** `database/04_booking_core.sql` enforces one active assignment per booking via **`active_booking_id`** (STORED generated column + unique index). This replaces MySQL-only functional unique indexes so migrations succeed on MariaDB 10.11.
+**Migrations:** `database/04_booking_core.sql` enforces one active assignment per booking via **`active_assignment_guard`** (STORED generated column) plus composite unique `(booking_id, active_assignment_guard)`. The guard avoids referencing FK columns in generated expressions (MariaDB 10.11).
 
 ## Reset DB volume after image change (or failed first migration)
 
