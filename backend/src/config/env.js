@@ -24,6 +24,7 @@ const envSchema = Joi.object({
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('1h'),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
   GOOGLE_MAPS_API_KEY: Joi.string().allow('').optional(),
+  GOOGLE_PLACES_API_KEY: Joi.string().allow('').optional(),
   AVIATIONSTACK_API_KEY: Joi.string().allow('').optional(),
   AVIATIONSTACK_BASE_URL: Joi.string().uri().default('http://api.aviationstack.com/v1'),
   AVIATIONSTACK_TIMEOUT_MS: Joi.number().integer().min(1000).max(30000).default(5000),
@@ -131,7 +132,7 @@ module.exports = {
     refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
   },
   external: {
-    googleMapsApiKey: env.GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: env.GOOGLE_MAPS_API_KEY || env.GOOGLE_PLACES_API_KEY,
     aviationStackApiKey: env.AVIATIONSTACK_API_KEY,
     aviationStackBaseUrl: env.AVIATIONSTACK_BASE_URL,
     aviationStackTimeoutMs: env.AVIATIONSTACK_TIMEOUT_MS,

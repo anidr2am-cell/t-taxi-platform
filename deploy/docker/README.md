@@ -54,6 +54,20 @@ PUBLIC_API_URL=http://SERVER_IP:3100
 TRIDE_API_BASE_URL=http://SERVER_IP:3100
 ```
 
+**Google Places:** booking origin/destination autocomplete is proxied by
+`tride-backend`; the Flutter frontend does not receive the Google API key. Set
+one backend key in `.env` and rebuild/recreate `tride-backend`:
+
+```env
+GOOGLE_MAPS_API_KEY=
+# or GOOGLE_PLACES_API_KEY=
+```
+
+If the key is missing, `/api/v1/places/autocomplete` returns
+`Google Places provider is not configured`. If the key exists but the error
+continues, verify Google Cloud has the new Places API enabled and that API key
+restrictions allow server-side requests from the staging backend.
+
 Rebuild frontend after changing `TRIDE_API_BASE_URL`:
 
 ```bash

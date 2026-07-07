@@ -56,6 +56,32 @@ test('staging env validation rejects development QR reissue flag', () => {
   assert.match(result.stderr + result.stdout, /ALLOW_DEV_QR_REISSUE/);
 });
 
+test('Google Places key alias maps to backend Places provider config', () => {
+  const output = execFileSync(
+    process.execPath,
+    ['-e', "const config=require('./src/config/env'); console.log(config.external.googleMapsApiKey)"],
+    {
+      cwd: backendRoot,
+      env: {
+        ...process.env,
+        NODE_ENV: 'staging',
+        DB_USER: 'ttaxi_app',
+        DB_NAME: 'ttaxi_staging',
+        DB_PASSWORD: 'strong-db-password',
+        JWT_ACCESS_SECRET: 'strong-access-secret-value',
+        JWT_REFRESH_SECRET: 'strong-refresh-secret-value',
+        CORS_ORIGIN: 'https://staging.example.com',
+        ALLOW_DEV_QR_REISSUE: 'false',
+        GOOGLE_MAPS_API_KEY: '',
+        GOOGLE_PLACES_API_KEY: 'dummy-places-key',
+      },
+      encoding: 'utf8',
+    },
+  );
+
+  assert.equal(output.trim(), 'dummy-places-key');
+});
+
 test('migration validator prints deterministic order and duplicate prefix note', () => {
   const output = execFileSync(process.execPath, ['scripts/validate-migrations.js'], {
     cwd: backendRoot,
@@ -87,10 +113,16 @@ test('Linux migrate script exists and is documented', () => {
 
 test('.env.example contains placeholders only and staging-sensitive defaults are safe', () => {
   const envExample = fs.readFileSync(path.join(backendRoot, '.env.example'), 'utf8');
+  const dockerEnvExample = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', '.env.example'),
+    'utf8',
+  );
 
   assert.match(envExample, /FLIGHT_SYNC_ENABLED=false/);
   assert.match(envExample, /ALLOW_DEV_QR_REISSUE=false/);
+  assert.match(dockerEnvExample, /GOOGLE_MAPS_API_KEY=/);
   assert.doesNotMatch(envExample, /AIza[0-9A-Za-z_-]+/);
+  assert.doesNotMatch(dockerEnvExample, /AIza[0-9A-Za-z_-]+/);
   assert.doesNotMatch(envExample, /-----BEGIN PRIVATE KEY-----/);
   assert.doesNotMatch(envExample, /localhost:[0-9]+/);
 });
