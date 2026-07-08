@@ -71,6 +71,11 @@ class AppLocalizations {
           'Professional airport and city transfers across Thailand.',
       'landing_language_label': 'Language',
       'support_title': 'Customer center',
+      'support_page_intro':
+          'If booking is difficult or you need help, please contact customer center. You can also attach flight tickets, hotel vouchers, or reservation screenshots.',
+      'support_inquiry_button': 'Contact us',
+      'support_dialog_title': 'Customer center inquiry',
+      'support_close_button': 'Close',
       'support_inquiry_title': 'Booking and inquiry via customer center',
       'support_inquiry_subtitle':
           'Leave your booking question, flight information, pickup place, and destination.',
@@ -760,6 +765,11 @@ class AppLocalizations {
       'landing_footer_note': '태국 전역 공항·도시 이동 전문 서비스',
       'landing_language_label': '언어',
       'support_title': '고객센터',
+      'support_page_intro':
+          '예약이 어렵거나 문의가 필요하신 경우 고객센터로 문의해 주세요. 항공권, 호텔 바우처, 예약 캡처 이미지도 첨부할 수 있습니다.',
+      'support_inquiry_button': '문의하기',
+      'support_dialog_title': '고객센터 문의',
+      'support_close_button': '닫기',
       'support_inquiry_title': '고객센터를 통한 예약 및 문의',
       'support_inquiry_subtitle': '예약 문의, 항공편 정보, 픽업 장소, 목적지를 남겨주세요.',
       'support_default_guide':
@@ -1229,6 +1239,10 @@ class AppLocalizations {
       'landing_footer_note': '泰国全境专业机场与城市接送',
       'landing_language_label': '语言',
       'support_title': '客服中心',
+      'support_page_intro': '如果预约有困难或需要咨询，请联系客户中心。也可以附加机票、酒店凭证或预约截图。',
+      'support_inquiry_button': '咨询',
+      'support_dialog_title': '客服中心咨询',
+      'support_close_button': '关闭',
       'support_inquiry_title': '通过客服中心预约和咨询',
       'support_inquiry_subtitle': '请留下预约问题、航班信息、接送地点和目的地。',
       'support_default_guide':
@@ -1546,6 +1560,11 @@ class AppLocalizations {
       'landing_footer_note': 'タイ全土のプロ空港・市内送迎サービス',
       'landing_language_label': '言語',
       'support_title': 'カスタマーセンター',
+      'support_page_intro':
+          '予約が難しい場合やお問い合わせが必要な場合は、カスタマーセンターへご連絡ください。航空券、ホテルバウチャー、予約画面の画像も添付できます。',
+      'support_inquiry_button': '問い合わせる',
+      'support_dialog_title': 'カスタマーセンターお問い合わせ',
+      'support_close_button': '閉じる',
       'support_inquiry_title': 'カスタマーセンターでの予約・お問い合わせ',
       'support_inquiry_subtitle': '予約相談、フライト情報、ピックアップ場所、目的地をお送りください。',
       'support_default_guide':
@@ -1876,6 +1895,11 @@ class AppLocalizations {
       'landing_footer_note': 'บริการรับส่งสนามบินและในเมืองทั่วประเทศไทย',
       'landing_language_label': 'ภาษา',
       'support_title': 'ศูนย์บริการลูกค้า',
+      'support_page_intro':
+          'หากจองยากหรือต้องการสอบถาม โปรดติดต่อศูนย์บริการลูกค้า สามารถแนบรูปตั๋วเครื่องบิน เวาเชอร์โรงแรม หรือภาพหน้าจอการจองได้',
+      'support_inquiry_button': 'สอบถาม',
+      'support_dialog_title': 'สอบถามศูนย์บริการลูกค้า',
+      'support_close_button': 'ปิด',
       'support_inquiry_title': 'จองและสอบถามผ่านศูนย์บริการลูกค้า',
       'support_inquiry_subtitle':
           'ฝากคำถามการจอง ข้อมูลเที่ยวบิน จุดรับ และปลายทางไว้ได้เลย',

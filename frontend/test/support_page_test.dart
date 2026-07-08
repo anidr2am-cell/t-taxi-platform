@@ -31,30 +31,51 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('CustomerSupportPage', () {
-    testWidgets('renders inquiry and FAQ placeholder', (tester) async {
+    testWidgets('renders support landing content without inline chat input', (
+      tester,
+    ) async {
+      final l10n = AppLocalizations('ko');
+
       await tester.pumpWidget(_wrapSupport());
       await tester.pumpAndSettle();
 
-      expect(find.text('고객센터'), findsWidgets);
-      expect(find.text('고객센터를 통한 예약 및 문의'), findsOneWidget);
-      expect(
-        find.text(
-          '안녕하세요. T-Ride 고객센터입니다. 예약 문의, 항공편 정보, 픽업 장소, 목적지를 남겨주시면 확인 후 안내드리겠습니다.',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.t('support_title')), findsWidgets);
+      expect(find.text(l10n.t('support_page_intro')), findsOneWidget);
+      expect(find.text(l10n.t('support_inquiry_button')), findsOneWidget);
+      expect(find.byKey(const Key('support_message_input')), findsNothing);
+
       await tester.drag(find.byType(ListView), const Offset(0, -500));
       await tester.pumpAndSettle();
-      expect(
-        find.text('자주 하는 질문은 고객 문의 데이터가 축적되면 우선순위에 따라 업데이트될 예정입니다.'),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.t('support_faq_placeholder')), findsOneWidget);
+    });
+
+    testWidgets('inquiry button opens chat popup with guide and input', (
+      tester,
+    ) async {
+      final l10n = AppLocalizations('ko');
+
+      await tester.pumpWidget(_wrapSupport());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.t('support_dialog_title')), findsOneWidget);
+      expect(find.text(l10n.t('support_default_guide')), findsOneWidget);
+      expect(find.byKey(const Key('support_message_input')), findsOneWidget);
+      expect(find.byKey(const Key('support_attach_button')), findsOneWidget);
+      expect(find.byKey(const Key('support_send_button')), findsOneWidget);
+      expect(find.text(l10n.t('support_attachment_help')), findsOneWidget);
     });
 
     testWidgets('sending a message adds user and auto receipt bubbles', (
       tester,
     ) async {
+      final l10n = AppLocalizations('ko');
+
       await tester.pumpWidget(_wrapSupport());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -65,10 +86,28 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('BKK to Pattaya 문의드립니다'), findsOneWidget);
-      expect(
-        find.text('자동 접수 안내: 문의가 접수되었습니다. 고객센터에서 확인 후 안내드리겠습니다.'),
-        findsOneWidget,
+      expect(find.text(l10n.t('support_auto_receipt')), findsOneWidget);
+      final input = tester.widget<TextField>(
+        find.byKey(const Key('support_message_input')),
       );
+      expect(input.controller?.text, isEmpty);
+    });
+
+    testWidgets('chat popup can be closed', (tester) async {
+      final l10n = AppLocalizations('ko');
+
+      await tester.pumpWidget(_wrapSupport());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.t('support_dialog_title')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('support_close_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.t('support_dialog_title')), findsNothing);
+      expect(find.byKey(const Key('support_message_input')), findsNothing);
     });
 
     testWidgets('has no overflow at common widths', (tester) async {
@@ -76,8 +115,16 @@ void main() {
         await tester.pumpWidget(_wrapSupport(width: width));
         await tester.pumpAndSettle();
 
-        expect(tester.takeException(), isNull, reason: 'Overflow at $width');
+        expect(tester.takeException(), isNull, reason: 'Page at $width');
+
+        await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull, reason: 'Popup at $width');
         expect(find.byKey(const Key('support_message_input')), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('support_close_button')));
+        await tester.pumpAndSettle();
       }
     });
   });
