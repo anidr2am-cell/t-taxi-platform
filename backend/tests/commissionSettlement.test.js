@@ -28,6 +28,10 @@ function sign(role = 'DRIVER', id = 44) {
   );
 }
 
+function sqlDateFromNow(days) {
+  return new Date(Date.now() + days * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function settlementRow(overrides = {}) {
   return {
     id: 7,
@@ -38,7 +42,7 @@ function settlementRow(overrides = {}) {
     currency: 'THB',
     commission_status: COMMISSION_STATUS.DUE,
     commission_amount: 120,
-    commission_due_at: '2026-07-08 12:00:00',
+    commission_due_at: sqlDateFromNow(7),
     commission_paid_at: null,
     commission_receipt_file_id: null,
     metadata: null,
