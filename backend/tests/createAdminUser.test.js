@@ -10,6 +10,7 @@ const AuthService = require('../src/services/auth.service');
 const ROLES = require('../src/constants/roles');
 const {
   createOrUpdateAdminUser,
+  formatResult,
   parseArgs,
   resolveInputs,
 } = require('../scripts/createAdminUser');
@@ -120,6 +121,16 @@ describe('createAdminUser script', () => {
     assert.equal(input.force, true);
   });
 
+  test('defaults role to ADMIN and name to T-Ride Admin', () => {
+    const input = resolveInputs({
+      email: 'admin@tride.local',
+      password: 'Admin123456!',
+    });
+
+    assert.equal(input.role, ROLES.ADMIN);
+    assert.equal(input.name, 'T-Ride Admin');
+  });
+
   test('rejects invalid role', () => {
     assert.throws(
       () => resolveInputs({
@@ -165,6 +176,23 @@ describe('createAdminUser script', () => {
     assert.equal(await bcrypt.compare('Admin123456!', pool.state.users[0].password_hash), true);
     assert.equal(pool.state.profiles[0].display_name, 'T-Ride Admin');
     assert.equal(pool.state.committed, 1);
+  });
+
+  test('creates new ADMIN with hashed password and active account', async () => {
+    const pool = createMemoryPool();
+
+    const result = await createOrUpdateAdminUser(pool, {
+      email: 'admin@tride.local',
+      password: 'Admin123456!',
+      name: 'T-Ride Admin',
+      role: ROLES.ADMIN,
+      force: false,
+    });
+
+    assert.equal(result.role, ROLES.ADMIN);
+    assert.equal(pool.state.users[0].role, ROLES.ADMIN);
+    assert.equal(pool.state.users[0].is_active, 1);
+    assert.equal(await bcrypt.compare('Admin123456!', pool.state.users[0].password_hash), true);
   });
 
   test('blocks duplicate email without force', async () => {
@@ -248,5 +276,24 @@ describe('createAdminUser script', () => {
 
     assert.equal(login.user.role, ROLES.SUPER_ADMIN);
     assert.equal(login.accessToken, 'access-token');
+  });
+
+  test('formatted output never includes plaintext password or password hash', async () => {
+    const hash = await bcrypt.hash('Admin123456!', 12);
+    const lines = formatResult({
+      email: 'admin@tride.local',
+      role: ROLES.ADMIN,
+      isActive: true,
+      password: 'Admin123456!',
+      passwordHash: hash,
+    });
+    const output = lines.join('\n');
+
+    assert.match(output, /admin@tride\.local/);
+    assert.match(output, /ADMIN/);
+    assert.doesNotMatch(output, /Admin123456!/);
+    assert.doesNotMatch(output, new RegExp(hash.replace(/\$/g, '\\$')));
+    assert.doesNotMatch(output, /password/i);
+    assert.doesNotMatch(output, /hash/i);
   });
 });

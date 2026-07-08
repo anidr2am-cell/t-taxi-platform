@@ -3,8 +3,8 @@
  * Create or update an ADMIN/SUPER_ADMIN user.
  *
  * Usage:
- *   node scripts/createAdminUser.js --email admin@tride.local --password 'Admin123456!' --name "T-Ride Admin" --role SUPER_ADMIN
- *   node scripts/createAdminUser.js --email admin@tride.local --password 'NewAdmin123456!' --name "T-Ride Admin" --role SUPER_ADMIN --force
+ *   node scripts/createAdminUser.js --email admin@tride.local --password "$ADMIN_PASSWORD" --name "T-Ride Admin" --role SUPER_ADMIN
+ *   node scripts/createAdminUser.js --email admin@tride.local --password "$ADMIN_PASSWORD" --name "T-Ride Admin" --role SUPER_ADMIN --force
  */
 const path = require('path');
 
@@ -48,8 +48,8 @@ function validatePassword(password) {
 function resolveInputs(args) {
   const email = String(args.email ?? '').trim().toLowerCase();
   const password = String(args.password ?? '');
-  const name = String(args.name ?? '').trim();
-  const role = String(args.role ?? '').trim().toUpperCase();
+  const name = String(args.name ?? 'T-Ride Admin').trim();
+  const role = String(args.role ?? ROLES.ADMIN).trim().toUpperCase();
   const force = args.force === true;
 
   if (!email || !validateEmail(email)) {
@@ -66,6 +66,14 @@ function resolveInputs(args) {
   }
 
   return { email, password, name, role, force };
+}
+
+function formatResult(result) {
+  return [
+    `Email: ${result.email}`,
+    `Role: ${result.role}`,
+    `Active: ${result.isActive}`,
+  ];
 }
 
 async function findExistingUser(conn, email) {
@@ -175,9 +183,7 @@ async function main() {
   try {
     const input = resolveInputs(parseArgs(process.argv.slice(2)));
     const result = await createOrUpdateAdminUser(database.pool, input);
-    console.log(`Email: ${result.email}`);
-    console.log(`Role: ${result.role}`);
-    console.log(`Active: ${result.isActive}`);
+    formatResult(result).forEach((line) => console.log(line));
   } finally {
     await database.pool.end();
   }
@@ -194,6 +200,7 @@ module.exports = {
   ALLOWED_ROLES,
   BCRYPT_ROUNDS,
   createOrUpdateAdminUser,
+  formatResult,
   parseArgs,
   resolveInputs,
   validatePassword,
