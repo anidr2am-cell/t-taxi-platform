@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
@@ -224,7 +225,48 @@ class SupportInquiryService {
   async getAdminDetail(id) {
     const row = await this.repository.findById(id);
     if (!row) this.notFound();
-    return this.mapDetail(row);
+    return this.mapDetail(row, { adminAttachments: true });
+  }
+
+  attachmentNotFound() {
+    throw new AppError('Support inquiry attachment not found', {
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      errorCode: ERROR_CODES.FILE_NOT_FOUND,
+    });
+  }
+
+  sanitizeDownloadFilename(name) {
+    const base = path.basename(String(name || 'attachment').split(/[?#]/)[0]);
+    return base.replace(/[^\w.\-()[\] ]/g, '_').slice(0, 200) || 'attachment';
+  }
+
+  resolveAttachmentAbsolutePath(storagePath) {
+    if (!storagePath) this.attachmentNotFound();
+    const absolute = path.resolve(uploadDir, storagePath);
+    const root = `${uploadDir}${path.sep}`;
+    if (absolute !== uploadDir && !absolute.startsWith(root)) {
+      this.attachmentNotFound();
+    }
+    return absolute;
+  }
+
+  async getAdminAttachmentFile(inquiryId, attachmentId) {
+    const attachment = await this.repository.findAttachmentByInquiryId(
+      inquiryId,
+      attachmentId,
+    );
+    if (!attachment) this.attachmentNotFound();
+
+    const absolutePath = this.resolveAttachmentAbsolutePath(attachment.storage_path);
+    if (!fs.existsSync(absolutePath)) this.attachmentNotFound();
+
+    return {
+      absolutePath,
+      mimeType: attachment.mime_type || 'application/octet-stream',
+      fileName: this.sanitizeDownloadFilename(
+        attachment.original_file_name || 'attachment',
+      ),
+    };
   }
 
   async updateStatus(id, status) {
@@ -265,19 +307,33 @@ class SupportInquiryService {
     };
   }
 
-  mapDetail(row) {
+  mapAttachment(item, options = {}) {
+    const id = item.id;
+    const inquiryId = item.inquiryId ?? item.inquiry_id;
+    const mimeType = item.mimeType ?? item.mime_type;
+    const isImage = String(mimeType || '').toLowerCase().startsWith('image/');
+    const attachment = {
+      id,
+      originalFileName: item.originalFileName ?? item.original_file_name,
+      mimeType,
+      fileSize: item.fileSize ?? item.file_size,
+      isImage,
+      createdAt: item.createdAt ?? item.created_at,
+    };
+    if (options.adminAttachments && inquiryId && id) {
+      const url = `/api/v1/admin/support/inquiries/${inquiryId}/attachments/${id}`;
+      attachment.previewUrl = url;
+      attachment.downloadUrl = `${url}?download=1`;
+    }
+    return attachment;
+  }
+
+  mapDetail(row, options = {}) {
     const rawAttachments = row.attachments ?? parseJson(row.attachments_json, []);
     const rawMessages = row.messages ?? parseJson(row.messages_json, []);
     const attachments = rawAttachments
       .filter(Boolean)
-      .map((item) => ({
-        id: item.id,
-        originalFileName: item.originalFileName ?? item.original_file_name,
-        mimeType: item.mimeType ?? item.mime_type,
-        fileSize: item.fileSize ?? item.file_size,
-        publicUrl: item.publicUrl ?? item.public_url,
-        createdAt: item.createdAt ?? item.created_at,
-      }));
+      .map((item) => this.mapAttachment(item, options));
     const messages = rawMessages
       .filter(Boolean)
       .map((item) => ({

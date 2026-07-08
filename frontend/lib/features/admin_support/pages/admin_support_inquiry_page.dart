@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/browser_download.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_support_api_service.dart';
@@ -452,6 +453,8 @@ class _AdminSupportInquiryDetailPageState
                 const SizedBox(height: AppTokens.spaceMd),
                 AppUi.surfaceCard(
                   child: _AttachmentList(
+                    api: widget.api,
+                    inquiryId: widget.id,
                     attachments:
                         detail?['attachments'] as List<dynamic>? ?? const [],
                   ),
@@ -597,9 +600,127 @@ class _ReplyComposer extends StatelessWidget {
 }
 
 class _AttachmentList extends StatelessWidget {
-  const _AttachmentList({required this.attachments});
+  const _AttachmentList({
+    required this.api,
+    required this.inquiryId,
+    required this.attachments,
+  });
 
+  final AdminSupportApiService api;
+  final int inquiryId;
   final List<dynamic> attachments;
+
+  String _formatSize(dynamic value) {
+    final size = value is num ? value.toInt() : int.tryParse('$value');
+    if (size == null || size < 0) return '-';
+    if (size < 1024) return '$size B';
+    if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)} KB';
+    return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _preview(
+    BuildContext context,
+    Map<String, dynamic> attachment,
+  ) async {
+    final l10n = context.l10n;
+    try {
+      final file = await api.fetchAttachment(
+        inquiryId: inquiryId,
+        attachmentId: attachment['id'] as int,
+      );
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760, maxHeight: 680),
+            child: Padding(
+              padding: const EdgeInsets.all(AppTokens.spaceMd),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    attachment['originalFileName'] as String? ?? '-',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: AppTokens.spaceMd),
+                  Flexible(
+                    child: InteractiveViewer(
+                      child: Image.memory(
+                        file.bytes,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            AppUi.emptyState(
+                              title: l10n.t('admin_support_preview_failed'),
+                              icon: Icons.broken_image_outlined,
+                            ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppTokens.spaceMd),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(l10n.t('support_close_button')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    } catch (err) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            userFacingError(
+              err,
+              fallback: l10n.t('admin_support_preview_failed'),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _download(
+    BuildContext context,
+    Map<String, dynamic> attachment,
+  ) async {
+    final l10n = context.l10n;
+    try {
+      final file = await api.fetchAttachment(
+        inquiryId: inquiryId,
+        attachmentId: attachment['id'] as int,
+        download: true,
+      );
+      downloadBytes(
+        file.bytes,
+        attachment['originalFileName'] as String? ?? 'attachment',
+        attachment['mimeType'] as String? ?? file.mimeType,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('admin_support_download_started'))),
+      );
+    } catch (err) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            userFacingError(
+              err,
+              fallback: l10n.t('admin_support_download_failed'),
+            ),
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -618,19 +739,50 @@ class _AttachmentList extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: AppTokens.spaceSm),
-        for (final attachment in attachments)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.image_outlined),
-            title: Text(
-              Map<String, dynamic>.from(attachment as Map)['originalFileName']
-                      as String? ??
-                  '-',
-            ),
-            subtitle: Text(
-              Map<String, dynamic>.from(attachment)['mimeType'] as String? ??
-                  '',
-            ),
+        for (final raw in attachments)
+          Builder(
+            builder: (context) {
+              final attachment = Map<String, dynamic>.from(raw as Map);
+              final isImage =
+                  attachment['isImage'] == true ||
+                  (attachment['mimeType'] as String? ?? '').startsWith(
+                    'image/',
+                  );
+              return ListTile(
+                key: const Key('admin_support_attachment_item'),
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  isImage ? Icons.image_outlined : Icons.attach_file_outlined,
+                ),
+                title: Text(attachment['originalFileName'] as String? ?? '-'),
+                subtitle: Text(
+                  [
+                        attachment['mimeType'] as String? ?? '',
+                        _formatSize(attachment['fileSize']),
+                      ]
+                      .where((value) => value.isNotEmpty && value != '-')
+                      .join(' · '),
+                ),
+                trailing: Wrap(
+                  spacing: AppTokens.spaceXs,
+                  children: [
+                    if (isImage)
+                      TextButton.icon(
+                        key: const Key('admin_support_attachment_preview'),
+                        onPressed: () => _preview(context, attachment),
+                        icon: const Icon(Icons.visibility_outlined),
+                        label: Text(l10n.t('admin_support_preview')),
+                      ),
+                    TextButton.icon(
+                      key: const Key('admin_support_attachment_download'),
+                      onPressed: () => _download(context, attachment),
+                      icon: const Icon(Icons.download_outlined),
+                      label: Text(l10n.t('admin_support_download')),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
       ],
     );

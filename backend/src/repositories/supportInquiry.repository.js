@@ -104,7 +104,7 @@ class SupportInquiryRepository {
           public_url,
           created_at
         FROM support_inquiry_attachments
-        WHERE inquiry_id = ?
+        WHERE inquiry_id = ? AND deleted_at IS NULL
         ORDER BY id ASC
       `,
       [row.id],
@@ -183,7 +183,8 @@ class SupportInquiryRepository {
             LIMIT 1
           ) AS latest_message
         FROM support_inquiries si
-        LEFT JOIN support_inquiry_attachments sia ON sia.inquiry_id = si.id
+        LEFT JOIN support_inquiry_attachments sia
+          ON sia.inquiry_id = si.id AND sia.deleted_at IS NULL
         ${whereSql}
         GROUP BY si.id
         ORDER BY si.updated_at DESC, si.id DESC
@@ -196,6 +197,29 @@ class SupportInquiryRepository {
       items: rows,
       total: Number(countRows[0]?.total ?? 0),
     };
+  }
+
+  async findAttachmentByInquiryId(inquiryId, attachmentId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          id,
+          inquiry_id,
+          original_file_name,
+          mime_type,
+          file_size,
+          storage_path,
+          public_url,
+          created_at
+        FROM support_inquiry_attachments
+        WHERE inquiry_id = ?
+          AND id = ?
+          AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [inquiryId, attachmentId],
+    );
+    return rows[0] ?? null;
   }
 
   async updateStatus(conn, id, status) {

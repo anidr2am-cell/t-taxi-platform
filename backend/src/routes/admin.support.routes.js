@@ -7,6 +7,7 @@ const ROLES = require('../constants/roles');
 const {
   adminSupportInquiryListQuerySchema,
   adminSupportInquiryIdParamsSchema,
+  adminSupportInquiryAttachmentParamsSchema,
   adminSupportInquiryStatusSchema,
   supportInquiryMessageSchema,
 } = require('../validators/supportInquiry.validator');
@@ -26,6 +27,13 @@ router.get(
   adminOnly,
   validate({ params: adminSupportInquiryIdParamsSchema }),
   supportInquiryController.getAdminDetail,
+);
+
+router.get(
+  '/support/inquiries/:id/attachments/:attachmentId',
+  adminOnly,
+  validate({ params: adminSupportInquiryAttachmentParamsSchema }),
+  supportInquiryController.getAdminAttachment,
 );
 
 router.post(

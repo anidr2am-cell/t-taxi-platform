@@ -1,5 +1,6 @@
 const { success, paginate } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+const path = require('path');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
@@ -72,6 +73,25 @@ const addAdminMessage = asyncHandler(async (req, res) => {
   return success(res, data, 'Support inquiry reply sent', HTTP_STATUS.CREATED);
 });
 
+const sanitizeHeaderFilename = (name) => path.basename(String(name || 'attachment'))
+  .replace(/[\r\n"]/g, '_');
+
+const getAdminAttachment = asyncHandler(async (req, res) => {
+  const file = await getService().getAdminAttachmentFile(
+    Number(req.params.id),
+    Number(req.params.attachmentId),
+  );
+  const disposition = req.query.download === '1' || req.query.download === 'true'
+    ? 'attachment'
+    : 'inline';
+  res.setHeader('Content-Type', file.mimeType);
+  res.setHeader(
+    'Content-Disposition',
+    `${disposition}; filename="${sanitizeHeaderFilename(file.fileName)}"`,
+  );
+  return res.sendFile(file.absolutePath);
+});
+
 module.exports = {
   handleUploadError,
   normalizeMultipartBody,
@@ -81,4 +101,5 @@ module.exports = {
   getAdminDetail,
   updateAdminStatus,
   addAdminMessage,
+  getAdminAttachment,
 };

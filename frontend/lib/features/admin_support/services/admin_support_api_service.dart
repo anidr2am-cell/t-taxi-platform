@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,10 +16,16 @@ class AdminSupportApiException implements Exception {
 }
 
 class AdminSupportApiService {
-  const AdminSupportApiService();
+  const AdminSupportApiService({http.Client? client, String? baseUrl})
+    : _client = client,
+      _baseUrlOverride = baseUrl;
 
   static const _tokenKey = 'admin_access_token';
-  String get _base => '${AppConfig.apiBaseUrl}/api/v1';
+  final http.Client? _client;
+  final String? _baseUrlOverride;
+
+  http.Client get _http => _client ?? http.Client();
+  String get _base => '${_baseUrlOverride ?? AppConfig.apiBaseUrl}/api/v1';
 
   Future<String?> getSavedToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,15 +50,15 @@ class AdminSupportApiService {
     };
     late http.Response response;
     if (method == 'GET') {
-      response = await http.get(uri, headers: headers);
+      response = await _http.get(uri, headers: headers);
     } else if (method == 'PATCH') {
-      response = await http.patch(
+      response = await _http.patch(
         uri,
         headers: headers,
         body: jsonEncode(body ?? {}),
       );
     } else {
-      response = await http.post(
+      response = await _http.post(
         uri,
         headers: headers,
         body: jsonEncode(body ?? {}),
@@ -108,4 +115,48 @@ class AdminSupportApiService {
     );
     return Map<String, dynamic>.from(data as Map);
   }
+
+  Future<AdminSupportAttachmentFile> fetchAttachment({
+    required int inquiryId,
+    required int attachmentId,
+    bool download = false,
+  }) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) {
+      throw const AdminSupportApiException('Please log in');
+    }
+    final uri = Uri.parse(
+      '$_base/admin/support/inquiries/$inquiryId/attachments/$attachmentId',
+    ).replace(queryParameters: download ? {'download': '1'} : null);
+    final response = await _http.get(
+      uri,
+      headers: {'Accept': '*/*', 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode >= 400) {
+      String message = 'Request failed';
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) {
+          message = decoded['message'] as String? ?? message;
+        }
+      } catch (_) {
+        // Binary endpoint errors should still surface as a controlled message.
+      }
+      throw AdminSupportApiException(message);
+    }
+    return AdminSupportAttachmentFile(
+      bytes: response.bodyBytes,
+      mimeType: response.headers['content-type'] ?? 'application/octet-stream',
+    );
+  }
+}
+
+class AdminSupportAttachmentFile {
+  const AdminSupportAttachmentFile({
+    required this.bytes,
+    required this.mimeType,
+  });
+
+  final Uint8List bytes;
+  final String mimeType;
 }

@@ -34,6 +34,11 @@ const adminSupportInquiryIdParamsSchema = Joi.object({
   id: Joi.number().integer().positive().required(),
 });
 
+const adminSupportInquiryAttachmentParamsSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+  attachmentId: Joi.number().integer().positive().required(),
+});
+
 const adminSupportInquiryStatusSchema = Joi.object({
   status: Joi.string().valid(...statusValues).required(),
 });
@@ -48,6 +53,7 @@ module.exports = {
   publicSupportInquiryLookupSchema,
   adminSupportInquiryListQuerySchema,
   adminSupportInquiryIdParamsSchema,
+  adminSupportInquiryAttachmentParamsSchema,
   adminSupportInquiryStatusSchema,
   supportInquiryMessageSchema,
 };

@@ -6,12 +6,17 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh
 
 const { test, describe, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 const request = require('supertest');
 
 const app = require('../src/app');
 const container = require('../src/helpers/container');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const SupportInquiryService = require('../src/services/supportInquiry.service');
+const AppError = require('../src/utils/AppError');
+const HTTP_STATUS = require('../src/constants/httpStatus');
+const { uploadDir } = require('../src/config/multer');
 
 function registerAuth(role = 'ADMIN') {
   container.register('authService', () => ({
@@ -201,6 +206,107 @@ describe('Support inquiry routes', () => {
 
     assert.equal(res.body.data.message, 'Airport pickup question');
     assert.equal(res.body.data.messages[0].senderType, 'CUSTOMER');
+  });
+
+  test('admin detail returns safe attachment metadata without storage path', async () => {
+    container.register('supportInquiryService', () => ({
+      async getAdminDetail(id) {
+        return {
+          id,
+          publicId: 'SUP-260708-ABC123',
+          status: 'NEW',
+          message: 'Airport pickup question',
+          messages: [],
+          attachments: [{
+            id: 3,
+            originalFileName: 'ticket.jpg',
+            mimeType: 'image/jpeg',
+            fileSize: 123,
+            isImage: true,
+            previewUrl: '/api/v1/admin/support/inquiries/1/attachments/3',
+            downloadUrl: '/api/v1/admin/support/inquiries/1/attachments/3?download=1',
+          }],
+        };
+      },
+    }));
+    registerAuth('ADMIN');
+
+    const res = await request(app)
+      .get('/api/v1/admin/support/inquiries/1')
+      .set('Authorization', 'Bearer admin-token')
+      .expect(200);
+
+    const attachment = res.body.data.attachments[0];
+    assert.equal(attachment.originalFileName, 'ticket.jpg');
+    assert.equal(attachment.isImage, true);
+    assert.equal(attachment.previewUrl, '/api/v1/admin/support/inquiries/1/attachments/3');
+    assert.equal(Object.hasOwn(attachment, 'storagePath'), false);
+    assert.equal(Object.hasOwn(attachment, 'storage_path'), false);
+  });
+
+  test('admin attachment fetch requires admin role', async () => {
+    await request(app)
+      .get('/api/v1/admin/support/inquiries/1/attachments/3')
+      .expect(401);
+
+    registerAuth('DRIVER');
+    await request(app)
+      .get('/api/v1/admin/support/inquiries/1/attachments/3')
+      .set('Authorization', 'Bearer driver-token')
+      .expect(403);
+  });
+
+  test('admin can fetch inline and download support attachment', async () => {
+    const filePath = path.join(uploadDir, 'support-test-attachment.png');
+    fs.writeFileSync(filePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    container.register('supportInquiryService', () => ({
+      async getAdminAttachmentFile(inquiryId, attachmentId) {
+        assert.equal(inquiryId, 1);
+        assert.equal(attachmentId, 3);
+        return {
+          absolutePath: filePath,
+          mimeType: 'image/png',
+          fileName: 'ticket.png',
+        };
+      },
+    }));
+    registerAuth('SUPER_ADMIN');
+
+    try {
+      const inline = await request(app)
+        .get('/api/v1/admin/support/inquiries/1/attachments/3')
+        .set('Authorization', 'Bearer admin-token')
+        .expect(200);
+      assert.equal(inline.headers['content-type'], 'image/png');
+      assert.match(inline.headers['content-disposition'], /^inline;/);
+
+      const download = await request(app)
+        .get('/api/v1/admin/support/inquiries/1/attachments/3?download=1')
+        .set('Authorization', 'Bearer admin-token')
+        .expect(200);
+      assert.match(download.headers['content-disposition'], /^attachment;/);
+    } finally {
+      fs.rmSync(filePath, { force: true });
+    }
+  });
+
+  test('unknown or mismatched support attachment returns 404', async () => {
+    container.register('supportInquiryService', () => ({
+      async getAdminAttachmentFile() {
+        throw new AppError('Support inquiry attachment not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.FILE_NOT_FOUND,
+        });
+      },
+    }));
+    registerAuth('ADMIN');
+
+    const res = await request(app)
+      .get('/api/v1/admin/support/inquiries/1/attachments/999')
+      .set('Authorization', 'Bearer admin-token')
+      .expect(404);
+
+    assert.equal(res.body.error_code, ERROR_CODES.FILE_NOT_FOUND);
   });
 
   test('admin can reply to support inquiry', async () => {
