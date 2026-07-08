@@ -33,9 +33,15 @@ class CustomerLandingPage extends StatelessWidget {
     );
   }
 
+  void _openSupport(BuildContext context) {
+    Navigator.pushNamed(context, '/support');
+  }
+
   @override
   Widget build(BuildContext context) {
-    final maxWidth = MediaQuery.sizeOf(context).width >= 900 ? 1100.0 : double.infinity;
+    final maxWidth = MediaQuery.sizeOf(context).width >= 900
+        ? 1100.0
+        : double.infinity;
 
     return Scaffold(
       backgroundColor: AppTokens.background,
@@ -52,9 +58,11 @@ class CustomerLandingPage extends StatelessWidget {
                 const LandingTrustSection(),
                 const LandingStepsSection(),
                 const LandingReassuranceCard(),
-                LandingBookingLookupCard(onLookup: () => _openBookingLookup(context)),
+                LandingBookingLookupCard(
+                  onLookup: () => _openBookingLookup(context),
+                ),
                 const PwaInstallBanner(),
-                LandingBottomCta(onBook: () => _openBookingWizard(context)),
+                LandingBottomCta(onSupport: () => _openSupport(context)),
                 LandingFooter(
                   onAdmin: () => Navigator.push(
                     context,

@@ -8,6 +8,7 @@ import 'features/booking/pages/guest_booking_lookup_page.dart';
 import 'features/driver_application/pages/driver_application_form_page.dart';
 import 'features/driver/pages/driver_login_page.dart';
 import 'features/driver/pages/driver_shell_page.dart';
+import 'features/support/pages/customer_support_page.dart';
 import 'providers/booking_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -58,6 +59,7 @@ class TTaxiApp extends StatelessWidget {
         '/driver/application-status': (_) => const DriverApplicationFormPage(),
         '/driver/home': (_) => const DriverShellPage(),
         '/driver/jobs': (_) => const DriverShellPage(),
+        '/support': (_) => const CustomerSupportPage(),
       },
       home: const HomeScreen(),
     );

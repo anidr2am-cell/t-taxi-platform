@@ -7,6 +7,7 @@ import 'package:frontend/features/landing/pages/customer_landing_page.dart';
 import 'package:frontend/features/landing/widgets/landing_clickable_styles.dart';
 import 'package:frontend/features/landing/widgets/landing_header.dart';
 import 'package:frontend/features/landing/widgets/landing_hero.dart';
+import 'package:frontend/features/support/pages/customer_support_page.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:frontend/theme/app_tokens.dart';
@@ -35,6 +36,7 @@ Widget _wrapLanding({
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          routes: {'/support': (_) => const CustomerSupportPage()},
           home: MediaQuery(
             data: MediaQueryData(size: Size(width, height)),
             child: Scaffold(body: child),
@@ -90,6 +92,21 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(BookingWizardPage), findsOneWidget);
+    });
+
+    testWidgets('bottom CTA opens customer support page', (tester) async {
+      await pumpLanding(tester);
+
+      await tester.ensureVisible(find.byKey(const Key('landing_support_cta')));
+      await tester.tap(find.byKey(const Key('landing_support_cta')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(CustomerSupportPage), findsOneWidget);
+      expect(
+        find.text(AppLocalizations('en').t('support_title')),
+        findsWidgets,
+      );
     });
 
     testWidgets('header lookup opens lookup page', (tester) async {

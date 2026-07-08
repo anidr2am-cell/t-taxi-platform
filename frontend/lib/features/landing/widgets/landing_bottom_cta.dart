@@ -4,9 +4,9 @@ import '../../../l10n/app_localizations.dart';
 import 'landing_clickable_styles.dart';
 
 class LandingBottomCta extends StatelessWidget {
-  final VoidCallback onBook;
+  final VoidCallback onSupport;
 
-  const LandingBottomCta({super.key, required this.onBook});
+  const LandingBottomCta({super.key, required this.onSupport});
 
   @override
   Widget build(BuildContext context) {
@@ -16,11 +16,12 @@ class LandingBottomCta extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Semantics(
         button: true,
-        label: l10n.t('landing_hero_cta'),
+        label: l10n.t('landing_support_cta'),
         child: FilledButton(
-          onPressed: onBook,
+          key: const Key('landing_support_cta'),
+          onPressed: onSupport,
           style: LandingClickableStyles.heroCtaStyle(compact: true),
-          child: Text(l10n.t('landing_hero_cta')),
+          child: Text(l10n.t('landing_support_cta')),
         ),
       ),
     );

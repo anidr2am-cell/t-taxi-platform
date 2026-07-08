@@ -25,6 +25,7 @@ class AppLocalizations {
       'landing_hero_body':
           'Travel safely and smoothly from the airport to your destination with experienced drivers.',
       'landing_hero_cta': 'Book now',
+      'landing_support_cta': 'Customer center',
       'landing_hero_helper': 'Quick booking, no account required',
       'landing_hero_subtitle': 'Travel safely, smoothly, and with confidence.',
       'landing_highlight_fixed_price': 'Fixed Price',
@@ -69,6 +70,24 @@ class AppLocalizations {
       'landing_footer_note':
           'Professional airport and city transfers across Thailand.',
       'landing_language_label': 'Language',
+      'support_title': 'Customer center',
+      'support_inquiry_title': 'Booking and inquiry via customer center',
+      'support_inquiry_subtitle':
+          'Leave your booking question, flight information, pickup place, and destination.',
+      'support_default_guide':
+          'Hello. This is T-Ride customer center. Please leave your booking inquiry, flight information, pickup place, and destination, and we will check and guide you.',
+      'support_input_label': 'Inquiry message',
+      'support_input_hint': 'Enter your reservation or travel question.',
+      'support_attach_button': 'Attach image',
+      'support_send_button': 'Send',
+      'support_attachment_help':
+          'You can attach flight ticket images, hotel vouchers, or reservation screenshots.',
+      'support_no_attachments': 'No attachments selected',
+      'support_auto_receipt':
+          'Auto receipt: Your inquiry has been received. Customer center will check and guide you.',
+      'support_faq_title': 'Frequently asked questions',
+      'support_faq_placeholder':
+          'Frequently asked questions will be updated by priority as customer inquiry data accumulates.',
       'trust_flight_delay': 'Flight Delay Monitoring',
       'trust_flight_delay_desc':
           'Pickup time updates automatically when your flight changes.',
@@ -706,6 +725,7 @@ class AppLocalizations {
       'landing_hero_title': '태국에서 만나는 편안한 출발 T-Ride',
       'landing_hero_body': '숙련된 기사와 함께 공항에서 목적지까지 안전하고 편안하게 이동하세요.',
       'landing_hero_cta': '예약하기',
+      'landing_support_cta': '고객센터',
       'landing_hero_helper': '회원가입 없이 간편 예약',
       'landing_hero_subtitle': '즐겁고 안전한 여행을 약속드립니다.',
       'landing_highlight_fixed_price': '정액 요금',
@@ -739,6 +759,21 @@ class AppLocalizations {
       'landing_booking_lookup_action': '예약 조회',
       'landing_footer_note': '태국 전역 공항·도시 이동 전문 서비스',
       'landing_language_label': '언어',
+      'support_title': '고객센터',
+      'support_inquiry_title': '고객센터를 통한 예약 및 문의',
+      'support_inquiry_subtitle': '예약 문의, 항공편 정보, 픽업 장소, 목적지를 남겨주세요.',
+      'support_default_guide':
+          '안녕하세요. T-Ride 고객센터입니다. 예약 문의, 항공편 정보, 픽업 장소, 목적지를 남겨주시면 확인 후 안내드리겠습니다.',
+      'support_input_label': '문의 내용',
+      'support_input_hint': '예약 또는 이동 문의를 입력해 주세요.',
+      'support_attach_button': '이미지 첨부',
+      'support_send_button': '보내기',
+      'support_attachment_help': '항공권 이미지, 호텔 바우처, 예약 화면 캡처 등을 첨부할 수 있습니다.',
+      'support_no_attachments': '첨부된 파일 없음',
+      'support_auto_receipt': '자동 접수 안내: 문의가 접수되었습니다. 고객센터에서 확인 후 안내드리겠습니다.',
+      'support_faq_title': '자주 하는 질문',
+      'support_faq_placeholder':
+          '자주 하는 질문은 고객 문의 데이터가 축적되면 우선순위에 따라 업데이트될 예정입니다.',
       'trust_flight_delay': '항공 지연 모니터링',
       'trust_flight_delay_desc': '항공 지연 발생 시 픽업 시간을 자동으로 맞춰드립니다',
       'trust_fixed_pricing': '정액 요금',
@@ -920,20 +955,15 @@ class AppLocalizations {
       'guest_lookup_total': '총 금액',
       'guest_lookup_another': '다른 예약 조회',
       'guest_lookup_refresh': '새로고침',
-      'guest_lookup_refresh_needs_phone':
-          '새로고침하려면 조회 화면에서 전화번호를 입력해 주세요.',
+      'guest_lookup_refresh_needs_phone': '새로고침하려면 조회 화면에서 전화번호를 입력해 주세요.',
       'booking_complete_track_cta': '예약 상태 확인',
-      'guest_status_guidance_pending':
-          '예약이 접수되었습니다. 곧 확인 처리됩니다.',
-      'guest_status_guidance_confirmed':
-          '예약이 확정되었습니다. 픽업 전에 기사가 배정됩니다.',
-      'guest_status_guidance_driver_assigned':
-          '기사가 배정되었습니다. 곧 픽업지로 이동합니다.',
+      'guest_status_guidance_pending': '예약이 접수되었습니다. 곧 확인 처리됩니다.',
+      'guest_status_guidance_confirmed': '예약이 확정되었습니다. 픽업 전에 기사가 배정됩니다.',
+      'guest_status_guidance_driver_assigned': '기사가 배정되었습니다. 곧 픽업지로 이동합니다.',
       'guest_status_guidance_on_route': '기사가 픽업지로 이동 중입니다.',
       'guest_status_guidance_driver_arrived': '기사가 픽업지에 도착했습니다.',
       'guest_status_guidance_picked_up': '운행이 진행 중입니다.',
-      'guest_status_guidance_completed':
-          '운행이 완료되었습니다. 이용해 주셔서 감사합니다.',
+      'guest_status_guidance_completed': '운행이 완료되었습니다. 이용해 주셔서 감사합니다.',
       'guest_status_guidance_cancelled': '이 예약은 취소되었습니다.',
       'guest_status_guidance_no_show': '이 예약은 노쇼로 처리되었습니다.',
       'guest_lookup_issue_dropoff_qr': '하차 QR 발급',
@@ -1165,6 +1195,7 @@ class AppLocalizations {
       'landing_hero_title': '在泰国，和 T-Ride 一起舒适出发',
       'landing_hero_body': '经验丰富的司机，从机场到目的地，安全顺畅。',
       'landing_hero_cta': '立即预订',
+      'landing_support_cta': '客服中心',
       'landing_hero_helper': '无需注册，快速预约',
       'landing_hero_subtitle': '安心、顺畅，值得信赖。',
       'landing_highlight_fixed_price': '固定价格',
@@ -1197,6 +1228,20 @@ class AppLocalizations {
       'landing_booking_lookup_action': '查询预约',
       'landing_footer_note': '泰国全境专业机场与城市接送',
       'landing_language_label': '语言',
+      'support_title': '客服中心',
+      'support_inquiry_title': '通过客服中心预约和咨询',
+      'support_inquiry_subtitle': '请留下预约问题、航班信息、接送地点和目的地。',
+      'support_default_guide':
+          '您好，这里是 T-Ride 客服中心。请留下预约咨询、航班信息、接送地点和目的地，我们确认后会为您说明。',
+      'support_input_label': '咨询内容',
+      'support_input_hint': '请输入预约或行程咨询。',
+      'support_attach_button': '附加图片',
+      'support_send_button': '发送',
+      'support_attachment_help': '可以附加机票图片、酒店凭证或预约画面截图等。',
+      'support_no_attachments': '尚未选择附件',
+      'support_auto_receipt': '自动接收通知：您的咨询已收到。客服中心确认后会为您说明。',
+      'support_faq_title': '常见问题',
+      'support_faq_placeholder': '常见问题将在客户咨询数据积累后按优先级更新。',
       'trust_flight_delay': '航班延误监控',
       'trust_flight_delay_desc': '航班变动时自动更新接车时间',
       'trust_fixed_pricing': '固定定价',
@@ -1467,6 +1512,7 @@ class AppLocalizations {
       'landing_hero_title': 'タイで始まる快適な旅 T-Ride',
       'landing_hero_body': '経験豊富なドライバーが、空港から目的地まで安全・快適にお送りします。',
       'landing_hero_cta': '予約する',
+      'landing_support_cta': 'カスタマーセンター',
       'landing_hero_helper': '会員登録不要、かんたん予約',
       'landing_hero_subtitle': '安全でスムーズな旅をお約束します。',
       'landing_highlight_fixed_price': '定額料金',
@@ -1499,6 +1545,20 @@ class AppLocalizations {
       'landing_booking_lookup_action': '予約を検索',
       'landing_footer_note': 'タイ全土のプロ空港・市内送迎サービス',
       'landing_language_label': '言語',
+      'support_title': 'カスタマーセンター',
+      'support_inquiry_title': 'カスタマーセンターでの予約・お問い合わせ',
+      'support_inquiry_subtitle': '予約相談、フライト情報、ピックアップ場所、目的地をお送りください。',
+      'support_default_guide':
+          'こんにちは。T-Ride カスタマーセンターです。予約相談、フライト情報、ピックアップ場所、目的地をお送りいただければ、確認後にご案内します。',
+      'support_input_label': 'お問い合わせ内容',
+      'support_input_hint': '予約または移動に関するお問い合わせを入力してください。',
+      'support_attach_button': '画像を添付',
+      'support_send_button': '送信',
+      'support_attachment_help': '航空券画像、ホテルバウチャー、予約画面のスクリーンショットなどを添付できます。',
+      'support_no_attachments': '添付ファイルはありません',
+      'support_auto_receipt': '自動受付通知：お問い合わせを受け付けました。カスタマーセンターで確認後にご案内します。',
+      'support_faq_title': 'よくある質問',
+      'support_faq_placeholder': 'よくある質問は、お問い合わせデータが蓄積され次第、優先度に応じて更新されます。',
       'trust_flight_delay': 'フライト遅延モニタリング',
       'trust_flight_delay_desc': 'フライト変更時にピックアップ時間を自動更新',
       'trust_fixed_pricing': '定額料金',
@@ -1577,20 +1637,16 @@ class AppLocalizations {
       'guest_lookup_total': '合計',
       'guest_lookup_another': '別の予約を検索',
       'guest_lookup_refresh': '更新',
-      'guest_lookup_refresh_needs_phone':
-          '更新するには検索フォームで電話番号を入力してください。',
+      'guest_lookup_refresh_needs_phone': '更新するには検索フォームで電話番号を入力してください。',
       'booking_complete_track_cta': '予約状況を確認',
-      'guest_status_guidance_pending':
-          '予約を受け付けました。まもなく確認します。',
-      'guest_status_guidance_confirmed':
-          '予約が確定しました。迎え前にドライバーが割り当てられます。',
+      'guest_status_guidance_pending': '予約を受け付けました。まもなく確認します。',
+      'guest_status_guidance_confirmed': '予約が確定しました。迎え前にドライバーが割り当てられます。',
       'guest_status_guidance_driver_assigned':
           'ドライバーが割り当てられました。まもなく迎え場所へ向かいます。',
       'guest_status_guidance_on_route': 'ドライバーが迎え場所へ向かっています。',
       'guest_status_guidance_driver_arrived': 'ドライバーが迎え場所に到着しました。',
       'guest_status_guidance_picked_up': '運行中です。',
-      'guest_status_guidance_completed':
-          '運行が完了しました。ご利用ありがとうございました。',
+      'guest_status_guidance_completed': '運行が完了しました。ご利用ありがとうございました。',
       'guest_status_guidance_cancelled': 'この予約はキャンセルされました。',
       'guest_status_guidance_no_show': 'この予約はノーショーとして処理されました。',
       'guest_lookup_issue_dropoff_qr': '降車 QR を発行',
@@ -1780,6 +1836,7 @@ class AppLocalizations {
       'landing_hero_body':
           'คนขับมืออาชีพพาคุณจากสนามบินถึงที่พักอย่างปลอดภัยและสบาย',
       'landing_hero_cta': 'จองเลย',
+      'landing_support_cta': 'ศูนย์บริการลูกค้า',
       'landing_hero_helper': 'จองง่าย ไม่ต้องสมัครสมาชิก',
       'landing_hero_subtitle': 'เดินทางอย่างปลอดภัย ราบรื่น และมั่นใจ',
       'landing_highlight_fixed_price': 'ราคาคงที่',
@@ -1818,6 +1875,24 @@ class AppLocalizations {
       'landing_booking_lookup_action': 'ค้นหาการจอง',
       'landing_footer_note': 'บริการรับส่งสนามบินและในเมืองทั่วประเทศไทย',
       'landing_language_label': 'ภาษา',
+      'support_title': 'ศูนย์บริการลูกค้า',
+      'support_inquiry_title': 'จองและสอบถามผ่านศูนย์บริการลูกค้า',
+      'support_inquiry_subtitle':
+          'ฝากคำถามการจอง ข้อมูลเที่ยวบิน จุดรับ และปลายทางไว้ได้เลย',
+      'support_default_guide':
+          'สวัสดีค่ะ/ครับ นี่คือศูนย์บริการลูกค้า T-Ride กรุณาฝากคำถามการจอง ข้อมูลเที่ยวบิน จุดรับ และปลายทางไว้ แล้วเราจะตรวจสอบและแนะนำให้',
+      'support_input_label': 'ข้อความสอบถาม',
+      'support_input_hint': 'กรอกคำถามเกี่ยวกับการจองหรือการเดินทาง',
+      'support_attach_button': 'แนบรูปภาพ',
+      'support_send_button': 'ส่ง',
+      'support_attachment_help':
+          'สามารถแนบรูปตั๋วเครื่องบิน เวาเชอร์โรงแรม หรือภาพหน้าจอการจองได้',
+      'support_no_attachments': 'ยังไม่ได้เลือกไฟล์แนบ',
+      'support_auto_receipt':
+          'ข้อความตอบรับอัตโนมัติ: ได้รับคำถามของคุณแล้ว ศูนย์บริการลูกค้าจะตรวจสอบและแนะนำให้',
+      'support_faq_title': 'คำถามที่พบบ่อย',
+      'support_faq_placeholder':
+          'คำถามที่พบบ่อยจะอัปเดตตามลำดับความสำคัญเมื่อมีข้อมูลคำถามจากลูกค้าเพิ่มขึ้น',
       'trust_flight_delay': 'ติดตามความล่าช้าของเที่ยวบิน',
       'trust_flight_delay_desc': 'อัปเดตเวลารับอัตโนมัติเมื่อเที่ยวบินเปลี่ยน',
       'trust_fixed_pricing': 'ราคาคงที่',
@@ -1919,7 +1994,8 @@ class AppLocalizations {
       'guest_status_guidance_completed':
           'การเดินทางเสร็จสิ้นแล้ว ขอบคุณที่ใช้บริการ',
       'guest_status_guidance_cancelled': 'การจองนี้ถูกยกเลิกแล้ว',
-      'guest_status_guidance_no_show': 'การจองนี้ถูกทำเครื่องหมายว่าไม่มาตามนัด',
+      'guest_status_guidance_no_show':
+          'การจองนี้ถูกทำเครื่องหมายว่าไม่มาตามนัด',
       'guest_lookup_issue_dropoff_qr': 'ออก QR ลงรถ',
       'guest_lookup_trip_completed_qr_hidden':
           'ทริปเสร็จสิ้น QR ที่ใช้งานอยู่จะถูกซ่อน',
