@@ -142,7 +142,6 @@ class SupportInquiryApiService {
     required String message,
     String? customerName,
     String? customerPhone,
-    String? customerEmail,
     String? kakaoId,
     String? lineId,
     String? locale,
@@ -161,8 +160,6 @@ class SupportInquiryApiService {
             'customerName': customerName.trim(),
           if (customerPhone != null && customerPhone.trim().isNotEmpty)
             'customerPhone': customerPhone.trim(),
-          if (customerEmail != null && customerEmail.trim().isNotEmpty)
-            'customerEmail': customerEmail.trim(),
           if (kakaoId != null && kakaoId.trim().isNotEmpty)
             'kakaoId': kakaoId.trim(),
           if (lineId != null && lineId.trim().isNotEmpty)
@@ -184,9 +181,6 @@ class SupportInquiryApiService {
     }
     if (customerPhone != null && customerPhone.trim().isNotEmpty) {
       request.fields['customerPhone'] = customerPhone.trim();
-    }
-    if (customerEmail != null && customerEmail.trim().isNotEmpty) {
-      request.fields['customerEmail'] = customerEmail.trim();
     }
     if (kakaoId != null && kakaoId.trim().isNotEmpty) {
       request.fields['kakaoId'] = kakaoId.trim();

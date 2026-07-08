@@ -72,11 +72,16 @@ void main() {
       expect(find.text(l10n.t('support_dialog_title')), findsOneWidget);
       expect(find.text(l10n.t('support_default_guide')), findsOneWidget);
       expect(
+        find.byKey(const Key('support_customer_name_input')),
+        findsOneWidget,
+      );
+      expect(
         find.byKey(const Key('support_customer_phone_input')),
         findsOneWidget,
       );
       expect(find.byKey(const Key('support_kakao_input')), findsOneWidget);
       expect(find.byKey(const Key('support_line_input')), findsOneWidget);
+      expect(find.byKey(const Key('support_email_input')), findsNothing);
       expect(find.byKey(const Key('support_message_input')), findsOneWidget);
       expect(find.byKey(const Key('support_attach_button')), findsOneWidget);
       expect(find.byKey(const Key('support_send_button')), findsOneWidget);
@@ -282,7 +287,6 @@ class _FakeSupportApi extends SupportInquiryApiService {
     required String message,
     String? customerName,
     String? customerPhone,
-    String? customerEmail,
     String? kakaoId,
     String? lineId,
     String? locale,

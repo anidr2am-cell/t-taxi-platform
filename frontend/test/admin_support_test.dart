@@ -33,6 +33,7 @@ void main() {
     expect(find.text('SUP-260708-ABC123'), findsOneWidget);
     expect(find.textContaining('Airport pickup question'), findsOneWidget);
     expect(find.textContaining('test-kakao'), findsOneWidget);
+    expect(find.textContaining('legacy@example.com'), findsNothing);
     expect(find.text('신규'), findsWidgets);
   });
 
@@ -52,6 +53,7 @@ void main() {
     );
     expect(find.text('Airport pickup full question'), findsOneWidget);
     expect(find.text('test-line'), findsOneWidget);
+    expect(find.text('legacy@example.com'), findsNothing);
     expect(find.byKey(const Key('admin_support_reply_input')), findsOneWidget);
     expect(
       find.byKey(const Key('admin_support_send_reply_button')),
@@ -130,7 +132,7 @@ class _FakeAdminSupportApi extends AdminSupportApiService {
       'message': 'Airport pickup full question',
       'customerName': 'Test Customer',
       'customerPhone': '+66810000000',
-      'customerEmail': null,
+      'customerEmail': 'legacy@example.com',
       'kakaoId': 'test-kakao',
       'lineId': 'test-line',
       'messages': [

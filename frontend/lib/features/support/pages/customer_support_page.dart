@@ -120,7 +120,6 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
   final _phoneController = TextEditingController();
   final _kakaoController = TextEditingController();
   final _lineController = TextEditingController();
-  final _emailController = TextEditingController();
   final _scrollController = ScrollController();
   final List<_SupportMessage> _messages = [];
   final List<_SupportMessage> _systemMessages = [];
@@ -144,7 +143,6 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
     _phoneController.dispose();
     _kakaoController.dispose();
     _lineController.dispose();
-    _emailController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -253,7 +251,6 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
         message: displayText,
         customerName: _nameController.text,
         customerPhone: _phoneController.text,
-        customerEmail: _emailController.text,
         kakaoId: _kakaoController.text,
         lineId: _lineController.text,
         locale: Localizations.localeOf(context).languageCode,
@@ -371,7 +368,6 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
                     phoneController: _phoneController,
                     kakaoController: _kakaoController,
                     lineController: _lineController,
-                    emailController: _emailController,
                   ),
                   if (_loadingThread)
                     Padding(
@@ -492,7 +488,6 @@ class _SupportContactCard extends StatelessWidget {
     required this.phoneController,
     required this.kakaoController,
     required this.lineController,
-    required this.emailController,
   });
 
   final bool enabled;
@@ -500,7 +495,6 @@ class _SupportContactCard extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController kakaoController;
   final TextEditingController lineController;
-  final TextEditingController emailController;
 
   @override
   Widget build(BuildContext context) {
@@ -539,7 +533,6 @@ class _SupportContactCard extends StatelessWidget {
             phoneController: phoneController,
             kakaoController: kakaoController,
             lineController: lineController,
-            emailController: emailController,
           ),
         ],
       ),
@@ -554,7 +547,6 @@ class _ContactFields extends StatelessWidget {
     required this.phoneController,
     required this.kakaoController,
     required this.lineController,
-    required this.emailController,
   });
 
   final bool enabled;
@@ -562,7 +554,6 @@ class _ContactFields extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController kakaoController;
   final TextEditingController lineController;
-  final TextEditingController emailController;
 
   @override
   Widget build(BuildContext context) {
@@ -595,13 +586,6 @@ class _ContactFields extends StatelessWidget {
             controller: lineController,
             enabled: enabled,
             label: l10n.t('support_contact_line'),
-          ),
-          _ContactField(
-            key: const Key('support_email_input'),
-            controller: emailController,
-            enabled: enabled,
-            label: l10n.t('support_contact_email'),
-            keyboardType: TextInputType.emailAddress,
           ),
         ];
 

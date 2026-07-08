@@ -41,13 +41,15 @@ void main() {
       captured.url.toString(),
       'http://localhost:3000/api/v1/support/inquiries',
     );
-    expect(jsonDecode(captured.body), {
+    final body = jsonDecode(captured.body) as Map<String, dynamic>;
+    expect(body, {
       'message': 'Airport pickup question',
       'customerPhone': '+66810000000',
       'kakaoId': 'test-kakao',
       'lineId': 'test-line',
       'locale': 'ko',
     });
+    expect(body.containsKey('customerEmail'), false);
     expect(receipt.publicId, 'SUP-260708-ABC123');
     expect(receipt.lookupToken, 'lookup-token');
     expect(receipt.status, 'NEW');

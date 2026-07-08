@@ -157,7 +157,6 @@ class _AdminSupportInquiryPageState extends State<AdminSupportInquiryPage> {
                             [
                                   item['customerName'],
                                   item['customerPhone'],
-                                  item['customerEmail'],
                                   item['kakaoId'],
                                   item['lineId'],
                                 ]
@@ -438,10 +437,6 @@ class _AdminSupportInquiryDetailPageState
                       AppUi.summaryRow(
                         label: l10n.t('admin_support_customer_phone'),
                         value: detail?['customerPhone'] as String? ?? '-',
-                      ),
-                      AppUi.summaryRow(
-                        label: l10n.t('admin_support_customer_email'),
-                        value: detail?['customerEmail'] as String? ?? '-',
                       ),
                       AppUi.summaryRow(
                         label: l10n.t('admin_support_customer_kakao'),
