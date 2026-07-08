@@ -266,6 +266,8 @@ Demo accounts (change if staging is public):
 | Admin | `admin@ttaxi.dev` | `Admin123456!` |
 | Driver | `+66810000001` | `Driver123456!` |
 
+**Forgot credentials?** See [STAGING_ACCOUNT_RESET.md](./STAGING_ACCOUNT_RESET.md) — safe reset without DB wipe or KTaxi impact.
+
 ### 6.4 Rehearsal (from dev machine or exec into backend)
 
 ```bash

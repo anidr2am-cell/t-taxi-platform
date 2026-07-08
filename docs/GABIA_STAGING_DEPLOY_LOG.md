@@ -157,3 +157,6 @@ KTaxi legacy impact: none
 ### Safety
 - Existing KTaxi legacy stack remained unaffected.
 - Do not touch `/opt/ktaxi`, `ktaxi-*`, `ktaxi-nginx`, `80/443`, or legacy compose.
+
+### Account recovery
+- See [STAGING_ACCOUNT_RESET.md](./STAGING_ACCOUNT_RESET.md) for safe admin/driver password reset on T-Ride staging.
