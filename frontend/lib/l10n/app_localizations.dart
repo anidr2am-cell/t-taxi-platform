@@ -94,6 +94,8 @@ class AppLocalizations {
       'support_no_attachments': 'No attachments selected',
       'support_contact_help':
           'For agent inquiries, leave any contact information we can use to follow up. At least one contact method is recommended.',
+      'support_contact_messenger_help':
+          'If you leave your KakaoTalk ID or LINE ID, customer center can contact you there.',
       'support_contact_name': 'Name or nickname',
       'support_contact_phone': 'Phone number',
       'support_contact_kakao': 'KakaoTalk ID',
@@ -119,6 +121,7 @@ class AppLocalizations {
       'admin_support_customer_kakao': 'KakaoTalk ID',
       'admin_support_customer_line': 'LINE ID',
       'admin_support_messages': 'Messages',
+      'admin_support_reply_title': 'Write reply',
       'admin_support_reply_label': 'Reply',
       'admin_support_reply_hint': 'Enter a reply to the customer.',
       'admin_support_send_reply': 'Send reply',
@@ -822,6 +825,8 @@ class AppLocalizations {
       'support_no_attachments': '첨부된 파일 없음',
       'support_contact_help':
           '상담원 문의의 경우 답변 확인을 위해 연락 가능한 정보를 남겨주세요. 최소 1개 연락수단 입력을 권장합니다.',
+      'support_contact_messenger_help':
+          '카카오톡 ID 또는 LINE ID를 남겨주시면 고객센터에서 연락드릴 수 있습니다.',
       'support_contact_name': '이름 또는 닉네임',
       'support_contact_phone': '휴대폰 번호',
       'support_contact_kakao': '카카오톡 ID',
@@ -845,6 +850,7 @@ class AppLocalizations {
       'admin_support_customer_kakao': '카카오톡 ID',
       'admin_support_customer_line': 'LINE ID',
       'admin_support_messages': '메시지',
+      'admin_support_reply_title': '답변 작성',
       'admin_support_reply_label': '답변',
       'admin_support_reply_hint': '고객에게 보낼 답변을 입력해 주세요.',
       'admin_support_send_reply': '답변 보내기',

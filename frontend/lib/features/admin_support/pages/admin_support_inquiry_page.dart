@@ -409,16 +409,16 @@ class _AdminSupportInquiryDetailPageState
                 ),
                 const SizedBox(height: AppTokens.spaceMd),
                 AppUi.surfaceCard(
-                  child: _MessageThread(
-                    messages: detail?['messages'] as List<dynamic>? ?? const [],
-                  ),
-                ),
-                const SizedBox(height: AppTokens.spaceMd),
-                AppUi.surfaceCard(
                   child: _ReplyComposer(
                     controller: _replyController,
                     submitting: _submitting,
                     onSend: _sendReply,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
+                AppUi.surfaceCard(
+                  child: _MessageThread(
+                    messages: detail?['messages'] as List<dynamic>? ?? const [],
                   ),
                 ),
                 const SizedBox(height: AppTokens.spaceMd),
@@ -564,6 +564,11 @@ class _ReplyComposer extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          l10n.t('admin_support_reply_title'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: AppTokens.spaceSm),
         TextField(
           key: const Key('admin_support_reply_input'),
           controller: controller,

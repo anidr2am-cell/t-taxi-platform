@@ -365,6 +365,14 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
                   _MessageBubble(
                     message: _SupportMessage(l10n.t('support_default_guide')),
                   ),
+                  _SupportContactCard(
+                    enabled: !_submitting,
+                    nameController: _nameController,
+                    phoneController: _phoneController,
+                    kakaoController: _kakaoController,
+                    lineController: _lineController,
+                    emailController: _emailController,
+                  ),
                   if (_loadingThread)
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
@@ -392,22 +400,6 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      l10n.t('support_contact_help'),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTokens.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppTokens.spaceSm),
-                    _ContactFields(
-                      enabled: !_submitting,
-                      nameController: _nameController,
-                      phoneController: _phoneController,
-                      kakaoController: _kakaoController,
-                      lineController: _lineController,
-                      emailController: _emailController,
-                    ),
-                    const SizedBox(height: AppTokens.spaceSm),
                     TextField(
                       key: const Key('support_message_input'),
                       controller: _messageController,
@@ -488,6 +480,68 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SupportContactCard extends StatelessWidget {
+  const _SupportContactCard({
+    required this.enabled,
+    required this.nameController,
+    required this.phoneController,
+    required this.kakaoController,
+    required this.lineController,
+    required this.emailController,
+  });
+
+  final bool enabled;
+  final TextEditingController nameController;
+  final TextEditingController phoneController;
+  final TextEditingController kakaoController;
+  final TextEditingController lineController;
+  final TextEditingController emailController;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      key: const Key('support_contact_section'),
+      margin: const EdgeInsets.only(bottom: AppTokens.spaceMd),
+      padding: const EdgeInsets.all(AppTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: AppTokens.primaryLight,
+        borderRadius: AppTokens.borderRadiusMd,
+        border: Border.all(color: AppTokens.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.t('support_contact_help'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTokens.textSecondary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.t('support_contact_messenger_help'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTokens.textSecondary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          _ContactFields(
+            enabled: enabled,
+            nameController: nameController,
+            phoneController: phoneController,
+            kakaoController: kakaoController,
+            lineController: lineController,
+            emailController: emailController,
+          ),
+        ],
       ),
     );
   }

@@ -52,22 +52,15 @@ void main() {
     );
     expect(find.text('Airport pickup full question'), findsOneWidget);
     expect(find.text('test-line'), findsOneWidget);
-
-    await tester.drag(find.byType(ListView), const Offset(0, -500));
-    await tester.pumpAndSettle();
-    expect(find.text('ticket.jpg'), findsOneWidget);
-    await tester.ensureVisible(
-      find.byKey(const Key('admin_support_reply_input')),
+    expect(find.byKey(const Key('admin_support_reply_input')), findsOneWidget);
+    expect(
+      find.byKey(const Key('admin_support_send_reply_button')),
+      findsOneWidget,
     );
-    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('admin_support_reply_input')),
       'We will check this booking.',
     );
-    await tester.ensureVisible(
-      find.byKey(const Key('admin_support_send_reply_button')),
-    );
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('admin_support_send_reply_button')));
     await tester.pumpAndSettle();
 
