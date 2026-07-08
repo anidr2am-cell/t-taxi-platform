@@ -25,6 +25,8 @@ const placesRoutes = require('./places.routes');
 const flightsRoutes = require('./flights.routes');
 const publicRoutes = require('./public.routes');
 const driverApplicationRoutes = require('./driver.application.routes');
+const supportRoutes = require('./support.routes');
+const adminSupportRoutes = require('./admin.support.routes');
 
 const router = express.Router();
 
@@ -46,5 +48,7 @@ router.use('/places', placesRoutes);
 router.use('/flights', flightsRoutes);
 router.use('/public', publicRoutes);
 router.use('/driver-applications', driverApplicationRoutes);
+router.use('/support', supportRoutes);
+router.use('/admin', adminSupportRoutes);
 
 module.exports = router;

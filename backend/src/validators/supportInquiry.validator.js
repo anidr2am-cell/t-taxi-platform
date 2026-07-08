@@ -1,0 +1,36 @@
+const Joi = require('joi');
+const SupportInquiryService = require('../services/supportInquiry.service');
+
+const localeValues = ['ko', 'en', 'th', 'ja', 'zh'];
+const statusValues = SupportInquiryService.STATUS_VALUES;
+
+const createSupportInquirySchema = Joi.object({
+  message: Joi.string().trim().min(1).max(5000).required(),
+  customerName: Joi.string().trim().max(100).allow('', null),
+  customerPhone: Joi.string().trim().max(30).allow('', null),
+  customerEmail: Joi.string().trim().lowercase().email().max(255).empty('').optional(),
+  locale: Joi.string().valid(...localeValues).allow('', null),
+});
+
+const adminSupportInquiryListQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).optional(),
+  page_size: Joi.number().integer().min(1).max(100).optional(),
+  limit: Joi.number().integer().min(1).max(100).optional(),
+  status: Joi.string().valid(...statusValues).optional(),
+  search: Joi.string().trim().max(100).allow('', null),
+});
+
+const adminSupportInquiryIdParamsSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+});
+
+const adminSupportInquiryStatusSchema = Joi.object({
+  status: Joi.string().valid(...statusValues).required(),
+});
+
+module.exports = {
+  createSupportInquirySchema,
+  adminSupportInquiryListQuerySchema,
+  adminSupportInquiryIdParamsSchema,
+  adminSupportInquiryStatusSchema,
+};

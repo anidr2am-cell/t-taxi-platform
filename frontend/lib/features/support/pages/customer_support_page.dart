@@ -5,10 +5,14 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../services/support_inquiry_api_service.dart';
 
 class CustomerSupportPage extends StatelessWidget {
-  const CustomerSupportPage({super.key});
+  const CustomerSupportPage({super.key, this.api});
+
+  final SupportInquiryApiService? api;
 
   Future<void> _openInquiry(BuildContext context) async {
     final width = MediaQuery.sizeOf(context).width;
@@ -20,7 +24,10 @@ class CustomerSupportPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         builder: (context) => FractionallySizedBox(
           heightFactor: 0.88,
-          child: _SupportChatPanel(onClose: () => Navigator.pop(context)),
+          child: _SupportChatPanel(
+            api: api ?? SupportInquiryApiService(),
+            onClose: () => Navigator.pop(context),
+          ),
         ),
       );
       return;
@@ -32,7 +39,10 @@ class CustomerSupportPage extends StatelessWidget {
         insetPadding: const EdgeInsets.all(AppTokens.spaceLg),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720, maxHeight: 760),
-          child: _SupportChatPanel(onClose: () => Navigator.pop(context)),
+          child: _SupportChatPanel(
+            api: api ?? SupportInquiryApiService(),
+            onClose: () => Navigator.pop(context),
+          ),
         ),
       ),
     );
@@ -92,8 +102,9 @@ class CustomerSupportPage extends StatelessWidget {
 }
 
 class _SupportChatPanel extends StatefulWidget {
-  const _SupportChatPanel({required this.onClose});
+  const _SupportChatPanel({required this.api, required this.onClose});
 
+  final SupportInquiryApiService api;
   final VoidCallback onClose;
 
   @override
@@ -105,6 +116,8 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
   final _scrollController = ScrollController();
   final List<_SupportMessage> _messages = [];
   final List<_SupportAttachment> _attachments = [];
+  bool _submitting = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -135,7 +148,8 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
     });
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
+    if (_submitting) return;
     final text = _messageController.text.trim();
     if (text.isEmpty && _attachments.isEmpty) return;
 
@@ -145,19 +159,52 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
         : sentAttachments.map((file) => file.name).join(', ');
 
     setState(() {
-      _messages
-        ..add(
-          _SupportMessage(
-            displayText,
-            isUser: true,
-            attachments: sentAttachments,
-          ),
-        )
-        ..add(_SupportMessage(context.l10n.t('support_auto_receipt')));
-      _attachments.clear();
-      _messageController.clear();
+      _submitting = true;
+      _error = null;
     });
-    _scrollToLatest();
+
+    try {
+      final receipt = await widget.api.submit(
+        message: displayText,
+        locale: Localizations.localeOf(context).languageCode,
+        attachments: sentAttachments
+            .map(
+              (file) => SupportInquiryAttachmentDraft(
+                name: file.name,
+                bytes: file.bytes,
+              ),
+            )
+            .toList(growable: false),
+      );
+      if (!mounted) return;
+      final receiptMessage = receipt.publicId.isEmpty
+          ? context.l10n.t('support_auto_receipt')
+          : '${context.l10n.t('support_auto_receipt')}\n${context.l10n.t('support_receipt_number')}: ${receipt.publicId}';
+      setState(() {
+        _messages
+          ..add(
+            _SupportMessage(
+              displayText,
+              isUser: true,
+              attachments: sentAttachments,
+            ),
+          )
+          ..add(_SupportMessage(receiptMessage));
+        _attachments.clear();
+        _messageController.clear();
+        _submitting = false;
+      });
+      _scrollToLatest();
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('support_submit_failed'),
+        );
+        _submitting = false;
+      });
+    }
   }
 
   void _scrollToLatest() {
@@ -232,6 +279,7 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
                   TextField(
                     key: const Key('support_message_input'),
                     controller: _messageController,
+                    enabled: !_submitting,
                     minLines: 2,
                     maxLines: 4,
                     textInputAction: TextInputAction.newline,
@@ -242,6 +290,14 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
                   ),
                   const SizedBox(height: AppTokens.spaceSm),
                   _AttachmentPreview(attachments: _attachments),
+                  if (_error != null) ...[
+                    const SizedBox(height: AppTokens.spaceSm),
+                    Text(
+                      _error!,
+                      key: const Key('support_error_message'),
+                      style: const TextStyle(color: AppTokens.error),
+                    ),
+                  ],
                   const SizedBox(height: AppTokens.spaceSm),
                   Text(
                     l10n.t('support_attachment_help'),
@@ -255,15 +311,27 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
                       final compact = constraints.maxWidth < 520;
                       final attachButton = OutlinedButton.icon(
                         key: const Key('support_attach_button'),
-                        onPressed: _pickImages,
+                        onPressed: _submitting ? null : _pickImages,
                         icon: const Icon(Icons.attach_file),
                         label: Text(l10n.t('support_attach_button')),
                       );
                       final sendButton = FilledButton.icon(
                         key: const Key('support_send_button'),
-                        onPressed: _sendMessage,
-                        icon: const Icon(Icons.send_outlined),
-                        label: Text(l10n.t('support_send_button')),
+                        onPressed: _submitting ? null : _sendMessage,
+                        icon: _submitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.send_outlined),
+                        label: Text(
+                          _submitting
+                              ? l10n.t('support_sending')
+                              : l10n.t('support_send_button'),
+                        ),
                       );
 
                       if (compact) {

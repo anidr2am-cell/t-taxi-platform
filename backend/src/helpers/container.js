@@ -49,11 +49,13 @@ const OutboxRepository = require('../repositories/outbox.repository');
 const OutboxProcessor = require('../services/outboxProcessor.service');
 const FlightMonitorRepository = require('../repositories/flightMonitor.repository');
 const DriverApplicationRepository = require('../repositories/driverApplication.repository');
+const SupportInquiryRepository = require('../repositories/supportInquiry.repository');
 const AdminFlightMonitorService = require('../services/adminFlightMonitor.service');
 const FlightSyncWorker = require('../workers/flightSync.worker');
 const FlightSyncSchedulerService = require('../services/flightSyncScheduler.service');
 const ChatService = require('../services/chat.service');
 const DriverApplicationService = require('../services/driverApplication.service');
+const SupportInquiryService = require('../services/supportInquiry.service');
 const config = require('../config/env');
 const database = require('../config/database');
 
@@ -255,6 +257,7 @@ container.register('chatService', (c) => new ChatService(
 ));
 container.register('flightMonitorRepository', () => new FlightMonitorRepository());
 container.register('driverApplicationRepository', () => new DriverApplicationRepository());
+container.register('supportInquiryRepository', () => new SupportInquiryRepository());
 container.register('adminFlightMonitorService', (c) => new AdminFlightMonitorService(
   database.pool,
   c.get('flightMonitorRepository'),
@@ -294,6 +297,10 @@ container.register('driverApplicationService', (c) => new DriverApplicationServi
   c.get('driverApplicationRepository'),
   c.get('fileRepository'),
   c.get('userRepository'),
+));
+container.register('supportInquiryService', (c) => new SupportInquiryService(
+  database.pool,
+  c.get('supportInquiryRepository'),
 ));
 
 module.exports = container;

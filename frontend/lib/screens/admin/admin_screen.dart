@@ -8,6 +8,7 @@ import '../../features/admin_settlement/pages/admin_settlement_queue_page.dart';
 import '../../features/admin_review/pages/admin_review_queue_page.dart';
 import '../../features/admin_notification/pages/admin_notification_queue_page.dart';
 import '../../features/admin_chat/pages/admin_chat_queue_page.dart';
+import '../../features/admin_support/pages/admin_support_inquiry_page.dart';
 import '../../features/admin_flight/pages/admin_flight_monitor_page.dart';
 import '../../features/admin_driver_application/pages/admin_driver_application_list_page.dart';
 import '../../features/driver_location/pages/admin_driver_monitor_page.dart';
@@ -32,12 +33,12 @@ class _AdminScreenState extends State<AdminScreen> {
   int _sessionEpoch = 0;
   final _drawerKey = GlobalKey<ScaffoldState>();
 
-  static const _authGatedIndices = {0, 2, 3, 4, 5, 8, 9, 10, 11};
+  static const _authGatedIndices = {0, 2, 3, 4, 5, 8, 9, 10, 11, 12};
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTab.clamp(0, 11);
+    _selectedIndex = widget.initialTab.clamp(0, 12);
   }
 
   Future<void> _logout() async {
@@ -68,6 +69,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_reviews'),
       l10n.t('admin_notifications'),
       l10n.t('admin_flights'),
+      l10n.t('admin_support_menu'),
     ];
 
     final icons = [
@@ -83,6 +85,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.rate_review_outlined,
       Icons.notifications_outlined,
       Icons.flight_land_outlined,
+      Icons.support_agent_outlined,
     ];
 
     final selectedIcons = [
@@ -98,6 +101,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.rate_review,
       Icons.notifications,
       Icons.flight_land,
+      Icons.support_agent,
     ];
 
     void selectIndex(int index) {
@@ -250,6 +254,8 @@ class _AdminScreenState extends State<AdminScreen> {
         return const AdminAuthGate(child: AdminNotificationQueuePage());
       case 11:
         return const AdminAuthGate(child: AdminFlightMonitorPage());
+      case 12:
+        return const AdminAuthGate(child: AdminSupportInquiryPage());
       default:
         return const SizedBox.shrink();
     }
