@@ -47,7 +47,7 @@ class BookingWizardController extends ChangeNotifier {
     'LUXURY',
   ];
 
-  static const customerHiddenVehicleCodes = {'VIP_SUV', 'VIP_VAN'};
+  static const customerHiddenVehicleCodes = {'VIP_SUV', 'VIP_VAN', 'LUXURY'};
 
   static List<String> get customerVehicleTierOrder => vehicleTierOrder
       .where((code) => !customerHiddenVehicleCodes.contains(code))
@@ -99,6 +99,22 @@ class BookingWizardController extends ChangeNotifier {
     'กรุงเทพมหานคร': 'BANGKOK',
     '曼谷': 'BANGKOK',
     'バンコク': 'BANGKOK',
+    'HUA_HIN': 'HUA_HIN',
+    'HUAHIN': 'HUA_HIN',
+    'หัวหิน': 'HUA_HIN',
+    '华欣': 'HUA_HIN',
+    'フアヒン': 'HUA_HIN',
+    '후아힌': 'HUA_HIN',
+    'RAYONG': 'RAYONG',
+    'ระยอง': 'RAYONG',
+    '罗勇': 'RAYONG',
+    'ラヨン': 'RAYONG',
+    '라용': 'RAYONG',
+    'AYUTTHAYA': 'AYUTTHAYA',
+    'อยุธยา': 'AYUTTHAYA',
+    '大城': 'AYUTTHAYA',
+    'アユタヤ': 'AYUTTHAYA',
+    '아유타야': 'AYUTTHAYA',
   };
 
   Future<void> initialize() async {
@@ -752,7 +768,8 @@ class BookingWizardController extends ChangeNotifier {
       _state = _state.copyWith(pricing: pricing, clearError: true);
     } catch (e) {
       _state = _state.copyWith(
-        errorMessage: userFacingError(e, fallback: 'ui_action_failed'),
+        errorMessage: bookingPricingInquiryMessage(e)
+            ?? userFacingError(e, fallback: 'ui_action_failed'),
         clearPricing: true,
       );
     } finally {
@@ -948,4 +965,16 @@ class BookingWizardController extends ChangeNotifier {
     await _storage.clear();
     notifyListeners();
   }
+}
+
+String? bookingPricingInquiryMessage(Object err) {
+  if (err is! BookingApiException) return null;
+  if (err.errorCode != 'NOT_FOUND') return null;
+  final message = err.message;
+  if (message.contains('Route not found')
+      || message.contains('Vehicle price not configured')
+      || message.contains('Origin or destination location not found')) {
+    return 'pricing_inquiry_required';
+  }
+  return null;
 }

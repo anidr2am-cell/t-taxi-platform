@@ -42,6 +42,9 @@ class PricingService {
       { code: 'BANGKOK', tokens: ['BANGKOK', 'กรุงเทพ', 'กรุงเทพมหานคร', '방콕', '曼谷', 'バンコク'] },
       { code: 'BKK', tokens: ['BKK', 'SUVARNABHUMI', 'สุวรรณภูมิ', 'スワンナプーム', '素万那普'] },
       { code: 'DMK', tokens: ['DMK', 'DONMUEANG', 'DONMUANG', 'ดอนเมือง', 'ドンムアン', '廊曼'] },
+      { code: 'HUA_HIN', tokens: ['HUAHIN', 'HUA_HIN', 'หัวหิน', '华欣', 'フアヒン', '후아힌'] },
+      { code: 'RAYONG', tokens: ['RAYONG', 'ระยอง', '罗勇', 'ラヨン', '라용'] },
+      { code: 'AYUTTHAYA', tokens: ['AYUTTHAYA', 'อยุธยา', '大城', 'アユタヤ', '아유타야'] },
     ];
     const matched = aliases.find((entry) => (
       entry.tokens.some((token) => compact.includes(token.toUpperCase()))

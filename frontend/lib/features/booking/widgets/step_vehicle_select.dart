@@ -86,7 +86,7 @@ class StepVehicleSelect extends StatelessWidget {
                     title: vehicle,
                     subtitle: enabled
                         ? (isRecommended ? recommendation.message : null)
-                        : l10n.t('vehicle_not_available'),
+                        : l10n.t('pricing_inquiry_required'),
                     icon: _iconForVehicle(vehicle),
                     selected: selected,
                     onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
@@ -95,7 +95,7 @@ class StepVehicleSelect extends StatelessWidget {
                     title: vehicle,
                     subtitle: enabled
                         ? (isRecommended ? recommendation.message : null)
-                        : l10n.t('vehicle_not_available'),
+                        : l10n.t('pricing_inquiry_required'),
                     icon: _iconForVehicle(vehicle),
                     selected: selected,
                     onTap: enabled ? () => controller.selectVehicle(vehicle) : null,

@@ -206,7 +206,134 @@ SELECT
     Assert-Equals -Name "SEDAN seed count" -Actual $parts[7] -Expected "1"
     Assert-Equals -Name "settlement commission setting count" -Actual $parts[8] -Expected "1"
     Assert-Equals -Name "BKK to Pattaya airport pickup route count" -Actual $parts[9] -Expected "1"
-    Assert-Equals -Name "BKK to Pattaya active vehicle price count" -Actual $parts[10] -Expected "6"
+    Assert-Equals -Name "BKK to Pattaya active SEDAN/SUV/VAN price count" -Actual $parts[10] -Expected "3"
+
+    $fareChecks = @"
+SELECT
+  (
+    SELECT CAST(vp.price AS CHAR)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'AIRPORT_PICKUP' AND lo.code = 'BKK' AND ld.code = 'PATTAYA'
+      AND vt.code = 'SUV' AND vp.is_active = 1 AND vp.deleted_at IS NULL
+    LIMIT 1
+  ),
+  (
+    SELECT CAST(vp.price AS CHAR)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'AIRPORT_PICKUP' AND lo.code = 'BKK' AND ld.code = 'BANGKOK'
+      AND vt.code = 'SEDAN' AND vp.is_active = 1 AND vp.deleted_at IS NULL
+    LIMIT 1
+  ),
+  (
+    SELECT CAST(vp.price AS CHAR)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'AIRPORT_PICKUP' AND lo.code = 'DMK' AND ld.code = 'PATTAYA'
+      AND vt.code = 'VAN' AND vp.is_active = 1 AND vp.deleted_at IS NULL
+    LIMIT 1
+  ),
+  (
+    SELECT CAST(vp.price AS CHAR)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'AIRPORT_DROPOFF' AND lo.code = 'PATTAYA' AND ld.code = 'DMK'
+      AND vt.code = 'VAN' AND vp.is_active = 1 AND vp.deleted_at IS NULL
+    LIMIT 1
+  ),
+  (
+    SELECT CAST(vp.price AS CHAR)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'CITY_TRANSFER' AND lo.code = 'PATTAYA' AND ld.code = 'BANGKOK'
+      AND vt.code = 'SUV' AND vp.is_active = 1 AND vp.deleted_at IS NULL
+    LIMIT 1
+  ),
+  (
+    SELECT CAST(vp.price AS CHAR)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'CITY_TRANSFER' AND lo.code = 'BANGKOK' AND ld.code = 'PATTAYA'
+      AND vt.code = 'VAN' AND vp.is_active = 1 AND vp.deleted_at IS NULL
+    LIMIT 1
+  ),
+  (
+    SELECT CAST(vp.price AS CHAR)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'AIRPORT_DROPOFF' AND lo.code = 'BANGKOK' AND ld.code = 'BKK'
+      AND vt.code = 'SUV' AND vp.is_active = 1 AND vp.deleted_at IS NULL
+    LIMIT 1
+  ),
+  (
+    SELECT COUNT(*)
+    FROM $SmokeDatabase.routes r
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    WHERE r.is_active = 1 AND r.deleted_at IS NULL
+      AND st.code IN ('AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'CITY_TRANSFER')
+  ),
+  (
+    SELECT COUNT(*)
+    FROM $SmokeDatabase.vehicle_prices vp
+    INNER JOIN $SmokeDatabase.routes r ON r.id = vp.route_id
+    INNER JOIN $SmokeDatabase.service_types st ON st.id = r.service_type_id
+    INNER JOIN $SmokeDatabase.locations lo ON lo.id = r.origin_location_id
+    INNER JOIN $SmokeDatabase.locations ld ON ld.id = r.destination_location_id
+    INNER JOIN $SmokeDatabase.vehicle_types vt ON vt.id = vp.vehicle_type_id
+    WHERE st.code = 'AIRPORT_PICKUP' AND lo.code = 'BKK' AND ld.code = 'PATTAYA'
+      AND vt.code IN ('VIP_SUV', 'VIP_VAN', 'LUXURY')
+      AND vp.is_active = 1 AND vp.deleted_at IS NULL
+  ),
+  (
+    SELECT COUNT(*)
+    FROM $SmokeDatabase.locations
+    WHERE code IN ('HUA_HIN', 'RAYONG', 'AYUTTHAYA') AND is_active = 1 AND deleted_at IS NULL
+  );
+"@
+
+    $fareResult = Invoke-MysqlScalar -Sql $fareChecks -DefaultsFile $defaults -MysqlPath $MysqlPath
+    $fareParts = $fareResult -split "`t"
+    Assert-Equals -Name "fare table BKK Pattaya SUV" -Actual $fareParts[0] -Expected "1300.00"
+    Assert-Equals -Name "fare table BKK Bangkok Sedan" -Actual $fareParts[1] -Expected "550.00"
+    Assert-Equals -Name "fare table DMK Pattaya VAN" -Actual $fareParts[2] -Expected "2200.00"
+    Assert-Equals -Name "fare table Pattaya DMK VAN" -Actual $fareParts[3] -Expected "2300.00"
+    Assert-Equals -Name "fare table Pattaya Bangkok SUV" -Actual $fareParts[4] -Expected "1500.00"
+    Assert-Equals -Name "fare table Bangkok Pattaya VAN" -Actual $fareParts[5] -Expected "2000.00"
+    Assert-Equals -Name "fare table Bangkok BKK SUV" -Actual $fareParts[6] -Expected "800.00"
+    Assert-Equals -Name "fare table active route count" -Actual $fareParts[7] -Expected "14"
+    Assert-Equals -Name "fare table VIP/LUXURY inactive on BKK Pattaya" -Actual $fareParts[8] -Expected "0"
+    Assert-Equals -Name "fare table extra city locations" -Actual $fareParts[9] -Expected "3"
 
     Write-Host "Migration smoke test completed."
     Write-Host "Smoke database left in place for inspection: $SmokeDatabase"

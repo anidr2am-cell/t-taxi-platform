@@ -36,7 +36,7 @@ function makePricingService(overrides = {}) {
       id: 1,
       routeId: 1,
       vehicleTypeId: 1,
-      price: 800,
+      price: 1300,
       currency: 'THB',
       isActive: true,
       effectiveFrom: null,
@@ -101,7 +101,7 @@ test('BKK to Pattaya airport pickup route resolves with configured IDs', async (
 
   assert.equal(result.routeId, 1);
   assert.equal(result.vehiclePriceId, 1);
-  assert.equal(result.totalAmount, 800);
+  assert.equal(result.totalAmount, 1300);
 });
 
 test('Pattaya Google region aliases normalize to configured internal location code', async () => {

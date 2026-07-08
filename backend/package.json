@@ -13,6 +13,7 @@
     "lint": "echo \"Add ESLint in a later phase\"",
     "validate:migrations": "node scripts/validate-migrations.js",
     "smoke:staging": "node scripts/staging-smoke-test.js",
+    "smoke:staging:fare-table": "node scripts/staging-fare-table-smoke.js",
     "create-test-driver": "node scripts/create-test-driver.js",
     "create-test-admin": "node scripts/create-test-admin.js",
     "create-admin-user": "node scripts/createAdminUser.js",

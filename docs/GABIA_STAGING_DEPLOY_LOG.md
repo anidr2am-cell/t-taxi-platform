@@ -160,3 +160,43 @@ KTaxi legacy impact: none
 
 ### Account recovery
 - See [STAGING_ACCOUNT_RESET.md](./STAGING_ACCOUNT_RESET.md) for safe admin/driver password reset on T-Ride staging.
+
+## 2026-07-08 Fare Table Image Seed (pending server apply)
+
+### Local repo
+- Migration: `database/28_fare_table_image_seed.sql` (idempotent upsert + soft-deactivate extras).
+- Frontend inquiry UX: pricing `NOT_FOUND` → **문의** (`pricing_inquiry_required`).
+- Tests: `backend/tests/fareTablePricing.test.js`, updated Flutter/backend suites.
+- DB smoke: `database/smoke-test.ps1` fare-table assertions.
+- Remote apply script: `deploy/scripts/apply-staging-fare-table.sh`.
+- API smoke: `npm run smoke:staging:fare-table` (from backend).
+
+### Apply on Gabia (T-Ride only)
+```bash
+cd /opt/t-ride
+bash deploy/scripts/apply-staging-fare-table.sh
+```
+
+Or manually:
+```bash
+cd /opt/t-ride && git pull origin main
+cd /opt/t-ride/deploy/docker
+docker compose -f docker-compose.staging.yml up -d --build tride-backend tride-frontend
+docker compose -f docker-compose.staging.yml exec tride-backend \
+  sh -c 'cd /srv/tride/database && ./migrate.sh'
+```
+
+### Pre-apply staging API spot check (2026-07-08)
+- BKK → Pattaya SUV: **1300** (partial/old seed)
+- BKK → Bangkok Sedan, DMK → Pattaya VAN, Pattaya → DMK VAN: **NOT_FOUND** (migration 28 not applied yet)
+- Bangkok → Hua Hin: **NOT_FOUND** (HUA_HIN location missing until migration 28)
+
+### Post-apply verification
+```bash
+cd /opt/t-ride/backend
+STAGING_BASE_URL=http://103.60.127.213:3100 npm run smoke:staging:fare-table
+```
+
+### Safety
+- No KTaxi containers, volumes, or 80/443 touched.
+- No `docker compose down`, no DB volume delete, no clean migration.

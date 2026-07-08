@@ -505,6 +505,27 @@ void main() {
     expect(payload['scheduledPickupAt'], isA<String>());
   });
 
+  test('bookingPricingInquiryMessage maps route not found to inquiry key', () {
+    final message = bookingPricingInquiryMessage(
+      BookingApiException('Route not found for the given service and locations', 'NOT_FOUND'),
+    );
+    expect(message, 'pricing_inquiry_required');
+  });
+
+  test('bookingPricingInquiryMessage maps missing vehicle price to inquiry key', () {
+    final message = bookingPricingInquiryMessage(
+      BookingApiException('Vehicle price not configured for this route', 'NOT_FOUND'),
+    );
+    expect(message, 'pricing_inquiry_required');
+  });
+
+  test('bookingPricingInquiryMessage ignores unrelated errors', () {
+    final message = bookingPricingInquiryMessage(
+      BookingApiException('Validation failed', 'VALIDATION_ERROR'),
+    );
+    expect(message, isNull);
+  });
+
   test(
     'booking create payload fails before submission when pickup time is missing',
     () async {

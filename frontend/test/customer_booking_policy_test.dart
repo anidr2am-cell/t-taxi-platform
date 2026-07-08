@@ -10,14 +10,14 @@ import 'package:frontend/providers/booking_provider.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  test('customer vehicle tiers exclude VIP_SUV and VIP_VAN', () {
+  test('customer vehicle tiers show only fare-table vehicles (SEDAN, SUV, VAN)', () {
     final tiers = BookingWizardController.customerVehicleTierOrder;
     expect(tiers, contains('SEDAN'));
     expect(tiers, contains('SUV'));
     expect(tiers, contains('VAN'));
-    expect(tiers, contains('LUXURY'));
     expect(tiers, isNot(contains('VIP_SUV')));
     expect(tiers, isNot(contains('VIP_VAN')));
+    expect(tiers, isNot(contains('LUXURY')));
   });
 
   test('pricing display maps NAME_SIGN to localized picket label', () {
