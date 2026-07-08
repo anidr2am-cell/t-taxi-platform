@@ -135,3 +135,25 @@ DB migration: OK
 E2E rehearsal: 19/19 passed
 Google Places autocomplete: OK
 KTaxi legacy impact: none
+
+
+## 2026-07-08 Staging Manual E2E Confirmed
+
+### Confirmed from office PC
+- Local `C:\TTaxi` synced with `origin/main`.
+- Latest commit: `3cc740a fix(booking): correct airport dropoff pricing location payload`.
+- T-Ride backend health: OK.
+- T-Ride frontend: OK.
+- Airport pickup BKK → Pattaya pricing: OK.
+- Airport dropoff Pattaya → BKK pricing: OK.
+- Browser manual flow: OK.
+- Success tag created: `staging-manual-e2e-success-2026-07-08`.
+
+### Access Rules
+- `http://103.60.127.213` opens existing KTaxi. This is expected.
+- T-Ride staging must be accessed with `http://103.60.127.213:3101/`.
+- T-Ride backend API uses `http://103.60.127.213:3100/`.
+
+### Safety
+- Existing KTaxi legacy stack remained unaffected.
+- Do not touch `/opt/ktaxi`, `ktaxi-*`, `ktaxi-nginx`, `80/443`, or legacy compose.
