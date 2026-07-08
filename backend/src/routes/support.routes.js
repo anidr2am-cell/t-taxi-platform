@@ -3,7 +3,11 @@ const supportInquiryController = require('../controllers/supportInquiry.controll
 const { upload } = require('../config/multer');
 const validate = require('../middlewares/validate.middleware');
 const createRateLimit = require('../middlewares/rateLimit.middleware');
-const { createSupportInquirySchema } = require('../validators/supportInquiry.validator');
+const {
+  createSupportInquirySchema,
+  publicSupportInquiryParamsSchema,
+  publicSupportInquiryLookupSchema,
+} = require('../validators/supportInquiry.validator');
 
 const router = express.Router();
 const publicLimiter = createRateLimit({ windowMs: 60_000, max: 30 });
@@ -17,6 +21,16 @@ router.post(
   supportInquiryController.normalizeMultipartBody,
   validate({ body: createSupportInquirySchema }),
   supportInquiryController.create,
+);
+
+router.get(
+  '/inquiries/:publicId',
+  publicLimiter,
+  validate({
+    params: publicSupportInquiryParamsSchema,
+    query: publicSupportInquiryLookupSchema,
+  }),
+  supportInquiryController.getPublicDetail,
 );
 
 module.exports = router;

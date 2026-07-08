@@ -99,4 +99,13 @@ class AdminSupportApiService {
     );
     return Map<String, dynamic>.from(data as Map);
   }
+
+  Future<Map<String, dynamic>> sendReply(int id, String message) async {
+    final data = await _request(
+      'POST',
+      '/admin/support/inquiries/$id/messages',
+      body: {'message': message},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
 }

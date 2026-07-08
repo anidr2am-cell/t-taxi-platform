@@ -41,6 +41,12 @@ const create = asyncHandler(async (req, res) => {
   return success(res, data, 'Support inquiry received', HTTP_STATUS.CREATED);
 });
 
+const getPublicDetail = asyncHandler(async (req, res) => {
+  const token = req.get('X-Support-Lookup-Token') || req.query.token;
+  const data = await getService().getPublicDetail(req.params.publicId, token);
+  return success(res, data, 'OK');
+});
+
 const listAdmin = asyncHandler(async (req, res) => {
   const data = await getService().listAdmin(req.query);
   return paginate(res, {
@@ -61,11 +67,18 @@ const updateAdminStatus = asyncHandler(async (req, res) => {
   return success(res, data, 'Support inquiry status updated');
 });
 
+const addAdminMessage = asyncHandler(async (req, res) => {
+  const data = await getService().addAdminMessage(Number(req.params.id), req.body, req.user);
+  return success(res, data, 'Support inquiry reply sent', HTTP_STATUS.CREATED);
+});
+
 module.exports = {
   handleUploadError,
   normalizeMultipartBody,
   create,
+  getPublicDetail,
   listAdmin,
   getAdminDetail,
   updateAdminStatus,
+  addAdminMessage,
 };

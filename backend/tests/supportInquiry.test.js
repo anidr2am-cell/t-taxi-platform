@@ -27,10 +27,35 @@ describe('Support inquiry routes', () => {
       async create(body, options) {
         return {
           publicId: 'SUP-260708-ABC123',
+          lookupToken: 'lookup-token',
           status: 'NEW',
           createdAt: '2026-07-08 12:00:00',
           attachmentCount: options.files?.length ?? 0,
           echo: body.message,
+          contact: {
+            kakaoId: body.kakaoId,
+            lineId: body.lineId,
+          },
+        };
+      },
+      async getPublicDetail(publicId, token) {
+        if (token !== 'lookup-token') {
+          const AppError = require('../src/utils/AppError');
+          throw new AppError('Support inquiry not found', {
+            statusCode: 404,
+            errorCode: ERROR_CODES.NOT_FOUND,
+          });
+        }
+        return {
+          publicId,
+          status: 'NEW',
+          messages: [{
+            id: 1,
+            senderType: 'CUSTOMER',
+            message: 'Airport pickup question',
+            createdAt: '2026-07-08 12:00:00',
+          }],
+          attachments: [],
         };
       },
       async listAdmin() {
@@ -43,6 +68,9 @@ describe('Support inquiry routes', () => {
             publicId: 'SUP-260708-ABC123',
             status: 'NEW',
             messagePreview: 'Airport pickup question',
+            latestMessagePreview: 'Airport pickup question',
+            kakaoId: 'test-kakao',
+            lineId: 'test-line',
             attachmentCount: 0,
             createdAt: '2026-07-08 12:00:00',
           }],
@@ -54,6 +82,13 @@ describe('Support inquiry routes', () => {
           publicId: 'SUP-260708-ABC123',
           status: 'NEW',
           message: 'Airport pickup question',
+          kakaoId: 'test-kakao',
+          lineId: 'test-line',
+          messages: [{
+            id: 1,
+            senderType: 'CUSTOMER',
+            message: 'Airport pickup question',
+          }],
           attachments: [],
         };
       },
@@ -63,6 +98,20 @@ describe('Support inquiry routes', () => {
           publicId: 'SUP-260708-ABC123',
           status,
           message: 'Airport pickup question',
+          messages: [],
+          attachments: [],
+        };
+      },
+      async addAdminMessage(id, body) {
+        return {
+          id,
+          publicId: 'SUP-260708-ABC123',
+          status: 'IN_PROGRESS',
+          message: 'Airport pickup question',
+          messages: [
+            { id: 1, senderType: 'CUSTOMER', message: 'Airport pickup question' },
+            { id: 2, senderType: 'ADMIN', message: body.message },
+          ],
           attachments: [],
         };
       },
@@ -76,13 +125,32 @@ describe('Support inquiry routes', () => {
         message: 'Airport pickup booking question',
         customerName: 'Test Customer',
         customerPhone: '+66810000000',
+        kakaoId: 'test-kakao',
+        lineId: 'test-line',
         locale: 'ko',
       })
       .expect(201);
 
     assert.equal(res.body.success, true);
     assert.equal(res.body.data.publicId, 'SUP-260708-ABC123');
+    assert.equal(res.body.data.lookupToken, 'lookup-token');
     assert.equal(res.body.data.status, 'NEW');
+  });
+
+  test('public inquiry detail requires lookup token', async () => {
+    await request(app)
+      .get('/api/v1/support/inquiries/SUP-260708-ABC123')
+      .expect(404);
+  });
+
+  test('public inquiry detail returns messages with valid lookup token', async () => {
+    const res = await request(app)
+      .get('/api/v1/support/inquiries/SUP-260708-ABC123')
+      .query({ token: 'lookup-token' })
+      .expect(200);
+
+    assert.equal(res.body.data.publicId, 'SUP-260708-ABC123');
+    assert.equal(res.body.data.messages[0].senderType, 'CUSTOMER');
   });
 
   test('empty support inquiry message is rejected', async () => {
@@ -120,6 +188,7 @@ describe('Support inquiry routes', () => {
 
     assert.equal(res.body.success, true);
     assert.equal(res.body.data.items[0].publicId, 'SUP-260708-ABC123');
+    assert.equal(res.body.data.items[0].kakaoId, 'test-kakao');
   });
 
   test('admin can read support inquiry detail', async () => {
@@ -131,6 +200,20 @@ describe('Support inquiry routes', () => {
       .expect(200);
 
     assert.equal(res.body.data.message, 'Airport pickup question');
+    assert.equal(res.body.data.messages[0].senderType, 'CUSTOMER');
+  });
+
+  test('admin can reply to support inquiry', async () => {
+    registerAuth('ADMIN');
+
+    const res = await request(app)
+      .post('/api/v1/admin/support/inquiries/1/messages')
+      .set('Authorization', 'Bearer admin-token')
+      .send({ message: 'We will check this booking.' })
+      .expect(201);
+
+    assert.equal(res.body.data.status, 'IN_PROGRESS');
+    assert.equal(res.body.data.messages[1].senderType, 'ADMIN');
   });
 
   test('admin can update support inquiry status', async () => {
@@ -158,19 +241,26 @@ describe('SupportInquiryService', () => {
     const pool = { async getConnection() { return conn; } };
     const repository = {
       async create(_conn, data) {
-        calls.push(['create', data.publicId, data.message]);
+        calls.push(['create', data.publicId, data.lookupTokenHash, data.message]);
         return 9;
       },
       async insertAttachment(_conn, data) {
         calls.push(['attachment', data.originalFileName, data.mimeType]);
         return 1;
       },
+      async insertMessage(_conn, data) {
+        calls.push(['message', data.senderType, data.message]);
+        return 1;
+      },
       async findById() {
         return {
           id: 9,
           public_id: 'SUP-260708-ABC123',
+          lookup_token_hash: 'hash',
           status: 'NEW',
           created_at: '2026-07-08 12:00:00',
+          messages: [],
+          attachments: [],
         };
       },
     };
@@ -190,9 +280,30 @@ describe('SupportInquiryService', () => {
     );
 
     assert.equal(result.publicId, 'SUP-260708-ABC123');
+    assert.equal(typeof result.lookupToken, 'string');
     assert.equal(result.attachmentCount, 1);
     assert.deepEqual(calls[0], 'begin');
     assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'attachment'), true);
+    assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'message'), true);
+  });
+
+  test('public detail validates lookup token hash and returns messages', async () => {
+    const service = new SupportInquiryService({}, {
+      async findByPublicId() {
+        const token = 'valid-token';
+        return {
+          id: 9,
+          public_id: 'SUP-260708-ABC123',
+          lookup_token_hash: service.hashLookupToken(token),
+          status: 'NEW',
+          messages: [{ id: 1, sender_type: 'ADMIN', message: 'Reply' }],
+          attachments: [],
+        };
+      },
+    });
+
+    const result = await service.getPublicDetail('SUP-260708-ABC123', 'valid-token');
+    assert.equal(result.messages[0].senderType, 'ADMIN');
   });
 
   test('non-image support attachment is rejected', async () => {

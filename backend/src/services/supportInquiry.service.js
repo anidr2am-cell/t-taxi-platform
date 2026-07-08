@@ -32,7 +32,15 @@ class SupportInquiryService {
       customerName: input.customerName?.trim() || null,
       customerPhone: input.customerPhone?.trim() || null,
       customerEmail: input.customerEmail?.trim().toLowerCase() || null,
+      kakaoId: input.kakaoId?.trim() || null,
+      lineId: input.lineId?.trim() || null,
       locale: input.locale?.trim() || null,
+    };
+  }
+
+  normalizeMessage(input) {
+    return {
+      message: input.message.trim(),
     };
   }
 
@@ -54,6 +62,14 @@ class SupportInquiryService {
     const date = now.toISOString().slice(2, 10).replace(/-/g, '');
     const suffix = crypto.randomBytes(3).toString('hex').toUpperCase();
     return `SUP-${date}-${suffix}`;
+  }
+
+  generateLookupToken() {
+    return crypto.randomBytes(24).toString('base64url');
+  }
+
+  hashLookupToken(token) {
+    return crypto.createHash('sha256').update(String(token)).digest('hex');
   }
 
   notFound() {
@@ -99,10 +115,16 @@ class SupportInquiryService {
     try {
       await conn.beginTransaction();
       let publicId = this.generatePublicId();
+      const lookupToken = this.generateLookupToken();
+      const lookupTokenHash = this.hashLookupToken(lookupToken);
       let id;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          id = await this.repository.create(conn, { ...normalized, publicId });
+          id = await this.repository.create(conn, {
+            ...normalized,
+            publicId,
+            lookupTokenHash,
+          });
           break;
         } catch (err) {
           if (err.code !== 'ER_DUP_ENTRY' || attempt === 2) throw err;
@@ -121,12 +143,19 @@ class SupportInquiryService {
           publicUrl: null,
         });
       }
+      await this.repository.insertMessage(conn, {
+        inquiryId: id,
+        senderType: 'CUSTOMER',
+        senderUserId: null,
+        message: normalized.message,
+      });
 
       await conn.commit();
       const detail = await this.repository.findById(id);
       return {
         id: detail.id,
         publicId: detail.public_id,
+        lookupToken,
         status: detail.status,
         createdAt: detail.created_at,
         attachmentCount: files.length,
@@ -149,6 +178,47 @@ class SupportInquiryService {
       total: result.total,
       items: result.items.map((row) => this.mapListItem(row)),
     };
+  }
+
+  async getPublicDetail(publicId, lookupToken) {
+    const token = String(lookupToken || '').trim();
+    if (!token) this.notFound();
+    const row = await this.repository.findByPublicId(publicId);
+    if (!row || !row.lookup_token_hash) this.notFound();
+    const expected = Buffer.from(row.lookup_token_hash, 'hex');
+    const actual = Buffer.from(this.hashLookupToken(token), 'hex');
+    if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+      this.notFound();
+    }
+    return this.mapPublicDetail(row);
+  }
+
+  async addAdminMessage(id, input, actor = {}) {
+    const normalized = this.normalizeMessage(input);
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const current = await this.repository.findById(id);
+      if (!current) this.notFound();
+      await this.repository.insertMessage(conn, {
+        inquiryId: id,
+        senderType: 'ADMIN',
+        senderUserId: actor.id ?? null,
+        message: normalized.message,
+      });
+      if (current.status === 'NEW') {
+        await this.repository.updateStatus(conn, id, 'IN_PROGRESS');
+      } else {
+        await this.repository.touch(conn, id);
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+    return this.getAdminDetail(id);
   }
 
   async getAdminDetail(id) {
@@ -179,9 +249,14 @@ class SupportInquiryService {
       publicId: row.public_id,
       status: row.status,
       messagePreview: row.message.length > 120 ? `${row.message.slice(0, 120)}...` : row.message,
+      latestMessagePreview: row.latest_message
+        ? (row.latest_message.length > 120 ? `${row.latest_message.slice(0, 120)}...` : row.latest_message)
+        : null,
       customerName: row.customer_name,
       customerPhone: row.customer_phone,
       customerEmail: row.customer_email,
+      kakaoId: row.kakao_id,
+      lineId: row.line_id,
       source: row.source,
       locale: row.locale,
       attachmentCount: Number(row.attachment_count ?? 0),
@@ -191,15 +266,26 @@ class SupportInquiryService {
   }
 
   mapDetail(row) {
-    const attachments = parseJson(row.attachments_json, [])
+    const rawAttachments = row.attachments ?? parseJson(row.attachments_json, []);
+    const rawMessages = row.messages ?? parseJson(row.messages_json, []);
+    const attachments = rawAttachments
       .filter(Boolean)
       .map((item) => ({
         id: item.id,
-        originalFileName: item.originalFileName,
-        mimeType: item.mimeType,
-        fileSize: item.fileSize,
-        publicUrl: item.publicUrl,
-        createdAt: item.createdAt,
+        originalFileName: item.originalFileName ?? item.original_file_name,
+        mimeType: item.mimeType ?? item.mime_type,
+        fileSize: item.fileSize ?? item.file_size,
+        publicUrl: item.publicUrl ?? item.public_url,
+        createdAt: item.createdAt ?? item.created_at,
+      }));
+    const messages = rawMessages
+      .filter(Boolean)
+      .map((item) => ({
+        id: item.id,
+        senderType: item.senderType ?? item.sender_type,
+        senderUserId: item.senderUserId ?? item.sender_user_id,
+        message: item.message,
+        createdAt: item.createdAt ?? item.created_at,
       }));
     return {
       id: row.id,
@@ -209,11 +295,26 @@ class SupportInquiryService {
       customerName: row.customer_name,
       customerPhone: row.customer_phone,
       customerEmail: row.customer_email,
+      kakaoId: row.kakao_id,
+      lineId: row.line_id,
       source: row.source,
       locale: row.locale,
+      messages,
       attachments,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+    };
+  }
+
+  mapPublicDetail(row) {
+    const detail = this.mapDetail(row);
+    return {
+      publicId: detail.publicId,
+      status: detail.status,
+      messages: detail.messages,
+      attachments: detail.attachments,
+      createdAt: detail.createdAt,
+      updatedAt: detail.updatedAt,
     };
   }
 }

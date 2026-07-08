@@ -22,18 +22,21 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
-  testWidgets('admin support list shows inquiries', (tester) async {
+  testWidgets('admin support list shows inquiries and contact fields', (
+    tester,
+  ) async {
     final api = _FakeAdminSupportApi();
 
     await tester.pumpWidget(_wrap(AdminSupportInquiryPage(api: api)));
     await tester.pumpAndSettle();
 
     expect(find.text('SUP-260708-ABC123'), findsOneWidget);
-    expect(find.textContaining('공항 픽업 문의'), findsOneWidget);
+    expect(find.textContaining('Airport pickup question'), findsOneWidget);
+    expect(find.textContaining('test-kakao'), findsOneWidget);
     expect(find.text('신규'), findsWidgets);
   });
 
-  testWidgets('admin support detail shows message and updates status', (
+  testWidgets('admin support detail shows thread and sends reply', (
     tester,
   ) async {
     final api = _FakeAdminSupportApi();
@@ -43,8 +46,43 @@ void main() {
     await tester.tap(find.text('SUP-260708-ABC123'));
     await tester.pumpAndSettle();
 
-    expect(find.text('공항 픽업 문의 전체 내용'), findsOneWidget);
+    expect(
+      find.byKey(const Key('admin_support_message_thread')),
+      findsOneWidget,
+    );
+    expect(find.text('Airport pickup full question'), findsOneWidget);
+    expect(find.text('test-line'), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
     expect(find.text('ticket.jpg'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('admin_support_reply_input')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('admin_support_reply_input')),
+      'We will check this booking.',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('admin_support_send_reply_button')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('admin_support_send_reply_button')));
+    await tester.pumpAndSettle();
+
+    expect(api.reply, 'We will check this booking.');
+    expect(api.updatedStatus, 'IN_PROGRESS');
+    expect(find.text('We will check this booking.'), findsOneWidget);
+  });
+
+  testWidgets('admin support detail updates status', (tester) async {
+    final api = _FakeAdminSupportApi();
+
+    await tester.pumpWidget(_wrap(AdminSupportInquiryPage(api: api)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SUP-260708-ABC123'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byType(DropdownButton<String>));
     await tester.pumpAndSettle();
@@ -60,6 +98,7 @@ class _FakeAdminSupportApi extends AdminSupportApiService {
   _FakeAdminSupportApi();
 
   String updatedStatus = 'NEW';
+  String? reply;
 
   @override
   Future<Map<String, dynamic>> listInquiries({
@@ -76,9 +115,12 @@ class _FakeAdminSupportApi extends AdminSupportApiService {
           'id': 1,
           'publicId': 'SUP-260708-ABC123',
           'status': updatedStatus,
-          'messagePreview': '공항 픽업 문의',
+          'messagePreview': 'Airport pickup question',
+          'latestMessagePreview': reply ?? 'Airport pickup question',
           'customerName': 'Test Customer',
           'customerPhone': '+66810000000',
+          'kakaoId': 'test-kakao',
+          'lineId': 'test-line',
           'attachmentCount': 1,
           'createdAt': '2026-07-08 12:00:00',
         },
@@ -92,10 +134,20 @@ class _FakeAdminSupportApi extends AdminSupportApiService {
       'id': id,
       'publicId': 'SUP-260708-ABC123',
       'status': updatedStatus,
-      'message': '공항 픽업 문의 전체 내용',
+      'message': 'Airport pickup full question',
       'customerName': 'Test Customer',
       'customerPhone': '+66810000000',
       'customerEmail': null,
+      'kakaoId': 'test-kakao',
+      'lineId': 'test-line',
+      'messages': [
+        {
+          'id': 1,
+          'senderType': 'CUSTOMER',
+          'message': 'Airport pickup full question',
+        },
+        if (reply != null) {'id': 2, 'senderType': 'ADMIN', 'message': reply},
+      ],
       'attachments': [
         {'id': 1, 'originalFileName': 'ticket.jpg', 'mimeType': 'image/jpeg'},
       ],
@@ -105,6 +157,13 @@ class _FakeAdminSupportApi extends AdminSupportApiService {
   @override
   Future<Map<String, dynamic>> updateStatus(int id, String status) async {
     updatedStatus = status;
+    return getInquiry(id);
+  }
+
+  @override
+  Future<Map<String, dynamic>> sendReply(int id, String message) async {
+    reply = message;
+    updatedStatus = 'IN_PROGRESS';
     return getInquiry(id);
   }
 }

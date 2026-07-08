@@ -158,6 +158,8 @@ class _AdminSupportInquiryPageState extends State<AdminSupportInquiryPage> {
                                   item['customerName'],
                                   item['customerPhone'],
                                   item['customerEmail'],
+                                  item['kakaoId'],
+                                  item['lineId'],
                                 ]
                                 .whereType<String>()
                                 .where((value) => value.isNotEmpty)
@@ -183,7 +185,10 @@ class _AdminSupportInquiryPageState extends State<AdminSupportInquiryPage> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      item['messagePreview'] as String? ?? '',
+                                      (item['latestMessagePreview']
+                                              as String?) ??
+                                          (item['messagePreview'] as String?) ??
+                                          '',
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -240,11 +245,18 @@ class _AdminSupportInquiryDetailPageState
   bool _submitting = false;
   String? _error;
   Map<String, dynamic>? _detail;
+  final _replyController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _replyController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -290,6 +302,34 @@ class _AdminSupportInquiryDetailPageState
         _error = userFacingError(
           err,
           fallback: context.l10n.t('ui_load_failed'),
+        );
+        _submitting = false;
+      });
+    }
+  }
+
+  Future<void> _sendReply() async {
+    if (_submitting) return;
+    final message = _replyController.text.trim();
+    if (message.isEmpty) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      final detail = await widget.api.sendReply(widget.id, message);
+      if (!mounted) return;
+      setState(() {
+        _detail = detail;
+        _replyController.clear();
+        _submitting = false;
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('admin_support_reply_failed'),
         );
         _submitting = false;
       });
@@ -369,7 +409,17 @@ class _AdminSupportInquiryDetailPageState
                 ),
                 const SizedBox(height: AppTokens.spaceMd),
                 AppUi.surfaceCard(
-                  child: Text(detail?['message'] as String? ?? ''),
+                  child: _MessageThread(
+                    messages: detail?['messages'] as List<dynamic>? ?? const [],
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
+                AppUi.surfaceCard(
+                  child: _ReplyComposer(
+                    controller: _replyController,
+                    submitting: _submitting,
+                    onSend: _sendReply,
+                  ),
                 ),
                 const SizedBox(height: AppTokens.spaceMd),
                 AppUi.surfaceCard(
@@ -393,6 +443,14 @@ class _AdminSupportInquiryDetailPageState
                         label: l10n.t('admin_support_customer_email'),
                         value: detail?['customerEmail'] as String? ?? '-',
                       ),
+                      AppUi.summaryRow(
+                        label: l10n.t('admin_support_customer_kakao'),
+                        value: detail?['kakaoId'] as String? ?? '-',
+                      ),
+                      AppUi.summaryRow(
+                        label: l10n.t('admin_support_customer_line'),
+                        value: detail?['lineId'] as String? ?? '-',
+                      ),
                     ],
                   ),
                 ),
@@ -405,6 +463,135 @@ class _AdminSupportInquiryDetailPageState
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _MessageThread extends StatelessWidget {
+  const _MessageThread({required this.messages});
+
+  final List<dynamic> messages;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (messages.isEmpty) {
+      return Text(
+        l10n.t('admin_support_empty'),
+        style: const TextStyle(color: AppTokens.textMuted),
+      );
+    }
+    return Column(
+      key: const Key('admin_support_message_thread'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.t('admin_support_messages'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: AppTokens.spaceSm),
+        for (final raw in messages)
+          _AdminMessageBubble(message: Map<String, dynamic>.from(raw as Map)),
+      ],
+    );
+  }
+}
+
+class _AdminMessageBubble extends StatelessWidget {
+  const _AdminMessageBubble({required this.message});
+
+  final Map<String, dynamic> message;
+
+  @override
+  Widget build(BuildContext context) {
+    final sender = message['senderType'] as String? ?? 'SYSTEM';
+    final isAdmin = sender == 'ADMIN';
+    final isCustomer = sender == 'CUSTOMER';
+    final color = isAdmin
+        ? AppTokens.primaryLight
+        : isCustomer
+        ? AppTokens.surfaceMuted
+        : AppTokens.warningLight;
+
+    return Align(
+      alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        key: isAdmin
+            ? const Key('admin_support_admin_message')
+            : const Key('admin_support_customer_message'),
+        margin: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+        constraints: const BoxConstraints(maxWidth: 640),
+        padding: const EdgeInsets.all(AppTokens.spaceSm),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: AppTokens.borderRadiusMd,
+          border: Border.all(color: AppTokens.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              sender,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: AppTokens.textMuted,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(message['message'] as String? ?? ''),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReplyComposer extends StatelessWidget {
+  const _ReplyComposer({
+    required this.controller,
+    required this.submitting,
+    required this.onSend,
+  });
+
+  final TextEditingController controller;
+  final bool submitting;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: const Key('admin_support_reply_input'),
+          controller: controller,
+          enabled: !submitting,
+          minLines: 2,
+          maxLines: 4,
+          decoration: InputDecoration(
+            labelText: l10n.t('admin_support_reply_label'),
+            hintText: l10n.t('admin_support_reply_hint'),
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceSm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            key: const Key('admin_support_send_reply_button'),
+            onPressed: submitting ? null : onSend,
+            icon: submitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.send_outlined),
+            label: Text(l10n.t('admin_support_send_reply')),
+          ),
+        ),
+      ],
     );
   }
 }

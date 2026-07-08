@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -112,18 +113,102 @@ class _SupportChatPanel extends StatefulWidget {
 }
 
 class _SupportChatPanelState extends State<_SupportChatPanel> {
+  static const _pollInterval = Duration(seconds: 12);
+
   final _messageController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _kakaoController = TextEditingController();
+  final _lineController = TextEditingController();
+  final _emailController = TextEditingController();
   final _scrollController = ScrollController();
   final List<_SupportMessage> _messages = [];
+  final List<_SupportMessage> _systemMessages = [];
   final List<_SupportAttachment> _attachments = [];
   bool _submitting = false;
+  bool _loadingThread = false;
   String? _error;
+  SupportInquiryLookup? _lookup;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStoredThread();
+  }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _messageController.dispose();
+    _nameController.dispose();
+    _phoneController.dispose();
+    _kakaoController.dispose();
+    _lineController.dispose();
+    _emailController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Timer? _pollTimer;
+
+  Future<void> _loadStoredThread() async {
+    setState(() => _loadingThread = true);
+    final lookup = await widget.api.loadLatestLookup();
+    if (!mounted) return;
+    if (lookup == null) {
+      setState(() => _loadingThread = false);
+      return;
+    }
+    _lookup = lookup;
+    await _refreshThread(showError: false);
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(_pollInterval, (_) {
+      if (mounted) _refreshThread(showError: false);
+    });
+  }
+
+  Future<void> _refreshThread({required bool showError}) async {
+    final lookup = _lookup;
+    if (lookup == null) return;
+    try {
+      final thread = await widget.api.getThread(
+        publicId: lookup.publicId,
+        lookupToken: lookup.token,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages
+          ..clear()
+          ..addAll(
+            thread.messages
+                .where((message) => message.message.trim().isNotEmpty)
+                .map(
+                  (message) => _SupportMessage(
+                    message.message,
+                    isUser: message.senderType == 'CUSTOMER',
+                    senderType: message.senderType,
+                  ),
+                ),
+          );
+        _loadingThread = false;
+      });
+      _scrollToLatest();
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _loadingThread = false;
+        if (showError) {
+          _error = userFacingError(
+            err,
+            fallback: context.l10n.t('support_thread_load_failed'),
+          );
+        }
+      });
+    }
   }
 
   Future<void> _pickImages() async {
@@ -166,6 +251,11 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
     try {
       final receipt = await widget.api.submit(
         message: displayText,
+        customerName: _nameController.text,
+        customerPhone: _phoneController.text,
+        customerEmail: _emailController.text,
+        kakaoId: _kakaoController.text,
+        lineId: _lineController.text,
         locale: Localizations.localeOf(context).languageCode,
         attachments: sentAttachments
             .map(
@@ -176,24 +266,34 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
             )
             .toList(growable: false),
       );
+      await widget.api.saveLatestLookup(receipt);
       if (!mounted) return;
       final receiptMessage = receipt.publicId.isEmpty
           ? context.l10n.t('support_auto_receipt')
           : '${context.l10n.t('support_auto_receipt')}\n${context.l10n.t('support_receipt_number')}: ${receipt.publicId}';
       setState(() {
-        _messages
-          ..add(
-            _SupportMessage(
-              displayText,
-              isUser: true,
-              attachments: sentAttachments,
-            ),
-          )
-          ..add(_SupportMessage(receiptMessage));
+        if (receipt.lookupToken != null && receipt.lookupToken!.isNotEmpty) {
+          _lookup = SupportInquiryLookup(
+            publicId: receipt.publicId,
+            token: receipt.lookupToken!,
+          );
+        }
+        _messages.add(
+          _SupportMessage(
+            displayText,
+            isUser: true,
+            senderType: 'CUSTOMER',
+            attachments: sentAttachments,
+          ),
+        );
+        _systemMessages
+          ..clear()
+          ..add(_SupportMessage(receiptMessage, senderType: 'SYSTEM'));
         _attachments.clear();
         _messageController.clear();
         _submitting = false;
       });
+      if (_lookup != null) _startPolling();
       _scrollToLatest();
     } catch (err) {
       if (!mounted) return;
@@ -265,97 +365,240 @@ class _SupportChatPanelState extends State<_SupportChatPanel> {
                   _MessageBubble(
                     message: _SupportMessage(l10n.t('support_default_guide')),
                   ),
+                  if (_loadingThread)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+                      child: Text(
+                        l10n.t('support_thread_loading'),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTokens.textMuted,
+                        ),
+                      ),
+                    ),
                   for (final message in _messages)
+                    _MessageBubble(message: message),
+                  for (final message in _systemMessages)
                     _MessageBubble(message: message),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(AppTokens.spaceMd),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    key: const Key('support_message_input'),
-                    controller: _messageController,
-                    enabled: !_submitting,
-                    minLines: 2,
-                    maxLines: 4,
-                    textInputAction: TextInputAction.newline,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('support_input_label'),
-                      hintText: l10n.t('support_input_hint'),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.56,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppTokens.spaceMd),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.t('support_contact_help'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTokens.textSecondary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppTokens.spaceSm),
-                  _AttachmentPreview(attachments: _attachments),
-                  if (_error != null) ...[
+                    const SizedBox(height: AppTokens.spaceSm),
+                    _ContactFields(
+                      enabled: !_submitting,
+                      nameController: _nameController,
+                      phoneController: _phoneController,
+                      kakaoController: _kakaoController,
+                      lineController: _lineController,
+                      emailController: _emailController,
+                    ),
+                    const SizedBox(height: AppTokens.spaceSm),
+                    TextField(
+                      key: const Key('support_message_input'),
+                      controller: _messageController,
+                      enabled: !_submitting,
+                      minLines: 2,
+                      maxLines: 4,
+                      textInputAction: TextInputAction.newline,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('support_input_label'),
+                        hintText: l10n.t('support_input_hint'),
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.spaceSm),
+                    _AttachmentPreview(attachments: _attachments),
+                    if (_error != null) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(
+                        _error!,
+                        key: const Key('support_error_message'),
+                        style: const TextStyle(color: AppTokens.error),
+                      ),
+                    ],
                     const SizedBox(height: AppTokens.spaceSm),
                     Text(
-                      _error!,
-                      key: const Key('support_error_message'),
-                      style: const TextStyle(color: AppTokens.error),
+                      l10n.t('support_attachment_help'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTokens.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 520;
+                        final attachButton = OutlinedButton.icon(
+                          key: const Key('support_attach_button'),
+                          onPressed: _submitting ? null : _pickImages,
+                          icon: const Icon(Icons.attach_file),
+                          label: Text(l10n.t('support_attach_button')),
+                        );
+                        final sendButton = FilledButton.icon(
+                          key: const Key('support_send_button'),
+                          onPressed: _submitting ? null : _sendMessage,
+                          icon: _submitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.send_outlined),
+                          label: Text(
+                            _submitting
+                                ? l10n.t('support_sending')
+                                : l10n.t('support_send_button'),
+                          ),
+                        );
+
+                        if (compact) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              attachButton,
+                              const SizedBox(height: AppTokens.spaceSm),
+                              sendButton,
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [attachButton, const Spacer(), sendButton],
+                        );
+                      },
                     ),
                   ],
-                  const SizedBox(height: AppTokens.spaceSm),
-                  Text(
-                    l10n.t('support_attachment_help'),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTokens.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppTokens.spaceMd),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compact = constraints.maxWidth < 520;
-                      final attachButton = OutlinedButton.icon(
-                        key: const Key('support_attach_button'),
-                        onPressed: _submitting ? null : _pickImages,
-                        icon: const Icon(Icons.attach_file),
-                        label: Text(l10n.t('support_attach_button')),
-                      );
-                      final sendButton = FilledButton.icon(
-                        key: const Key('support_send_button'),
-                        onPressed: _submitting ? null : _sendMessage,
-                        icon: _submitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.send_outlined),
-                        label: Text(
-                          _submitting
-                              ? l10n.t('support_sending')
-                              : l10n.t('support_send_button'),
-                        ),
-                      );
-
-                      if (compact) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            attachButton,
-                            const SizedBox(height: AppTokens.spaceSm),
-                            sendButton,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [attachButton, const Spacer(), sendButton],
-                      );
-                    },
-                  ),
-                ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ContactFields extends StatelessWidget {
+  const _ContactFields({
+    required this.enabled,
+    required this.nameController,
+    required this.phoneController,
+    required this.kakaoController,
+    required this.lineController,
+    required this.emailController,
+  });
+
+  final bool enabled;
+  final TextEditingController nameController;
+  final TextEditingController phoneController;
+  final TextEditingController kakaoController;
+  final TextEditingController lineController;
+  final TextEditingController emailController;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final twoColumns = constraints.maxWidth >= 560;
+        final fields = [
+          _ContactField(
+            key: const Key('support_customer_name_input'),
+            controller: nameController,
+            enabled: enabled,
+            label: l10n.t('support_contact_name'),
+          ),
+          _ContactField(
+            key: const Key('support_customer_phone_input'),
+            controller: phoneController,
+            enabled: enabled,
+            label: l10n.t('support_contact_phone'),
+            keyboardType: TextInputType.phone,
+          ),
+          _ContactField(
+            key: const Key('support_kakao_input'),
+            controller: kakaoController,
+            enabled: enabled,
+            label: l10n.t('support_contact_kakao'),
+          ),
+          _ContactField(
+            key: const Key('support_line_input'),
+            controller: lineController,
+            enabled: enabled,
+            label: l10n.t('support_contact_line'),
+          ),
+          _ContactField(
+            key: const Key('support_email_input'),
+            controller: emailController,
+            enabled: enabled,
+            label: l10n.t('support_contact_email'),
+            keyboardType: TextInputType.emailAddress,
+          ),
+        ];
+
+        if (!twoColumns) {
+          return Column(
+            children: [
+              for (final field in fields) ...[
+                field,
+                const SizedBox(height: AppTokens.spaceSm),
+              ],
+            ],
+          );
+        }
+
+        return Wrap(
+          spacing: AppTokens.spaceSm,
+          runSpacing: AppTokens.spaceSm,
+          children: [
+            for (final field in fields)
+              SizedBox(
+                width: (constraints.maxWidth - AppTokens.spaceSm) / 2,
+                child: field,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ContactField extends StatelessWidget {
+  const _ContactField({
+    super.key,
+    required this.controller,
+    required this.enabled,
+    required this.label,
+    this.keyboardType,
+  });
+
+  final TextEditingController controller;
+  final bool enabled;
+  final String label;
+  final TextInputType? keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(labelText: label),
     );
   }
 }
@@ -526,11 +769,13 @@ class _SupportMessage {
   const _SupportMessage(
     this.text, {
     this.isUser = false,
+    this.senderType = 'SYSTEM',
     this.attachments = const [],
   });
 
   final String text;
   final bool isUser;
+  final String senderType;
   final List<_SupportAttachment> attachments;
 }
 

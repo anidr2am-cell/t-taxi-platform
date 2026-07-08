@@ -9,7 +9,17 @@ const createSupportInquirySchema = Joi.object({
   customerName: Joi.string().trim().max(100).allow('', null),
   customerPhone: Joi.string().trim().max(30).allow('', null),
   customerEmail: Joi.string().trim().lowercase().email().max(255).empty('').optional(),
+  kakaoId: Joi.string().trim().max(100).allow('', null),
+  lineId: Joi.string().trim().max(100).allow('', null),
   locale: Joi.string().valid(...localeValues).allow('', null),
+});
+
+const publicSupportInquiryParamsSchema = Joi.object({
+  publicId: Joi.string().trim().max(32).required(),
+});
+
+const publicSupportInquiryLookupSchema = Joi.object({
+  token: Joi.string().trim().max(200).allow('', null),
 });
 
 const adminSupportInquiryListQuerySchema = Joi.object({
@@ -28,9 +38,16 @@ const adminSupportInquiryStatusSchema = Joi.object({
   status: Joi.string().valid(...statusValues).required(),
 });
 
+const supportInquiryMessageSchema = Joi.object({
+  message: Joi.string().trim().min(1).max(5000).required(),
+});
+
 module.exports = {
   createSupportInquirySchema,
+  publicSupportInquiryParamsSchema,
+  publicSupportInquiryLookupSchema,
   adminSupportInquiryListQuerySchema,
   adminSupportInquiryIdParamsSchema,
   adminSupportInquiryStatusSchema,
+  supportInquiryMessageSchema,
 };

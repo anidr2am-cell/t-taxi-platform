@@ -8,6 +8,7 @@ const {
   adminSupportInquiryListQuerySchema,
   adminSupportInquiryIdParamsSchema,
   adminSupportInquiryStatusSchema,
+  supportInquiryMessageSchema,
 } = require('../validators/supportInquiry.validator');
 
 const router = express.Router();
@@ -25,6 +26,16 @@ router.get(
   adminOnly,
   validate({ params: adminSupportInquiryIdParamsSchema }),
   supportInquiryController.getAdminDetail,
+);
+
+router.post(
+  '/support/inquiries/:id/messages',
+  adminOnly,
+  validate({
+    params: adminSupportInquiryIdParamsSchema,
+    body: supportInquiryMessageSchema,
+  }),
+  supportInquiryController.addAdminMessage,
 );
 
 router.patch(
