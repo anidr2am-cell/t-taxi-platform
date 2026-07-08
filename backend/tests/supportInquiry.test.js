@@ -14,6 +14,7 @@ const app = require('../src/app');
 const container = require('../src/helpers/container');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const SupportInquiryService = require('../src/services/supportInquiry.service');
+const SupportInquiryRepository = require('../src/repositories/supportInquiry.repository');
 const AppError = require('../src/utils/AppError');
 const HTTP_STATUS = require('../src/constants/httpStatus');
 const { uploadDir } = require('../src/config/multer');
@@ -140,6 +141,29 @@ describe('Support inquiry routes', () => {
     assert.equal(res.body.data.publicId, 'SUP-260708-ABC123');
     assert.equal(res.body.data.lookupToken, 'lookup-token');
     assert.equal(res.body.data.status, 'NEW');
+  });
+
+  test('POST /api/v1/support/inquiries accepts image attachment upload', async () => {
+    const filePath = path.join(uploadDir, 'support-upload-test.png');
+    fs.writeFileSync(filePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+
+    try {
+      const res = await request(app)
+        .post('/api/v1/support/inquiries')
+        .field('message', 'Airport pickup booking question')
+        .field('customerName', 'Test Customer')
+        .field('customerPhone', '+66810000000')
+        .attach('attachments', filePath, {
+          filename: 'ticket.png',
+          contentType: 'image/png',
+        })
+        .expect(201);
+
+      assert.equal(res.body.success, true);
+      assert.equal(res.body.data.attachmentCount, 1);
+    } finally {
+      fs.rmSync(filePath, { force: true });
+    }
   });
 
   test('public inquiry detail requires lookup token', async () => {
@@ -423,5 +447,42 @@ describe('SupportInquiryService', () => {
       }),
       /Invalid file type/,
     );
+  });
+});
+
+describe('SupportInquiryRepository', () => {
+  test('attachment queries filter soft-deleted attachment rows', async () => {
+    const queries = [];
+    const pool = {
+      async query(sql) {
+        queries.push(sql);
+        if (sql.includes('FROM support_inquiries')) {
+          return [[{ id: 9, public_id: 'SUP-260708-ABC123' }]];
+        }
+        if (sql.includes('FROM support_inquiry_attachments')) {
+          return [[{
+            id: 3,
+            inquiry_id: 9,
+            original_file_name: 'ticket.png',
+            mime_type: 'image/png',
+            storage_path: '2026-07-08/ticket.png',
+          }]];
+        }
+        if (sql.includes('FROM support_inquiry_messages')) return [[]];
+        return [[]];
+      },
+    };
+    const repository = new SupportInquiryRepository(pool);
+
+    await repository.findById(9);
+    await repository.findAttachmentByInquiryId(9, 3);
+
+    const attachmentQueries = queries.filter((sql) => (
+      sql.includes('FROM support_inquiry_attachments')
+    ));
+    assert.equal(attachmentQueries.length, 2);
+    for (const sql of attachmentQueries) {
+      assert.match(sql, /deleted_at IS NULL/);
+    }
   });
 });
