@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
@@ -11,16 +10,19 @@ import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 import '../services/driver_api_service.dart';
+import 'driver_chat_page.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
   const DriverBookingDetailPage({
     super.key,
     required this.bookingNumber,
     DriverApiService? api,
+    this.chatPageBuilder,
   }) : api = api ?? const DriverApiService();
 
   final String bookingNumber;
   final DriverApiService api;
+  final Widget Function(String bookingNumber)? chatPageBuilder;
 
   @override
   State<DriverBookingDetailPage> createState() =>
@@ -101,13 +103,14 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     }
   }
 
-  Future<void> _callCustomer(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone.replaceAll(' ', ''));
-    if (!await launchUrl(uri)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.t('driver_call_failed'))),
-      );
-    }
+  void _openCustomerChat() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            widget.chatPageBuilder?.call(widget.bookingNumber) ??
+            DriverChatPage(bookingNumber: widget.bookingNumber),
+      ),
+    );
   }
 
   void _openSettlementDetail() {
@@ -239,15 +242,11 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                               label: l10n.t('driver_detail_customer_name'),
                               value: booking.customerDisplayName!,
                             ),
-                          if (DriverUx.canCallCustomer(
-                            booking.status,
-                            booking.customerPhone,
-                          ))
+                          if (DriverUx.canMessageCustomer(booking.status))
                             AppUi.secondaryButton(
-                              label: l10n.t('driver_call_customer'),
-                              icon: Icons.phone,
-                              onPressed: () =>
-                                  _callCustomer(booking.customerPhone!),
+                              label: l10n.t('driver_message_customer'),
+                              icon: Icons.chat_bubble_outline,
+                              onPressed: _openCustomerChat,
                               fullWidth: true,
                             ),
                         ],

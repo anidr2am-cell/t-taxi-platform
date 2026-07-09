@@ -139,17 +139,102 @@ void main() {
     expect(find.text('Booking not found'), findsOneWidget);
     expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
   });
+
+  testWidgets('customer message action opens internal driver chat', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+          ),
+        ),
+        chatPageBuilder: (bookingNumber) =>
+            Scaffold(body: Text('chat:$bookingNumber')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
+    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
+    expect(find.byIcon(Icons.phone), findsNothing);
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('chat:TX202607010001'), findsOneWidget);
+  });
+
+  testWidgets('customer message action works without customer phone', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS'],
+            phone: '',
+          ),
+        ),
+        chatPageBuilder: (bookingNumber) =>
+            Scaffold(body: Text('chat:$bookingNumber')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
+    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('chat:TX202607010001'), findsOneWidget);
+  });
 }
 
-Widget _wrap(DriverApiService api) {
+Widget _wrap(
+  DriverApiService api, {
+  Widget Function(String bookingNumber)? chatPageBuilder,
+}) {
   return MaterialApp(
-    home: DriverBookingDetailPage(bookingNumber: 'TX202607010001', api: api),
+    home: DriverBookingDetailPage(
+      bookingNumber: 'TX202607010001',
+      api: api,
+      chatPageBuilder: chatPageBuilder,
+    ),
   );
+}
+
+void _useTallViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 1000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
 }
 
 DriverBooking _booking({
   String status = 'DRIVER_ASSIGNED',
   List<String> actions = const ['VIEW_DETAILS'],
+  String? phone = '+66123456789',
 }) {
   return DriverBooking(
     bookingNumber: 'TX202607010001',
@@ -162,7 +247,7 @@ DriverBooking _booking({
     passengerCount: 2,
     vehicleTypeName: 'SUV',
     customerDisplayName: 'Kim',
-    customerPhone: '+66123456789',
+    customerPhone: phone,
     allowedActions: actions,
   );
 }
@@ -172,9 +257,6 @@ class _FakeDriverApi extends DriverApiService {
     DriverBooking? detail,
     Future<DriverBooking>? detailFuture,
     this.detailError,
-    this.onRoute,
-    this.arrived,
-    this.completed,
     this.actionError,
   }) {
     _current = detail ?? _booking();
@@ -186,9 +268,6 @@ class _FakeDriverApi extends DriverApiService {
   late DriverBooking _current;
   Future<DriverBooking>? _detailFuture;
   final Exception? detailError;
-  final DriverBooking? onRoute;
-  final DriverBooking? arrived;
-  final DriverBooking? completed;
   final Exception? actionError;
 
   @override
@@ -201,24 +280,21 @@ class _FakeDriverApi extends DriverApiService {
   @override
   Future<DriverBooking> startOnRoute(String bookingNumber) async {
     if (actionError != null) throw actionError!;
-    _current =
-        onRoute ?? _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']);
+    _current = _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']);
     return _current;
   }
 
   @override
   Future<DriverBooking> markArrived(String bookingNumber) async {
     if (actionError != null) throw actionError!;
-    _current =
-        arrived ??
-        _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']);
+    _current = _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']);
     return _current;
   }
 
   @override
   Future<DriverBooking> completeTrip(String bookingNumber) async {
     if (actionError != null) throw actionError!;
-    _current = completed ?? _booking(status: 'COMPLETED', actions: []);
+    _current = _booking(status: 'COMPLETED', actions: []);
     return _current;
   }
 }

@@ -41,10 +41,10 @@ void main() {
       expect(grouped[DriverJobGroup.completed]!.length, 1);
     });
 
-    test('canCallCustomer requires phone and active status', () {
-      expect(DriverUx.canCallCustomer('DRIVER_ASSIGNED', '+66123'), true);
-      expect(DriverUx.canCallCustomer('COMPLETED', '+66123'), false);
-      expect(DriverUx.canCallCustomer('DRIVER_ASSIGNED', null), false);
+    test('canMessageCustomer requires active booking status', () {
+      expect(DriverUx.canMessageCustomer('DRIVER_ASSIGNED'), true);
+      expect(DriverUx.canMessageCustomer('PICKED_UP'), true);
+      expect(DriverUx.canMessageCustomer('COMPLETED'), false);
     });
   });
 
@@ -197,7 +197,8 @@ void main() {
     );
   });
 
-  testWidgets('call button when phone exists', (tester) async {
+  testWidgets('message button opens booking chat room', (tester) async {
+    _useTallViewport(tester);
     await tester.pumpWidget(
       MaterialApp(
         home: DriverBookingDetailPage(
@@ -205,23 +206,34 @@ void main() {
           api: _FakeDetailApi(
             detail: _booking(
               status: 'DRIVER_ASSIGNED',
-              actions: ['START_ON_ROUTE'],
+              actions: ['VIEW_DETAILS'],
               phone: '+66123456789',
             ),
           ),
+          chatPageBuilder: (bookingNumber) =>
+              Scaffold(body: Text('chat:$bookingNumber')),
         ),
       ),
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('고객에게 전화 / โทรหาลูกค้า'),
+      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
       120,
       scrollable: find.byType(Scrollable),
     );
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsOneWidget);
+    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
+    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('chat:TX202607010001'), findsOneWidget);
   });
 
-  testWidgets('call button hidden without phone', (tester) async {
+  testWidgets('message button does not require customer phone', (tester) async {
+    _useTallViewport(tester);
     await tester.pumpWidget(
       MaterialApp(
         home: DriverBookingDetailPage(
@@ -229,15 +241,30 @@ void main() {
           api: _FakeDetailApi(
             detail: _booking(
               status: 'DRIVER_ASSIGNED',
-              actions: ['START_ON_ROUTE'],
+              actions: ['VIEW_DETAILS'],
               phone: '',
             ),
           ),
+          chatPageBuilder: (bookingNumber) =>
+              Scaffold(body: Text('chat:$bookingNumber')),
         ),
       ),
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
+    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('chat:TX202607010001'), findsOneWidget);
   });
 
   testWidgets('cancelled booking is read-only without primary action', (
@@ -344,6 +371,13 @@ DriverBooking _booking({
     customerPhone: phone,
     allowedActions: actions,
   );
+}
+
+void _useTallViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 1000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
 }
 
 class _FakeLoginApi extends DriverApiService {

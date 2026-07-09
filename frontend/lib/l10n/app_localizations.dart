@@ -2829,6 +2829,7 @@ class AppLocalizations {
     'driver_detail_customer_name': '고객 이름\n(ชื่อลูกค้า)',
     'driver_pickup_time': '픽업 시간\n(เวลารับ)',
     'driver_call_customer': '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
+    'driver_message_customer': '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
     'driver_estimated_arrival': '예상 도착 시간\n(เวลาถึงโดยประมาณ)',
     'driver_section_chat': '채팅\n(แชต)',
     'driver_next_action': '다음 작업\n(ขั้นตอนถัดไป)',

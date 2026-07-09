@@ -110,6 +110,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
         : l10n.t('driver_chat_readonly');
 
     return Scaffold(
+      appBar: AppBar(title: Text(l10n.t('driver_message_customer'))),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

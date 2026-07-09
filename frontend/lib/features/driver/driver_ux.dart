@@ -30,8 +30,7 @@ class DriverUx {
 
   static bool isReadOnly(String status) => isTerminal(status);
 
-  static bool canCallCustomer(String status, String? phone) {
-    if (phone == null || phone.trim().isEmpty) return false;
+  static bool canMessageCustomer(String status) {
     return status == 'DRIVER_ASSIGNED' ||
         status == 'ON_ROUTE' ||
         status == 'DRIVER_ARRIVED' ||
