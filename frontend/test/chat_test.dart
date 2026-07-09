@@ -16,11 +16,7 @@ import 'package:frontend/features/admin_chat/services/admin_chat_api_service.dar
 
 class FakeBookingChatApi extends BookingChatApi {
   FakeBookingChatApi({
-    this.room = const {
-      'roomId': 1,
-      'sendingAllowed': true,
-      'unreadCount': 0,
-    },
+    this.room = const {'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0},
     this.messages = const [],
     this.sendError,
   });
@@ -85,6 +81,7 @@ class FakeDriverChatApi extends DriverChatApi {
 
   final int unread;
   final String? sendError;
+  int sendCount = 0;
 
   @override
   Future<Map<String, dynamic>> getRoom(String bookingNumber) async {
@@ -100,6 +97,7 @@ class FakeDriverChatApi extends DriverChatApi {
     required String text,
     required String clientMessageId,
   }) async {
+    sendCount += 1;
     if (sendError != null) throw DriverChatApiException(sendError!);
     return {
       'messageId': 2,
@@ -119,7 +117,10 @@ class FakeDriverChatApi extends DriverChatApi {
 
 class FakeAdminChatApi extends AdminChatApiService {
   @override
-  Future<Map<String, dynamic>> listChats({bool unreadOnly = false, String? search}) async {
+  Future<Map<String, dynamic>> listChats({
+    bool unreadOnly = false,
+    String? search,
+  }) async {
     final items = [
       {
         'bookingNumber': 'TX202607010001',
@@ -158,17 +159,22 @@ class FakeAdminChatApi extends AdminChatApiService {
 }
 
 class TestChatSocketService extends ChatSocketService {
-  TestChatSocketService({this.stayOffline = false});
+  TestChatSocketService({
+    this.stayOffline = false,
+    this.connectAsError = false,
+  });
 
   final bool stayOffline;
+  final bool connectAsError;
 
   @override
-  io.Socket connect({
-    String? accessToken,
-    String? guestAccessToken,
-  }) {
+  io.Socket connect({String? accessToken, String? guestAccessToken}) {
     debugSetConnectionState(
-      stayOffline ? ChatConnectionState.offline : ChatConnectionState.connected,
+      connectAsError
+          ? ChatConnectionState.error
+          : stayOffline
+          ? ChatConnectionState.offline
+          : ChatConnectionState.connected,
     );
     return io.io(
       'http://localhost:0',
@@ -209,18 +215,19 @@ void main() {
     expect(merged.length, 1);
     expect((merged.first as Map)['text'], 'one updated');
 
-    final withClient = ChatMessageList.upsert([
-      {'clientMessageId': 'pending-1', 'text': 'opt'},
-    ], {
-      'messageId': 5,
-      'clientMessageId': 'pending-1',
-      'text': 'confirmed',
-    });
+    final withClient = ChatMessageList.upsert(
+      [
+        {'clientMessageId': 'pending-1', 'text': 'opt'},
+      ],
+      {'messageId': 5, 'clientMessageId': 'pending-1', 'text': 'confirmed'},
+    );
     expect(withClient.length, 1);
     expect((withClient.first as Map)['messageId'], 5);
   });
 
-  testWidgets('customer chat loads REST history and shows live connection', (tester) async {
+  testWidgets('customer chat loads REST history and shows live connection', (
+    tester,
+  ) async {
     final socket = TestChatSocketService();
     await tester.pumpWidget(
       MaterialApp(
@@ -236,10 +243,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Live'), findsOneWidget);
-    expect(find.text('No messages yet. Send the first message.'), findsOneWidget);
+    expect(
+      find.text('No messages yet. Send the first message.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('incoming socket message appears without refresh', (tester) async {
+  testWidgets('incoming socket message appears without refresh', (
+    tester,
+  ) async {
     final socket = TestChatSocketService();
     await tester.pumpWidget(
       MaterialApp(
@@ -270,7 +282,9 @@ void main() {
     expect(find.text('On my way'), findsOneWidget);
   });
 
-  testWidgets('duplicate REST and socket message displayed once', (tester) async {
+  testWidgets('duplicate REST and socket message displayed once', (
+    tester,
+  ) async {
     final api = FakeBookingChatApi(
       messages: [
         {
@@ -354,7 +368,10 @@ void main() {
     expect(find.text('Chat is not accessible'), findsOneWidget);
   });
 
-  testWidgets('disconnected send queues message instead of silent loss', (tester) async {
+  testWidgets('disconnected send uses REST instead of silent loss', (
+    tester,
+  ) async {
+    final api = FakeBookingChatApi();
     final socket = TestChatSocketService(stayOffline: true);
     await tester.pumpWidget(
       MaterialApp(
@@ -362,7 +379,7 @@ void main() {
           body: BookingChatSection(
             bookingNumber: 'TX202607010001',
             guestAccessToken: 'guest-token',
-            api: FakeBookingChatApi(),
+            api: api,
             socketService: socket,
           ),
         ),
@@ -372,10 +389,44 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Queued msg');
     await tester.tap(find.byIcon(Icons.send));
     await tester.pump();
-    expect(find.textContaining('queued'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(api.sendCount, 1);
+    expect(find.text('Queued msg'), findsOneWidget);
+    expect(find.textContaining('queued'), findsNothing);
   });
 
-  testWidgets('admin chat queue has no horizontal overflow at 360px', (tester) async {
+  testWidgets('driver chat loads and sends through REST when socket errors', (
+    tester,
+  ) async {
+    final api = FakeDriverChatApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverChatPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          socketService: TestChatSocketService(connectAsError: true),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Connection error'), findsNothing);
+    expect(find.text('Offline'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Driver hello');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(api.sendCount, 1);
+    expect(find.text('Driver hello'), findsOneWidget);
+    final input = tester.widget<TextField>(find.byType(TextField));
+    expect(input.controller?.text, isEmpty);
+  });
+
+  testWidgets('admin chat queue has no horizontal overflow at 360px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -383,9 +434,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: AdminChatQueuePage(api: FakeAdminChatApi()),
-        ),
+        home: Scaffold(body: AdminChatQueuePage(api: FakeAdminChatApi())),
       ),
     );
     await tester.pumpAndSettle();
@@ -394,7 +443,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('customer chat has no horizontal overflow at 360px', (tester) async {
+  testWidgets('customer chat has no horizontal overflow at 360px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -448,7 +499,9 @@ void main() {
     expect(find.text('Admin live'), findsOneWidget);
   });
 
-  testWidgets('message from another booking does not appear in current room', (tester) async {
+  testWidgets('message from another booking does not appear in current room', (
+    tester,
+  ) async {
     final socket = TestChatSocketService();
     await tester.pumpWidget(
       MaterialApp(
@@ -485,11 +538,17 @@ void main() {
       bookingNumber: 'TX202607010001',
       loadRoom: () async {
         loadCount += 1;
-        return api.getRoom(bookingNumber: 'TX202607010001', guestAccessToken: 't');
+        return api.getRoom(
+          bookingNumber: 'TX202607010001',
+          guestAccessToken: 't',
+        );
       },
       loadMessages: () async {
         loadCount += 1;
-        return api.listMessages(bookingNumber: 'TX202607010001', guestAccessToken: 't');
+        return api.listMessages(
+          bookingNumber: 'TX202607010001',
+          guestAccessToken: 't',
+        );
       },
       sendRest: ({required String text, required String clientMessageId}) =>
           api.sendMessage(

@@ -4,11 +4,13 @@ import 'chat_socket_service.dart';
 
 typedef ChatLoadRoom = Future<Map<String, dynamic>> Function();
 typedef ChatLoadMessages = Future<List<dynamic>> Function();
-typedef ChatSendRest = Future<Map<String, dynamic>> Function({
-  required String text,
-  required String clientMessageId,
-});
-typedef ChatMarkReadRest = Future<Map<String, dynamic>> Function(int upToMessageId);
+typedef ChatSendRest =
+    Future<Map<String, dynamic>> Function({
+      required String text,
+      required String clientMessageId,
+    });
+typedef ChatMarkReadRest =
+    Future<Map<String, dynamic>> Function(int upToMessageId);
 typedef ChatNewClientMessageId = String Function();
 typedef ChatAccessTokenLoader = Future<String?> Function();
 
@@ -62,7 +64,12 @@ class ChatRealtimeSession {
   bool get sendingAllowed => _sendingAllowed;
   int get unreadCount => _unreadCount;
   List<dynamic> get messages => List.unmodifiable(_messages);
-  ChatConnectionState get connectionState => _socket.connectionState;
+  ChatConnectionState get connectionState =>
+      _socket.connectionState == ChatConnectionState.error &&
+          !_loading &&
+          _error == null
+      ? ChatConnectionState.offline
+      : _socket.connectionState;
   bool get hasPendingOutbound => _pendingOutboundText != null;
 
   Future<void> start() async {
@@ -81,14 +88,6 @@ class ChatRealtimeSession {
   Future<void> send(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _sending || !_sendingAllowed) return;
-
-    if (_socket.connectionState != ChatConnectionState.connected) {
-      _pendingOutboundText = trimmed;
-      _pendingClientMessageId ??= newClientMessageId();
-      _error = 'Message queued — waiting for connection';
-      _notify();
-      return;
-    }
 
     await _sendInternal(trimmed);
   }
@@ -133,8 +132,12 @@ class ChatRealtimeSession {
   }
 
   Future<void> _connectSocket() async {
-    final accessToken = loadAccessToken != null ? await loadAccessToken!() : null;
-    final guestToken = loadGuestAccessToken != null ? await loadGuestAccessToken!() : null;
+    final accessToken = loadAccessToken != null
+        ? await loadAccessToken!()
+        : null;
+    final guestToken = loadGuestAccessToken != null
+        ? await loadGuestAccessToken!()
+        : null;
     _socket.setHandlers(
       onMessage: _handleSocketMessage,
       onReadUpdated: _handleReadUpdated,
@@ -147,10 +150,7 @@ class ChatRealtimeSession {
         _notify();
       },
     );
-    _socket.connect(
-      accessToken: accessToken,
-      guestAccessToken: guestToken,
-    );
+    _socket.connect(accessToken: accessToken, guestAccessToken: guestToken);
     _notify();
   }
 
@@ -198,7 +198,10 @@ class ChatRealtimeSession {
       _messages = ChatMessageList.upsert(_messages, optimistic);
       _notify();
 
-      final message = await sendRest(text: text, clientMessageId: clientMessageId);
+      final message = await sendRest(
+        text: text,
+        clientMessageId: clientMessageId,
+      );
       _messages = ChatMessageList.upsert(_messages, message);
       _pendingClientMessageId = null;
       _pendingOutboundText = null;
@@ -207,7 +210,11 @@ class ChatRealtimeSession {
       await _markVisibleRead();
     } catch (err) {
       _messages = _messages
-          .where((m) => (m as Map)['clientMessageId'] != clientMessageId || m['messageId'] != null)
+          .where(
+            (m) =>
+                (m as Map)['clientMessageId'] != clientMessageId ||
+                m['messageId'] != null,
+          )
           .toList();
       _pendingClientMessageId = clientMessageId;
       _pendingOutboundText = text;
