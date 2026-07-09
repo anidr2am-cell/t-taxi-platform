@@ -13,19 +13,25 @@ import '../../notification/services/notification_device_registration_service.dar
 import '../services/driver_api_service.dart';
 
 class DriverNotificationsPage extends StatefulWidget {
-  const DriverNotificationsPage({super.key, this.api, this.deviceRegistrationService});
+  const DriverNotificationsPage({
+    super.key,
+    this.api,
+    this.deviceRegistrationService,
+  });
 
   final DriverApiService? api;
   final NotificationDeviceRegistrationService? deviceRegistrationService;
 
   @override
-  State<DriverNotificationsPage> createState() => _DriverNotificationsPageState();
+  State<DriverNotificationsPage> createState() =>
+      _DriverNotificationsPageState();
 }
 
 class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
   late final DriverApiService _api = widget.api ?? const DriverApiService();
   late final NotificationDeviceRegistrationService _deviceRegistration =
-      widget.deviceRegistrationService ?? NotificationDeviceRegistrationService();
+      widget.deviceRegistrationService ??
+      NotificationDeviceRegistrationService();
   bool _loading = true;
   bool _markingAll = false;
   bool _enablingNotifications = false;
@@ -57,7 +63,10 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
         });
       }
       setState(() {
-        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('driver_load_failed'),
+        );
         _loading = false;
       });
     }
@@ -70,7 +79,12 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
       await _api.markAllNotificationsRead();
       await _load();
     } catch (err) {
-      setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
+      setState(
+        () => _error = userFacingError(
+          err,
+          fallback: context.l10n.t('driver_action_failed'),
+        ),
+      );
     } finally {
       setState(() => _markingAll = false);
     }
@@ -81,7 +95,12 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
       await _api.markNotificationRead(id);
       await _load();
     } catch (err) {
-      setState(() => _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
+      setState(
+        () => _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        ),
+      );
     }
   }
 
@@ -103,22 +122,20 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
   String _messageForPushResult(NotificationDeviceRegistrationResult result) {
     switch (result.status) {
       case NotificationDeviceRegistrationStatus.registered:
-        return 'Notifications enabled';
+        return context.l10n.t('driver_notification_enabled');
       case NotificationDeviceRegistrationStatus.permissionDenied:
-        return 'Notification permission was denied';
+        return context.l10n.t('driver_notification_denied');
       case NotificationDeviceRegistrationStatus.unsupported:
-        return 'Push notifications are not supported in this browser';
+        return context.l10n.t('driver_notification_unsupported');
       case NotificationDeviceRegistrationStatus.configMissing:
-        return 'Push notifications are not configured for this environment';
+        return context.l10n.t('driver_notification_unconfigured');
       case NotificationDeviceRegistrationStatus.failed:
-        return result.message ?? 'Notification registration failed';
+        return result.message ?? context.l10n.t('driver_notification_failed');
     }
   }
 
   void _openTarget(Map<String, dynamic> item) {
-    final payload = Map<String, dynamic>.from(
-      item['payload'] as Map? ?? {},
-    );
+    final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
     final bookingNumber = payload['bookingNumber'] as String?;
     final type = item['notificationType'] as String? ?? '';
 
@@ -164,7 +181,7 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
           IconButton(
             onPressed: _enablingNotifications ? null : _enableNotifications,
             icon: const Icon(Icons.notifications_active_outlined),
-            tooltip: 'Enable notifications',
+            tooltip: l10n.t('driver_notification_enable'),
           ),
           IconButton(
             onPressed: _markingAll ? null : _markAll,
@@ -176,71 +193,85 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
       body: _loading
           ? AppUi.loadingState()
           : _error != null
-              ? AppUi.errorState(
-                  message: _error!,
-                  onRetry: _load,
-                  retryLabel: l10n.t('driver_retry'),
-                )
-              : Column(
-                  children: [
-                    if (_pushStatus != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppTokens.spaceMd,
-                          AppTokens.spaceSm,
-                          AppTokens.spaceMd,
-                          0,
-                        ),
-                        child: AppUi.surfaceCard(
-                          backgroundColor: AppTokens.infoLight,
-                          padding: const EdgeInsets.all(AppTokens.spaceSm),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.info_outline, color: AppTokens.info, size: 18),
-                              const SizedBox(width: AppTokens.spaceSm),
-                              Expanded(child: Text(_pushStatus!)),
-                            ],
+          ? AppUi.errorState(
+              message: _error!,
+              onRetry: _load,
+              retryLabel: l10n.t('driver_retry'),
+            )
+          : Column(
+              children: [
+                if (_pushStatus != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTokens.spaceMd,
+                      AppTokens.spaceSm,
+                      AppTokens.spaceMd,
+                      0,
+                    ),
+                    child: AppUi.surfaceCard(
+                      backgroundColor: AppTokens.infoLight,
+                      padding: const EdgeInsets.all(AppTokens.spaceSm),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            color: AppTokens.info,
+                            size: 18,
+                          ),
+                          const SizedBox(width: AppTokens.spaceSm),
+                          Expanded(child: Text(_pushStatus!)),
+                        ],
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  child: _items.isEmpty
+                      ? AppUi.emptyState(
+                          title: l10n.t('driver_notifications_empty'),
+                          icon: Icons.notifications_none_outlined,
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          child: ListView.separated(
+                            padding: AppUi.pagePadding(context),
+                            itemCount: _items.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: AppTokens.spaceSm),
+                            itemBuilder: (context, index) {
+                              final item = Map<String, dynamic>.from(
+                                _items[index] as Map,
+                              );
+                              final read = item['read'] == true;
+                              return _NotificationCard(
+                                title:
+                                    item['title'] as String? ??
+                                    l10n.t('driver_notification_default'),
+                                body: item['body'] as String? ?? '',
+                                read: read,
+                                markReadLabel: l10n.t(
+                                  'driver_notification_mark_read',
+                                ),
+                                newBadgeLabel: l10n.t(
+                                  'driver_notification_new',
+                                ),
+                                onMarkRead: read
+                                    ? null
+                                    : () => _markRead(
+                                        item['notificationId'] as int,
+                                      ),
+                                onTap: () {
+                                  if (!read) {
+                                    _markRead(item['notificationId'] as int);
+                                  }
+                                  _openTarget(item);
+                                },
+                              );
+                            },
                           ),
                         ),
-                      ),
-                    Expanded(
-                      child: _items.isEmpty
-                          ? AppUi.emptyState(
-                              title: l10n.t('driver_notifications_empty'),
-                              icon: Icons.notifications_none_outlined,
-                            )
-                          : RefreshIndicator(
-                              onRefresh: _load,
-                              child: ListView.separated(
-                                padding: AppUi.pagePadding(context),
-                                itemCount: _items.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: AppTokens.spaceSm),
-                                itemBuilder: (context, index) {
-                                  final item = Map<String, dynamic>.from(_items[index] as Map);
-                                  final read = item['read'] == true;
-                                  return _NotificationCard(
-                                    title: item['title'] as String? ?? 'Notification',
-                                    body: item['body'] as String? ?? '',
-                                    read: read,
-                                    markReadLabel: l10n.t('driver_notification_mark_read'),
-                                    newBadgeLabel: l10n.t('driver_notification_new'),
-                                    onMarkRead: read
-                                        ? null
-                                        : () => _markRead(item['notificationId'] as int),
-                                    onTap: () {
-                                      if (!read) {
-                                        _markRead(item['notificationId'] as int);
-                                      }
-                                      _openTarget(item);
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                    ),
-                  ],
                 ),
+              ],
+            ),
     );
   }
 }
@@ -298,19 +329,27 @@ class _NotificationCard extends StatelessWidget {
                         title,
                         style: TextStyle(
                           fontWeight: read ? FontWeight.w600 : FontWeight.w800,
-                          color: read ? AppTokens.textPrimary : AppTokens.primaryDark,
+                          color: read
+                              ? AppTokens.textPrimary
+                              : AppTokens.primaryDark,
                         ),
                       ),
                     ),
                     if (!read)
-                      AppUi.statusBadge(newBadgeLabel, tone: AppStatusTone.info),
+                      AppUi.statusBadge(
+                        newBadgeLabel,
+                        tone: AppStatusTone.info,
+                      ),
                   ],
                 ),
                 if (body.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     body,
-                    style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13),
+                    style: const TextStyle(
+                      color: AppTokens.textSecondary,
+                      fontSize: 13,
+                    ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),

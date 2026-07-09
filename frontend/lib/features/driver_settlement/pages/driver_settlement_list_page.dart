@@ -33,7 +33,9 @@ Future<ReceiptPickResult?> defaultReceiptFilePicker() async {
 }
 
 bool isAllowedReceiptFilename(String filename) {
-  final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
+  final ext = filename.contains('.')
+      ? filename.split('.').last.toLowerCase()
+      : '';
   return _allowedReceiptExtensions.contains(ext);
 }
 
@@ -43,11 +45,13 @@ class DriverSettlementListPage extends StatefulWidget {
   final DriverSettlementApiService? api;
 
   @override
-  State<DriverSettlementListPage> createState() => _DriverSettlementListPageState();
+  State<DriverSettlementListPage> createState() =>
+      _DriverSettlementListPageState();
 }
 
 class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
-  late final DriverSettlementApiService _api = widget.api ?? const DriverSettlementApiService();
+  late final DriverSettlementApiService _api =
+      widget.api ?? const DriverSettlementApiService();
   bool _loading = true;
   String? _error;
   List<dynamic> _items = [];
@@ -71,7 +75,10 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_load_failed'),
+        );
         _loading = false;
       });
     }
@@ -98,96 +105,113 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Commission settlements'),
-        actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))],
+        title: Text(context.l10n.t('driver_settlement_title')),
+        actions: [
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+        ],
       ),
       body: _loading
           ? AppUi.loadingState()
           : _error != null
-              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
-              : _items.isEmpty
-                  ? AppUi.emptyState(
-                      title: 'No settlements',
-                      icon: Icons.receipt_long_outlined,
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: AppUi.pagePadding(context),
-                        itemCount: _items.length,
-                        separatorBuilder: (_, index) => const SizedBox(height: AppTokens.spaceSm),
-                        itemBuilder: (context, index) {
-                          final item = Map<String, dynamic>.from(_items[index] as Map);
-                          final status = item['commissionStatus'] as String? ?? '';
-                          return AppUi.surfaceCard(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DriverSettlementDetailPage(
-                                  bookingNumber: item['bookingNumber'] as String,
-                                  api: _api,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppTokens.primaryLight,
-                                    borderRadius: AppTokens.borderRadiusSm,
-                                  ),
-                                  child: const Icon(
-                                    Icons.receipt_long_outlined,
-                                    color: AppTokens.primary,
-                                  ),
-                                ),
-                                const SizedBox(width: AppTokens.spaceSm),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item['bookingNumber'] as String? ?? '',
-                                        style: const TextStyle(fontWeight: FontWeight.w700),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${item['commissionAmount']} ${item['currency']}',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTokens.textPrimary,
-                                        ),
-                                      ),
-                                      if (item['dueAt'] != null)
-                                        Text(
-                                          l10n.t('driver_settlement_due').replaceAll(
-                                            '{date}',
-                                            item['dueAt'] as String,
-                                          ),
-                                          style: const TextStyle(
-                                            color: AppTokens.textSecondary,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    AppUi.statusBadge(status, tone: _settlementTone(status)),
-                                    const SizedBox(height: 4),
-                                    const Icon(Icons.chevron_right, color: AppTokens.textMuted),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+          ? AppUi.errorState(
+              message: _error!,
+              onRetry: _load,
+              retryLabel: context.l10n.t('driver_retry'),
+            )
+          : _items.isEmpty
+          ? AppUi.emptyState(
+              title: context.l10n.t('driver_settlement_empty'),
+              icon: Icons.receipt_long_outlined,
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.separated(
+                padding: AppUi.pagePadding(context),
+                itemCount: _items.length,
+                separatorBuilder: (_, index) =>
+                    const SizedBox(height: AppTokens.spaceSm),
+                itemBuilder: (context, index) {
+                  final item = Map<String, dynamic>.from(_items[index] as Map);
+                  final status = item['commissionStatus'] as String? ?? '';
+                  return AppUi.surfaceCard(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DriverSettlementDetailPage(
+                          bookingNumber: item['bookingNumber'] as String,
+                          api: _api,
+                        ),
                       ),
                     ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTokens.primaryLight,
+                            borderRadius: AppTokens.borderRadiusSm,
+                          ),
+                          child: const Icon(
+                            Icons.receipt_long_outlined,
+                            color: AppTokens.primary,
+                          ),
+                        ),
+                        const SizedBox(width: AppTokens.spaceSm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['bookingNumber'] as String? ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${item['commissionAmount']} ${item['currency']}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTokens.textPrimary,
+                                ),
+                              ),
+                              if (item['dueAt'] != null)
+                                Text(
+                                  l10n
+                                      .t('driver_settlement_due')
+                                      .replaceAll(
+                                        '{date}',
+                                        item['dueAt'] as String,
+                                      ),
+                                  style: const TextStyle(
+                                    color: AppTokens.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            AppUi.statusBadge(
+                              status,
+                              tone: _settlementTone(status),
+                            ),
+                            const SizedBox(height: 4),
+                            const Icon(
+                              Icons.chevron_right,
+                              color: AppTokens.textMuted,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }
@@ -205,10 +229,12 @@ class DriverSettlementDetailPage extends StatefulWidget {
   final ReceiptFilePicker? receiptPicker;
 
   @override
-  State<DriverSettlementDetailPage> createState() => _DriverSettlementDetailPageState();
+  State<DriverSettlementDetailPage> createState() =>
+      _DriverSettlementDetailPageState();
 }
 
-class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage> {
+class _DriverSettlementDetailPageState
+    extends State<DriverSettlementDetailPage> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _detail;
@@ -236,7 +262,10 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_load_failed'),
+        );
         _loading = false;
       });
     }
@@ -268,11 +297,15 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
     final picked = await picker();
     if (picked == null) return;
     if (!isAllowedReceiptFilename(picked.filename)) {
-      setState(() => _uploadError = 'Supported files: JPG, JPEG, PNG, PDF');
+      setState(
+        () => _uploadError = context.l10n.t('driver_settlement_invalid_file'),
+      );
       return;
     }
     if (picked.bytes.length > _maxReceiptBytes) {
-      setState(() => _uploadError = 'File exceeds maximum size (10 MB)');
+      setState(
+        () => _uploadError = context.l10n.t('driver_settlement_file_too_large'),
+      );
       return;
     }
     setState(() {
@@ -283,7 +316,9 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
   }
 
   Future<void> _uploadSelected() async {
-    if (_uploading || _selectedBytes == null || _selectedFilename == null) return;
+    if (_uploading || _selectedBytes == null || _selectedFilename == null) {
+      return;
+    }
     setState(() {
       _uploading = true;
       _uploadError = null;
@@ -300,7 +335,12 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
       });
       await _load();
     } catch (err) {
-      setState(() => _uploadError = userFacingError(err, fallback: context.l10n.t('ui_action_failed')));
+      setState(
+        () => _uploadError = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -317,92 +357,114 @@ class _DriverSettlementDetailPageState extends State<DriverSettlementDetailPage>
       body: _loading
           ? AppUi.loadingState()
           : _error != null
-              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
-              : ListView(
-                  padding: AppUi.pagePadding(context),
-                  children: [
-                    AppUi.surfaceCard(
-                      backgroundColor: AppTokens.primaryLight,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          ? AppUi.errorState(
+              message: _error!,
+              onRetry: _load,
+              retryLabel: l10n.t('driver_retry'),
+            )
+          : ListView(
+              padding: AppUi.pagePadding(context),
+              children: [
+                AppUi.surfaceCard(
+                  backgroundColor: AppTokens.primaryLight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${_detail?['commissionAmount']} ${_detail?['currency']}',
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTokens.primaryDark,
-                                  ),
-                                ),
+                          Expanded(
+                            child: Text(
+                              '${_detail?['commissionAmount']} ${_detail?['currency']}',
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                color: AppTokens.primaryDark,
                               ),
-                              AppUi.statusBadge(status, tone: _settlementTone(status)),
-                            ],
-                          ),
-                          const SizedBox(height: AppTokens.spaceSm),
-                          Text('Status: $status', style: const TextStyle(fontSize: 18)),
-                          const SizedBox(height: 4),
-                          Text('Due: ${_detail?['dueAt'] ?? '-'}'),
-                          if (_detail?['rejectionReason'] != null) ...[
-                            const SizedBox(height: AppTokens.spaceSm),
-                            AppUi.summaryRow(
-                              label: 'Rejection',
-                              value: _detail?['rejectionReason'] as String,
                             ),
-                          ],
+                          ),
+                          AppUi.statusBadge(
+                            status,
+                            tone: _settlementTone(status),
+                          ),
                         ],
                       ),
-                    ),
-                    if (canUpload) ...[
-                      const SizedBox(height: AppTokens.spaceMd),
-                      AppUi.adminDetailSection(
-                        context: context,
-                        title: l10n.t('driver_settlement_receipt_upload'),
-                        subtitle: l10n.t('driver_settlement_receipt_formats'),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            AppUi.secondaryButton(
-                              label: _selectedFilename == null
-                                  ? 'Select receipt (JPG, PNG, PDF)'
-                                  : 'Replace selection',
-                              icon: Icons.upload_file,
-                              onPressed: _uploading ? null : _pickFile,
-                              fullWidth: true,
-                            ),
-                            if (_selectedFilename != null) ...[
-                              const SizedBox(height: AppTokens.spaceSm),
-                              Text('Selected: $_selectedFilename'),
-                              const SizedBox(height: AppTokens.spaceSm),
-                              SizedBox(
-                                height: 48,
-                                child: ElevatedButton(
-                                  onPressed: _uploading ? null : _uploadSelected,
-                                  child: Text(_uploading ? 'Uploading...' : 'Upload receipt'),
-                                ),
-                              ),
-                            ],
-                            if (_uploadError != null) ...[
-                              const SizedBox(height: AppTokens.spaceSm),
-                              Text(
-                                _uploadError!,
-                                style: const TextStyle(color: AppTokens.error),
-                              ),
-                              AppUi.secondaryButton(
-                                label: 'Retry upload',
-                                icon: Icons.refresh,
-                                onPressed: _uploading ? null : _uploadSelected,
-                                fullWidth: true,
-                              ),
-                            ],
-                          ],
-                        ),
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(
+                        '${l10n.t('driver_settlement_status')}: $status',
+                        style: const TextStyle(fontSize: 18),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${l10n.t('driver_settlement_due_label')}: '
+                        '${_detail?['dueAt'] ?? '-'}',
+                      ),
+                      if (_detail?['rejectionReason'] != null) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        AppUi.summaryRow(
+                          label: l10n.t('driver_settlement_rejection'),
+                          value: _detail?['rejectionReason'] as String,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
+                if (canUpload) ...[
+                  const SizedBox(height: AppTokens.spaceMd),
+                  AppUi.adminDetailSection(
+                    context: context,
+                    title: l10n.t('driver_settlement_receipt_upload'),
+                    subtitle: l10n.t('driver_settlement_receipt_formats'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AppUi.secondaryButton(
+                          label: _selectedFilename == null
+                              ? l10n.t('driver_settlement_select_receipt')
+                              : l10n.t('driver_settlement_replace_receipt'),
+                          icon: Icons.upload_file,
+                          onPressed: _uploading ? null : _pickFile,
+                          fullWidth: true,
+                        ),
+                        if (_selectedFilename != null) ...[
+                          const SizedBox(height: AppTokens.spaceSm),
+                          Text(
+                            l10n
+                                .t('driver_settlement_selected')
+                                .replaceAll('{name}', _selectedFilename!),
+                          ),
+                          const SizedBox(height: AppTokens.spaceSm),
+                          SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: _uploading ? null : _uploadSelected,
+                              child: Text(
+                                _uploading
+                                    ? l10n.t('driver_settlement_uploading')
+                                    : l10n.t('driver_settlement_upload'),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (_uploadError != null) ...[
+                          const SizedBox(height: AppTokens.spaceSm),
+                          Text(
+                            _uploadError!,
+                            style: const TextStyle(color: AppTokens.error),
+                          ),
+                          AppUi.secondaryButton(
+                            label: l10n.t('driver_settlement_retry_upload'),
+                            icon: Icons.refresh,
+                            onPressed: _uploading ? null : _uploadSelected,
+                            fullWidth: true,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
     );
   }
 }

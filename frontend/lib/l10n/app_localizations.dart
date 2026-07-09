@@ -2758,7 +2758,156 @@ class AppLocalizations {
     },
   };
 
+  static const Map<String, String> _driverUiTranslations = {
+    'driver_login_title': '기사 로그인\n(เข้าสู่ระบบคนขับ)',
+    'driver_brand': 'T-Ride 기사\n(T-Ride คนขับ)',
+    'driver_phone': '전화번호\n(เบอร์โทรศัพท์)',
+    'driver_password': '비밀번호\n(รหัสผ่าน)',
+    'driver_login': '로그인 / เข้าสู่ระบบ',
+    'driver_application_cta': '기사 등록 신청 / สมัครคนขับ',
+    'driver_load_failed': '정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลได้)',
+    'driver_action_failed': '처리 중 오류가 발생했습니다\n(เกิดข้อผิดพลาดระหว่างดำเนินการ)',
+    'driver_nav_jobs': '배정 예약\n(งานที่ได้รับมอบหมาย)',
+    'driver_nav_notifications': '알림\n(การแจ้งเตือน)',
+    'driver_nav_settlement': '정산\n(การชำระบัญชี)',
+    'driver_nav_profile': '내 정보\n(โปรไฟล์)',
+    'driver_refresh': '새로고침 / รีเฟรช',
+    'driver_retry': '다시 시도 / ลองอีกครั้ง',
+    'driver_jobs_error_title':
+        '예약 정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลการจองได้)',
+    'driver_jobs_empty_title':
+        '오늘 배정된 예약이 없습니다\n(วันนี้ยังไม่มีงานที่ได้รับมอบหมาย)',
+    'driver_jobs_empty_message':
+        '새 예약이 배정되면 여기에 표시됩니다.\n(งานใหม่จะแสดงที่นี่เมื่อได้รับมอบหมาย)',
+    'driver_jobs_today_date': '오늘 배정된 예약 - {date}\n(งานที่ได้รับมอบหมายวันนี้)',
+    'driver_jobs_group_active': '진행 중\n(งานปัจจุบัน)',
+    'driver_jobs_group_upcoming': '예정\n(งานที่กำลังจะมาถึง)',
+    'driver_jobs_group_completed': '완료\n(เสร็จสิ้น)',
+    'driver_action_start_on_route': '운행 시작 / เริ่มเดินทาง',
+    'driver_action_mark_arrived': '기사 도착 / ถึงจุดรับแล้ว',
+    'driver_action_complete_trip': '운행 완료 / จบงาน',
+    'driver_action_scan_boarding': '탑승 QR 스캔 / สแกน QR ขึ้นรถ',
+    'driver_action_scan_dropoff': '하차 QR 스캔 / สแกน QR ลงรถ',
+    'driver_job_assigned_hint':
+        '준비되면 픽업 장소로 이동하세요\n(พร้อมแล้วให้เดินทางไปยังจุดรับ)',
+    'driver_status_on_route': '이동 중\n(กำลังเดินทางไปรับ)',
+    'driver_status_arrived': '픽업 장소 도착\n(ถึงจุดรับแล้ว)',
+    'driver_status_picked_up': '고객 탑승\n(รับผู้โดยสารแล้ว)',
+    'driver_status_no_show': '고객 미탑승\n(ผู้โดยสารไม่มา)',
+    'driver_success_boarding': '고객 탑승 처리가 완료되었습니다\n(ยืนยันการขึ้นรถแล้ว)',
+    'driver_success_completed': '운행이 완료되었습니다\n(จบงานเรียบร้อยแล้ว)',
+    'driver_success_on_route': '운행을 시작했습니다\n(เริ่มเดินทางแล้ว)',
+    'driver_success_arrived': '기사 도착으로 변경했습니다\n(เปลี่ยนสถานะเป็นถึงจุดรับแล้ว)',
+    'driver_call_failed': '전화를 연결할 수 없습니다\n(ไม่สามารถโทรออกได้)',
+    'driver_open_chat': '채팅 열기 / เปิดแชต',
+    'driver_detail_error': '예약 정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลการจองได้)',
+    'driver_section_trip': '예약 상세\n(รายละเอียดการจอง)',
+    'driver_detail_status': '상태\n(สถานะ)',
+    'driver_detail_origin': '픽업 장소\n(จุดรับ)',
+    'driver_detail_destination': '목적지\n(จุดหมายปลายทาง)',
+    'driver_detail_vehicle': '차량 종류\n(ประเภทรถ)',
+    'driver_detail_passengers': '인원\n(จำนวนผู้โดยสาร)',
+    'driver_detail_luggage': '짐\n(สัมภาระ)',
+    'driver_detail_flight_number': '항공편 번호\n(หมายเลขเที่ยวบิน)',
+    'driver_detail_special_requests': '요청사항\n(คำขอเพิ่มเติม)',
+    'driver_detail_customer_info': '고객 정보\n(ข้อมูลลูกค้า)',
+    'driver_detail_customer_name': '고객 이름\n(ชื่อลูกค้า)',
+    'driver_pickup_time': '픽업 시간\n(เวลารับ)',
+    'driver_call_customer': '고객에게 전화 / โทรหาลูกค้า',
+    'driver_estimated_arrival': '예상 도착 시간\n(เวลาถึงโดยประมาณ)',
+    'driver_section_chat': '채팅\n(แชต)',
+    'driver_next_action': '다음 작업\n(ขั้นตอนถัดไป)',
+    'driver_section_settlement': '정산\n(การชำระบัญชี)',
+    'driver_settlement_loading_failed':
+        '정산 정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลการชำระบัญชีได้)',
+    'driver_rejection_reason': '반려 사유\n(เหตุผลที่ไม่อนุมัติ)',
+    'driver_view_settlement': '정산 상세 / ดูรายละเอียด',
+    'driver_qr_boarding_title': '탑승 QR\n(QR ขึ้นรถ)',
+    'driver_qr_dropoff_title': '하차 QR\n(QR ลงรถ)',
+    'driver_qr_boarding_help':
+        '고객 앱의 탑승 QR을 스캔하세요.\n(สแกน QR ขึ้นรถจากแอปลูกค้า)',
+    'driver_qr_dropoff_help': '고객 앱의 하차 QR을 스캔하세요.\n(สแกน QR ลงรถจากแอปลูกค้า)',
+    'driver_qr_boarding_manual_label': '탑승 QR 코드\n(รหัส QR ขึ้นรถ)',
+    'driver_qr_dropoff_manual_label': '하차 QR 코드\n(รหัส QR ลงรถ)',
+    'driver_qr_manual_hint':
+        '카메라 없이 코드를 직접 입력할 수 있습니다.\n(กรอกรหัสเองได้โดยไม่ใช้กล้อง)',
+    'driver_qr_manual_entry': '코드 직접 입력\n(กรอกรหัสด้วยตนเอง)',
+    'driver_qr_use_manual': '직접 입력 / กรอกรหัส',
+    'driver_qr_use_camera': '카메라 / กล้อง',
+    'driver_qr_submit': '확인 / ยืนยัน',
+    'driver_notification_no_target':
+        '연결된 예약이 없는 알림입니다\n(การแจ้งเตือนนี้ไม่มีงานที่เชื่อมโยง)',
+    'driver_mark_all_read': '모두 읽음 / อ่านทั้งหมด',
+    'driver_notifications_empty': '알림이 없습니다\n(ยังไม่มีการแจ้งเตือน)',
+    'driver_notification_new': '새 알림 / ใหม่',
+    'driver_notification_mark_read': '읽음 / อ่านแล้ว',
+    'driver_notification_enable': '알림 켜기 / เปิดการแจ้งเตือน',
+    'driver_notification_enabled': '알림이 켜졌습니다\n(เปิดการแจ้งเตือนแล้ว)',
+    'driver_notification_denied':
+        '알림 권한이 거부되었습니다\n(ไม่ได้รับอนุญาตให้แจ้งเตือน)',
+    'driver_notification_unsupported':
+        '이 브라우저는 푸시 알림을 지원하지 않습니다\n(เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน)',
+    'driver_notification_unconfigured':
+        '알림 서비스가 설정되지 않았습니다\n(ยังไม่ได้ตั้งค่าระบบแจ้งเตือน)',
+    'driver_notification_failed':
+        '알림 등록에 실패했습니다\n(ลงทะเบียนการแจ้งเตือนไม่สำเร็จ)',
+    'driver_notification_default': '알림\n(การแจ้งเตือน)',
+    'driver_rating_loading': '평점을 불러오는 중입니다\n(กำลังโหลดคะแนน)',
+    'driver_rating_error': '평점을 불러올 수 없습니다\n(ไม่สามารถโหลดคะแนนได้)',
+    'driver_no_ratings': '아직 평점이 없습니다\n(ยังไม่มีคะแนน)',
+    'driver_rating_average': '평균 / คะแนนเฉลี่ย',
+    'driver_rating_count': '개 리뷰 / รีวิว',
+    'driver_logout': '로그아웃 / ออกจากระบบ',
+    'driver_online': '온라인\n(พร้อมรับงาน)',
+    'driver_offline': '오프라인\n(ออฟไลน์)',
+    'driver_session_ready': '배차 대기 중\n(พร้อมรับงาน)',
+    'driver_session_offline': '오프라인 상태입니다\n(ขณะนี้ออฟไลน์)',
+    'driver_active_job_in_progress': '진행 중인 운행이 있습니다\n(มีงานที่กำลังดำเนินการ)',
+    'driver_active_job_stay_online':
+        '운행 완료 전까지 온라인을 유지하세요.\n(กรุณาออนไลน์ไว้จนกว่าจะจบงาน)',
+    'driver_profile_status_loading': '기사 상태를 불러오는 중입니다\n(กำลังโหลดสถานะคนขับ)',
+    'driver_profile_status_error':
+        '기사 상태를 불러올 수 없습니다\n(ไม่สามารถโหลดสถานะคนขับได้)',
+    'driver_profile_go_online': '온라인 전환 / พร้อมรับงาน',
+    'driver_profile_go_offline': '오프라인 전환 / ออฟไลน์',
+    'driver_profile_offline_confirm': '오프라인으로 전환할까요?\n(ต้องการออฟไลน์หรือไม่)',
+    'driver_profile_offline_blocked':
+        '진행 중인 운행이 있어 완료 전에는 오프라인 전환이 제한됩니다.\n(มีงานที่กำลังดำเนินการ จึงยังไม่สามารถออฟไลน์ได้)',
+    'driver_cancel': '취소 / ยกเลิก',
+    'driver_try_anyway': '계속 시도 / ลองต่อ',
+    'driver_last_seen': '마지막 접속: {date}\n(ออนไลน์ล่าสุด)',
+    'driver_passengers': '명\n(ผู้โดยสาร)',
+    'driver_live_location_share': '실시간 위치 공유\n(แชร์ตำแหน่งปัจจุบัน)',
+    'driver_live_location_online_required':
+        '온라인 전환 후 위치를 공유하세요.\n(กรุณาออนไลน์ก่อนแชร์ตำแหน่ง)',
+    'driver_live_location_active_job_only':
+        '진행 중인 운행에서만 사용할 수 있습니다\n(ใช้ได้เฉพาะระหว่างมีงาน)',
+    'driver_live_location_last_sent': '마지막 전송 {time}\n(ส่งล่าสุด)',
+    'driver_settlement_title': '수수료 정산\n(การชำระค่าคอมมิชชัน)',
+    'driver_settlement_empty': '정산 내역이 없습니다\n(ยังไม่มีรายการชำระบัญชี)',
+    'driver_settlement_status': '상태\n(สถานะ)',
+    'driver_settlement_due_label': '납부 기한\n(กำหนดชำระ)',
+    'driver_settlement_rejection': '반려 사유\n(เหตุผลที่ไม่อนุมัติ)',
+    'driver_settlement_select_receipt': '영수증 선택 / เลือกใบเสร็จ',
+    'driver_settlement_replace_receipt': '파일 변경 / เปลี่ยนไฟล์',
+    'driver_settlement_selected': '선택한 파일: {name}\n(ไฟล์ที่เลือก)',
+    'driver_settlement_uploading': '업로드 중\n(กำลังอัปโหลด)',
+    'driver_settlement_upload': '영수증 업로드 / อัปโหลดใบเสร็จ',
+    'driver_settlement_retry_upload': '업로드 재시도 / ลองอัปโหลดอีกครั้ง',
+    'driver_settlement_invalid_file':
+        '지원 파일: JPG, JPEG, PNG, PDF\n(รองรับไฟล์ JPG, JPEG, PNG, PDF)',
+    'driver_settlement_file_too_large':
+        '파일은 10MB 이하여야 합니다\n(ไฟล์ต้องมีขนาดไม่เกิน 10 MB)',
+    'driver_chat_hint_message': '고객/관리자에게 메시지\n(ส่งข้อความถึงลูกค้า/ผู้ดูแล)',
+    'driver_chat_no_messages': '메시지가 없습니다\n(ยังไม่มีข้อความ)',
+    'driver_chat_queued': '연결 대기 중입니다\n(กำลังรอการเชื่อมต่อ)',
+    'driver_chat_readonly': '읽기 전용 채팅입니다\n(แชตนี้อ่านได้อย่างเดียว)',
+    'driver_chat_participant': '대화 참여자\n(ผู้ร่วมสนทนา)',
+  };
+
   String t(String key) {
+    final driverText = _driverUiTranslations[key];
+    if (driverText != null) return driverText;
     final lang = _translations[languageCode] ?? _translations['en']!;
     final featureLang = _driverApplicationTranslations[languageCode];
     final featureEn = _driverApplicationTranslations['en']!;

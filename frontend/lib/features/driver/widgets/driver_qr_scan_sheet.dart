@@ -48,7 +48,10 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
       if (mounted) {
         setState(() {
           _submitting = false;
-          _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+          _error = userFacingError(
+            err,
+            fallback: context.l10n.t('ui_action_failed'),
+          );
         });
       }
     }
@@ -65,9 +68,7 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
         : l10n.t('driver_qr_dropoff_help');
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Material(
         color: AppTokens.surface,
         child: SafeArea(
@@ -93,14 +94,18 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _submitting ? null : () => Navigator.pop(context),
+                      onPressed: _submitting
+                          ? null
+                          : () => Navigator.pop(context),
                       icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTokens.spaceMd,
+                ),
                 child: Text(
                   help,
                   style: const TextStyle(color: AppTokens.textSecondary),
@@ -108,7 +113,9 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
               ),
               const SizedBox(height: AppTokens.spaceSm),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTokens.spaceMd,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -119,9 +126,9 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                         onTap: _submitting
                             ? null
                             : () => setState(() {
-                              _cameraMode = false;
-                              _cameraError = false;
-                            }),
+                                _cameraMode = false;
+                                _cameraError = false;
+                              }),
                       ),
                     ),
                     const SizedBox(width: AppTokens.spaceSm),
@@ -133,9 +140,9 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                         onTap: _submitting
                             ? null
                             : () => setState(() {
-                              _cameraMode = true;
-                              _cameraError = false;
-                            }),
+                                _cameraMode = true;
+                                _cameraError = false;
+                              }),
                       ),
                     ),
                   ],
@@ -144,7 +151,9 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
               const SizedBox(height: AppTokens.spaceMd),
               if (_cameraMode && !_cameraError)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTokens.spaceMd,
+                  ),
                   child: ClipRRect(
                     borderRadius: AppTokens.borderRadiusLg,
                     child: SizedBox(
@@ -176,12 +185,17 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                 )
               else if (_cameraMode && _cameraError)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTokens.spaceMd,
+                  ),
                   child: AppUi.surfaceCard(
                     backgroundColor: AppTokens.warningLight,
                     child: Column(
                       children: [
-                        const Icon(Icons.videocam_off_outlined, color: AppTokens.warning),
+                        const Icon(
+                          Icons.videocam_off_outlined,
+                          color: AppTokens.warning,
+                        ),
                         const SizedBox(height: AppTokens.spaceSm),
                         Text(
                           l10n.t('driver_qr_manual_hint'),
@@ -197,7 +211,9 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                 )
               else
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTokens.spaceMd,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -236,7 +252,11 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.error_outline, color: AppTokens.error, size: 18),
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppTokens.error,
+                          size: 18,
+                        ),
                         const SizedBox(width: AppTokens.spaceSm),
                         Expanded(
                           child: Text(
@@ -264,7 +284,9 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
                               ? const SizedBox(
                                   height: 22,
                                   width: 22,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : Text(l10n.t('driver_qr_submit')),
                         ),
@@ -316,7 +338,11 @@ class _ModeChip extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: selected ? AppTokens.primary : AppTokens.textSecondary),
+              Icon(
+                icon,
+                size: 18,
+                color: selected ? AppTokens.primary : AppTokens.textSecondary,
+              ),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
@@ -324,7 +350,9 @@ class _ModeChip extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    color: selected ? AppTokens.primaryDark : AppTokens.textSecondary,
+                    color: selected
+                        ? AppTokens.primaryDark
+                        : AppTokens.textSecondary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -346,9 +374,7 @@ Future<bool?> showDriverQrScanSheet({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => DriverQrScanSheet(
-      isBoarding: isBoarding,
-      onSubmit: onSubmit,
-    ),
+    builder: (context) =>
+        DriverQrScanSheet(isBoarding: isBoarding, onSubmit: onSubmit),
   );
 }

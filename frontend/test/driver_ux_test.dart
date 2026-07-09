@@ -56,12 +56,15 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'driver@test.com');
     await tester.enterText(find.byType(TextField).last, 'secret');
-    await tester.tap(find.text('Log in'));
+    await tester.tap(find.text('로그인 / เข้าสู่ระบบ'));
     await tester.pump();
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('No jobs today'), findsOneWidget);
+    expect(
+      find.text('오늘 배정된 예약이 없습니다\n(วันนี้ยังไม่มีงานที่ได้รับมอบหมาย)'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('saved token opens Jobs shell on login page load', (
@@ -75,7 +78,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Driver Login'), findsNothing);
+    expect(find.text('기사 로그인\n(เข้าสู่ระบบคนขับ)'), findsNothing);
   });
 
   testWidgets('expired token on jobs redirects to login', (tester) async {
@@ -92,7 +95,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.text('Driver Login'), findsOneWidget);
+    expect(find.text('기사 로그인\n(เข้าสู่ระบบคนขับ)'), findsOneWidget);
   });
 
   testWidgets('jobs list groups active, upcoming, and completed', (
@@ -129,13 +132,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Active / Current'), findsOneWidget);
+    expect(find.text('진행 중\n(งานปัจจุบัน)'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Upcoming'),
+      find.text('예정\n(งานที่กำลังจะมาถึง)'),
       120,
       scrollable: find.byType(Scrollable),
     );
-    expect(find.text('Upcoming'), findsOneWidget);
+    expect(find.text('예정\n(งานที่กำลังจะมาถึง)'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('TX202607010001'),
       120,
@@ -156,7 +159,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No jobs today'), findsOneWidget);
+    expect(
+      find.text('오늘 배정된 예약이 없습니다\n(วันนี้ยังไม่มีงานที่ได้รับมอบหมาย)'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('jobs error state with retry', (tester) async {
@@ -165,7 +171,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('network'), findsOneWidget);
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
   });
 
   testWidgets('jobs list action calls mutation and refreshes', (tester) async {
@@ -180,12 +186,15 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverJobsPage(api: api)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Start route'));
+    await tester.tap(find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'));
     await tester.pumpAndSettle();
 
     expect(api.startRouteCalls, 1);
     expect(api.todayCalls, 2);
-    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsOneWidget);
+    expect(
+      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('call button when phone exists', (tester) async {
@@ -204,7 +213,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Call customer'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('고객에게 전화 / โทรหาลูกค้า'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsOneWidget);
   });
 
   testWidgets('call button hidden without phone', (tester) async {
@@ -223,7 +237,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Call customer'), findsNothing);
+    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
   });
 
   testWidgets('cancelled booking is read-only without primary action', (
@@ -241,7 +255,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Start route'), findsNothing);
+    expect(find.text('운행 시작 / เริ่มเดินทาง'), findsNothing);
     expect(find.text('Cancelled'), findsWidgets);
   });
 
@@ -264,11 +278,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Mark arrived'));
+    await tester.tap(
+      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid status transition'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Complete trip'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '운행 완료 / จบงาน'), findsOneWidget);
   });
 
   testWidgets('jobs layout has no horizontal overflow at 360px', (

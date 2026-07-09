@@ -94,7 +94,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
     final err = _session.error;
     if (err == null) return null;
     if (err.contains('Exception') || err.startsWith('Instance of')) {
-      return l10n.t('ui_load_failed');
+      return l10n.t('driver_load_failed');
     }
     return err;
   }
@@ -105,9 +105,9 @@ class _DriverChatPageState extends State<DriverChatPage> {
     final sessionError = _sessionErrorMessage(l10n);
     final inputHint = _session.sendingAllowed
         ? (_session.hasPendingOutbound
-            ? l10n.t('admin_chat_hint_queued')
-            : l10n.t('driver_chat_hint_message'))
-        : l10n.t('admin_chat_hint_readonly');
+              ? l10n.t('driver_chat_queued')
+              : l10n.t('driver_chat_hint_message'))
+        : l10n.t('driver_chat_readonly');
 
     return Scaffold(
       body: Column(
@@ -131,7 +131,10 @@ class _DriverChatPageState extends State<DriverChatPage> {
                       '${_session.unreadCount}',
                       tone: AppStatusTone.info,
                     ),
-                  IconButton(onPressed: _session.refresh, icon: const Icon(Icons.refresh)),
+                  IconButton(
+                    onPressed: _session.refresh,
+                    icon: const Icon(Icons.refresh),
+                  ),
                 ],
               ),
             ),
@@ -139,7 +142,9 @@ class _DriverChatPageState extends State<DriverChatPage> {
           if (_session.loading) const LinearProgressIndicator(),
           if (sessionError != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTokens.spaceMd,
+              ),
               child: AppUi.surfaceCard(
                 backgroundColor: AppTokens.errorLight,
                 padding: const EdgeInsets.all(AppTokens.spaceSm),
@@ -148,7 +153,10 @@ class _DriverChatPageState extends State<DriverChatPage> {
                     Expanded(
                       child: Text(
                         sessionError,
-                        style: const TextStyle(color: AppTokens.error, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppTokens.error,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     if (_session.connectionState == ChatConnectionState.error)
@@ -169,10 +177,15 @@ class _DriverChatPageState extends State<DriverChatPage> {
                 : ListView.separated(
                     padding: AppUi.pagePadding(context),
                     itemCount: _session.messages.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppTokens.spaceSm),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppTokens.spaceSm),
                     itemBuilder: (context, index) {
-                      final item = Map<String, dynamic>.from(_session.messages[index] as Map);
-                      final sender = item['senderDisplayName'] as String? ?? l10n.t('admin_chat_participant');
+                      final item = Map<String, dynamic>.from(
+                        _session.messages[index] as Map,
+                      );
+                      final sender =
+                          item['senderDisplayName'] as String? ??
+                          l10n.t('driver_chat_participant');
                       final text = item['text'] as String? ?? '';
                       return AppUi.surfaceCard(
                         padding: const EdgeInsets.symmetric(
@@ -182,7 +195,13 @@ class _DriverChatPageState extends State<DriverChatPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(sender, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            Text(
+                              sender,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 4),
                             Text(text, style: const TextStyle(fontSize: 14)),
                           ],
@@ -199,18 +218,26 @@ class _DriverChatPageState extends State<DriverChatPage> {
                   child: TextField(
                     controller: _controller,
                     enabled: _session.sendingAllowed && !_session.sending,
-                    decoration: InputDecoration(hintText: inputHint, isDense: true),
+                    decoration: InputDecoration(
+                      hintText: inputHint,
+                      isDense: true,
+                    ),
                     onSubmitted: (_) => _send(),
                   ),
                 ),
                 const SizedBox(width: AppTokens.spaceSm),
                 FilledButton(
-                  onPressed: _session.sendingAllowed && !_session.sending ? _send : null,
+                  onPressed: _session.sendingAllowed && !_session.sending
+                      ? _send
+                      : null,
                   child: _session.sending
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.send, size: 20),
                 ),

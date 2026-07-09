@@ -148,7 +148,9 @@ class _DriverSessionBar extends StatelessWidget {
           builder: (context, snapshot) {
             if (snapshot.hasError && driverIsAuthError(snapshot.error!)) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (context.mounted) driverHandleApiError(context, snapshot.error!);
+                if (context.mounted) {
+                  driverHandleApiError(context, snapshot.error!);
+                }
               });
             }
 
@@ -177,19 +179,24 @@ class _DriverSessionBar extends StatelessWidget {
                         )
                       else
                         AppUi.statusBadge(
-                          online ? l10n.t('driver_online') : l10n.t('driver_offline'),
-                          tone: online ? AppStatusTone.success : AppStatusTone.neutral,
+                          online
+                              ? l10n.t('driver_online')
+                              : l10n.t('driver_offline'),
+                          tone: online
+                              ? AppStatusTone.success
+                              : AppStatusTone.neutral,
                         ),
-                        const SizedBox(width: AppTokens.spaceSm),
-                        Expanded(
-                          child: Text(
-                            online
-                                ? l10n.t('driver_session_ready')
-                                : l10n.t('driver_session_offline'),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTokens.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      const SizedBox(width: AppTokens.spaceSm),
+                      Expanded(
+                        child: Text(
+                          online
+                              ? l10n.t('driver_session_ready')
+                              : l10n.t('driver_session_offline'),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppTokens.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ),
                       IconButton(
@@ -200,11 +207,15 @@ class _DriverSessionBar extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (snapshot.hasError && !driverIsAuthError(snapshot.error!)) ...[
+                  if (snapshot.hasError &&
+                      !driverIsAuthError(snapshot.error!)) ...[
                     const SizedBox(height: AppTokens.spaceSm),
                     Text(
                       snapshot.error.toString(),
-                      style: const TextStyle(color: AppTokens.error, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppTokens.error,
+                        fontSize: 13,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -224,15 +235,22 @@ class _DriverSessionBar extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.local_taxi, color: AppTokens.info, size: 20),
+                                const Icon(
+                                  Icons.local_taxi,
+                                  color: AppTokens.info,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: AppTokens.spaceSm),
                                 Expanded(
                                   child: Text(
                                     l10n.t('driver_active_job_in_progress'),
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTokens.info,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTokens.info,
+                                        ),
                                   ),
                                 ),
                               ],
@@ -248,7 +266,11 @@ class _DriverSessionBar extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.local_taxi, color: AppTokens.info, size: 20),
+                                  const Icon(
+                                    Icons.local_taxi,
+                                    color: AppTokens.info,
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: AppTokens.spaceSm),
                                   Expanded(
                                     child: Text(
@@ -260,8 +282,12 @@ class _DriverSessionBar extends StatelessWidget {
                                     ),
                                   ),
                                   AppUi.statusBadge(
-                                    context.l10n.t(DriverUx.statusLabelKey(job.status)),
-                                    tone: AppUi.toneForBookingStatus(job.status),
+                                    context.l10n.t(
+                                      DriverUx.statusLabelKey(job.status),
+                                    ),
+                                    tone: AppUi.toneForBookingStatus(
+                                      job.status,
+                                    ),
                                   ),
                                 ],
                               ),

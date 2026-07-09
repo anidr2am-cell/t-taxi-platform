@@ -24,7 +24,8 @@ class DriverLiveLocationControl extends StatefulWidget {
   final Duration interval;
 
   @override
-  State<DriverLiveLocationControl> createState() => _DriverLiveLocationControlState();
+  State<DriverLiveLocationControl> createState() =>
+      _DriverLiveLocationControlState();
 }
 
 class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
@@ -61,7 +62,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
     if (widget.online == false) {
       setState(() {
         _enabled = false;
-        _error = 'Go online before sharing live location.';
+        _error = context.l10n.t('driver_live_location_online_required');
       });
       return;
     }
@@ -91,7 +92,8 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       throw const DriverLocationApiException('Location permission denied');
     }
     return Geolocator.getCurrentPosition(
@@ -124,19 +126,24 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
       if (!mounted) return;
       setState(() {
         _sending = false;
-        _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        );
       });
     }
   }
 
   String _formatLastSent() {
     if (_lastSentAt == null) {
-      return 'Only while an active job is in progress';
+      return context.l10n.t('driver_live_location_active_job_only');
     }
     final local = _lastSentAt!.toLocal();
     final h = local.hour.toString().padLeft(2, '0');
     final m = local.minute.toString().padLeft(2, '0');
-    return 'Last sent $h:$m';
+    return context.l10n
+        .t('driver_live_location_last_sent')
+        .replaceAll('{time}', '$h:$m');
   }
 
   @override
@@ -160,13 +167,13 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
                 Icons.my_location,
                 color: _enabled ? AppTokens.success : AppTokens.textSecondary,
               ),
-              title: const Text(
-                'Share live location',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              title: Text(
+                l10n.t('driver_live_location_share'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               subtitle: Text(
                 _lastSentAt == null
-                    ? 'Only while an active job is in progress'
+                    ? l10n.t('driver_live_location_active_job_only')
                     : _formatLastSent(),
               ),
               value: _enabled,
@@ -176,11 +183,13 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
             if (_enabled) ...[
               const SizedBox(height: AppTokens.spaceSm),
               Text(
-                l10n.t('driver_live_location_interval_hint').replaceAll(
-                  '{seconds}',
-                  '${widget.interval.inSeconds}',
+                l10n
+                    .t('driver_live_location_interval_hint')
+                    .replaceAll('{seconds}', '${widget.interval.inSeconds}'),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTokens.textMuted,
                 ),
-                style: const TextStyle(fontSize: 12, color: AppTokens.textMuted),
               ),
             ],
             if (_error != null) ...[
@@ -191,12 +200,19 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.error_outline, color: AppTokens.error, size: 18),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppTokens.error,
+                      size: 18,
+                    ),
                     const SizedBox(width: AppTokens.spaceSm),
                     Expanded(
                       child: Text(
                         _error!,
-                        style: const TextStyle(color: AppTokens.error, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppTokens.error,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],

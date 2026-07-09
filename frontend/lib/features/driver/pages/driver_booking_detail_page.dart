@@ -28,7 +28,7 @@ class DriverBookingDetailPage extends StatefulWidget {
 }
 
 class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
-  late   Future<DriverBooking> _future;
+  late Future<DriverBooking> _future;
   Future<Map<String, dynamic>>? _settlementFuture;
   bool _processing = false;
   String? _actionError;
@@ -75,9 +75,9 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       if (updated.status == 'COMPLETED') {
         _loadSettlement();
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.t(messageKey))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.t(messageKey))));
     } on DriverApiException catch (err) {
       if (!mounted) return;
       setState(() => _processing = false);
@@ -93,7 +93,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       if (!mounted) return;
       setState(() {
         _processing = false;
-        _actionError = userFacingError(err, fallback: l10n.t('ui_action_failed'));
+        _actionError = userFacingError(
+          err,
+          fallback: l10n.t('driver_action_failed'),
+        );
       });
     }
   }
@@ -108,17 +111,19 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   }
 
   void _openSettlementDetail() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DriverSettlementDetailPage(
-          bookingNumber: widget.bookingNumber,
-          api: const DriverSettlementApiService(),
-        ),
-      ),
-    ).then((_) {
-      _loadBooking();
-      _loadSettlement();
-    });
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => DriverSettlementDetailPage(
+              bookingNumber: widget.bookingNumber,
+              api: const DriverSettlementApiService(),
+            ),
+          ),
+        )
+        .then((_) {
+          _loadBooking();
+          _loadSettlement();
+        });
   }
 
   @override
@@ -169,8 +174,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
 
           return Column(
             children: [
-              if (_processing)
-                const LinearProgressIndicator(minHeight: 3),
+              if (_processing) const LinearProgressIndicator(minHeight: 3),
               Expanded(
                 child: ListView(
                   key: const Key('driverDetailScroll'),
@@ -184,7 +188,11 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.error_outline, color: AppTokens.error, size: 20),
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppTokens.error,
+                              size: 20,
+                            ),
                             const SizedBox(width: AppTokens.spaceSm),
                             Expanded(
                               child: Text(
@@ -204,24 +212,31 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                         children: [
                           AppUi.summaryRow(
                             label: l10n.t('driver_pickup_time'),
-                            value: '${booking.pickupDate} ${booking.pickupTime}',
+                            value:
+                                '${booking.pickupDate} ${booking.pickupTime}',
                             emphasize: true,
                           ),
-                          AppUi.summaryRow(label: l10n.t('origin'), value: booking.origin),
-                          AppUi.summaryRow(label: l10n.t('destination'), value: booking.destination),
+                          AppUi.summaryRow(
+                            label: l10n.t('driver_detail_origin'),
+                            value: booking.origin,
+                          ),
+                          AppUi.summaryRow(
+                            label: l10n.t('driver_detail_destination'),
+                            value: booking.destination,
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                     AppUi.adminDetailSection(
                       context: context,
-                      title: l10n.t('customer_info'),
+                      title: l10n.t('driver_detail_customer_info'),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (booking.customerDisplayName != null)
                             AppUi.summaryRow(
-                              label: l10n.t('name'),
+                              label: l10n.t('driver_detail_customer_name'),
                               value: booking.customerDisplayName!,
                             ),
                           if (DriverUx.canCallCustomer(
@@ -231,7 +246,8 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                             AppUi.secondaryButton(
                               label: l10n.t('driver_call_customer'),
                               icon: Icons.phone,
-                              onPressed: () => _callCustomer(booking.customerPhone!),
+                              onPressed: () =>
+                                  _callCustomer(booking.customerPhone!),
                               fullWidth: true,
                             ),
                         ],
@@ -240,17 +256,20 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                     const SizedBox(height: AppTokens.spaceMd),
                     AppUi.adminDetailSection(
                       context: context,
-                      title: l10n.t('passengers'),
+                      title: l10n.t('driver_detail_passengers'),
                       child: Column(
                         children: [
                           AppUi.summaryRow(
-                            label: l10n.t('passengers'),
+                            label: l10n.t('driver_detail_passengers'),
                             value: booking.passengerCount.toString(),
                           ),
-                          AppUi.summaryRow(label: l10n.t('vehicle'), value: booking.vehicleTypeName),
+                          AppUi.summaryRow(
+                            label: l10n.t('driver_detail_vehicle'),
+                            value: booking.vehicleTypeName,
+                          ),
                           if (booking.luggage != null)
                             AppUi.summaryRow(
-                              label: l10n.t('luggage'),
+                              label: l10n.t('driver_detail_luggage'),
                               value: _formatLuggage(booking.luggage!),
                             ),
                         ],
@@ -260,16 +279,16 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                       const SizedBox(height: AppTokens.spaceMd),
                       AppUi.adminDetailSection(
                         context: context,
-                        title: l10n.t('flight_number'),
+                        title: l10n.t('driver_detail_flight_number'),
                         child: Column(
                           children: [
                             AppUi.summaryRow(
-                              label: l10n.t('flight_number'),
+                              label: l10n.t('driver_detail_flight_number'),
                               value: booking.flightNumber!,
                             ),
                             if (booking.flightStatus != null)
                               AppUi.summaryRow(
-                                label: l10n.t('status'),
+                                label: l10n.t('driver_detail_status'),
                                 value: booking.flightStatus!,
                               ),
                             if (booking.latestEstimatedArrival != null)
@@ -285,10 +304,12 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                       const SizedBox(height: AppTokens.spaceMd),
                       AppUi.adminDetailSection(
                         context: context,
-                        title: l10n.t('special_requests'),
+                        title: l10n.t('driver_detail_special_requests'),
                         child: Text(
                           booking.specialInstructions!,
-                          style: const TextStyle(color: AppTokens.textSecondary),
+                          style: const TextStyle(
+                            color: AppTokens.textSecondary,
+                          ),
                         ),
                       ),
                     ],
@@ -403,15 +424,12 @@ class _StatusHeader extends StatelessWidget {
             const SizedBox(height: AppTokens.spaceMd),
             Text(
               l10n.t('driver_next_action'),
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppTokens.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: AppTokens.textSecondary),
             ),
             const SizedBox(height: AppTokens.spaceSm),
-            AppUi.actionBanner(
-              message: l10n.t(nextKey),
-              icon: Icons.flag,
-            ),
+            AppUi.actionBanner(message: l10n.t(nextKey), icon: Icons.flag),
           ],
         ],
       ),
@@ -420,10 +438,7 @@ class _StatusHeader extends StatelessWidget {
 }
 
 class _SettlementSection extends StatelessWidget {
-  const _SettlementSection({
-    required this.future,
-    required this.onOpenDetail,
-  });
+  const _SettlementSection({required this.future, required this.onOpenDetail});
 
   final Future<Map<String, dynamic>>? future;
   final VoidCallback onOpenDetail;
@@ -463,10 +478,7 @@ class _SettlementSection extends StatelessWidget {
                       ),
                     ),
                   ),
-                  AppUi.statusBadge(
-                    status,
-                    tone: _settlementTone(status),
-                  ),
+                  AppUi.statusBadge(status, tone: _settlementTone(status)),
                 ],
               ),
               if (detail['rejectionReason'] != null) ...[

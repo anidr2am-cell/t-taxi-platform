@@ -31,8 +31,14 @@ class DriverChatApi {
 
   Future<Map<String, String>> _headers() async {
     final token = await _token();
-    if (token == null || token.isEmpty) throw const DriverChatApiException('Please log in');
-    return {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
+    if (token == null || token.isEmpty) {
+      throw const DriverChatApiException('Please log in');
+    }
+    return {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
   }
 
   Future<Map<String, dynamic>> getRoom(String bookingNumber) async {
@@ -81,7 +87,9 @@ class DriverChatApi {
     final decoded = jsonDecode(response.body);
     if (response.statusCode >= 400) {
       throw DriverChatApiException(
-        decoded is Map ? decoded['message'] as String? ?? 'Request failed' : 'Request failed',
+        decoded is Map
+            ? decoded['message'] as String? ?? 'Request failed'
+            : 'Request failed',
       );
     }
     return Map<String, dynamic>.from((decoded as Map)['data'] as Map);

@@ -3,11 +3,7 @@ import 'services/driver_api_service.dart';
 import 'models/driver_booking.dart';
 
 /// Job list grouping for driver today view.
-enum DriverJobGroup {
-  active,
-  upcoming,
-  completed,
-}
+enum DriverJobGroup { active, upcoming, completed }
 
 class DriverUx {
   static DriverJobGroup groupForStatus(String status) {

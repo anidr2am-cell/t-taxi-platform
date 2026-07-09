@@ -29,7 +29,8 @@ class DriverProfilePage extends StatefulWidget {
 class _DriverProfilePageState extends State<DriverProfilePage> {
   late final DriverApiService _api = widget.api ?? DriverApiService();
   late final NotificationDeviceRegistrationService _deviceRegistration =
-      widget.deviceRegistrationService ?? NotificationDeviceRegistrationService();
+      widget.deviceRegistrationService ??
+      NotificationDeviceRegistrationService();
   Future<Map<String, dynamic>>? _ratingFuture;
   Future<DriverStatus>? _statusFuture;
   bool _statusUpdating = false;
@@ -55,13 +56,17 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Go offline?'),
-          content: const Text(
-            'You have an active job. Going offline is blocked until the job is finished.',
-          ),
+          title: Text(context.l10n.t('driver_profile_offline_confirm')),
+          content: Text(context.l10n.t('driver_profile_offline_blocked')),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Try anyway')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(context.l10n.t('driver_cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(context.l10n.t('driver_try_anyway')),
+            ),
           ],
         ),
       );
@@ -89,7 +94,10 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       }
       setState(() {
         _statusUpdating = false;
-        _statusError = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+        _statusError = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        );
         _statusFuture = _api.getStatus();
       });
     }
@@ -129,7 +137,7 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       const SizedBox(width: AppTokens.spaceMd),
-                      Text(l10n.t('driver_rating_error').replaceAll('Could not load ', 'Loading ')),
+                      Text(l10n.t('driver_rating_loading')),
                     ],
                   ),
                 );
@@ -162,7 +170,11 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                         color: AppTokens.warningLight,
                         borderRadius: AppTokens.borderRadiusSm,
                       ),
-                      child: const Icon(Icons.star, color: AppTokens.warning, size: 28),
+                      child: const Icon(
+                        Icons.star,
+                        color: AppTokens.warning,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: AppTokens.spaceMd),
                     Expanded(
@@ -173,9 +185,8 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                             avg == null
                                 ? l10n.t('driver_no_ratings')
                                 : '$avg ${l10n.t('driver_rating_average')}',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           Text('$count ${l10n.t('driver_rating_count')}'),
                         ],
@@ -200,7 +211,9 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       const SizedBox(width: AppTokens.spaceMd),
-                      const Expanded(child: Text('Loading driver status')),
+                      Expanded(
+                        child: Text(l10n.t('driver_profile_status_loading')),
+                      ),
                     ],
                   ),
                 );
@@ -213,12 +226,17 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.error_outline, color: AppTokens.error),
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppTokens.error,
+                          ),
                           const SizedBox(width: AppTokens.spaceSm),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Driver status unavailable',
-                              style: TextStyle(fontWeight: FontWeight.w700),
+                              l10n.t('driver_profile_status_error'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                           IconButton(
@@ -235,15 +253,21 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
               final status = snapshot.data;
               final online = status?.online == true;
               return AppUi.surfaceCard(
-                backgroundColor: online ? AppTokens.successLight : AppTokens.surfaceMuted,
+                backgroundColor: online
+                    ? AppTokens.successLight
+                    : AppTokens.surfaceMuted,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
                       children: [
                         Icon(
-                          online ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: online ? AppTokens.success : AppTokens.textMuted,
+                          online
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: online
+                              ? AppTokens.success
+                              : AppTokens.textMuted,
                           size: 28,
                         ),
                         const SizedBox(width: AppTokens.spaceSm),
@@ -252,14 +276,17 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                online ? 'Online' : 'Offline',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                                online
+                                    ? l10n.t('driver_online')
+                                    : l10n.t('driver_offline'),
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               Text(
                                 status?.status ?? 'OFFLINE',
-                                style: const TextStyle(color: AppTokens.textSecondary),
+                                style: const TextStyle(
+                                  color: AppTokens.textSecondary,
+                                ),
                               ),
                             ],
                           ),
@@ -273,7 +300,11 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                         padding: const EdgeInsets.all(AppTokens.spaceSm),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, color: AppTokens.warning, size: 18),
+                            Icon(
+                              Icons.info_outline,
+                              color: AppTokens.warning,
+                              size: 18,
+                            ),
                             SizedBox(width: AppTokens.spaceSm),
                             Expanded(
                               child: Text(
@@ -292,8 +323,13 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                     if (status?.lastSeenAt != null) ...[
                       const SizedBox(height: AppTokens.spaceSm),
                       Text(
-                        'Last seen ${status!.lastSeenAt}',
-                        style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13),
+                        l10n
+                            .t('driver_last_seen')
+                            .replaceAll('{date}', status!.lastSeenAt!),
+                        style: const TextStyle(
+                          color: AppTokens.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                     if (_statusError != null) ...[
@@ -317,7 +353,10 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                               onPressed: _statusUpdating || online
                                   ? null
                                   : () => _setOnlineState(true, status),
-                              child: const Text('Go online'),
+                              child: Text(
+                                l10n.t('driver_profile_go_online'),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ),
@@ -329,7 +368,10 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                               onPressed: _statusUpdating || !online
                                   ? null
                                   : () => _setOnlineState(false, status),
-                              child: const Text('Go offline'),
+                              child: Text(
+                                l10n.t('driver_profile_go_offline'),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ),

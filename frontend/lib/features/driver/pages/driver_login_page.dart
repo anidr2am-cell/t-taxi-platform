@@ -83,7 +83,7 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Driver Login')),
+      appBar: AppBar(title: Text(context.l10n.t('driver_login_title'))),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -92,7 +92,7 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
             children: [
               const SizedBox(height: 24),
               Text(
-                'T-Ride Driver',
+                context.l10n.t('driver_brand'),
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 24),
@@ -100,14 +100,18 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 autofillHints: const [AutofillHints.telephoneNumber],
-                decoration: InputDecoration(labelText: context.l10n.t('phone')),
+                decoration: InputDecoration(
+                  labelText: context.l10n.t('driver_phone'),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _passwordController,
                 obscureText: true,
                 autofillHints: const [AutofillHints.password],
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: InputDecoration(
+                  labelText: context.l10n.t('driver_password'),
+                ),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
@@ -127,7 +131,7 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
                           width: 22,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Log in'),
+                      : Text(context.l10n.t('driver_login')),
                 ),
               ),
               const SizedBox(height: 12),

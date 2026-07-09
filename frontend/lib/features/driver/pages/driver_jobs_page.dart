@@ -93,7 +93,10 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            userFacingError(err, fallback: context.l10n.t('ui_action_failed')),
+            userFacingError(
+              err,
+              fallback: context.l10n.t('driver_action_failed'),
+            ),
           ),
         ),
       );
@@ -132,7 +135,10 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
               });
             }
             return AppUi.errorState(
-              message: userFacingError(err, fallback: l10n.t('ui_load_failed')),
+              message: userFacingError(
+                err,
+                fallback: l10n.t('driver_load_failed'),
+              ),
               onRetry: _refresh,
               retryLabel: l10n.t('driver_retry'),
             );
@@ -381,7 +387,8 @@ class _JobCard extends StatelessWidget {
                 ),
               _MetaChip(
                 icon: Icons.people_outline,
-                label: '${booking.passengerCount} ${l10n.t('passengers')}',
+                label:
+                    '${booking.passengerCount} ${l10n.t('driver_passengers')}',
                 muted: isCompleted,
               ),
               _MetaChip(
