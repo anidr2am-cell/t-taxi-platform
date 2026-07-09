@@ -77,10 +77,17 @@ class FakeBookingChatApi extends BookingChatApi {
 }
 
 class FakeDriverChatApi extends DriverChatApi {
-  FakeDriverChatApi({this.unread = 1, this.sendError});
+  FakeDriverChatApi({
+    this.unread = 1,
+    this.sendError,
+    this.sendResponse,
+    this.throwUnexpected = false,
+  });
 
   final int unread;
   final String? sendError;
+  final Map<String, dynamic>? sendResponse;
+  final bool throwUnexpected;
   int sendCount = 0;
   String? sentBookingNumber;
 
@@ -100,7 +107,9 @@ class FakeDriverChatApi extends DriverChatApi {
   }) async {
     sendCount += 1;
     sentBookingNumber = bookingNumber;
+    if (throwUnexpected) throw StateError('unexpected send failure');
     if (sendError != null) throw DriverChatApiException(sendError!);
+    if (sendResponse != null) return sendResponse!;
     return {
       'messageId': 2,
       'clientMessageId': clientMessageId,
@@ -411,6 +420,102 @@ void main() {
       find.byKey(const Key('driver_chat_message_input')),
     );
     expect(input.controller?.text, isEmpty);
+  });
+
+  testWidgets('driver send tolerates sparse success response', (tester) async {
+    final api = FakeDriverChatApi(sendResponse: {'messageId': 9});
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverChatPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          socketService: TestChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.enterText(
+      find.byKey(const Key('driver_chat_message_input')),
+      'Sparse response',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('driver_chat_send_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(api.sendCount, 1);
+    expect(find.text('Sparse response'), findsOneWidget);
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('driver_chat_message_input')),
+    );
+    expect(input.controller?.text, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('driver send timeout shows message and keeps input', (
+    tester,
+  ) async {
+    final api = FakeDriverChatApi(sendError: '전송 시간이 초과되었습니다. 다시 시도해 주세요.');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverChatPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          socketService: TestChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.enterText(
+      find.byKey(const Key('driver_chat_message_input')),
+      'Keep me',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('driver_chat_send_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('전송 시간이 초과되었습니다. 다시 시도해 주세요.'), findsWidgets);
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('driver_chat_message_input')),
+    );
+    expect(input.controller?.text, 'Keep me');
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
+  testWidgets('driver send unexpected exception is caught', (tester) async {
+    final api = FakeDriverChatApi(throwUnexpected: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverChatPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          socketService: TestChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.enterText(
+      find.byKey(const Key('driver_chat_message_input')),
+      'Still here',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('driver_chat_send_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('driver_chat_message_input')),
+    );
+    expect(input.controller?.text, 'Still here');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('disconnected send uses REST instead of silent loss', (

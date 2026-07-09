@@ -48,7 +48,7 @@ class DriverChatApi {
           Uri.parse('$_base/bookings/$bookingNumber/chat'),
           headers: await _headers(),
         )
-        .timeout(_requestTimeout, onTimeout: _timeout);
+        .timeout(_requestTimeout, onTimeout: _timeoutResponse);
     return _decode(response);
   }
 
@@ -58,7 +58,7 @@ class DriverChatApi {
           Uri.parse('$_base/bookings/$bookingNumber/chat/messages'),
           headers: await _headers(),
         )
-        .timeout(_requestTimeout, onTimeout: _timeout);
+        .timeout(_requestTimeout, onTimeout: _timeoutResponse);
     final data = _decode(response);
     return data['items'] as List<dynamic>? ?? [];
   }
@@ -74,7 +74,7 @@ class DriverChatApi {
           headers: await _headers(),
           body: jsonEncode({'text': text, 'clientMessageId': clientMessageId}),
         )
-        .timeout(_requestTimeout, onTimeout: _timeout);
+        .timeout(_requestTimeout, onTimeout: _timeoutResponse);
     return _decode(response);
   }
 
@@ -88,16 +88,25 @@ class DriverChatApi {
           headers: await _headers(),
           body: jsonEncode({'upToMessageId': upToMessageId}),
         )
-        .timeout(_requestTimeout, onTimeout: _timeout);
+        .timeout(_requestTimeout, onTimeout: _timeoutResponse);
     return _decode(response);
   }
 
-  static http.Response _timeout() {
-    throw const DriverChatApiException('Request timed out');
+  static http.Response _timeoutResponse() {
+    return http.Response(
+      jsonEncode({'message': '전송 시간이 초과되었습니다. 다시 시도해 주세요.'}),
+      408,
+      headers: {'content-type': 'application/json'},
+    );
   }
 
   Map<String, dynamic> _decode(http.Response response) {
-    final decoded = jsonDecode(response.body);
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } catch (_) {
+      throw const DriverChatApiException('Request failed');
+    }
     if (response.statusCode >= 400) {
       throw DriverChatApiException(
         decoded is Map
@@ -105,6 +114,13 @@ class DriverChatApi {
             : 'Request failed',
       );
     }
-    return Map<String, dynamic>.from((decoded as Map)['data'] as Map);
+    if (decoded is! Map) {
+      throw const DriverChatApiException('Request failed');
+    }
+    final data = decoded['data'];
+    if (data is! Map) {
+      throw const DriverChatApiException('Request failed');
+    }
+    return Map<String, dynamic>.from(data);
   }
 }

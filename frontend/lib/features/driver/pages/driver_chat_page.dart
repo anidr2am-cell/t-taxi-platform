@@ -44,6 +44,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
   late final ChatRealtimeSession _session;
   final _controller = TextEditingController();
   String _draftText = '';
+  String? _actionError;
 
   @override
   void initState() {
@@ -85,6 +86,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
   }
 
   void _handleDraftChanged() {
+    if (!mounted) return;
     if (_draftText == _controller.text) return;
     setState(() {
       _draftText = _controller.text;
@@ -98,33 +100,61 @@ class _DriverChatPageState extends State<DriverChatPage> {
       !_session.loading;
 
   Future<void> _send() async {
-    final text = _controller.text;
-    if (text.trim().isEmpty) return;
-    if (!_session.sendingAllowed || _session.loading) return;
-    await _session.send(text);
-    if (!mounted) return;
-    if (!_session.sending && _session.error == null) {
-      _controller.clear();
+    try {
+      final text = _controller.text;
+      if (text.trim().isEmpty) return;
+      if (!_session.sendingAllowed || _session.loading) return;
       setState(() {
-        _draftText = '';
+        _actionError = null;
       });
-      return;
-    }
-    final message = _sessionErrorMessage(context.l10n);
-    if (message != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      await _session.send(text);
+      if (!mounted) return;
+      if (!_session.sending && _session.error == null) {
+        _controller.clear();
+        setState(() {
+          _draftText = '';
+          _actionError = null;
+        });
+        return;
+      }
+      _showSendError(_sessionErrorMessage(context.l10n));
+    } catch (err) {
+      if (!mounted) return;
+      _showSendError(_friendlyErrorMessage(err, context.l10n));
     }
   }
 
   String? _sessionErrorMessage(AppLocalizations l10n) {
-    final err = _session.error;
+    final err = _actionError ?? _session.error;
     if (err == null) return null;
+    if (err.contains('전송 시간이 초과') || err.contains('timed out')) {
+      return '전송 시간이 초과되었습니다. 다시 시도해 주세요.';
+    }
     if (err.contains('Exception') || err.startsWith('Instance of')) {
       return l10n.t('driver_load_failed');
     }
     return err;
+  }
+
+  String _friendlyErrorMessage(Object err, AppLocalizations l10n) {
+    final text = err.toString();
+    if (text.contains('전송 시간이 초과') || text.contains('timed out')) {
+      return '전송 시간이 초과되었습니다. 다시 시도해 주세요.';
+    }
+    if (text.contains('Exception') || text.startsWith('Instance of')) {
+      return l10n.t('driver_load_failed');
+    }
+    return text;
+  }
+
+  void _showSendError(String? message) {
+    if (!mounted || message == null) return;
+    setState(() {
+      _actionError = message;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -209,9 +239,10 @@ class _DriverChatPageState extends State<DriverChatPage> {
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: AppTokens.spaceSm),
                     itemBuilder: (context, index) {
-                      final item = Map<String, dynamic>.from(
-                        _session.messages[index] as Map,
-                      );
+                      final rawItem = _session.messages[index];
+                      final item = rawItem is Map
+                          ? Map<String, dynamic>.from(rawItem)
+                          : <String, dynamic>{};
                       final sender =
                           item['senderDisplayName'] as String? ??
                           l10n.t('driver_chat_participant');
