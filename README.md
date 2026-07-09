@@ -14,6 +14,7 @@ MVP scope: **guest booking → admin manual dispatch → driver trip flow → gu
 | [docs/MVP_MANUAL_E2E_CHECKLIST.md](docs/MVP_MANUAL_E2E_CHECKLIST.md) | Manual verification checklist |
 | **[docs/STAGING_ACCOUNT_RESET.md](docs/STAGING_ACCOUNT_RESET.md)** | **Gabia staging — admin/driver password reset (T-Ride only)** |
 | **[docs/STAGING_MANUAL_E2E_CHECKLIST.md](docs/STAGING_MANUAL_E2E_CHECKLIST.md)** | **Gabia staging — manual E2E verification** |
+| **[docs/OPERATIONS_REHEARSAL_CHECKLIST.md](docs/OPERATIONS_REHEARSAL_CHECKLIST.md)** | **Pre-production customer/admin/driver rehearsal and release go/no-go checklist** |
 | **[docs/STAGING_DOMAIN_CUTOVER_PLAN.md](docs/STAGING_DOMAIN_CUTOVER_PLAN.md)** | **Future domain cutover risk plan (not for execution yet)** |
 
 ## Tech stack
