@@ -51,4 +51,11 @@ router.get(
   driverLocationController.getGuestDriverLocation,
 );
 
+router.get(
+  '/bookings/:bookingId/assigned-driver-vehicle-photo',
+  bookingLookupRateLimit,
+  validate({ params: bookingIdParamsSchema }),
+  bookingController.getGuestAssignedDriverVehiclePhoto,
+);
+
 module.exports = router;

@@ -282,7 +282,22 @@ class BookingRepository {
           dv.model_name AS assigned_vehicle_model,
           dv.color AS assigned_vehicle_color,
           av.code AS assigned_vehicle_type_code,
-          av.name AS assigned_vehicle_type_name
+          av.name AS assigned_vehicle_type_name,
+          (
+            SELECT f.id
+            FROM driver_applications da
+            INNER JOIN driver_application_files daf
+              ON daf.driver_application_id = da.id
+             AND daf.category = 'DRIVER_VEHICLE_PHOTO'
+            INNER JOIN files f
+              ON f.id = daf.file_id
+             AND f.deleted_at IS NULL
+            WHERE da.approved_driver_id = d.id
+              AND da.status = 'APPROVED'
+              AND da.deleted_at IS NULL
+            ORDER BY daf.sort_order ASC, f.id ASC
+            LIMIT 1
+          ) AS driver_vehicle_photo_file_id
         FROM bookings b
         INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
         INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
@@ -338,6 +353,40 @@ class BookingRepository {
         LIMIT 1
       `,
       [bookingId, tokenHash],
+    );
+    return rows[0] || null;
+  }
+
+  async findGuestAssignedDriverVehiclePhotoFile(bookingId, tokenHash) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          f.file_path,
+          f.mime_type,
+          f.original_filename
+        FROM bookings b
+        INNER JOIN guest_access_tokens gat ON gat.booking_id = b.id
+          AND gat.token_hash = ?
+          AND gat.revoked_at IS NULL
+          AND gat.expires_at > CURRENT_TIMESTAMP
+        INNER JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+        INNER JOIN drivers d ON d.id = bda.driver_id
+          AND d.deleted_at IS NULL
+        INNER JOIN driver_applications da ON da.approved_driver_id = d.id
+          AND da.status = 'APPROVED'
+          AND da.deleted_at IS NULL
+        INNER JOIN driver_application_files daf ON daf.driver_application_id = da.id
+          AND daf.category = 'DRIVER_VEHICLE_PHOTO'
+        INNER JOIN files f ON f.id = daf.file_id
+          AND f.deleted_at IS NULL
+        WHERE b.id = ?
+          AND b.deleted_at IS NULL
+        ORDER BY daf.sort_order ASC, f.id ASC
+        LIMIT 1
+      `,
+      [tokenHash, bookingId],
     );
     return rows[0] || null;
   }

@@ -3,13 +3,16 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
+const GuestVehiclePhotoService = require('./guestVehiclePhoto.service');
 
 const LOOKUP_GUEST_TOKEN_TTL_HOURS = 24;
 
 class GuestBookingLookupService {
-  constructor(pool, bookingRepository) {
+  constructor(pool, bookingRepository, guestVehiclePhotoService = null) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
+    this.guestVehiclePhotoService = guestVehiclePhotoService
+      ?? new GuestVehiclePhotoService(bookingRepository);
   }
 
   normalizePhone(value) {
@@ -51,17 +54,22 @@ class GuestBookingLookupService {
     const adults = Number(row.adults ?? 0);
     const children = Number(row.children ?? 0);
     const infants = Number(row.infants ?? 0);
+    const vehiclePhotoUrl = this.guestVehiclePhotoService.mapVehiclePhotoUrl(row);
+    const hasVehicleDetails = row.assigned_vehicle_plate
+      || row.assigned_vehicle_type_code
+      || row.assigned_vehicle_type_name;
     const assignedDriver = row.driver_name
       ? {
         name: row.driver_name,
         phone: row.driver_phone ?? null,
-        vehicle: row.assigned_vehicle_plate || row.assigned_vehicle_type_code || row.assigned_vehicle_type_name
+        vehicle: hasVehicleDetails || vehiclePhotoUrl
           ? {
             typeCode: row.assigned_vehicle_type_code ?? null,
             typeName: row.assigned_vehicle_type_name ?? null,
             plateNumber: row.assigned_vehicle_plate ?? null,
             modelName: row.assigned_vehicle_model ?? null,
             color: row.assigned_vehicle_color ?? null,
+            vehiclePhotoUrl,
           }
           : null,
       }

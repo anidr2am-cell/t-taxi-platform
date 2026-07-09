@@ -12,6 +12,7 @@ import '../utils/booking_status_display.dart';
 import '../widgets/booking_chat_section.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
+import '../widgets/assigned_driver_status_card.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 
@@ -371,6 +372,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ],
           ),
         ),
+        if (result.driverName?.trim().isNotEmpty == true) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          AssignedDriverStatusCard(result: result),
+        ],
         if (BookingStatusDisplay.customerGuidance(l10n, result.status) !=
             null) ...[
           const SizedBox(height: AppTokens.spaceMd),

@@ -54,6 +54,7 @@ function bookingRow(overrides = {}) {
     assigned_vehicle_color: 'Black',
     assigned_vehicle_type_code: 'SUV',
     assigned_vehicle_type_name: 'SUV',
+    driver_vehicle_photo_file_id: 55,
     ...overrides,
   };
 }
@@ -116,11 +117,50 @@ test('guest lookup returns safe summary and fresh guest access token', async () 
   assert.equal(result.assignedDriver.name, 'Driver A');
   assert.equal(result.assignedDriver.vehicle.plateNumber, '1กข1234');
   assert.equal(result.assignedDriver.vehicle.color, 'Black');
+  assert.equal(
+    result.assignedDriver.vehicle.vehiclePhotoUrl,
+    '/api/v1/public/bookings/10/assigned-driver-vehicle-photo',
+  );
   assert.ok(!JSON.stringify(result).includes('customer_phone'));
   assert.ok(!JSON.stringify(result).includes('customer_email'));
   assert.ok(!JSON.stringify(result).includes('boarding-hash'));
   assert.ok(!JSON.stringify(result).includes('"route_id"'));
   assert.ok(!JSON.stringify(result).includes('"driver_id"'));
+  assert.ok(!JSON.stringify(result).includes('driver_vehicle_photo_file_id'));
+  assert.ok(!JSON.stringify(result).includes('driver-applications'));
+});
+
+test('guest lookup omits vehiclePhotoUrl when driver has no application photo', async () => {
+  const { service } = buildService(bookingRow({ driver_vehicle_photo_file_id: null }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.assignedDriver.name, 'Driver A');
+  assert.equal(result.assignedDriver.vehicle.vehiclePhotoUrl, null);
+});
+
+test('guest lookup omits assignedDriver vehicle photo when booking is unassigned', async () => {
+  const { service } = buildService(bookingRow({
+    driver_name: null,
+    driver_phone: null,
+    assigned_vehicle_plate: null,
+    assigned_vehicle_model: null,
+    assigned_vehicle_color: null,
+    assigned_vehicle_type_code: null,
+    assigned_vehicle_type_name: null,
+    driver_vehicle_photo_file_id: null,
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.assignedDriver, null);
+  assert.ok(!JSON.stringify(result).includes('vehiclePhotoUrl'));
 });
 
 test('guest lookup includes BKK name sign option for airport pickup guide', async () => {

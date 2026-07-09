@@ -24,6 +24,7 @@ const ChatRepository = require("../repositories/chat.repository");
 const BookingNumberService = require("../services/bookingNumber.service");
 const BookingService = require("../services/booking.service");
 const GuestBookingLookupService = require("../services/guestBookingLookup.service");
+const GuestVehiclePhotoService = require("../services/guestVehiclePhoto.service");
 const BookingStatusService = require("../services/bookingStatus.service");
 const AdminDashboardService = require("../services/adminDashboard.service");
 const FlightService = require("../services/flight.service");
@@ -197,9 +198,17 @@ container.register(
     ),
 );
 container.register(
+  "guestVehiclePhotoService",
+  (c) => new GuestVehiclePhotoService(c.get("bookingRepository")),
+);
+container.register(
   "guestBookingLookupService",
   (c) =>
-    new GuestBookingLookupService(database.pool, c.get("bookingRepository")),
+    new GuestBookingLookupService(
+      database.pool,
+      c.get("bookingRepository"),
+      c.get("guestVehiclePhotoService"),
+    ),
 );
 container.register(
   "adminDashboardService",

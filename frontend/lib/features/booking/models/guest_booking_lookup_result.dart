@@ -21,6 +21,7 @@ class GuestBookingLookupResult {
     this.vehiclePlateNumber,
     this.driverName,
     this.driverPhone,
+    this.vehiclePhotoUrl,
     this.customerPhone,
   });
 
@@ -45,6 +46,7 @@ class GuestBookingLookupResult {
   final String? vehiclePlateNumber;
   final String? driverName;
   final String? driverPhone;
+  final String? vehiclePhotoUrl;
   final String? customerPhone;
 
   factory GuestBookingLookupResult.fromJson(Map<String, dynamic> json) {
@@ -124,6 +126,10 @@ class GuestBookingLookupResult {
       ]),
       driverName: driver?['name'] as String?,
       driverPhone: driver?['phone'] as String?,
+      vehiclePhotoUrl: _firstString([
+        driverVehicle['vehiclePhotoUrl'],
+        driverVehicle['photoUrl'],
+      ]),
       customerPhone: json['customerPhone'] as String?,
     );
   }
@@ -154,6 +160,7 @@ class GuestBookingLookupResult {
       vehiclePlateNumber: vehiclePlateNumber,
       driverName: driverName,
       driverPhone: driverPhone,
+      vehiclePhotoUrl: vehiclePhotoUrl,
       customerPhone: customerPhone ?? this.customerPhone,
     );
   }
@@ -237,6 +244,7 @@ class GuestBookingLookupResult {
               'typeName': vehicleType,
               'color': vehicleColor,
               'plateNumber': vehiclePlateNumber,
+              if (vehiclePhotoUrl != null) 'vehiclePhotoUrl': vehiclePhotoUrl,
             },
           },
     if (customerPhone != null) 'customerPhone': customerPhone,
