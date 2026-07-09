@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
 import '../../../config/app_config.dart';
+import '../../chat/utils/client_message_id.dart' as chat_ids;
 
 class BookingChatApiException implements Exception {
   const BookingChatApiException(
@@ -40,10 +40,8 @@ class BookingChatApi {
     return headers;
   }
 
-  static String newClientMessageId() {
-    final random = Random();
-    return '${DateTime.now().microsecondsSinceEpoch}-${random.nextInt(1 << 32)}';
-  }
+  static String newClientMessageId() =>
+      chat_ids.newClientMessageId('guest');
 
   Future<Map<String, dynamic>> getRoom({
     required String bookingNumber,

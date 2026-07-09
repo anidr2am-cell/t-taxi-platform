@@ -90,6 +90,7 @@ class FakeDriverChatApi extends DriverChatApi {
   final bool throwUnexpected;
   int sendCount = 0;
   String? sentBookingNumber;
+  String? lastClientMessageId;
 
   @override
   Future<Map<String, dynamic>> getRoom(String bookingNumber) async {
@@ -107,6 +108,7 @@ class FakeDriverChatApi extends DriverChatApi {
   }) async {
     sendCount += 1;
     sentBookingNumber = bookingNumber;
+    lastClientMessageId = clientMessageId;
     if (throwUnexpected) throw StateError('unexpected send failure');
     if (sendError != null) throw DriverChatApiException(sendError!);
     if (sendResponse != null) return sendResponse!;
@@ -234,6 +236,59 @@ void main() {
     );
     expect(withClient.length, 1);
     expect((withClient.first as Map)['messageId'], 5);
+  });
+
+  test('client message id generators avoid Random RangeError and stay unique', () {
+    expect(() {
+      for (var i = 0; i < 50; i++) {
+        DriverChatApi.newClientMessageId();
+        BookingChatApi.newClientMessageId();
+        AdminChatApiService.newClientMessageId();
+      }
+    }, returnsNormally);
+
+    final driverId = DriverChatApi.newClientMessageId();
+    final guestId = BookingChatApi.newClientMessageId();
+    final adminId = AdminChatApiService.newClientMessageId();
+
+    expect(driverId, isNotEmpty);
+    expect(guestId, isNotEmpty);
+    expect(adminId, isNotEmpty);
+    expect(driverId.startsWith('driver-'), isTrue);
+    expect(guestId.startsWith('guest-'), isTrue);
+    expect(adminId.startsWith('admin-'), isTrue);
+    expect(driverId, isNot(guestId));
+  });
+
+  test('ChatRealtimeSession send uses REST with non-empty clientMessageId', () async {
+    final api = FakeDriverChatApi();
+    final socket = TestChatSocketService();
+    final session = ChatRealtimeSession(
+      bookingNumber: 'TX202607010001',
+      loadRoom: () => api.getRoom('TX202607010001'),
+      loadMessages: () => api.listMessages('TX202607010001'),
+      sendRest: ({required String text, required String clientMessageId}) =>
+          api.sendMessage(
+            bookingNumber: 'TX202607010001',
+            text: text,
+            clientMessageId: clientMessageId,
+          ),
+      markReadRest: (id) =>
+          api.markRead(bookingNumber: 'TX202607010001', upToMessageId: id),
+      newClientMessageId: DriverChatApi.newClientMessageId,
+      loadAccessToken: () async => 'driver-token',
+      socketService: socket,
+    );
+
+    await session.start();
+    await session.send('Driver REST hello');
+
+    expect(api.sendCount, 1);
+    expect(api.lastClientMessageId, isNotNull);
+    expect(api.lastClientMessageId, isNotEmpty);
+    expect(session.messages.length, 1);
+    expect((session.messages.first as Map)['text'], 'Driver REST hello');
+    session.dispose();
   });
 
   testWidgets('customer chat loads REST history and shows live connection', (
@@ -381,6 +436,32 @@ void main() {
     expect(find.byType(SnackBar), findsOneWidget);
   });
 
+  testWidgets('driver whitespace-only message is not sent', (tester) async {
+    final api = FakeDriverChatApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverChatPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          socketService: TestChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.enterText(
+      find.byKey(const Key('driver_chat_message_input')),
+      '   ',
+    );
+    await tester.pump();
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('driver_chat_send_button')),
+    );
+    expect(button.onPressed, isNull);
+    expect(api.sendCount, 0);
+  });
+
   testWidgets('driver send button enables with text and sends booking number', (
     tester,
   ) async {
@@ -415,6 +496,8 @@ void main() {
 
     expect(api.sendCount, 1);
     expect(api.sentBookingNumber, 'TX202607010001');
+    expect(api.lastClientMessageId, isNotEmpty);
+    expect(api.lastClientMessageId!.startsWith('driver-'), isTrue);
     expect(find.text('Driver hello'), findsOneWidget);
     final input = tester.widget<TextField>(
       find.byKey(const Key('driver_chat_message_input')),

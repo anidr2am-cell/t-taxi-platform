@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_config.dart';
+import '../../chat/utils/client_message_id.dart' as chat_ids;
 
 class AdminChatApiException implements Exception {
   const AdminChatApiException(this.message);
@@ -19,10 +19,8 @@ class AdminChatApiService {
   static const _tokenKey = 'admin_access_token';
   String get _base => '${AppConfig.apiBaseUrl}/api/v1';
 
-  static String newClientMessageId() {
-    final random = Random();
-    return '${DateTime.now().microsecondsSinceEpoch}-${random.nextInt(1 << 32)}';
-  }
+  static String newClientMessageId() =>
+      chat_ids.newClientMessageId('admin');
 
   Future<String?> _token() async {
     final prefs = await SharedPreferences.getInstance();
