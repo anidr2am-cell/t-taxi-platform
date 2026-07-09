@@ -2914,6 +2914,15 @@ class AppLocalizations {
       'airport_meeting_notify_sent': 'Pickup notification sent',
       'airport_meeting_notify_failed':
           'Could not send the pickup notification. Please try again.',
+      'airport_meeting_notify_waiting_driver':
+          'Pickup notification becomes available after a driver is assigned.',
+      'airport_meeting_notify_luggage_first':
+          'Press only after you have collected all luggage.',
+      'airport_meeting_notify_confirm_title': 'Send pickup notification',
+      'airport_meeting_notify_confirm_body':
+          'Have you collected all luggage? Sending this alert tells your driver that you are ready for pickup.',
+      'airport_meeting_notify_cancel': 'Cancel',
+      'airport_meeting_notify_confirm_send': 'Send',
     },
     'ko': {
       'airport_meeting_step_notify_driver':
@@ -2921,18 +2930,38 @@ class AppLocalizations {
       'airport_meeting_notify_button': '도착하고 수화물을 찾았습니다',
       'airport_meeting_notify_sent': '픽업 알림을 보냈습니다',
       'airport_meeting_notify_failed': '픽업 알림을 보내지 못했습니다. 다시 시도해 주세요.',
+      'airport_meeting_notify_waiting_driver': '기사 배정 후 픽업 알림을 보낼 수 있습니다.',
+      'airport_meeting_notify_luggage_first': '수하물을 찾으신 후에만 눌러주세요.',
+      'airport_meeting_notify_confirm_title': '픽업 알림 보내기',
+      'airport_meeting_notify_confirm_body':
+          '수하물을 모두 찾으셨나요? 알림을 보내면 기사에게 고객님이 픽업 준비가 되었다는 메시지가 전달됩니다.',
+      'airport_meeting_notify_cancel': '취소',
+      'airport_meeting_notify_confirm_send': '보내기',
     },
     'zh': {
       'airport_meeting_step_notify_driver': '抵达并取到行李后，请通知司机。',
       'airport_meeting_notify_button': '我已抵达并取到行李',
       'airport_meeting_notify_sent': '接机通知已发送',
       'airport_meeting_notify_failed': '无法发送接机通知，请重试。',
+      'airport_meeting_notify_waiting_driver': '司机分配后即可发送接机通知。',
+      'airport_meeting_notify_luggage_first': '请仅在取齐所有行李后点击。',
+      'airport_meeting_notify_confirm_title': '发送接机通知',
+      'airport_meeting_notify_confirm_body': '您已取齐所有行李了吗？发送后，司机将收到您已准备好上车的消息。',
+      'airport_meeting_notify_cancel': '取消',
+      'airport_meeting_notify_confirm_send': '发送',
     },
     'ja': {
       'airport_meeting_step_notify_driver': '到着して荷物を受け取ったら、ドライバーへお知らせください。',
       'airport_meeting_notify_button': '到着して荷物を受け取りました',
       'airport_meeting_notify_sent': 'ピックアップ通知を送信しました',
       'airport_meeting_notify_failed': '通知を送信できませんでした。もう一度お試しください。',
+      'airport_meeting_notify_waiting_driver': 'ドライバーが割り当てられると通知を送信できます。',
+      'airport_meeting_notify_luggage_first': '荷物をすべて受け取ってから押してください。',
+      'airport_meeting_notify_confirm_title': 'ピックアップ通知を送信',
+      'airport_meeting_notify_confirm_body':
+          '荷物をすべて受け取りましたか？送信すると、乗車準備ができたことをドライバーへ通知します。',
+      'airport_meeting_notify_cancel': 'キャンセル',
+      'airport_meeting_notify_confirm_send': '送信',
     },
     'th': {
       'airport_meeting_step_notify_driver':
@@ -2941,6 +2970,15 @@ class AppLocalizations {
       'airport_meeting_notify_sent': 'ส่งข้อความแจ้งคนขับแล้ว',
       'airport_meeting_notify_failed':
           'ส่งข้อความแจ้งคนขับไม่สำเร็จ กรุณาลองอีกครั้ง',
+      'airport_meeting_notify_waiting_driver':
+          'ส่งข้อความแจ้งรับรถได้หลังจากจัดสรรคนขับแล้ว',
+      'airport_meeting_notify_luggage_first':
+          'กรุณากดหลังจากรับสัมภาระครบแล้วเท่านั้น',
+      'airport_meeting_notify_confirm_title': 'ส่งข้อความแจ้งรับรถ',
+      'airport_meeting_notify_confirm_body':
+          'รับสัมภาระครบแล้วใช่ไหม เมื่อส่ง คนขับจะได้รับข้อความว่าคุณพร้อมขึ้นรถแล้ว',
+      'airport_meeting_notify_cancel': 'ยกเลิก',
+      'airport_meeting_notify_confirm_send': 'ส่ง',
     },
   };
 

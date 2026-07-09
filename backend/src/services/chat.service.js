@@ -8,6 +8,12 @@ const { EVENTS } = require("../events");
 const { hashToken } = require("../utils/tokenHash.util");
 
 const MAX_MESSAGE_LENGTH = 2000;
+const PICKUP_ALERT_TEXT = "도착하고 수화물을 찾았습니다";
+const PICKUP_ALERT_STATUSES = new Set([
+  BOOKING_STATUS.DRIVER_ASSIGNED,
+  BOOKING_STATUS.ON_ROUTE,
+  BOOKING_STATUS.DRIVER_ARRIVED,
+]);
 const READ_ONLY_STATUSES = new Set([
   BOOKING_STATUS.COMPLETED,
   BOOKING_STATUS.CANCELLED,
@@ -520,7 +526,13 @@ class ChatService {
     return outboxIds;
   }
 
-  async sendMessage(bookingNumber, authUser, guestAccessToken, input) {
+  async sendMessage(
+    bookingNumber,
+    authUser,
+    guestAccessToken,
+    input,
+    { pickupAlert = false } = {},
+  ) {
     const text = this.validateMessageText(input.text);
     const clientMessageId = String(input.clientMessageId ?? "").trim();
     if (!clientMessageId) {
@@ -540,6 +552,28 @@ class ChatService {
         authUser,
         guestAccessToken,
       );
+      if (pickupAlert) {
+        if (!PICKUP_ALERT_STATUSES.has(context.booking.status)) {
+          throw new AppError(
+            "Pickup alert is not available in the current status",
+            {
+              statusCode: HTTP_STATUS.CONFLICT,
+              errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+            },
+          );
+        }
+        const activeAssignment =
+          await this.bookingRepository.findActiveAssignmentForUpdate(
+            conn,
+            context.booking.id,
+          );
+        if (!activeAssignment) {
+          throw new AppError("Pickup alert requires an assigned driver", {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
+          });
+        }
+      }
       if (!context.canSend) {
         throw new AppError("Chat is read-only for this booking", {
           statusCode: HTTP_STATUS.CONFLICT,
@@ -607,6 +641,23 @@ class ChatService {
     } finally {
       conn.release();
     }
+  }
+
+  async sendPickupAlert(bookingNumber, authUser, guestAccessToken) {
+    const result = await this.sendMessage(
+      bookingNumber,
+      authUser,
+      guestAccessToken,
+      {
+        text: PICKUP_ALERT_TEXT,
+        clientMessageId: `pickup-alert:${bookingNumber}`,
+      },
+      { pickupAlert: true },
+    );
+    return {
+      ...result.message,
+      alreadySent: result.broadcast === false,
+    };
   }
 
   async markRead(bookingNumber, authUser, guestAccessToken, input = {}) {

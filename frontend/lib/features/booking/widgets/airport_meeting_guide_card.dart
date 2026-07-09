@@ -349,6 +349,24 @@ class _PickupNotificationActionState extends State<_PickupNotificationAction> {
 
   Future<void> _send() async {
     if (_sending || widget.onNotifyPickup == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.t('airport_meeting_notify_confirm_title')),
+        content: Text(context.l10n.t('airport_meeting_notify_confirm_body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(context.l10n.t('airport_meeting_notify_cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(context.l10n.t('airport_meeting_notify_confirm_send')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     setState(() {
       _sending = true;
       _error = null;
@@ -375,12 +393,17 @@ class _PickupNotificationActionState extends State<_PickupNotificationAction> {
     if (widget.onNotifyPickup == null) {
       return _InfoNotice(
         icon: Icons.chat_bubble_outline,
-        text: l10n.t('airport_meeting_notify_unavailable'),
+        text: l10n.t('airport_meeting_notify_waiting_driver'),
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _InfoNotice(
+          icon: Icons.luggage_outlined,
+          text: l10n.t('airport_meeting_notify_luggage_first'),
+        ),
+        const SizedBox(height: AppTokens.spaceSm),
         SizedBox(
           width: double.infinity,
           child: AppUi.primaryButton(

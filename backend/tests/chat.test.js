@@ -210,6 +210,11 @@ function buildHarness(overrides = {}) {
         return null;
       return { driver_user_id: driverUserId };
     },
+    async findActiveAssignmentForUpdate() {
+      return overrides.driverAssigned === false
+        ? null
+        : { id: 1, driver_id: 9 };
+    },
     ...overrides.bookingRepository,
   };
 
@@ -515,6 +520,66 @@ test("duplicate clientMessageId returns one message", async () => {
     payload,
   );
   assert.equal(state.messages.length, 1);
+});
+
+test("guest pickup alert stores fixed text once", async () => {
+  const { service, state } = buildHarness({
+    booking: { customer_user_id: null },
+  });
+  const first = await service.sendPickupAlert(
+    "TX202607010001",
+    null,
+    "guest-token",
+  );
+  const second = await service.sendPickupAlert(
+    "TX202607010001",
+    null,
+    "guest-token",
+  );
+
+  assert.equal(first.text, "도착하고 수화물을 찾았습니다");
+  assert.equal(first.alreadySent, false);
+  assert.equal(second.alreadySent, true);
+  assert.equal(state.messages.length, 1);
+});
+
+test("pickup alert rejects missing assignment and terminal status", async () => {
+  const missingAssignment = buildHarness({
+    booking: { customer_user_id: null },
+    driverAssigned: false,
+  });
+  await assert.rejects(
+    () =>
+      missingAssignment.service.sendPickupAlert(
+        "TX202607010001",
+        null,
+        "guest-token",
+      ),
+    (err) => err.errorCode === ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
+  );
+
+  const completed = buildHarness({
+    booking: {
+      customer_user_id: null,
+      status: BOOKING_STATUS.COMPLETED,
+    },
+  });
+  await assert.rejects(
+    () =>
+      completed.service.sendPickupAlert("TX202607010001", null, "guest-token"),
+    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
+});
+
+test("pickup alert rejects invalid guest token", async () => {
+  const { service } = buildHarness({
+    booking: { customer_user_id: null },
+    guestValid: false,
+  });
+  await assert.rejects(
+    () => service.sendPickupAlert("TX202607010001", null, "wrong-token"),
+    (err) => err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+  );
 });
 
 test("terminal booking read-only rule", async () => {

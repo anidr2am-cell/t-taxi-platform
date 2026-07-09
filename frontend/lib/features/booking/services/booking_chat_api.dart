@@ -6,8 +6,14 @@ import 'package:http/http.dart' as http;
 import '../../../config/app_config.dart';
 
 class BookingChatApiException implements Exception {
-  const BookingChatApiException(this.message);
+  const BookingChatApiException(
+    this.message, {
+    this.errorCode,
+    this.statusCode,
+  });
   final String message;
+  final String? errorCode;
+  final int? statusCode;
   @override
   String toString() => message;
 }
@@ -17,8 +23,14 @@ class BookingChatApi {
 
   String get _base => '${AppConfig.apiBaseUrl}/api/v1';
 
-  Map<String, String> _headers({String? guestAccessToken, String? customerAccessToken}) {
-    final headers = <String, String>{'Accept': 'application/json', 'Content-Type': 'application/json'};
+  Map<String, String> _headers({
+    String? guestAccessToken,
+    String? customerAccessToken,
+  }) {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
     if (customerAccessToken != null && customerAccessToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $customerAccessToken';
     }
@@ -80,6 +92,17 @@ class BookingChatApi {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> sendPickupAlert({
+    required String bookingNumber,
+    required String guestAccessToken,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_base/bookings/$bookingNumber/pickup-alert'),
+      headers: _headers(guestAccessToken: guestAccessToken),
+    );
+    return _decode(response);
+  }
+
   Future<Map<String, dynamic>> markRead({
     required String bookingNumber,
     required int upToMessageId,
@@ -117,7 +140,11 @@ class BookingChatApi {
     final decoded = jsonDecode(response.body);
     if (response.statusCode >= 400) {
       throw BookingChatApiException(
-        decoded is Map ? decoded['message'] as String? ?? 'Request failed' : 'Request failed',
+        decoded is Map
+            ? decoded['message'] as String? ?? 'Request failed'
+            : 'Request failed',
+        errorCode: decoded is Map ? decoded['error_code'] as String? : null,
+        statusCode: response.statusCode,
       );
     }
     return Map<String, dynamic>.from((decoded as Map)['data'] as Map);

@@ -34,7 +34,11 @@ class GuestBookingLookupPage extends StatefulWidget {
 }
 
 class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
-  static const _pickupReadyMessage = '도착하고 수화물을 찾았습니다';
+  static const _pickupAlertStatuses = {
+    'DRIVER_ASSIGNED',
+    'ON_ROUTE',
+    'DRIVER_ARRIVED',
+  };
   final _formKey = GlobalKey<FormState>();
   final _bookingNumberController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -124,12 +128,19 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   }
 
   Future<void> _notifyPickupReady(GuestBookingLookupResult result) {
-    return (widget.bookingChatApi ?? const BookingChatApi()).sendMessage(
+    return (widget.bookingChatApi ?? const BookingChatApi()).sendPickupAlert(
       bookingNumber: result.bookingNumber,
-      text: _pickupReadyMessage,
-      clientMessageId: BookingChatApi.newClientMessageId(),
       guestAccessToken: result.guestAccessToken,
     );
+  }
+
+  bool _canSendPickupAlert(GuestBookingLookupResult result) {
+    final hasDriver =
+        result.driverName?.trim().isNotEmpty == true ||
+        result.capabilities.chatAvailable;
+    return _pickupAlertStatuses.contains(result.status) &&
+        hasDriver &&
+        result.guestAccessToken.trim().isNotEmpty;
   }
 
   Future<void> _lookup() async {
@@ -438,7 +449,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               vehicleColor: result.vehicleColor,
               vehiclePlateNumber: result.vehiclePlateNumber,
             ),
-            onNotifyPickup: result.capabilities.chatAvailable
+            onNotifyPickup: _canSendPickupAlert(result)
                 ? () => _notifyPickupReady(result)
                 : null,
           ),

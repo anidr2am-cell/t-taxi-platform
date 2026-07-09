@@ -43,7 +43,9 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.textContaining('Pickup notification is not connected yet'),
+      find.text(
+        'Pickup notification becomes available after a driver is assigned.',
+      ),
       findsOneWidget,
     );
   });
@@ -135,7 +137,15 @@ void main() {
       ),
       findsOneWidget,
     );
+    await tester.scrollUntilVisible(
+      find.text('I arrived and collected my luggage'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.pumpAndSettle();
+    expect(find.text('Send pickup notification'), findsOneWidget);
+    await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
 
     expect(sends, 1);
@@ -181,11 +191,69 @@ void main() {
     );
     await tester.tap(find.text('I arrived and collected my luggage'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
 
-    expect(chatApi.sentText, '도착하고 수화물을 찾았습니다');
     expect(chatApi.sentGuestToken, 'guest-token');
     expect(chatApi.sentBookingNumber, 'TX202607010001');
   });
+
+  testWidgets('lookup enables pickup alert in active pickup statuses', (
+    tester,
+  ) async {
+    for (final status in ['DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED']) {
+      await tester.pumpWidget(
+        _wrapPage(
+          GuestBookingLookupPage(
+            lookupService: _FakeLookupService(
+              _lookupResult(nameSign: false, status: status),
+            ),
+            bookingChatApi: _FakeBookingChatApi(),
+            enableCustomerTools: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('I arrived and collected my luggage'),
+        findsOneWidget,
+        reason: status,
+      );
+    }
+  });
+
+  testWidgets(
+    'lookup disables pickup alert before assignment and when terminal',
+    (tester) async {
+      for (final status in ['PENDING', 'COMPLETED', 'CANCELLED']) {
+        await tester.pumpWidget(
+          _wrapPage(
+            GuestBookingLookupPage(
+              lookupService: _FakeLookupService(
+                _lookupResult(
+                  nameSign: false,
+                  status: status,
+                  includeDriver: status != 'PENDING',
+                ),
+              ),
+              bookingChatApi: _FakeBookingChatApi(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Pickup notification becomes available after a driver is assigned.',
+          ),
+          findsOneWidget,
+          reason: status,
+        );
+        expect(find.text('I arrived and collected my luggage'), findsNothing);
+      }
+    },
+  );
 
   testWidgets('booking complete screen displays BKK meeting guide', (
     tester,
@@ -418,11 +486,13 @@ GuestBookingLookupResult _lookupResult({
   required bool nameSign,
   String serviceTypeCode = 'AIRPORT_PICKUP',
   String originCode = 'BKK',
+  String status = 'DRIVER_ASSIGNED',
+  bool includeDriver = true,
 }) {
   return GuestBookingLookupResult.fromJson({
     'bookingId': 1,
     'bookingNumber': 'TX202607010001',
-    'status': 'DRIVER_ASSIGNED',
+    'status': status,
     'scheduledPickupAt': '2026-07-01T09:30:00+07:00',
     'serviceType': {'code': serviceTypeCode, 'name': 'Airport Pickup'},
     'route': {
@@ -435,15 +505,17 @@ GuestBookingLookupResult _lookupResult({
       'currency': 'THB',
       'paymentMethod': 'PAY_DRIVER',
     },
-    'assignedDriver': {
-      'name': 'Driver A',
-      'phone': '+66 80 000 0000',
-      'vehicle': {
-        'typeName': 'SUV',
-        'color': 'Black',
-        'plateNumber': '1กข1234',
-      },
-    },
+    'assignedDriver': includeDriver
+        ? {
+            'name': 'Driver A',
+            'phone': '+66 80 000 0000',
+            'vehicle': {
+              'typeName': 'SUV',
+              'color': 'Black',
+              'plateNumber': '1กข1234',
+            },
+          }
+        : null,
     'capabilities': {
       'chatAvailable': true,
       'notificationsAvailable': true,
@@ -473,7 +545,6 @@ class _FakeLookupService extends GuestBookingLookupService {
 }
 
 class _FakeBookingChatApi extends BookingChatApi {
-  String? sentText;
   String? sentGuestToken;
   String? sentBookingNumber;
 
@@ -500,7 +571,6 @@ class _FakeBookingChatApi extends BookingChatApi {
     String? customerAccessToken,
   }) async {
     sentBookingNumber = bookingNumber;
-    sentText = text;
     sentGuestToken = guestAccessToken;
     return {
       'message': {
@@ -509,6 +579,16 @@ class _FakeBookingChatApi extends BookingChatApi {
         'clientMessageId': clientMessageId,
       },
     };
+  }
+
+  @override
+  Future<Map<String, dynamic>> sendPickupAlert({
+    required String bookingNumber,
+    required String guestAccessToken,
+  }) async {
+    sentBookingNumber = bookingNumber;
+    sentGuestToken = guestAccessToken;
+    return {'messageId': 1, 'text': '도착하고 수화물을 찾았습니다', 'alreadySent': false};
   }
 }
 

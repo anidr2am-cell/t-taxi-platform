@@ -1,9 +1,11 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { success, paginate } = require('../utils/apiResponse');
-const container = require('../helpers/container');
-const { extractGuestAccessTokenFromHeader } = require('../utils/guestAccess.util');
+const asyncHandler = require("../utils/asyncHandler");
+const { success, paginate } = require("../utils/apiResponse");
+const container = require("../helpers/container");
+const {
+  extractGuestAccessTokenFromHeader,
+} = require("../utils/guestAccess.util");
 
-const getChatService = () => container.get('chatService');
+const getChatService = () => container.get("chatService");
 
 const getBookingChat = asyncHandler(async (req, res) => {
   const data = await getChatService().getRoom(
@@ -31,7 +33,16 @@ const sendBookingChatMessage = asyncHandler(async (req, res) => {
     extractGuestAccessTokenFromHeader(req),
     req.body,
   );
-  return success(res, result.message, 'Created', 201);
+  return success(res, result.message, "Created", 201);
+});
+
+const sendBookingPickupAlert = asyncHandler(async (req, res) => {
+  const data = await getChatService().sendPickupAlert(
+    req.params.bookingNumber,
+    req.user ?? null,
+    extractGuestAccessTokenFromHeader(req),
+  );
+  return success(res, data, data.alreadySent ? "Already sent" : "Created", 201);
 });
 
 const markBookingChatRead = asyncHandler(async (req, res) => {
@@ -55,7 +66,10 @@ const listAdminChats = asyncHandler(async (req, res) => {
 });
 
 const getAdminChat = asyncHandler(async (req, res) => {
-  const data = await getChatService().getAdminRoom(req.params.bookingNumber, req.user);
+  const data = await getChatService().getAdminRoom(
+    req.params.bookingNumber,
+    req.user,
+  );
   return success(res, data);
 });
 
@@ -74,7 +88,7 @@ const sendAdminChatMessage = asyncHandler(async (req, res) => {
     req.user,
     req.body,
   );
-  return success(res, result.message, 'Created', 201);
+  return success(res, result.message, "Created", 201);
 });
 
 const markAdminChatRead = asyncHandler(async (req, res) => {
@@ -90,6 +104,7 @@ module.exports = {
   getBookingChat,
   listBookingChatMessages,
   sendBookingChatMessage,
+  sendBookingPickupAlert,
   markBookingChatRead,
   listAdminChats,
   getAdminChat,

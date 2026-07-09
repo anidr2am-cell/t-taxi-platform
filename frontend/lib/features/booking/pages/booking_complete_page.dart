@@ -61,7 +61,11 @@ class BookingCompletePage extends StatefulWidget {
 }
 
 class _BookingCompletePageState extends State<BookingCompletePage> {
-  static const _pickupReadyMessage = '도착하고 수화물을 찾았습니다';
+  static const _pickupAlertStatuses = {
+    'DRIVER_ASSIGNED',
+    'ON_ROUTE',
+    'DRIVER_ARRIVED',
+  };
   bool _loadingDropoffQr = false;
   String? _dropoffQrToken;
   String? _dropoffQrError;
@@ -179,11 +183,9 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   }
 
   Future<void> _notifyPickupReady() {
-    return (widget.chatApi ?? const BookingChatApi()).sendMessage(
+    return (widget.chatApi ?? const BookingChatApi()).sendPickupAlert(
       bookingNumber: widget.result.bookingNumber,
-      text: _pickupReadyMessage,
-      clientMessageId: BookingChatApi.newClientMessageId(),
-      guestAccessToken: widget.result.guestAccessToken,
+      guestAccessToken: widget.result.guestAccessToken ?? '',
     );
   }
 
@@ -286,7 +288,12 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   nameSignRequested: widget.nameSignRequested,
                   vehicleInfo: widget.meetingVehicleInfo,
                   onNotifyPickup:
-                      widget.meetingVehicleInfo?.hasAssignedDetails == true
+                      _pickupAlertStatuses.contains(
+                            _status ?? widget.result.status,
+                          ) &&
+                          widget.meetingVehicleInfo?.hasAssignedDetails ==
+                              true &&
+                          widget.result.guestAccessToken?.isNotEmpty == true
                       ? _notifyPickupReady
                       : null,
                 ),
