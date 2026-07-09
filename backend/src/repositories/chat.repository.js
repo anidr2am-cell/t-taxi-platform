@@ -79,10 +79,12 @@ class ChatRepository {
         WHERE chat_room_id = ?
           AND participant_role = ?
           AND deleted_at IS NULL
-          AND ${userId == null ? 'user_id IS NULL' : 'user_id = ?'}
+          AND ${userId == null ? "user_id IS NULL" : "user_id = ?"}
         LIMIT 1
       `,
-      userId == null ? [chatRoomId, participantRole] : [chatRoomId, participantRole, userId],
+      userId == null
+        ? [chatRoomId, participantRole]
+        : [chatRoomId, participantRole, userId],
     );
     return rows[0] ?? null;
   }
@@ -114,6 +116,46 @@ class ChatRepository {
       [chatRoomId],
     );
     return rows[0] ?? null;
+  }
+
+  async deactivateParticipant(conn, chatRoomId, participantRole, userId) {
+    const [result] = await conn.query(
+      `
+        UPDATE chat_participants
+        SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE chat_room_id = ?
+          AND participant_role = ?
+          AND user_id = ?
+          AND deleted_at IS NULL
+      `,
+      [chatRoomId, participantRole, userId],
+    );
+    return result.affectedRows;
+  }
+
+  async reactivateParticipant(
+    conn,
+    chatRoomId,
+    participantRole,
+    userId,
+    displayName,
+  ) {
+    const [result] = await conn.query(
+      `
+        UPDATE chat_participants
+        SET deleted_at = NULL,
+            display_name = ?,
+            joined_at = CURRENT_TIMESTAMP,
+            last_read_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE chat_room_id = ?
+          AND participant_role = ?
+          AND user_id = ?
+          AND deleted_at IS NOT NULL
+      `,
+      [displayName, chatRoomId, participantRole, userId],
+    );
+    return result.affectedRows;
   }
 
   async listParticipants(conn, chatRoomId) {
@@ -157,7 +199,12 @@ class ChatRepository {
     return result.insertId;
   }
 
-  async findMessageByClientId(conn, chatRoomId, senderParticipantId, clientMessageId) {
+  async findMessageByClientId(
+    conn,
+    chatRoomId,
+    senderParticipantId,
+    clientMessageId,
+  ) {
     const [rows] = await conn.query(
       `
         SELECT
@@ -185,10 +232,10 @@ class ChatRepository {
       WHERE id = ? AND deleted_at IS NULL
     `;
     if (chatRoomId != null) {
-      sql += ' AND chat_room_id = ?';
+      sql += " AND chat_room_id = ?";
       params.push(chatRoomId);
     }
-    sql += ' LIMIT 1';
+    sql += " LIMIT 1";
     const [rows] = await conn.query(sql, params);
     return rows[0] ?? null;
   }
@@ -196,9 +243,10 @@ class ChatRepository {
   async listMessages(conn, chatRoomId, { cursor = null, limit = 50 } = {}) {
     const boundedLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
     const params = [chatRoomId];
-    let cursorSql = '';
+    let cursorSql = "";
     if (cursor) {
-      cursorSql = ' AND (created_at < (SELECT created_at FROM chat_messages WHERE id = ?) OR (created_at = (SELECT created_at FROM chat_messages WHERE id = ?) AND id < ?))';
+      cursorSql =
+        " AND (created_at < (SELECT created_at FROM chat_messages WHERE id = ?) OR (created_at = (SELECT created_at FROM chat_messages WHERE id = ?) AND id < ?))";
       params.push(cursor, cursor, cursor);
     }
     params.push(boundedLimit);
@@ -231,7 +279,12 @@ class ChatRepository {
             OR m.created_at > ?
           )
       `,
-      [chatRoomId, participant.id, participant.last_read_at, participant.last_read_at],
+      [
+        chatRoomId,
+        participant.id,
+        participant.last_read_at,
+        participant.last_read_at,
+      ],
     );
     return Number(rows[0]?.unread_count ?? 0);
   }
@@ -272,21 +325,23 @@ class ChatRepository {
   }
 
   async countAdminUnread(conn, chatRoomId, adminParticipantId) {
-    const participant = await this.findParticipantById(conn, adminParticipantId);
+    const participant = await this.findParticipantById(
+      conn,
+      adminParticipantId,
+    );
     if (!participant) return 0;
     return this.countUnreadForParticipant(conn, chatRoomId, participant);
   }
 
-  async listAdminChatSummaries(conn, adminUserId, {
-    search = null,
-    unreadOnly = false,
-    limit = 20,
-    offset = 0,
-  } = {}) {
+  async listAdminChatSummaries(
+    conn,
+    adminUserId,
+    { search = null, unreadOnly = false, limit = 20, offset = 0 } = {},
+  ) {
     const boundedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
     const boundedOffset = Math.max(Number(offset) || 0, 0);
     const params = [adminUserId];
-    let searchSql = '';
+    let searchSql = "";
     if (search) {
       searchSql = `
         AND (
@@ -298,7 +353,7 @@ class ChatRepository {
       const term = `%${search}%`;
       params.push(term, term, term);
     }
-    let unreadSql = '';
+    let unreadSql = "";
     if (unreadOnly) {
       unreadSql = `
         AND EXISTS (
@@ -357,9 +412,13 @@ class ChatRepository {
     return rows;
   }
 
-  async countAdminChatSummaries(conn, adminUserId, { search = null, unreadOnly = false } = {}) {
+  async countAdminChatSummaries(
+    conn,
+    adminUserId,
+    { search = null, unreadOnly = false } = {},
+  ) {
     const params = [];
-    let searchSql = '';
+    let searchSql = "";
     if (search) {
       searchSql = `
         AND (
@@ -371,7 +430,7 @@ class ChatRepository {
       const term = `%${search}%`;
       params.push(term, term, term);
     }
-    let unreadSql = '';
+    let unreadSql = "";
     if (unreadOnly) {
       unreadSql = `
         AND EXISTS (

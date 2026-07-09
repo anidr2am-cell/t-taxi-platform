@@ -31,13 +31,14 @@ class _FakeSettlementApi extends DriverSettlementApiService {
         'dueAt': '2026-07-08 12:00:00',
       };
     }
-    return detail ?? {
-      'bookingNumber': bookingNumber,
-      'commissionStatus': 'PENDING',
-      'commissionAmount': 120,
-      'currency': 'THB',
-      'dueAt': '2026-07-08 12:00:00',
-    };
+    return detail ??
+        {
+          'bookingNumber': bookingNumber,
+          'commissionStatus': 'PENDING',
+          'commissionAmount': 120,
+          'currency': 'THB',
+          'dueAt': '2026-07-08 12:00:00',
+        };
   }
 
   @override
@@ -59,19 +60,19 @@ class _FakeSettlementApi extends DriverSettlementApiService {
 void main() {
   testWidgets('driver settlement shows empty state', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: DriverSettlementListPage(api: _FakeSettlementApi()),
-      ),
+      MaterialApp(home: DriverSettlementListPage(api: _FakeSettlementApi())),
     );
     await tester.pumpAndSettle();
-    expect(find.text('No settlements'), findsOneWidget);
+    expect(find.text('정산 내역이 없습니다\n(ยังไม่มีรายการชำระบัญชี)'), findsOneWidget);
   });
 
   testWidgets('driver settlement shows error state', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DriverSettlementListPage(
-          api: _FakeSettlementApi(error: const DriverSettlementApiException('Network error')),
+          api: _FakeSettlementApi(
+            error: const DriverSettlementApiException('Network error'),
+          ),
         ),
       ),
     );
@@ -79,30 +80,35 @@ void main() {
     expect(find.text('Network error'), findsOneWidget);
   });
 
-  testWidgets('driver settlement detail selects file and uploads', (tester) async {
+  testWidgets('driver settlement detail selects file and uploads', (
+    tester,
+  ) async {
     final api = _FakeSettlementApi();
     await tester.pumpWidget(
       MaterialApp(
         home: DriverSettlementDetailPage(
           bookingNumber: 'TX202607010001',
           api: api,
-          receiptPicker: () async => (bytes: [0x25, 0x50, 0x44, 0x46], filename: 'receipt.pdf'),
+          receiptPicker: () async =>
+              (bytes: [0x25, 0x50, 0x44, 0x46], filename: 'receipt.pdf'),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Select receipt (JPG, PNG, PDF)'));
+    await tester.tap(find.text('영수증 선택 / เลือกใบเสร็จ'));
     await tester.pumpAndSettle();
-    expect(find.text('Selected: receipt.pdf'), findsOneWidget);
+    expect(find.text('선택한 파일: receipt.pdf\n(ไฟล์ที่เลือก)'), findsOneWidget);
 
-    await tester.tap(find.text('Upload receipt'));
+    await tester.tap(find.text('영수증 업로드 / อัปโหลดใบเสร็จ'));
     await tester.pumpAndSettle();
     expect(api.uploadCalls, 1);
-    expect(find.text('Status: RECEIPT_SUBMITTED'), findsOneWidget);
+    expect(find.text('상태\n(สถานะ): RECEIPT_SUBMITTED'), findsOneWidget);
   });
 
-  testWidgets('driver settlement detail shows upload failure and retry', (tester) async {
+  testWidgets('driver settlement detail shows upload failure and retry', (
+    tester,
+  ) async {
     final api = _FakeSettlementApi(
       uploadError: const DriverSettlementApiException('Upload failed'),
     );
@@ -111,19 +117,20 @@ void main() {
         home: DriverSettlementDetailPage(
           bookingNumber: 'TX202607010001',
           api: api,
-          receiptPicker: () async => (bytes: [1, 2, 3], filename: 'receipt.png'),
+          receiptPicker: () async =>
+              (bytes: [1, 2, 3], filename: 'receipt.png'),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Select receipt (JPG, PNG, PDF)'));
+    await tester.tap(find.text('영수증 선택 / เลือกใบเสร็จ'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload receipt'));
+    await tester.tap(find.text('영수증 업로드 / อัปโหลดใบเสร็จ'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Upload failed'), findsOneWidget);
-    expect(find.text('Retry upload'), findsOneWidget);
+    expect(find.text('업로드 재시도 / ลองอัปโหลดอีกครั้ง'), findsOneWidget);
   });
 
   test('isAllowedReceiptFilename validates extensions', () {

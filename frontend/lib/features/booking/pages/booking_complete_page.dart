@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
+import '../../../utils/clipboard_writer.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
@@ -61,6 +61,7 @@ class BookingCompletePage extends StatefulWidget {
 }
 
 class _BookingCompletePageState extends State<BookingCompletePage> {
+  static const _pickupReadyMessage = '도착하고 수화물을 찾았습니다';
   bool _loadingDropoffQr = false;
   String? _dropoffQrToken;
   String? _dropoffQrError;
@@ -120,7 +121,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
     try {
-      await Clipboard.setData(ClipboardData(text: widget.result.bookingNumber));
+      await writeClipboardText(widget.result.bookingNumber);
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.t('booking_number_copied'))),
@@ -175,6 +176,15 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
         );
       });
     }
+  }
+
+  Future<void> _notifyPickupReady() {
+    return (widget.chatApi ?? const BookingChatApi()).sendMessage(
+      bookingNumber: widget.result.bookingNumber,
+      text: _pickupReadyMessage,
+      clientMessageId: BookingChatApi.newClientMessageId(),
+      guestAccessToken: widget.result.guestAccessToken,
+    );
   }
 
   @override
@@ -275,6 +285,10 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   originAirportCode: widget.originAirportCode,
                   nameSignRequested: widget.nameSignRequested,
                   vehicleInfo: widget.meetingVehicleInfo,
+                  onNotifyPickup:
+                      widget.meetingVehicleInfo?.hasAssignedDetails == true
+                      ? _notifyPickupReady
+                      : null,
                 ),
               ],
               if (widget.review != null) ...[
@@ -488,9 +502,7 @@ class _BookingNumberCard extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              AppUi.statusBadge(statusLabel, tone: statusTone),
-            ],
+            children: [AppUi.statusBadge(statusLabel, tone: statusTone)],
           ),
           const SizedBox(height: AppTokens.spaceMd),
           const Divider(height: 1),

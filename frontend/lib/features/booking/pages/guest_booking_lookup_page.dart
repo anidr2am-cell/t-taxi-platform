@@ -20,11 +20,13 @@ class GuestBookingLookupPage extends StatefulWidget {
     super.key,
     this.lookupService,
     this.bookingApiService,
+    this.bookingChatApi,
     this.enableCustomerTools = false,
   });
 
   final GuestBookingLookupService? lookupService;
   final BookingApiService? bookingApiService;
+  final BookingChatApi? bookingChatApi;
   final bool enableCustomerTools;
 
   @override
@@ -32,6 +34,7 @@ class GuestBookingLookupPage extends StatefulWidget {
 }
 
 class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
+  static const _pickupReadyMessage = '도착하고 수화물을 찾았습니다';
   final _formKey = GlobalKey<FormState>();
   final _bookingNumberController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -118,6 +121,15 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _error = context.l10n.t('guest_lookup_load_error');
       });
     }
+  }
+
+  Future<void> _notifyPickupReady(GuestBookingLookupResult result) {
+    return (widget.bookingChatApi ?? const BookingChatApi()).sendMessage(
+      bookingNumber: result.bookingNumber,
+      text: _pickupReadyMessage,
+      clientMessageId: BookingChatApi.newClientMessageId(),
+      guestAccessToken: result.guestAccessToken,
+    );
   }
 
   Future<void> _lookup() async {
@@ -426,6 +438,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               vehicleColor: result.vehicleColor,
               vehiclePlateNumber: result.vehiclePlateNumber,
             ),
+            onNotifyPickup: result.capabilities.chatAvailable
+                ? () => _notifyPickupReady(result)
+                : null,
           ),
         ],
         const SizedBox(height: AppTokens.spaceMd),

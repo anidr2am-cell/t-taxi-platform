@@ -466,7 +466,7 @@ void main() {
     await tester.pumpWidget(_app(const DriverLoginPage(api: _FakeDriverApi())));
     await tester.pumpAndSettle();
 
-    expect(find.text('Apply as a driver'), findsOneWidget);
+    expect(find.text('기사 등록 신청 / สมัครคนขับ'), findsOneWidget);
     expect(find.text('Check application status'), findsNothing);
     expect(find.text('Check saved application status'), findsNothing);
   });
@@ -478,7 +478,7 @@ void main() {
     await tester.pumpWidget(_app(const DriverLoginPage(api: _FakeDriverApi())));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Apply as a driver'));
+    await tester.tap(find.text('기사 등록 신청 / สมัครคนขับ'));
     await tester.pumpAndSettle();
     expect(find.text('Apply route'), findsOneWidget);
   });
@@ -496,7 +496,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Apply as a driver'), findsOneWidget);
+      expect(find.text('기사 등록 신청 / สมัครคนขับ'), findsOneWidget);
       expect(find.text('Check application status'), findsNothing);
     },
   );
@@ -637,7 +637,7 @@ void main() {
     await tester.pumpWidget(_app(const DriverLoginPage(api: _FakeDriverApi())));
     await tester.pumpAndSettle();
 
-    expect(find.text('Apply as a driver'), findsOneWidget);
+    expect(find.text('기사 등록 신청 / สมัครคนขับ'), findsOneWidget);
     expect(find.text('Check saved application status'), findsNothing);
     expect(find.text('Edit and resubmit'), findsNothing);
   });

@@ -35,12 +35,14 @@ class AirportMeetingGuideCard extends StatelessWidget {
     required this.originAirportCode,
     required this.nameSignRequested,
     this.vehicleInfo,
+    this.onNotifyPickup,
   });
 
   final String? serviceTypeCode;
   final String? originAirportCode;
   final bool nameSignRequested;
   final AirportMeetingVehicleInfo? vehicleInfo;
+  final Future<void> Function()? onNotifyPickup;
 
   static bool shouldShow({
     required String? serviceTypeCode,
@@ -127,14 +129,14 @@ class AirportMeetingGuideCard extends StatelessWidget {
               ),
               const SizedBox(height: AppTokens.spaceMd),
             ],
-            _Steps(stepKeys: stepKeys),
+            _Steps(
+              stepKeys: stepKeys,
+              emphasizedStepIndex: nameSignRequested ? null : 1,
+            ),
             const SizedBox(height: AppTokens.spaceMd),
             _VehicleBlock(info: vehicleInfo),
             const SizedBox(height: AppTokens.spaceMd),
-            _InfoNotice(
-              icon: Icons.chat_bubble_outline,
-              text: l10n.t('airport_meeting_notify_unavailable'),
-            ),
+            _PickupNotificationAction(onNotifyPickup: onNotifyPickup),
           ],
         ),
       ),
@@ -265,9 +267,10 @@ class _Highlight extends StatelessWidget {
 }
 
 class _Steps extends StatelessWidget {
-  const _Steps({required this.stepKeys});
+  const _Steps({required this.stepKeys, this.emphasizedStepIndex});
 
   final List<String> stepKeys;
+  final int? emphasizedStepIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -275,44 +278,132 @@ class _Steps extends StatelessWidget {
     return Column(
       children: [
         for (var i = 0; i < stepKeys.length; i++)
-          Padding(
-            padding: EdgeInsets.only(bottom: i == stepKeys.length - 1 ? 0 : 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: AppTokens.primaryDark,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '${i + 1}',
-                    style: const TextStyle(
-                      color: AppTokens.surface,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+          Builder(
+            builder: (context) {
+              final isEmphasized = i == emphasizedStepIndex;
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: i == stepKeys.length - 1 ? 0 : 10,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      l10n.t(stepKeys[i]),
-                      style: const TextStyle(
-                        color: AppTokens.textPrimary,
-                        height: 1.4,
-                        fontWeight: FontWeight.w600,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isEmphasized
+                            ? AppTokens.accent
+                            : AppTokens.primaryDark,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${i + 1}',
+                        style: const TextStyle(
+                          color: AppTokens.surface,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          l10n.t(stepKeys[i]),
+                          style: TextStyle(
+                            color: isEmphasized
+                                ? AppTokens.error
+                                : AppTokens.textPrimary,
+                            height: 1.4,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _PickupNotificationAction extends StatefulWidget {
+  const _PickupNotificationAction({required this.onNotifyPickup});
+
+  final Future<void> Function()? onNotifyPickup;
+
+  @override
+  State<_PickupNotificationAction> createState() =>
+      _PickupNotificationActionState();
+}
+
+class _PickupNotificationActionState extends State<_PickupNotificationAction> {
+  bool _sending = false;
+  bool _sent = false;
+  String? _error;
+
+  Future<void> _send() async {
+    if (_sending || widget.onNotifyPickup == null) return;
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      await widget.onNotifyPickup!();
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _sent = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = context.l10n.t('airport_meeting_notify_failed');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (widget.onNotifyPickup == null) {
+      return _InfoNotice(
+        icon: Icons.chat_bubble_outline,
+        text: l10n.t('airport_meeting_notify_unavailable'),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: AppUi.primaryButton(
+            label: _sent
+                ? l10n.t('airport_meeting_notify_sent')
+                : l10n.t('airport_meeting_notify_button'),
+            icon: _sent
+                ? Icons.check_circle_outline
+                : Icons.notifications_active,
+            loading: _sending,
+            onPressed: _sending || _sent ? null : _send,
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: AppTokens.spaceSm),
+          Text(
+            _error!,
+            style: const TextStyle(
+              color: AppTokens.error,
+              fontWeight: FontWeight.w600,
             ),
           ),
+        ],
       ],
     );
   }

@@ -14,62 +14,81 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  test('driver location update uses /api/v1/driver/location and bearer token', () async {
-    SharedPreferences.setMockInitialValues({'driver_access_token': 'driver-token'});
-    Uri? uri;
-    Map<String, String>? headers;
-    Map<String, dynamic>? body;
-    final api = DriverLocationApiService(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        uri = request.url;
-        headers = request.headers;
-        body = jsonDecode(request.body) as Map<String, dynamic>;
-        return http.Response(jsonEncode({'success': true, 'data': {'accepted': true}}), 200);
-      }),
-    );
+  test(
+    'driver location update uses /api/v1/driver/location and bearer token',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'driver_access_token': 'driver-token',
+      });
+      Uri? uri;
+      Map<String, String>? headers;
+      Map<String, dynamic>? body;
+      final api = DriverLocationApiService(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          uri = request.url;
+          headers = request.headers;
+          body = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {'accepted': true},
+            }),
+            200,
+          );
+        }),
+      );
 
-    await api.updateDriverLocation(
-      latitude: 12.9236,
-      longitude: 100.8825,
-      accuracyMeters: 15,
-      heading: 120,
-      speedKph: 35,
-      recordedAt: DateTime.parse('2026-07-01T10:30:00+07:00'),
-    );
+      await api.updateDriverLocation(
+        latitude: 12.9236,
+        longitude: 100.8825,
+        accuracyMeters: 15,
+        heading: 120,
+        speedKph: 35,
+        recordedAt: DateTime.parse('2026-07-01T10:30:00+07:00'),
+      );
 
-    expect(uri!.path, '/api/v1/driver/location');
-    expect(headers!['Authorization'], 'Bearer driver-token');
-    expect(body!['latitude'], 12.9236);
-    expect(body!['longitude'], 100.8825);
-  });
+      expect(uri!.path, '/api/v1/driver/location');
+      expect(headers!['Authorization'], 'Bearer driver-token');
+      expect(body!['latitude'], 12.9236);
+      expect(body!['longitude'], 100.8825);
+    },
+  );
 
   test('admin snapshot uses filters and admin bearer token', () async {
-    SharedPreferences.setMockInitialValues({'admin_access_token': 'admin-token'});
+    SharedPreferences.setMockInitialValues({
+      'admin_access_token': 'admin-token',
+    });
     Uri? uri;
     final api = DriverLocationApiService(
       baseUrl: 'http://localhost:3000',
       client: MockClient((request) async {
         uri = request.url;
         expect(request.headers['Authorization'], 'Bearer admin-token');
-        return http.Response(jsonEncode({
-          'success': true,
-          'data': {
-            'items': [
-              {
-                'driverId': 7,
-                'displayName': 'Somchai',
-                'latitude': 12.9,
-                'longitude': 100.8,
-                'stale': false,
-              }
-            ],
-          },
-        }), 200);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'items': [
+                {
+                  'driverId': 7,
+                  'displayName': 'Somchai',
+                  'latitude': 12.9,
+                  'longitude': 100.8,
+                  'stale': false,
+                },
+              ],
+            },
+          }),
+          200,
+        );
       }),
     );
 
-    final items = await api.listAdminLocations(onlineOnly: true, activeJobOnly: true);
+    final items = await api.listAdminLocations(
+      onlineOnly: true,
+      activeJobOnly: true,
+    );
 
     expect(uri!.path, '/api/v1/admin/drivers/locations');
     expect(uri!.queryParameters['onlineOnly'], 'true');
@@ -85,19 +104,22 @@ void main() {
       client: MockClient((request) async {
         uri = request.url;
         headers = request.headers;
-        return http.Response(jsonEncode({
-          'success': true,
-          'data': {
-            'available': true,
-            'driver': {
-              'driverId': 7,
-              'displayName': 'Somchai',
-              'latitude': 12.9,
-              'longitude': 100.8,
-              'stale': false,
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'available': true,
+              'driver': {
+                'driverId': 7,
+                'displayName': 'Somchai',
+                'latitude': 12.9,
+                'longitude': 100.8,
+                'stale': false,
+              },
             },
-          },
-        }), 200);
+          }),
+          200,
+        );
       }),
     );
 
@@ -112,18 +134,19 @@ void main() {
     expect(result.available, true);
   });
 
-  testWidgets('driver location permission is not requested before enabling sharing', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: DriverLiveLocationControl(hasActiveJob: true),
+  testWidgets(
+    'driver location permission is not requested before enabling sharing',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: DriverLiveLocationControl(hasActiveJob: true)),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('Share live location'), findsOneWidget);
-    expect(find.byType(Switch), findsOneWidget);
-  });
+      expect(find.text('실시간 위치 공유\n(แชร์ตำแหน่งปัจจุบัน)'), findsOneWidget);
+      expect(find.byType(Switch), findsOneWidget);
+    },
+  );
 
   testWidgets('driver location control prompts when offline', (tester) async {
     await tester.pumpWidget(
@@ -137,22 +160,27 @@ void main() {
     await tester.tap(find.byType(Switch));
     await tester.pump();
 
-    expect(find.text('Go online before sharing live location.'), findsOneWidget);
+    expect(
+      find.text('온라인 전환 후 위치를 공유하세요.\n(กรุณาออนไลน์ก่อนแชร์ตำแหน่ง)'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('driver location control hides when there is no active job', (tester) async {
+  testWidgets('driver location control hides when there is no active job', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: DriverLiveLocationControl(hasActiveJob: false),
-        ),
+        home: Scaffold(body: DriverLiveLocationControl(hasActiveJob: false)),
       ),
     );
 
-    expect(find.text('Share live location'), findsNothing);
+    expect(find.text('실시간 위치 공유\n(แชร์ตำแหน่งปัจจุบัน)'), findsNothing);
   });
 
-  testWidgets('admin monitor shows loading, empty, and error states', (tester) async {
+  testWidgets('admin monitor shows loading, empty, and error states', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(900, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -190,37 +218,42 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
   });
 
-  testWidgets('admin monitor lists active offline driver without live location', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(900, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: AdminDriverMonitorPage(
-            api: _FakeAdminLocationApi(items: const []),
-            dispatchApi: _FakeDispatchDriversApi(
-              drivers: [
-                {
-                  'driverId': 1,
-                  'displayName': 'Local Driver',
-                  'activeState': 'ACTIVE',
-                  'onlineState': 'OFFLINE',
-                  'activeAssignmentCount': 0,
-                },
-              ],
+  testWidgets(
+    'admin monitor lists active offline driver without live location',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdminDriverMonitorPage(
+              api: _FakeAdminLocationApi(items: const []),
+              dispatchApi: _FakeDispatchDriversApi(
+                drivers: [
+                  {
+                    'driverId': 1,
+                    'displayName': 'Local Driver',
+                    'activeState': 'ACTIVE',
+                    'onlineState': 'OFFLINE',
+                    'activeAssignmentCount': 0,
+                  },
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Local Driver'), findsOneWidget);
-    expect(find.textContaining('Offline'), findsOneWidget);
-    expect(find.text('No location'), findsOneWidget);
-  });
+      expect(find.text('Local Driver'), findsOneWidget);
+      expect(find.textContaining('Offline'), findsOneWidget);
+      expect(find.text('No location'), findsOneWidget);
+    },
+  );
 
-  testWidgets('guest tracking unavailable and terminal states render safely', (tester) async {
+  testWidgets('guest tracking unavailable and terminal states render safely', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
@@ -9,6 +10,7 @@ import 'package:frontend/features/booking/services/guest_booking_lookup_service.
 import 'package:frontend/features/booking/widgets/airport_meeting_guide_card.dart';
 import 'package:frontend/features/chat/models/chat_connection_state.dart';
 import 'package:frontend/features/chat/services/chat_socket_service.dart';
+import 'package:frontend/theme/app_tokens.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -108,6 +110,81 @@ void main() {
     expect(find.text('SUV'), findsOneWidget);
     expect(find.text('Black'), findsOneWidget);
     expect(find.text('1กข1234'), findsOneWidget);
+  });
+
+  testWidgets('pickup notification action is enabled and sends once', (
+    tester,
+  ) async {
+    var sends = 0;
+    await tester.pumpWidget(
+      _wrap(
+        AirportMeetingGuideCard(
+          serviceTypeCode: 'AIRPORT_PICKUP',
+          originAirportCode: 'BKK',
+          nameSignRequested: false,
+          onNotifyPickup: () async {
+            sends += 1;
+          },
+        ),
+      ),
+    );
+
+    expect(
+      find.text(
+        'After arrival and collecting your luggage, notify your driver.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.pumpAndSettle();
+
+    expect(sends, 1);
+    expect(find.text('Pickup notification sent'), findsOneWidget);
+  });
+
+  testWidgets('Gate 7 step 2 shows Korean warning text in error color', (
+    tester,
+  ) async {
+    const warning = '기사에게 픽업 알림을 보냅니다. 꼭 수하물을 찾으신 후에 알림을 보내주시기 바랍니다';
+    await tester.pumpWidget(
+      _wrap(
+        const AirportMeetingGuideCard(
+          serviceTypeCode: 'AIRPORT_PICKUP',
+          originAirportCode: 'BKK',
+          nameSignRequested: false,
+        ),
+        locale: const Locale('ko'),
+      ),
+    );
+
+    final warningText = tester.widget<Text>(find.text(warning));
+    expect(warningText.style?.color, AppTokens.error);
+  });
+
+  testWidgets('guest lookup pickup action sends expected chat message', (
+    tester,
+  ) async {
+    final chatApi = _FakeBookingChatApi();
+    await tester.pumpWidget(
+      _wrapPage(
+        GuestBookingLookupPage(
+          lookupService: _FakeLookupService(_lookupResult(nameSign: false)),
+          bookingChatApi: chatApi,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('I arrived and collected my luggage'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.pumpAndSettle();
+
+    expect(chatApi.sentText, '도착하고 수화물을 찾았습니다');
+    expect(chatApi.sentGuestToken, 'guest-token');
+    expect(chatApi.sentBookingNumber, 'TX202607010001');
   });
 
   testWidgets('booking complete screen displays BKK meeting guide', (
@@ -286,12 +363,39 @@ void main() {
 Widget _wrap(Widget child, {Locale locale = const Locale('en')}) {
   return MaterialApp(
     locale: locale,
+    supportedLocales: const [
+      Locale('en'),
+      Locale('ko'),
+      Locale('th'),
+      Locale('ja'),
+      Locale('zh'),
+    ],
+    localizationsDelegates: [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
     home: Scaffold(body: SingleChildScrollView(child: child)),
   );
 }
 
 Widget _wrapPage(Widget child, {Locale locale = const Locale('en')}) {
-  return MaterialApp(locale: locale, home: child);
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: const [
+      Locale('en'),
+      Locale('ko'),
+      Locale('th'),
+      Locale('ja'),
+      Locale('zh'),
+    ],
+    localizationsDelegates: [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: child,
+  );
 }
 
 BookingCreateResult _bookingResult() {
@@ -369,6 +473,10 @@ class _FakeLookupService extends GuestBookingLookupService {
 }
 
 class _FakeBookingChatApi extends BookingChatApi {
+  String? sentText;
+  String? sentGuestToken;
+  String? sentBookingNumber;
+
   @override
   Future<Map<String, dynamic>> getRoom({
     required String bookingNumber,
@@ -382,6 +490,26 @@ class _FakeBookingChatApi extends BookingChatApi {
     String? guestAccessToken,
     String? customerAccessToken,
   }) async => [];
+
+  @override
+  Future<Map<String, dynamic>> sendMessage({
+    required String bookingNumber,
+    required String text,
+    required String clientMessageId,
+    String? guestAccessToken,
+    String? customerAccessToken,
+  }) async {
+    sentBookingNumber = bookingNumber;
+    sentText = text;
+    sentGuestToken = guestAccessToken;
+    return {
+      'message': {
+        'messageId': 1,
+        'text': text,
+        'clientMessageId': clientMessageId,
+      },
+    };
+  }
 }
 
 class _FakeChatSocketService extends ChatSocketService {

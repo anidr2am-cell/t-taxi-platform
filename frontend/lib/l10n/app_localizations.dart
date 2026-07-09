@@ -2905,7 +2905,50 @@ class AppLocalizations {
     'driver_chat_participant': '대화 참여자\n(ผู้ร่วมสนทนา)',
   };
 
+  static const Map<String, Map<String, String>>
+  _airportMeetingActionTranslations = {
+    'en': {
+      'airport_meeting_step_notify_driver':
+          'After arrival and collecting your luggage, notify your driver.',
+      'airport_meeting_notify_button': 'I arrived and collected my luggage',
+      'airport_meeting_notify_sent': 'Pickup notification sent',
+      'airport_meeting_notify_failed':
+          'Could not send the pickup notification. Please try again.',
+    },
+    'ko': {
+      'airport_meeting_step_notify_driver':
+          '기사에게 픽업 알림을 보냅니다. 꼭 수하물을 찾으신 후에 알림을 보내주시기 바랍니다',
+      'airport_meeting_notify_button': '도착하고 수화물을 찾았습니다',
+      'airport_meeting_notify_sent': '픽업 알림을 보냈습니다',
+      'airport_meeting_notify_failed': '픽업 알림을 보내지 못했습니다. 다시 시도해 주세요.',
+    },
+    'zh': {
+      'airport_meeting_step_notify_driver': '抵达并取到行李后，请通知司机。',
+      'airport_meeting_notify_button': '我已抵达并取到行李',
+      'airport_meeting_notify_sent': '接机通知已发送',
+      'airport_meeting_notify_failed': '无法发送接机通知，请重试。',
+    },
+    'ja': {
+      'airport_meeting_step_notify_driver': '到着して荷物を受け取ったら、ドライバーへお知らせください。',
+      'airport_meeting_notify_button': '到着して荷物を受け取りました',
+      'airport_meeting_notify_sent': 'ピックアップ通知を送信しました',
+      'airport_meeting_notify_failed': '通知を送信できませんでした。もう一度お試しください。',
+    },
+    'th': {
+      'airport_meeting_step_notify_driver':
+          'เมื่อมาถึงและรับสัมภาระแล้ว ให้แจ้งคนขับว่าพร้อมขึ้นรถ',
+      'airport_meeting_notify_button': 'มาถึงและรับสัมภาระแล้ว',
+      'airport_meeting_notify_sent': 'ส่งข้อความแจ้งคนขับแล้ว',
+      'airport_meeting_notify_failed':
+          'ส่งข้อความแจ้งคนขับไม่สำเร็จ กรุณาลองอีกครั้ง',
+    },
+  };
+
   String t(String key) {
+    final airportMeetingText =
+        _airportMeetingActionTranslations[languageCode]?[key] ??
+        _airportMeetingActionTranslations['en']?[key];
+    if (airportMeetingText != null) return airportMeetingText;
     final driverText = _driverUiTranslations[key];
     if (driverText != null) return driverText;
     final lang = _translations[languageCode] ?? _translations['en']!;

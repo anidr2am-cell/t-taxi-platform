@@ -5,7 +5,9 @@ import 'package:frontend/features/driver/pages/driver_profile_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 
 void main() {
-  testWidgets('driver rating summary shows average and review count', (tester) async {
+  testWidgets('driver rating summary shows average and review count', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DriverProfilePage(
@@ -17,8 +19,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('4.5 average'), findsOneWidget);
-    expect(find.text('12 reviews'), findsOneWidget);
+    expect(find.text('4.5 평균 / คะแนนเฉลี่ย'), findsOneWidget);
+    expect(find.text('12 개 리뷰 / รีวิว'), findsOneWidget);
     expect(find.text('Great service'), findsNothing);
   });
 
@@ -34,8 +36,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No ratings yet'), findsOneWidget);
-    expect(find.text('0 reviews'), findsOneWidget);
+    expect(find.text('아직 평점이 없습니다\n(ยังไม่มีคะแนน)'), findsOneWidget);
+    expect(find.text('0 개 리뷰 / รีวิว'), findsOneWidget);
   });
 
   testWidgets('driver rating summary shows error state', (tester) async {
@@ -50,24 +52,31 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Could not load rating'), findsOneWidget);
+    expect(
+      find.text('평점을 불러올 수 없습니다\n(ไม่สามารถโหลดคะแนนได้)'),
+      findsOneWidget,
+    );
     expect(find.text('average'), findsNothing);
   });
 
-  testWidgets('driver profile renders offline state and goes online', (tester) async {
+  testWidgets('driver profile renders offline state and goes online', (
+    tester,
+  ) async {
     final api = _FakeDriverApi();
     await tester.pumpWidget(MaterialApp(home: DriverProfilePage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Offline'), findsOneWidget);
-    await tester.tap(find.text('Go online'));
+    expect(find.text('오프라인\n(ออฟไลน์)'), findsOneWidget);
+    await tester.tap(find.text('온라인 전환 / พร้อมรับงาน'));
     await tester.pumpAndSettle();
 
     expect(api.onlineCalls, 1);
-    expect(find.text('Online'), findsOneWidget);
+    expect(find.text('온라인\n(พร้อมรับงาน)'), findsOneWidget);
   });
 
-  testWidgets('driver profile active-job offline conflict is shown', (tester) async {
+  testWidgets('driver profile active-job offline conflict is shown', (
+    tester,
+  ) async {
     final api = _FakeDriverApi(
       initialStatus: const DriverStatus(
         driverId: 7,
@@ -76,17 +85,22 @@ void main() {
         status: 'AVAILABLE',
         hasActiveJob: true,
       ),
-      offlineError: const DriverApiException('Cannot go offline while an active trip is assigned'),
+      offlineError: const DriverApiException(
+        'Cannot go offline while an active trip is assigned',
+      ),
     );
     await tester.pumpWidget(MaterialApp(home: DriverProfilePage(api: api)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Go offline'));
+    await tester.tap(find.text('오프라인 전환 / ออฟไลน์'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Try anyway'));
+    await tester.tap(find.text('계속 시도 / ลองต่อ'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Cannot go offline while an active trip is assigned'), findsOneWidget);
+    expect(
+      find.text('Cannot go offline while an active trip is assigned'),
+      findsOneWidget,
+    );
   });
 }
 
@@ -96,13 +110,15 @@ class _FakeDriverApi extends DriverApiService {
     this.ratingError,
     DriverStatus? initialStatus,
     this.offlineError,
-  }) : _status = initialStatus ?? const DriverStatus(
-          driverId: 7,
-          active: true,
-          online: false,
-          status: 'OFFLINE',
-          hasActiveJob: false,
-        );
+  }) : _status =
+           initialStatus ??
+           const DriverStatus(
+             driverId: 7,
+             active: true,
+             online: false,
+             status: 'OFFLINE',
+             hasActiveJob: false,
+           );
 
   final Map<String, dynamic>? ratingSummary;
   final Object? ratingError;

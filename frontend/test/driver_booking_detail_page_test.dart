@@ -20,8 +20,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(FilledButton, 'Start route'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsNothing);
+    expect(
+      find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      findsNothing,
+    );
   });
 
   testWidgets('shows loading state', (tester) async {
@@ -39,17 +45,16 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
-          detail: _booking(
-            status: 'ON_ROUTE',
-            actions: ['MARK_ARRIVED'],
-          ),
+          detail: _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']),
           actionError: const DriverApiException('Invalid status transition'),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Mark arrived'));
+    await tester.tap(
+      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid status transition'), findsOneWidget);
@@ -64,19 +69,25 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsOneWidget);
+    expect(
+      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows complete trip after arrival', (tester) async {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
-          detail: _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']),
+          detail: _booking(
+            status: 'DRIVER_ARRIVED',
+            actions: ['COMPLETE_TRIP'],
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Complete trip'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '운행 완료 / จบงาน'), findsOneWidget);
   });
 
   testWidgets('hides primary action for completed booking', (tester) async {
@@ -90,9 +101,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.widgetWithText(FilledButton, 'Start route'), findsNothing);
-    expect(find.widgetWithText(FilledButton, 'Mark arrived'), findsNothing);
-    expect(find.widgetWithText(FilledButton, 'Complete trip'), findsNothing);
+    expect(
+      find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'),
+      findsNothing,
+    );
+    expect(
+      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      findsNothing,
+    );
+    expect(find.widgetWithText(FilledButton, '운행 완료 / จบงาน'), findsNothing);
   });
 
   testWidgets('hides primary action for no-show booking', (tester) async {
@@ -104,7 +121,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Start route'), findsNothing);
+    expect(
+      find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'),
+      findsNothing,
+    );
   });
 
   testWidgets('shows backend message on initial load failure', (tester) async {
@@ -117,7 +137,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Booking not found'), findsOneWidget);
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
   });
 }
 
@@ -181,14 +201,16 @@ class _FakeDriverApi extends DriverApiService {
   @override
   Future<DriverBooking> startOnRoute(String bookingNumber) async {
     if (actionError != null) throw actionError!;
-    _current = onRoute ?? _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']);
+    _current =
+        onRoute ?? _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']);
     return _current;
   }
 
   @override
   Future<DriverBooking> markArrived(String bookingNumber) async {
     if (actionError != null) throw actionError!;
-    _current = arrived ??
+    _current =
+        arrived ??
         _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']);
     return _current;
   }

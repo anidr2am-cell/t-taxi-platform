@@ -1,10 +1,10 @@
-const { randomUUID } = require('node:crypto');
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
-const BOOKING_STATUS = require('../constants/reservationStatus');
-const ROLES = require('../constants/roles');
-const { EVENTS } = require('../events');
+const { randomUUID } = require("node:crypto");
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
+const BOOKING_STATUS = require("../constants/reservationStatus");
+const ROLES = require("../constants/roles");
+const { EVENTS } = require("../events");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -35,6 +35,7 @@ class AdminDispatchService {
     outboxProcessor,
     driverCandidateScoringService,
     adminQrReissueService = null,
+    chatService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -45,6 +46,7 @@ class AdminDispatchService {
     this.outboxProcessor = outboxProcessor;
     this.driverCandidateScoringService = driverCandidateScoringService;
     this.adminQrReissueService = adminQrReissueService;
+    this.chatService = chatService;
   }
 
   actorFromUser(user) {
@@ -75,7 +77,7 @@ class AdminDispatchService {
     if (query.serviceDateTo) {
       const end = new Date(`${query.serviceDateTo}T00:00:00`);
       end.setDate(end.getDate() + 1);
-      filters.serviceDateTo = end.toISOString().slice(0, 19).replace('T', ' ');
+      filters.serviceDateTo = end.toISOString().slice(0, 19).replace("T", " ");
     }
 
     return filters;
@@ -84,22 +86,26 @@ class AdminDispatchService {
   formatLuggageSummary(row) {
     const parts = [];
     if (row.carriers_20_inch) parts.push(`20":${row.carriers_20_inch}`);
-    if (row.carriers_24_inch_plus) parts.push(`24+":${row.carriers_24_inch_plus}`);
+    if (row.carriers_24_inch_plus)
+      parts.push(`24+":${row.carriers_24_inch_plus}`);
     if (row.golf_bags) parts.push(`golf:${row.golf_bags}`);
     if (row.special_items) parts.push(row.special_items);
-    return parts.length ? parts.join(', ') : null;
+    return parts.length ? parts.join(", ") : null;
   }
 
   mapActiveAssignment(row) {
     if (!row.assignment_id) return null;
-    const vehicle = row.assigned_vehicle_type_code || row.assigned_vehicle_plate || row.assigned_vehicle_model
-      ? {
-          typeCode: row.assigned_vehicle_type_code ?? null,
-          typeName: row.assigned_vehicle_type_name ?? null,
-          plateNumber: row.assigned_vehicle_plate ?? null,
-          modelName: row.assigned_vehicle_model ?? null,
-        }
-      : null;
+    const vehicle =
+      row.assigned_vehicle_type_code ||
+      row.assigned_vehicle_plate ||
+      row.assigned_vehicle_model
+        ? {
+            typeCode: row.assigned_vehicle_type_code ?? null,
+            typeName: row.assigned_vehicle_type_name ?? null,
+            plateNumber: row.assigned_vehicle_plate ?? null,
+            modelName: row.assigned_vehicle_model ?? null,
+          }
+        : null;
     return {
       assignmentId: row.assignment_id,
       driverId: row.assignment_driver_id,
@@ -112,7 +118,8 @@ class AdminDispatchService {
   }
 
   mapQueueItem(row) {
-    const passengerCount = (row.adults ?? 0) + (row.children ?? 0) + (row.infants ?? 0);
+    const passengerCount =
+      (row.adults ?? 0) + (row.children ?? 0) + (row.infants ?? 0);
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -142,32 +149,36 @@ class AdminDispatchService {
   }
 
   mapDriverEligibility(driver) {
-    if (!driver.is_active || driver.status === 'SUSPENDED') {
-      return 'NOT_ELIGIBLE';
+    if (!driver.is_active || driver.status === "SUSPENDED") {
+      return "NOT_ELIGIBLE";
     }
-    if (driver.status === 'OFFLINE' || !driver.is_online) {
-      return 'INACTIVE';
+    if (driver.status === "OFFLINE" || !driver.is_online) {
+      return "INACTIVE";
     }
-    return 'ACTIVE';
+    return "ACTIVE";
   }
 
   isDriverAssignable(driver) {
-    return driver.is_active === 1 && driver.status !== 'SUSPENDED';
+    return driver.is_active === 1 && driver.status !== "SUSPENDED";
   }
 
-  mapDriverListItem(row, settlementBlocked = false, settlementBlockReason = null) {
+  mapDriverListItem(
+    row,
+    settlementBlocked = false,
+    settlementBlockReason = null,
+  ) {
     const eligibilityState = settlementBlocked
-      ? 'NOT_ELIGIBLE'
+      ? "NOT_ELIGIBLE"
       : this.mapDriverEligibility(row);
     return {
       driverId: row.id,
       displayName: row.name,
       phone: row.phone,
-      activeState: row.is_active ? 'ACTIVE' : 'INACTIVE',
-      onlineState: row.is_online ? 'ONLINE' : 'OFFLINE',
+      activeState: row.is_active ? "ACTIVE" : "INACTIVE",
+      onlineState: row.is_online ? "ONLINE" : "OFFLINE",
       driverStatus: row.status,
       eligibilityState,
-      assignmentEligible: eligibilityState !== 'NOT_ELIGIBLE',
+      assignmentEligible: eligibilityState !== "NOT_ELIGIBLE",
       settlementBlockReason: settlementBlockReason ?? null,
       primaryVehicle: row.primary_vehicle_id
         ? {
@@ -179,7 +190,8 @@ class AdminDispatchService {
           }
         : null,
       activeAssignmentCount: Number(row.active_assignment_count ?? 0),
-      averageRating: row.average_rating != null ? Number(row.average_rating) : null,
+      averageRating:
+        row.average_rating != null ? Number(row.average_rating) : null,
       reviewCount: Number(row.review_count ?? 0),
     };
   }
@@ -191,17 +203,17 @@ class AdminDispatchService {
     const terminalReassign = TERMINAL_REASSIGN_STATUSES.has(status);
 
     if (!activeAssignment && !terminalAssign) {
-      actions.push('ASSIGN_DRIVER');
+      actions.push("ASSIGN_DRIVER");
     }
     if (activeAssignment && !terminalReassign) {
-      actions.push('REASSIGN_DRIVER');
+      actions.push("REASSIGN_DRIVER");
     }
     return actions;
   }
 
   parseMetadata(raw) {
     if (!raw) return null;
-    if (typeof raw === 'object') return raw;
+    if (typeof raw === "object") return raw;
     try {
       return JSON.parse(raw);
     } catch {
@@ -225,7 +237,10 @@ class AdminDispatchService {
     const filters = this.parseFilters(query);
     const pagination = this.parsePagination(query);
     const total = await this.bookingRepository.countAdminBookings(filters);
-    const rows = await this.bookingRepository.findAdminBookings(filters, pagination);
+    const rows = await this.bookingRepository.findAdminBookings(
+      filters,
+      pagination,
+    );
 
     return {
       page: pagination.page,
@@ -236,17 +251,23 @@ class AdminDispatchService {
   }
 
   async getBookingDetail(bookingNumber) {
-    const row = await this.bookingRepository.findAdminBookingDetail(bookingNumber);
+    const row =
+      await this.bookingRepository.findAdminBookingDetail(bookingNumber);
     if (!row) {
-      throw new AppError('Booking not found', {
+      throw new AppError("Booking not found", {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
       });
     }
 
-    const chargeItems = await this.bookingRepository.findChargeItemsByBookingId(row.id);
-    const statusHistory = await this.bookingRepository.findStatusLogsByBookingId(row.id);
-    const assignments = await this.bookingRepository.findAssignmentsByBookingId(row.id);
+    const chargeItems = await this.bookingRepository.findChargeItemsByBookingId(
+      row.id,
+    );
+    const statusHistory =
+      await this.bookingRepository.findStatusLogsByBookingId(row.id);
+    const assignments = await this.bookingRepository.findAssignmentsByBookingId(
+      row.id,
+    );
     const activeAssignment = assignments.find((a) => a.is_active === 1) ?? null;
     const metadata = this.parseMetadata(row.metadata);
 
@@ -355,7 +376,7 @@ class AdminDispatchService {
       allowedActions: this.computeAllowedActions(row, activeAssignment),
       devQrTools: this.adminQrReissueService?.buildDevTools(row) ?? {
         qrReissueEnabled: false,
-        disabledReason: 'QR reissue service unavailable',
+        disabledReason: "QR reissue service unavailable",
         boarding: {
           reissueAvailable: false,
           consumed: false,
@@ -378,9 +399,12 @@ class AdminDispatchService {
     const rows = await this.driverRepository.listForAdminAssignment();
     const items = [];
     for (const row of rows) {
-      const blocked = await this.commissionSettlementService.driverHasBlockingSettlement(row.id);
+      const blocked =
+        await this.commissionSettlementService.driverHasBlockingSettlement(
+          row.id,
+        );
       const blockReason = blocked
-        ? 'Outstanding overdue or unresolved commission settlement'
+        ? "Outstanding overdue or unresolved commission settlement"
         : null;
       items.push(this.mapDriverListItem(row, blocked, blockReason));
     }
@@ -388,44 +412,53 @@ class AdminDispatchService {
   }
 
   async ensureDriverEligible(conn, driverId) {
-    const driver = await this.driverRepository.findByIdForUpdate(conn, driverId);
+    const driver = await this.driverRepository.findByIdForUpdate(
+      conn,
+      driverId,
+    );
     if (!driver) {
-      throw new AppError('Driver not found', {
+      throw new AppError("Driver not found", {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
       });
     }
     if (!this.isDriverAssignable(driver)) {
-      throw new AppError('Driver is not eligible for assignment', {
+      throw new AppError("Driver is not eligible for assignment", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });
     }
-    const blocked = await this.commissionSettlementService.driverHasBlockingSettlement(driver.id);
+    const blocked =
+      await this.commissionSettlementService.driverHasBlockingSettlement(
+        driver.id,
+      );
     if (blocked) {
-      throw new AppError('Driver has overdue or unresolved commission settlement', {
-        statusCode: HTTP_STATUS.CONFLICT,
-        errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
-      });
+      throw new AppError(
+        "Driver has overdue or unresolved commission settlement",
+        {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+        },
+      );
     }
     return driver;
   }
 
   assertBookingSupportsCandidateRecommendation(booking, activeAssignment) {
     if (activeAssignment) {
-      throw new AppError('Booking already has an active driver assignment', {
+      throw new AppError("Booking already has an active driver assignment", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.ALREADY_ASSIGNED,
       });
     }
     if (!CANDIDATE_ASSIGN_STATUSES.has(booking.status)) {
-      throw new AppError('Booking is not eligible for driver recommendation', {
+      throw new AppError("Booking is not eligible for driver recommendation", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
       });
     }
     if (TERMINAL_ASSIGN_STATUSES.has(booking.status)) {
-      throw new AppError('Booking cannot be assigned in the current status', {
+      throw new AppError("Booking cannot be assigned in the current status", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
       });
@@ -440,8 +473,10 @@ class AdminDispatchService {
     const excluded = [];
 
     for (const driver of drivers) {
-      const settlementBlocked = await this.commissionSettlementService
-        .driverHasBlockingSettlement(driver.id);
+      const settlementBlocked =
+        await this.commissionSettlementService.driverHasBlockingSettlement(
+          driver.id,
+        );
       const candidate = this.driverCandidateScoringService.buildCandidate(
         driver,
         booking,
@@ -470,7 +505,9 @@ class AdminDispatchService {
       }
     }
 
-    candidates.sort((a, b) => this.driverCandidateScoringService.compareCandidates(a, b));
+    candidates.sort((a, b) =>
+      this.driverCandidateScoringService.compareCandidates(a, b),
+    );
 
     return {
       candidates,
@@ -480,17 +517,26 @@ class AdminDispatchService {
   }
 
   async getDriverCandidates(bookingNumber) {
-    const booking = await this.bookingRepository.findBookingForDriverCandidates(bookingNumber);
+    const booking =
+      await this.bookingRepository.findBookingForDriverCandidates(
+        bookingNumber,
+      );
     if (!booking) {
-      throw new AppError('Booking not found', {
+      throw new AppError("Booking not found", {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
       });
     }
 
-    const assignments = await this.bookingRepository.findAssignmentsByBookingId(booking.id);
-    const activeAssignment = assignments.find((row) => row.is_active === 1) ?? null;
-    this.assertBookingSupportsCandidateRecommendation(booking, activeAssignment);
+    const assignments = await this.bookingRepository.findAssignmentsByBookingId(
+      booking.id,
+    );
+    const activeAssignment =
+      assignments.find((row) => row.is_active === 1) ?? null;
+    this.assertBookingSupportsCandidateRecommendation(
+      booking,
+      activeAssignment,
+    );
 
     const preview = await this.buildDriverCandidatePreview(booking);
 
@@ -505,13 +551,17 @@ class AdminDispatchService {
     };
   }
 
-  async assertAutoAssignCandidate(bookingNumber, driverId, expectedAssignmentVersion) {
+  async assertAutoAssignCandidate(
+    bookingNumber,
+    driverId,
+    expectedAssignmentVersion,
+  ) {
     const preview = await this.getDriverCandidates(bookingNumber);
     if (
-      expectedAssignmentVersion !== undefined
-      && Number(expectedAssignmentVersion) !== Number(preview.assignmentVersion)
+      expectedAssignmentVersion !== undefined &&
+      Number(expectedAssignmentVersion) !== Number(preview.assignmentVersion)
     ) {
-      throw new AppError('Assignment conflict', {
+      throw new AppError("Assignment conflict", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.ASSIGNMENT_CONFLICT,
       });
@@ -521,7 +571,7 @@ class AdminDispatchService {
       (row) => Number(row.driverId) === Number(driverId),
     );
     if (!candidate) {
-      throw new AppError('Driver is not eligible for auto assignment', {
+      throw new AppError("Driver is not eligible for auto assignment", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });
@@ -535,16 +585,19 @@ class AdminDispatchService {
       const preview = await this.getDriverCandidates(bookingNumber);
       const top = preview.candidates[0];
       if (!top) {
-        throw new AppError('No eligible drivers available for auto assignment', {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
-        });
+        throw new AppError(
+          "No eligible drivers available for auto assignment",
+          {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+          },
+        );
       }
       driverId = top.driverId;
     }
 
     if (!driverId) {
-      throw new AppError('driverId or useTopCandidate is required', {
+      throw new AppError("driverId or useTopCandidate is required", {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
@@ -560,7 +613,7 @@ class AdminDispatchService {
       bookingNumber,
       {
         driverId,
-        assignmentReason: input.assignmentReason ?? 'AUTO_ASSIGN',
+        assignmentReason: input.assignmentReason ?? "AUTO_ASSIGN",
       },
       user,
     );
@@ -572,8 +625,8 @@ class AdminDispatchService {
       transitions.push(BOOKING_STATUS.CONFIRMED);
     }
     if (
-      initialStatus === BOOKING_STATUS.PENDING
-      || initialStatus === BOOKING_STATUS.CONFIRMED
+      initialStatus === BOOKING_STATUS.PENDING ||
+      initialStatus === BOOKING_STATUS.CONFIRMED
     ) {
       transitions.push(BOOKING_STATUS.DRIVER_ASSIGNED);
     }
@@ -602,24 +655,30 @@ class AdminDispatchService {
     try {
       await conn.beginTransaction();
 
-      const booking = await this.bookingRepository.findByBookingNumberForUpdate(conn, bookingNumber);
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
       if (!booking) {
-        throw new AppError('Booking not found', {
+        throw new AppError("Booking not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
         });
       }
 
       if (TERMINAL_ASSIGN_STATUSES.has(booking.status)) {
-        throw new AppError('Booking cannot be assigned in the current status', {
+        throw new AppError("Booking cannot be assigned in the current status", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
         });
       }
 
-      const active = await this.bookingRepository.findActiveAssignmentForUpdate(conn, booking.id);
+      const active = await this.bookingRepository.findActiveAssignmentForUpdate(
+        conn,
+        booking.id,
+      );
       if (active) {
-        throw new AppError('Booking already has an active driver assignment', {
+        throw new AppError("Booking already has an active driver assignment", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.ALREADY_ASSIGNED,
         });
@@ -628,17 +687,23 @@ class AdminDispatchService {
       const driver = await this.ensureDriverEligible(conn, input.driverId);
       let driverVehicleId = input.driverVehicleId ?? null;
       if (!driverVehicleId) {
-        const primaryVehicle = await this.driverRepository.findPrimaryVehicle(conn, driver.id);
+        const primaryVehicle = await this.driverRepository.findPrimaryVehicle(
+          conn,
+          driver.id,
+        );
         driverVehicleId = primaryVehicle?.id ?? null;
       }
 
-      const assignmentId = await this.bookingRepository.insertDriverAssignment(conn, {
-        bookingId: booking.id,
-        driverId: driver.id,
-        driverVehicleId,
-        assignedByUserId: actor.id,
-        assignmentReason: input.assignmentReason ?? input.reason ?? null,
-      });
+      const assignmentId = await this.bookingRepository.insertDriverAssignment(
+        conn,
+        {
+          bookingId: booking.id,
+          driverId: driver.id,
+          driverVehicleId,
+          assignedByUserId: actor.id,
+          assignmentReason: input.assignmentReason ?? input.reason ?? null,
+        },
+      );
 
       const statusOutboxIds = await this.transitionToDriverAssigned(
         conn,
@@ -648,8 +713,19 @@ class AdminDispatchService {
       );
       pendingOutboxIds.push(...statusOutboxIds);
 
+      if (this.chatService) {
+        await this.chatService.syncAssignedParticipants(conn, {
+          booking: {
+            ...booking,
+            status: BOOKING_STATUS.DRIVER_ASSIGNED,
+          },
+          driver,
+          adminUser: user,
+        });
+      }
+
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
-        activityType: 'DRIVER_ASSIGNED',
+        activityType: "DRIVER_ASSIGNED",
         actorUserId: actor.id,
         actorRole: actor.role,
         description: `Driver ${driver.name} assigned by admin`,
@@ -678,8 +754,8 @@ class AdminDispatchService {
       };
     } catch (err) {
       await conn.rollback();
-      if (err.code === 'ER_DUP_ENTRY') {
-        throw new AppError('Assignment conflict', {
+      if (err.code === "ER_DUP_ENTRY") {
+        throw new AppError("Assignment conflict", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.ASSIGNMENT_CONFLICT,
         });
@@ -699,31 +775,40 @@ class AdminDispatchService {
     try {
       await conn.beginTransaction();
 
-      const booking = await this.bookingRepository.findByBookingNumberForUpdate(conn, bookingNumber);
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
       if (!booking) {
-        throw new AppError('Booking not found', {
+        throw new AppError("Booking not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
         });
       }
 
       if (TERMINAL_REASSIGN_STATUSES.has(booking.status)) {
-        throw new AppError('Booking cannot be reassigned in the current status', {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
-        });
+        throw new AppError(
+          "Booking cannot be reassigned in the current status",
+          {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+          },
+        );
       }
 
-      const active = await this.bookingRepository.findActiveAssignmentForUpdate(conn, booking.id);
+      const active = await this.bookingRepository.findActiveAssignmentForUpdate(
+        conn,
+        booking.id,
+      );
       if (!active) {
-        throw new AppError('Booking has no active driver assignment', {
+        throw new AppError("Booking has no active driver assignment", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
         });
       }
 
       if (Number(active.driver_id) === Number(input.driverId)) {
-        throw new AppError('New driver must differ from the current driver', {
+        throw new AppError("New driver must differ from the current driver", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.VALIDATION_ERROR,
         });
@@ -732,7 +817,10 @@ class AdminDispatchService {
       const driver = await this.ensureDriverEligible(conn, input.driverId);
       let driverVehicleId = input.driverVehicleId ?? null;
       if (!driverVehicleId) {
-        const primaryVehicle = await this.driverRepository.findPrimaryVehicle(conn, driver.id);
+        const primaryVehicle = await this.driverRepository.findPrimaryVehicle(
+          conn,
+          driver.id,
+        );
         driverVehicleId = primaryVehicle?.id ?? null;
       }
 
@@ -742,22 +830,37 @@ class AdminDispatchService {
         input.reason ?? null,
       );
       if (!deactivated) {
-        throw new AppError('Assignment conflict', {
+        throw new AppError("Assignment conflict", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.ASSIGNMENT_CONFLICT,
         });
       }
 
-      const assignmentId = await this.bookingRepository.insertDriverAssignment(conn, {
-        bookingId: booking.id,
-        driverId: driver.id,
-        driverVehicleId,
-        assignedByUserId: actor.id,
-        assignmentReason: input.reason ?? input.assignmentReason ?? null,
-      });
+      const assignmentId = await this.bookingRepository.insertDriverAssignment(
+        conn,
+        {
+          bookingId: booking.id,
+          driverId: driver.id,
+          driverVehicleId,
+          assignedByUserId: actor.id,
+          assignmentReason: input.reason ?? input.assignmentReason ?? null,
+        },
+      );
+
+      if (this.chatService) {
+        const previousDriver = await this.driverRepository.findById(
+          active.driver_id,
+        );
+        await this.chatService.syncAssignedParticipants(conn, {
+          booking,
+          driver,
+          adminUser: user,
+          previousDriverUserId: previousDriver?.user_id ?? null,
+        });
+      }
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
-        activityType: 'DRIVER_REASSIGNED',
+        activityType: "DRIVER_REASSIGNED",
         actorUserId: actor.id,
         actorRole: actor.role,
         description: `Driver reassigned to ${driver.name}`,
@@ -804,8 +907,8 @@ class AdminDispatchService {
       };
     } catch (err) {
       await conn.rollback();
-      if (err.code === 'ER_DUP_ENTRY') {
-        throw new AppError('Assignment conflict', {
+      if (err.code === "ER_DUP_ENTRY") {
+        throw new AppError("Assignment conflict", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.ASSIGNMENT_CONFLICT,
         });
