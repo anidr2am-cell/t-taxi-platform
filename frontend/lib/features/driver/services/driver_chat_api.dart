@@ -17,6 +17,7 @@ class DriverChatApi {
   const DriverChatApi();
 
   static const _tokenKey = 'driver_access_token';
+  static const _requestTimeout = Duration(seconds: 15);
   String get _base => '${AppConfig.apiBaseUrl}/api/v1';
 
   static String newClientMessageId() {
@@ -42,18 +43,22 @@ class DriverChatApi {
   }
 
   Future<Map<String, dynamic>> getRoom(String bookingNumber) async {
-    final response = await http.get(
-      Uri.parse('$_base/bookings/$bookingNumber/chat'),
-      headers: await _headers(),
-    );
+    final response = await http
+        .get(
+          Uri.parse('$_base/bookings/$bookingNumber/chat'),
+          headers: await _headers(),
+        )
+        .timeout(_requestTimeout, onTimeout: _timeout);
     return _decode(response);
   }
 
   Future<List<dynamic>> listMessages(String bookingNumber) async {
-    final response = await http.get(
-      Uri.parse('$_base/bookings/$bookingNumber/chat/messages'),
-      headers: await _headers(),
-    );
+    final response = await http
+        .get(
+          Uri.parse('$_base/bookings/$bookingNumber/chat/messages'),
+          headers: await _headers(),
+        )
+        .timeout(_requestTimeout, onTimeout: _timeout);
     final data = _decode(response);
     return data['items'] as List<dynamic>? ?? [];
   }
@@ -63,11 +68,13 @@ class DriverChatApi {
     required String text,
     required String clientMessageId,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_base/bookings/$bookingNumber/chat/messages'),
-      headers: await _headers(),
-      body: jsonEncode({'text': text, 'clientMessageId': clientMessageId}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$_base/bookings/$bookingNumber/chat/messages'),
+          headers: await _headers(),
+          body: jsonEncode({'text': text, 'clientMessageId': clientMessageId}),
+        )
+        .timeout(_requestTimeout, onTimeout: _timeout);
     return _decode(response);
   }
 
@@ -75,12 +82,18 @@ class DriverChatApi {
     required String bookingNumber,
     required int upToMessageId,
   }) async {
-    final response = await http.post(
-      Uri.parse('$_base/bookings/$bookingNumber/chat/read'),
-      headers: await _headers(),
-      body: jsonEncode({'upToMessageId': upToMessageId}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$_base/bookings/$bookingNumber/chat/read'),
+          headers: await _headers(),
+          body: jsonEncode({'upToMessageId': upToMessageId}),
+        )
+        .timeout(_requestTimeout, onTimeout: _timeout);
     return _decode(response);
+  }
+
+  static http.Response _timeout() {
+    throw const DriverChatApiException('Request timed out');
   }
 
   Map<String, dynamic> _decode(http.Response response) {

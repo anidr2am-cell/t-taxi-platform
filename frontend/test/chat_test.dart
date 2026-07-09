@@ -82,6 +82,7 @@ class FakeDriverChatApi extends DriverChatApi {
   final int unread;
   final String? sendError;
   int sendCount = 0;
+  String? sentBookingNumber;
 
   @override
   Future<Map<String, dynamic>> getRoom(String bookingNumber) async {
@@ -98,6 +99,7 @@ class FakeDriverChatApi extends DriverChatApi {
     required String clientMessageId,
   }) async {
     sendCount += 1;
+    sentBookingNumber = bookingNumber;
     if (sendError != null) throw DriverChatApiException(sendError!);
     return {
       'messageId': 2,
@@ -362,10 +364,53 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     await tester.enterText(find.byType(TextField), 'Hi');
-    await tester.tap(find.byIcon(Icons.send));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('driver_chat_send_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Chat is not accessible'), findsOneWidget);
+    expect(find.text('Chat is not accessible'), findsWidgets);
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
+  testWidgets('driver send button enables with text and sends booking number', (
+    tester,
+  ) async {
+    final api = FakeDriverChatApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverChatPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          socketService: TestChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final buttonFinder = find.byKey(const Key('driver_chat_send_button'));
+    FilledButton button = tester.widget<FilledButton>(buttonFinder);
+    expect(button.onPressed, isNull);
+
+    await tester.enterText(
+      find.byKey(const Key('driver_chat_message_input')),
+      'Driver hello',
+    );
+    await tester.pump();
+    button = tester.widget<FilledButton>(buttonFinder);
+    expect(button.onPressed, isNotNull);
+
+    await tester.tap(buttonFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(api.sendCount, 1);
+    expect(api.sentBookingNumber, 'TX202607010001');
+    expect(find.text('Driver hello'), findsOneWidget);
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('driver_chat_message_input')),
+    );
+    expect(input.controller?.text, isEmpty);
   });
 
   testWidgets('disconnected send uses REST instead of silent loss', (
@@ -414,7 +459,8 @@ void main() {
     expect(find.text('Offline'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Driver hello');
-    await tester.tap(find.byIcon(Icons.send));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('driver_chat_send_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 

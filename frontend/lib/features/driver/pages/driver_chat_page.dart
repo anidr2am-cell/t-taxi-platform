@@ -43,10 +43,12 @@ class _DriverChatPageState extends State<DriverChatPage> {
   late final DriverChatApi _api = widget.api ?? const DriverChatApi();
   late final ChatRealtimeSession _session;
   final _controller = TextEditingController();
+  String _draftText = '';
 
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_handleDraftChanged);
     _session = ChatRealtimeSession(
       bookingNumber: widget.bookingNumber,
       loadRoom: () => _api.getRoom(widget.bookingNumber),
@@ -77,16 +79,42 @@ class _DriverChatPageState extends State<DriverChatPage> {
   @override
   void dispose() {
     _session.dispose();
+    _controller.removeListener(_handleDraftChanged);
     _controller.dispose();
     super.dispose();
   }
 
+  void _handleDraftChanged() {
+    if (_draftText == _controller.text) return;
+    setState(() {
+      _draftText = _controller.text;
+    });
+  }
+
+  bool get _canSend =>
+      _draftText.trim().isNotEmpty &&
+      _session.sendingAllowed &&
+      !_session.sending &&
+      !_session.loading;
+
   Future<void> _send() async {
     final text = _controller.text;
     if (text.trim().isEmpty) return;
+    if (!_session.sendingAllowed || _session.loading) return;
     await _session.send(text);
+    if (!mounted) return;
     if (!_session.sending && _session.error == null) {
       _controller.clear();
+      setState(() {
+        _draftText = '';
+      });
+      return;
+    }
+    final message = _sessionErrorMessage(context.l10n);
+    if (message != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -217,6 +245,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
               children: [
                 Expanded(
                   child: TextField(
+                    key: const Key('driver_chat_message_input'),
                     controller: _controller,
                     enabled: _session.sendingAllowed && !_session.sending,
                     decoration: InputDecoration(
@@ -228,9 +257,8 @@ class _DriverChatPageState extends State<DriverChatPage> {
                 ),
                 const SizedBox(width: AppTokens.spaceSm),
                 FilledButton(
-                  onPressed: _session.sendingAllowed && !_session.sending
-                      ? _send
-                      : null,
+                  key: const Key('driver_chat_send_button'),
+                  onPressed: _canSend ? _send : null,
                   child: _session.sending
                       ? const SizedBox(
                           width: 18,
