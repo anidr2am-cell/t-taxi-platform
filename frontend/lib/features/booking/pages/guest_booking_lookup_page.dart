@@ -15,6 +15,8 @@ import '../widgets/booking_review_form.dart';
 import '../widgets/assigned_driver_status_card.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
+import '../../chat/services/chat_socket_service.dart';
+import 'customer_booking_chat_page.dart';
 
 class GuestBookingLookupPage extends StatefulWidget {
   const GuestBookingLookupPage({
@@ -22,12 +24,14 @@ class GuestBookingLookupPage extends StatefulWidget {
     this.lookupService,
     this.bookingApiService,
     this.bookingChatApi,
+    this.bookingChatSocketService,
     this.enableCustomerTools = false,
   });
 
   final GuestBookingLookupService? lookupService;
   final BookingApiService? bookingApiService;
   final BookingChatApi? bookingChatApi;
+  final ChatSocketService? bookingChatSocketService;
   final bool enableCustomerTools;
 
   @override
@@ -128,10 +132,21 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
   }
 
-  Future<void> _notifyPickupReady(GuestBookingLookupResult result) {
-    return (widget.bookingChatApi ?? const BookingChatApi()).sendPickupAlert(
+  Future<void> _notifyPickupReady(GuestBookingLookupResult result) async {
+    await (widget.bookingChatApi ?? const BookingChatApi()).sendPickupAlert(
       bookingNumber: result.bookingNumber,
       guestAccessToken: result.guestAccessToken,
+    );
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CustomerBookingChatPage(
+          bookingNumber: result.bookingNumber,
+          guestAccessToken: result.guestAccessToken,
+          api: widget.bookingChatApi,
+          socketService: widget.bookingChatSocketService,
+        ),
+      ),
     );
   }
 
@@ -504,7 +519,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             BookingChatSection(
               bookingNumber: result.bookingNumber,
               guestAccessToken: result.guestAccessToken,
-              api: const BookingChatApi(),
+              api: widget.bookingChatApi ?? const BookingChatApi(),
+              socketService: widget.bookingChatSocketService,
             ),
           ],
           if (result.capabilities.reviewAvailable) ...[

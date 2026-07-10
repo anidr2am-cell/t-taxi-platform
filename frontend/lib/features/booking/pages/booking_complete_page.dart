@@ -18,6 +18,7 @@ import '../widgets/booking_notification_section.dart';
 import '../../chat/services/chat_socket_service.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/booking_chat_section.dart';
+import 'customer_booking_chat_page.dart';
 import 'guest_booking_lookup_page.dart';
 
 class BookingCompletePage extends StatefulWidget {
@@ -182,10 +183,21 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     }
   }
 
-  Future<void> _notifyPickupReady() {
-    return (widget.chatApi ?? const BookingChatApi()).sendPickupAlert(
+  Future<void> _notifyPickupReady() async {
+    await (widget.chatApi ?? const BookingChatApi()).sendPickupAlert(
       bookingNumber: widget.result.bookingNumber,
       guestAccessToken: widget.result.guestAccessToken ?? '',
+    );
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CustomerBookingChatPage(
+          bookingNumber: widget.result.bookingNumber,
+          guestAccessToken: widget.result.guestAccessToken,
+          api: widget.chatApi,
+          socketService: widget.chatSocketService,
+        ),
+      ),
     );
   }
 

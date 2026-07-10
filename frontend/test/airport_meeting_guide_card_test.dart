@@ -180,6 +180,7 @@ void main() {
         GuestBookingLookupPage(
           lookupService: _FakeLookupService(_lookupResult(nameSign: false)),
           bookingChatApi: chatApi,
+          bookingChatSocketService: _FakeChatSocketService(),
         ),
       ),
     );
@@ -196,6 +197,39 @@ void main() {
 
     expect(chatApi.sentGuestToken, 'guest-token');
     expect(chatApi.sentBookingNumber, 'TX202607010001');
+    expect(find.text('Booking chat'), findsWidgets);
+    expect(find.text('Type a message'), findsOneWidget);
+  });
+
+  testWidgets('guest lookup stays on guide when pickup alert fails', (
+    tester,
+  ) async {
+    final chatApi = _FakeBookingChatApi(failPickupAlert: true);
+    await tester.pumpWidget(
+      _wrapPage(
+        GuestBookingLookupPage(
+          lookupService: _FakeLookupService(_lookupResult(nameSign: false)),
+          bookingChatApi: chatApi,
+          bookingChatSocketService: _FakeChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('I arrived and collected my luggage'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Booking chat'), findsNothing);
+    expect(
+      find.text('Could not send the pickup notification. Please try again.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('lookup enables pickup alert in active pickup statuses', (
@@ -277,6 +311,46 @@ void main() {
 
     expect(find.text('Vehicle pickup guide · Gate 7'), findsOneWidget);
     expect(find.text('Boarding QR'), findsNothing);
+  });
+
+  testWidgets('booking complete pickup action opens customer chat', (
+    tester,
+  ) async {
+    final chatApi = _FakeBookingChatApi();
+    await tester.pumpWidget(
+      _wrapPage(
+        BookingCompletePage(
+          result: _bookingResult(status: 'DRIVER_ASSIGNED'),
+          serviceLabel: 'Airport Pickup',
+          originLabel: 'BKK Airport',
+          destinationLabel: 'Pattaya',
+          serviceTypeCode: 'AIRPORT_PICKUP',
+          originAirportCode: 'BKK',
+          nameSignRequested: false,
+          meetingVehicleInfo: const AirportMeetingVehicleInfo(
+            driverName: 'Driver A',
+            vehiclePlateNumber: '1ABC1234',
+          ),
+          chatApi: chatApi,
+          chatSocketService: _FakeChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('I arrived and collected my luggage'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+
+    expect(chatApi.sentGuestToken, 'guest-token');
+    expect(chatApi.sentBookingNumber, 'TX202607010001');
+    expect(find.text('Booking chat'), findsWidgets);
+    expect(find.text('Type a message'), findsOneWidget);
   });
 
   testWidgets(
@@ -466,11 +540,11 @@ Widget _wrapPage(Widget child, {Locale locale = const Locale('en')}) {
   );
 }
 
-BookingCreateResult _bookingResult() {
-  return const BookingCreateResult(
+BookingCreateResult _bookingResult({String status = 'PENDING'}) {
+  return BookingCreateResult(
     bookingId: 1,
     bookingNumber: 'TX202607010001',
-    status: 'PENDING',
+    status: status,
     paymentMethod: 'PAY_DRIVER',
     paymentStatus: 'UNPAID',
     totalAmount: 1500,
@@ -545,6 +619,9 @@ class _FakeLookupService extends GuestBookingLookupService {
 }
 
 class _FakeBookingChatApi extends BookingChatApi {
+  _FakeBookingChatApi({this.failPickupAlert = false});
+
+  final bool failPickupAlert;
   String? sentGuestToken;
   String? sentBookingNumber;
 
@@ -586,6 +663,9 @@ class _FakeBookingChatApi extends BookingChatApi {
     required String bookingNumber,
     required String guestAccessToken,
   }) async {
+    if (failPickupAlert) {
+      throw const BookingChatApiException('Pickup alert failed');
+    }
     sentBookingNumber = bookingNumber;
     sentGuestToken = guestAccessToken;
     return {'messageId': 1, 'text': '도착하고 수화물을 찾았습니다', 'alreadySent': false};
