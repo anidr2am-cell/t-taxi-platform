@@ -591,7 +591,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('전송 시간이 초과되었습니다. 다시 시도해 주세요.'), findsWidgets);
+    expect(find.text('Sending timed out. Please try again.'), findsWidgets);
     final input = tester.widget<TextField>(
       find.byKey(const Key('driver_chat_message_input')),
     );

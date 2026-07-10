@@ -130,7 +130,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
     final err = _actionError ?? _session.error;
     if (err == null) return null;
     if (err.contains('전송 시간이 초과') || err.contains('timed out')) {
-      return '전송 시간이 초과되었습니다. 다시 시도해 주세요.';
+      return l10n.t('chat_send_timeout');
     }
     if (err.contains('Exception') || err.startsWith('Instance of')) {
       return l10n.t('driver_load_failed');
@@ -141,7 +141,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
   String _friendlyErrorMessage(Object err, AppLocalizations l10n) {
     final text = err.toString();
     if (text.contains('전송 시간이 초과') || text.contains('timed out')) {
-      return '전송 시간이 초과되었습니다. 다시 시도해 주세요.';
+      return l10n.t('chat_send_timeout');
     }
     if (text.contains('Exception') || text.startsWith('Instance of')) {
       return l10n.t('driver_load_failed');
@@ -178,7 +178,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
         : l10n.t('driver_chat_readonly');
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('driver_message_customer'))),
+      appBar: AppBar(title: Text(l10n.t('chat_title_short'))),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -186,10 +186,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
             padding: AppUi.pagePadding(context).copyWith(bottom: 0),
             child: AppUi.sectionHeader(
               context,
-              title: context.l10n
-                  .t('reservation_number')
-                  .replaceAll('No.', '')
-                  .trim(),
+              title: context.l10n.t('booking_number_label'),
               subtitle: widget.bookingNumber,
               trailing: Wrap(
                 spacing: AppTokens.spaceSm,
@@ -223,7 +220,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
                     : _openBookingDetail,
                 icon: const Icon(Icons.confirmation_number_outlined),
                 label: Text(
-                  '${l10n.t('reservation_number')} ${widget.bookingNumber}',
+                  '${l10n.t('booking_number_label')} ${widget.bookingNumber}',
                 ),
               ),
             ),

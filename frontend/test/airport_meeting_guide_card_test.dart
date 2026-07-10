@@ -138,13 +138,13 @@ void main() {
       findsOneWidget,
     );
     await tester.scrollUntilVisible(
-      find.text('Send pickup notification'),
+      find.text('Tell driver I’m ready'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Send pickup notification'));
+    await tester.tap(find.text('Tell driver I’m ready'));
     await tester.pumpAndSettle();
-    expect(find.text('Send pickup notification'), findsWidgets);
+    expect(find.text('Tell driver I’m ready'), findsWidgets);
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
 
@@ -189,11 +189,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Send pickup notification'),
+      find.text('Tell driver I’m ready'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Send pickup notification'));
+    await tester.tap(find.text('Tell driver I’m ready'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
@@ -228,11 +228,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Send pickup notification'),
+      find.text('Tell driver I’m ready'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Send pickup notification'));
+    await tester.tap(find.text('Tell driver I’m ready'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
@@ -262,7 +262,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Send pickup notification'),
+        find.text('Tell driver I’m ready'),
         findsOneWidget,
         reason: status,
       );
@@ -296,7 +296,7 @@ void main() {
           findsOneWidget,
           reason: status,
         );
-        expect(find.text('Send pickup notification'), findsNothing);
+        expect(find.text('Tell driver I’m ready'), findsNothing);
       }
     },
   );
@@ -350,11 +350,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Send pickup notification'),
+      find.text('Tell driver I’m ready'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Send pickup notification'));
+    await tester.tap(find.text('Tell driver I’m ready'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();

@@ -191,6 +191,9 @@ class AppLocalizations {
       'country': 'Country',
       'booking_complete': 'Booking Complete',
       'reservation_number': 'Reservation No.',
+      'booking_number_label': 'Booking number',
+      'chat_title_short': 'Chat',
+      'chat_send_timeout': 'Sending timed out. Please try again.',
       'status': 'Status',
       'chat_driver': 'Chat Driver',
       'install_app': 'Install App',
@@ -737,6 +740,9 @@ class AppLocalizations {
       'country': '국가',
       'booking_complete': '예약 완료',
       'reservation_number': '예약번호',
+      'booking_number_label': '예약번호',
+      'chat_title_short': '채팅',
+      'chat_send_timeout': '전송 시간이 초과되었습니다. 다시 시도해 주세요.',
       'status': '상태',
       'chat_driver': '기사 채팅',
       'install_app': '앱 설치',
@@ -1255,6 +1261,9 @@ class AppLocalizations {
       'country': '国家',
       'booking_complete': '预订完成',
       'reservation_number': '预订号',
+      'booking_number_label': '预订号',
+      'chat_title_short': '聊天',
+      'chat_send_timeout': '发送超时。请重试。',
       'status': '状态',
       'chat_driver': '联系司机',
       'install_app': '安装应用',
@@ -1582,6 +1591,9 @@ class AppLocalizations {
       'country': '国',
       'booking_complete': '予約完了',
       'reservation_number': '予約番号',
+      'booking_number_label': '予約番号',
+      'chat_title_short': 'チャット',
+      'chat_send_timeout': '送信がタイムアウトしました。もう一度お試しください。',
       'status': 'ステータス',
       'chat_driver': 'ドライバーとチャット',
       'install_app': 'アプリをインストール',
@@ -1916,6 +1928,10 @@ class AppLocalizations {
       'country': 'ประเทศ',
       'booking_complete': 'จองสำเร็จ',
       'reservation_number': 'หมายเลขจอง',
+      'booking_number_label': 'หมายเลขการจอง',
+      'chat_title_short': 'แชต',
+      'chat_send_timeout':
+          'ส่งข้อความไม่สำเร็จภายในเวลาที่กำหนด กรุณาลองอีกครั้ง',
       'status': 'สถานะ',
       'chat_driver': 'แชทกับคนขับ',
       'install_app': 'ติดตั้งแอป',
@@ -2926,7 +2942,7 @@ class AppLocalizations {
     'en': {
       'airport_meeting_step_notify_driver':
           'After arrival and collecting your luggage, notify your driver.',
-      'airport_meeting_notify_button': 'Send pickup notification',
+      'airport_meeting_notify_button': 'Tell driver I’m ready',
       'airport_meeting_message_driver': 'Message driver',
       'airport_meeting_notify_sent': 'Pickup notification sent',
       'airport_meeting_notify_failed':
@@ -2944,7 +2960,7 @@ class AppLocalizations {
     'ko': {
       'airport_meeting_step_notify_driver':
           '기사에게 픽업 알림을 보냅니다. 꼭 수하물을 찾으신 후에 알림을 보내주시기 바랍니다',
-      'airport_meeting_notify_button': '픽업 알림 보내기',
+      'airport_meeting_notify_button': '픽업 준비 알림 보내기',
       'airport_meeting_message_driver': '기사에게 메시지 보내기',
       'airport_meeting_notify_sent': '픽업 알림을 보냈습니다',
       'airport_meeting_notify_failed': '픽업 알림을 보내지 못했습니다. 다시 시도해 주세요.',
@@ -2958,7 +2974,7 @@ class AppLocalizations {
     },
     'zh': {
       'airport_meeting_step_notify_driver': '抵达并取到行李后，请通知司机。',
-      'airport_meeting_notify_button': '发送接机通知',
+      'airport_meeting_notify_button': '告诉司机我已准备好',
       'airport_meeting_message_driver': '联系司机',
       'airport_meeting_notify_sent': '接机通知已发送',
       'airport_meeting_notify_failed': '无法发送接机通知，请重试。',
@@ -2971,7 +2987,7 @@ class AppLocalizations {
     },
     'ja': {
       'airport_meeting_step_notify_driver': '到着して荷物を受け取ったら、ドライバーへお知らせください。',
-      'airport_meeting_notify_button': 'ピックアップ通知を送信',
+      'airport_meeting_notify_button': '準備完了をドライバーに知らせる',
       'airport_meeting_message_driver': 'ドライバーにメッセージ',
       'airport_meeting_notify_sent': 'ピックアップ通知を送信しました',
       'airport_meeting_notify_failed': '通知を送信できませんでした。もう一度お試しください。',
@@ -2986,7 +3002,7 @@ class AppLocalizations {
     'th': {
       'airport_meeting_step_notify_driver':
           'เมื่อมาถึงและรับสัมภาระแล้ว ให้แจ้งคนขับว่าพร้อมขึ้นรถ',
-      'airport_meeting_notify_button': 'ส่งการแจ้งรับรถ',
+      'airport_meeting_notify_button': 'แจ้งคนขับว่าพร้อมรับรถ',
       'airport_meeting_message_driver': 'ส่งข้อความหาคนขับ',
       'airport_meeting_notify_sent': 'ส่งข้อความแจ้งคนขับแล้ว',
       'airport_meeting_notify_failed':
