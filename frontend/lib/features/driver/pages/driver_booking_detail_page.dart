@@ -108,7 +108,11 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       MaterialPageRoute(
         builder: (_) =>
             widget.chatPageBuilder?.call(widget.bookingNumber) ??
-            DriverChatPage(bookingNumber: widget.bookingNumber),
+            DriverChatPage(
+              bookingNumber: widget.bookingNumber,
+              bookingDetailPageBuilder: (bookingNumber) =>
+                  DriverBookingDetailPage(bookingNumber: bookingNumber),
+            ),
       ),
     );
   }

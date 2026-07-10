@@ -36,6 +36,7 @@ class AirportMeetingGuideCard extends StatelessWidget {
     required this.nameSignRequested,
     this.vehicleInfo,
     this.onNotifyPickup,
+    this.pickupAlertSent = false,
   });
 
   final String? serviceTypeCode;
@@ -43,6 +44,7 @@ class AirportMeetingGuideCard extends StatelessWidget {
   final bool nameSignRequested;
   final AirportMeetingVehicleInfo? vehicleInfo;
   final Future<void> Function()? onNotifyPickup;
+  final bool pickupAlertSent;
 
   static bool shouldShow({
     required String? serviceTypeCode,
@@ -136,7 +138,10 @@ class AirportMeetingGuideCard extends StatelessWidget {
             const SizedBox(height: AppTokens.spaceMd),
             _VehicleBlock(info: vehicleInfo),
             const SizedBox(height: AppTokens.spaceMd),
-            _PickupNotificationAction(onNotifyPickup: onNotifyPickup),
+            _PickupNotificationAction(
+              onNotifyPickup: onNotifyPickup,
+              pickupAlertSent: pickupAlertSent,
+            ),
           ],
         ),
       ),
@@ -333,9 +338,13 @@ class _Steps extends StatelessWidget {
 }
 
 class _PickupNotificationAction extends StatefulWidget {
-  const _PickupNotificationAction({required this.onNotifyPickup});
+  const _PickupNotificationAction({
+    required this.onNotifyPickup,
+    required this.pickupAlertSent,
+  });
 
   final Future<void> Function()? onNotifyPickup;
+  final bool pickupAlertSent;
 
   @override
   State<_PickupNotificationAction> createState() =>
@@ -347,8 +356,26 @@ class _PickupNotificationActionState extends State<_PickupNotificationAction> {
   bool _sent = false;
   String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    _sent = widget.pickupAlertSent;
+  }
+
+  @override
+  void didUpdateWidget(covariant _PickupNotificationAction oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.pickupAlertSent && !_sent) {
+      _sent = true;
+    }
+  }
+
   Future<void> _send() async {
     if (_sending || widget.onNotifyPickup == null) return;
+    if (_sent) {
+      await widget.onNotifyPickup!();
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -408,13 +435,13 @@ class _PickupNotificationActionState extends State<_PickupNotificationAction> {
           width: double.infinity,
           child: AppUi.primaryButton(
             label: _sent
-                ? l10n.t('airport_meeting_notify_sent')
+                ? l10n.t('airport_meeting_message_driver')
                 : l10n.t('airport_meeting_notify_button'),
             icon: _sent
-                ? Icons.check_circle_outline
+                ? Icons.chat_bubble_outline
                 : Icons.notifications_active,
             loading: _sending,
-            onPressed: _sending || _sent ? null : _send,
+            onPressed: _sending ? null : _send,
           ),
         ),
         if (_error != null) ...[

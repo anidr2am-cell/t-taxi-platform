@@ -58,6 +58,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   String? _error;
   bool _loadingDropoffQr = false;
   String? _dropoffQrToken;
+  final Set<String> _pickupAlertSentBookingNumbers = <String>{};
 
   @override
   void initState() {
@@ -133,10 +134,22 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   }
 
   Future<void> _notifyPickupReady(GuestBookingLookupResult result) async {
+    if (_pickupAlertSentBookingNumbers.contains(result.bookingNumber)) {
+      _openCustomerChat(result);
+      return;
+    }
     await (widget.bookingChatApi ?? const BookingChatApi()).sendPickupAlert(
       bookingNumber: result.bookingNumber,
       guestAccessToken: result.guestAccessToken,
     );
+    if (!mounted) return;
+    setState(() {
+      _pickupAlertSentBookingNumbers.add(result.bookingNumber);
+    });
+    _openCustomerChat(result);
+  }
+
+  void _openCustomerChat(GuestBookingLookupResult result) {
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -462,6 +475,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             serviceTypeCode: result.serviceTypeCode,
             originAirportCode: result.originAirportCode,
             nameSignRequested: result.nameSignRequested,
+            pickupAlertSent: _pickupAlertSentBookingNumbers.contains(
+              result.bookingNumber,
+            ),
             vehicleInfo: AirportMeetingVehicleInfo(
               driverName: result.driverName,
               driverPhone: result.driverPhone,

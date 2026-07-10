@@ -238,58 +238,64 @@ void main() {
     expect((withClient.first as Map)['messageId'], 5);
   });
 
-  test('client message id generators avoid Random RangeError and stay unique', () {
-    expect(() {
-      for (var i = 0; i < 50; i++) {
-        DriverChatApi.newClientMessageId();
-        BookingChatApi.newClientMessageId();
-        AdminChatApiService.newClientMessageId();
-      }
-    }, returnsNormally);
+  test(
+    'client message id generators avoid Random RangeError and stay unique',
+    () {
+      expect(() {
+        for (var i = 0; i < 50; i++) {
+          DriverChatApi.newClientMessageId();
+          BookingChatApi.newClientMessageId();
+          AdminChatApiService.newClientMessageId();
+        }
+      }, returnsNormally);
 
-    final driverId = DriverChatApi.newClientMessageId();
-    final guestId = BookingChatApi.newClientMessageId();
-    final adminId = AdminChatApiService.newClientMessageId();
+      final driverId = DriverChatApi.newClientMessageId();
+      final guestId = BookingChatApi.newClientMessageId();
+      final adminId = AdminChatApiService.newClientMessageId();
 
-    expect(driverId, isNotEmpty);
-    expect(guestId, isNotEmpty);
-    expect(adminId, isNotEmpty);
-    expect(driverId.startsWith('driver-'), isTrue);
-    expect(guestId.startsWith('guest-'), isTrue);
-    expect(adminId.startsWith('admin-'), isTrue);
-    expect(driverId, isNot(guestId));
-  });
+      expect(driverId, isNotEmpty);
+      expect(guestId, isNotEmpty);
+      expect(adminId, isNotEmpty);
+      expect(driverId.startsWith('driver-'), isTrue);
+      expect(guestId.startsWith('guest-'), isTrue);
+      expect(adminId.startsWith('admin-'), isTrue);
+      expect(driverId, isNot(guestId));
+    },
+  );
 
-  test('ChatRealtimeSession send uses REST with non-empty clientMessageId', () async {
-    final api = FakeDriverChatApi();
-    final socket = TestChatSocketService();
-    final session = ChatRealtimeSession(
-      bookingNumber: 'TX202607010001',
-      loadRoom: () => api.getRoom('TX202607010001'),
-      loadMessages: () => api.listMessages('TX202607010001'),
-      sendRest: ({required String text, required String clientMessageId}) =>
-          api.sendMessage(
-            bookingNumber: 'TX202607010001',
-            text: text,
-            clientMessageId: clientMessageId,
-          ),
-      markReadRest: (id) =>
-          api.markRead(bookingNumber: 'TX202607010001', upToMessageId: id),
-      newClientMessageId: DriverChatApi.newClientMessageId,
-      loadAccessToken: () async => 'driver-token',
-      socketService: socket,
-    );
+  test(
+    'ChatRealtimeSession send uses REST with non-empty clientMessageId',
+    () async {
+      final api = FakeDriverChatApi();
+      final socket = TestChatSocketService();
+      final session = ChatRealtimeSession(
+        bookingNumber: 'TX202607010001',
+        loadRoom: () => api.getRoom('TX202607010001'),
+        loadMessages: () => api.listMessages('TX202607010001'),
+        sendRest: ({required String text, required String clientMessageId}) =>
+            api.sendMessage(
+              bookingNumber: 'TX202607010001',
+              text: text,
+              clientMessageId: clientMessageId,
+            ),
+        markReadRest: (id) =>
+            api.markRead(bookingNumber: 'TX202607010001', upToMessageId: id),
+        newClientMessageId: DriverChatApi.newClientMessageId,
+        loadAccessToken: () async => 'driver-token',
+        socketService: socket,
+      );
 
-    await session.start();
-    await session.send('Driver REST hello');
+      await session.start();
+      await session.send('Driver REST hello');
 
-    expect(api.sendCount, 1);
-    expect(api.lastClientMessageId, isNotNull);
-    expect(api.lastClientMessageId, isNotEmpty);
-    expect(session.messages.length, 1);
-    expect((session.messages.first as Map)['text'], 'Driver REST hello');
-    session.dispose();
-  });
+      expect(api.sendCount, 1);
+      expect(api.lastClientMessageId, isNotNull);
+      expect(api.lastClientMessageId, isNotEmpty);
+      expect(session.messages.length, 1);
+      expect((session.messages.first as Map)['text'], 'Driver REST hello');
+      session.dispose();
+    },
+  );
 
   testWidgets('customer chat loads REST history and shows live connection', (
     tester,
@@ -460,6 +466,29 @@ void main() {
     );
     expect(button.onPressed, isNull);
     expect(api.sendCount, 0);
+  });
+
+  testWidgets('driver chat booking number opens booking detail route', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverChatPage(
+          bookingNumber: 'TX202607010001',
+          api: FakeDriverChatApi(),
+          socketService: TestChatSocketService(),
+          bookingDetailPageBuilder: (bookingNumber) =>
+              Scaffold(body: Text('detail:$bookingNumber')),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(find.byKey(const Key('driver_chat_booking_detail_link')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('detail:TX202607010001'), findsOneWidget);
   });
 
   testWidgets('driver send button enables with text and sends booking number', (

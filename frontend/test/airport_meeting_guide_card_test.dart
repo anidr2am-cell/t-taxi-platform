@@ -101,7 +101,7 @@ void main() {
             driverPhone: '+66 80 000 0000',
             vehicleType: 'SUV',
             vehicleColor: 'Black',
-            vehiclePlateNumber: '1กข1234',
+            vehiclePlateNumber: '1錫곟툊1234',
           ),
         ),
       ),
@@ -111,7 +111,7 @@ void main() {
     expect(find.text('+66 80 000 0000'), findsOneWidget);
     expect(find.text('SUV'), findsOneWidget);
     expect(find.text('Black'), findsOneWidget);
-    expect(find.text('1กข1234'), findsOneWidget);
+    expect(find.text('1錫곟툊1234'), findsOneWidget);
   });
 
   testWidgets('pickup notification action is enabled and sends once', (
@@ -138,18 +138,21 @@ void main() {
       findsOneWidget,
     );
     await tester.scrollUntilVisible(
-      find.text('I arrived and collected my luggage'),
+      find.text('Send pickup notification'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.tap(find.text('Send pickup notification'));
     await tester.pumpAndSettle();
-    expect(find.text('Send pickup notification'), findsOneWidget);
+    expect(find.text('Send pickup notification'), findsWidgets);
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
 
     expect(sends, 1);
-    expect(find.text('Pickup notification sent'), findsOneWidget);
+    expect(find.text('Message driver'), findsOneWidget);
+    await tester.tap(find.text('Message driver'));
+    await tester.pumpAndSettle();
+    expect(sends, 2);
   });
 
   testWidgets('Gate 7 step 2 shows Korean warning text in error color', (
@@ -186,19 +189,28 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('I arrived and collected my luggage'),
+      find.text('Send pickup notification'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.tap(find.text('Send pickup notification'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
 
     expect(chatApi.sentGuestToken, 'guest-token');
     expect(chatApi.sentBookingNumber, 'TX202607010001');
+    expect(chatApi.pickupAlertSendCount, 1);
     expect(find.text('Booking chat'), findsWidgets);
     expect(find.text('Type a message'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('Booking chat').first)).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Message driver'));
+    await tester.pumpAndSettle();
+
+    expect(chatApi.pickupAlertSendCount, 1);
+    expect(find.text('Booking chat'), findsWidgets);
   });
 
   testWidgets('guest lookup stays on guide when pickup alert fails', (
@@ -216,11 +228,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('I arrived and collected my luggage'),
+      find.text('Send pickup notification'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.tap(find.text('Send pickup notification'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
@@ -250,7 +262,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('I arrived and collected my luggage'),
+        find.text('Send pickup notification'),
         findsOneWidget,
         reason: status,
       );
@@ -284,7 +296,7 @@ void main() {
           findsOneWidget,
           reason: status,
         );
-        expect(find.text('I arrived and collected my luggage'), findsNothing);
+        expect(find.text('Send pickup notification'), findsNothing);
       }
     },
   );
@@ -338,17 +350,18 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('I arrived and collected my luggage'),
+      find.text('Send pickup notification'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('I arrived and collected my luggage'));
+    await tester.tap(find.text('Send pickup notification'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
 
     expect(chatApi.sentGuestToken, 'guest-token');
     expect(chatApi.sentBookingNumber, 'TX202607010001');
+    expect(chatApi.pickupAlertSendCount, 1);
     expect(find.text('Booking chat'), findsWidgets);
     expect(find.text('Type a message'), findsOneWidget);
   });
@@ -586,7 +599,7 @@ GuestBookingLookupResult _lookupResult({
             'vehicle': {
               'typeName': 'SUV',
               'color': 'Black',
-              'plateNumber': '1กข1234',
+              'plateNumber': '1錫곟툊1234',
             },
           }
         : null,
@@ -624,6 +637,7 @@ class _FakeBookingChatApi extends BookingChatApi {
   final bool failPickupAlert;
   String? sentGuestToken;
   String? sentBookingNumber;
+  int pickupAlertSendCount = 0;
 
   @override
   Future<Map<String, dynamic>> getRoom({
@@ -666,9 +680,10 @@ class _FakeBookingChatApi extends BookingChatApi {
     if (failPickupAlert) {
       throw const BookingChatApiException('Pickup alert failed');
     }
+    pickupAlertSendCount += 1;
     sentBookingNumber = bookingNumber;
     sentGuestToken = guestAccessToken;
-    return {'messageId': 1, 'text': '도착하고 수화물을 찾았습니다', 'alreadySent': false};
+    return {'messageId': 1, 'text': 'pickup alert sent', 'alreadySent': false};
   }
 }
 

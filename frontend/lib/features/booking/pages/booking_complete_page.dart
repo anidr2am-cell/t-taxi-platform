@@ -71,6 +71,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   String? _dropoffQrToken;
   String? _dropoffQrError;
   String? _status;
+  bool _pickupAlertSent = false;
 
   @override
   void initState() {
@@ -184,10 +185,22 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   }
 
   Future<void> _notifyPickupReady() async {
+    if (_pickupAlertSent) {
+      _openCustomerChat();
+      return;
+    }
     await (widget.chatApi ?? const BookingChatApi()).sendPickupAlert(
       bookingNumber: widget.result.bookingNumber,
       guestAccessToken: widget.result.guestAccessToken ?? '',
     );
+    if (!mounted) return;
+    setState(() {
+      _pickupAlertSent = true;
+    });
+    _openCustomerChat();
+  }
+
+  void _openCustomerChat() {
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -299,6 +312,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   originAirportCode: widget.originAirportCode,
                   nameSignRequested: widget.nameSignRequested,
                   vehicleInfo: widget.meetingVehicleInfo,
+                  pickupAlertSent: _pickupAlertSent,
                   onNotifyPickup:
                       _pickupAlertStatuses.contains(
                             _status ?? widget.result.status,

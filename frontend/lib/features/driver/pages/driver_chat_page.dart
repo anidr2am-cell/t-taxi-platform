@@ -29,11 +29,13 @@ class DriverChatPage extends StatefulWidget {
     required this.bookingNumber,
     this.api,
     this.socketService,
+    this.bookingDetailPageBuilder,
   });
 
   final String bookingNumber;
   final DriverChatApi? api;
   final ChatSocketService? socketService;
+  final Widget Function(String bookingNumber)? bookingDetailPageBuilder;
 
   @override
   State<DriverChatPage> createState() => _DriverChatPageState();
@@ -157,6 +159,14 @@ class _DriverChatPageState extends State<DriverChatPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _openBookingDetail() {
+    final builder = widget.bookingDetailPageBuilder;
+    if (builder == null) return;
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => builder(widget.bookingNumber)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -176,7 +186,11 @@ class _DriverChatPageState extends State<DriverChatPage> {
             padding: AppUi.pagePadding(context).copyWith(bottom: 0),
             child: AppUi.sectionHeader(
               context,
-              title: widget.bookingNumber,
+              title: context.l10n
+                  .t('reservation_number')
+                  .replaceAll('No.', '')
+                  .trim(),
+              subtitle: widget.bookingNumber,
               trailing: Wrap(
                 spacing: AppTokens.spaceSm,
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -195,6 +209,22 @@ class _DriverChatPageState extends State<DriverChatPage> {
                     icon: const Icon(Icons.refresh),
                   ),
                 ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('driver_chat_booking_detail_link'),
+                onPressed: widget.bookingDetailPageBuilder == null
+                    ? null
+                    : _openBookingDetail,
+                icon: const Icon(Icons.confirmation_number_outlined),
+                label: Text(
+                  '${l10n.t('reservation_number')} ${widget.bookingNumber}',
+                ),
               ),
             ),
           ),
