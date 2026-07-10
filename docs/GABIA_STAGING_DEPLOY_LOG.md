@@ -161,9 +161,9 @@ KTaxi legacy impact: none
 ### Account recovery
 - See [STAGING_ACCOUNT_RESET.md](./STAGING_ACCOUNT_RESET.md) for safe admin/driver password reset on T-Ride staging.
 
-## 2026-07-08 Fare Table Image Seed (pending server apply)
+## 2026-07-08 Fare Table Image Seed — applied and verified
 
-### Local repo
+### Local repo (commits `2b2b96f`, `62e0421`)
 - Migration: `database/28_fare_table_image_seed.sql` (idempotent upsert + soft-deactivate extras).
 - Frontend inquiry UX: pricing `NOT_FOUND` → **문의** (`pricing_inquiry_required`).
 - Tests: `backend/tests/fareTablePricing.test.js`, updated Flutter/backend suites.
@@ -171,31 +171,31 @@ KTaxi legacy impact: none
 - Remote apply script: `deploy/scripts/apply-staging-fare-table.sh`.
 - API smoke: `npm run smoke:staging:fare-table` (from backend).
 
-### Apply on Gabia (T-Ride only)
+### Server apply (Gabia, T-Ride only)
 ```bash
 cd /opt/t-ride
 bash deploy/scripts/apply-staging-fare-table.sh
 ```
 
-Or manually:
-```bash
-cd /opt/t-ride && git pull origin main
-cd /opt/t-ride/deploy/docker
-docker compose -f docker-compose.staging.yml up -d --build tride-backend tride-frontend
-docker compose -f docker-compose.staging.yml exec tride-backend \
-  sh -c 'cd /srv/tride/database && ./migrate.sh'
+### Post-apply API smoke — **10/10 passed** (office PC, 2026-07-08)
+```powershell
+cd C:\TTaxi\backend
+$env:STAGING_BASE_URL='http://103.60.127.213:3100'
+npm run smoke:staging:fare-table
 ```
 
-### Pre-apply staging API spot check (2026-07-08)
-- BKK → Pattaya SUV: **1300** (partial/old seed)
-- BKK → Bangkok Sedan, DMK → Pattaya VAN, Pattaya → DMK VAN: **NOT_FOUND** (migration 28 not applied yet)
-- Bangkok → Hua Hin: **NOT_FOUND** (HUA_HIN location missing until migration 28)
-
-### Post-apply verification
-```bash
-cd /opt/t-ride/backend
-STAGING_BASE_URL=http://103.60.127.213:3100 npm run smoke:staging:fare-table
-```
+| Check | Result |
+|-------|--------|
+| BKK → Pattaya SUV | 1300 |
+| BKK → Bangkok Sedan | 550 |
+| BKK → Hua Hin VAN | 2700 |
+| DMK → Pattaya VAN | 2200 |
+| Pattaya → DMK VAN | 2300 |
+| Pattaya → Bangkok SUV | 1500 |
+| Bangkok → Pattaya VAN | 2000 |
+| Bangkok → BKK SUV | 800 |
+| Bangkok → Hua Hin (outside fare table) | NOT_FOUND (inquiry) |
+| BKK → Pattaya LUXURY | NOT_FOUND (inquiry) |
 
 ### Safety
 - No KTaxi containers, volumes, or 80/443 touched.
