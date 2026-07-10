@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
-import 'package:frontend/features/booking/widgets/booking_chat_section.dart';
+import 'package:frontend/features/booking/pages/customer_booking_chat_page.dart';
 import 'package:frontend/features/booking/services/booking_chat_api.dart';
+import 'package:frontend/features/booking/widgets/booking_chat_section.dart';
 import 'package:frontend/features/chat/models/chat_connection_state.dart';
 import 'package:frontend/features/chat/services/chat_message_list.dart';
 import 'package:frontend/features/chat/services/chat_realtime_session.dart';
@@ -321,6 +322,30 @@ void main() {
     );
   });
 
+  testWidgets('customer chat page explains pickup alert handoff', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerBookingChatPage(
+          bookingNumber: 'TX202607010001',
+          guestAccessToken: 'guest-token',
+          api: FakeBookingChatApi(),
+          socketService: TestChatSocketService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pickup-ready alert sent'), findsOneWidget);
+    expect(
+      find.text(
+        'We’ve notified your driver. You can message the driver or admin here if needed.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('incoming socket message appears without refresh', (
     tester,
   ) async {
@@ -344,6 +369,7 @@ void main() {
       'roomId': 1,
       'message': {
         'messageId': 99,
+        'senderType': 'DRIVER',
         'senderDisplayName': 'Driver',
         'text': 'On my way',
         'createdAt': DateTime.now().toIso8601String(),
@@ -352,6 +378,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('On my way'), findsOneWidget);
+    expect(find.text('Driver'), findsWidgets);
   });
 
   testWidgets('duplicate REST and socket message displayed once', (
@@ -484,6 +511,9 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Booking TX202607010001'), findsOneWidget);
+    expect(find.text('View booking details'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('driver_chat_booking_detail_link')));
     await tester.pumpAndSettle();

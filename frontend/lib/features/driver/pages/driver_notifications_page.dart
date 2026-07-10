@@ -206,6 +206,41 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
     return candidates.contains('CHAT') || candidates.contains('MESSAGE');
   }
 
+  String _typeBadgeLabel(Map<String, dynamic> item, AppLocalizations l10n) {
+    final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
+    final type = item['notificationType'] as String? ?? '';
+    final category = item['category'] as String? ?? '';
+    final action = item['action'] as String? ?? '';
+    final deepLink = item['deepLink'] as String? ?? '';
+    final candidates = [
+      type,
+      category,
+      action,
+      deepLink,
+      payload['type'] as String? ?? '',
+      payload['category'] as String? ?? '',
+      payload['action'] as String? ?? '',
+      payload['deepLink'] as String? ?? '',
+    ].map((value) => value.toUpperCase()).join(' ');
+
+    if (candidates.contains('CHAT') || candidates.contains('MESSAGE')) {
+      return l10n.t('notification_type_chat');
+    }
+    if (candidates.contains('COMMISSION') ||
+        candidates.contains('RECEIPT') ||
+        candidates.contains('SETTLEMENT')) {
+      return l10n.t('notification_type_settlement');
+    }
+    if (candidates.contains('PICKUP')) {
+      return l10n.t('notification_type_pickup');
+    }
+    final bookingNumber = payload['bookingNumber'] as String?;
+    if (bookingNumber != null && bookingNumber.isNotEmpty) {
+      return l10n.t('notification_type_booking');
+    }
+    return l10n.t('notification_type_system');
+  }
+
   Widget _buildChatPage(String bookingNumber) {
     return widget.chatPageBuilder?.call(bookingNumber) ??
         DriverChatPage(
@@ -296,6 +331,7 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
                                     item['title'] as String? ??
                                     l10n.t('driver_notification_default'),
                                 body: item['body'] as String? ?? '',
+                                typeLabel: _typeBadgeLabel(item, l10n),
                                 read: read,
                                 markReadLabel: l10n.t(
                                   'driver_notification_mark_read',
@@ -329,6 +365,7 @@ class _NotificationCard extends StatelessWidget {
   const _NotificationCard({
     required this.title,
     required this.body,
+    required this.typeLabel,
     required this.read,
     required this.onTap,
     required this.markReadLabel,
@@ -338,6 +375,7 @@ class _NotificationCard extends StatelessWidget {
 
   final String title;
   final String body;
+  final String typeLabel;
   final bool read;
   final VoidCallback onTap;
   final String markReadLabel;
@@ -389,6 +427,14 @@ class _NotificationCard extends StatelessWidget {
                         newBadgeLabel,
                         tone: AppStatusTone.info,
                       ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: AppTokens.spaceXs,
+                  runSpacing: AppTokens.spaceXs,
+                  children: [
+                    AppUi.statusBadge(typeLabel, tone: AppStatusTone.neutral),
                   ],
                 ),
                 if (body.isNotEmpty) ...[

@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../chat/models/chat_connection_state.dart';
 import '../../chat/services/chat_realtime_session.dart';
 import '../../chat/services/chat_socket_service.dart';
+import '../../chat/widgets/chat_role_badge.dart';
 import '../services/admin_chat_api_service.dart';
 
 const _narrowBreakpoint = 600.0;
@@ -55,7 +56,8 @@ class AdminChatQueuePage extends StatefulWidget {
 }
 
 class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
-  late final AdminChatApiService _api = widget.api ?? const AdminChatApiService();
+  late final AdminChatApiService _api =
+      widget.api ?? const AdminChatApiService();
   bool _loading = true;
   String? _error;
   List<dynamic> _items = [];
@@ -106,22 +108,29 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
   Widget _queueCard(AppLocalizations l10n, Map<String, dynamic> item) {
     final bookingNumber = item['bookingNumber'] as String? ?? '';
     final customer = item['customerDisplayName'] as String? ?? '';
-    final driver = item['driverDisplayName'] as String? ?? l10n.t('admin_chat_no_driver');
+    final driver =
+        item['driverDisplayName'] as String? ?? l10n.t('admin_chat_no_driver');
     final unread = item['unreadCount'] as int? ?? 0;
     final lastMessage = item['lastMessageText'] as String?;
-    final lastMessageAt = _formatChatTimestamp(item['lastMessageAt'] as String?);
+    final lastMessageAt = _formatChatTimestamp(
+      item['lastMessageAt'] as String?,
+    );
     final hasUnread = unread > 0;
 
     return AppUi.adminQueueCard(
       onTap: () => _openChat(bookingNumber),
-      backgroundColor: hasUnread ? AppTokens.primaryLight.withValues(alpha: 0.35) : null,
+      backgroundColor: hasUnread
+          ? AppTokens.primaryLight.withValues(alpha: 0.35)
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: hasUnread ? AppTokens.primaryLight : AppTokens.surfaceMuted,
+              color: hasUnread
+                  ? AppTokens.primaryLight
+                  : AppTokens.surfaceMuted,
               borderRadius: AppTokens.borderRadiusSm,
             ),
             child: Icon(
@@ -140,13 +149,19 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
                     Expanded(
                       child: Text(
                         bookingNumber,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                     if (lastMessageAt.isNotEmpty)
                       Text(
                         lastMessageAt,
-                        style: const TextStyle(color: AppTokens.textMuted, fontSize: 12),
+                        style: const TextStyle(
+                          color: AppTokens.textMuted,
+                          fontSize: 12,
+                        ),
                       ),
                   ],
                 ),
@@ -155,7 +170,10 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
                   '$customer · $driver',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppTokens.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
                 if (lastMessage != null && lastMessage.isNotEmpty) ...[
                   const SizedBox(height: 6),
@@ -164,8 +182,12 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: hasUnread ? AppTokens.textPrimary : AppTokens.textSecondary,
-                      fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                      color: hasUnread
+                          ? AppTokens.textPrimary
+                          : AppTokens.textSecondary,
+                      fontWeight: hasUnread
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                       fontSize: 13,
                     ),
                   ),
@@ -175,10 +197,7 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
           ),
           if (hasUnread) ...[
             const SizedBox(width: AppTokens.spaceSm),
-            AppUi.statusBadge(
-              unread.toString(),
-              tone: AppStatusTone.info,
-            ),
+            AppUi.statusBadge(unread.toString(), tone: AppStatusTone.info),
           ],
         ],
       ),
@@ -233,29 +252,31 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
             child: _loading
                 ? AppUi.loadingState()
                 : _error != null
-                    ? AppUi.errorState(
-                        message: _error!,
-                        onRetry: _load,
-                        retryLabel: l10n.t('admin_dispatch_retry'),
-                      )
-                    : _items.isEmpty
-                        ? AppUi.emptyState(
-                            title: l10n.t('admin_chat_empty'),
-                            icon: Icons.chat_outlined,
-                          )
-                        : RefreshIndicator(
-                            onRefresh: _load,
-                            child: ListView.separated(
-                              padding: AppUi.pagePadding(context),
-                              itemCount: _items.length,
-                              separatorBuilder: (context, index) =>
-                                  const SizedBox(height: AppTokens.spaceSm),
-                              itemBuilder: (context, index) {
-                                final item = Map<String, dynamic>.from(_items[index] as Map);
-                                return _queueCard(l10n, item);
-                              },
-                            ),
-                          ),
+                ? AppUi.errorState(
+                    message: _error!,
+                    onRetry: _load,
+                    retryLabel: l10n.t('admin_dispatch_retry'),
+                  )
+                : _items.isEmpty
+                ? AppUi.emptyState(
+                    title: l10n.t('admin_chat_empty'),
+                    icon: Icons.chat_outlined,
+                  )
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView.separated(
+                      padding: AppUi.pagePadding(context),
+                      itemCount: _items.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: AppTokens.spaceSm),
+                      itemBuilder: (context, index) {
+                        final item = Map<String, dynamic>.from(
+                          _items[index] as Map,
+                        );
+                        return _queueCard(l10n, item);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -282,7 +303,8 @@ class AdminChatDetailPage extends StatefulWidget {
 }
 
 class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
-  late final AdminChatApiService _api = widget.api ?? const AdminChatApiService();
+  late final AdminChatApiService _api =
+      widget.api ?? const AdminChatApiService();
   late final ChatRealtimeSession _session;
   final _controller = TextEditingController();
 
@@ -342,12 +364,17 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
   }
 
   Widget _messageTile(AppLocalizations l10n, Map<String, dynamic> item) {
-    final sender = item['senderDisplayName'] as String? ?? l10n.t('admin_chat_participant');
+    final sender =
+        item['senderDisplayName'] as String? ??
+        l10n.t('admin_chat_participant');
     final text = item['text'] as String? ?? '';
     final createdAt = _formatChatTimestamp(item['createdAt'] as String?);
 
     return AppUi.surfaceCard(
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd, vertical: AppTokens.spaceSm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.spaceMd,
+        vertical: AppTokens.spaceSm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -356,16 +383,24 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
               Expanded(
                 child: Text(
                   sender,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
               ),
               if (createdAt.isNotEmpty)
                 Text(
                   createdAt,
-                  style: const TextStyle(color: AppTokens.textMuted, fontSize: 11),
+                  style: const TextStyle(
+                    color: AppTokens.textMuted,
+                    fontSize: 11,
+                  ),
                 ),
             ],
           ),
+          const SizedBox(height: 4),
+          ChatRoleBadge(message: item, l10n: l10n),
           const SizedBox(height: 4),
           Text(text, style: const TextStyle(fontSize: 14)),
         ],
@@ -379,8 +414,8 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
     final sessionError = _sessionErrorMessage(l10n);
     final inputHint = _session.sendingAllowed
         ? (_session.hasPendingOutbound
-            ? l10n.t('admin_chat_hint_queued')
-            : l10n.t('admin_chat_hint_message'))
+              ? l10n.t('admin_chat_hint_queued')
+              : l10n.t('admin_chat_hint_message'))
         : l10n.t('admin_chat_hint_readonly');
 
     return Scaffold(
@@ -399,8 +434,14 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
                     chatConnectionLabel(_session.connectionState, context.l10n),
                     tone: _toneForConnection(_session.connectionState),
                   ),
-                  IconButton(onPressed: widget.onBack, icon: const Icon(Icons.arrow_back)),
-                  IconButton(onPressed: _session.refresh, icon: const Icon(Icons.refresh)),
+                  IconButton(
+                    onPressed: widget.onBack,
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                  IconButton(
+                    onPressed: _session.refresh,
+                    icon: const Icon(Icons.refresh),
+                  ),
                 ],
               ),
             ),
@@ -408,7 +449,9 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
           if (_session.loading) const LinearProgressIndicator(),
           if (sessionError != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMd),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTokens.spaceMd,
+              ),
               child: AppUi.surfaceCard(
                 backgroundColor: AppTokens.errorLight,
                 padding: const EdgeInsets.all(AppTokens.spaceSm),
@@ -417,7 +460,10 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
                     Expanded(
                       child: Text(
                         sessionError,
-                        style: const TextStyle(color: AppTokens.error, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppTokens.error,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     if (_session.connectionState == ChatConnectionState.error)
@@ -438,9 +484,12 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
                 : ListView.separated(
                     padding: AppUi.pagePadding(context),
                     itemCount: _session.messages.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppTokens.spaceSm),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppTokens.spaceSm),
                     itemBuilder: (context, index) {
-                      final item = Map<String, dynamic>.from(_session.messages[index] as Map);
+                      final item = Map<String, dynamic>.from(
+                        _session.messages[index] as Map,
+                      );
                       return _messageTile(l10n, item);
                     },
                   ),
@@ -462,12 +511,17 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
                 ),
                 const SizedBox(width: AppTokens.spaceSm),
                 FilledButton(
-                  onPressed: _session.sendingAllowed && !_session.sending ? _send : null,
+                  onPressed: _session.sendingAllowed && !_session.sending
+                      ? _send
+                      : null,
                   child: _session.sending
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.send, size: 20),
                 ),

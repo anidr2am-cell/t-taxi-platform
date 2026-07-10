@@ -75,6 +75,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Commission payment required'), findsOneWidget);
+    expect(find.text('Settlement'), findsOneWidget);
   });
 
   testWidgets('driver chat notification opens driver chat page', (
@@ -92,6 +93,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Chat'), findsOneWidget);
     await tester.tap(find.text('New customer message'));
     await tester.pumpAndSettle();
 
@@ -279,6 +281,7 @@ class _FakeDriverNotificationApi extends DriverApiService {
       'items': [
         {
           'notificationId': 1,
+          'notificationType': 'COMMISSION_PAYMENT_REQUIRED',
           'title': 'Commission payment required',
           'body': 'Please submit receipt',
           'read': false,

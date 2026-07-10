@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../chat/models/chat_connection_state.dart';
 import '../../chat/services/chat_realtime_session.dart';
 import '../../chat/services/chat_socket_service.dart';
+import '../../chat/widgets/chat_role_badge.dart';
 import '../services/driver_chat_api.dart';
 
 AppStatusTone _toneForConnection(ChatConnectionState state) {
@@ -186,8 +187,9 @@ class _DriverChatPageState extends State<DriverChatPage> {
             padding: AppUi.pagePadding(context).copyWith(bottom: 0),
             child: AppUi.sectionHeader(
               context,
-              title: context.l10n.t('booking_number_label'),
-              subtitle: widget.bookingNumber,
+              title: l10n
+                  .t('booking_with_number')
+                  .replaceAll('{bookingNumber}', widget.bookingNumber),
               trailing: Wrap(
                 spacing: AppTokens.spaceSm,
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -219,9 +221,7 @@ class _DriverChatPageState extends State<DriverChatPage> {
                     ? null
                     : _openBookingDetail,
                 icon: const Icon(Icons.confirmation_number_outlined),
-                label: Text(
-                  '${l10n.t('booking_number_label')} ${widget.bookingNumber}',
-                ),
+                label: Text(l10n.t('booking_detail_view')),
               ),
             ),
           ),
@@ -289,6 +289,8 @@ class _DriverChatPageState extends State<DriverChatPage> {
                                 fontSize: 13,
                               ),
                             ),
+                            const SizedBox(height: 4),
+                            ChatRoleBadge(message: item, l10n: l10n),
                             const SizedBox(height: 4),
                             Text(text, style: const TextStyle(fontSize: 14)),
                           ],

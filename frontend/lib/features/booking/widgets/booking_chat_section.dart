@@ -5,6 +5,7 @@ import '../../../utils/user_facing_error.dart';
 import '../../chat/models/chat_connection_state.dart';
 import '../../chat/services/chat_realtime_session.dart';
 import '../../chat/services/chat_socket_service.dart';
+import '../../chat/widgets/chat_role_badge.dart';
 import '../services/booking_chat_api.dart';
 import 'booking_review_form.dart';
 
@@ -50,15 +51,16 @@ class _BookingChatSectionState extends State<BookingChatSection> {
           guestAccessToken: guestToken,
         );
       },
-      sendRest: ({required String text, required String clientMessageId}) async {
-        final guestToken = await _guestToken();
-        return _api.sendMessage(
-          bookingNumber: widget.bookingNumber,
-          text: text,
-          clientMessageId: clientMessageId,
-          guestAccessToken: guestToken,
-        );
-      },
+      sendRest:
+          ({required String text, required String clientMessageId}) async {
+            final guestToken = await _guestToken();
+            return _api.sendMessage(
+              bookingNumber: widget.bookingNumber,
+              text: text,
+              clientMessageId: clientMessageId,
+              guestAccessToken: guestToken,
+            );
+          },
       markReadRest: (upToMessageId) async {
         final guestToken = await _guestToken();
         return _api.markRead(
@@ -85,7 +87,8 @@ class _BookingChatSectionState extends State<BookingChatSection> {
   }
 
   Future<String?> _guestToken() async {
-    if (widget.guestAccessToken != null && widget.guestAccessToken!.isNotEmpty) {
+    if (widget.guestAccessToken != null &&
+        widget.guestAccessToken!.isNotEmpty) {
       return widget.guestAccessToken;
     }
     return const BookingReviewApi().loadGuestToken(widget.bookingNumber);
@@ -115,15 +118,23 @@ class _BookingChatSectionState extends State<BookingChatSection> {
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text(l10n.t('booking_chat_title'), style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  l10n.t('booking_chat_title'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 _ConnectionChip(state: _session.connectionState, l10n: l10n),
                 if (_session.unreadCount > 0)
                   Chip(
                     label: Text(
-                      l10n.t('booking_chat_unread').replaceAll('{count}', '${_session.unreadCount}'),
+                      l10n
+                          .t('booking_chat_unread')
+                          .replaceAll('{count}', '${_session.unreadCount}'),
                     ),
                   ),
-                IconButton(onPressed: _session.refresh, icon: const Icon(Icons.refresh)),
+                IconButton(
+                  onPressed: _session.refresh,
+                  icon: const Icon(Icons.refresh),
+                ),
               ],
             ),
             if (_session.loading) const LinearProgressIndicator(),
@@ -134,7 +145,10 @@ class _BookingChatSectionState extends State<BookingChatSection> {
                   children: [
                     Expanded(
                       child: Text(
-                        userFacingError(_session.error!, fallback: l10n.t('ui_load_failed')),
+                        userFacingError(
+                          _session.error!,
+                          fallback: l10n.t('ui_load_failed'),
+                        ),
                         style: const TextStyle(color: Colors.red),
                       ),
                     ),
@@ -159,7 +173,18 @@ class _BookingChatSectionState extends State<BookingChatSection> {
                   final item = _session.messages[index] as Map<String, dynamic>;
                   return ListTile(
                     dense: true,
-                    title: Text(item['senderDisplayName'] as String? ?? l10n.t('admin_chat_participant')),
+                    title: Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        ChatRoleBadge(message: item, l10n: l10n),
+                        Text(
+                          item['senderDisplayName'] as String? ??
+                              l10n.t('admin_chat_participant'),
+                        ),
+                      ],
+                    ),
                     subtitle: Text(item['text'] as String? ?? ''),
                   );
                 },
@@ -174,15 +199,17 @@ class _BookingChatSectionState extends State<BookingChatSection> {
                     decoration: InputDecoration(
                       hintText: _session.sendingAllowed
                           ? (_session.hasPendingOutbound
-                              ? l10n.t('admin_chat_hint_queued')
-                              : l10n.t('booking_chat_hint_type'))
+                                ? l10n.t('admin_chat_hint_queued')
+                                : l10n.t('booking_chat_hint_type'))
                           : l10n.t('admin_chat_hint_readonly'),
                     ),
                     onSubmitted: (_) => _send(),
                   ),
                 ),
                 IconButton(
-                  onPressed: _session.sendingAllowed && !_session.sending ? _send : null,
+                  onPressed: _session.sendingAllowed && !_session.sending
+                      ? _send
+                      : null,
                   icon: _session.sending
                       ? const SizedBox(
                           width: 18,
@@ -210,7 +237,8 @@ class _ConnectionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (state) {
       ChatConnectionState.connected => Colors.green,
-      ChatConnectionState.connecting || ChatConnectionState.reconnecting => Colors.orange,
+      ChatConnectionState.connecting ||
+      ChatConnectionState.reconnecting => Colors.orange,
       ChatConnectionState.error => Colors.red,
       ChatConnectionState.offline => Colors.grey,
     };
