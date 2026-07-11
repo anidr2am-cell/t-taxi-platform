@@ -19,6 +19,12 @@ const router = express.Router();
 const adminOnly = [authMiddleware, roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN])];
 
 router.get(
+  '/bookings/summary',
+  adminOnly,
+  adminController.getBookingsSummary,
+);
+
+router.get(
   '/bookings',
   adminOnly,
   validate({ query: adminBookingListQuerySchema }),

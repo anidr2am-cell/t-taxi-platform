@@ -89,11 +89,19 @@ class AdminDispatchApiService {
   }
 
   Future<Map<String, dynamic>> listBookings({
+    String? view,
     String? search,
     String? status,
     String? assignmentState,
     String? serviceDateFrom,
     String? serviceDateTo,
+    String? serviceType,
+    String? origin,
+    String? destination,
+    String? settlementStatus,
+    bool? lowRating,
+    bool? unassigned,
+    bool? hasInquiry,
     int page = 1,
     int limit = 20,
   }) async {
@@ -101,6 +109,7 @@ class AdminDispatchApiService {
       'page': '$page',
       'limit': '$limit',
     };
+    if (view != null && view.isNotEmpty) query['view'] = view;
     if (search != null && search.isNotEmpty) query['search'] = search;
     if (status != null && status.isNotEmpty) query['status'] = status;
     if (assignmentState != null && assignmentState.isNotEmpty) {
@@ -108,7 +117,25 @@ class AdminDispatchApiService {
     }
     if (serviceDateFrom != null) query['serviceDateFrom'] = serviceDateFrom;
     if (serviceDateTo != null) query['serviceDateTo'] = serviceDateTo;
+    if (serviceType != null && serviceType.isNotEmpty) {
+      query['serviceType'] = serviceType;
+    }
+    if (origin != null && origin.isNotEmpty) query['origin'] = origin;
+    if (destination != null && destination.isNotEmpty) {
+      query['destination'] = destination;
+    }
+    if (settlementStatus != null && settlementStatus.isNotEmpty) {
+      query['settlementStatus'] = settlementStatus;
+    }
+    if (lowRating == true) query['lowRating'] = 'true';
+    if (unassigned == true) query['unassigned'] = 'true';
+    if (hasInquiry == true) query['hasInquiry'] = 'true';
     final data = await _request('GET', '/admin/bookings', query: query);
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> getBookingsSummary() async {
+    final data = await _request('GET', '/admin/bookings/summary');
     return Map<String, dynamic>.from(data as Map);
   }
 

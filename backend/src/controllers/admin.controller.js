@@ -6,17 +6,26 @@ const getAdminDispatchService = () => container.get('adminDispatchService');
 const getAdminQrReissueService = () => container.get('adminQrReissueService');
 
 const listBookings = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().listBookings(req.query);
+  const data = await getAdminDispatchService().listBookings(req.query, req.user);
   return paginate(res, {
     page: data.page,
     pageSize: data.pageSize,
     total: data.total,
     items: data.items,
+    view: data.view,
   });
 });
 
+const getBookingsSummary = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().getBookingsSummary(req.user);
+  return success(res, data);
+});
+
 const getBookingDetail = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().getBookingDetail(req.params.bookingNumber);
+  const data = await getAdminDispatchService().getBookingDetail(
+    req.params.bookingNumber,
+    req.user,
+  );
   return success(res, data);
 });
 
@@ -68,6 +77,7 @@ const reissueQr = asyncHandler(async (req, res) => {
 
 module.exports = {
   listBookings,
+  getBookingsSummary,
   getBookingDetail,
   listDrivers,
   assignDriver,

@@ -10,6 +10,7 @@ import '../services/admin_dispatch_api_service.dart';
 import '../../admin_settlement/services/admin_settlement_api_service.dart';
 import '../widgets/assign_driver_dialog.dart';
 import '../widgets/recommend_drivers_dialog.dart';
+import '../utils/admin_operations_ux.dart';
 
 class AdminBookingDetailPage extends StatefulWidget {
   final String bookingNumber;
@@ -468,11 +469,20 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
   Widget _summaryHeader(AppLocalizations l10n, Map<String, dynamic> detail) {
     final status = detail['status'] as String? ?? '';
-    final actions = _allowedActions();
+    final operations = detail['operations'] is Map
+        ? Map<String, dynamic>.from(detail['operations'] as Map)
+        : null;
     final customerReview = detail['customerReview'] is Map
         ? Map<String, dynamic>.from(detail['customerReview'] as Map)
         : null;
-    final lowRating = customerReview?['lowRating'] == true;
+    final lowRating = customerReview?['lowRating'] == true ||
+        operations?['lowRating'] == true;
+    final severity = operations?['severity'] as String?;
+    final reason = AdminOperationsUx.formatActionReason(l10n, operations);
+    final route = Map<String, dynamic>.from(detail['route'] as Map? ?? {});
+    final origin = Map<String, dynamic>.from(route['origin'] as Map? ?? {});
+    final destination =
+        Map<String, dynamic>.from(route['destination'] as Map? ?? {});
 
     return AppUi.surfaceCard(
       backgroundColor: AppTokens.primaryLight,
@@ -500,6 +510,13 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 ),
                 tone: AppUi.toneForBookingStatus(status),
               ),
+              if (severity != null && severity.isNotEmpty)
+                AppUi.statusBadge(
+                  AdminOperationsUx.severityLabel(l10n, severity),
+                  tone: severity == 'URGENT'
+                      ? AppStatusTone.error
+                      : AppStatusTone.warning,
+                ),
               if (lowRating)
                 AppUi.statusBadge(
                   l10n.t('admin_booking_low_rating_badge'),
@@ -507,27 +524,37 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 ),
             ],
           ),
+          if (reason.isNotEmpty) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              reason,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppTokens.warning,
+              ),
+            ),
+          ],
           const SizedBox(height: AppTokens.spaceSm),
           Text(
-            _nextActionHint(l10n, actions),
+            l10n.t('admin_ops_next_action_label'),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          Text(
+            AdminOperationsUx.nextActionLabel(l10n, operations, detail),
             style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          Text(
+            detail['scheduledPickupAt'] as String? ?? '-',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            '${origin['address'] ?? '-'} → ${destination['address'] ?? '-'}',
+            style: const TextStyle(color: AppTokens.textSecondary),
           ),
         ],
       ),
     );
-  }
-
-  String _nextActionHint(AppLocalizations l10n, List<String> actions) {
-    if (actions.contains('RECOMMEND_DRIVERS')) {
-      return l10n.t('admin_dispatch_next_action_recommend');
-    }
-    if (actions.contains('ASSIGN_DRIVER')) {
-      return l10n.t('admin_dispatch_next_action_assign');
-    }
-    if (actions.contains('REASSIGN_DRIVER')) {
-      return l10n.t('admin_dispatch_next_action_reassign');
-    }
-    return l10n.t('admin_dispatch_next_action_none');
   }
 
   Widget _basicInfoSection(AppLocalizations l10n, Map<String, dynamic> detail) {

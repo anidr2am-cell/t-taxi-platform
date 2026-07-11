@@ -29,6 +29,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
   int autoAssignCalls = 0;
   String? lastAssignmentState;
   String? lastStatus;
+  String? lastView;
   final Object? candidatesError;
 
   @override
@@ -36,18 +37,39 @@ class _FakeAdminApi extends AdminDispatchApiService {
 
   @override
   Future<Map<String, dynamic>> listBookings({
+    String? view,
     String? search,
     String? status,
     String? assignmentState,
     String? serviceDateFrom,
     String? serviceDateTo,
+    String? serviceType,
+    String? origin,
+    String? destination,
+    String? settlementStatus,
+    bool? lowRating,
+    bool? unassigned,
+    bool? hasInquiry,
     int page = 1,
     int limit = 20,
   }) async {
     lastAssignmentState = assignmentState;
     lastStatus = status;
+    lastView = view;
     if (bookingsError != null) throw bookingsError!;
     return bookingsResponse ?? {'page': 1, 'total': 0, 'items': []};
+  }
+
+  @override
+  Future<Map<String, dynamic>> getBookingsSummary() async {
+    return {
+      'needsAction': 2,
+      'unassigned': 1,
+      'today': 3,
+      'inProgress': 1,
+      'settlementPending': 1,
+      'issues': 1,
+    };
   }
 
   @override
@@ -278,7 +300,7 @@ void main() {
     expect(find.text('Network error'), findsOneWidget);
   });
 
-  testWidgets('assignment filter requests UNASSIGNED bookings', (tester) async {
+  testWidgets('summary unassigned card requests UNASSIGNED bookings', (tester) async {
     final api = _FakeAdminApi(
       token: 'token',
       bookingsResponse: {'page': 1, 'total': 0, 'items': []},
@@ -287,9 +309,7 @@ void main() {
       MaterialApp(home: AdminDispatchQueuePage(api: api)),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButton<String?>).at(1));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Unassigned').last);
+    await tester.tap(find.text('Unassigned').first);
     await tester.pumpAndSettle();
     expect(api.lastAssignmentState, 'UNASSIGNED');
   });
@@ -315,7 +335,21 @@ void main() {
     expect(find.text('Assign driver'), findsOneWidget);
   });
 
-  testWidgets('separates new unassigned and existing assigned bookings', (
+  testWidgets('issues summary card switches to issues view', (tester) async {
+    final api = _FakeAdminApi(
+      token: 'token',
+      bookingsResponse: {'page': 1, 'total': 0, 'items': []},
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: AdminDispatchQueuePage(api: api)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Issues').first);
+    await tester.pumpAndSettle();
+    expect(api.lastView, 'issues');
+  });
+
+  testWidgets('shows needs action tab and summary cards by default', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -327,10 +361,9 @@ void main() {
               'page': 1,
               'total': 2,
               'items': [
-                {..._queueItem('TX-NEW'), 'bookingGroup': 'NEW'},
+                _queueItem('TX-NEW'),
                 {
                   ..._queueItem('TX-EXISTING'),
-                  'bookingGroup': 'EXISTING',
                   'activeAssignment': {
                     'driverDisplayName': 'Driver A',
                     'status': 'ASSIGNED',
@@ -344,10 +377,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('New bookings'), findsOneWidget);
-    expect(find.text('Newest request first'), findsOneWidget);
-    expect(find.text('Existing bookings'), findsOneWidget);
-    expect(find.text('Latest pickup first'), findsOneWidget);
+    expect(find.text('Needs action'), findsWidgets);
+    expect(find.text('TX-NEW'), findsOneWidget);
+    expect(find.text('TX-EXISTING'), findsOneWidget);
   });
 
   testWidgets('assigned driver is rendered in booking list', (tester) async {

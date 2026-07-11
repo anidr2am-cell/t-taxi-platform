@@ -622,6 +622,182 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  buildAdminUnreadExistsSql(adminUserId) {
+    if (!adminUserId) return { sql: '0', params: [] };
+    return {
+      sql: `
+        EXISTS (
+          SELECT 1
+          FROM chat_rooms cr
+          INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
+            AND ap.user_id = ?
+            AND ap.participant_role = 'ADMIN'
+            AND ap.deleted_at IS NULL
+          INNER JOIN chat_messages m ON m.chat_room_id = cr.id
+            AND m.deleted_at IS NULL
+            AND m.sender_participant_id <> ap.id
+            AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
+          WHERE cr.booking_id = b.id
+            AND cr.deleted_at IS NULL
+        )
+      `,
+      params: [adminUserId],
+    };
+  }
+
+  buildNeedsActionWhere(filters) {
+    const where = [];
+    const params = [];
+    const nowText = filters.operationsNow;
+    const urgentCutoff = filters.operationsUrgentCutoff;
+    const unread = this.buildAdminUnreadExistsSql(filters.adminUserId);
+
+    where.push(this.buildLowRatingExistsSql());
+
+    where.push(`
+      (
+        b.status = 'SETTLEMENT_PENDING'
+        AND b.commission_status IN ('DUE', 'OVERDUE')
+        AND JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) IS NOT NULL
+        AND b.commission_receipt_file_id IS NULL
+      )
+    `);
+
+    where.push(`
+      (
+        b.status = 'SETTLEMENT_PENDING'
+        AND b.commission_status IN ('DUE', 'OVERDUE')
+        AND b.commission_receipt_file_id IS NOT NULL
+      )
+    `);
+
+    where.push(`
+      (
+        b.status = 'SETTLEMENT_PENDING'
+        AND b.commission_status IN ('DUE', 'OVERDUE')
+        AND b.commission_receipt_file_id IS NULL
+        AND (
+          JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) IS NULL
+          OR JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) = ''
+        )
+      )
+    `);
+
+    where.push(`
+      (
+        b.driver_id IS NULL
+        AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+        AND b.scheduled_pickup_at <= ?
+      )
+    `);
+    params.push(urgentCutoff);
+
+    where.push(`
+      (
+        b.scheduled_pickup_at < ?
+        AND b.status IN ('PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED')
+      )
+    `);
+    params.push(nowText);
+
+    where.push(`
+      (
+        b.status = 'DRIVER_ARRIVED'
+        AND b.updated_at < DATE_SUB(?, INTERVAL 30 MINUTE)
+      )
+    `);
+    params.push(nowText);
+
+    where.push(`
+      (
+        b.status = 'PICKED_UP'
+        AND b.updated_at < DATE_SUB(?, INTERVAL 6 HOUR)
+      )
+    `);
+    params.push(nowText);
+
+    where.push(`
+      (
+        b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW', 'SETTLEMENT_PENDING')
+        AND b.updated_at < DATE_SUB(?, INTERVAL 2 HOUR)
+      )
+    `);
+    params.push(nowText);
+
+    if (filters.adminUserId) {
+      where.push(`(${unread.sql})`);
+      params.push(...unread.params);
+    }
+
+    return { sql: `(${where.join(' OR ')})`, params };
+  }
+
+  buildLowRatingExistsSql() {
+    return `EXISTS (
+      SELECT 1 FROM reviews r
+      WHERE r.booking_id = b.id
+        AND r.rating <= 2
+    )`;
+  }
+
+  buildIssuesWhere(filters) {
+    const where = [];
+    const params = [];
+    const nowText = filters.operationsNow;
+    const unread = this.buildAdminUnreadExistsSql(filters.adminUserId);
+
+    where.push(this.buildLowRatingExistsSql());
+
+    where.push(`
+      (
+        b.status = 'SETTLEMENT_PENDING'
+        AND b.commission_status IN ('DUE', 'OVERDUE')
+        AND JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) IS NOT NULL
+        AND b.commission_receipt_file_id IS NULL
+      )
+    `);
+
+    where.push(`
+      (
+        b.driver_id IS NULL
+        AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+        AND b.scheduled_pickup_at < ?
+      )
+    `);
+    params.push(nowText);
+
+    where.push(`
+      (
+        b.scheduled_pickup_at < ?
+        AND b.status IN ('PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED')
+      )
+    `);
+    params.push(nowText);
+
+    where.push(`
+      (
+        b.status = 'DRIVER_ARRIVED'
+        AND b.updated_at < DATE_SUB(?, INTERVAL 30 MINUTE)
+      )
+    `);
+    params.push(nowText);
+
+    where.push(`
+      (
+        b.status = 'PICKED_UP'
+        AND b.updated_at < DATE_SUB(?, INTERVAL 6 HOUR)
+      )
+    `);
+    params.push(nowText);
+
+    if (filters.adminUserId) {
+      where.push(`(${unread.sql})`);
+      params.push(...unread.params);
+    }
+
+    return { sql: `(${where.join(' OR ')})`, params };
+  }
+
   buildAdminBookingFilters(filters) {
     const where = ['b.deleted_at IS NULL'];
     const params = [];
@@ -629,6 +805,30 @@ class BookingRepository {
     if (filters.status) {
       where.push('b.status = ?');
       params.push(filters.status);
+    }
+
+    if (filters.cancelledTab) {
+      where.push(`b.status IN ('CANCELLED', 'NO_SHOW')`);
+    }
+
+    if (filters.excludeTerminalStatuses) {
+      where.push(`b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')`);
+    }
+
+    if (filters.inProgressOnly) {
+      where.push(`b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP')`);
+    }
+
+    if (filters.needsActionOnly) {
+      const needsAction = this.buildNeedsActionWhere(filters);
+      where.push(needsAction.sql);
+      params.push(...needsAction.params);
+    }
+
+    if (filters.issuesOnly) {
+      const issues = this.buildIssuesWhere(filters);
+      where.push(issues.sql);
+      params.push(...issues.params);
     }
 
     if (filters.driverId) {
@@ -644,6 +844,60 @@ class BookingRepository {
     if (filters.serviceDateTo) {
       where.push('b.scheduled_pickup_at < ?');
       params.push(filters.serviceDateTo);
+    }
+
+    if (filters.serviceType) {
+      where.push('st.code = ?');
+      params.push(filters.serviceType);
+    }
+
+    if (filters.origin) {
+      where.push('b.origin_address LIKE ?');
+      params.push(`%${filters.origin}%`);
+    }
+
+    if (filters.destination) {
+      where.push('b.destination_address LIKE ?');
+      params.push(`%${filters.destination}%`);
+    }
+
+    if (filters.lowRating) {
+      where.push(this.buildLowRatingExistsSql());
+    }
+
+    if (filters.unassigned) {
+      where.push('b.driver_id IS NULL');
+    }
+
+    if (filters.hasInquiry && filters.adminUserId) {
+      const unread = this.buildAdminUnreadExistsSql(filters.adminUserId);
+      where.push(`(${unread.sql})`);
+      params.push(...unread.params);
+    }
+
+    if (filters.settlementStatus === 'RECEIPT_REJECTED') {
+      where.push(`
+        b.status = 'SETTLEMENT_PENDING'
+        AND JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) IS NOT NULL
+        AND b.commission_receipt_file_id IS NULL
+      `);
+    } else if (filters.settlementStatus === 'RECEIPT_SUBMITTED') {
+      where.push(`
+        b.status = 'SETTLEMENT_PENDING'
+        AND b.commission_receipt_file_id IS NOT NULL
+        AND b.commission_status IN ('DUE', 'OVERDUE')
+      `);
+    } else if (filters.settlementStatus === 'RECEIPT_MISSING') {
+      where.push(`
+        b.status = 'SETTLEMENT_PENDING'
+        AND b.commission_receipt_file_id IS NULL
+        AND (
+          JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) IS NULL
+          OR JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) = ''
+        )
+      `);
+    } else if (filters.settlementStatus === 'ADMIN_CONFIRMED') {
+      where.push(`b.commission_status = 'PAID'`);
     }
 
     if (filters.assignmentState === 'ASSIGNED') {
@@ -673,18 +927,53 @@ class BookingRepository {
           b.booking_number LIKE ?
           OR b.customer_name LIKE ?
           OR b.customer_phone LIKE ?
+          OR b.customer_email LIKE ?
           OR b.origin_address LIKE ?
           OR b.destination_address LIKE ?
           OR btd.flight_number LIKE ?
+          OR d.name LIKE ?
+          OR d.phone LIKE ?
+          OR dv.plate_number LIKE ?
         )
       `);
-      params.push(term, term, term, term, term, term);
+      params.push(term, term, term, term, term, term, term, term, term, term);
     }
 
     return { whereSql: where.join(' AND '), params };
   }
 
-  adminQueueSelectSql() {
+  adminQueueFromSql(adminUserId = null) {
+    return `
+      FROM bookings b
+      INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
+      INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+      LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
+      LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+      LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+      LEFT JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+        AND bda.is_active = 1
+        AND bda.deleted_at IS NULL
+      LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+      LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
+      LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
+      LEFT JOIN (
+        SELECT cr.booking_id, COUNT(m.id) AS admin_unread_count
+        FROM chat_rooms cr
+        INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
+          AND ap.user_id = ?
+          AND ap.participant_role = 'ADMIN'
+          AND ap.deleted_at IS NULL
+        INNER JOIN chat_messages m ON m.chat_room_id = cr.id
+          AND m.deleted_at IS NULL
+          AND m.sender_participant_id <> ap.id
+          AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
+        WHERE cr.deleted_at IS NULL
+        GROUP BY cr.booking_id
+      ) chat_unread ON chat_unread.booking_id = b.id
+    `;
+  }
+
+  adminQueueSelectSql(adminUserId = null) {
     return `
       SELECT
         b.id,
@@ -699,7 +988,11 @@ class BookingRepository {
         b.total_amount,
         b.currency,
         b.created_at,
+        b.updated_at,
         b.driver_id,
+        b.commission_status,
+        b.commission_receipt_file_id,
+        b.metadata,
         CASE WHEN b.driver_id IS NULL THEN 1 ELSE 0 END AS is_new_booking,
         st.code AS service_type_code,
         st.name AS service_type_name,
@@ -714,6 +1007,14 @@ class BookingRepository {
         bl.special_items,
         btd.flight_number,
         btd.delay_status,
+        (
+          SELECT r.rating
+          FROM reviews r
+          WHERE r.booking_id = b.id
+          ORDER BY r.id DESC
+          LIMIT 1
+        ) AS review_rating,
+        COALESCE(chat_unread.admin_unread_count, 0) AS admin_unread_count,
         bda.id AS assignment_id,
         bda.driver_id AS assignment_driver_id,
         bda.status AS assignment_status,
@@ -724,31 +1025,85 @@ class BookingRepository {
         dv.model_name AS assigned_vehicle_model,
         av.code AS assigned_vehicle_type_code,
         av.name AS assigned_vehicle_type_name
-      FROM bookings b
-      INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
-      INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
-      LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
-      LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
-      LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
-      LEFT JOIN booking_driver_assignments bda ON bda.booking_id = b.id
-        AND bda.is_active = 1
-        AND bda.deleted_at IS NULL
-      LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
-      LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
-      LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
+      ${this.adminQueueFromSql(adminUserId)}
     `;
+  }
+
+  adminQueueOrderSql(view) {
+    if (view === 'needs_action') {
+      return `
+        ORDER BY
+          b.scheduled_pickup_at ASC,
+          b.booking_number ASC
+      `;
+    }
+    if (view === 'issues') {
+      return `
+        ORDER BY
+          b.scheduled_pickup_at ASC,
+          b.booking_number ASC
+      `;
+    }
+    if (view === 'settlement') {
+      return `
+        ORDER BY
+          CASE
+            WHEN b.status = 'SETTLEMENT_PENDING'
+              AND JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.commissionRejectionReason')) IS NOT NULL
+              AND b.commission_receipt_file_id IS NULL THEN 0
+            WHEN b.commission_receipt_file_id IS NOT NULL
+              AND b.commission_status IN ('DUE', 'OVERDUE') THEN 1
+            WHEN b.status = 'SETTLEMENT_PENDING'
+              AND b.commission_receipt_file_id IS NULL THEN 2
+            WHEN b.commission_status = 'PAID' THEN 3
+            ELSE 4
+          END ASC,
+          b.scheduled_pickup_at DESC,
+          b.booking_number DESC
+      `;
+    }
+    return `
+      ORDER BY
+        CASE WHEN b.driver_id IS NULL THEN 0 ELSE 1 END ASC,
+        CASE WHEN b.driver_id IS NULL THEN b.created_at END DESC,
+        CASE WHEN b.driver_id IS NOT NULL THEN b.scheduled_pickup_at END DESC,
+        b.booking_number DESC
+    `;
+  }
+
+  async countAdminUnreadForBooking(adminUserId, bookingId) {
+    if (!adminUserId) return 0;
+    const [rows] = await this.pool.query(
+      `
+        SELECT COUNT(m.id) AS unread_count
+        FROM chat_rooms cr
+        INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
+          AND ap.user_id = ?
+          AND ap.participant_role = 'ADMIN'
+          AND ap.deleted_at IS NULL
+        INNER JOIN chat_messages m ON m.chat_room_id = cr.id
+          AND m.deleted_at IS NULL
+          AND m.sender_participant_id <> ap.id
+          AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
+        WHERE cr.booking_id = ?
+          AND cr.deleted_at IS NULL
+      `,
+      [adminUserId, bookingId],
+    );
+    return Number(rows[0]?.unread_count ?? 0);
   }
 
   async countAdminBookings(filters) {
     const { whereSql, params } = this.buildAdminBookingFilters(filters);
+    const adminUserId = filters.adminUserId ?? null;
+    const fromParams = adminUserId ? [adminUserId] : [0];
     const [rows] = await this.pool.query(
       `
-        SELECT COUNT(*) AS total
-        FROM bookings b
-        LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
+        SELECT COUNT(DISTINCT b.id) AS total
+        ${this.adminQueueFromSql(adminUserId)}
         WHERE ${whereSql}
       `,
-      params,
+      [...fromParams, ...params],
     );
     return rows[0]?.total ?? 0;
   }
@@ -757,19 +1112,18 @@ class BookingRepository {
     const { whereSql, params } = this.buildAdminBookingFilters(filters);
     const limit = pagination.limit;
     const offset = pagination.offset;
+    const adminUserId = filters.adminUserId ?? null;
+    const fromParams = adminUserId ? [adminUserId] : [0];
+    const orderSql = this.adminQueueOrderSql(filters.view);
 
     const [rows] = await this.pool.query(
       `
-        ${this.adminQueueSelectSql()}
+        ${this.adminQueueSelectSql(adminUserId)}
         WHERE ${whereSql}
-        ORDER BY
-          CASE WHEN b.driver_id IS NULL THEN 0 ELSE 1 END ASC,
-          CASE WHEN b.driver_id IS NULL THEN b.created_at END DESC,
-          CASE WHEN b.driver_id IS NOT NULL THEN b.scheduled_pickup_at END DESC,
-          b.booking_number DESC
+        ${orderSql}
         LIMIT ? OFFSET ?
       `,
-      [...params, limit, offset],
+      [...fromParams, ...params, limit, offset],
     );
     return rows;
   }
