@@ -14,12 +14,14 @@ import '../widgets/recommend_drivers_dialog.dart';
 class AdminBookingDetailPage extends StatefulWidget {
   final String bookingNumber;
   final AdminDispatchApiService api;
+  final AdminSettlementApiService settlementApi;
   final VoidCallback onChanged;
 
   const AdminBookingDetailPage({
     super.key,
     required this.bookingNumber,
     required this.api,
+    this.settlementApi = const AdminSettlementApiService(),
     required this.onChanged,
   });
 
@@ -31,6 +33,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _detail;
+  Map<String, dynamic>? _settlement;
+  String? _settlementError;
   bool _submitting = false;
 
   @override
@@ -46,8 +50,26 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     });
     try {
       final detail = await widget.api.getBookingDetail(widget.bookingNumber);
+      Map<String, dynamic>? settlement;
+      String? settlementError;
+      if (detail['status'] == 'SETTLEMENT_PENDING') {
+        try {
+          settlement = await widget.settlementApi.getSettlement(
+            widget.bookingNumber,
+          );
+        } catch (err) {
+          if (!mounted) return;
+          settlementError = userFacingError(
+            err,
+            fallback: context.l10n.t('ui_load_failed'),
+          );
+        }
+      }
+      if (!mounted) return;
       setState(() {
         _detail = detail;
+        _settlement = settlement;
+        _settlementError = settlementError;
         _loading = false;
       });
     } catch (err) {
@@ -71,6 +93,78 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final tools = _detail?['devQrTools'];
     if (tools is Map) return Map<String, dynamic>.from(tools);
     return null;
+  }
+
+  bool get _hasTransferSlip {
+    final receiptUrl = _settlement?['receiptUrl'];
+    final metadata = _settlement?['receiptMetadata'];
+    return (receiptUrl is String && receiptUrl.isNotEmpty) || metadata is Map;
+  }
+
+  bool get _canConfirmSettlement =>
+      _detail?['status'] == 'SETTLEMENT_PENDING' &&
+      _settlement?['commissionStatus'] == 'RECEIPT_SUBMITTED' &&
+      _hasTransferSlip;
+
+  Future<void> _viewTransferSlip() async {
+    final l10n = context.l10n;
+    setState(() => _submitting = true);
+    try {
+      final receipt = await widget.settlementApi.getReceipt(
+        widget.bookingNumber,
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.t('admin_settlement_transfer_slip')),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
+            child: receipt.contentType.startsWith('image/')
+                ? Image.memory(
+                    receipt.bytes,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) =>
+                        Text(l10n.t('admin_settlement_slip_load_failed')),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.description_outlined, size: 52),
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(
+                        receipt.filename ??
+                            l10n.t('admin_settlement_transfer_slip'),
+                      ),
+                      Text(receipt.contentType),
+                      Text('${receipt.bytes.length} bytes'),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.t('support_close_button')),
+            ),
+          ],
+        ),
+      );
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: l10n.t('admin_settlement_slip_load_failed'),
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   Future<void> _reissueQr(String qrType) async {
@@ -233,18 +327,19 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     if (confirmed != true) return;
     setState(() => _submitting = true);
     try {
-      await const AdminSettlementApiService().approve(widget.bookingNumber);
+      await widget.settlementApi.approve(widget.bookingNumber);
       widget.onChanged();
       await _load();
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              userFacingError(err, fallback: l10n.t('ui_action_failed')),
-            ),
-          ),
-        );
+        final message =
+            err is AdminSettlementApiException &&
+                err.errorCode == 'RECEIPT_REQUIRED'
+            ? l10n.t('admin_settlement_waiting_slip')
+            : userFacingError(err, fallback: l10n.t('ui_action_failed'));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -286,6 +381,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     _customerSection(l10n, detail),
                     const SizedBox(height: AppTokens.spaceMd),
                     _assignmentSection(l10n, detail),
+                    if (detail['status'] == 'SETTLEMENT_PENDING') ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      _settlementSection(l10n),
+                    ],
                     if (_hasFlight(detail)) ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       _flightSection(detail),
@@ -308,7 +407,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
   Widget? _actionBar(AppLocalizations l10n, List<String> actions) {
     final buttons = <Widget>[];
-    if (_detail?['status'] == 'SETTLEMENT_PENDING') {
+    if (_canConfirmSettlement) {
       buttons.add(
         AppUi.primaryButton(
           label: l10n.t('admin_settlement_confirm_200'),
@@ -354,6 +453,47 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     }
     if (buttons.isEmpty) return null;
     return AppUi.adminStickyActions(actions: buttons);
+  }
+
+  Widget _settlementSection(AppLocalizations l10n) {
+    final status = _settlement?['commissionStatus'] as String? ?? '-';
+    return AppUi.adminDetailSection(
+      context: context,
+      title: l10n.t('admin_settlement_section'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppUi.summaryRow(
+            label: l10n.t('admin_settlement_status'),
+            value: status,
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_settlement_transfer_slip'),
+            value: _hasTransferSlip
+                ? l10n.t('admin_settlement_slip_submitted')
+                : l10n.t('admin_settlement_slip_not_submitted'),
+          ),
+          if (_settlementError != null) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              _settlementError!,
+              style: const TextStyle(color: AppTokens.error),
+            ),
+          ] else if (!_hasTransferSlip) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(l10n.t('admin_settlement_waiting_slip')),
+          ] else ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            AppUi.secondaryButton(
+              label: l10n.t('admin_settlement_view_slip'),
+              icon: Icons.receipt_long_outlined,
+              onPressed: _submitting ? null : _viewTransferSlip,
+              fullWidth: true,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _summaryHeader(AppLocalizations l10n, Map<String, dynamic> detail) {

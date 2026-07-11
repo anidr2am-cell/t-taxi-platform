@@ -286,6 +286,7 @@ test('overdue blocking prevents assignment', async () => {
     async findByIdForUpdate() {
       return { id: 5, name: 'Driver', phone: '+6600', is_active: 1, status: 'AVAILABLE' };
     },
+    async hasActiveJob() { return false; },
   };
   const settlementService = {
     async driverHasBlockingSettlement() { return true; },

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,8 +7,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_config.dart';
 
 class AdminSettlementApiException implements Exception {
-  const AdminSettlementApiException(this.message);
+  const AdminSettlementApiException(
+    this.message, {
+    this.statusCode,
+    this.errorCode,
+  });
   final String message;
+  final int? statusCode;
+  final String? errorCode;
   @override
   String toString() => message;
 }
@@ -23,7 +30,12 @@ class AdminSettlementApiService {
     return prefs.getString(_tokenKey);
   }
 
-  Future<dynamic> _request(String method, String path, {Map<String, String>? query, Map<String, dynamic>? body}) async {
+  Future<dynamic> _request(
+    String method,
+    String path, {
+    Map<String, String>? query,
+    Map<String, dynamic>? body,
+  }) async {
     final token = await getSavedToken();
     if (token == null || token.isEmpty) {
       throw const AdminSettlementApiException('Please log in');
@@ -44,7 +56,11 @@ class AdminSettlementApiService {
         await prefs.remove(_tokenKey);
       }
       throw AdminSettlementApiException(
-        decoded is Map ? decoded['message'] as String? ?? 'Request failed' : 'Request failed',
+        decoded is Map
+            ? decoded['message'] as String? ?? 'Request failed'
+            : 'Request failed',
+        statusCode: response.statusCode,
+        errorCode: decoded is Map ? decoded['error_code'] as String? : null,
       );
     }
     if (decoded is Map && decoded.containsKey('data')) return decoded['data'];
@@ -70,12 +86,73 @@ class AdminSettlementApiService {
   }
 
   Future<Map<String, dynamic>> approve(String bookingNumber) async {
-    final data = await _request('POST', '/admin/settlements/$bookingNumber/approve');
+    final data = await _request(
+      'POST',
+      '/admin/settlements/$bookingNumber/approve',
+    );
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> reject(String bookingNumber, String reason) async {
-    final data = await _request('POST', '/admin/settlements/$bookingNumber/reject', body: {'reason': reason});
+  Future<AdminSettlementReceipt> getReceipt(String bookingNumber) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) {
+      throw const AdminSettlementApiException('Please log in');
+    }
+    final response = await http.get(
+      Uri.parse('$_base/admin/settlements/$bookingNumber/receipt'),
+      headers: {'Accept': '*/*', 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode >= 400) {
+      Map<String, dynamic>? decoded;
+      try {
+        final value = jsonDecode(response.body);
+        if (value is Map) decoded = Map<String, dynamic>.from(value);
+      } catch (_) {
+        decoded = null;
+      }
+      throw AdminSettlementApiException(
+        decoded?['message'] as String? ?? 'Unable to load transfer slip',
+        statusCode: response.statusCode,
+        errorCode: decoded?['error_code'] as String?,
+      );
+    }
+    return AdminSettlementReceipt(
+      bytes: response.bodyBytes,
+      contentType:
+          response.headers['content-type'] ?? 'application/octet-stream',
+      filename: _filenameFromDisposition(
+        response.headers['content-disposition'],
+      ),
+    );
+  }
+
+  String? _filenameFromDisposition(String? value) {
+    if (value == null) return null;
+    final match = RegExp(r'filename="?([^";]+)').firstMatch(value);
+    return match?.group(1);
+  }
+
+  Future<Map<String, dynamic>> reject(
+    String bookingNumber,
+    String reason,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/settlements/$bookingNumber/reject',
+      body: {'reason': reason},
+    );
     return Map<String, dynamic>.from(data as Map);
   }
+}
+
+class AdminSettlementReceipt {
+  const AdminSettlementReceipt({
+    required this.bytes,
+    required this.contentType,
+    this.filename,
+  });
+
+  final Uint8List bytes;
+  final String contentType;
+  final String? filename;
 }

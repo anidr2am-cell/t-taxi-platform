@@ -14,6 +14,7 @@ const TERMINAL_ASSIGN_STATUSES = new Set([
 
 const TERMINAL_REASSIGN_STATUSES = new Set([
   BOOKING_STATUS.PICKED_UP,
+  BOOKING_STATUS.SETTLEMENT_PENDING,
   BOOKING_STATUS.COMPLETED,
   BOOKING_STATUS.CANCELLED,
   BOOKING_STATUS.NO_SHOW,
@@ -428,6 +429,16 @@ class AdminDispatchService {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });
+    }
+    const hasActiveJob = await this.driverRepository.hasActiveJob(conn, driver.id);
+    if (hasActiveJob) {
+      throw new AppError(
+        "This driver has an active or unsettled job and cannot receive a new booking.",
+        {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+        },
+      );
     }
     const blocked =
       await this.commissionSettlementService.driverHasBlockingSettlement(

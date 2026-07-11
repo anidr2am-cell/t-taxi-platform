@@ -30,7 +30,7 @@ class DriverRepository {
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-              AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+              AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
           ) AS active_assignment_count,
           (
             SELECT ROUND(AVG(r.rating), 1)
@@ -84,7 +84,7 @@ class DriverRepository {
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-              AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+              AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
           ) AS active_assignment_count,
           (
             SELECT ROUND(AVG(r.rating), 1)
@@ -114,7 +114,7 @@ class DriverRepository {
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-              AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+              AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
               AND b.scheduled_pickup_at IS NOT NULL
               AND ? IS NOT NULL
               AND ABS(TIMESTAMPDIFF(MINUTE, b.scheduled_pickup_at, ?)) <= ?
@@ -207,7 +207,7 @@ class DriverRepository {
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL
           AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-          AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+          AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
         LIMIT 1
       `,
       [driverId],
@@ -265,7 +265,7 @@ class DriverRepository {
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-              AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+              AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
           ) AS active_job_count
         FROM drivers d
         INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL

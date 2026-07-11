@@ -16,6 +16,7 @@ const ERROR_CODES = require("../src/constants/errorCodes");
 const BOOKING_STATUS = require("../src/constants/reservationStatus");
 const AdminDispatchService = require("../src/services/adminDispatch.service");
 const BookingRepository = require("../src/repositories/booking.repository");
+const DriverRepository = require("../src/repositories/driver.repository");
 const DriverCandidateScoringService = require("../src/services/driverCandidateScoring.service");
 const container = require("../src/helpers/container");
 const app = require("../src/app");
@@ -141,6 +142,126 @@ test("service maps queue item without secrets", () => {
   assert.equal(item.bookingGroup, "NEW");
   assert.equal(item.passengerCount, 2);
   assert.ok(!("boardingQrTokenHash" in item));
+});
+
+test("driver active-job queries use all non-terminal operating statuses", async () => {
+  const queries = [];
+  const pool = {
+    async query(sql) {
+      queries.push(sql.replace(/\s+/g, " "));
+      return [[], []];
+    },
+  };
+  const repository = new DriverRepository(pool);
+
+  await repository.listForAdminAssignment();
+  await repository.listForCandidateEvaluation("2026-07-01 09:30:00");
+  await repository.hasActiveJob(pool, 6);
+  await repository.findByUserId(66);
+
+  const activeStatuses = "('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')";
+  const activeQueries = queries.filter((sql) => sql.includes("booking_driver_assignments"));
+  assert.ok(activeQueries.length >= 4);
+  for (const sql of activeQueries) {
+    assert.ok(sql.includes(`b.status IN ${activeStatuses}`));
+    assert.ok(!sql.includes("b.status IN ('COMPLETED'"));
+  }
+});
+
+test("auto-assignment candidates exclude a driver with an active or unsettled job", async () => {
+  const service = new AdminDispatchService(
+    {},
+    {},
+    {
+      async listForCandidateEvaluation() {
+        return [{
+          id: 6,
+          name: "Busy Driver",
+          is_active: 1,
+          user_is_active: 1,
+          status: "AVAILABLE",
+          is_online: 1,
+          primary_vehicle_id: 9,
+          primary_vehicle_type_id: 3,
+          primary_vehicle_type_code: "SUV",
+          active_assignment_count: 1,
+          schedule_conflict_count: 0,
+        }];
+      },
+    },
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const result = await service.buildDriverCandidatePreview({ vehicle_type_id: 3 });
+  assert.equal(result.candidates.length, 0);
+  assert.deepEqual(result.excluded[0].reasons, ["MAX_ACTIVE_JOBS"]);
+});
+
+for (const status of ["ON_ROUTE", "PICKED_UP", "SETTLEMENT_PENDING"]) {
+  test(`direct assign rejects a driver with ${status} active job`, async () => {
+    let inserted = false;
+    const conn = {
+      async beginTransaction() {},
+      async commit() {},
+      async rollback() {},
+      release() {},
+    };
+    const service = new AdminDispatchService(
+      { async getConnection() { return conn; } },
+      {
+        async findByBookingNumberForUpdate() {
+          return { id: 1, status: BOOKING_STATUS.PENDING, booking_number: "TX202607010001" };
+        },
+        async findActiveAssignmentForUpdate() { return null; },
+        async insertDriverAssignment() { inserted = true; },
+      },
+      {
+        async findByIdForUpdate() {
+          return { id: 6, name: "Busy Driver", is_active: 1, status: "AVAILABLE" };
+        },
+        async hasActiveJob() { return true; },
+      },
+      {},
+      settlementStub,
+      null,
+      null,
+      scoringService,
+    );
+
+    await assert.rejects(
+      () => service.assignDriver(
+        "TX202607010001",
+        { driverId: 6 },
+        { id: 1, role: "ADMIN" },
+      ),
+      (err) => err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE
+        && err.message === "This driver has an active or unsettled job and cannot receive a new booking.",
+    );
+    assert.equal(inserted, false);
+  });
+}
+
+test("completed job no longer blocks driver eligibility", async () => {
+  const driver = { id: 6, name: "Available Driver", is_active: 1, status: "AVAILABLE" };
+  const service = new AdminDispatchService(
+    {},
+    {},
+    {
+      async findByIdForUpdate() { return driver; },
+      async hasActiveJob() { return false; },
+    },
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  assert.equal(await service.ensureDriverEligible({}, 6), driver);
 });
 
 test("assign rejects already assigned booking", async () => {
@@ -278,6 +399,42 @@ test("reassign rejects PICKED_UP booking", async () => {
   );
 });
 
+test("reassign rejects SETTLEMENT_PENDING booking", async () => {
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const service = new AdminDispatchService(
+    { async getConnection() { return conn; } },
+    {
+      async findByBookingNumberForUpdate() {
+        return {
+          id: 1,
+          status: BOOKING_STATUS.SETTLEMENT_PENDING,
+          booking_number: "TX202607010001",
+        };
+      },
+    },
+    {},
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  await assert.rejects(
+    () => service.reassignDriver(
+      "TX202607010001",
+      { driverId: 6, reason: "swap" },
+      { id: 1, role: "ADMIN" },
+    ),
+    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
+});
+
 test("assign uses BookingStatusService transitions", async () => {
   const transitions = [];
   const bookingRepo = {
@@ -308,6 +465,9 @@ test("assign uses BookingStatusService transitions", async () => {
     },
     async findPrimaryVehicle() {
       return { id: 3 };
+    },
+    async hasActiveJob() {
+      return false;
     },
   };
   const statusService = {
@@ -394,6 +554,9 @@ test("reassign dispatches outbox only after commit", async () => {
     },
     async findPrimaryVehicle() {
       return null;
+    },
+    async hasActiveJob() {
+      return false;
     },
   };
   const conn = {
@@ -841,6 +1004,9 @@ test("assign creates exactly one active assignment", async () => {
     async findPrimaryVehicle() {
       return { id: 3 };
     },
+    async hasActiveJob() {
+      return false;
+    },
   };
   const statusService = {
     async transitionInTransaction() {
@@ -924,6 +1090,9 @@ test("reassign deactivates previous assignment and creates one new active assign
     async findPrimaryVehicle() {
       return null;
     },
+    async hasActiveJob() {
+      return false;
+    },
   };
   const conn = {
     async beginTransaction() {},
@@ -986,6 +1155,9 @@ test("assign maps ER_DUP_ENTRY to ASSIGNMENT_CONFLICT", async () => {
     },
     async findPrimaryVehicle() {
       return null;
+    },
+    async hasActiveJob() {
+      return false;
     },
   };
   const conn = {

@@ -4,10 +4,8 @@ import 'package:frontend/features/driver_settlement/pages/driver_settlement_list
 import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
 
 class _FakeSettlementApi extends DriverSettlementApiService {
-  _FakeSettlementApi({this.items, this.detail, this.error, this.uploadError});
+  _FakeSettlementApi({this.error, this.uploadError});
 
-  final List<dynamic>? items;
-  final Map<String, dynamic>? detail;
   final Object? error;
   final Object? uploadError;
   int uploadCalls = 0;
@@ -16,7 +14,7 @@ class _FakeSettlementApi extends DriverSettlementApiService {
   @override
   Future<List<dynamic>> listSettlements() async {
     if (error != null) throw error!;
-    return items ?? [];
+    return [];
   }
 
   @override
@@ -31,14 +29,13 @@ class _FakeSettlementApi extends DriverSettlementApiService {
         'dueAt': '2026-07-08 12:00:00',
       };
     }
-    return detail ??
-        {
-          'bookingNumber': bookingNumber,
-          'commissionStatus': 'PENDING',
-          'commissionAmount': 120,
-          'currency': 'THB',
-          'dueAt': '2026-07-08 12:00:00',
-        };
+    return {
+      'bookingNumber': bookingNumber,
+      'commissionStatus': 'PENDING',
+      'commissionAmount': 120,
+      'currency': 'THB',
+      'dueAt': '2026-07-08 12:00:00',
+    };
   }
 
   @override
@@ -96,11 +93,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('영수증 선택 / เลือกใบเสร็จ'));
+    await tester.tap(find.text('송금증 선택 / เลือกสลิปโอนเงิน'));
     await tester.pumpAndSettle();
     expect(find.text('선택한 파일: receipt.pdf\n(ไฟล์ที่เลือก)'), findsOneWidget);
 
-    await tester.tap(find.text('영수증 업로드 / อัปโหลดใบเสร็จ'));
+    await tester.tap(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
     expect(api.uploadCalls, 1);
     expect(find.text('상태\n(สถานะ): RECEIPT_SUBMITTED'), findsOneWidget);
@@ -124,9 +121,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('영수증 선택 / เลือกใบเสร็จ'));
+    await tester.tap(find.text('송금증 선택 / เลือกสลิปโอนเงิน'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('영수증 업로드 / อัปโหลดใบเสร็จ'));
+    await tester.tap(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Upload failed'), findsOneWidget);

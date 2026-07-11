@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_booking_detail_page.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/features/admin_dispatch/widgets/recommend_drivers_dialog.dart';
+import 'package:frontend/features/admin_settlement/services/admin_settlement_api_service.dart';
 
 class _FakeAdminApi extends AdminDispatchApiService {
   _FakeAdminApi({
@@ -176,6 +179,53 @@ class _FakeAdminApi extends AdminDispatchApiService {
     };
   }
 }
+
+class _FakeSettlementApi extends AdminSettlementApiService {
+  _FakeSettlementApi({required this.detail, this.approveError});
+
+  final Map<String, dynamic> detail;
+  final Object? approveError;
+  int approveCalls = 0;
+  int receiptCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> getSettlement(String bookingNumber) async =>
+      detail;
+
+  @override
+  Future<Map<String, dynamic>> approve(String bookingNumber) async {
+    approveCalls += 1;
+    if (approveError != null) throw approveError!;
+    return {...detail, 'commissionStatus': 'APPROVED'};
+  }
+
+  @override
+  Future<AdminSettlementReceipt> getReceipt(String bookingNumber) async {
+    receiptCalls += 1;
+    return AdminSettlementReceipt(
+      bytes: Uint8List.fromList([0x25, 0x50, 0x44, 0x46]),
+      contentType: 'application/pdf',
+      filename: 'transfer-slip.pdf',
+    );
+  }
+}
+
+Map<String, dynamic> _settlementPendingDetail() => {
+  'bookingNumber': 'TX202607010001',
+  'status': 'SETTLEMENT_PENDING',
+  'route': {
+    'origin': {'address': 'BKK'},
+    'destination': {'address': 'Pattaya'},
+  },
+  'customer': {'name': 'Kim', 'phone': '+66123456789'},
+  'pricing': {
+    'totalAmount': 1200,
+    'currency': 'THB',
+    'paymentMethod': 'PAY_DRIVER',
+  },
+  'activeAssignment': {'driverDisplayName': 'Driver A'},
+  'allowedActions': [],
+};
 
 Map<String, dynamic> _queueItem(String bookingNumber) => {
   'bookingNumber': bookingNumber,
@@ -800,6 +850,144 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Server error'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('settlement pending without transfer slip hides confirmation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: _settlementPendingDetail()),
+          settlementApi: _FakeSettlementApi(
+            detail: {
+              'bookingNumber': 'TX202607010001',
+              'commissionStatus': 'PENDING',
+              'commissionAmount': 200,
+              'currency': 'THB',
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settlement confirmation'), findsOneWidget);
+    expect(find.text('PENDING'), findsOneWidget);
+    expect(
+      find.text(
+        'Payment can be confirmed after the driver uploads the transfer slip.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Confirm 200 THB received'), findsNothing);
+    expect(find.text('View transfer slip'), findsNothing);
+  });
+
+  testWidgets('submitted transfer slip can be viewed and confirmed', (
+    tester,
+  ) async {
+    final settlementApi = _FakeSettlementApi(
+      detail: {
+        'bookingNumber': 'TX202607010001',
+        'commissionStatus': 'RECEIPT_SUBMITTED',
+        'commissionAmount': 200,
+        'currency': 'THB',
+        'receiptUrl': '/api/v1/admin/settlements/TX202607010001/receipt',
+        'receiptMetadata': {'mimeType': 'application/pdf'},
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: _settlementPendingDetail()),
+          settlementApi: settlementApi,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transfer slip submitted'), findsOneWidget);
+    expect(find.text('View transfer slip'), findsOneWidget);
+    expect(find.text('Confirm 200 THB received'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('View transfer slip'));
+    await tester.tap(find.text('View transfer slip'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('transfer-slip.pdf'), findsOneWidget);
+    expect(settlementApi.receiptCalls, 1);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+
+    final confirmButton = tester.widget<ElevatedButton>(
+      find.ancestor(
+        of: find.text('Confirm 200 THB received'),
+        matching: find.byType(ElevatedButton),
+      ),
+    );
+    expect(confirmButton.onPressed, isNotNull);
+    confirmButton.onPressed!();
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Confirm that 200 THB has been received from the driver?'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Confirm'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(settlementApi.approveCalls, 1);
+  });
+
+  testWidgets('receipt-required approval race shows friendly guidance', (
+    tester,
+  ) async {
+    final settlementApi = _FakeSettlementApi(
+      detail: {
+        'bookingNumber': 'TX202607010001',
+        'commissionStatus': 'RECEIPT_SUBMITTED',
+        'receiptUrl': '/api/v1/admin/settlements/TX202607010001/receipt',
+      },
+      approveError: const AdminSettlementApiException(
+        'Receipt must be submitted before approval',
+        statusCode: 409,
+        errorCode: 'RECEIPT_REQUIRED',
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: _settlementPendingDetail()),
+          settlementApi: settlementApi,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final confirmButton = tester.widget<ElevatedButton>(
+      find.ancestor(
+        of: find.text('Confirm 200 THB received'),
+        matching: find.byType(ElevatedButton),
+      ),
+    );
+    expect(confirmButton.onPressed, isNotNull);
+    confirmButton.onPressed!();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      find.text(
+        'Payment can be confirmed after the driver uploads the transfer slip.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows dev QR reissue actions when enabled', (tester) async {

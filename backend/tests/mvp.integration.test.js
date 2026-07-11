@@ -6,6 +6,8 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 
@@ -23,6 +25,7 @@ const ReviewService = require('../src/services/review.service');
 const ChatService = require('../src/services/chat.service');
 const container = require('../src/helpers/container');
 const app = require('../src/app');
+const { uploadDir } = require('../src/config/multer');
 
 const BOOKING_NUMBER = 'TX202607010001';
 const GUEST_TOKEN = 'guest-access-token-mvp';
@@ -80,6 +83,9 @@ function createLifecycleState() {
     dropoffToken: 'dropoff-qr-token',
     commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
     commissionAmount: null,
+    commissionReceiptFileId: null,
+    commissionMetadata: {},
+    storedReceiptPath: null,
     commissionUpdates: 0,
     reviewId: null,
     reviewCount: 0,
@@ -106,13 +112,15 @@ function bookingRow(state) {
     driver_id: state.driverUserId ?? 5,
     commission_status: state.commissionStatus,
     commission_amount: state.commissionAmount,
+    commission_receipt_file_id: state.commissionReceiptFileId,
+    metadata: state.commissionMetadata,
     completed_at: state.status === BOOKING_STATUS.COMPLETED ? '2026-07-01 12:00:00' : null,
     boarding_qr_token_hash: hashToken(state.boardingToken),
     boarding_qr_expires_at: '2099-01-01 00:00:00',
-    boarding_qr_used_at: null,
+    boarding_qr_used_at: state.boardingQrUsedAt ?? null,
     dropoff_qr_token_hash: state.dropoffToken ? hashToken(state.dropoffToken) : null,
     dropoff_qr_expires_at: state.dropoffToken ? '2099-01-01 00:00:00' : null,
-    dropoff_qr_used_at: null,
+    dropoff_qr_used_at: state.dropoffQrUsedAt ?? null,
   };
 }
 
@@ -153,8 +161,21 @@ function buildMvpHarness(initialState = createLifecycleState()) {
       state.commissionUpdates += 1;
       if (fields.commissionStatus) state.commissionStatus = fields.commissionStatus;
       if (fields.commissionAmount != null) state.commissionAmount = fields.commissionAmount;
+      if (fields.commissionReceiptFileId != null) {
+        state.commissionReceiptFileId = fields.commissionReceiptFileId;
+      }
+      if (fields.metadata) state.commissionMetadata = fields.metadata;
     },
     async insertActivityLog() {},
+    async findSettlementByBookingNumberForUpdate(_c, num) {
+      return num === state.bookingNumber ? bookingRow(state) : null;
+    },
+    async findSettlementByBookingNumber(num) {
+      return num === state.bookingNumber ? bookingRow(state) : null;
+    },
+    async driverOwnsSettlementBooking(driverId, num) {
+      return driverId === 5 && num === state.bookingNumber;
+    },
     async findQrTokenBooking(_c, tokenHash) {
       if (tokenHash === hashToken(state.boardingToken)) {
         return { id: state.bookingId, booking_number: state.bookingNumber, token_type: 'BOARDING' };
@@ -171,11 +192,11 @@ function buildMvpHarness(initialState = createLifecycleState()) {
       return 1;
     },
     async markBoardingQrUsed() {
-      state.status = BOOKING_STATUS.PICKED_UP;
+      state.boardingQrUsedAt = '2026-07-01 11:00:00';
       return true;
     },
     async markDropoffQrUsed() {
-      state.status = BOOKING_STATUS.COMPLETED;
+      state.dropoffQrUsedAt = '2026-07-01 12:00:00';
       return true;
     },
     async issueDropoffQr(_c, bookingId) {
@@ -190,6 +211,10 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     validateTransition: realStatus.validateTransition.bind(realStatus),
     async transitionInTransaction(_c, bookingNumber, input) {
       state.status = input.status;
+      if (input.status === BOOKING_STATUS.SETTLEMENT_PENDING) {
+        state.commissionStatus = COMMISSION_STATUS.DUE;
+        state.commissionAmount = 200;
+      }
       return {
         result: { bookingNumber, status: input.status, idempotent: false },
         domainEvent: `event.${input.status}`,
@@ -214,6 +239,25 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     async findPrimaryVehicle() {
       return { id: 1 };
     },
+    async hasActiveJob(_c, driverId) {
+      return driverId === 5
+        && state.activeDriverUserId === DRIVER_USER_ID
+        && [
+          BOOKING_STATUS.DRIVER_ASSIGNED,
+          BOOKING_STATUS.ON_ROUTE,
+          BOOKING_STATUS.DRIVER_ARRIVED,
+          BOOKING_STATUS.PICKED_UP,
+          BOOKING_STATUS.SETTLEMENT_PENDING,
+        ].includes(state.status);
+    },
+  };
+
+  const fileRepository = {
+    async insert(_c, data) {
+      state.storedReceiptPath = data.filePath;
+      return 77;
+    },
+    async softDelete() {},
   };
 
   const bookingService = {
@@ -351,10 +395,11 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     pool,
     bookingRepo,
     driverRepo,
-    {},
+    fileRepository,
     settingsRepo,
     outboxRepository,
     null,
+    statusService,
   );
   const review = new ReviewService(
     pool,
@@ -416,15 +461,57 @@ test('MVP lifecycle — booking through review with commission, notifications, a
   assert.equal(state.chatMessages.length, 1);
   assert.equal(duplicate.message.messageId, sent.message.messageId);
 
-  await h.driverTripFlow.completeTrip(DRIVER_USER_ID, BOOKING_NUMBER);
-  assert.equal(state.status, BOOKING_STATUS.COMPLETED);
+  await h.driverQr.scanBoarding(
+    DRIVER_USER_ID,
+    BOOKING_NUMBER,
+    state.boardingToken,
+  );
+  assert.equal(state.status, BOOKING_STATUS.PICKED_UP);
 
-  await h.commission.activateObligationForCompletedBooking(state.bookingId);
-  assert.equal(state.commissionUpdates, 1);
+  await h.driverQr.scanDropoff(
+    DRIVER_USER_ID,
+    BOOKING_NUMBER,
+    state.dropoffToken,
+  );
+  assert.equal(state.status, BOOKING_STATUS.SETTLEMENT_PENDING);
   assert.equal(state.commissionStatus, COMMISSION_STATUS.DUE);
+  assert.equal(state.commissionAmount, 200);
 
-  await h.commission.activateObligationForCompletedBooking(state.bookingId);
-  assert.equal(state.commissionUpdates, 1, 'commission obligation created once');
+  await assert.rejects(
+    () => h.commission.approve(BOOKING_NUMBER, ADMIN_USER),
+    (err) => err.errorCode === ERROR_CODES.RECEIPT_REQUIRED,
+  );
+  await assert.rejects(
+    () => h.adminDispatch.ensureDriverEligible(connStub(state), 5),
+    (err) => err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+  );
+
+  const uploadPath = path.join(uploadDir, 'mvp-transfer-slip.pdf');
+  fs.writeFileSync(uploadPath, '%PDF-1.4');
+  await h.commission.uploadReceipt(DRIVER_USER_ID, BOOKING_NUMBER, {
+    path: uploadPath,
+    mimetype: 'application/pdf',
+    size: 8,
+    originalname: 'transfer-slip.pdf',
+  });
+  assert.equal(state.commissionReceiptFileId, 77);
+
+  await h.commission.approve(BOOKING_NUMBER, ADMIN_USER);
+  assert.equal(state.status, BOOKING_STATUS.COMPLETED);
+  assert.equal(state.commissionStatus, COMMISSION_STATUS.PAID);
+
+  await h.commission.approve(BOOKING_NUMBER, ADMIN_USER);
+  assert.equal(state.status, BOOKING_STATUS.COMPLETED);
+  const eligibleDriver = await h.adminDispatch.ensureDriverEligible(
+    connStub(state),
+    5,
+  );
+  assert.equal(eligibleDriver.id, 5);
+
+  if (state.storedReceiptPath) {
+    const storedReceipt = path.join(uploadDir, state.storedReceiptPath);
+    if (fs.existsSync(storedReceipt)) fs.unlinkSync(storedReceipt);
+  }
 
   const reviewResult = await h.review.submitBookingReview(
     BOOKING_NUMBER,
