@@ -9,6 +9,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/support_inquiry_api_service.dart';
+import '../../platform_settings/services/platform_settings_api_service.dart';
 
 class CustomerSupportPage extends StatelessWidget {
   const CustomerSupportPage({super.key, this.api});
@@ -93,10 +94,49 @@ class CustomerSupportPage extends StatelessWidget {
                   padding: const EdgeInsets.all(AppTokens.spaceLg),
                   child: const _FaqSection(),
                 ),
+                const SizedBox(height: AppTokens.spaceMd),
+                const _LineInquirySection(),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LineInquirySection extends StatelessWidget {
+  const _LineInquirySection();
+
+  @override
+  Widget build(BuildContext context) {
+    const api = PlatformSettingsApiService();
+    final l10n = context.l10n;
+    return AppUi.surfaceCard(
+      padding: const EdgeInsets.all(AppTokens.spaceLg),
+      child: FutureBuilder<Map<String, dynamic>>(
+        future: api.getPublic(),
+        builder: (context, snapshot) {
+          final path = snapshot.data?['lineQrImageUrl'] as String?;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.t('support_line_inquiry'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              if (path == null || path.isEmpty)
+                Text(l10n.t('support_line_qr_missing'))
+              else
+                Image.network(
+                  api.assetUri(path).toString(),
+                  height: 240,
+                  fit: BoxFit.contain,
+                ),
+            ],
+          );
+        },
       ),
     );
   }

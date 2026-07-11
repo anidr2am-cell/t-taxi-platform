@@ -14,6 +14,7 @@ import 'driver_jobs_page.dart';
 import 'driver_notifications_page.dart';
 import 'driver_profile_page.dart';
 import 'driver_qr_scan_page.dart';
+import 'driver_support_page.dart';
 
 /// Mobile-first driver shell: Jobs (default), Notifications, Settlement, Profile.
 class DriverShellPage extends StatefulWidget {
@@ -96,6 +97,7 @@ class _DriverShellPageState extends State<DriverShellPage> {
       DriverNotificationsPage(api: _api),
       DriverSettlementListPage(api: null),
       DriverProfilePage(api: _api, onStatusChanged: _refreshSession),
+      const DriverSupportPage(),
     ];
 
     return Scaffold(
@@ -141,6 +143,11 @@ class _DriverShellPageState extends State<DriverShellPage> {
             icon: const Icon(Icons.person_outline),
             selectedIcon: const Icon(Icons.person),
             label: l10n.t('driver_nav_profile'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.support_agent_outlined),
+            selectedIcon: const Icon(Icons.support_agent),
+            label: l10n.t('driver_support_title'),
           ),
         ],
       ),

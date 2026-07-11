@@ -198,7 +198,7 @@ class DriverQrService {
       normalizedBookingNumber = row.booking_number;
       await this.verifyTokenIdentity(conn, row, tokenHash, 'DROPOFF');
 
-      if (row.dropoff_qr_used_at && row.status === BOOKING_STATUS.COMPLETED) {
+      if (row.dropoff_qr_used_at && row.status === BOOKING_STATUS.SETTLEMENT_PENDING) {
         idempotent = true;
         await conn.commit();
       } else {
@@ -215,7 +215,7 @@ class DriverQrService {
         if (row.status !== BOOKING_STATUS.PICKED_UP) {
           this.bookingStatusService.validateTransition(
             row.status,
-            BOOKING_STATUS.COMPLETED,
+            BOOKING_STATUS.SETTLEMENT_PENDING,
             ROLES.DRIVER,
           );
         }
@@ -232,7 +232,7 @@ class DriverQrService {
         transition = await this.transitionInTransaction(
           conn,
           normalizedBookingNumber,
-          BOOKING_STATUS.COMPLETED,
+          BOOKING_STATUS.SETTLEMENT_PENDING,
           this.actor(driverUserId),
           'DRIVER_SCAN_DROPOFF_QR',
         );

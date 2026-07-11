@@ -434,7 +434,7 @@ class AdminDispatchService {
       );
     if (blocked) {
       throw new AppError(
-        "Driver has overdue or unresolved commission settlement",
+        "This driver cannot receive a new job until the previous settlement is confirmed.",
         {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,

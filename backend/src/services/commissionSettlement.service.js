@@ -36,6 +36,7 @@ class CommissionSettlementService {
     settingsRepository,
     outboxRepository,
     outboxProcessor,
+    bookingStatusService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -44,6 +45,7 @@ class CommissionSettlementService {
     this.settingsRepository = settingsRepository;
     this.outboxRepository = outboxRepository;
     this.outboxProcessor = outboxProcessor;
+    this.bookingStatusService = bookingStatusService;
   }
 
   parseMetadata(raw) {
@@ -123,7 +125,7 @@ class CommissionSettlementService {
     ) {
       return false;
     }
-    return this.isOverdue(row, now);
+    return true;
   }
 
   mapPublicCommissionStatus(row, metadata, now = new Date()) {
@@ -355,7 +357,7 @@ class CommissionSettlementService {
     }
     await this.reconcileMissingObligationForBooking(bookingNumber);
     const row = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
-    if (!row || row.status !== 'COMPLETED'
+    if (!row || !['SETTLEMENT_PENDING', 'COMPLETED'].includes(row.status)
       || row.commission_status === COMMISSION_STATUS.NOT_DUE_YET
       || row.commission_status === COMMISSION_STATUS.WAIVED) {
       throw new AppError('Settlement not found', {
@@ -363,7 +365,23 @@ class CommissionSettlementService {
         errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,
       });
     }
-    return this.mapSettlementListItem(row, apiBasePath, ROLES.DRIVER);
+    const item = this.mapSettlementListItem(row, apiBasePath, ROLES.DRIVER);
+    const settings = this.settingsRepository?.findByGroup
+      ? await this.settingsRepository.findByGroup('operations')
+      : [];
+    const values = Object.fromEntries(settings.map((entry) => [entry.key_name, entry.value]));
+    return {
+      ...item,
+      paymentInstructions: {
+        bankName: values.bankName || '',
+        accountName: values.accountName || '',
+        accountNumber: values.accountNumber || '',
+        promptPayNumber: values.promptPayNumber || '',
+        promptPayQrImageUrl: values.promptPayQrImagePath
+          ? '/api/v1/settings/assets/promptPayQr'
+          : null,
+      },
+    };
   }
 
   validateUploadedFile(file) {
@@ -413,7 +431,7 @@ class CommissionSettlementService {
         conn,
         bookingNumber,
       );
-      if (!row || row.status !== 'COMPLETED') {
+      if (!row || !['SETTLEMENT_PENDING', 'COMPLETED'].includes(row.status)) {
         throw new AppError('Settlement not found', {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,
@@ -565,7 +583,7 @@ class CommissionSettlementService {
   async getAdminSettlement(bookingNumber, apiBasePath) {
     await this.reconcileMissingObligationForBooking(bookingNumber);
     const row = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
-    if (!row || row.status !== 'COMPLETED'
+    if (!row || !['SETTLEMENT_PENDING', 'COMPLETED'].includes(row.status)
       || row.commission_status === COMMISSION_STATUS.NOT_DUE_YET
       || row.commission_status === COMMISSION_STATUS.WAIVED) {
       throw new AppError('Settlement not found', {
@@ -578,23 +596,31 @@ class CommissionSettlementService {
 
   async approve(bookingNumber, user) {
     const conn = await this.pool.getConnection();
+    let bookingTransition = null;
     try {
       await conn.beginTransaction();
       const row = await this.bookingRepository.findSettlementByBookingNumberForUpdate(
         conn,
         bookingNumber,
       );
-      if (!row || row.status !== 'COMPLETED') {
+      if (!row) {
         throw new AppError('Settlement not found', {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,
         });
       }
 
-      if (row.commission_status === COMMISSION_STATUS.PAID) {
+      if (row.status === 'COMPLETED' && row.commission_status === COMMISSION_STATUS.PAID) {
         await conn.commit();
         const current = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
         return this.mapAdminDetail(current, null);
+      }
+
+      if (row.status !== 'SETTLEMENT_PENDING') {
+        throw new AppError('Settlement is not awaiting confirmation', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+        });
       }
 
       if (!row.commission_receipt_file_id) {
@@ -619,6 +645,16 @@ class CommissionSettlementService {
         metadata,
         updatedBy: user.id,
       });
+
+      if (this.bookingStatusService) {
+        bookingTransition = await this.bookingStatusService.transitionInTransaction(
+          conn,
+          bookingNumber,
+          { status: 'COMPLETED', reason: 'SETTLEMENT_CONFIRMED' },
+          user,
+          { skipAccessCheck: true },
+        );
+      }
 
       await this.bookingRepository.insertActivityLog(conn, row.id, {
         activityType: 'COMMISSION_APPROVED',
@@ -662,6 +698,15 @@ class CommissionSettlementService {
       if (outboxId && this.outboxProcessor) {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
       }
+      if (bookingTransition) {
+        await this.bookingStatusService.dispatchOutboxAfterCommit(
+          bookingTransition.outboxId,
+        );
+        this.bookingStatusService.emitDomainEvent(
+          bookingTransition.domainEvent,
+          bookingTransition.eventPayload,
+        );
+      }
 
       const updatedSettlement = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
 
@@ -682,7 +727,7 @@ class CommissionSettlementService {
         conn,
         bookingNumber,
       );
-      if (!row || row.status !== 'COMPLETED') {
+      if (!row || row.status !== 'SETTLEMENT_PENDING') {
         throw new AppError('Settlement not found', {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,

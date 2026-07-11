@@ -6,6 +6,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
+import '../../admin_settlement/services/admin_settlement_api_service.dart';
 import '../widgets/admin_qr_reissue_dialog.dart';
 import '../widgets/assign_driver_dialog.dart';
 import '../widgets/recommend_drivers_dialog.dart';
@@ -210,6 +211,46 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     }
   }
 
+  Future<void> _confirmSettlement() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.t('admin_settlement_confirm_200')),
+        content: Text(l10n.t('admin_settlement_confirm_question')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _submitting = true);
+    try {
+      await const AdminSettlementApiService().approve(widget.bookingNumber);
+      widget.onChanged();
+      await _load();
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              userFacingError(err, fallback: l10n.t('ui_action_failed')),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -266,8 +307,17 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Widget? _actionBar(AppLocalizations l10n, List<String> actions) {
-    if (actions.isEmpty) return null;
     final buttons = <Widget>[];
+    if (_detail?['status'] == 'SETTLEMENT_PENDING') {
+      buttons.add(
+        AppUi.primaryButton(
+          label: l10n.t('admin_settlement_confirm_200'),
+          icon: Icons.payments_outlined,
+          loading: _submitting,
+          onPressed: _submitting ? null : _confirmSettlement,
+        ),
+      );
+    }
     if (actions.contains('RECOMMEND_DRIVERS')) {
       buttons.add(
         AppUi.secondaryButton(
@@ -307,9 +357,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Widget _summaryHeader(AppLocalizations l10n, Map<String, dynamic> detail) {
-    final assignment = detail['activeAssignment'] is Map
-        ? Map<String, dynamic>.from(detail['activeAssignment'] as Map)
-        : null;
     final status = detail['status'] as String? ?? '';
     final actions = _allowedActions();
 

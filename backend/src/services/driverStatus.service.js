@@ -46,7 +46,7 @@ class DriverStatusService {
     if (!this.commissionSettlementService) return;
     const blocked = await this.commissionSettlementService.driverHasBlockingSettlement(driverId);
     if (blocked) {
-      throw new AppError('Driver has overdue or unresolved commission settlement', {
+      throw new AppError('This driver cannot receive a new job until the previous settlement is confirmed.', {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });

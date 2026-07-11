@@ -93,7 +93,13 @@ for file in "${MIGRATION_FILES[@]}"; do
   fi
   echo "Running $base ..."
   sql="$(convert_sql "$(cat "$file")")"
-  if ! printf '%s\n' "$sql" | mysql "${MYSQL_ARGS[@]}" --show-warnings 2>&1; then
+  FILE_MYSQL_ARGS=("${MYSQL_ARGS[@]}")
+  # 00_database.sql creates the database on a fresh install. Every migration
+  # after that is explicitly scoped to DB_NAME, including files without USE.
+  if [[ "$base" != "00_database.sql" ]]; then
+    FILE_MYSQL_ARGS+=(--database="$DB_NAME")
+  fi
+  if ! printf '%s\n' "$sql" | mysql "${FILE_MYSQL_ARGS[@]}" --show-warnings 2>&1; then
     echo "$base failed" >&2
     exit 1
   fi

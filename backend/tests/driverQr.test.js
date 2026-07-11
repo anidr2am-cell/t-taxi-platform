@@ -261,21 +261,21 @@ test('boarding scan does not generate driver-owned dropoff tokens', async () => 
   assert.equal(calls.boardingUsed, 1);
 });
 
-test('valid dropoff scan completes the trip', async () => {
+test('valid dropoff scan moves the trip to settlement pending', async () => {
   const { service, calls } = buildHarness({
     row: {
       status: BOOKING_STATUS.PICKED_UP,
       dropoff_qr_token_hash: hashToken('dropoff-token'),
       dropoff_qr_expires_at: '2099-01-01 00:00:00',
     },
-    detailRow: row({ status: BOOKING_STATUS.COMPLETED }),
+    detailRow: row({ status: BOOKING_STATUS.SETTLEMENT_PENDING }),
   });
 
   const result = await service.scanDropoff(44, 'TX202607010001', 'dropoff-token');
 
-  assert.equal(result.status, BOOKING_STATUS.COMPLETED);
+  assert.equal(result.status, BOOKING_STATUS.SETTLEMENT_PENDING);
   assert.equal(calls.dropoffUsed, 1);
-  assert.equal(calls.transitions[0].input.status, BOOKING_STATUS.COMPLETED);
+  assert.equal(calls.transitions[0].input.status, BOOKING_STATUS.SETTLEMENT_PENDING);
   assert.equal(calls.emitted, 1);
 });
 
@@ -297,12 +297,12 @@ test('dropoff scan requires PICKED_UP or DRIVER_ARRIVED', async () => {
 test('repeated dropoff scan creates no duplicate side effects', async () => {
   const { service, calls } = buildHarness({
     row: {
-      status: BOOKING_STATUS.COMPLETED,
+      status: BOOKING_STATUS.SETTLEMENT_PENDING,
       dropoff_qr_token_hash: hashToken('dropoff-token'),
       dropoff_qr_expires_at: '2099-01-01 00:00:00',
       dropoff_qr_used_at: '2026-07-01 10:45:00',
     },
-    detailRow: row({ status: BOOKING_STATUS.COMPLETED }),
+    detailRow: row({ status: BOOKING_STATUS.SETTLEMENT_PENDING }),
   });
 
   const result = await service.scanDropoff(44, 'TX202607010001', 'dropoff-token');

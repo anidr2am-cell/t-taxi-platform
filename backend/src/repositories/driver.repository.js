@@ -207,7 +207,7 @@ class DriverRepository {
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL
           AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-          AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP')
+          AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
         LIMIT 1
       `,
       [driverId],
@@ -265,7 +265,7 @@ class DriverRepository {
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-              AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP')
+              AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
           ) AS active_job_count
         FROM drivers d
         INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL

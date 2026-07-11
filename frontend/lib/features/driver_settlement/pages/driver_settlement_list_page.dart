@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../../../utils/user_facing_error.dart';
 import '../services/driver_settlement_api_service.dart';
 
@@ -408,6 +409,10 @@ class _DriverSettlementDetailPageState
                     ],
                   ),
                 ),
+                if (_detail?['paymentInstructions'] is Map) ...[
+                  const SizedBox(height: AppTokens.spaceMd),
+                  _paymentInstructions(l10n),
+                ],
                 if (canUpload) ...[
                   const SizedBox(height: AppTokens.spaceMd),
                   AppUi.adminDetailSection(
@@ -465,6 +470,49 @@ class _DriverSettlementDetailPageState
                 ],
               ],
             ),
+    );
+  }
+
+  Widget _paymentInstructions(AppLocalizations l10n) {
+    final payment = Map<String, dynamic>.from(
+      _detail?['paymentInstructions'] as Map,
+    );
+    final qrPath = payment['promptPayQrImageUrl'] as String?;
+    return AppUi.adminDetailSection(
+      context: context,
+      title: l10n.t('driver_settlement_payment_account'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppUi.summaryRow(
+            label: l10n.t('admin_settings_bank_name'),
+            value: payment['bankName'] as String? ?? '-',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_settings_account_name'),
+            value: payment['accountName'] as String? ?? '-',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_settings_account_number'),
+            value: payment['accountNumber'] as String? ?? '-',
+          ),
+          AppUi.summaryRow(
+            label: 'PromptPay',
+            value: payment['promptPayNumber'] as String? ?? '-',
+          ),
+          if (qrPath != null && qrPath.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppTokens.spaceSm),
+              child: Image.network(
+                const PlatformSettingsApiService().assetUri(qrPath).toString(),
+                height: 220,
+                fit: BoxFit.contain,
+              ),
+            ),
+          const SizedBox(height: AppTokens.spaceSm),
+          Text(l10n.t('driver_settlement_next_job_notice')),
+        ],
+      ),
     );
   }
 }

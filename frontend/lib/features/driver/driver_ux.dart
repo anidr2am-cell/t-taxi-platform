@@ -12,6 +12,7 @@ class DriverUx {
       case 'ON_ROUTE':
       case 'DRIVER_ARRIVED':
       case 'PICKED_UP':
+      case 'SETTLEMENT_PENDING':
         return DriverJobGroup.active;
       case 'COMPLETED':
       case 'NO_SHOW':

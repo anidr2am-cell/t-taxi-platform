@@ -18,6 +18,8 @@ class BookingStatusDisplay {
         return 'status_driver_arrived';
       case 'PICKED_UP':
         return 'status_picked_up';
+      case 'SETTLEMENT_PENDING':
+        return 'status_settlement_pending';
       case 'COMPLETED':
         return 'status_completed';
       case 'CANCELLED':

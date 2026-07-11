@@ -37,6 +37,7 @@ const DriverLocationService = require("../services/driverLocation.service");
 const FileRepository = require("../repositories/file.repository");
 const SettingsRepository = require("../repositories/settings.repository");
 const CommissionSettlementService = require("../services/commissionSettlement.service");
+const PlatformSettingsService = require("../services/platformSettings.service");
 const ReviewRepository = require("../repositories/review.repository");
 const ReviewService = require("../services/review.service");
 const AdminDispatchService = require("../services/adminDispatch.service");
@@ -254,6 +255,10 @@ container.register(
     new DriverLocationService(database.pool, c.get("driverLocationRepository")),
 );
 container.register("settingsRepository", () => new SettingsRepository());
+container.register(
+  "platformSettingsService",
+  (c) => new PlatformSettingsService(c.get("settingsRepository")),
+);
 container.register("fileRepository", () => new FileRepository());
 container.register(
   "commissionSettlementService",
@@ -266,6 +271,7 @@ container.register(
       c.get("settingsRepository"),
       c.get("outboxRepository"),
       c.get("outboxProcessor"),
+      c.get("bookingStatusService"),
     ),
 );
 container.register("reviewRepository", () => new ReviewRepository());

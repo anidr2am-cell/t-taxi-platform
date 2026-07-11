@@ -170,7 +170,9 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
             );
           }
           final booking = snapshot.data!;
-          if (booking.status == 'COMPLETED' && _settlementFuture == null) {
+          if ((booking.status == 'SETTLEMENT_PENDING' ||
+                  booking.status == 'COMPLETED') &&
+              _settlementFuture == null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _loadSettlement();
             });

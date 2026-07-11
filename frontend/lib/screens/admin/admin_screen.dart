@@ -13,6 +13,7 @@ import '../../features/admin_flight/pages/admin_flight_monitor_page.dart';
 import '../../features/admin_driver_application/pages/admin_driver_application_list_page.dart';
 import '../../features/driver_location/pages/admin_driver_monitor_page.dart';
 import '../../features/admin_pricing/pages/admin_pricing_manager_page.dart';
+import '../../features/admin_settings/pages/admin_settings_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_tokens.dart';
 import '../../widgets/app_ui.dart';
@@ -33,12 +34,12 @@ class _AdminScreenState extends State<AdminScreen> {
   int _sessionEpoch = 0;
   final _drawerKey = GlobalKey<ScaffoldState>();
 
-  static const _authGatedIndices = {0, 2, 3, 4, 5, 8, 9, 10, 11, 12};
+  static const _authGatedIndices = {0, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13};
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTab.clamp(0, 12);
+    _selectedIndex = widget.initialTab.clamp(0, 13);
   }
 
   Future<void> _logout() async {
@@ -70,6 +71,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_notifications'),
       l10n.t('admin_flights'),
       l10n.t('admin_support_menu'),
+      l10n.t('admin_settings'),
     ];
 
     final icons = [
@@ -86,6 +88,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.notifications_outlined,
       Icons.flight_land_outlined,
       Icons.support_agent_outlined,
+      Icons.settings_outlined,
     ];
 
     final selectedIcons = [
@@ -102,6 +105,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.notifications,
       Icons.flight_land,
       Icons.support_agent,
+      Icons.settings,
     ];
 
     void selectIndex(int index) {
@@ -256,6 +260,8 @@ class _AdminScreenState extends State<AdminScreen> {
         return const AdminAuthGate(child: AdminFlightMonitorPage());
       case 12:
         return const AdminAuthGate(child: AdminSupportInquiryPage());
+      case 13:
+        return const AdminAuthGate(child: AdminSettingsPage());
       default:
         return const SizedBox.shrink();
     }

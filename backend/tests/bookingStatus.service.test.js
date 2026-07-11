@@ -237,13 +237,13 @@ test('transaction failure prevents outbox dispatch', async () => {
 
 test('COMPLETED transition closes active driver assignment', async () => {
   const harness = createHarness({
-    booking: createBooking({ status: 'PICKED_UP' }),
+    booking: createBooking({ status: 'SETTLEMENT_PENDING' }),
   });
 
   const result = await harness.service.transition(
     'TX202607010001',
     { status: 'COMPLETED' },
-    { id: 99, role: ROLES.DRIVER },
+    { id: 99, role: ROLES.ADMIN },
   );
 
   assert.equal(result.status, 'COMPLETED');

@@ -242,12 +242,14 @@ test('successful approval is idempotent', async () => {
   const bookingRepo = {
     async findSettlementByBookingNumberForUpdate() {
       return settlementRow({
+        status: 'COMPLETED',
         commission_receipt_file_id: 11,
         commission_status: COMMISSION_STATUS.PAID,
       });
     },
     async findSettlementByBookingNumber() {
       return settlementRow({
+        status: 'COMPLETED',
         commission_receipt_file_id: 11,
         commission_status: COMMISSION_STATUS.PAID,
         commission_paid_at: '2026-07-02 10:00:00',
@@ -313,7 +315,7 @@ test('overdue blocking prevents assignment', async () => {
   );
 });
 
-test('non-overdue PENDING does not block', async () => {
+test('unresolved settlement blocks even before its due date', async () => {
   const futureDue = new Date(Date.now() + 86400000).toISOString().slice(0, 19).replace('T', ' ');
   const bookingRepo = {
     async findUnpaidSettlementsForDriver() {
@@ -327,7 +329,7 @@ test('non-overdue PENDING does not block', async () => {
   };
   const service = new CommissionSettlementService({}, bookingRepo, {}, {}, {});
   const blocked = await service.driverHasBlockingSettlement(5);
-  assert.equal(blocked, false);
+  assert.equal(blocked, true);
 });
 
 test('overdue with receipt still blocks assignment', async () => {
@@ -398,6 +400,7 @@ test('duplicate rejection does not add review history', async () => {
   const bookingRepo = {
     async findSettlementByBookingNumberForUpdate() {
       return settlementRow({
+        status: 'SETTLEMENT_PENDING',
         commission_receipt_file_id: null,
         metadata: {
           commissionRejectionReason: 'Blurry photo',
@@ -407,6 +410,7 @@ test('duplicate rejection does not add review history', async () => {
     },
     async findSettlementByBookingNumber() {
       return settlementRow({
+        status: 'SETTLEMENT_PENDING',
         commission_receipt_file_id: null,
         metadata: {
           commissionRejectionReason: 'Blurry photo',

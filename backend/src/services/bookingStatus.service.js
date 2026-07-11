@@ -36,14 +36,16 @@ const TRANSITIONS = {
     [BOOKING_STATUS.NO_SHOW]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [BOOKING_STATUS.DRIVER_ARRIVED]: {
-    [BOOKING_STATUS.COMPLETED]: [ROLES.DRIVER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
     [BOOKING_STATUS.PICKED_UP]: [ROLES.DRIVER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
     [BOOKING_STATUS.CANCELLED]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
     [BOOKING_STATUS.NO_SHOW]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [BOOKING_STATUS.PICKED_UP]: {
-    [BOOKING_STATUS.COMPLETED]: [ROLES.DRIVER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    [BOOKING_STATUS.SETTLEMENT_PENDING]: [ROLES.DRIVER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
     [BOOKING_STATUS.CANCELLED]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
+  },
+  [BOOKING_STATUS.SETTLEMENT_PENDING]: {
+    [BOOKING_STATUS.COMPLETED]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
 };
 
@@ -64,6 +66,7 @@ const ACTIVITY_BY_STATUS = {
   [BOOKING_STATUS.ON_ROUTE]: 'TRIP_ON_ROUTE',
   [BOOKING_STATUS.DRIVER_ARRIVED]: 'DRIVER_ARRIVED',
   [BOOKING_STATUS.PICKED_UP]: 'TRIP_PICKED_UP',
+  [BOOKING_STATUS.SETTLEMENT_PENDING]: 'SETTLEMENT_PENDING',
   [BOOKING_STATUS.COMPLETED]: 'TRIP_COMPLETED',
   [BOOKING_STATUS.CANCELLED]: 'BOOKING_CANCELLED',
   [BOOKING_STATUS.NO_SHOW]: 'BOOKING_NO_SHOW',
@@ -223,6 +226,15 @@ class BookingStatusService {
     await this.bookingRepository.updateStatus(conn, booking.id, toStatus, actor.id, {
       cancellationReason: input.reason ?? input.memo ?? null,
     });
+
+    if (toStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
+      await this.bookingRepository.updateCommissionFields(conn, booking.id, {
+        commissionStatus: 'DUE',
+        commissionAmount: 200,
+        commissionDueAt: null,
+        updatedBy: actor.id,
+      });
+    }
 
     await this.bookingRepository.insertStatusLog(conn, booking.id, {
       fromStatus,
