@@ -65,6 +65,12 @@ router.patch(
 );
 
 router.post(
+  "/:bookingNumber/boarding-qr/issue",
+  optionalAuthMiddleware,
+  bookingController.issueBoardingQr,
+);
+
+router.post(
   "/:bookingNumber/dropoff-qr/issue",
   optionalAuthMiddleware,
   bookingController.issueDropoffQr,

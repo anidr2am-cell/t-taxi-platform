@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
+import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,48 +19,51 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('lookup posts booking number and phone then persists guest access', () async {
-    Uri? requestedUri;
-    Map<String, dynamic>? body;
-    final service = GuestBookingLookupService(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        requestedUri = request.url;
-        body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
-        return http.Response(jsonEncode({
-          'success': true,
-          'data': _lookupJson(),
-        }), 200);
-      }),
-    );
+  test(
+    'lookup posts booking number and phone then persists guest access',
+    () async {
+      Uri? requestedUri;
+      Map<String, dynamic>? body;
+      final service = GuestBookingLookupService(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          requestedUri = request.url;
+          body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+          return http.Response(
+            jsonEncode({'success': true, 'data': _lookupJson()}),
+            200,
+          );
+        }),
+      );
 
-    final result = await service.lookup(
-      bookingNumber: 'tx202607010001',
-      phone: '+66 (81) 234-5678',
-    );
+      final result = await service.lookup(
+        bookingNumber: 'tx202607010001',
+        phone: '+66 (81) 234-5678',
+      );
 
-    expect(requestedUri!.path, '/api/v1/public/bookings/lookup');
-    expect(body, {
-      'bookingNumber': 'tx202607010001',
-      'phone': '+66 (81) 234-5678',
-    });
-    expect(result.bookingNumber, 'TX202607010001');
+      expect(requestedUri!.path, '/api/v1/public/bookings/lookup');
+      expect(body, {
+        'bookingNumber': 'tx202607010001',
+        'phone': '+66 (81) 234-5678',
+      });
+      expect(result.bookingNumber, 'TX202607010001');
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(
-      prefs.getString('guest_access_token_TX202607010001'),
-      'guest-token',
-    );
-  });
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('guest_access_token_TX202607010001'),
+        'guest-token',
+      );
+    },
+  );
 
   test('lookup persists customer phone for refresh', () async {
     final service = GuestBookingLookupService(
       baseUrl: 'http://localhost:3000',
       client: MockClient((request) async {
-        return http.Response(jsonEncode({
-          'success': true,
-          'data': _lookupJson(),
-        }), 200);
+        return http.Response(
+          jsonEncode({'success': true, 'data': _lookupJson()}),
+          200,
+        );
       }),
     );
 
@@ -71,13 +76,34 @@ void main() {
     expect(cached?.customerPhone, '+66 81 234 5678');
   });
 
+  test('create summary keeps boarding QR recoverable before pickup', () {
+    final result = GuestBookingLookupResult.fromCreateSummary(
+      bookingId: 10,
+      bookingNumber: 'TX202607010001',
+      status: 'PENDING',
+      totalAmount: 1500,
+      currency: 'THB',
+      paymentMethod: 'PAY_DRIVER',
+      guestAccessToken: 'guest-token',
+      customerPhone: '+66 81 234 5678',
+      serviceTypeName: 'Airport Pickup',
+      originAddress: 'BKK Airport',
+      destinationAddress: 'Pattaya Hotel',
+    );
+
+    expect(result.capabilities.boardingQrRecoverable, true);
+    expect(result.capabilities.boardingQrPreviouslyIssued, true);
+  });
+
   testWidgets('lookup page restores cached booking on refresh', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: GuestBookingLookupPage(
-        lookupService: _FakeLookupService(cached: _result()),
-        enableCustomerTools: false,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: _result()),
+          enableCustomerTools: false,
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('TX202607010001'), findsOneWidget);
@@ -92,12 +118,14 @@ void main() {
       refreshedStatus: 'ON_ROUTE',
     );
 
-    await tester.pumpWidget(MaterialApp(
-      home: GuestBookingLookupPage(
-        lookupService: service,
-        enableCustomerTools: false,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: service,
+          enableCustomerTools: false,
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('In progress'), findsOneWidget);
@@ -108,13 +136,53 @@ void main() {
     expect(service.refreshCount, 1);
   });
 
-  testWidgets('lookup page shows controlled not-found error', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: GuestBookingLookupPage(
-        lookupService: _FakeLookupService(errorCode: 'BOOKING_NOT_FOUND'),
-        enableCustomerTools: false,
+  testWidgets('lookup page issues and displays recoverable boarding QR', (
+    tester,
+  ) async {
+    final api = _FakeBookingApi();
+    final json = _lookupJson();
+    json['status'] = 'DRIVER_ARRIVED';
+    json['capabilities'] = {
+      'chatAvailable': true,
+      'notificationsAvailable': true,
+      'dropoffQrIssueAvailable': false,
+      'reviewAvailable': false,
+      'boardingQrRecoverable': true,
+      'boardingQrPreviouslyIssued': true,
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(
+            cached: GuestBookingLookupResult.fromJson(json),
+          ),
+          bookingApiService: api,
+          enableCustomerTools: true,
+        ),
       ),
-    ));
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.boardingIssueCalls, 1);
+    expect(api.lastGuestAccessToken, 'guest-token');
+    expect(find.text('Boarding QR'), findsOneWidget);
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(
+      find.textContaining('issued when the booking was created'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('lookup page shows controlled not-found error', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(errorCode: 'BOOKING_NOT_FOUND'),
+          enableCustomerTools: false,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -129,28 +197,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Booking not found. Please check your booking number and phone.'),
+      find.text(
+        'Booking not found. Please check your booking number and phone.',
+      ),
       findsOneWidget,
     );
   });
 
-  testWidgets('malformed successful response becomes controlled error state', (tester) async {
+  testWidgets('malformed successful response becomes controlled error state', (
+    tester,
+  ) async {
     final service = GuestBookingLookupService(
       baseUrl: 'http://localhost:3000',
       client: MockClient((request) async {
-        return http.Response(jsonEncode({
-          'success': true,
-          'data': {'bookingNumber': 'TX202607010001'},
-        }), 200);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'bookingNumber': 'TX202607010001'},
+          }),
+          200,
+        );
       }),
     );
 
-    await tester.pumpWidget(MaterialApp(
-      home: GuestBookingLookupPage(
-        lookupService: service,
-        enableCustomerTools: false,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: service,
+          enableCustomerTools: false,
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -164,35 +241,44 @@ void main() {
     await tester.tap(find.text('Find booking'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Unable to load booking. Please try again.'), findsOneWidget);
+    expect(
+      find.text('Unable to load booking. Please try again.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('lookup page has no horizontal overflow at 360px', (tester) async {
+  testWidgets('lookup page has no horizontal overflow at 360px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(MaterialApp(
-      home: GuestBookingLookupPage(
-        lookupService: _FakeLookupService(cached: _result()),
-        enableCustomerTools: false,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: _result()),
+          enableCustomerTools: false,
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('lookup page shows cancelled guidance', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: GuestBookingLookupPage(
-        lookupService: _FakeLookupService(
-          cached: _result().copyWith(status: 'CANCELLED'),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(
+            cached: _result().copyWith(status: 'CANCELLED'),
+          ),
+          enableCustomerTools: false,
         ),
-        enableCustomerTools: false,
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Cancelled'), findsOneWidget);
@@ -201,47 +287,41 @@ void main() {
 }
 
 Map<String, dynamic> _lookupJson() => {
-      'bookingNumber': 'TX202607010001',
-      'status': 'PICKED_UP',
-      'scheduledPickupAt': '2026-07-01T09:30:00+07:00',
-      'serviceType': {'name': 'Airport Pickup'},
-      'route': {
-        'origin': {'address': 'BKK Airport'},
-        'destination': {'address': 'Pattaya Hotel'},
-      },
-      'pricing': {
-        'totalAmount': 1500,
-        'currency': 'THB',
-        'paymentMethod': 'PAY_DRIVER',
-      },
-      'assignedDriver': {'name': 'Driver A', 'phone': '+66 80 000 0000'},
-      'capabilities': {
-        'chatAvailable': true,
-        'notificationsAvailable': true,
-        'dropoffQrIssueAvailable': true,
-        'reviewAvailable': false,
-        'boardingQrRecoverable': false,
-        'boardingQrPreviouslyIssued': true,
-      },
-      'guestAccess': {
-        'token': 'guest-token',
-        'expiresAt': '2099-07-02T00:00:00Z',
-      },
-    };
+  'bookingNumber': 'TX202607010001',
+  'status': 'PICKED_UP',
+  'scheduledPickupAt': '2026-07-01T09:30:00+07:00',
+  'serviceType': {'name': 'Airport Pickup'},
+  'route': {
+    'origin': {'address': 'BKK Airport'},
+    'destination': {'address': 'Pattaya Hotel'},
+  },
+  'pricing': {
+    'totalAmount': 1500,
+    'currency': 'THB',
+    'paymentMethod': 'PAY_DRIVER',
+  },
+  'assignedDriver': {'name': 'Driver A', 'phone': '+66 80 000 0000'},
+  'capabilities': {
+    'chatAvailable': true,
+    'notificationsAvailable': true,
+    'dropoffQrIssueAvailable': true,
+    'reviewAvailable': false,
+    'boardingQrRecoverable': false,
+    'boardingQrPreviouslyIssued': true,
+  },
+  'guestAccess': {'token': 'guest-token', 'expiresAt': '2099-07-02T00:00:00Z'},
+};
 
 GuestBookingLookupResult _result() {
   return GuestBookingLookupResult.fromJson(_lookupJson());
 }
 
 class _FakeLookupService extends GuestBookingLookupService {
-  _FakeLookupService({
-    this.cached,
-    this.errorCode,
-    this.refreshedStatus,
-  }) : super(
-          baseUrl: 'http://localhost:3000',
-          client: MockClient((_) async => http.Response('{}', 200)),
-        );
+  _FakeLookupService({this.cached, this.errorCode, this.refreshedStatus})
+    : super(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((_) async => http.Response('{}', 200)),
+      );
 
   final GuestBookingLookupResult? cached;
   final String? errorCode;
@@ -265,5 +345,31 @@ class _FakeLookupService extends GuestBookingLookupService {
       return base.copyWith(status: refreshedStatus);
     }
     return base;
+  }
+}
+
+class _FakeBookingApi extends BookingApiService {
+  _FakeBookingApi()
+    : super.test(
+        client: MockClient((_) async => http.Response('{}', 500)),
+        baseUrl: 'http://localhost:3000',
+      );
+
+  int boardingIssueCalls = 0;
+  String? lastGuestAccessToken;
+
+  @override
+  Future<BoardingQrIssueResult> issueBoardingQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+  }) async {
+    boardingIssueCalls += 1;
+    lastGuestAccessToken = guestAccessToken;
+    return BoardingQrIssueResult(
+      bookingNumber: bookingNumber,
+      status: 'DRIVER_ARRIVED',
+      boardingQrToken: 'recovered-boarding-token',
+      boardingQrExpiresAt: '2099-01-01 00:00:00',
+    );
   }
 }

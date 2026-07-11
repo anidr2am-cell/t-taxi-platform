@@ -64,3 +64,26 @@ class DropoffQrIssueResult {
     );
   }
 }
+
+class BoardingQrIssueResult {
+  final String bookingNumber;
+  final String status;
+  final String boardingQrToken;
+  final String boardingQrExpiresAt;
+
+  const BoardingQrIssueResult({
+    required this.bookingNumber,
+    required this.status,
+    required this.boardingQrToken,
+    required this.boardingQrExpiresAt,
+  });
+
+  factory BoardingQrIssueResult.fromJson(Map<String, dynamic> json) {
+    return BoardingQrIssueResult(
+      bookingNumber: json['bookingNumber'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      boardingQrToken: json['boardingQrToken'] as String? ?? '',
+      boardingQrExpiresAt: json['boardingQrExpiresAt'] as String? ?? '',
+    );
+  }
+}

@@ -134,10 +134,7 @@ class GuestBookingLookupResult {
     );
   }
 
-  GuestBookingLookupResult copyWith({
-    String? customerPhone,
-    String? status,
-  }) {
+  GuestBookingLookupResult copyWith({String? customerPhone, String? status}) {
     return GuestBookingLookupResult(
       bookingId: bookingId,
       bookingNumber: bookingNumber,
@@ -181,6 +178,13 @@ class GuestBookingLookupResult {
     String? originAirportCode,
     bool nameSignRequested = false,
   }) {
+    const boardingQrStatuses = {
+      'PENDING',
+      'CONFIRMED',
+      'DRIVER_ASSIGNED',
+      'ON_ROUTE',
+      'DRIVER_ARRIVED',
+    };
     return GuestBookingLookupResult(
       bookingId: bookingId,
       bookingNumber: bookingNumber,
@@ -194,13 +198,13 @@ class GuestBookingLookupResult {
       paymentMethod: paymentMethod,
       guestAccessToken: guestAccessToken,
       guestAccessExpiresAt: null,
-      capabilities: const GuestBookingCapabilities(
+      capabilities: GuestBookingCapabilities(
         chatAvailable: false,
         notificationsAvailable: false,
         dropoffQrIssueAvailable: false,
         reviewAvailable: false,
-        boardingQrRecoverable: false,
-        boardingQrPreviouslyIssued: false,
+        boardingQrRecoverable: boardingQrStatuses.contains(status),
+        boardingQrPreviouslyIssued: boardingQrStatuses.contains(status),
       ),
       serviceTypeCode: serviceTypeCode,
       originAirportCode: originAirportCode,

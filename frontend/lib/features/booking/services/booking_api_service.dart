@@ -19,13 +19,11 @@ class BookingApiService {
   static final BookingApiService _instance = BookingApiService._();
   factory BookingApiService() => _instance;
   BookingApiService._({http.Client? client, String? baseUrl})
-      : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+    : _client = client ?? http.Client(),
+      _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
-  BookingApiService.test({
-    required http.Client client,
-    required String baseUrl,
-  }) : this._(client: client, baseUrl: baseUrl);
+  BookingApiService.test({required http.Client client, required String baseUrl})
+    : this._(client: client, baseUrl: baseUrl);
 
   final http.Client _client;
   final String _baseUrl;
@@ -165,8 +163,12 @@ class BookingApiService {
   }
 
   Map<String, dynamic> _normalizeCreateBookingBody(Map<String, dynamic> body) {
-    if (!body.containsKey('scheduledPickupAt') || body['scheduledPickupAt'] == null) {
-      throw BookingApiException('Pickup date and time are required', 'VALIDATION_ERROR');
+    if (!body.containsKey('scheduledPickupAt') ||
+        body['scheduledPickupAt'] == null) {
+      throw BookingApiException(
+        'Pickup date and time are required',
+        'VALIDATION_ERROR',
+      );
     }
 
     final normalized = Map<String, dynamic>.from(body);
@@ -176,13 +178,18 @@ class BookingApiService {
     } else if (value is String && value.trim().isNotEmpty) {
       normalized['scheduledPickupAt'] = value.trim();
     } else {
-      throw BookingApiException('Pickup date and time must be a valid ISO string', 'VALIDATION_ERROR');
+      throw BookingApiException(
+        'Pickup date and time must be a valid ISO string',
+        'VALIDATION_ERROR',
+      );
     }
     return normalized;
   }
 
   String _serializeThailandPickupAt(DateTime value) {
-    final thailandWallTime = value.isUtc ? value.add(const Duration(hours: 7)) : value;
+    final thailandWallTime = value.isUtc
+        ? value.add(const Duration(hours: 7))
+        : value;
     String two(int number) => number.toString().padLeft(2, '0');
     String four(int number) => number.toString().padLeft(4, '0');
     return '${four(thailandWallTime.year)}-${two(thailandWallTime.month)}-${two(thailandWallTime.day)}'
@@ -204,6 +211,25 @@ class BookingApiService {
       body: body,
     );
     return DropoffQrIssueResult.fromJson(
+      Map<String, dynamic>.from(data as Map),
+    );
+  }
+
+  Future<BoardingQrIssueResult> issueBoardingQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+  }) async {
+    final body = <String, dynamic>{};
+    if (guestAccessToken != null) {
+      body['guestAccessToken'] = guestAccessToken;
+    }
+
+    final data = await _request(
+      'POST',
+      '/bookings/$bookingNumber/boarding-qr/issue',
+      body: body,
+    );
+    return BoardingQrIssueResult.fromJson(
       Map<String, dynamic>.from(data as Map),
     );
   }

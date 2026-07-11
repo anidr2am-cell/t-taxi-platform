@@ -40,6 +40,15 @@ const issueDropoffQr = asyncHandler(async (req, res) => {
   return success(res, data, 'Dropoff QR issued');
 });
 
+const issueBoardingQr = asyncHandler(async (req, res) => {
+  const data = await getBookingService().issueBoardingQr(
+    req.params.bookingNumber,
+    req.body,
+    req.user,
+  );
+  return success(res, data, 'Boarding QR issued');
+});
+
 const lookupGuestBooking = asyncHandler(async (req, res) => {
   const data = await getGuestBookingLookupService().lookup(req.body);
   return success(res, data, 'Booking found');
@@ -60,6 +69,7 @@ module.exports = {
   createBooking,
   updateBookingStatus,
   issueDropoffQr,
+  issueBoardingQr,
   lookupGuestBooking,
   getGuestAssignedDriverVehiclePhoto,
 };

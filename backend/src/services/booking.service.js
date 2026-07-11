@@ -15,6 +15,14 @@ const GUEST_TOKEN_TTL_DAYS = 90;
 const BOARDING_QR_TTL_HOURS = 48;
 const DROPOFF_QR_TTL_HOURS = 48;
 
+const BOARDING_QR_ISSUE_STATUSES = new Set([
+  BOOKING_STATUS.PENDING,
+  BOOKING_STATUS.CONFIRMED,
+  BOOKING_STATUS.DRIVER_ASSIGNED,
+  BOOKING_STATUS.ON_ROUTE,
+  BOOKING_STATUS.DRIVER_ARRIVED,
+]);
+
 class BookingService {
   constructor(
     pool,
@@ -461,6 +469,71 @@ class BookingService {
       status: booking.status,
       dropoffQrToken: rawDropoffToken,
       dropoffQrExpiresAt: expiresAt,
+    };
+  }
+
+  async issueBoardingQr(bookingNumber, input = {}, authUser = null) {
+    const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
+    const conn = await this.pool.getConnection();
+    const rawBoardingToken = generateSecureToken();
+    const expiresAt = this.formatDateTime(
+      this.addHours(new Date(), BOARDING_QR_TTL_HOURS),
+    );
+    let booking;
+
+    try {
+      await conn.beginTransaction();
+
+      booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        normalizedBookingNumber,
+      );
+
+      if (!booking) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      await this.assertCustomerOrGuestAccess(
+        conn,
+        booking,
+        authUser,
+        input.guestAccessToken,
+      );
+
+      if (
+        !BOARDING_QR_ISSUE_STATUSES.has(booking.status)
+        || booking.boarding_qr_used_at
+      ) {
+        throw new AppError('Boarding QR can only be issued before pickup', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+          errors: [{ currentStatus: booking.status }],
+        });
+      }
+
+      await this.bookingRepository.setBoardingQr(
+        conn,
+        booking.id,
+        hashToken(rawBoardingToken),
+        expiresAt,
+      );
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    return {
+      bookingNumber: booking.booking_number,
+      status: booking.status,
+      boardingQrToken: rawBoardingToken,
+      boardingQrExpiresAt: expiresAt,
     };
   }
 }

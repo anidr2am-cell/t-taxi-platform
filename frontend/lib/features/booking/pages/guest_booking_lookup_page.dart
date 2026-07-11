@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
@@ -58,6 +59,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   String? _error;
   bool _loadingDropoffQr = false;
   String? _dropoffQrToken;
+  bool _loadingBoardingQr = false;
+  String? _boardingQrToken;
   final Set<String> _pickupAlertSentBookingNumbers = <String>{};
 
   @override
@@ -86,6 +89,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       _result = cached;
       _loading = false;
     });
+    if (cached?.capabilities.boardingQrRecoverable == true) {
+      await _issueBoardingQr(cached!);
+    }
   }
 
   Future<void> _refresh() async {
@@ -114,7 +120,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _result = refreshed;
         _refreshing = false;
         _dropoffQrToken = null;
+        _boardingQrToken = null;
       });
+      if (refreshed.capabilities.boardingQrRecoverable) {
+        await _issueBoardingQr(refreshed);
+      }
     } on BookingApiException catch (err) {
       if (!mounted) return;
       final l10n = context.l10n;
@@ -190,6 +200,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _result = result;
         _loading = false;
       });
+      if (result.capabilities.boardingQrRecoverable) {
+        await _issueBoardingQr(result);
+      }
     } on BookingApiException catch (err) {
       if (!mounted) return;
       final l10n = context.l10n;
@@ -215,6 +228,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       _result = null;
       _error = null;
       _dropoffQrToken = null;
+      _boardingQrToken = null;
       _bookingNumberController.clear();
       _phoneController.clear();
     });
@@ -256,6 +270,32 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           err,
           fallback: context.l10n.t('guest_lookup_load_error'),
         );
+      });
+    }
+  }
+
+  Future<void> _issueBoardingQr(GuestBookingLookupResult result) async {
+    if (_loadingBoardingQr) return;
+    setState(() {
+      _loadingBoardingQr = true;
+      _error = null;
+    });
+    try {
+      final qr = await _bookingApiService.issueBoardingQr(
+        bookingNumber: result.bookingNumber,
+        guestAccessToken: result.guestAccessToken,
+      );
+      if (!mounted || _result?.bookingNumber != result.bookingNumber) return;
+      setState(() {
+        _boardingQrToken = qr.boardingQrToken;
+        _loadingBoardingQr = false;
+      });
+    } catch (_) {
+      if (!mounted || _result?.bookingNumber != result.bookingNumber) return;
+      setState(() {
+        _loadingBoardingQr = false;
+        _boardingQrToken = null;
+        _error = context.l10n.t('booking_qr_load_failed');
       });
     }
   }
@@ -570,12 +610,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
 
     if (_dropoffQrToken != null) {
-      return AppUi.surfaceCard(
-        child: SelectableText(
-          context.l10n
-              .t('guest_lookup_dropoff_qr_token')
-              .replaceAll('{token}', _dropoffQrToken!),
-        ),
+      return _GuestQrDisplay(
+        title: context.l10n.t('booking_dropoff_qr_title'),
+        hint: context.l10n.t('booking_dropoff_qr_hint'),
+        token: _dropoffQrToken!,
       );
     }
 
@@ -588,16 +626,75 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       );
     }
 
-    if (result.capabilities.boardingQrPreviouslyIssued) {
-      return AppUi.surfaceCard(
-        backgroundColor: AppTokens.infoLight,
-        child: Text(
-          context.l10n.t('guest_lookup_boarding_qr_security'),
-          style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
-        ),
+    if (_boardingQrToken != null) {
+      return _GuestQrDisplay(
+        title: context.l10n.t('boarding_qr_title'),
+        hint: context.l10n.t('boarding_qr_hint'),
+        token: _boardingQrToken!,
+      );
+    }
+
+    if (result.capabilities.boardingQrRecoverable) {
+      if (_loadingBoardingQr) {
+        return AppUi.loadingState(message: context.l10n.t('boarding_qr_title'));
+      }
+      return AppUi.secondaryButton(
+        label: context.l10n.t('boarding_qr_title'),
+        icon: Icons.refresh,
+        onPressed: () => _issueBoardingQr(result),
+        fullWidth: true,
       );
     }
 
     return const SizedBox.shrink();
+  }
+}
+
+class _GuestQrDisplay extends StatelessWidget {
+  const _GuestQrDisplay({
+    required this.title,
+    required this.hint,
+    required this.token,
+  });
+
+  final String title;
+  final String hint;
+  final String token;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.primaryLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          Text(
+            hint,
+            style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(AppTokens.spaceMd),
+              color: AppTokens.surface,
+              child: QrImageView(
+                data: token,
+                size: 200,
+                backgroundColor: AppTokens.surface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

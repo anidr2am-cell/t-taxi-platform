@@ -130,6 +130,22 @@ test('guest lookup returns safe summary and fresh guest access token', async () 
   assert.ok(!JSON.stringify(result).includes('driver-applications'));
 });
 
+test('guest lookup allows boarding QR recovery before pickup', async () => {
+  const { service } = buildService(bookingRow({
+    status: 'DRIVER_ARRIVED',
+    boarding_qr_used_at: null,
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.capabilities.boardingQrRecoverable, true);
+  assert.equal(result.capabilities.dropoffQrIssueAvailable, false);
+  assert.ok(!JSON.stringify(result).includes('boarding-hash'));
+});
+
 test('guest lookup omits vehiclePhotoUrl when driver has no application photo', async () => {
   const { service } = buildService(bookingRow({ driver_vehicle_photo_file_id: null }));
 

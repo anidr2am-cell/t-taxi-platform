@@ -507,17 +507,26 @@ void main() {
 
   test('bookingPricingInquiryMessage maps route not found to inquiry key', () {
     final message = bookingPricingInquiryMessage(
-      BookingApiException('Route not found for the given service and locations', 'NOT_FOUND'),
+      BookingApiException(
+        'Route not found for the given service and locations',
+        'NOT_FOUND',
+      ),
     );
     expect(message, 'pricing_inquiry_required');
   });
 
-  test('bookingPricingInquiryMessage maps missing vehicle price to inquiry key', () {
-    final message = bookingPricingInquiryMessage(
-      BookingApiException('Vehicle price not configured for this route', 'NOT_FOUND'),
-    );
-    expect(message, 'pricing_inquiry_required');
-  });
+  test(
+    'bookingPricingInquiryMessage maps missing vehicle price to inquiry key',
+    () {
+      final message = bookingPricingInquiryMessage(
+        BookingApiException(
+          'Vehicle price not configured for this route',
+          'NOT_FOUND',
+        ),
+      );
+      expect(message, 'pricing_inquiry_required');
+    },
+  );
 
   test('bookingPricingInquiryMessage ignores unrelated errors', () {
     final message = bookingPricingInquiryMessage(
@@ -655,6 +664,14 @@ class _CapturingBookingApi implements BookingApiService {
 
   @override
   Future<DropoffQrIssueResult> issueDropoffQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BoardingQrIssueResult> issueBoardingQr({
     required String bookingNumber,
     required String? guestAccessToken,
   }) {

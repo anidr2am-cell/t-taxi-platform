@@ -79,6 +79,13 @@ class GuestBookingLookupService {
       BOOKING_STATUS.CANCELLED,
       BOOKING_STATUS.NO_SHOW,
     ].includes(row.status);
+    const boardingQrRecoverable = [
+      BOOKING_STATUS.PENDING,
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.DRIVER_ASSIGNED,
+      BOOKING_STATUS.ON_ROUTE,
+      BOOKING_STATUS.DRIVER_ARRIVED,
+    ].includes(row.status) && !row.boarding_qr_used_at;
 
     return {
       bookingId: row.id,
@@ -134,7 +141,7 @@ class GuestBookingLookupService {
         notificationsAvailable: true,
         dropoffQrIssueAvailable: row.status === BOOKING_STATUS.PICKED_UP,
         reviewAvailable: row.status === BOOKING_STATUS.COMPLETED,
-        boardingQrRecoverable: false,
+        boardingQrRecoverable,
         boardingQrPreviouslyIssued: Boolean(row.boarding_qr_token_hash) && !terminalStatus,
       },
       guestAccess: {
