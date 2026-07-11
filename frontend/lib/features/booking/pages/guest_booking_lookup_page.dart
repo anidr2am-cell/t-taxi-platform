@@ -549,7 +549,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           ),
         ),
         const SizedBox(height: AppTokens.spaceMd),
-        if (widget.enableCustomerTools) _qrSection(result),
+        _qrSection(result),
         if (_error != null) ...[
           const SizedBox(height: AppTokens.spaceMd),
           AppUi.errorState(message: _error!),

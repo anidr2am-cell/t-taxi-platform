@@ -108,7 +108,7 @@ void main() {
 
     expect(find.text('TX202607010001'), findsOneWidget);
     expect(find.text('In progress'), findsOneWidget);
-    expect(find.text('Issue dropoff QR'), findsNothing);
+    expect(find.text('Issue dropoff QR'), findsOneWidget);
     expect(find.text('Your trip is in progress.'), findsOneWidget);
   });
 
@@ -158,7 +158,6 @@ void main() {
             cached: GuestBookingLookupResult.fromJson(json),
           ),
           bookingApiService: api,
-          enableCustomerTools: true,
         ),
       ),
     );
@@ -168,10 +167,30 @@ void main() {
     expect(api.lastGuestAccessToken, 'guest-token');
     expect(find.text('Boarding QR'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.text('recovered-boarding-token'), findsNothing);
     expect(
       find.textContaining('issued when the booking was created'),
       findsNothing,
     );
+  });
+
+  testWidgets('lookup page hides boarding QR after pickup', (tester) async {
+    final api = _FakeBookingApi();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: _result()),
+          bookingApiService: api,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.boardingIssueCalls, 0);
+    expect(find.text('Boarding QR'), findsNothing);
+    expect(find.byType(QrImageView), findsNothing);
+    expect(find.text('Issue dropoff QR'), findsOneWidget);
   });
 
   testWidgets('lookup page shows controlled not-found error', (tester) async {
