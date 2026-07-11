@@ -132,66 +132,38 @@ test('booking validator still requires customer name and phone', () => {
   assert.match(missingPhone.error.message, /phone/i);
 });
 
-test('booking validator accepts valid countryCode', () => {
+test('booking validator accepts optional countryCode and free text', () => {
+  const cases = [
+    { countryCode: ' th ', expected: 'th' },
+    { countryCode: 'Korea', expected: 'Korea' },
+    { countryCode: '대한민국', expected: '대한민국' },
+    { countryCode: '', expected: null },
+    { countryCode: '   ', expected: null },
+    { countryCode: null, expected: null },
+  ];
+
+  for (const { countryCode, expected } of cases) {
+    const { error, value } = createBookingSchema.validate(validPayload({
+      customer: {
+        name: 'Kim',
+        phone: '+66123456789',
+        countryCode,
+      },
+    }));
+
+    assert.equal(error, undefined, `countryCode=${JSON.stringify(countryCode)}`);
+    assert.equal(value.customer.countryCode, expected);
+  }
+});
+
+test('booking validator accepts missing countryCode', () => {
   const { error, value } = createBookingSchema.validate(validPayload({
     customer: {
       name: 'Kim',
       phone: '+66123456789',
-      countryCode: ' th ',
     },
   }));
 
   assert.equal(error, undefined);
-  assert.equal(value.customer.countryCode, 'TH');
-});
-
-test('booking validator rejects missing countryCode', () => {
-  const { error } = createBookingSchema.validate(validPayload({
-    customer: {
-      name: 'Kim',
-      phone: '+66123456789',
-    },
-  }));
-
-  assert.ok(error);
-  assert.match(error.message, /countryCode/i);
-});
-
-test('booking validator rejects null countryCode', () => {
-  const { error } = createBookingSchema.validate(validPayload({
-    customer: {
-      name: 'Kim',
-      phone: '+66123456789',
-      countryCode: null,
-    },
-  }));
-
-  assert.ok(error);
-  assert.match(error.message, /countryCode/i);
-});
-
-test('booking validator rejects empty countryCode', () => {
-  const { error } = createBookingSchema.validate(validPayload({
-    customer: {
-      name: 'Kim',
-      phone: '+66123456789',
-      countryCode: '',
-    },
-  }));
-
-  assert.ok(error);
-  assert.match(error.message, /countryCode/i);
-});
-
-test('booking validator rejects whitespace-only countryCode', () => {
-  const { error } = createBookingSchema.validate(validPayload({
-    customer: {
-      name: 'Kim',
-      phone: '+66123456789',
-      countryCode: '   ',
-    },
-  }));
-
-  assert.ok(error);
-  assert.match(error.message, /countryCode/i);
+  assert.equal(value.customer.countryCode, null);
 });

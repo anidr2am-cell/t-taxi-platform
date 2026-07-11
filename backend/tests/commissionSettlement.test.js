@@ -625,6 +625,52 @@ test('admin list obligation activation is idempotent', async () => {
   assert.equal(activityLogs, 1);
 });
 
+test('admin list uses fixed commission amount when configured', async () => {
+  let capturedAmount = null;
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+    async query(sql) {
+      if (sql.includes('FOR UPDATE')) {
+        return [[{
+          id: 7,
+          booking_number: 'TX202607010001',
+          status: 'COMPLETED',
+          total_amount: 1000,
+          currency: 'THB',
+          commission_status: COMMISSION_STATUS.NOT_DUE_YET,
+          commission_amount: null,
+          completed_at: '2026-07-01 12:00:00',
+        }]];
+      }
+      return [[], []];
+    },
+  };
+  const pool = { async getConnection() { return conn; } };
+  const bookingRepo = {
+    async findCompletedBookingIdsMissingObligationForAdmin() { return [7]; },
+    async countAdminSettlements() { return 0; },
+    async findAdminSettlements() { return []; },
+    async updateCommissionFields(_conn, _id, fields) {
+      capturedAmount = fields.commissionAmount;
+    },
+    async insertActivityLog() {},
+  };
+  const settingsRepo = {
+    async findByGroupAndKey(_g, key) {
+      if (key === 'commission_fixed_amount') return { value: '200' };
+      if (key === 'commission_due_days') return { value: '5' };
+      return null;
+    },
+  };
+  const service = new CommissionSettlementService(pool, bookingRepo, {}, {}, settingsRepo);
+  await service.listAdminSettlements({}, '/api/v1/admin/settlements');
+
+  assert.equal(capturedAmount, 200);
+});
+
 test('admin list uses configured rate and due days when reconciling', async () => {
   let capturedAmount = null;
   let capturedDueAt = null;

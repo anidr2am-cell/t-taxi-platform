@@ -432,6 +432,132 @@ void main() {
     expect(BookingWizardState.stepCount, 7);
     expect(BookingWizardController.validationSteps, [0, 1, 2, 3, 4, 5, 6]);
   });
+
+  test('passenger and luggage changes reload recommendation immediately', () async {
+    var recommendCalls = 0;
+    int? lastAdults;
+    int? lastLuggage20;
+    final api = _TrackingRecommendApi(
+      onRecommend: (adults, luggage20) {
+        recommendCalls += 1;
+        lastAdults = adults;
+        lastLuggage20 = luggage20;
+      },
+    );
+    final controller = BookingWizardController(
+      apiService: api,
+      storage: _MemoryBookingStateStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.selectService(BookingServiceType.airportPickup);
+    await controller.setOrigin(
+      const LocationOption(
+        id: 'bkk',
+        displayName: 'Suvarnabhumi Airport',
+        kind: LocationKind.airport,
+        code: 'BKK',
+      ),
+    );
+    await controller.setDestination(
+      const LocationOption(
+        id: 'pattaya',
+        displayName: 'Pattaya',
+        kind: LocationKind.city,
+        code: 'PATTAYA',
+      ),
+    );
+    await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+    final baselineCalls = recommendCalls;
+
+    await controller.updatePassengersAndLuggage(adults: 2, luggage20: 1);
+    expect(recommendCalls - baselineCalls, 1);
+    expect(lastAdults, 2);
+    expect(lastLuggage20, 1);
+    expect(controller.state.recommendation, isNotNull);
+
+    await controller.updatePassengersAndLuggage(adults: 3);
+    expect(recommendCalls - baselineCalls, 2);
+    expect(lastAdults, 3);
+    expect(controller.state.adults, 3);
+    expect(controller.state.recommendation, isNotNull);
+  });
+}
+
+class _TrackingRecommendApi implements BookingApiService {
+  _TrackingRecommendApi({required this.onRecommend});
+
+  final void Function(int adults, int luggage20) onRecommend;
+
+  @override
+  Future<VehicleRecommendation> recommendVehicle({
+    required int adults,
+    int children = 0,
+    int infants = 0,
+    int luggage20 = 0,
+    int luggage24 = 0,
+    int golfBags = 0,
+    int specialLuggageCount = 0,
+  }) async {
+    onRecommend(adults, luggage20);
+    return VehicleRecommendation(
+      recommendedVehicle: 'SUV',
+      selectableVehicles: ['SUV', 'VAN'],
+      multipleVehicles: false,
+      message: 'adults=$adults luggage20=$luggage20',
+    );
+  }
+
+  @override
+  Future<PricingResult> calculatePricing({
+    required String serviceTypeCode,
+    required String vehicleTypeCode,
+    int vehicleCount = 1,
+    String? originAirportIata,
+    String? destinationRegion,
+    String? originLocationCode,
+    String? destinationLocationCode,
+    bool nameSign = false,
+    String? scheduledPickupAt,
+    int adults = 1,
+    int children = 0,
+    int infants = 0,
+    int luggage20 = 0,
+    int luggage24 = 0,
+    int golfBags = 0,
+    int specialLuggageCount = 0,
+  }) async {
+    return const PricingResult(
+      currency: 'THB',
+      chargeItems: [],
+      totalAmount: 1500,
+    );
+  }
+
+  @override
+  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<DropoffQrIssueResult> issueDropoffQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BoardingQrIssueResult> issueBoardingQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+    bool forceReissue = false,
+  }) {
+    throw UnimplementedError();
+  }
 }
 
 class _CountingBookingApi implements BookingApiService {
@@ -501,6 +627,7 @@ class _CountingBookingApi implements BookingApiService {
   Future<BoardingQrIssueResult> issueBoardingQr({
     required String bookingNumber,
     required String? guestAccessToken,
+    bool forceReissue = false,
   }) {
     throw UnimplementedError();
   }
@@ -568,6 +695,7 @@ class _CapturingBookingApi implements BookingApiService {
   Future<BoardingQrIssueResult> issueBoardingQr({
     required String bookingNumber,
     required String? guestAccessToken,
+    bool forceReissue = false,
   }) {
     throw UnimplementedError();
   }

@@ -130,7 +130,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
         ),
         SizedBox(height: gap),
         Semantics(
-          label: _requiredSemanticsLabel(l10n, 'country'),
+          label: l10n.t('country'),
           textField: true,
           child: TextField(
             controller: _countryController,
@@ -138,7 +138,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
               l10n,
               l10n.t('country'),
               hint: l10n.t('country_code_hint'),
-              required: true,
             ),
             textInputAction: TextInputAction.next,
             onChanged: widget.onCountryChanged,

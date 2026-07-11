@@ -69,14 +69,32 @@ class CommissionSettlementService {
   }
 
   async getCommissionConfig(conn) {
-    const rateRow = await this.settingsRepository.findByGroupAndKey(
+    const fixedRow = await this.settingsRepository.findByGroupAndKey(
       'settlement',
-      'commission_rate_percent',
+      'commission_fixed_amount',
       conn,
     );
     const dueDaysRow = await this.settingsRepository.findByGroupAndKey(
       'settlement',
       'commission_due_days',
+      conn,
+    );
+
+    const fixedAmount = fixedRow?.value != null ? Number(fixedRow.value) : null;
+    if (Number.isFinite(fixedAmount) && fixedAmount > 0) {
+      const dueDays = dueDaysRow?.value ? Number(dueDaysRow.value) : null;
+      if (dueDays != null && (!Number.isFinite(dueDays) || dueDays < 0)) {
+        throw new AppError('Commission due days is not configured', {
+          statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          errorCode: ERROR_CODES.COMMISSION_NOT_CONFIGURED,
+        });
+      }
+      return { fixedAmount, dueDays };
+    }
+
+    const rateRow = await this.settingsRepository.findByGroupAndKey(
+      'settlement',
+      'commission_rate_percent',
       conn,
     );
 
@@ -268,8 +286,10 @@ class CommissionSettlementService {
         return;
       }
 
-      const { ratePercent, dueDays } = await this.getCommissionConfig(conn);
-      const amount = Math.round(Number(booking.total_amount) * ratePercent / 100 * 100) / 100;
+      const { ratePercent, fixedAmount, dueDays } = await this.getCommissionConfig(conn);
+      const amount = fixedAmount != null
+        ? Math.round(Number(fixedAmount) * 100) / 100
+        : Math.round(Number(booking.total_amount) * ratePercent / 100 * 100) / 100;
       const completedAt = booking.completed_at ? new Date(booking.completed_at) : new Date();
       const dueAt = dueDays != null && Number.isFinite(dueDays)
         ? this.formatDateTime(this.addDays(completedAt, dueDays))

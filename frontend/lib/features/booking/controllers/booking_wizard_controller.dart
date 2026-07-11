@@ -30,6 +30,8 @@ class BookingWizardController extends ChangeNotifier {
   bool _isLoading = false;
   bool _isSubmitting = false;
   bool _isInitialized = false;
+  int _recommendationGeneration = 0;
+  int _pricingGeneration = 0;
 
   BookingWizardState get state => _state;
   bool get isLoading => _isLoading;
@@ -60,6 +62,16 @@ class BookingWizardController extends ChangeNotifier {
 
   void _sanitizeCustomerVehicleSelection() {
     if (!_isCustomerVisibleVehicle(_state.selectedVehicle)) {
+      _state = _state.copyWith(clearSelectedVehicle: true, clearPricing: true);
+      return;
+    }
+
+    final selected = _state.selectedVehicle;
+    final recommendation = _state.recommendation;
+    if (selected == null || recommendation == null) return;
+
+    if (!recommendation.selectableVehicles.contains(selected) ||
+        !isVehicleEnabled(selected)) {
       _state = _state.copyWith(clearSelectedVehicle: true, clearPricing: true);
     }
   }
@@ -359,9 +371,16 @@ class BookingWizardController extends ChangeNotifier {
       clearPricing: true,
       clearError: true,
     );
+    _recommendationGeneration += 1;
+    _pricingGeneration += 1;
     await _persist();
+    if (canLoadRecommendation()) {
+      _setLoading(true);
+    }
     notifyListeners();
-    await syncDerivedData();
+    if (canLoadRecommendation()) {
+      await loadRecommendation();
+    }
   }
 
   Future<void> updateCustomerInfo({
@@ -461,8 +480,8 @@ class BookingWizardController extends ChangeNotifier {
       'customer': {
         'name': _state.customerName.trim(),
         'phone': _state.customerPhone.trim(),
-        if (_state.customerCountryCode.trim().isNotEmpty)
-          'countryCode': _state.customerCountryCode.trim().toUpperCase(),
+      if (_state.customerCountryCode.trim().isNotEmpty)
+          'countryCode': _state.customerCountryCode.trim(),
         if (_state.customerEmail.trim().isNotEmpty)
           'email': _state.customerEmail.trim(),
         if (_state.messengerType.trim().isNotEmpty)
@@ -536,17 +555,40 @@ class BookingWizardController extends ChangeNotifier {
 
   Future<void> loadRecommendation() async {
     if (!canLoadRecommendation()) return;
+
+    final generation = ++_recommendationGeneration;
+    final requestCounts = (
+      adults: _state.adults,
+      children: _state.children,
+      infants: _state.infants,
+      luggage20: _state.luggage20,
+      luggage24: _state.luggage24,
+      golfBags: _state.golfBags,
+      specialLuggageCount: _state.specialLuggageCount,
+    );
+
     _setLoading(true);
     try {
       final recommendation = await _api.recommendVehicle(
-        adults: _state.adults,
-        children: _state.children,
-        infants: _state.infants,
-        luggage20: _state.luggage20,
-        luggage24: _state.luggage24,
-        golfBags: _state.golfBags,
-        specialLuggageCount: _state.specialLuggageCount,
+        adults: requestCounts.adults,
+        children: requestCounts.children,
+        infants: requestCounts.infants,
+        luggage20: requestCounts.luggage20,
+        luggage24: requestCounts.luggage24,
+        golfBags: requestCounts.golfBags,
+        specialLuggageCount: requestCounts.specialLuggageCount,
       );
+      if (generation != _recommendationGeneration) return;
+      if (_state.adults != requestCounts.adults ||
+          _state.children != requestCounts.children ||
+          _state.infants != requestCounts.infants ||
+          _state.luggage20 != requestCounts.luggage20 ||
+          _state.luggage24 != requestCounts.luggage24 ||
+          _state.golfBags != requestCounts.golfBags ||
+          _state.specialLuggageCount != requestCounts.specialLuggageCount) {
+        return;
+      }
+
       final autoSelected = recommendation.multipleVehicles
           ? null
           : (_isCustomerVisibleVehicle(recommendation.recommendedVehicle)
@@ -554,22 +596,25 @@ class BookingWizardController extends ChangeNotifier {
                 : null);
       _state = _state.copyWith(
         recommendation: recommendation,
-        selectedVehicle: autoSelected,
+        selectedVehicle: _state.selectedVehicle ?? autoSelected,
         clearPricing: true,
         clearError: true,
       );
       _sanitizeCustomerVehicleSelection();
       await _persist();
     } catch (e) {
+      if (generation != _recommendationGeneration) return;
       _state = _state.copyWith(
         errorMessage: userFacingError(e, fallback: 'ui_load_failed'),
         clearRecommendation: true,
       );
     } finally {
-      _setLoading(false);
-      notifyListeners();
-      if (_state.selectedVehicle != null && _state.pricing == null) {
-        await loadPricing();
+      if (generation == _recommendationGeneration) {
+        _setLoading(false);
+        notifyListeners();
+        if (_state.selectedVehicle != null && _state.pricing == null) {
+          await loadPricing();
+        }
       }
     }
   }
@@ -734,6 +779,7 @@ class BookingWizardController extends ChangeNotifier {
     if (!canLoadPricing()) return;
     if (_state.serviceType == null || _state.selectedVehicle == null) return;
 
+    final generation = ++_pricingGeneration;
     final scheduledPickupAt = scheduledPickupAtIso();
     if (scheduledPickupAt == null) {
       _state = _state.copyWith(
@@ -746,11 +792,12 @@ class BookingWizardController extends ChangeNotifier {
     }
 
     final locations = _pricingLocationParams();
+    final requestVehicle = _state.selectedVehicle!;
     _setLoading(true);
     try {
       final pricing = await _api.calculatePricing(
         serviceTypeCode: _state.serviceType!.apiCode,
-        vehicleTypeCode: _state.selectedVehicle!,
+        vehicleTypeCode: requestVehicle,
         originAirportIata: locations['originAirportIata'],
         destinationRegion: locations['destinationRegion'],
         originLocationCode: locations['originLocationCode'],
@@ -765,16 +812,27 @@ class BookingWizardController extends ChangeNotifier {
         golfBags: _state.golfBags,
         specialLuggageCount: _state.specialLuggageCount,
       );
+      if (generation != _pricingGeneration ||
+          _state.selectedVehicle != requestVehicle) {
+        return;
+      }
       _state = _state.copyWith(pricing: pricing, clearError: true);
     } catch (e) {
+      if (generation != _pricingGeneration ||
+          _state.selectedVehicle != requestVehicle) {
+        return;
+      }
       _state = _state.copyWith(
         errorMessage: bookingPricingInquiryMessage(e)
             ?? userFacingError(e, fallback: 'ui_action_failed'),
         clearPricing: true,
       );
     } finally {
-      _setLoading(false);
-      await _persist();
+      if (generation == _pricingGeneration) {
+        _setLoading(false);
+        await _persist();
+        notifyListeners();
+      }
     }
   }
 
@@ -834,7 +892,6 @@ class BookingWizardController extends ChangeNotifier {
   bool _isCustomerStepValid() {
     if (_state.customerName.trim().isEmpty) return false;
     if (_state.customerPhone.trim().isEmpty) return false;
-    if (_state.customerCountryCode.trim().isEmpty) return false;
     final email = _state.customerEmail.trim();
     if (email.isNotEmpty && !_isValidEmail(email)) return false;
     return true;
@@ -884,12 +941,13 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<void> syncDerivedData() async {
-    if (_isLoading || _isSubmitting) return;
-    if (canLoadRecommendation() && _state.recommendation == null) {
+    if (_isSubmitting) return;
+    if (canLoadRecommendation() &&
+        (_state.recommendation == null || !_isLoading)) {
       await loadRecommendation();
       return;
     }
-    if (canLoadPricing() && _state.pricing == null) {
+    if (canLoadPricing() && _state.pricing == null && !_isLoading) {
       await loadPricing();
     }
   }

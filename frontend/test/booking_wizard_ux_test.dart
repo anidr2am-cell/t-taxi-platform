@@ -83,11 +83,17 @@ void main() {
       controller = BookingWizardController(storage: _NoopStorage());
     });
 
-    test('requires name, phone, and country but not email', () async {
+    test('requires name and phone but not email or country', () async {
       await controller.updateCustomerInfo(
         name: 'Jane',
         phone: '+66123456789',
-        countryCode: 'TH',
+      );
+      expect(controller.canProceedFromStep(6), isTrue);
+
+      await controller.updateCustomerInfo(
+        name: 'Jane',
+        phone: '+66123456789',
+        countryCode: '대한민국',
       );
       expect(controller.canProceedFromStep(6), isTrue);
     });

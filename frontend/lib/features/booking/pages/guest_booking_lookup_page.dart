@@ -8,6 +8,7 @@ import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
+import '../utils/boarding_qr_token.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
 import '../widgets/booking_chat_section.dart';
@@ -61,6 +62,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   String? _dropoffQrToken;
   bool _loadingBoardingQr = false;
   String? _boardingQrToken;
+  String? _boardingQrExpiresAt;
+  int _boardingQrRequestGeneration = 0;
   final Set<String> _pickupAlertSentBookingNumbers = <String>{};
 
   @override
@@ -90,8 +93,32 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       _loading = false;
     });
     if (cached?.capabilities.boardingQrRecoverable == true) {
-      await _issueBoardingQr(cached!);
+      await _restoreOrIssueBoardingQr(cached!);
     }
+  }
+
+  Future<void> _restoreOrIssueBoardingQr(
+    GuestBookingLookupResult result, {
+    bool forceReissue = false,
+  }) async {
+    if (!result.capabilities.boardingQrRecoverable) return;
+
+    if (!forceReissue) {
+      final cached = await _lookupService.loadBoardingQr(result.bookingNumber);
+      if (cached != null &&
+          !isBoardingQrTokenExpired(cached.expiresAt) &&
+          mounted &&
+          _result?.bookingNumber == result.bookingNumber) {
+        setState(() {
+          _boardingQrToken = cached.token;
+          _boardingQrExpiresAt = cached.expiresAt;
+          _loadingBoardingQr = false;
+        });
+        return;
+      }
+    }
+
+    await _issueBoardingQr(result, forceReissue: forceReissue);
   }
 
   Future<void> _refresh() async {
@@ -120,10 +147,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _result = refreshed;
         _refreshing = false;
         _dropoffQrToken = null;
-        _boardingQrToken = null;
       });
       if (refreshed.capabilities.boardingQrRecoverable) {
-        await _issueBoardingQr(refreshed);
+        await _restoreOrIssueBoardingQr(refreshed);
       }
     } on BookingApiException catch (err) {
       if (!mounted) return;
@@ -201,7 +227,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _loading = false;
       });
       if (result.capabilities.boardingQrRecoverable) {
-        await _issueBoardingQr(result);
+        await _restoreOrIssueBoardingQr(result);
       }
     } on BookingApiException catch (err) {
       if (!mounted) return;
@@ -229,6 +255,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       _error = null;
       _dropoffQrToken = null;
       _boardingQrToken = null;
+      _boardingQrExpiresAt = null;
       _bookingNumberController.clear();
       _phoneController.clear();
     });
@@ -274,8 +301,19 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
   }
 
-  Future<void> _issueBoardingQr(GuestBookingLookupResult result) async {
+  Future<void> _issueBoardingQr(
+    GuestBookingLookupResult result, {
+    bool forceReissue = false,
+  }) async {
     if (_loadingBoardingQr) return;
+    if (!forceReissue &&
+        _boardingQrToken != null &&
+        !isBoardingQrTokenExpired(_boardingQrExpiresAt) &&
+        _result?.bookingNumber == result.bookingNumber) {
+      return;
+    }
+
+    final generation = ++_boardingQrRequestGeneration;
     setState(() {
       _loadingBoardingQr = true;
       _error = null;
@@ -284,17 +322,51 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       final qr = await _bookingApiService.issueBoardingQr(
         bookingNumber: result.bookingNumber,
         guestAccessToken: result.guestAccessToken,
+        forceReissue: forceReissue,
       );
-      if (!mounted || _result?.bookingNumber != result.bookingNumber) return;
+      if (!mounted ||
+          generation != _boardingQrRequestGeneration ||
+          _result?.bookingNumber != result.bookingNumber) {
+        return;
+      }
+      await _lookupService.persistBoardingQr(
+        bookingNumber: result.bookingNumber,
+        token: qr.boardingQrToken,
+        expiresAt: qr.boardingQrExpiresAt,
+      );
       setState(() {
         _boardingQrToken = qr.boardingQrToken;
+        _boardingQrExpiresAt = qr.boardingQrExpiresAt;
         _loadingBoardingQr = false;
       });
-    } catch (_) {
-      if (!mounted || _result?.bookingNumber != result.bookingNumber) return;
+    } on BookingApiException catch (err) {
+      if (!mounted ||
+          generation != _boardingQrRequestGeneration ||
+          _result?.bookingNumber != result.bookingNumber) {
+        return;
+      }
+      if (err.errorCode == 'INVALID_STATUS_TRANSITION' &&
+          _boardingQrToken != null &&
+          !isBoardingQrTokenExpired(_boardingQrExpiresAt)) {
+        setState(() => _loadingBoardingQr = false);
+        return;
+      }
       setState(() {
         _loadingBoardingQr = false;
         _boardingQrToken = null;
+        _boardingQrExpiresAt = null;
+        _error = context.l10n.t('booking_qr_load_failed');
+      });
+    } catch (_) {
+      if (!mounted ||
+          generation != _boardingQrRequestGeneration ||
+          _result?.bookingNumber != result.bookingNumber) {
+        return;
+      }
+      setState(() {
+        _loadingBoardingQr = false;
+        _boardingQrToken = null;
+        _boardingQrExpiresAt = null;
         _error = context.l10n.t('booking_qr_load_failed');
       });
     }
@@ -641,7 +713,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       return AppUi.secondaryButton(
         label: context.l10n.t('boarding_qr_title'),
         icon: Icons.refresh,
-        onPressed: () => _issueBoardingQr(result),
+        onPressed: () => _restoreOrIssueBoardingQr(result, forceReissue: true),
         fullWidth: true,
       );
     }

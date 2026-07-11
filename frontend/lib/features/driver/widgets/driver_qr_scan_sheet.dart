@@ -5,6 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../../booking/utils/boarding_qr_token.dart';
 
 /// Full-screen QR capture for boarding or dropoff tokens.
 class DriverQrScanSheet extends StatefulWidget {
@@ -37,7 +38,7 @@ class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
   }
 
   Future<void> _submit(String raw) async {
-    final token = raw.trim();
+    final token = normalizeBoardingQrToken(raw);
     if (token.isEmpty || _submitting) return;
     setState(() {
       _submitting = true;

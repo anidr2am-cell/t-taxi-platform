@@ -233,7 +233,7 @@ class BookingService {
         customerName: input.customer.name,
         customerEmail: input.customer?.email ?? null,
         customerPhone: input.customer.phone,
-        customerCountryCode: input.customer.countryCode,
+        customerCountryCode: input.customer.countryCode?.trim() || null,
         specialRequests: input.additionalRequests ?? input.specialRequests ?? null,
         metadata: Object.keys(metadata).length ? metadata : null,
         boardingQrTokenHash: hashToken(boardingQrToken),
@@ -511,6 +511,18 @@ class BookingService {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
           errors: [{ currentStatus: booking.status }],
+        });
+      }
+
+      const hasActiveQr = Boolean(
+        booking.boarding_qr_token_hash
+        && booking.boarding_qr_expires_at
+        && new Date(booking.boarding_qr_expires_at).getTime() > Date.now(),
+      );
+      if (hasActiveQr && !input.forceReissue) {
+        throw new AppError('Boarding QR is already active for this booking', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
         });
       }
 

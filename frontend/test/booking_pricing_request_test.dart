@@ -674,6 +674,7 @@ class _CapturingBookingApi implements BookingApiService {
   Future<BoardingQrIssueResult> issueBoardingQr({
     required String bookingNumber,
     required String? guestAccessToken,
+    bool forceReissue = false,
   }) {
     throw UnimplementedError();
   }

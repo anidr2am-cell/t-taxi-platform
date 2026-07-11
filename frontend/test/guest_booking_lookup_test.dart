@@ -193,6 +193,49 @@ void main() {
     expect(find.text('Issue dropoff QR'), findsOneWidget);
   });
 
+  testWidgets('lookup page refresh does not reissue boarding QR when cached', (
+    tester,
+  ) async {
+    final api = _FakeBookingApi();
+    final json = _lookupJson();
+    json['status'] = 'DRIVER_ARRIVED';
+    json['capabilities'] = {
+      'chatAvailable': true,
+      'notificationsAvailable': true,
+      'dropoffQrIssueAvailable': false,
+      'reviewAvailable': false,
+      'boardingQrRecoverable': true,
+      'boardingQrPreviouslyIssued': true,
+    };
+    final lookupService = _FakeLookupService(
+      cached: GuestBookingLookupResult.fromJson(json),
+    );
+
+    await lookupService.persistBoardingQr(
+      bookingNumber: 'TX202607010001',
+      token: 'cached-boarding-token',
+      expiresAt: '2099-01-01 00:00:00',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: lookupService,
+          bookingApiService: api,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.boardingIssueCalls, 0);
+
+    await tester.tap(find.byKey(const ValueKey('guest_lookup_refresh')));
+    await tester.pumpAndSettle();
+
+    expect(api.boardingIssueCalls, 0);
+    expect(find.byType(QrImageView), findsOneWidget);
+  });
+
   testWidgets('lookup page shows controlled not-found error', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -381,6 +424,7 @@ class _FakeBookingApi extends BookingApiService {
   Future<BoardingQrIssueResult> issueBoardingQr({
     required String bookingNumber,
     required String? guestAccessToken,
+    bool forceReissue = false,
   }) async {
     boardingIssueCalls += 1;
     lastGuestAccessToken = guestAccessToken;

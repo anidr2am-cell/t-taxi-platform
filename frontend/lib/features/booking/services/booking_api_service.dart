@@ -218,10 +218,14 @@ class BookingApiService {
   Future<BoardingQrIssueResult> issueBoardingQr({
     required String bookingNumber,
     required String? guestAccessToken,
+    bool forceReissue = false,
   }) async {
     final body = <String, dynamic>{};
     if (guestAccessToken != null) {
       body['guestAccessToken'] = guestAccessToken;
+    }
+    if (forceReissue) {
+      body['forceReissue'] = true;
     }
 
     final data = await _request(

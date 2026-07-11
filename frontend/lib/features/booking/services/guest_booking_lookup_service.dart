@@ -17,6 +17,8 @@ class GuestBookingLookupService {
   final String _baseUrl;
 
   static const _cachedBookingKey = 'guest_lookup_booking';
+  static String _boardingQrCacheKey(String bookingNumber) =>
+      'guest_lookup_boarding_qr_${bookingNumber.trim().toUpperCase()}';
 
   String get _base => '$_baseUrl/api/v1';
 
@@ -89,8 +91,47 @@ class GuestBookingLookupService {
     final cached = await loadCachedWithoutValidation();
     if (cached != null) {
       await BookingReviewApi().persistGuestToken(cached.bookingNumber, null);
+      await clearBoardingQr(cached.bookingNumber);
     }
     await prefs.remove(_cachedBookingKey);
+  }
+
+  Future<void> persistBoardingQr({
+    required String bookingNumber,
+    required String token,
+    required String expiresAt,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _boardingQrCacheKey(bookingNumber),
+      jsonEncode({
+        'token': token,
+        'expiresAt': expiresAt,
+        'bookingNumber': bookingNumber.trim().toUpperCase(),
+      }),
+    );
+  }
+
+  Future<({String token, String expiresAt})?> loadBoardingQr(
+    String bookingNumber,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_boardingQrCacheKey(bookingNumber));
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final map = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      final token = map['token'] as String? ?? '';
+      final expiresAt = map['expiresAt'] as String? ?? '';
+      if (token.isEmpty || expiresAt.isEmpty) return null;
+      return (token: token, expiresAt: expiresAt);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearBoardingQr(String bookingNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_boardingQrCacheKey(bookingNumber));
   }
 
   Future<GuestBookingLookupResult?> loadCachedWithoutValidation() async {

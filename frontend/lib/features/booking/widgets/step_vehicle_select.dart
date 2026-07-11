@@ -55,6 +55,9 @@ class StepVehicleSelect extends StatelessWidget {
     }
 
     if (recommendation == null) {
+      if (controller.isLoading) {
+        return WizardLoadingView(message: l10n.t('loading_recommendation'));
+      }
       return const SizedBox.shrink();
     }
 

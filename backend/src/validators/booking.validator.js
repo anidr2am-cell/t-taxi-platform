@@ -22,11 +22,19 @@ const optionalEmailField = Joi.string().max(255).allow(null, '').custom((value, 
   return normalized;
 }).default(null);
 
-const requiredCountryCodeField = Joi.string()
+function normalizeOptionalCountry(value) {
+  if (value == null) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+}
+
+const optionalCountryField = Joi.string()
   .trim()
-  .uppercase()
-  .length(2)
-  .required();
+  .max(100)
+  .allow(null)
+  .empty('')
+  .custom((value) => normalizeOptionalCountry(value))
+  .default(null);
 
 function validateScheduledPickupAt(value, helpers) {
   const timestamp = Date.parse(value);
@@ -107,7 +115,7 @@ const createBookingSchema = Joi.object({
     name: Joi.string().max(100).required(),
     email: optionalEmailField,
     phone: Joi.string().max(30).required(),
-    countryCode: requiredCountryCodeField,
+    countryCode: optionalCountryField,
     messengerType: Joi.string().max(30).allow(null, ''),
     messengerId: Joi.string().max(100).allow(null, ''),
   }).required(),
@@ -132,4 +140,5 @@ module.exports = {
   updateBookingStatusSchema,
   guestBookingLookupSchema,
   normalizeOptionalEmail,
+  normalizeOptionalCountry,
 };

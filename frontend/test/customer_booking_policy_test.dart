@@ -58,7 +58,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('(Required)'), findsNWidgets(3));
+    expect(find.textContaining('(Required)'), findsNWidgets(2));
     expect(find.textContaining('(Required) Email'), findsNothing);
+    expect(find.textContaining('(Required) Country'), findsNothing);
   });
 }

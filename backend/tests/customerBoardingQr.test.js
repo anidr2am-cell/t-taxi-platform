@@ -22,6 +22,7 @@ function buildHarness(overrides = {}) {
     customer_user_id: null,
     status: BOOKING_STATUS.DRIVER_ARRIVED,
     boarding_qr_token_hash: hashToken('old-token'),
+    boarding_qr_expires_at: '2099-01-01 00:00:00',
     boarding_qr_used_at: null,
     ...overrides,
   };
@@ -69,16 +70,28 @@ test('customer boarding QR issue requires booking-scoped guest access', async ()
   );
 });
 
-test('customer boarding QR issue stores only hash and rotates previous token', async () => {
-  const { service, calls, getBooking } = buildHarness();
+test('customer boarding QR issue stores only hash and rejects duplicate active issue', async () => {
+  const { service, calls, getBooking } = buildHarness({
+    boarding_qr_token_hash: null,
+    boarding_qr_expires_at: null,
+  });
 
   const first = await service.issueBoardingQr(
     'TX202607010001',
     { guestAccessToken: 'guest-token' },
   );
+
+  await assert.rejects(
+    () => service.issueBoardingQr(
+      'TX202607010001',
+      { guestAccessToken: 'guest-token' },
+    ),
+    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
+
   const second = await service.issueBoardingQr(
     'TX202607010001',
-    { guestAccessToken: 'guest-token' },
+    { guestAccessToken: 'guest-token', forceReissue: true },
   );
 
   assert.notEqual(first.boardingQrToken, second.boardingQrToken);
