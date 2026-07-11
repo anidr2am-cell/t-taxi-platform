@@ -5,6 +5,7 @@ const ERROR_CODES = require("../constants/errorCodes");
 const BOOKING_STATUS = require("../constants/reservationStatus");
 const ROLES = require("../constants/roles");
 const { EVENTS } = require("../events");
+const { parseStoredTags } = require("../constants/reviewTags");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -37,6 +38,7 @@ class AdminDispatchService {
     driverCandidateScoringService,
     adminQrReissueService = null,
     chatService = null,
+    reviewRepository = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -48,6 +50,7 @@ class AdminDispatchService {
     this.driverCandidateScoringService = driverCandidateScoringService;
     this.adminQrReissueService = adminQrReissueService;
     this.chatService = chatService;
+    this.reviewRepository = reviewRepository;
   }
 
   actorFromUser(user) {
@@ -272,6 +275,19 @@ class AdminDispatchService {
     );
     const activeAssignment = assignments.find((a) => a.is_active === 1) ?? null;
     const metadata = this.parseMetadata(row.metadata);
+    const reviewRow = this.reviewRepository
+      ? await this.reviewRepository.findByBookingId(row.id)
+      : null;
+    const customerReview = reviewRow
+      ? {
+          reviewId: reviewRow.id,
+          rating: reviewRow.rating,
+          tags: parseStoredTags(reviewRow.tags_json),
+          comment: reviewRow.comment,
+          lowRating: Number(reviewRow.rating) <= 2,
+          createdAt: reviewRow.created_at,
+        }
+      : null;
 
     return {
       bookingNumber: row.booking_number,
@@ -376,6 +392,7 @@ class AdminDispatchService {
         createdAt: item.created_at,
       })),
       allowedActions: this.computeAllowedActions(row, activeAssignment),
+      customerReview,
       devQrTools: this.adminQrReissueService?.buildDevTools(row) ?? {
         qrReissueEnabled: false,
         disabledReason: "QR reissue service unavailable",

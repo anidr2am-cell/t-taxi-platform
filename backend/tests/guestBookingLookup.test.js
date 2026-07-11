@@ -59,13 +59,14 @@ function bookingRow(overrides = {}) {
   };
 }
 
-function buildService(row = bookingRow()) {
+function buildService(row = bookingRow(), reviewRow = null) {
   const calls = {
     committed: 0,
     rolledBack: 0,
     released: 0,
     insertedTokens: [],
     lookups: [],
+    reviewLookups: [],
   };
   const conn = {
     beginTransaction: async () => {},
@@ -85,8 +86,14 @@ function buildService(row = bookingRow()) {
       calls.insertedTokens.push({ bookingId, tokenHash, expiresAt });
     },
   };
+  const reviewRepository = {
+    async findByBookingId(bookingId) {
+      calls.reviewLookups.push(bookingId);
+      return reviewRow;
+    },
+  };
   return {
-    service: new GuestBookingLookupService(pool, repository),
+    service: new GuestBookingLookupService(pool, repository, null, reviewRepository),
     calls,
   };
 }
@@ -251,6 +258,58 @@ test('guest lookup does not allow partial phone matching', async () => {
     }),
     (err) => err.errorCode === 'BOOKING_NOT_FOUND',
   );
+});
+
+test('guest lookup exposes reviewAvailable when settlement pending without review', async () => {
+  const { service } = buildService(bookingRow({ status: 'SETTLEMENT_PENDING' }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.capabilities.reviewAvailable, true);
+  assert.equal(result.review?.submitted, false);
+  assert.deepEqual(result.review?.tags, []);
+});
+
+test('guest lookup hides reviewAvailable when review already submitted', async () => {
+  const { service } = buildService(
+    bookingRow({ status: 'SETTLEMENT_PENDING' }),
+    {
+      id: 7,
+      rating: 4,
+      tags_json: JSON.stringify(['ON_TIME']),
+    },
+  );
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.capabilities.reviewAvailable, false);
+  assert.equal(result.review?.submitted, true);
+  assert.equal(result.review?.rating, 4);
+  assert.deepEqual(result.review?.tags, ['ON_TIME']);
+  assert.ok(!JSON.stringify(result).includes('comment'));
+});
+
+test('guest lookup review state omits tags for null tags_json legacy review', async () => {
+  const { service } = buildService(
+    bookingRow({ status: 'COMPLETED' }),
+    { id: 8, rating: 5, tags_json: null, comment: 'Legacy comment' },
+  );
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.capabilities.reviewAvailable, false);
+  assert.equal(result.review?.submitted, true);
+  assert.deepEqual(result.review?.tags, []);
+  assert.ok(!JSON.stringify(result).includes('Legacy comment'));
 });
 
 test('cancelled booking can be found but active customer actions are disabled', async () => {

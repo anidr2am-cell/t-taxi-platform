@@ -13,6 +13,7 @@ class GuestBookingLookupResult {
     required this.guestAccessToken,
     required this.guestAccessExpiresAt,
     required this.capabilities,
+    this.review,
     this.serviceTypeCode,
     this.originAirportCode,
     this.nameSignRequested = false,
@@ -38,6 +39,7 @@ class GuestBookingLookupResult {
   final String guestAccessToken;
   final String? guestAccessExpiresAt;
   final GuestBookingCapabilities capabilities;
+  final GuestBookingReviewSnapshot? review;
   final String? serviceTypeCode;
   final String? originAirportCode;
   final bool nameSignRequested;
@@ -93,6 +95,11 @@ class GuestBookingLookupResult {
       capabilities: GuestBookingCapabilities.fromJson(
         Map<String, dynamic>.from(json['capabilities'] as Map? ?? {}),
       ),
+      review: json['review'] is Map
+          ? GuestBookingReviewSnapshot.fromJson(
+              Map<String, dynamic>.from(json['review'] as Map),
+            )
+          : null,
       serviceTypeCode: _firstString([
         serviceType['code'],
         serviceType['serviceTypeCode'],
@@ -134,7 +141,12 @@ class GuestBookingLookupResult {
     );
   }
 
-  GuestBookingLookupResult copyWith({String? customerPhone, String? status}) {
+  GuestBookingLookupResult copyWith({
+    String? customerPhone,
+    String? status,
+    GuestBookingCapabilities? capabilities,
+    GuestBookingReviewSnapshot? review,
+  }) {
     return GuestBookingLookupResult(
       bookingId: bookingId,
       bookingNumber: bookingNumber,
@@ -148,7 +160,8 @@ class GuestBookingLookupResult {
       paymentMethod: paymentMethod,
       guestAccessToken: guestAccessToken,
       guestAccessExpiresAt: guestAccessExpiresAt,
-      capabilities: capabilities,
+      capabilities: capabilities ?? this.capabilities,
+      review: review ?? this.review,
       serviceTypeCode: serviceTypeCode,
       originAirportCode: originAirportCode,
       nameSignRequested: nameSignRequested,
@@ -239,6 +252,7 @@ class GuestBookingLookupResult {
       'expiresAt': guestAccessExpiresAt,
     },
     'capabilities': capabilities.toJson(),
+    if (review != null) 'review': review!.toJson(),
     'assignedDriver': driverName == null
         ? null
         : {
@@ -269,6 +283,46 @@ class GuestBookingLookupResult {
     }
     return null;
   }
+}
+
+class GuestBookingReviewSnapshot {
+  const GuestBookingReviewSnapshot({
+    required this.eligible,
+    required this.submitted,
+    this.rating,
+    this.tags = const [],
+  });
+
+  final bool eligible;
+  final bool submitted;
+  final int? rating;
+  final List<String> tags;
+
+  factory GuestBookingReviewSnapshot.fromJson(Map<String, dynamic> json) {
+    final rawTags = json['tags'];
+    return GuestBookingReviewSnapshot(
+      eligible: json['eligible'] == true,
+      submitted: json['submitted'] == true,
+      rating: (json['rating'] as num?)?.toInt(),
+      tags: rawTags is List
+          ? rawTags.map((item) => item.toString()).toList()
+          : const [],
+    );
+  }
+
+  Map<String, dynamic> toFormState() => {
+    'eligible': eligible,
+    'submitted': submitted,
+    if (rating != null) 'rating': rating,
+    'tags': tags,
+  };
+
+  Map<String, dynamic> toJson() => {
+    'eligible': eligible,
+    'submitted': submitted,
+    if (rating != null) 'rating': rating,
+    'tags': tags,
+  };
 }
 
 class GuestBookingCapabilities {

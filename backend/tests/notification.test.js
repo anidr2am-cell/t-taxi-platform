@@ -536,7 +536,7 @@ test('DRIVER cannot list notification delivery statuses', async () => {
   assert.equal(res.status, 403);
 });
 
-test('trip completed creates customer notifications', async () => {
+test('trip completed creates customer notification', async () => {
   let specs = 0;
   const service = makeService({
     notificationRepository: {
@@ -555,7 +555,32 @@ test('trip completed creates customer notifications', async () => {
     bookingNumber: 'TX202607010001',
     customerUserId: 8,
   });
-  assert.ok(specs >= 2);
+  assert.equal(specs, 1);
+});
+
+test('trip ended creates customer notification with rating prompt', async () => {
+  let notificationType = null;
+  const service = makeService({
+    notificationRepository: {
+      async findByIdempotencyKey() { return null; },
+      async insert(_conn, data) {
+        notificationType = data.notificationType;
+        return 1;
+      },
+      async insertDelivery() { return 1; },
+      async findDeliveryByNotificationAndChannel() { return null; },
+      async findDeliveriesByNotificationId() { return []; },
+      async findById(id) { return { id, user_id: 8, payload: {} }; },
+      async updateDeliveryStatus() {},
+    },
+  });
+  await service.handleDomainEvent(EVENTS.TRIP_ENDED, {
+    eventId: 'evt-trip-ended',
+    bookingId: 10,
+    bookingNumber: 'TX202607010001',
+    customerUserId: 8,
+  });
+  assert.equal(notificationType, NOTIFICATION_TYPES.TRIP_ENDED);
 });
 
 test('cancelled and no-show events produce notification specs', async () => {

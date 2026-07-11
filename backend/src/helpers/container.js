@@ -209,6 +209,7 @@ container.register(
       database.pool,
       c.get("bookingRepository"),
       c.get("guestVehiclePhotoService"),
+      c.get("reviewRepository"),
     ),
 );
 container.register(
@@ -310,6 +311,7 @@ container.register(
       c.get("driverCandidateScoringService"),
       c.get("adminQrReissueService"),
       c.get("chatService"),
+      c.get("reviewRepository"),
     ),
 );
 container.register(

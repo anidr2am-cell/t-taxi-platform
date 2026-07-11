@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../booking/utils/booking_status_display.dart';
+import '../../booking/utils/review_tags.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
@@ -346,6 +347,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     _customerSection(l10n, detail),
                     const SizedBox(height: AppTokens.spaceMd),
                     _assignmentSection(l10n, detail),
+                    if (detail['customerReview'] is Map) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      _customerReviewSection(l10n, detail),
+                    ],
                     if (detail['status'] == 'SETTLEMENT_PENDING') ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       _settlementSection(l10n),
@@ -464,6 +469,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   Widget _summaryHeader(AppLocalizations l10n, Map<String, dynamic> detail) {
     final status = detail['status'] as String? ?? '';
     final actions = _allowedActions();
+    final customerReview = detail['customerReview'] is Map
+        ? Map<String, dynamic>.from(detail['customerReview'] as Map)
+        : null;
+    final lowRating = customerReview?['lowRating'] == true;
 
     return AppUi.surfaceCard(
       backgroundColor: AppTokens.primaryLight,
@@ -491,6 +500,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 ),
                 tone: AppUi.toneForBookingStatus(status),
               ),
+              if (lowRating)
+                AppUi.statusBadge(
+                  l10n.t('admin_booking_low_rating_badge'),
+                  tone: AppStatusTone.warning,
+                ),
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
@@ -682,6 +696,79 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             AppUi.summaryRow(
               label: l10n.t('admin_dispatch_assignment'),
               value: assignment['status'] as String? ?? '',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _customerReviewSection(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+  ) {
+    final review = Map<String, dynamic>.from(detail['customerReview'] as Map);
+    final rating = review['rating'] as num?;
+    final tags = (review['tags'] as List<dynamic>? ?? [])
+        .map((item) => item.toString())
+        .toList();
+    final comment = review['comment'] as String?;
+    final lowRating = review['lowRating'] == true;
+
+    return AppUi.adminDetailSection(
+      context: context,
+      title: l10n.t('admin_booking_review_section'),
+      backgroundColor: lowRating ? AppTokens.warningLight : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (rating != null) ...[
+            Row(
+              children: [
+                Text(
+                  '${l10n.t('admin_booking_review_rating')}: ',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                ...List.generate(5, (index) {
+                  final value = index + 1;
+                  return Icon(
+                    value <= rating.toInt()
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    color: lowRating ? AppTokens.warning : Colors.amber.shade700,
+                    size: 20,
+                  );
+                }),
+                const SizedBox(width: 6),
+                Text('${rating.toInt()}/5'),
+              ],
+            ),
+          ],
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              l10n.t('admin_booking_review_tags'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: tags
+                  .map(
+                    (code) => Chip(
+                      label: Text(l10n.t(ReviewTags.labelKey(code))),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (comment != null && comment.trim().isNotEmpty) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            AppUi.summaryRow(
+              label: l10n.t('admin_booking_review_comment'),
+              value: comment,
             ),
           ],
         ],

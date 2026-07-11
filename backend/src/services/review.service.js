@@ -3,12 +3,22 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const ROLES = require('../constants/roles');
 const MODERATION_STATUS = require('../constants/reviewModerationStatus');
+const { normalizeTags, parseStoredTags } = require('../constants/reviewTags');
 const { hashToken } = require('../utils/tokenHash.util');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
 
 const MAX_COMMENT_LENGTH = 500;
-const BOOKING_STATUS = { COMPLETED: 'COMPLETED' };
+const BOOKING_STATUS = {
+  SETTLEMENT_PENDING: 'SETTLEMENT_PENDING',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  NO_SHOW: 'NO_SHOW',
+};
+const REVIEW_ELIGIBLE_STATUSES = new Set([
+  BOOKING_STATUS.SETTLEMENT_PENDING,
+  BOOKING_STATUS.COMPLETED,
+]);
 
 class ReviewService {
   constructor(
@@ -82,24 +92,70 @@ class ReviewService {
     return booking.driver_id;
   }
 
+  isReviewEligible(booking) {
+    if (!booking?.driver_id) return false;
+    if (booking.status === BOOKING_STATUS.CANCELLED || booking.status === BOOKING_STATUS.NO_SHOW) {
+      return false;
+    }
+    return REVIEW_ELIGIBLE_STATUSES.has(booking.status);
+  }
+
+  assertReviewEligible(booking) {
+    if (!this.isReviewEligible(booking)) {
+      throw new AppError('Review is not eligible for this booking', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.REVIEW_NOT_ELIGIBLE,
+      });
+    }
+  }
+
+  mapReviewRecord(review) {
+    if (!review) return null;
+    return {
+      rating: review.rating,
+      tags: parseStoredTags(review.tags_json),
+      comment: review.comment,
+      createdAt: review.created_at,
+      moderationStatus: review.moderation_status,
+      lowRating: Number(review.rating) <= 2,
+    };
+  }
+
   mapCustomerReviewState(booking, review) {
-    const eligible = booking.status === BOOKING_STATUS.COMPLETED && !!booking.driver_id;
+    const eligible = this.isReviewEligible(booking);
     if (!review) {
       return {
         eligible,
         submitted: false,
         rating: null,
+        tags: [],
         comment: null,
         createdAt: null,
       };
     }
+    const mapped = this.mapReviewRecord(review);
     return {
       eligible,
       submitted: true,
-      rating: review.rating,
-      comment: review.comment,
-      createdAt: review.created_at,
-      moderationStatus: review.moderation_status,
+      rating: mapped.rating,
+      tags: mapped.tags,
+      comment: null,
+      createdAt: mapped.createdAt,
+      moderationStatus: mapped.moderationStatus,
+    };
+  }
+
+  mapAdminReviewSummary(review) {
+    if (!review) return null;
+    const mapped = this.mapReviewRecord(review);
+    return {
+      reviewId: review.id,
+      rating: mapped.rating,
+      tags: mapped.tags,
+      comment: mapped.comment,
+      createdAt: mapped.createdAt,
+      lowRating: mapped.lowRating,
+      moderationStatus: mapped.moderationStatus,
     };
   }
 
@@ -115,7 +171,9 @@ class ReviewService {
         ? (row.customer_name || 'Customer')
         : 'Guest',
       rating: row.rating,
+      tags: parseStoredTags(row.tags_json),
       comment: row.comment,
+      lowRating: Number(row.rating) <= 2,
       moderationStatus: row.moderation_status,
       createdAt: row.created_at,
     };
@@ -125,7 +183,9 @@ class ReviewService {
     return {
       reviewId: row.id,
       rating: row.rating,
+      tags: parseStoredTags(row.tags_json),
       comment: row.comment,
+      lowRating: Number(row.rating) <= 2,
       moderationStatus: row.moderation_status,
       hiddenReason: row.hidden_reason,
       reviewedAt: row.reviewed_at,
@@ -195,7 +255,13 @@ class ReviewService {
 
   normalizeComment(comment) {
     if (comment == null || comment === '') return null;
-    const trimmed = String(comment).trim();
+    if (typeof comment !== 'string') {
+      throw new AppError('Comment must be a string', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    const trimmed = comment.trim();
     if (!trimmed) return null;
     if (trimmed.length > MAX_COMMENT_LENGTH) {
       throw new AppError(`Comment must be at most ${MAX_COMMENT_LENGTH} characters`, {
@@ -206,11 +272,16 @@ class ReviewService {
     return trimmed;
   }
 
+  normalizeTags(input, rating) {
+    return normalizeTags(input, rating);
+  }
+
   async submitBookingReview(bookingNumber, input, authUser) {
     this.assertNotStaffSubmitter(authUser);
     const normalized = this.bookingService.validateBookingNumber(bookingNumber);
     const rating = this.validateRating(input.rating);
     const comment = this.normalizeComment(input.comment);
+    const tags = this.normalizeTags(input.tags, rating);
 
     const conn = await this.pool.getConnection();
     try {
@@ -233,12 +304,7 @@ class ReviewService {
         input.guestAccessToken,
       );
 
-      if (booking.status !== BOOKING_STATUS.COMPLETED) {
-        throw new AppError('Review is not eligible for this booking', {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.REVIEW_NOT_ELIGIBLE,
-        });
-      }
+      this.assertReviewEligible(booking);
 
       const driverId = this.resolveDriverId(booking);
       const existing = await this.reviewRepository.findByBookingIdForUpdate(conn, booking.id);
@@ -267,6 +333,7 @@ class ReviewService {
         guestAccessTokenId,
         rating,
         comment,
+        tags,
         moderationStatus: MODERATION_STATUS.VISIBLE,
       });
 
@@ -275,7 +342,7 @@ class ReviewService {
         actorUserId: customerUserId,
         actorRole: ROLES.CUSTOMER,
         description: `Review submitted for ${normalized}`,
-        payload: { bookingNumber: normalized, reviewId, rating },
+        payload: { bookingNumber: normalized, reviewId, rating, tags },
       });
 
       let outboxId = null;

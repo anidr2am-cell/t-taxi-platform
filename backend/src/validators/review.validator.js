@@ -8,6 +8,7 @@ const bookingNumberParamsSchema = Joi.object({
 const submitReviewSchema = Joi.object({
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().trim().max(500).allow('', null).optional(),
+  tags: Joi.array().items(Joi.string().trim().uppercase().max(64)).max(12).optional(),
   guestAccessToken: Joi.string().trim().min(1).max(512).optional(),
 }).unknown(false);
 

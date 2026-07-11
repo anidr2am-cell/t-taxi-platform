@@ -378,6 +378,22 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
           ),
         ],
+        if (result.capabilities.reviewAvailable) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          BookingReviewForm(
+            key: ValueKey('guest_review_${result.bookingNumber}_${result.status}_pending'),
+            bookingNumber: result.bookingNumber,
+            guestAccessToken: result.guestAccessToken,
+          ),
+        ] else if (result.review?.submitted == true) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          BookingReviewForm(
+            key: ValueKey('guest_review_${result.bookingNumber}_${result.status}_submitted'),
+            bookingNumber: result.bookingNumber,
+            guestAccessToken: result.guestAccessToken,
+            initialState: result.review!.toFormState(),
+          ),
+        ],
         const SizedBox(height: AppTokens.spaceMd),
         AppUi.sectionHeader(
           context,
@@ -487,13 +503,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               guestAccessToken: result.guestAccessToken,
               api: widget.bookingChatApi ?? const BookingChatApi(),
               socketService: widget.bookingChatSocketService,
-            ),
-          ],
-          if (result.capabilities.reviewAvailable) ...[
-            const SizedBox(height: AppTokens.spaceMd),
-            BookingReviewForm(
-              bookingNumber: result.bookingNumber,
-              guestAccessToken: result.guestAccessToken,
             ),
           ],
         ],

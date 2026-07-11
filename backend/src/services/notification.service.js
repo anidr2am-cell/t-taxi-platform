@@ -63,7 +63,7 @@ const CONTENT = {
   },
   [NOTIFICATION_TYPES.TRIP_ENDED]: {
     title: 'Arrived at destination',
-    body: 'You have arrived at your destination. Thank you for riding with us.',
+    body: 'You have arrived at your destination. Please rate your driver. Thank you for riding with us.',
   },
   [NOTIFICATION_TYPES.TRIP_COMPLETED]: {
     title: 'Trip completed',
@@ -461,7 +461,6 @@ class NotificationService {
         break;
       case EVENTS.TRIP_COMPLETED:
         addCustomer(NOTIFICATION_TYPES.TRIP_COMPLETED);
-        addCustomer(NOTIFICATION_TYPES.REVIEW_REQUESTED);
         break;
       case EVENTS.BOOKING_CANCELLED:
         addCustomer(NOTIFICATION_TYPES.BOOKING_CANCELLED);

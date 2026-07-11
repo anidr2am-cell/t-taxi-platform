@@ -1176,4 +1176,46 @@ void main() {
     expect(find.text('TX202607010001'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('admin booking detail shows low rating review', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'COMPLETED',
+              'serviceType': {'name': 'Airport Pickup'},
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': [],
+              'customerReview': {
+                'reviewId': 9,
+                'rating': 2,
+                'tags': ['LATE_ARRIVAL', 'UNFRIENDLY_SERVICE'],
+                'comment': 'Driver was late and rude.',
+                'lowRating': true,
+                'createdAt': '2026-07-02 10:00:00',
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Low rating requires review'), findsOneWidget);
+    expect(find.text('Customer review'), findsOneWidget);
+    expect(find.text('Late arrival'), findsOneWidget);
+    expect(find.text('Driver was late and rude.'), findsOneWidget);
+  });
 }

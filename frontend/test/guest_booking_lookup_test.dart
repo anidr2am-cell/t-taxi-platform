@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
@@ -332,6 +333,85 @@ void main() {
     expect(find.textContaining('Settlement'), findsNothing);
     expect(find.textContaining('Please rate your driver'), findsOneWidget);
   });
+
+  testWidgets('submitted review shows thank you card without submit form', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['status'] = 'COMPLETED';
+    json['capabilities'] = {
+      'chatAvailable': false,
+      'notificationsAvailable': true,
+      'dropoffQrIssueAvailable': false,
+      'reviewAvailable': false,
+      'boardingQrRecoverable': false,
+      'boardingQrPreviouslyIssued': false,
+    };
+    json['review'] = {
+      'eligible': true,
+      'submitted': true,
+      'rating': 4,
+      'tags': ['ON_TIME'],
+    };
+    final result = GuestBookingLookupResult.fromJson(json);
+
+    await tester.pumpWidget(
+      _localizedApp(
+        locale: const Locale('zh'),
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: result),
+          enableCustomerTools: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('本次乘车体验如何？'), findsNothing);
+    expect(find.text('提交评分'), findsNothing);
+    expect(find.text('感谢您的评价'), findsOneWidget);
+  });
+
+  testWidgets('ja locale shows localized review guidance on trip end', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['status'] = 'SETTLEMENT_PENDING';
+    final result = GuestBookingLookupResult.fromJson(json);
+
+    await tester.pumpWidget(
+      _localizedApp(
+        locale: const Locale('ja'),
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: result),
+          enableCustomerTools: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('運行終了'), findsOneWidget);
+    expect(find.textContaining('ドライバーを評価'), findsOneWidget);
+    expect(find.text('How was your ride?'), findsNothing);
+  });
+}
+
+Widget _localizedApp({required Locale locale, required Widget home}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: const [
+      Locale('en'),
+      Locale('ko'),
+      Locale('zh'),
+      Locale('ja'),
+      Locale('th'),
+    ],
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: home,
+  );
 }
 
 Map<String, dynamic> _lookupJson() => {
