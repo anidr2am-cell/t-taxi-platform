@@ -223,7 +223,7 @@ class AppLocalizations {
       'status_on_route': 'On the way',
       'status_driver_arrived': 'Driver arrived',
       'status_no_show': 'No show',
-      'status_picked_up': 'In progress',
+      'status_picked_up': 'Customer boarded',
       'search_place': 'Search place...',
       'no_results': 'No locations found',
       'infants': 'Infants',
@@ -382,6 +382,14 @@ class AppLocalizations {
       'admin_dispatch_next_action_none':
           'No dispatch actions available for the current status.',
       'driver_nav_jobs': 'Jobs',
+      'driver_qr_scan_menu': 'Scan QR',
+      'driver_qr_scan_instruction':
+          'Point the camera at the customer’s QR code.',
+      'driver_qr_scan_no_active_job': 'No active trip to scan',
+      'driver_qr_scan_invalid':
+          'This QR code is invalid or no longer available.',
+      'driver_qr_scan_success_boarding': 'Customer boarding confirmed.',
+      'driver_qr_scan_success_dropoff': 'Ride completion confirmed.',
       'driver_nav_notifications': 'Notifications',
       'driver_nav_settlement': 'Settlement',
       'driver_nav_profile': 'Profile',
@@ -790,7 +798,7 @@ class AppLocalizations {
       'status_on_route': '픽업 이동 중',
       'status_driver_arrived': '픽업지 도착',
       'status_no_show': '노쇼',
-      'status_picked_up': '운행 중',
+      'status_picked_up': '고객 탑승',
       'search_place': '장소 검색...',
       'no_results': '검색 결과 없음',
       'infants': '유아',
@@ -1329,7 +1337,7 @@ class AppLocalizations {
       'status_on_route': '前往接客',
       'status_driver_arrived': '司机已到达',
       'status_no_show': '未出现',
-      'status_picked_up': '行程进行中',
+      'status_picked_up': '乘客已上车',
       'search_place': '搜索地点...',
       'no_results': '未找到地点',
       'infants': '婴儿',
@@ -1674,7 +1682,7 @@ class AppLocalizations {
       'status_on_route': '迎えに向かっています',
       'status_driver_arrived': '迎え場所に到着',
       'status_no_show': 'ノーショー',
-      'status_picked_up': '運行中',
+      'status_picked_up': 'お客様乗車済み',
       'search_place': '場所を検索...',
       'no_results': '場所が見つかりません',
       'infants': '乳幼児',
@@ -2028,7 +2036,7 @@ class AppLocalizations {
       'status_on_route': 'กำลังไปรับ',
       'status_driver_arrived': 'ถึงจุดรับแล้ว',
       'status_no_show': 'ไม่มาตามนัด',
-      'status_picked_up': 'กำลังเดินทาง',
+      'status_picked_up': 'ลูกค้าขึ้นรถแล้ว',
       'search_place': 'ค้นหาสถานที่...',
       'no_results': 'ไม่พบสถานที่',
       'infants': 'ทารก',
@@ -2884,6 +2892,17 @@ class AppLocalizations {
     'driver_load_failed': '정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลได้)',
     'driver_action_failed': '처리 중 오류가 발생했습니다\n(เกิดข้อผิดพลาดระหว่างดำเนินการ)',
     'driver_nav_jobs': '배정 예약\n(งานที่ได้รับมอบหมาย)',
+    'driver_qr_scan_menu': 'QR 스캔\n(สแกน QR)',
+    'driver_qr_scan_instruction':
+        '고객의 QR 코드를 카메라에 비춰 주세요.\n(เล็งกล้องไปที่ QR ของลูกค้า)',
+    'driver_qr_scan_no_active_job':
+        '스캔할 운행 중 예약이 없습니다.\n(ไม่มีงานที่กำลังดำเนินการสำหรับสแกน QR)',
+    'driver_qr_scan_invalid':
+        '유효하지 않거나 사용할 수 없는 QR 코드입니다.\n(QR นี้ไม่ถูกต้องหรือไม่สามารถใช้งานได้แล้ว)',
+    'driver_qr_scan_success_boarding':
+        '고객 탑승이 확인되었습니다.\n(ยืนยันการขึ้นรถของลูกค้าแล้ว)',
+    'driver_qr_scan_success_dropoff':
+        '운행 종료가 확인되었습니다.\n(ยืนยันการสิ้นสุดการเดินทางแล้ว)',
     'driver_nav_notifications': '알림\n(การแจ้งเตือน)',
     'driver_nav_settlement': '정산\n(การชำระบัญชี)',
     'driver_nav_profile': '내 정보\n(โปรไฟล์)',

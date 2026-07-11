@@ -107,7 +107,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TX202607010001'), findsOneWidget);
-    expect(find.text('In progress'), findsOneWidget);
+    expect(find.text('Customer boarded'), findsOneWidget);
     expect(find.text('Issue dropoff QR'), findsOneWidget);
     expect(find.text('Your trip is in progress.'), findsOneWidget);
   });
@@ -128,7 +128,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('In progress'), findsOneWidget);
+    expect(find.text('Customer boarded'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('guest_lookup_refresh')));
     await tester.pumpAndSettle();
 

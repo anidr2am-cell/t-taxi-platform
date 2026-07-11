@@ -6,6 +6,7 @@ import 'package:frontend/features/driver/models/driver_status.dart';
 import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/pages/driver_jobs_page.dart';
 import 'package:frontend/features/driver/pages/driver_login_page.dart';
+import 'package:frontend/features/driver/pages/driver_qr_scan_page.dart';
 import 'package:frontend/features/driver/pages/driver_shell_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 
@@ -168,6 +169,56 @@ void main() {
 
     expect(find.byType(DriverBookingDetailPage), findsOneWidget);
     expect(find.text('TX202607010099'), findsWidgets);
+  });
+
+  testWidgets('driver QR menu opens scan page', (tester) async {
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      hasActiveJob: true,
+      jobs: DriverJobsToday(
+        date: '2026-07-01',
+        items: [_booking(status: 'DRIVER_ARRIVED')],
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.qr_code_scanner));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DriverQrScanPage), findsOneWidget);
+    expect(find.byIcon(Icons.qr_code_scanner), findsWidgets);
+  });
+
+  testWidgets('boarding QR scan calls API and opens booking detail', (
+    tester,
+  ) async {
+    final api = _FakeJobsApi(
+      jobs: DriverJobsToday(
+        date: '2026-07-01',
+        items: [_booking(status: 'DRIVER_ARRIVED')],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverQrScanPage(
+          api: api,
+          scannerLauncher: (context, isBoarding, onSubmit) async {
+            expect(isBoarding, true);
+            await onSubmit('boarding-token');
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.qr_code_scanner));
+    await tester.pumpAndSettle();
+
+    expect(api.boardingScanCalls, 1);
+    expect(api.lastScannedToken, 'boarding-token');
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
   });
 
   testWidgets('jobs empty state', (tester) async {
@@ -444,6 +495,9 @@ class _FakeJobsApi extends DriverApiService {
   final String? _token;
   int todayCalls = 0;
   int startRouteCalls = 0;
+  int boardingScanCalls = 0;
+  int dropoffScanCalls = 0;
+  String? lastScannedToken;
 
   @override
   Future<String?> getSavedToken() async => _token;
@@ -482,6 +536,32 @@ class _FakeJobsApi extends DriverApiService {
     return jobs!.items.firstWhere(
       (booking) => booking.bookingNumber == bookingNumber,
     );
+  }
+
+  @override
+  Future<DriverBooking> scanBoarding(String bookingNumber, String token) async {
+    boardingScanCalls += 1;
+    lastScannedToken = token;
+    final current = jobs!;
+    final updated = _booking(
+      status: 'PICKED_UP',
+      number: bookingNumber,
+      actions: ['COMPLETE_TRIP'],
+    );
+    jobs = DriverJobsToday(
+      date: current.date,
+      items: current.items
+          .map((item) => item.bookingNumber == bookingNumber ? updated : item)
+          .toList(),
+    );
+    return updated;
+  }
+
+  @override
+  Future<DriverBooking> scanDropoff(String bookingNumber, String token) async {
+    dropoffScanCalls += 1;
+    lastScannedToken = token;
+    return _booking(status: 'COMPLETED', number: bookingNumber, actions: []);
   }
 
   @override

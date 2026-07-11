@@ -12,10 +12,12 @@ class DriverQrScanSheet extends StatefulWidget {
     super.key,
     required this.isBoarding,
     required this.onSubmit,
+    this.initialCameraMode = false,
   });
 
   final bool isBoarding;
   final Future<void> Function(String token) onSubmit;
+  final bool initialCameraMode;
 
   @override
   State<DriverQrScanSheet> createState() => _DriverQrScanSheetState();
@@ -23,7 +25,7 @@ class DriverQrScanSheet extends StatefulWidget {
 
 class _DriverQrScanSheetState extends State<DriverQrScanSheet> {
   final _manualController = TextEditingController();
-  bool _cameraMode = false;
+  late bool _cameraMode = widget.initialCameraMode;
   bool _submitting = false;
   String? _error;
   bool _cameraError = false;
@@ -369,12 +371,16 @@ Future<bool?> showDriverQrScanSheet({
   required BuildContext context,
   required bool isBoarding,
   required Future<void> Function(String token) onSubmit,
+  bool initialCameraMode = false,
 }) {
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) =>
-        DriverQrScanSheet(isBoarding: isBoarding, onSubmit: onSubmit),
+    builder: (context) => DriverQrScanSheet(
+      isBoarding: isBoarding,
+      onSubmit: onSubmit,
+      initialCameraMode: initialCameraMode,
+    ),
   );
 }

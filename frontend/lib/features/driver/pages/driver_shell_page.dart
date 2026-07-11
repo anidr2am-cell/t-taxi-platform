@@ -13,6 +13,7 @@ import 'driver_booking_detail_page.dart';
 import 'driver_jobs_page.dart';
 import 'driver_notifications_page.dart';
 import 'driver_profile_page.dart';
+import 'driver_qr_scan_page.dart';
 
 /// Mobile-first driver shell: Jobs (default), Notifications, Settlement, Profile.
 class DriverShellPage extends StatefulWidget {
@@ -91,6 +92,7 @@ class _DriverShellPageState extends State<DriverShellPage> {
     final l10n = context.l10n;
     final pages = [
       DriverJobsPage(api: _api, onSessionChanged: _refreshSession),
+      DriverQrScanPage(api: _api),
       DriverNotificationsPage(api: _api),
       DriverSettlementListPage(api: null),
       DriverProfilePage(api: _api, onStatusChanged: _refreshSession),
@@ -119,6 +121,11 @@ class _DriverShellPageState extends State<DriverShellPage> {
             icon: const Icon(Icons.work_outline),
             selectedIcon: const Icon(Icons.work),
             label: l10n.t('driver_nav_jobs'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.qr_code_scanner),
+            selectedIcon: const Icon(Icons.qr_code_2),
+            label: l10n.t('driver_qr_scan_menu'),
           ),
           NavigationDestination(
             icon: const Icon(Icons.notifications_outlined),
