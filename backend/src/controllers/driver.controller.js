@@ -36,6 +36,22 @@ const markArrived = asyncHandler(async (req, res) => {
   return success(res, data, 'OK');
 });
 
+const markPickedUp = asyncHandler(async (req, res) => {
+  const data = await getDriverTripFlowService().markPickedUp(
+    req.user.id,
+    req.params.bookingNumber,
+  );
+  return success(res, data, 'OK');
+});
+
+const endTrip = asyncHandler(async (req, res) => {
+  const data = await getDriverTripFlowService().endTrip(
+    req.user.id,
+    req.params.bookingNumber,
+  );
+  return success(res, data, 'OK');
+});
+
 const completeTrip = asyncHandler(async (req, res) => {
   const data = await getDriverTripFlowService().completeTrip(
     req.user.id,
@@ -82,6 +98,8 @@ module.exports = {
   getBookingDetail,
   startOnRoute,
   markArrived,
+  markPickedUp,
+  endTrip,
   completeTrip,
   scanBoarding,
   scanDropoff,

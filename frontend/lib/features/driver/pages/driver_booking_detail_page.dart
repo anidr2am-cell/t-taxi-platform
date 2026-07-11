@@ -8,8 +8,10 @@ import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
+import '../driver_trip_flow.dart';
 import '../models/driver_booking.dart';
 import '../services/driver_api_service.dart';
+import '../widgets/driver_trip_confirm_dialog.dart';
 import 'driver_chat_page.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
@@ -74,7 +76,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
         _future = Future.value(updated);
         _processing = false;
       });
-      if (updated.status == 'COMPLETED') {
+      if (updated.status == 'SETTLEMENT_PENDING' || updated.status == 'COMPLETED') {
         _loadSettlement();
       }
       ScaffoldMessenger.of(
@@ -179,7 +181,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
           }
 
           final primaryKey = DriverUx.primaryActionKey(booking);
+          final actionToken = DriverTripFlow.primaryActionToken(booking);
           final readOnly = DriverUx.isReadOnly(booking.status);
+          final showSettlementInfo = booking.status == 'SETTLEMENT_PENDING';
+          final showCompletedInfo = booking.status == 'COMPLETED';
 
           return Column(
             children: [
@@ -190,6 +195,32 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                   padding: AppUi.pagePadding(context),
                   children: [
                     _StatusHeader(booking: booking),
+                    if (showSettlementInfo) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      AppUi.surfaceCard(
+                        backgroundColor: AppTokens.infoLight,
+                        child: Text(
+                          l10n.t('driver_trip_settlement_pending_info'),
+                          style: const TextStyle(
+                            color: AppTokens.textSecondary,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (showCompletedInfo) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      AppUi.surfaceCard(
+                        backgroundColor: AppTokens.successLight,
+                        child: Text(
+                          l10n.t('driver_trip_completed_info'),
+                          style: const TextStyle(
+                            color: AppTokens.success,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                    ],
                     if (_actionError != null) ...[
                       const SizedBox(height: AppTokens.spaceSm),
                       AppUi.surfaceCard(
@@ -344,11 +375,16 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                     SizedBox(
                       height: 52,
                       width: double.infinity,
-                      child: FilledButton(
+                      child: FilledButton.icon(
                         onPressed: _processing
                             ? null
-                            : () => _onPrimaryAction(booking, primaryKey),
-                        child: Text(l10n.t(primaryKey)),
+                            : () => _onPrimaryAction(
+                                  booking,
+                                  actionToken,
+                                  primaryKey,
+                                ),
+                        icon: const Icon(Icons.touch_app_outlined),
+                        label: Text(l10n.t(primaryKey)),
                       ),
                     ),
                   ],
@@ -360,27 +396,45 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     );
   }
 
-  void _onPrimaryAction(DriverBooking booking, String actionKey) {
-    if (booking.allowedActions.contains('START_ON_ROUTE')) {
-      _runAction(
-        () => widget.api.startOnRoute(widget.bookingNumber),
-        'driver_success_on_route',
-      );
-      return;
+  Future<void> _onPrimaryAction(
+    DriverBooking booking,
+    String? actionToken,
+    String actionLabelKey,
+  ) async {
+    if (_processing || actionToken == null) return;
+    final titleKey = DriverTripFlow.confirmTitleKey(actionToken);
+    final messageKey = DriverTripFlow.confirmMessageKey(actionToken);
+    if (titleKey == null || messageKey == null) return;
+
+    final confirmed = await confirmDriverTripAction(
+      context: context,
+      titleKey: titleKey,
+      messageKey: messageKey,
+      confirmKey: DriverTripFlow.confirmButtonKey(actionToken),
+    );
+    if (!confirmed || !mounted) return;
+
+    Future<DriverBooking> Function() action;
+    switch (actionToken) {
+      case 'START_ON_ROUTE':
+        action = () => widget.api.startOnRoute(widget.bookingNumber);
+        break;
+      case 'MARK_ARRIVED':
+        action = () => widget.api.markArrived(widget.bookingNumber);
+        break;
+      case 'MARK_PICKED_UP':
+        action = () => widget.api.markPickedUp(widget.bookingNumber);
+        break;
+      case 'END_TRIP':
+        action = () => widget.api.endTrip(widget.bookingNumber);
+        break;
+      default:
+        return;
     }
-    if (booking.allowedActions.contains('MARK_ARRIVED')) {
-      _runAction(
-        () => widget.api.markArrived(widget.bookingNumber),
-        'driver_success_arrived',
-      );
-      return;
-    }
-    if (booking.allowedActions.contains('COMPLETE_TRIP')) {
-      _runAction(
-        () => widget.api.completeTrip(widget.bookingNumber),
-        'driver_success_completed',
-      );
-    }
+
+    final successKey =
+        DriverTripFlow.successMessageKey(actionToken) ?? actionLabelKey;
+    await _runAction(action, successKey);
   }
 
   String _formatLuggage(Map<String, dynamic> luggage) {

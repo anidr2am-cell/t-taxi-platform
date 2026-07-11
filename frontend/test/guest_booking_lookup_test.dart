@@ -10,7 +10,6 @@ import 'package:frontend/features/booking/services/guest_booking_lookup_service.
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -107,9 +106,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TX202607010001'), findsOneWidget);
-    expect(find.text('Customer boarded'), findsOneWidget);
-    expect(find.text('Issue dropoff QR'), findsOneWidget);
-    expect(find.text('Your trip is in progress.'), findsOneWidget);
+    expect(find.text('Customer onboard'), findsOneWidget);
+    expect(find.text('Boarding QR'), findsNothing);
+    expect(find.text('Issue dropoff QR'), findsNothing);
+    expect(find.text('You are on the way to your destination.'), findsOneWidget);
   });
 
   testWidgets('lookup page refresh updates status', (tester) async {
@@ -128,7 +128,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Customer boarded'), findsOneWidget);
+    expect(find.text('Customer onboard'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('guest_lookup_refresh')));
     await tester.pumpAndSettle();
 
@@ -136,10 +136,9 @@ void main() {
     expect(service.refreshCount, 1);
   });
 
-  testWidgets('lookup page issues and displays recoverable boarding QR', (
+  testWidgets('lookup page does not show or issue boarding QR', (
     tester,
   ) async {
-    final api = _FakeBookingApi();
     final json = _lookupJson();
     json['status'] = 'DRIVER_ARRIVED';
     json['capabilities'] = {
@@ -157,46 +156,18 @@ void main() {
           lookupService: _FakeLookupService(
             cached: GuestBookingLookupResult.fromJson(json),
           ),
-          bookingApiService: api,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(api.boardingIssueCalls, 1);
-    expect(api.lastGuestAccessToken, 'guest-token');
-    expect(find.text('Boarding QR'), findsOneWidget);
-    expect(find.byType(QrImageView), findsOneWidget);
-    expect(find.text('recovered-boarding-token'), findsNothing);
-    expect(
-      find.textContaining('issued when the booking was created'),
-      findsNothing,
-    );
-  });
-
-  testWidgets('lookup page hides boarding QR after pickup', (tester) async {
-    final api = _FakeBookingApi();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: GuestBookingLookupPage(
-          lookupService: _FakeLookupService(cached: _result()),
-          bookingApiService: api,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(api.boardingIssueCalls, 0);
     expect(find.text('Boarding QR'), findsNothing);
-    expect(find.byType(QrImageView), findsNothing);
-    expect(find.text('Issue dropoff QR'), findsOneWidget);
   });
 
-  testWidgets('lookup page refresh does not reissue boarding QR when cached', (
+  testWidgets('lookup page refresh does not call boarding QR issue API', (
     tester,
   ) async {
-    final api = _FakeBookingApi();
+    final api = _CountingBookingApi();
     final json = _lookupJson();
     json['status'] = 'DRIVER_ARRIVED';
     json['capabilities'] = {
@@ -211,29 +182,21 @@ void main() {
       cached: GuestBookingLookupResult.fromJson(json),
     );
 
-    await lookupService.persistBoardingQr(
-      bookingNumber: 'TX202607010001',
-      token: 'cached-boarding-token',
-      expiresAt: '2099-01-01 00:00:00',
-    );
-
     await tester.pumpWidget(
       MaterialApp(
-        home: GuestBookingLookupPage(
-          lookupService: lookupService,
-          bookingApiService: api,
-        ),
+        home: GuestBookingLookupPage(lookupService: lookupService),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(api.boardingIssueCalls, 0);
+    expect(api.dropoffIssueCalls, 0);
 
     await tester.tap(find.byKey(const ValueKey('guest_lookup_refresh')));
     await tester.pumpAndSettle();
 
     expect(api.boardingIssueCalls, 0);
-    expect(find.byType(QrImageView), findsOneWidget);
+    expect(api.dropoffIssueCalls, 0);
   });
 
   testWidgets('lookup page shows controlled not-found error', (tester) async {
@@ -346,6 +309,29 @@ void main() {
     expect(find.text('Cancelled'), findsOneWidget);
     expect(find.text('This booking was cancelled.'), findsOneWidget);
   });
+
+  testWidgets('SETTLEMENT_PENDING customer copy avoids settlement wording', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['status'] = 'SETTLEMENT_PENDING';
+    final result = GuestBookingLookupResult.fromJson(json);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: result),
+          enableCustomerTools: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Trip ended'), findsOneWidget);
+    expect(find.textContaining('settlement', findRichText: true), findsNothing);
+    expect(find.textContaining('Settlement'), findsNothing);
+    expect(find.textContaining('Please rate your driver'), findsOneWidget);
+  });
 }
 
 Map<String, dynamic> _lookupJson() => {
@@ -407,6 +393,36 @@ class _FakeLookupService extends GuestBookingLookupService {
       return base.copyWith(status: refreshedStatus);
     }
     return base;
+  }
+}
+
+class _CountingBookingApi extends BookingApiService {
+  _CountingBookingApi()
+    : super.test(
+        client: MockClient((_) async => http.Response('{}', 500)),
+        baseUrl: 'http://localhost:3000',
+      );
+
+  int boardingIssueCalls = 0;
+  int dropoffIssueCalls = 0;
+
+  @override
+  Future<BoardingQrIssueResult> issueBoardingQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+    bool forceReissue = false,
+  }) async {
+    boardingIssueCalls += 1;
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<DropoffQrIssueResult> issueDropoffQr({
+    required String bookingNumber,
+    required String? guestAccessToken,
+  }) async {
+    dropoffIssueCalls += 1;
+    throw UnimplementedError();
   }
 }
 

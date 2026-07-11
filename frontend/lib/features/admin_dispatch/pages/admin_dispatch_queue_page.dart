@@ -550,7 +550,11 @@ class _BookingListCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             AppUi.statusBadge(
-              BookingStatusDisplay.label(l10n, status),
+              BookingStatusDisplay.label(
+                l10n,
+                status,
+                audience: BookingStatusAudience.admin,
+              ),
               tone: AppUi.toneForBookingStatus(status),
             ),
             const SizedBox(height: 6),

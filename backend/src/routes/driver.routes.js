@@ -30,7 +30,10 @@ router.post('/notifications/:notificationId/read', require('../controllers/notif
 router.post('/notifications/read-all', require('../controllers/notification.controller').markDriverReadAll);
 router.post('/bookings/:bookingNumber/start-route', driverController.startOnRoute);
 router.post('/bookings/:bookingNumber/arrive', driverController.markArrived);
+router.post('/bookings/:bookingNumber/mark-picked-up', driverController.markPickedUp);
+router.post('/bookings/:bookingNumber/end-trip', driverController.endTrip);
 router.post('/bookings/:bookingNumber/complete', driverController.completeTrip);
+// Legacy QR scan routes — compatibility only; button trip flow must not call these.
 router.post('/bookings/:bookingNumber/scan-boarding', driverController.scanBoarding);
 router.post('/bookings/:bookingNumber/scan-dropoff', driverController.scanDropoff);
 router.get('/bookings/:bookingNumber', driverController.getBookingDetail);

@@ -7,7 +7,6 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../../admin_settlement/services/admin_settlement_api_service.dart';
-import '../widgets/admin_qr_reissue_dialog.dart';
 import '../widgets/assign_driver_dialog.dart';
 import '../widgets/recommend_drivers_dialog.dart';
 
@@ -89,12 +88,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     return actions.map((e) => e as String).toList();
   }
 
-  Map<String, dynamic>? _devQrTools() {
-    final tools = _detail?['devQrTools'];
-    if (tools is Map) return Map<String, dynamic>.from(tools);
-    return null;
-  }
-
   bool get _hasTransferSlip {
     final receiptUrl = _settlement?['receiptUrl'];
     final metadata = _settlement?['receiptMetadata'];
@@ -157,34 +150,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               userFacingError(
                 err,
                 fallback: l10n.t('admin_settlement_slip_load_failed'),
-              ),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  Future<void> _reissueQr(String qrType) async {
-    setState(() => _submitting = true);
-    try {
-      await handleAdminQrReissue(
-        context: context,
-        api: widget.api,
-        bookingNumber: widget.bookingNumber,
-        qrType: qrType,
-      );
-      await _load();
-    } catch (err) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              userFacingError(
-                err,
-                fallback: context.l10n.t('ui_action_failed'),
               ),
             ),
           ),
@@ -519,7 +484,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             runSpacing: 8,
             children: [
               AppUi.statusBadge(
-                BookingStatusDisplay.label(l10n, status),
+                BookingStatusDisplay.label(
+                  l10n,
+                  status,
+                  audience: BookingStatusAudience.admin,
+                ),
                 tone: AppUi.toneForBookingStatus(status),
               ),
             ],
@@ -561,6 +530,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             value: BookingStatusDisplay.label(
               l10n,
               detail['status'] as String? ?? '',
+              audience: BookingStatusAudience.admin,
             ),
           ),
           AppUi.summaryRow(
@@ -820,8 +790,18 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           final role = entry['changedByRole'] as String? ?? '';
           final fromLabel = from == '-'
               ? from
-              : BookingStatusDisplay.label(l10n, from);
-          final toLabel = to == '-' ? to : BookingStatusDisplay.label(l10n, to);
+              : BookingStatusDisplay.label(
+                  l10n,
+                  from,
+                  audience: BookingStatusAudience.admin,
+                );
+          final toLabel = to == '-'
+              ? to
+              : BookingStatusDisplay.label(
+                  l10n,
+                  to,
+                  audience: BookingStatusAudience.admin,
+                );
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -874,60 +854,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Widget _qrManagementSection(AppLocalizations l10n) {
-    final tools = _devQrTools();
-    if (tools == null) return const SizedBox.shrink();
-
-    final enabled = tools['qrReissueEnabled'] == true;
-    final boarding = Map<String, dynamic>.from(tools['boarding'] as Map? ?? {});
-    final dropoff = Map<String, dynamic>.from(tools['dropoff'] as Map? ?? {});
-
-    return AppUi.adminDetailSection(
-      context: context,
-      title: l10n.t('admin_qr_management_title'),
-      subtitle: enabled
-          ? l10n.t('admin_qr_management_help')
-          : l10n.t('admin_qr_management_disabled_help'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (enabled) ...[
-            if (boarding['reissueAvailable'] == true)
-              AppUi.secondaryButton(
-                label: l10n.t('admin_dev_qr_reissue_boarding'),
-                icon: Icons.qr_code,
-                onPressed: _submitting ? null : () => _reissueQr('BOARDING'),
-                fullWidth: true,
-              )
-            else if (boarding['unavailableReason'] != null)
-              Text(
-                boarding['unavailableReason'] as String,
-                style: const TextStyle(
-                  color: AppTokens.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            if (dropoff['reissueAvailable'] == true) ...[
-              const SizedBox(height: 8),
-              AppUi.secondaryButton(
-                label: l10n.t('admin_dev_qr_reissue_dropoff'),
-                icon: Icons.qr_code_2,
-                onPressed: _submitting ? null : () => _reissueQr('DROPOFF'),
-                fullWidth: true,
-              ),
-            ] else if (dropoff['unavailableReason'] != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                dropoff['unavailableReason'] as String,
-                style: const TextStyle(
-                  color: AppTokens.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ],
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   String _vehicleSummary(Map<String, dynamic> vehicle) {

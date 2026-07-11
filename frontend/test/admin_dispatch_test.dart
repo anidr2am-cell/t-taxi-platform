@@ -1034,8 +1034,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('QR management'), findsOneWidget);
-    expect(find.text('Reissue boarding QR'), findsOneWidget);
+    expect(find.text('QR management'), findsNothing);
+    expect(find.text('Reissue boarding QR'), findsNothing);
   });
 
   testWidgets('hides internal QR configuration when reissue disabled', (
@@ -1084,19 +1084,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('QR management'), findsOneWidget);
+    expect(find.text('QR management'), findsNothing);
     expect(find.text('Reissue boarding QR'), findsNothing);
-    expect(
-      find.text('Set ALLOW_DEV_QR_REISSUE=true on the backend and restart'),
-      findsNothing,
-    );
-    expect(
-      find.text('QR reissue is not available in this environment.'),
-      findsOneWidget,
-    );
   });
 
-  testWidgets('dev QR reissue shows token once dialog', (tester) async {
+  testWidgets('dev QR reissue is hidden from admin booking detail', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: AdminBookingDetailPage(
@@ -1139,13 +1133,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Reissue boarding QR'));
-    await tester.tap(find.text('Reissue boarding QR'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Reissue'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('adminQrReissueToken')), findsOneWidget);
-    expect(find.text('dev-boarding-token'), findsOneWidget);
+    expect(find.text('Reissue boarding QR'), findsNothing);
+    expect(find.text('QR management'), findsNothing);
   });
 
   testWidgets('dispatch queue has no horizontal overflow at 360px', (

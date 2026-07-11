@@ -61,7 +61,10 @@ class DriverJobService {
       return ['VIEW_DETAILS', 'MARK_ARRIVED'];
     }
     if (status === 'DRIVER_ARRIVED') {
-      return ['VIEW_DETAILS', 'COMPLETE_TRIP'];
+      return ['VIEW_DETAILS', 'MARK_PICKED_UP'];
+    }
+    if (status === 'PICKED_UP') {
+      return ['VIEW_DETAILS', 'END_TRIP'];
     }
     return [];
   }

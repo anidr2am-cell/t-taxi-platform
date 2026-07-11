@@ -1,3 +1,4 @@
+// Legacy QR scan screen — kept for compatibility; driver shell no longer navigates here.
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';

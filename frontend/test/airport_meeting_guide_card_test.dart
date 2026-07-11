@@ -367,7 +367,7 @@ void main() {
   });
 
   testWidgets(
-    'booking complete screen shows boarding QR only when customer tools enabled',
+    'booking complete screen hides QR when customer tools enabled',
     (tester) async {
       await tester.pumpWidget(
         _wrapPage(
@@ -387,7 +387,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Boarding QR'), findsOneWidget);
+      expect(find.text('Boarding QR'), findsNothing);
     },
   );
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/clipboard_writer.dart';
@@ -7,7 +6,6 @@ import '../../../widgets/app_ui.dart';
 import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
 import '../models/guest_booking_lookup_result.dart';
-import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
@@ -66,16 +64,11 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     'ON_ROUTE',
     'DRIVER_ARRIVED',
   };
-  bool _loadingDropoffQr = false;
-  String? _dropoffQrToken;
-  String? _dropoffQrError;
-  String? _status;
   bool _pickupAlertSent = false;
 
   @override
   void initState() {
     super.initState();
-    _status = widget.result.status;
     BookingReviewApi().persistGuestToken(
       widget.result.bookingNumber,
       widget.result.guestAccessToken,
@@ -120,7 +113,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     );
   }
 
-  bool get _isCompleted => _status == 'COMPLETED';
+  bool get _isCompleted => widget.result.status == 'COMPLETED';
 
   Future<void> _copyBookingNumber() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -136,44 +129,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.t('booking_number_copy_failed'))),
       );
-    }
-  }
-
-  Future<void> _loadDropoffQr() async {
-    setState(() {
-      _loadingDropoffQr = true;
-      _dropoffQrError = null;
-    });
-
-    try {
-      final issue =
-          widget.issueDropoffQr ??
-          () => BookingApiService().issueDropoffQr(
-            bookingNumber: widget.result.bookingNumber,
-            guestAccessToken: widget.result.guestAccessToken,
-          );
-      final result = await issue();
-      if (!mounted) return;
-      setState(() {
-        _status = result.status;
-        _dropoffQrToken = result.dropoffQrToken;
-        _loadingDropoffQr = false;
-      });
-    } on BookingApiException catch (err) {
-      if (!mounted) return;
-      setState(() {
-        _loadingDropoffQr = false;
-        _dropoffQrToken = null;
-        _dropoffQrError = err.errorCode == 'INVALID_STATUS_TRANSITION'
-            ? context.l10n.t('booking_dropoff_qr_unavailable')
-            : context.l10n.t('booking_qr_load_failed');
-      });
-    } catch (err) {
-      if (!mounted) return;
-      setState(() {
-        _loadingDropoffQr = false;
-        _dropoffQrError = context.l10n.t('booking_qr_load_failed');
-      });
     }
   }
 
@@ -226,19 +181,19 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 bookingNumber: result.bookingNumber,
                 statusLabel: BookingStatusDisplay.label(
                   l10n,
-                  _status ?? result.status,
+                  result.status,
                 ),
                 total: '${result.totalAmount} ${result.currency}',
                 paymentLabel: l10n.t('pay_driver_at_destination'),
                 l10n: l10n,
                 onCopy: _copyBookingNumber,
                 statusTone: AppUi.toneForBookingStatus(
-                  _status ?? result.status,
+                  result.status,
                 ),
               ),
               if (BookingStatusDisplay.customerGuidance(
                     l10n,
-                    _status ?? result.status,
+                    result.status,
                   ) !=
                   null) ...[
                 const SizedBox(height: AppTokens.spaceMd),
@@ -257,7 +212,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                         child: Text(
                           BookingStatusDisplay.customerGuidance(
                             l10n,
-                            _status ?? result.status,
+                            result.status,
                           )!,
                           style: const TextStyle(
                             color: AppTokens.textSecondary,
@@ -308,7 +263,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   pickupAlertSent: _pickupAlertSent,
                   onNotifyPickup:
                       _pickupAlertStatuses.contains(
-                            _status ?? widget.result.status,
+                            widget.result.status,
                           ) &&
                           widget.meetingVehicleInfo?.hasAssignedDetails ==
                               true &&
@@ -357,37 +312,14 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                     bookingNumber: result.bookingNumber,
                     guestAccessToken: result.guestAccessToken,
                   ),
-                ] else if (_dropoffQrToken != null)
-                  _QrDisplay(
-                    title: l10n.t('booking_dropoff_qr_title'),
-                    hint: l10n.t('booking_dropoff_qr_hint'),
-                    token: _dropoffQrToken!,
-                  )
-                else
-                  _QrDisplay(
-                    title: l10n.t('boarding_qr_title'),
-                    hint: l10n.t('boarding_qr_hint'),
-                    token: result.boardingQrToken,
-                  ),
-                const SizedBox(height: AppTokens.spaceMd),
-                BookingChatSection(
+                ] else ...[
+                  const SizedBox(height: AppTokens.spaceMd),
+                  BookingChatSection(
                   bookingNumber: result.bookingNumber,
                   guestAccessToken: result.guestAccessToken,
                   api: widget.chatApi,
                   socketService: widget.chatSocketService,
                 ),
-                if (!_isCompleted) ...[
-                  const SizedBox(height: AppTokens.spaceMd),
-                  if (_dropoffQrError != null)
-                    AppUi.errorState(message: _dropoffQrError!),
-                  AppUi.secondaryButton(
-                    label: _dropoffQrToken == null
-                        ? l10n.t('booking_refresh_dropoff_qr')
-                        : l10n.t('booking_issue_new_dropoff_qr'),
-                    icon: Icons.refresh,
-                    onPressed: _loadingDropoffQr ? null : _loadDropoffQr,
-                    fullWidth: true,
-                  ),
                 ],
               ],
               const SizedBox(height: AppTokens.spaceLg),
@@ -541,61 +473,6 @@ class _BookingNumberCard extends StatelessWidget {
           AppUi.summaryRow(
             label: l10n.t('payment_method'),
             value: paymentLabel,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QrDisplay extends StatelessWidget {
-  const _QrDisplay({
-    required this.title,
-    required this.hint,
-    required this.token,
-  });
-
-  final String title;
-  final String hint;
-  final String token;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppUi.surfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            hint,
-            style: const TextStyle(
-              color: AppTokens.textSecondary,
-              fontSize: 13,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppTokens.spaceMd),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(AppTokens.spaceMd),
-              decoration: BoxDecoration(
-                color: AppTokens.surface,
-                borderRadius: AppTokens.borderRadiusLg,
-                border: Border.all(color: AppTokens.border),
-                boxShadow: AppTokens.cardShadow(),
-              ),
-              child: QrImageView(
-                data: token,
-                size: 200,
-                backgroundColor: AppTokens.surface,
-              ),
-            ),
           ),
         ],
       ),

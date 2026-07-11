@@ -1,4 +1,5 @@
 import '../booking/utils/booking_status_display.dart';
+import 'driver_trip_flow.dart';
 import 'services/driver_api_service.dart';
 import 'models/driver_booking.dart';
 
@@ -39,36 +40,13 @@ class DriverUx {
         status == 'CONFIRMED';
   }
 
-  /// Next action hint for job cards (operational label key suffix).
   static String? nextActionKey(DriverBooking booking) {
     if (isReadOnly(booking.status)) return null;
-    if (booking.allowedActions.contains('START_ON_ROUTE')) {
-      return 'driver_action_start_on_route';
-    }
-    if (booking.allowedActions.contains('MARK_ARRIVED')) {
-      return 'driver_action_mark_arrived';
-    }
-    if (booking.allowedActions.contains('COMPLETE_TRIP')) {
-      return 'driver_action_complete_trip';
-    }
-    if (booking.status == 'DRIVER_ASSIGNED') {
-      return 'driver_job_assigned_hint';
-    }
-    return null;
+    return DriverTripFlow.primaryActionLabelKey(booking);
   }
 
   static String? primaryActionKey(DriverBooking booking) {
-    if (isReadOnly(booking.status)) return null;
-    if (booking.allowedActions.contains('START_ON_ROUTE')) {
-      return 'driver_action_start_on_route';
-    }
-    if (booking.allowedActions.contains('MARK_ARRIVED')) {
-      return 'driver_action_mark_arrived';
-    }
-    if (booking.allowedActions.contains('COMPLETE_TRIP')) {
-      return 'driver_action_complete_trip';
-    }
-    return null;
+    return DriverTripFlow.primaryActionLabelKey(booking);
   }
 
   static Map<DriverJobGroup, List<DriverBooking>> groupBookings(
@@ -98,7 +76,10 @@ class DriverUx {
   }
 
   static String statusLabelKey(String status) =>
-      BookingStatusDisplay.statusLabelKey(status);
+      BookingStatusDisplay.statusLabelKey(
+        status,
+        audience: BookingStatusAudience.driver,
+      );
 }
 
 bool driverIsAuthError(Object err) {

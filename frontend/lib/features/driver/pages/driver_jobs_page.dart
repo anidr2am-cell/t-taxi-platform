@@ -26,7 +26,6 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
   late final DriverApiService _api;
   Future<DriverJobsToday>? _future;
   Future<DriverStatus>? _statusFuture;
-  String? _processingBookingNumber;
 
   @override
   void initState() {
@@ -61,50 +60,6 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
         ),
       ),
     ).then((_) => _refresh());
-  }
-
-  Future<void> _runListAction(DriverBooking booking) async {
-    if (_processingBookingNumber != null) return;
-    setState(() => _processingBookingNumber = booking.bookingNumber);
-    try {
-      if (booking.allowedActions.contains('START_ON_ROUTE')) {
-        await _api.startOnRoute(booking.bookingNumber);
-      } else if (booking.allowedActions.contains('MARK_ARRIVED')) {
-        await _api.markArrived(booking.bookingNumber);
-      } else if (booking.allowedActions.contains('COMPLETE_TRIP')) {
-        await _api.completeTrip(booking.bookingNumber);
-      } else {
-        _openDetail(booking);
-        return;
-      }
-      if (!mounted) return;
-      _loadData(notifySession: true);
-    } on DriverApiException catch (err) {
-      if (!mounted) return;
-      if (driverIsAuthError(err)) {
-        driverHandleApiError(context, err);
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(err.message)));
-    } catch (err) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            userFacingError(
-              err,
-              fallback: context.l10n.t('driver_action_failed'),
-            ),
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _processingBookingNumber = null);
-      }
-    }
   }
 
   @override
@@ -234,8 +189,6 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
             booking: b,
             group: group,
             onTap: () => _openDetail(b),
-            onAction: () => _runListAction(b),
-            processing: _processingBookingNumber == b.bookingNumber,
           ),
         ),
       ),
@@ -248,20 +201,15 @@ class _JobCard extends StatelessWidget {
     required this.booking,
     required this.group,
     required this.onTap,
-    required this.onAction,
-    required this.processing,
   });
 
   final DriverBooking booking;
   final DriverJobGroup group;
   final VoidCallback onTap;
-  final VoidCallback onAction;
-  final bool processing;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final actionKey = DriverUx.nextActionKey(booking);
     final statusKey = DriverUx.statusLabelKey(booking.status);
     final isActive = group == DriverJobGroup.active;
     final isCompleted = group == DriverJobGroup.completed;
@@ -404,20 +352,14 @@ class _JobCard extends StatelessWidget {
                 ),
             ],
           ),
-          if (actionKey != null && !isCompleted) ...[
+          if (!isCompleted) ...[
             const SizedBox(height: AppTokens.spaceSm),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: processing ? null : onAction,
-                icon: processing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.touch_app, size: 18),
-                label: Text(l10n.t(actionKey)),
+              child: OutlinedButton.icon(
+                onPressed: onTap,
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: Text(l10n.t('driver_view_booking_detail')),
               ),
             ),
           ],

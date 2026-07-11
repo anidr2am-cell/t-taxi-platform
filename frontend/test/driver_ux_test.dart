@@ -171,7 +171,7 @@ void main() {
     expect(find.text('TX202607010099'), findsWidgets);
   });
 
-  testWidgets('driver QR menu opens scan page', (tester) async {
+  testWidgets('driver shell does not expose QR scan menu', (tester) async {
     final api = _FakeJobsApi(
       initialToken: 'tok',
       hasActiveJob: true,
@@ -183,42 +183,9 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.qr_code_scanner));
-    await tester.pumpAndSettle();
 
-    expect(find.byType(DriverQrScanPage), findsOneWidget);
-    expect(find.byIcon(Icons.qr_code_scanner), findsWidgets);
-  });
-
-  testWidgets('boarding QR scan calls API and opens booking detail', (
-    tester,
-  ) async {
-    final api = _FakeJobsApi(
-      jobs: DriverJobsToday(
-        date: '2026-07-01',
-        items: [_booking(status: 'DRIVER_ARRIVED')],
-      ),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: DriverQrScanPage(
-          api: api,
-          scannerLauncher: (context, isBoarding, onSubmit) async {
-            expect(isBoarding, true);
-            await onSubmit('boarding-token');
-            return true;
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.qr_code_scanner));
-    await tester.pumpAndSettle();
-
-    expect(api.boardingScanCalls, 1);
-    expect(api.lastScannedToken, 'boarding-token');
-    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
+    expect(find.byIcon(Icons.qr_code_scanner), findsNothing);
+    expect(find.byType(DriverQrScanPage), findsNothing);
   });
 
   testWidgets('jobs empty state', (tester) async {
@@ -248,27 +215,48 @@ void main() {
     expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
   });
 
-  testWidgets('jobs list action calls mutation and refreshes', (tester) async {
+  testWidgets('jobs list opens detail without calling status mutation APIs', (
+    tester,
+  ) async {
     final api = _FakeJobsApi(
       jobs: DriverJobsToday(
         date: '2026-07-01',
         items: [
           _booking(status: 'DRIVER_ASSIGNED', actions: ['START_ON_ROUTE']),
+          _booking(
+            status: 'ON_ROUTE',
+            number: 'TX202607010002',
+            actions: ['MARK_ARRIVED'],
+          ),
         ],
       ),
     );
     await tester.pumpWidget(MaterialApp(home: DriverJobsPage(api: api)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'));
+    expect(find.text('고객에게 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
+    expect(find.text('픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'), findsNothing);
+    expect(
+      find.widgetWithText(
+        OutlinedButton,
+        '예약 상세 보기 / ดูรายละเอียดการจอง',
+      ),
+      findsWidgets,
+    );
+
+    await tester.tap(
+      find
+          .widgetWithText(
+            OutlinedButton,
+            '예약 상세 보기 / ดูรายละเอียดการจอง',
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
 
-    expect(api.startRouteCalls, 1);
-    expect(api.todayCalls, 2);
-    expect(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
-      findsOneWidget,
-    );
+    expect(api.startRouteCalls, 0);
+    expect(api.markArrivedCalls, 0);
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
   });
 
   testWidgets('message button opens booking chat room', (tester) async {
@@ -356,7 +344,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('운행 시작 / เริ่มเดินทาง'), findsNothing);
+    expect(find.text('고객에게 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
     expect(find.text('Cancelled'), findsWidgets);
   });
 
@@ -367,7 +355,7 @@ void main() {
         'Invalid status transition',
         errorCode: 'INVALID_STATUS_TRANSITION',
       ),
-      refreshed: _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']),
+      refreshed: _booking(status: 'DRIVER_ARRIVED', actions: ['MARK_PICKED_UP']),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -380,12 +368,17 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '도착 / ถึงแล้ว'));
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid status transition'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, '운행 완료 / จบงาน'), findsOneWidget);
+    expect(
+      find.widgetWithText(FilledButton, '고객 탑승 / ลูกค้าขึ้นรถแล้ว'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('jobs layout has no horizontal overflow at 360px', (
@@ -495,6 +488,7 @@ class _FakeJobsApi extends DriverApiService {
   final String? _token;
   int todayCalls = 0;
   int startRouteCalls = 0;
+  int markArrivedCalls = 0;
   int boardingScanCalls = 0;
   int dropoffScanCalls = 0;
   String? lastScannedToken;
@@ -536,6 +530,12 @@ class _FakeJobsApi extends DriverApiService {
     return jobs!.items.firstWhere(
       (booking) => booking.bookingNumber == bookingNumber,
     );
+  }
+
+  @override
+  Future<DriverBooking> markArrived(String bookingNumber) async {
+    markArrivedCalls += 1;
+    throw UnimplementedError('list view must not call markArrived');
   }
 
   @override
