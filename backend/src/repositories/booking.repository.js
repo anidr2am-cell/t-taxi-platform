@@ -700,6 +700,7 @@ class BookingRepository {
         b.currency,
         b.created_at,
         b.driver_id,
+        CASE WHEN b.driver_id IS NULL THEN 1 ELSE 0 END AS is_new_booking,
         st.code AS service_type_code,
         st.name AS service_type_name,
         vt.code AS vehicle_type_code,
@@ -762,9 +763,10 @@ class BookingRepository {
         ${this.adminQueueSelectSql()}
         WHERE ${whereSql}
         ORDER BY
-          b.scheduled_pickup_at ASC,
-          b.created_at ASC,
-          b.booking_number ASC
+          CASE WHEN b.driver_id IS NULL THEN 0 ELSE 1 END ASC,
+          CASE WHEN b.driver_id IS NULL THEN b.created_at END DESC,
+          CASE WHEN b.driver_id IS NOT NULL THEN b.scheduled_pickup_at END DESC,
+          b.booking_number DESC
         LIMIT ? OFFSET ?
       `,
       [...params, limit, offset],

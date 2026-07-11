@@ -265,6 +265,41 @@ void main() {
     expect(find.text('Assign driver'), findsOneWidget);
   });
 
+  testWidgets('separates new unassigned and existing assigned bookings', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminDispatchQueuePage(
+          api: _FakeAdminApi(
+            token: 'token',
+            bookingsResponse: {
+              'page': 1,
+              'total': 2,
+              'items': [
+                {..._queueItem('TX-NEW'), 'bookingGroup': 'NEW'},
+                {
+                  ..._queueItem('TX-EXISTING'),
+                  'bookingGroup': 'EXISTING',
+                  'activeAssignment': {
+                    'driverDisplayName': 'Driver A',
+                    'status': 'ASSIGNED',
+                  },
+                },
+              ],
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('New bookings'), findsOneWidget);
+    expect(find.text('Newest request first'), findsOneWidget);
+    expect(find.text('Existing bookings'), findsOneWidget);
+    expect(find.text('Latest pickup first'), findsOneWidget);
+  });
+
   testWidgets('assigned driver is rendered in booking list', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

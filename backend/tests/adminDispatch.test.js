@@ -15,6 +15,7 @@ const { appEvents, EVENTS } = require("../src/events");
 const ERROR_CODES = require("../src/constants/errorCodes");
 const BOOKING_STATUS = require("../src/constants/reservationStatus");
 const AdminDispatchService = require("../src/services/adminDispatch.service");
+const BookingRepository = require("../src/repositories/booking.repository");
 const DriverCandidateScoringService = require("../src/services/driverCandidateScoring.service");
 const container = require("../src/helpers/container");
 const app = require("../src/app");
@@ -70,6 +71,7 @@ function queueRow(overrides = {}) {
     assignment_status: null,
     driver_name: null,
     driver_phone: null,
+    is_new_booking: 1,
     ...overrides,
   };
 }
@@ -136,6 +138,7 @@ test("service maps queue item without secrets", () => {
   assert.equal(item.bookingNumber, "TX202607010001");
   assert.equal(item.scheduledPickupAt, "2026-07-01 09:30:00");
   assert.equal(item.activeAssignment, null);
+  assert.equal(item.bookingGroup, "NEW");
   assert.equal(item.passengerCount, 2);
   assert.ok(!("boardingQrTokenHash" in item));
 });
@@ -667,6 +670,22 @@ test("listBookings passes search and assignment filters to repository", async ()
   assert.equal(capturedFilters.assignmentState, "UNASSIGNED");
   assert.equal(capturedFilters.serviceDateFrom, "2026-07-01 00:00:00");
   assert.ok(capturedFilters.serviceDateTo);
+});
+
+test("admin booking query groups unassigned first with group-specific newest ordering", async () => {
+  let capturedSql = "";
+  const pool = {
+    async query(sql) {
+      capturedSql = sql;
+      return [[]];
+    },
+  };
+  const repository = new BookingRepository(pool);
+  await repository.findAdminBookings({}, { limit: 20, offset: 0 });
+
+  assert.match(capturedSql, /CASE WHEN b\.driver_id IS NULL THEN 0 ELSE 1 END ASC/);
+  assert.match(capturedSql, /CASE WHEN b\.driver_id IS NULL THEN b\.created_at END DESC/);
+  assert.match(capturedSql, /CASE WHEN b\.driver_id IS NOT NULL THEN b\.scheduled_pickup_at END DESC/);
 });
 
 test("ADMIN can get booking detail", async () => {

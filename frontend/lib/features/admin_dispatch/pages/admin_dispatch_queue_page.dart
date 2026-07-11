@@ -79,7 +79,10 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
     } catch (err) {
       setState(() {
         _loading = false;
-        _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        );
       });
     }
   }
@@ -131,7 +134,10 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           _needsLogin = true;
           _error = null;
         } else {
-          _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+          _error = userFacingError(
+            err,
+            fallback: context.l10n.t('ui_action_failed'),
+          );
         }
         _loading = false;
         _loadingMore = false;
@@ -164,7 +170,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
       body: Column(
         children: [
           Padding(
-            padding: AppUi.pagePadding(context).copyWith(bottom: AppTokens.spaceSm),
+            padding: AppUi.pagePadding(
+              context,
+            ).copyWith(bottom: AppTokens.spaceSm),
             child: AppUi.surfaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -197,7 +205,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                           items: [
                             DropdownMenuItem(
                               value: null,
-                              child: Text(l10n.t('admin_dispatch_all_statuses')),
+                              child: Text(
+                                l10n.t('admin_dispatch_all_statuses'),
+                              ),
                             ),
                             DropdownMenuItem(
                               value: 'PENDING',
@@ -248,7 +258,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                           items: [
                             DropdownMenuItem(
                               value: null,
-                              child: Text(l10n.t('admin_dispatch_all_assignments')),
+                              child: Text(
+                                l10n.t('admin_dispatch_all_assignments'),
+                              ),
                             ),
                             DropdownMenuItem(
                               value: 'UNASSIGNED',
@@ -294,7 +306,13 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTokens.textSecondary,
+            ),
+          ),
           const SizedBox(height: 4),
           child,
         ],
@@ -336,28 +354,51 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                     child: _loadingMore
                         ? const CircularProgressIndicator()
                         : _loadMoreError != null
-                            ? AppUi.errorState(
-                                message: _loadMoreError!,
-                                onRetry: () => _load(page: _page + 1, append: true),
-                                retryLabel: l10n.t('admin_dispatch_retry'),
-                              )
-                            : OutlinedButton(
-                                onPressed: () => _load(page: _page + 1, append: true),
-                                child: Text(l10n.t('admin_dispatch_load_more')),
-                              ),
+                        ? AppUi.errorState(
+                            message: _loadMoreError!,
+                            onRetry: () => _load(page: _page + 1, append: true),
+                            retryLabel: l10n.t('admin_dispatch_retry'),
+                          )
+                        : OutlinedButton(
+                            onPressed: () =>
+                                _load(page: _page + 1, append: true),
+                            child: Text(l10n.t('admin_dispatch_load_more')),
+                          ),
                   ),
                 );
               }
 
               final item = Map<String, dynamic>.from(_items[index] as Map);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _BookingListCard(
-                  item: item,
-                  l10n: l10n,
-                  wide: wide,
-                  onTap: () => _openDetail(item['bookingNumber'] as String),
-                ),
+              final group =
+                  item['bookingGroup'] as String? ??
+                  (item['activeAssignment'] == null ? 'NEW' : 'EXISTING');
+              final previousGroup = index == 0
+                  ? null
+                  : (Map<String, dynamic>.from(
+                              _items[index - 1] as Map,
+                            )['bookingGroup']
+                            as String? ??
+                        (Map<String, dynamic>.from(
+                                  _items[index - 1] as Map,
+                                )['activeAssignment'] ==
+                                null
+                            ? 'NEW'
+                            : 'EXISTING'));
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (group != previousGroup)
+                    _BookingGroupHeader(group: group, l10n: l10n),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _BookingListCard(
+                      item: item,
+                      l10n: l10n,
+                      wide: wide,
+                      onTap: () => _openDetail(item['bookingNumber'] as String),
+                    ),
+                  ),
+                ],
               );
             },
           );
@@ -413,6 +454,50 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
   }
 }
 
+class _BookingGroupHeader extends StatelessWidget {
+  const _BookingGroupHeader({required this.group, required this.l10n});
+
+  final String group;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final isNew = group == 'NEW';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 14, 2, 10),
+      child: Row(
+        children: [
+          Icon(
+            isNew ? Icons.fiber_new_outlined : Icons.history_outlined,
+            color: isNew ? AppTokens.warning : AppTokens.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isNew
+                  ? l10n.t('admin_dispatch_new_bookings')
+                  : l10n.t('admin_dispatch_existing_bookings'),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppTokens.textPrimary,
+              ),
+            ),
+          ),
+          Text(
+            isNew
+                ? l10n.t('admin_dispatch_new_sort_hint')
+                : l10n.t('admin_dispatch_existing_sort_hint'),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _BookingListCard extends StatelessWidget {
   const _BookingListCard({
     required this.item,
@@ -445,7 +530,9 @@ class _BookingListCard extends StatelessWidget {
       onTap: onTap,
       backgroundColor: unassigned ? AppTokens.warningLight : AppTokens.surface,
       padding: const EdgeInsets.all(14),
-      child: wide ? _wideLayout(status, assignmentLabel, amountLabel, unassigned) : _narrowLayout(status, assignmentLabel, amountLabel, unassigned),
+      child: wide
+          ? _wideLayout(status, assignmentLabel, amountLabel, unassigned)
+          : _narrowLayout(status, assignmentLabel, amountLabel, unassigned),
     );
   }
 
@@ -479,7 +566,11 @@ class _BookingListCard extends StatelessWidget {
     );
   }
 
-  Widget _metaColumn(String assignmentLabel, String amountLabel, bool unassigned) {
+  Widget _metaColumn(
+    String assignmentLabel,
+    String amountLabel,
+    bool unassigned,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -525,24 +616,45 @@ class _BookingListCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Flight ${item['flightNumber']}',
-            style: const TextStyle(color: AppTokens.textSecondary, fontSize: 12),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 12,
+            ),
           ),
         ],
       ],
     );
   }
 
-  Widget _wideLayout(String status, String assignmentLabel, String amountLabel, bool unassigned) {
+  Widget _wideLayout(
+    String status,
+    String assignmentLabel,
+    String amountLabel,
+    bool unassigned,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_headerRow(status, unassigned), _metaColumn(assignmentLabel, amountLabel, unassigned)])),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _headerRow(status, unassigned),
+              _metaColumn(assignmentLabel, amountLabel, unassigned),
+            ],
+          ),
+        ),
         const Icon(Icons.chevron_right, color: AppTokens.textMuted),
       ],
     );
   }
 
-  Widget _narrowLayout(String status, String assignmentLabel, String amountLabel, bool unassigned) {
+  Widget _narrowLayout(
+    String status,
+    String assignmentLabel,
+    String amountLabel,
+    bool unassigned,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

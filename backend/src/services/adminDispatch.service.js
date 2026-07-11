@@ -144,6 +144,7 @@ class AdminDispatchService {
       totalAmount: Number(row.total_amount),
       currency: row.currency,
       activeAssignment: this.mapActiveAssignment(row),
+      bookingGroup: row.is_new_booking ? "NEW" : "EXISTING",
       createdAt: row.created_at,
     };
   }
