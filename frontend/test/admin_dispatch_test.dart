@@ -28,6 +28,9 @@ class _FakeAdminApi extends AdminDispatchApiService {
   int assignCalls = 0;
   int reassignCalls = 0;
   int autoAssignCalls = 0;
+  int addNoteCalls = 0;
+  List<Map<String, dynamic>> notes = [];
+  Object? addNoteError;
   String? lastAssignmentState;
   String? lastStatus;
   String? lastView;
@@ -100,6 +103,35 @@ class _FakeAdminApi extends AdminDispatchApiService {
           'activeAssignment': null,
           'allowedActions': ['ASSIGN_DRIVER'],
         };
+  }
+
+  @override
+  Future<Map<String, dynamic>> listBookingNotes(
+    String bookingNumber, {
+    int page = 1,
+    int limit = 20,
+  }) async => {
+    'page': page,
+    'page_size': limit,
+    'total': notes.length,
+    'items': notes,
+  };
+
+  @override
+  Future<Map<String, dynamic>> addBookingNote(
+    String bookingNumber,
+    String text,
+  ) async {
+    addNoteCalls += 1;
+    if (addNoteError != null) throw addNoteError!;
+    final note = {
+      'id': notes.length + 1,
+      'text': text,
+      'author': {'id': 1, 'name': 'Admin A'},
+      'createdAt': '2026-07-12 10:30:00',
+    };
+    notes.add(note);
+    return note;
   }
 
   @override
@@ -635,7 +667,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Driver A'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Closer to pickup');
+    await tester.enterText(find.byType(TextField).last, 'Closer to pickup');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
@@ -700,7 +732,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Driver A'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Closer to pickup');
+    await tester.enterText(find.byType(TextField).last, 'Closer to pickup');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
@@ -1339,5 +1371,97 @@ void main() {
       AppLocalizations('th').t('admin_detail_technical'),
       'ข้อมูลทางเทคนิค',
     );
+  });
+
+  testWidgets('internal notes show empty state and disable blank submit', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Internal notes'), findsOneWidget);
+    expect(find.text('Visible to administrators only.'), findsOneWidget);
+    expect(find.text('No internal notes yet.'), findsOneWidget);
+    final button = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Add note'),
+    );
+    expect(button.onPressed, isNull);
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Delete'), findsNothing);
+  });
+
+  testWidgets('internal note success appends item and clears input', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi();
+    api.notes.add({
+      'id': 1,
+      'text': 'Existing note',
+      'author': {'id': 1, 'name': 'Admin A'},
+      'createdAt': '2026-07-12 09:00:00',
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Existing note'), findsOneWidget);
+    expect(find.textContaining('Admin A'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('admin-note-input')),
+      'New operational note',
+    );
+    await tester.pump();
+    final addButton = find.widgetWithText(ElevatedButton, 'Add note');
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    expect(api.addNoteCalls, 1);
+    expect(find.text('New operational note'), findsOneWidget);
+    expect(find.text('Add an operational note'), findsOneWidget);
+  });
+
+  testWidgets('internal note failure keeps input for retry', (tester) async {
+    final api = _FakeAdminApi()
+      ..addNoteError = const AdminDispatchApiException('Save failed');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('admin-note-input')),
+      'Keep this text',
+    );
+    await tester.pump();
+    final addButton = find.widgetWithText(ElevatedButton, 'Add note');
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    expect(find.text('Save failed'), findsOneWidget);
+    expect(find.text('Keep this text'), findsOneWidget);
+  });
+
+  test('internal note labels are localized for KO EN and TH', () {
+    expect(AppLocalizations('ko').t('admin_notes_title'), '내부 메모');
+    expect(AppLocalizations('en').t('admin_notes_title'), 'Internal notes');
+    expect(AppLocalizations('th').t('admin_notes_title'), 'บันทึกภายใน');
   });
 }

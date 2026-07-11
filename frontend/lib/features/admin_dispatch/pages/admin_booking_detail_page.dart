@@ -38,6 +38,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   Map<String, dynamic>? _settlement;
   String? _settlementError;
   bool _submitting = false;
+  final _noteController = TextEditingController();
+  List<Map<String, dynamic>> _notes = [];
+  String? _notesError;
+  bool _addingNote = false;
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -46,12 +56,28 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Future<void> _load() async {
+    final l10n = AppLocalizations('en');
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final detail = await widget.api.getBookingDetail(widget.bookingNumber);
+      List<Map<String, dynamic>> notes = [];
+      String? notesError;
+      try {
+        final response = await widget.api.listBookingNotes(
+          widget.bookingNumber,
+        );
+        notes = (response['items'] as List<dynamic>? ?? [])
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      } catch (err) {
+        notesError = userFacingError(
+          err,
+          fallback: l10n.t('admin_notes_load_failed'),
+        );
+      }
       Map<String, dynamic>? settlement;
       String? settlementError;
       if (detail['status'] == 'SETTLEMENT_PENDING') {
@@ -72,6 +98,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         _detail = detail;
         _settlement = settlement;
         _settlementError = settlementError;
+        _notes = notes;
+        _notesError = notesError;
         _loading = false;
       });
     } catch (err) {
@@ -83,6 +111,33 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         );
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _addNote() async {
+    final text = _noteController.text.trim();
+    if (text.isEmpty || text.length > 1000 || _addingNote) return;
+    setState(() {
+      _addingNote = true;
+      _notesError = null;
+    });
+    try {
+      final note = await widget.api.addBookingNote(widget.bookingNumber, text);
+      if (!mounted) return;
+      setState(() {
+        _notes.add(note);
+        _noteController.clear();
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _notesError = userFacingError(
+          err,
+          fallback: context.l10n.t('admin_notes_add_failed'),
+        );
+      });
+    } finally {
+      if (mounted) setState(() => _addingNote = false);
     }
   }
 
@@ -353,6 +408,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                   children: [
                     _summaryHeader(l10n, detail!, actions),
                     const SizedBox(height: AppTokens.spaceMd),
+                    _notesSection(l10n),
+                    const SizedBox(height: AppTokens.spaceMd),
                     _responsivePair(
                       _customerSection(l10n, detail),
                       _tripSection(l10n, detail),
@@ -379,6 +436,90 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _notesSection(AppLocalizations l10n) {
+    final remaining = 1000 - _noteController.text.length;
+    final canSubmit =
+        _noteController.text.trim().isNotEmpty &&
+        _noteController.text.length <= 1000 &&
+        !_addingNote;
+    return AppUi.adminDetailSection(
+      context: context,
+      title: l10n.t('admin_notes_title'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.t('admin_notes_admin_only'),
+            style: const TextStyle(color: AppTokens.textSecondary),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          if (_notes.isEmpty)
+            Text(l10n.t('admin_notes_empty'))
+          else
+            ..._notes.map((note) {
+              final author = note['author'] as Map?;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppTokens.surfaceMuted,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppTokens.spaceSm),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${note['text'] ?? ''}'),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${author?['name'] ?? '-'} · ${note['createdAt'] ?? '-'}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTokens.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          if (_notesError != null) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(_notesError!, style: const TextStyle(color: AppTokens.error)),
+          ],
+          const SizedBox(height: AppTokens.spaceSm),
+          TextField(
+            key: const Key('admin-note-input'),
+            controller: _noteController,
+            maxLength: 1000,
+            minLines: 2,
+            maxLines: 4,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: l10n.t('admin_notes_hint'),
+              counterText: l10n
+                  .t('admin_notes_remaining')
+                  .replaceFirst('{count}', '$remaining'),
+            ),
+          ),
+          Text(
+            l10n.t('admin_notes_append_only'),
+            style: const TextStyle(fontSize: 12, color: AppTokens.textMuted),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.primaryButton(
+            label: l10n.t('admin_notes_add'),
+            icon: Icons.note_add_outlined,
+            loading: _addingNote,
+            onPressed: canSubmit ? _addNote : null,
+          ),
+        ],
+      ),
     );
   }
 

@@ -12,6 +12,8 @@ const {
   reassignDriverSchema,
   autoAssignDriverSchema,
   qrReissueSchema,
+  adminBookingNotesQuerySchema,
+  createAdminBookingNoteSchema,
 } = require('../validators/admin.validator');
 const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
@@ -36,6 +38,20 @@ router.get(
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   adminController.getBookingDetail,
+);
+
+router.get(
+  '/bookings/:bookingNumber/notes',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, query: adminBookingNotesQuerySchema }),
+  adminController.listBookingNotes,
+);
+
+router.post(
+  '/bookings/:bookingNumber/notes',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: createAdminBookingNoteSchema }),
+  adminController.createBookingNote,
 );
 
 router.post(

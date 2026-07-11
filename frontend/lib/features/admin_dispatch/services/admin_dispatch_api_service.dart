@@ -34,12 +34,17 @@ class AdminDispatchApiService {
   Future<void> login({required String email, required String password}) async {
     final response = await http.post(
       Uri.parse('$_base/auth/login'),
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
       body: jsonEncode({'email': email, 'password': password}),
     );
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400) {
-      throw AdminDispatchApiException(decoded['message'] as String? ?? 'Login failed');
+      throw AdminDispatchApiException(
+        decoded['message'] as String? ?? 'Login failed',
+      );
     }
     final data = Map<String, dynamic>.from(decoded['data'] as Map);
     final user = Map<String, dynamic>.from(data['user'] as Map);
@@ -105,10 +110,7 @@ class AdminDispatchApiService {
     int page = 1,
     int limit = 20,
   }) async {
-    final query = <String, String>{
-      'page': '$page',
-      'limit': '$limit',
-    };
+    final query = <String, String>{'page': '$page', 'limit': '$limit'};
     if (view != null && view.isNotEmpty) query['view'] = view;
     if (search != null && search.isNotEmpty) query['search'] = search;
     if (status != null && status.isNotEmpty) query['status'] = status;
@@ -144,6 +146,31 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<Map<String, dynamic>> listBookingNotes(
+    String bookingNumber, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final data = await _request(
+      'GET',
+      '/admin/bookings/$bookingNumber/notes',
+      query: {'page': '$page', 'limit': '$limit'},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> addBookingNote(
+    String bookingNumber,
+    String text,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/bookings/$bookingNumber/notes',
+      body: {'text': text},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<List<dynamic>> listDrivers() async {
     final data = await _request('GET', '/admin/drivers');
     if (data is List) return data;
@@ -151,7 +178,10 @@ class AdminDispatchApiService {
     return [];
   }
 
-  Future<Map<String, dynamic>> assignDriver(String bookingNumber, int driverId) async {
+  Future<Map<String, dynamic>> assignDriver(
+    String bookingNumber,
+    int driverId,
+  ) async {
     final data = await _request(
       'POST',
       '/admin/bookings/$bookingNumber/assign-driver',
@@ -174,7 +204,10 @@ class AdminDispatchApiService {
   }
 
   Future<Map<String, dynamic>> getDriverCandidates(String bookingNumber) async {
-    final data = await _request('GET', '/admin/bookings/$bookingNumber/driver-candidates');
+    final data = await _request(
+      'GET',
+      '/admin/bookings/$bookingNumber/driver-candidates',
+    );
     return Map<String, dynamic>.from(data as Map);
   }
 
@@ -198,7 +231,10 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> reissueQr(String bookingNumber, String type) async {
+  Future<Map<String, dynamic>> reissueQr(
+    String bookingNumber,
+    String type,
+  ) async {
     final data = await _request(
       'POST',
       '/admin/bookings/$bookingNumber/qr/reissue',

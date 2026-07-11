@@ -63,6 +63,17 @@ const qrReissueSchema = Joi.object({
   type: Joi.string().valid('BOARDING', 'DROPOFF').insensitive().required(),
 });
 
+const adminBookingNotesQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(50).optional(),
+});
+
+const createAdminBookingNoteSchema = Joi.object({
+  text: Joi.string().trim().min(1).max(1000).required(),
+  adminUserId: Joi.forbidden(),
+  admin_user_id: Joi.forbidden(),
+});
+
 module.exports = {
   adminBookingListQuerySchema,
   bookingNumberParamsSchema,
@@ -70,4 +81,6 @@ module.exports = {
   reassignDriverSchema,
   autoAssignDriverSchema,
   qrReissueSchema,
+  adminBookingNotesQuerySchema,
+  createAdminBookingNoteSchema,
 };

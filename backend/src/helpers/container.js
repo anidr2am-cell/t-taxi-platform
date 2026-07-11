@@ -58,6 +58,8 @@ const FlightSyncSchedulerService = require("../services/flightSyncScheduler.serv
 const ChatService = require("../services/chat.service");
 const DriverApplicationService = require("../services/driverApplication.service");
 const SupportInquiryService = require("../services/supportInquiry.service");
+const AdminBookingNoteRepository = require("../repositories/adminBookingNote.repository");
+const AdminBookingNoteService = require("../services/adminBookingNote.service");
 const config = require("../config/env");
 const database = require("../config/database");
 
@@ -166,6 +168,16 @@ container.register(
     ),
 );
 container.register("bookingRepository", () => new BookingRepository());
+container.register("adminBookingNoteRepository", () => new AdminBookingNoteRepository());
+container.register(
+  "adminBookingNoteService",
+  (c) =>
+    new AdminBookingNoteService(
+      database.pool,
+      c.get("adminBookingNoteRepository"),
+      c.get("bookingRepository"),
+    ),
+);
 container.register(
   "adminDashboardRepository",
   () => new AdminDashboardRepository(),
