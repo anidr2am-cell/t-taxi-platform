@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../../admin_chat/pages/admin_chat_queue_page.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../../admin_settlement/services/admin_settlement_api_service.dart';
 import '../widgets/assign_driver_dialog.dart';
@@ -313,6 +314,17 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     }
   }
 
+  Future<void> _openChat() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (chatContext) => AdminChatDetailPage(
+          bookingNumber: widget.bookingNumber,
+          onBack: () => Navigator.of(chatContext).pop(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -323,7 +335,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       appBar: AppBar(title: Text(widget.bookingNumber)),
       bottomNavigationBar: detail == null || _loading || _error != null
           ? null
-          : _actionBar(l10n, actions),
+          : _secondaryActionBar(l10n, actions),
       body: _loading
           ? AppUi.loadingState()
           : _error != null
@@ -339,36 +351,30 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _summaryHeader(l10n, detail!),
+                    _summaryHeader(l10n, detail!, actions),
                     const SizedBox(height: AppTokens.spaceMd),
-                    _basicInfoSection(l10n, detail),
+                    _responsivePair(
+                      _customerSection(l10n, detail),
+                      _tripSection(l10n, detail),
+                    ),
                     const SizedBox(height: AppTokens.spaceMd),
-                    _tripSection(l10n, detail),
+                    _responsivePair(
+                      _assignmentSection(l10n, detail),
+                      _pricingSection(l10n, detail),
+                    ),
                     const SizedBox(height: AppTokens.spaceMd),
-                    _customerSection(l10n, detail),
-                    const SizedBox(height: AppTokens.spaceMd),
-                    _assignmentSection(l10n, detail),
+                    _chatSection(l10n, detail),
                     if (detail['customerReview'] is Map) ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       _customerReviewSection(l10n, detail),
                     ],
-                    if (detail['status'] == 'SETTLEMENT_PENDING') ...[
-                      const SizedBox(height: AppTokens.spaceMd),
-                      _settlementSection(l10n),
-                    ],
-                    if (_hasFlight(detail)) ...[
-                      const SizedBox(height: AppTokens.spaceMd),
-                      _flightSection(detail),
-                    ],
-                    const SizedBox(height: AppTokens.spaceMd),
-                    _pricingSection(l10n, detail),
                     if (_statusHistory(detail).isNotEmpty) ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       _activitySection(l10n, detail),
                     ],
                     const SizedBox(height: AppTokens.spaceMd),
-                    _qrManagementSection(l10n),
-                    const SizedBox(height: 96),
+                    _technicalSection(l10n, detail),
+                    const SizedBox(height: AppTokens.spaceXl),
                   ],
                 ),
               ),
@@ -376,39 +382,15 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     );
   }
 
-  Widget? _actionBar(AppLocalizations l10n, List<String> actions) {
+  Widget? _secondaryActionBar(AppLocalizations l10n, List<String> actions) {
     final buttons = <Widget>[];
-    if (_canConfirmSettlement) {
-      buttons.add(
-        AppUi.primaryButton(
-          label: l10n.t('admin_settlement_confirm_200'),
-          icon: Icons.payments_outlined,
-          loading: _submitting,
-          onPressed: _submitting ? null : _confirmSettlement,
-        ),
-      );
-    }
     if (actions.contains('RECOMMEND_DRIVERS')) {
       buttons.add(
         AppUi.secondaryButton(
-          label: 'Recommend drivers',
+          label: l10n.t('admin_detail_recommend_drivers'),
           icon: Icons.recommend_outlined,
           onPressed: _submitting ? null : _recommendDrivers,
           fullWidth: true,
-        ),
-      );
-      buttons.add(const SizedBox(height: 8));
-    }
-    if (actions.contains('ASSIGN_DRIVER')) {
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          child: AppUi.primaryButton(
-            label: l10n.t('admin_dispatch_assign_driver'),
-            icon: Icons.person_add_alt,
-            loading: _submitting,
-            onPressed: _submitting ? null : _assign,
-          ),
         ),
       );
     }
@@ -422,52 +404,14 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         ),
       );
     }
-    if (buttons.isEmpty) return null;
-    return AppUi.adminStickyActions(actions: buttons);
+    return buttons.isEmpty ? null : AppUi.adminStickyActions(actions: buttons);
   }
 
-  Widget _settlementSection(AppLocalizations l10n) {
-    final status = _settlement?['commissionStatus'] as String? ?? '-';
-    return AppUi.adminDetailSection(
-      context: context,
-      title: l10n.t('admin_settlement_section'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppUi.summaryRow(
-            label: l10n.t('admin_settlement_status'),
-            value: status,
-          ),
-          AppUi.summaryRow(
-            label: l10n.t('admin_settlement_transfer_slip'),
-            value: _hasTransferSlip
-                ? l10n.t('admin_settlement_slip_submitted')
-                : l10n.t('admin_settlement_slip_not_submitted'),
-          ),
-          if (_settlementError != null) ...[
-            const SizedBox(height: AppTokens.spaceSm),
-            Text(
-              _settlementError!,
-              style: const TextStyle(color: AppTokens.error),
-            ),
-          ] else if (!_hasTransferSlip) ...[
-            const SizedBox(height: AppTokens.spaceSm),
-            Text(l10n.t('admin_settlement_waiting_slip')),
-          ] else ...[
-            const SizedBox(height: AppTokens.spaceSm),
-            AppUi.secondaryButton(
-              label: l10n.t('admin_settlement_view_slip'),
-              icon: Icons.receipt_long_outlined,
-              onPressed: _submitting ? null : _viewTransferSlip,
-              fullWidth: true,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryHeader(AppLocalizations l10n, Map<String, dynamic> detail) {
+  Widget _summaryHeader(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+    List<String> actions,
+  ) {
     final status = detail['status'] as String? ?? '';
     final operations = detail['operations'] is Map
         ? Map<String, dynamic>.from(detail['operations'] as Map)
@@ -475,14 +419,17 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final customerReview = detail['customerReview'] is Map
         ? Map<String, dynamic>.from(detail['customerReview'] as Map)
         : null;
-    final lowRating = customerReview?['lowRating'] == true ||
+    final lowRating =
+        customerReview?['lowRating'] == true ||
         operations?['lowRating'] == true;
     final severity = operations?['severity'] as String?;
     final reason = AdminOperationsUx.formatActionReason(l10n, operations);
+    final extraReasonCount = operations?['extraActionReasonCount'] as int? ?? 0;
     final route = Map<String, dynamic>.from(detail['route'] as Map? ?? {});
     final origin = Map<String, dynamic>.from(route['origin'] as Map? ?? {});
-    final destination =
-        Map<String, dynamic>.from(route['destination'] as Map? ?? {});
+    final destination = Map<String, dynamic>.from(
+      route['destination'] as Map? ?? {},
+    );
 
     return AppUi.surfaceCard(
       backgroundColor: AppTokens.primaryLight,
@@ -534,6 +481,12 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               ),
             ),
           ],
+          if (extraReasonCount > 0)
+            Text(
+              l10n
+                  .t('admin_detail_more_reasons')
+                  .replaceFirst('{count}', '$extraReasonCount'),
+            ),
           const SizedBox(height: AppTokens.spaceSm),
           Text(
             l10n.t('admin_ops_next_action_label'),
@@ -552,48 +505,67 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             '${origin['address'] ?? '-'} → ${destination['address'] ?? '-'}',
             style: const TextStyle(color: AppTokens.textSecondary),
           ),
+          if (_primaryAction(l10n, actions) case final action?) ...[
+            const SizedBox(height: AppTokens.spaceMd),
+            action,
+          ],
         ],
       ),
     );
   }
 
-  Widget _basicInfoSection(AppLocalizations l10n, Map<String, dynamic> detail) {
-    final serviceType = Map<String, dynamic>.from(
-      detail['serviceType'] as Map? ?? {},
-    );
-    return AppUi.adminDetailSection(
-      context: context,
-      title: 'Basic information',
-      child: Column(
-        children: [
-          AppUi.summaryRow(
-            label: l10n.t('status'),
-            value: BookingStatusDisplay.label(
-              l10n,
-              detail['status'] as String? ?? '',
-              audience: BookingStatusAudience.admin,
-            ),
-          ),
-          AppUi.summaryRow(
-            label: l10n.t('service_type'),
-            value: serviceType['name'] as String? ?? '-',
-          ),
-          AppUi.summaryRow(
-            label: l10n.t('pickup_datetime'),
-            value: detail['scheduledPickupAt'] as String? ?? '',
-          ),
-          if (detail['createdAt'] != null)
-            AppUi.summaryRow(
-              label: 'Created',
-              value: detail['createdAt'] as String,
-            ),
-          if (detail['commissionStatus'] != null)
-            AppUi.summaryRow(
-              label: 'Commission',
-              value: detail['commissionStatus'] as String,
-            ),
-        ],
-      ),
+  Widget? _primaryAction(AppLocalizations l10n, List<String> actions) {
+    final operations = _detail?['operations'] as Map?;
+    final primaryCta =
+        _detail?['primaryCta'] as String? ??
+        operations?['primaryCta'] as String?;
+    if (_canConfirmSettlement) {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_settlement_confirm_200'),
+        icon: Icons.payments_outlined,
+        loading: _submitting,
+        onPressed: _submitting ? null : _confirmSettlement,
+      );
+    }
+    if (primaryCta == 'OPEN_CHAT') {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_ops_cta_open_chat'),
+        icon: Icons.chat_bubble_outline,
+        onPressed: _openChat,
+      );
+    }
+    if (actions.contains('ASSIGN_DRIVER')) {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_dispatch_assign_driver'),
+        icon: Icons.person_add_alt,
+        loading: _submitting,
+        onPressed: _submitting ? null : _assign,
+      );
+    }
+    return null;
+  }
+
+  Widget _responsivePair(Widget first, Widget second) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 720) {
+          return Column(
+            children: [
+              first,
+              const SizedBox(height: AppTokens.spaceMd),
+              second,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: first),
+            const SizedBox(width: AppTokens.spaceMd),
+            Expanded(child: second),
+          ],
+        );
+      },
     );
   }
 
@@ -602,16 +574,19 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final origin = Map<String, dynamic>.from(route['origin'] as Map);
     final destination = Map<String, dynamic>.from(route['destination'] as Map);
     final vehicle = Map<String, dynamic>.from(detail['vehicle'] as Map? ?? {});
-    final passengers = Map<String, dynamic>.from(
-      detail['passengers'] as Map? ?? {},
-    );
-    final luggage = Map<String, dynamic>.from(detail['luggage'] as Map? ?? {});
-
     return AppUi.adminDetailSection(
       context: context,
-      title: 'Trip details',
+      title: l10n.t('admin_detail_trip'),
       child: Column(
         children: [
+          AppUi.summaryRow(
+            label: l10n.t('service_type'),
+            value: (detail['serviceType'] as Map?)?['name'] as String? ?? '-',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('pickup_datetime'),
+            value: detail['scheduledPickupAt'] as String? ?? '-',
+          ),
           AppUi.summaryRow(
             label: l10n.t('origin'),
             value: origin['address'] as String? ?? '',
@@ -624,21 +599,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             label: 'Vehicle',
             value: vehicle['typeName'] as String? ?? '-',
           ),
-          AppUi.summaryRow(
-            label: 'Passengers',
-            value:
-                '${passengers['adults'] ?? 0}A / ${passengers['children'] ?? 0}C / ${passengers['infants'] ?? 0}I',
-          ),
-          AppUi.summaryRow(
-            label: 'Luggage',
-            value:
-                '20" ${luggage['carriers20Inch'] ?? 0} · 24"+ ${luggage['carriers24InchPlus'] ?? 0} · Golf ${luggage['golfBags'] ?? 0}',
-          ),
-          if (detail['specialRequests'] != null &&
-              '${detail['specialRequests']}'.isNotEmpty)
+          if (_hasFlight(detail)) ..._flightRows(l10n, detail),
+          if (detail['createdAt'] != null)
             AppUi.summaryRow(
-              label: 'Notes',
-              value: '${detail['specialRequests']}',
+              label: l10n.t('admin_detail_created'),
+              value: '${detail['createdAt']}',
             ),
         ],
       ),
@@ -649,7 +614,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final customer = Map<String, dynamic>.from(detail['customer'] as Map);
     return AppUi.adminDetailSection(
       context: context,
-      title: 'Customer',
+      title: l10n.t('admin_detail_customer'),
       child: Column(
         children: [
           AppUi.summaryRow(
@@ -665,12 +630,24 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               label: l10n.t('email'),
               value: customer['email'] as String,
             ),
-          if (customer['messengerType'] != null)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_country'),
+            value: customer['countryCode'] as String? ?? '-',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_passengers'),
+            value:
+                '${(detail['passengers'] as Map?)?['adults'] ?? 0} / ${(detail['passengers'] as Map?)?['children'] ?? 0} / ${(detail['passengers'] as Map?)?['infants'] ?? 0}',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_luggage'),
+            value:
+                '20" ${(detail['luggage'] as Map?)?['carriers20Inch'] ?? 0} · 24"+ ${(detail['luggage'] as Map?)?['carriers24InchPlus'] ?? 0} · Golf ${(detail['luggage'] as Map?)?['golfBags'] ?? 0}',
+          ),
+          if ('${detail['specialRequests'] ?? ''}'.isNotEmpty)
             AppUi.summaryRow(
-              label: 'Messenger',
-              value:
-                  '${customer['messengerType']} ${customer['messengerId'] ?? ''}'
-                      .trim(),
+              label: l10n.t('admin_detail_special_requests'),
+              value: '${detail['specialRequests']}',
             ),
         ],
       ),
@@ -690,11 +667,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
     return AppUi.adminDetailSection(
       context: context,
-      title: l10n.t('admin_dispatch_assigned_driver'),
+      title: l10n.t('admin_detail_driver_vehicle'),
       backgroundColor: assignment == null ? AppTokens.warningLight : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            l10n.t('admin_dispatch_assigned_driver'),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
           if (assignment == null)
             AppUi.summaryRow(
               label: l10n.t('admin_dispatch_assignment'),
@@ -762,7 +744,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     value <= rating.toInt()
                         ? Icons.star_rounded
                         : Icons.star_outline_rounded,
-                    color: lowRating ? AppTokens.warning : Colors.amber.shade700,
+                    color: lowRating
+                        ? AppTokens.warning
+                        : Colors.amber.shade700,
                     size: 20,
                   );
                 }),
@@ -809,45 +793,39 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     return (flight['flightNumber'] as String?)?.isNotEmpty == true;
   }
 
-  Widget _flightSection(Map<String, dynamic> detail) {
+  List<Widget> _flightRows(AppLocalizations l10n, Map<String, dynamic> detail) {
     final flight = Map<String, dynamic>.from(detail['flight'] as Map);
-    return AppUi.adminDetailSection(
-      context: context,
-      title: 'Flight',
-      child: Column(
-        children: [
-          AppUi.summaryRow(
-            label: 'Flight',
-            value: flight['flightNumber'] as String? ?? '-',
-          ),
-          if (flight['airportIata'] != null)
-            AppUi.summaryRow(
-              label: 'Airport',
-              value: flight['airportIata'] as String,
-            ),
-          if (flight['scheduledArrivalAt'] != null)
-            AppUi.summaryRow(
-              label: 'Scheduled arrival',
-              value: flight['scheduledArrivalAt'] as String,
-            ),
-          if (flight['estimatedArrivalAt'] != null)
-            AppUi.summaryRow(
-              label: 'Estimated arrival',
-              value: flight['estimatedArrivalAt'] as String,
-            ),
-          if (flight['delayStatus'] != null)
-            AppUi.summaryRow(
-              label: 'Delay status',
-              value: flight['delayStatus'] as String,
-            ),
-          if (flight['delayMinutes'] != null)
-            AppUi.summaryRow(
-              label: 'Delay minutes',
-              value: '${flight['delayMinutes']}',
-            ),
-        ],
+    return [
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_flight'),
+        value: flight['flightNumber'] as String? ?? '-',
       ),
-    );
+      if (flight['airportIata'] != null)
+        AppUi.summaryRow(
+          label: 'Airport',
+          value: flight['airportIata'] as String,
+        ),
+      if (flight['scheduledArrivalAt'] != null)
+        AppUi.summaryRow(
+          label: 'Scheduled arrival',
+          value: flight['scheduledArrivalAt'] as String,
+        ),
+      if (flight['estimatedArrivalAt'] != null)
+        AppUi.summaryRow(
+          label: 'Estimated arrival',
+          value: flight['estimatedArrivalAt'] as String,
+        ),
+      if (flight['delayStatus'] != null)
+        AppUi.summaryRow(
+          label: 'Delay status',
+          value: flight['delayStatus'] as String,
+        ),
+      if (flight['delayMinutes'] != null)
+        AppUi.summaryRow(
+          label: 'Delay minutes',
+          value: '${flight['delayMinutes']}',
+        ),
+    ];
   }
 
   Widget _pricingSection(AppLocalizations l10n, Map<String, dynamic> detail) {
@@ -856,7 +834,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
     return AppUi.adminDetailSection(
       context: context,
-      title: 'Pricing',
+      title: l10n.t('admin_detail_pricing_settlement'),
       backgroundColor: AppTokens.accentLight,
       child: Column(
         children: [
@@ -880,6 +858,78 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               label: 'Payment status',
               value: pricing['paymentStatus'] as String,
             ),
+          if (detail['status'] == 'SETTLEMENT_PENDING') ...[
+            const Divider(height: 24),
+            Text(
+              l10n.t('admin_settlement_section'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppTokens.spaceSm),
+            _settlementSectionContent(l10n),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _settlementSectionContent(AppLocalizations l10n) {
+    final status = _settlement?['commissionStatus'] as String? ?? '-';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppUi.summaryRow(
+          label: l10n.t('admin_settlement_status'),
+          value: status,
+        ),
+        AppUi.summaryRow(
+          label: l10n.t('admin_settlement_transfer_slip'),
+          value: _hasTransferSlip
+              ? l10n.t('admin_settlement_slip_submitted')
+              : l10n.t('admin_settlement_slip_not_submitted'),
+        ),
+        if (_settlementError != null)
+          Text(
+            _settlementError!,
+            style: const TextStyle(color: AppTokens.error),
+          )
+        else if (!_hasTransferSlip)
+          Text(l10n.t('admin_settlement_waiting_slip'))
+        else
+          AppUi.secondaryButton(
+            label: l10n.t('admin_settlement_view_slip'),
+            icon: Icons.receipt_long_outlined,
+            onPressed: _submitting ? null : _viewTransferSlip,
+            fullWidth: true,
+          ),
+      ],
+    );
+  }
+
+  Widget _chatSection(AppLocalizations l10n, Map<String, dynamic> detail) {
+    final operations = detail['operations'] as Map?;
+    final unread = operations?['adminUnreadCount'] as int? ?? 0;
+    return AppUi.adminDetailSection(
+      context: context,
+      title: l10n.t('admin_detail_chat'),
+      child: Column(
+        children: [
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_customer_chat'),
+            value: unread > 0 ? '$unread' : '-',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_driver_chat'),
+            value: detail['activeAssignment'] is Map
+                ? l10n.t('admin_detail_available')
+                : '-',
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.secondaryButton(
+            label: l10n.t('admin_ops_cta_open_chat'),
+            icon: Icons.chat_bubble_outline,
+            onPressed: _openChat,
+            fullWidth: true,
+          ),
         ],
       ),
     );
@@ -895,7 +945,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final history = _statusHistory(detail);
     return AppUi.adminDetailSection(
       context: context,
-      title: 'Activity log',
+      title: l10n.t('admin_detail_status_history'),
       child: Column(
         children: history.map((entry) {
           final from = entry['fromStatus'] as String? ?? '-';
@@ -967,8 +1017,34 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     );
   }
 
-  Widget _qrManagementSection(AppLocalizations l10n) {
-    return const SizedBox.shrink();
+  Widget _technicalSection(AppLocalizations l10n, Map<String, dynamic> detail) {
+    final serviceType = detail['serviceType'] as Map?;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ExpansionTile(
+        key: const Key('admin-detail-technical'),
+        title: Text(l10n.t('admin_detail_technical')),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_booking_id'),
+            value: '${detail['id'] ?? '-'}',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_raw_status'),
+            value: '${detail['status'] ?? '-'}',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_service_code'),
+            value: '${serviceType?['code'] ?? '-'}',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_updated'),
+            value: '${detail['updatedAt'] ?? '-'}',
+          ),
+        ],
+      ),
+    );
   }
 
   String _vehicleSummary(Map<String, dynamic> vehicle) {

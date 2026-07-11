@@ -7,6 +7,7 @@ import 'package:frontend/features/admin_dispatch/pages/admin_dispatch_queue_page
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/features/admin_dispatch/widgets/recommend_drivers_dialog.dart';
 import 'package:frontend/features/admin_settlement/services/admin_settlement_api_service.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 
 class _FakeAdminApi extends AdminDispatchApiService {
   _FakeAdminApi({
@@ -300,7 +301,9 @@ void main() {
     expect(find.text('Network error'), findsOneWidget);
   });
 
-  testWidgets('summary unassigned card requests UNASSIGNED bookings', (tester) async {
+  testWidgets('summary unassigned card requests UNASSIGNED bookings', (
+    tester,
+  ) async {
     final api = _FakeAdminApi(
       token: 'token',
       bookingsResponse: {'page': 1, 'total': 0, 'items': []},
@@ -1249,5 +1252,92 @@ void main() {
     expect(find.text('Customer review'), findsOneWidget);
     expect(find.text('Late arrival'), findsOneWidget);
     expect(find.text('Driver was late and rude.'), findsOneWidget);
+  });
+
+  testWidgets('admin detail follows operations workspace section order', (
+    tester,
+  ) async {
+    final detail = {
+      ..._settlementPendingDetail(),
+      'scheduledPickupAt': '2026-07-11 09:30:00',
+      'serviceType': {'code': 'AIRPORT_TO_CITY', 'name': 'Airport transfer'},
+      'vehicle': {'typeName': 'SUV'},
+      'passengers': {'adults': 2, 'children': 0, 'infants': 0},
+      'luggage': {'carriers20Inch': 1, 'carriers24InchPlus': 0, 'golfBags': 0},
+      'operations': {'adminUnreadCount': 3},
+      'statusHistory': [
+        {
+          'fromStatus': 'PICKED_UP',
+          'toStatus': 'SETTLEMENT_PENDING',
+          'changedByRole': 'DRIVER',
+          'createdAt': '2026-07-11 12:30:00',
+        },
+      ],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: detail),
+          settlementApi: _FakeSettlementApi(
+            detail: const {'commissionStatus': 'DUE'},
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final labels = [
+      'Customer information',
+      'Trip information',
+      'Driver and vehicle',
+      'Fare and settlement',
+      'Customer and driver chat',
+      'Status history',
+      'Technical information',
+    ];
+    for (final label in labels) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Customer chat unread'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('Customer review'), findsNothing);
+    expect(find.text('Raw booking status'), findsNothing);
+  });
+
+  testWidgets(
+    'admin detail shows one primary assign CTA and no 320px overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(),
+            onChanged: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Assign driver'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  test('admin detail operation labels are localized for KO EN and TH', () {
+    expect(AppLocalizations('ko').t('admin_detail_technical'), '기술 정보');
+    expect(
+      AppLocalizations('en').t('admin_detail_technical'),
+      'Technical information',
+    );
+    expect(
+      AppLocalizations('th').t('admin_detail_technical'),
+      'ข้อมูลทางเทคนิค',
+    );
   });
 }
