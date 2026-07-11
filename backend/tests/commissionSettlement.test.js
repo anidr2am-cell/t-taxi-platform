@@ -364,6 +364,50 @@ test('reconciliation creates obligation for completed booking without event', as
   assert.equal(activateCalls, 2);
 });
 
+test('mapSettlementListItem includes trip summary fields with null-safe addresses', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      pickup_date: '2026-07-01',
+      pickup_time: '09:30:00',
+      origin_address: 'BKK Airport',
+      destination_address: 'Pattaya Hotel',
+    }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+  assert.equal(item.pickupDate, '2026-07-01');
+  assert.equal(item.pickupTime, '09:30:00');
+  assert.equal(item.origin, 'BKK Airport');
+  assert.equal(item.destination, 'Pattaya Hotel');
+  assert.equal(item.driverId, undefined);
+  assert.equal(item.driverName, undefined);
+
+  const nullItem = service.mapSettlementListItem(
+    settlementRow({
+      origin_address: null,
+      destination_address: null,
+      pickup_date: null,
+      pickup_time: null,
+    }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+  assert.equal(nullItem.origin, null);
+  assert.equal(nullItem.destination, null);
+});
+
+test('admin settlement list item keeps driver summary fields', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow(),
+    '/api/v1/admin/settlements',
+    ROLES.ADMIN,
+  );
+  assert.equal(item.driverId, 5);
+  assert.equal(item.driverName, 'Driver A');
+});
+
 test('getDriverSettlement reconciles missing obligation on access', async () => {
   let activated = false;
   const driverRepo = {

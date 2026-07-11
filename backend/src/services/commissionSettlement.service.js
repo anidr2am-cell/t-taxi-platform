@@ -169,6 +169,11 @@ class CommissionSettlementService {
     const receiptStatus = this.mapReceiptStatus(row, metadata);
     const item = {
       bookingNumber: row.booking_number,
+      status: row.status,
+      pickupDate: row.pickup_date ?? null,
+      pickupTime: row.pickup_time ?? null,
+      origin: row.origin_address ?? null,
+      destination: row.destination_address ?? null,
       completedAt: row.completed_at,
       commissionAmount: row.commission_amount != null ? Number(row.commission_amount) : null,
       currency: row.currency,
