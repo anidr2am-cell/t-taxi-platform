@@ -52,7 +52,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = userFacingError(err, fallback: context.l10n.t('ui_load_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_load_failed'),
+        );
         _loading = false;
       });
     }
@@ -82,7 +85,14 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: context.l10n.t('ui_action_failed'),
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -110,7 +120,14 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: context.l10n.t('ui_action_failed'),
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -142,8 +159,13 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       }
     } catch (err) {
       if (mounted) {
-        final message = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        final message = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
         if (message.toLowerCase().contains('conflict') ||
             message.toLowerCase().contains('already')) {
           await _load();
@@ -173,7 +195,14 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(err, fallback: context.l10n.t('ui_action_failed')))),
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: context.l10n.t('ui_action_failed'),
+              ),
+            ),
+          ),
         );
       }
     } finally {
@@ -195,7 +224,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       body: _loading
           ? AppUi.loadingState()
           : _error != null
-          ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: l10n.t('admin_dispatch_retry'))
+          ? AppUi.errorState(
+              message: _error!,
+              onRetry: _load,
+              retryLabel: l10n.t('admin_dispatch_retry'),
+            )
           : AppUi.centeredContent(
               maxWidth: 900,
               child: SingleChildScrollView(
@@ -287,7 +320,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         children: [
           Text(
             widget.bookingNumber,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTokens.primaryDark),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppTokens.primaryDark,
+            ),
           ),
           const SizedBox(height: AppTokens.spaceSm),
           Wrap(
@@ -324,7 +361,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Widget _basicInfoSection(AppLocalizations l10n, Map<String, dynamic> detail) {
-    final serviceType = Map<String, dynamic>.from(detail['serviceType'] as Map? ?? {});
+    final serviceType = Map<String, dynamic>.from(
+      detail['serviceType'] as Map? ?? {},
+    );
     return AppUi.adminDetailSection(
       context: context,
       title: 'Basic information',
@@ -337,12 +376,24 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               detail['status'] as String? ?? '',
             ),
           ),
-          AppUi.summaryRow(label: l10n.t('service_type'), value: serviceType['name'] as String? ?? '-'),
-          AppUi.summaryRow(label: l10n.t('pickup_datetime'), value: detail['scheduledPickupAt'] as String? ?? ''),
+          AppUi.summaryRow(
+            label: l10n.t('service_type'),
+            value: serviceType['name'] as String? ?? '-',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('pickup_datetime'),
+            value: detail['scheduledPickupAt'] as String? ?? '',
+          ),
           if (detail['createdAt'] != null)
-            AppUi.summaryRow(label: 'Created', value: detail['createdAt'] as String),
+            AppUi.summaryRow(
+              label: 'Created',
+              value: detail['createdAt'] as String,
+            ),
           if (detail['commissionStatus'] != null)
-            AppUi.summaryRow(label: 'Commission', value: detail['commissionStatus'] as String),
+            AppUi.summaryRow(
+              label: 'Commission',
+              value: detail['commissionStatus'] as String,
+            ),
         ],
       ),
     );
@@ -353,7 +404,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final origin = Map<String, dynamic>.from(route['origin'] as Map);
     final destination = Map<String, dynamic>.from(route['destination'] as Map);
     final vehicle = Map<String, dynamic>.from(detail['vehicle'] as Map? ?? {});
-    final passengers = Map<String, dynamic>.from(detail['passengers'] as Map? ?? {});
+    final passengers = Map<String, dynamic>.from(
+      detail['passengers'] as Map? ?? {},
+    );
     final luggage = Map<String, dynamic>.from(detail['luggage'] as Map? ?? {});
 
     return AppUi.adminDetailSection(
@@ -361,19 +414,34 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       title: 'Trip details',
       child: Column(
         children: [
-          AppUi.summaryRow(label: l10n.t('origin'), value: origin['address'] as String? ?? ''),
-          AppUi.summaryRow(label: l10n.t('destination'), value: destination['address'] as String? ?? ''),
-          AppUi.summaryRow(label: 'Vehicle', value: vehicle['typeName'] as String? ?? '-'),
+          AppUi.summaryRow(
+            label: l10n.t('origin'),
+            value: origin['address'] as String? ?? '',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('destination'),
+            value: destination['address'] as String? ?? '',
+          ),
+          AppUi.summaryRow(
+            label: 'Vehicle',
+            value: vehicle['typeName'] as String? ?? '-',
+          ),
           AppUi.summaryRow(
             label: 'Passengers',
-            value: '${passengers['adults'] ?? 0}A / ${passengers['children'] ?? 0}C / ${passengers['infants'] ?? 0}I',
+            value:
+                '${passengers['adults'] ?? 0}A / ${passengers['children'] ?? 0}C / ${passengers['infants'] ?? 0}I',
           ),
           AppUi.summaryRow(
             label: 'Luggage',
-            value: '20" ${luggage['carriers20Inch'] ?? 0} · 24"+ ${luggage['carriers24InchPlus'] ?? 0} · Golf ${luggage['golfBags'] ?? 0}',
+            value:
+                '20" ${luggage['carriers20Inch'] ?? 0} · 24"+ ${luggage['carriers24InchPlus'] ?? 0} · Golf ${luggage['golfBags'] ?? 0}',
           ),
-          if (detail['specialRequests'] != null && '${detail['specialRequests']}'.isNotEmpty)
-            AppUi.summaryRow(label: 'Notes', value: '${detail['specialRequests']}'),
+          if (detail['specialRequests'] != null &&
+              '${detail['specialRequests']}'.isNotEmpty)
+            AppUi.summaryRow(
+              label: 'Notes',
+              value: '${detail['specialRequests']}',
+            ),
         ],
       ),
     );
@@ -386,18 +454,35 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       title: 'Customer',
       child: Column(
         children: [
-          AppUi.summaryRow(label: l10n.t('name'), value: customer['name'] as String? ?? ''),
-          AppUi.summaryRow(label: l10n.t('phone'), value: customer['phone'] as String? ?? ''),
+          AppUi.summaryRow(
+            label: l10n.t('name'),
+            value: customer['name'] as String? ?? '',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('phone'),
+            value: customer['phone'] as String? ?? '',
+          ),
           if (customer['email'] != null)
-            AppUi.summaryRow(label: l10n.t('email'), value: customer['email'] as String),
+            AppUi.summaryRow(
+              label: l10n.t('email'),
+              value: customer['email'] as String,
+            ),
           if (customer['messengerType'] != null)
-            AppUi.summaryRow(label: 'Messenger', value: '${customer['messengerType']} ${customer['messengerId'] ?? ''}'.trim()),
+            AppUi.summaryRow(
+              label: 'Messenger',
+              value:
+                  '${customer['messengerType']} ${customer['messengerId'] ?? ''}'
+                      .trim(),
+            ),
         ],
       ),
     );
   }
 
-  Widget _assignmentSection(AppLocalizations l10n, Map<String, dynamic> detail) {
+  Widget _assignmentSection(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+  ) {
     final assignment = detail['activeAssignment'] is Map
         ? Map<String, dynamic>.from(detail['activeAssignment'] as Map)
         : null;
@@ -418,12 +503,25 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               value: l10n.t('admin_dispatch_unassigned'),
             )
           else ...[
-            AppUi.summaryRow(label: l10n.t('name'), value: assignment['driverDisplayName'] as String? ?? ''),
+            AppUi.summaryRow(
+              label: l10n.t('name'),
+              value: assignment['driverDisplayName'] as String? ?? '',
+            ),
             if (assignment['driverStatus'] != null)
-              AppUi.summaryRow(label: l10n.t('status'), value: assignment['driverStatus'] as String),
-            if (vehicle != null) AppUi.summaryRow(label: 'Vehicle', value: _vehicleSummary(vehicle)),
+              AppUi.summaryRow(
+                label: l10n.t('status'),
+                value: assignment['driverStatus'] as String,
+              ),
+            if (vehicle != null)
+              AppUi.summaryRow(
+                label: 'Vehicle',
+                value: _vehicleSummary(vehicle),
+              ),
             if (assignment['assignedAt'] != null)
-              AppUi.summaryRow(label: 'Assigned at', value: assignment['assignedAt'] as String),
+              AppUi.summaryRow(
+                label: 'Assigned at',
+                value: assignment['assignedAt'] as String,
+              ),
             AppUi.summaryRow(
               label: l10n.t('admin_dispatch_assignment'),
               value: assignment['status'] as String? ?? '',
@@ -447,17 +545,35 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       title: 'Flight',
       child: Column(
         children: [
-          AppUi.summaryRow(label: 'Flight', value: flight['flightNumber'] as String? ?? '-'),
+          AppUi.summaryRow(
+            label: 'Flight',
+            value: flight['flightNumber'] as String? ?? '-',
+          ),
           if (flight['airportIata'] != null)
-            AppUi.summaryRow(label: 'Airport', value: flight['airportIata'] as String),
+            AppUi.summaryRow(
+              label: 'Airport',
+              value: flight['airportIata'] as String,
+            ),
           if (flight['scheduledArrivalAt'] != null)
-            AppUi.summaryRow(label: 'Scheduled arrival', value: flight['scheduledArrivalAt'] as String),
+            AppUi.summaryRow(
+              label: 'Scheduled arrival',
+              value: flight['scheduledArrivalAt'] as String,
+            ),
           if (flight['estimatedArrivalAt'] != null)
-            AppUi.summaryRow(label: 'Estimated arrival', value: flight['estimatedArrivalAt'] as String),
+            AppUi.summaryRow(
+              label: 'Estimated arrival',
+              value: flight['estimatedArrivalAt'] as String,
+            ),
           if (flight['delayStatus'] != null)
-            AppUi.summaryRow(label: 'Delay status', value: flight['delayStatus'] as String),
+            AppUi.summaryRow(
+              label: 'Delay status',
+              value: flight['delayStatus'] as String,
+            ),
           if (flight['delayMinutes'] != null)
-            AppUi.summaryRow(label: 'Delay minutes', value: '${flight['delayMinutes']}'),
+            AppUi.summaryRow(
+              label: 'Delay minutes',
+              value: '${flight['delayMinutes']}',
+            ),
         ],
       ),
     );
@@ -489,7 +605,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             value: pricing['paymentMethod'] as String? ?? '',
           ),
           if (pricing['paymentStatus'] != null)
-            AppUi.summaryRow(label: 'Payment status', value: pricing['paymentStatus'] as String),
+            AppUi.summaryRow(
+              label: 'Payment status',
+              value: pricing['paymentStatus'] as String,
+            ),
         ],
       ),
     );
@@ -515,9 +634,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           final fromLabel = from == '-'
               ? from
               : BookingStatusDisplay.label(l10n, from);
-          final toLabel = to == '-'
-              ? to
-              : BookingStatusDisplay.label(l10n, to);
+          final toLabel = to == '-' ? to : BookingStatusDisplay.label(l10n, to);
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -534,11 +651,26 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       if (when.isNotEmpty)
-                        Text(when, style: const TextStyle(color: AppTokens.textSecondary, fontSize: 12)),
+                        Text(
+                          when,
+                          style: const TextStyle(
+                            color: AppTokens.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
                       if (role.isNotEmpty)
-                        Text(role, style: const TextStyle(color: AppTokens.textMuted, fontSize: 12)),
+                        Text(
+                          role,
+                          style: const TextStyle(
+                            color: AppTokens.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
                       if (entry['reason'] != null)
-                        Text('${entry['reason']}', style: const TextStyle(fontSize: 13)),
+                        Text(
+                          '${entry['reason']}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
                     ],
                   ),
                 ),
@@ -559,7 +691,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     if (tools == null) return const SizedBox.shrink();
 
     final enabled = tools['qrReissueEnabled'] == true;
-    final disabledReason = tools['disabledReason'] as String?;
     final boarding = Map<String, dynamic>.from(tools['boarding'] as Map? ?? {});
     final dropoff = Map<String, dynamic>.from(tools['dropoff'] as Map? ?? {});
 
@@ -568,7 +699,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       title: l10n.t('admin_qr_management_title'),
       subtitle: enabled
           ? l10n.t('admin_qr_management_help')
-          : (disabledReason ?? l10n.t('admin_qr_management_disabled_help')),
+          : l10n.t('admin_qr_management_disabled_help'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -583,7 +714,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             else if (boarding['unavailableReason'] != null)
               Text(
                 boarding['unavailableReason'] as String,
-                style: const TextStyle(color: AppTokens.textSecondary, fontSize: 12),
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             if (dropoff['reissueAvailable'] == true) ...[
               const SizedBox(height: 8),
@@ -597,7 +731,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               const SizedBox(height: 8),
               Text(
                 dropoff['unavailableReason'] as String,
-                style: const TextStyle(color: AppTokens.textSecondary, fontSize: 12),
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
           ],
@@ -615,7 +752,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   String _chargeLabel(dynamic raw) {
-    return Map<String, dynamic>.from(raw as Map)['description'] as String? ?? 'Charge';
+    return Map<String, dynamic>.from(raw as Map)['description'] as String? ??
+        'Charge';
   }
 
   num? _chargeAmount(dynamic raw) {

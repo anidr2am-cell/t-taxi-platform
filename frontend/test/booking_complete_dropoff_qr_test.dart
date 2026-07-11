@@ -14,24 +14,19 @@ class _FakeBookingChatApi extends BookingChatApi {
     required String bookingNumber,
     String? guestAccessToken,
     String? customerAccessToken,
-  }) async =>
-      {'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0};
+  }) async => {'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0};
 
   @override
   Future<List<dynamic>> listMessages({
     required String bookingNumber,
     String? guestAccessToken,
     String? customerAccessToken,
-  }) async =>
-      [];
+  }) async => [];
 }
 
 class _FakeChatSocketService extends ChatSocketService {
   @override
-  io.Socket connect({
-    String? accessToken,
-    String? guestAccessToken,
-  }) {
+  io.Socket connect({String? accessToken, String? guestAccessToken}) {
     debugSetConnectionState(ChatConnectionState.connected);
     return io.io(
       'http://localhost:0',
@@ -54,7 +49,13 @@ void main() {
     await tester.pumpWidget(_wrap(_page()));
 
     expect(find.text('Boarding QR'), findsOneWidget);
-    expect(find.text('Dropoff QR'), findsNothing);
+    expect(
+      find.text(
+        'Show this QR code to your driver when boarding. Once the driver scans it, your ride status will change to boarded.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Ride completion QR'), findsNothing);
   });
 
   testWidgets('dropoff QR is unavailable before PICKED_UP', (tester) async {
@@ -74,7 +75,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Boarding QR'), findsOneWidget);
-    expect(find.text('Dropoff QR'), findsNothing);
+    expect(find.text('Ride completion QR'), findsNothing);
     expect(
       find.text(
         'Dropoff QR is available after pickup and before trip completion.',
@@ -101,9 +102,11 @@ void main() {
     await tester.tap(find.text('Refresh dropoff QR'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Dropoff QR'), findsOneWidget);
+    expect(find.text('Ride completion QR'), findsOneWidget);
     expect(
-      find.text('Show this QR to your driver at destination.'),
+      find.text(
+        'Show this QR code to your driver again when getting off. Once the driver scans it, your ride will be marked as completed.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Issue new dropoff QR'), findsOneWidget);
@@ -136,12 +139,21 @@ void main() {
     await _scrollToText(tester, 'Refresh dropoff QR');
     await tester.tap(find.text('Refresh dropoff QR'));
     await tester.pumpAndSettle();
-    expect(find.text('Temporary issue failed'), findsOneWidget);
+    expect(
+      find.text(
+        'We couldn’t load the QR code. Please check the booking status or contact admin.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Set ALLOW_DEV_QR_REISSUE=true on the backend and restart'),
+      findsNothing,
+    );
 
     await _scrollToText(tester, 'Refresh dropoff QR');
     await tester.tap(find.text('Refresh dropoff QR'));
     await tester.pumpAndSettle();
-    expect(find.text('Dropoff QR'), findsOneWidget);
+    expect(find.text('Ride completion QR'), findsOneWidget);
   });
 
   testWidgets('completed state hides active QR', (tester) async {
@@ -149,7 +161,7 @@ void main() {
 
     expect(find.text('Trip completed'), findsOneWidget);
     expect(find.text('Boarding QR'), findsNothing);
-    expect(find.text('Dropoff QR'), findsNothing);
+    expect(find.text('Ride completion QR'), findsNothing);
     expect(find.text('Refresh dropoff QR'), findsNothing);
   });
 }

@@ -307,7 +307,8 @@ class AppLocalizations {
       'additional_requests': 'Additional Requests',
       'country_code_hint': 'TH, US, KR…',
       'boarding_qr_title': 'Boarding QR',
-      'boarding_qr_hint': 'Show this QR to your driver at pickup.',
+      'boarding_qr_hint':
+          'Show this QR code to your driver when boarding. Once the driver scans it, your ride status will change to boarded.',
       'booking_trust_message':
           'Your booking has been received. Please show your boarding QR to the driver when you get in.',
       'chat_after_driver_assignment': 'Chat available after driver assignment',
@@ -621,10 +622,13 @@ class AppLocalizations {
       'admin_flight_sync_unavailable':
           'Automatic flight sync status unavailable',
       'booking_trip_completed': 'Trip completed',
-      'booking_dropoff_qr_title': 'Dropoff QR',
-      'booking_dropoff_qr_hint': 'Show this QR to your driver at destination.',
+      'booking_dropoff_qr_title': 'Ride completion QR',
+      'booking_dropoff_qr_hint':
+          'Show this QR code to your driver again when getting off. Once the driver scans it, your ride will be marked as completed.',
       'booking_dropoff_qr_unavailable':
           'Dropoff QR is available after pickup and before trip completion.',
+      'booking_qr_load_failed':
+          'We couldn’t load the QR code. Please check the booking status or contact admin.',
       'booking_refresh_dropoff_qr': 'Refresh dropoff QR',
       'booking_issue_new_dropoff_qr': 'Issue new dropoff QR',
       'booking_chat_title': 'Booking chat',
@@ -920,7 +924,8 @@ class AppLocalizations {
       'additional_requests': '추가 요청',
       'country_code_hint': 'TH, US, KR…',
       'boarding_qr_title': '탑승 QR',
-      'boarding_qr_hint': '픽업 시 기사에게 이 QR을 보여주세요.',
+      'boarding_qr_hint':
+          '탑승 시 QR 코드를 기사님에게 보여주세요. 기사님이 QR 코드를 스캔하면 탑승 완료로 상태가 변경됩니다.',
       'booking_trust_message': '예약이 접수되었습니다. 탑승 시 기사에게 탑승 QR을 보여주세요.',
       'chat_after_driver_assignment': '기사 배정 후 채팅 가능',
       'airport_meeting_semantics': 'BKK 공항 미팅 안내, {gate}번 게이트',
@@ -1206,9 +1211,12 @@ class AppLocalizations {
       'admin_flight_provider_missing': '항공편 제공자가 설정되지 않았습니다',
       'admin_flight_sync_unavailable': '자동 항공편 동기화 상태를 불러올 수 없습니다',
       'booking_trip_completed': '운행 완료',
-      'booking_dropoff_qr_title': '하차 QR',
-      'booking_dropoff_qr_hint': '목적지에서 기사에게 이 QR을 보여주세요.',
+      'booking_dropoff_qr_title': '운행 완료 QR',
+      'booking_dropoff_qr_hint':
+          '하차 시 QR 코드를 기사님에게 한 번 더 보여주세요. 기사님이 QR 코드를 스캔하면 운행 종료로 전환됩니다.',
       'booking_dropoff_qr_unavailable': '하차 QR은 승차 후·운행 완료 전에 이용할 수 있습니다.',
+      'booking_qr_load_failed':
+          'QR 코드를 불러올 수 없습니다. 예약 상태를 확인하거나 관리자에게 문의해 주세요.',
       'booking_refresh_dropoff_qr': '하차 QR 새로고침',
       'booking_issue_new_dropoff_qr': '새 하차 QR 발급',
       'booking_chat_title': '예약 채팅',
@@ -1415,7 +1423,7 @@ class AppLocalizations {
       'additional_requests': '附加要求',
       'country_code_hint': 'TH、US、KR…',
       'boarding_qr_title': '登车 QR',
-      'boarding_qr_hint': '上车时请向司机出示此 QR。',
+      'boarding_qr_hint': '上车时请向司机出示此 QR 码。司机扫码后，行程状态将变更为已上车。',
       'booking_trust_message': '您的预订已收到。上车时请向司机出示登车 QR。',
       'chat_after_driver_assignment': '司机分配后可聊天',
       'airport_meeting_semantics': 'BKK 机场接机指南，{gate} 号门',
@@ -1494,9 +1502,10 @@ class AppLocalizations {
       'guest_lookup_boarding_qr_security': '登车 QR 在创建预订时签发，出于安全原因无法在此恢复。',
       'guest_lookup_booking_number_hint': 'TX202607010001',
       'booking_trip_completed': '行程已完成',
-      'booking_dropoff_qr_title': '下车 QR',
-      'booking_dropoff_qr_hint': '到达目的地时请向司机出示此 QR。',
+      'booking_dropoff_qr_title': '行程完成 QR',
+      'booking_dropoff_qr_hint': '下车时请再次向司机出示此 QR 码。司机扫码后，行程将标记为已完成。',
       'booking_dropoff_qr_unavailable': '下车 QR 在上车后、行程完成前可用。',
+      'booking_qr_load_failed': '无法加载 QR 码。请检查预订状态或联系管理员。',
       'booking_refresh_dropoff_qr': '刷新下车 QR',
       'booking_issue_new_dropoff_qr': '签发新下车 QR',
       'booking_chat_title': '预订聊天',
@@ -1760,7 +1769,7 @@ class AppLocalizations {
       'additional_requests': '追加リクエスト',
       'country_code_hint': 'TH、US、KR…',
       'boarding_qr_title': '乗車 QR',
-      'boarding_qr_hint': 'ピックアップ時にドライバーへこの QR を提示してください。',
+      'boarding_qr_hint': '乗車時にこの QR コードをドライバーへ提示してください。スキャン後、乗車済みの状態に変わります。',
       'booking_trust_message': '予約を受け付けました。乗車時にドライバーへ乗車 QR を提示してください。',
       'chat_after_driver_assignment': 'ドライバー割当後にチャット可能',
       'airport_meeting_semantics': 'BKK空港ミーティング案内、ゲート{gate}',
@@ -1844,9 +1853,11 @@ class AppLocalizations {
           '乗車 QR は予約作成時に発行され、セキュリティ上ここでは復元できません。',
       'guest_lookup_booking_number_hint': 'TX202607010001',
       'booking_trip_completed': '行程完了',
-      'booking_dropoff_qr_title': '降車 QR',
-      'booking_dropoff_qr_hint': '到着地でドライバーにこの QR を提示してください。',
+      'booking_dropoff_qr_title': '運行完了 QR',
+      'booking_dropoff_qr_hint':
+          '降車時にこの QR コードをもう一度ドライバーへ提示してください。スキャン後、運行完了になります。',
       'booking_dropoff_qr_unavailable': '降車 QR は乗車後〜行程完了前に利用できます。',
+      'booking_qr_load_failed': 'QR コードを読み込めませんでした。予約状況を確認するか、管理者にお問い合わせください。',
       'booking_refresh_dropoff_qr': '降車 QR を更新',
       'booking_issue_new_dropoff_qr': '新しい降車 QR を発行',
       'booking_chat_title': '予約チャット',
@@ -2124,8 +2135,9 @@ class AppLocalizations {
       'messenger_type_hint': 'LINE, WhatsApp ฯลฯ',
       'additional_requests': 'คำขอเพิ่มเติม',
       'country_code_hint': 'TH, US, KR…',
-      'boarding_qr_title': 'QR ขึ้นรถ',
-      'boarding_qr_hint': 'แสดง QR นี้ให้คนขับเมื่อขึ้นรถ',
+      'boarding_qr_title': 'QR สำหรับขึ้นรถ',
+      'boarding_qr_hint':
+          'แสดง QR นี้ให้คนขับสแกนตอนขึ้นรถ เมื่อคนขับสแกนแล้ว สถานะจะเปลี่ยนเป็นขึ้นรถเรียบร้อย',
       'booking_trust_message':
           'ได้รับการจองแล้ว กรุณาแสดง QR ขึ้นรถให้คนขับเมื่อขึ้นรถ',
       'chat_after_driver_assignment': 'แชทได้หลังมอบหมายคนขับ',
@@ -2222,10 +2234,13 @@ class AppLocalizations {
           'QR ขึ้นรถออกเมื่อสร้างการจอง ไม่สามารถกู้คืนจากหน้าค้นหาได้',
       'guest_lookup_booking_number_hint': 'TX202607010001',
       'booking_trip_completed': 'ทริปเสร็จสิ้น',
-      'booking_dropoff_qr_title': 'QR ลงรถ',
-      'booking_dropoff_qr_hint': 'แสดง QR นี้ให้คนขับเมื่อถึงปลายทาง',
+      'booking_dropoff_qr_title': 'QR สำหรับจบการเดินทาง',
+      'booking_dropoff_qr_hint':
+          'ตอนลงรถ กรุณาแสดง QR นี้ให้คนขับสแกนอีกครั้ง เมื่อสแกนแล้ว ระบบจะเปลี่ยนสถานะเป็นสิ้นสุดการเดินทาง',
       'booking_dropoff_qr_unavailable':
           'QR ลงรถใช้ได้หลังขึ้นรถและก่อนทริปเสร็จ',
+      'booking_qr_load_failed':
+          'ไม่สามารถโหลด QR ได้ กรุณาตรวจสอบสถานะการจองหรือติดต่อแอดมิน',
       'booking_refresh_dropoff_qr': 'รีเฟรช QR ลงรถ',
       'booking_issue_new_dropoff_qr': 'ออก QR ลงรถใหม่',
       'booking_chat_title': 'แชทการจอง',

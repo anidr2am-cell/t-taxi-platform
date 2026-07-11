@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
-import '../../../utils/user_facing_error.dart';
 import '../../../utils/clipboard_writer.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_complete_review.dart';
@@ -167,19 +166,13 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
         _dropoffQrToken = null;
         _dropoffQrError = err.errorCode == 'INVALID_STATUS_TRANSITION'
             ? context.l10n.t('booking_dropoff_qr_unavailable')
-            : userFacingError(
-                err,
-                fallback: context.l10n.t('ui_action_failed'),
-              );
+            : context.l10n.t('booking_qr_load_failed');
       });
     } catch (err) {
       if (!mounted) return;
       setState(() {
         _loadingDropoffQr = false;
-        _dropoffQrError = userFacingError(
-          err,
-          fallback: context.l10n.t('ui_action_failed'),
-        );
+        _dropoffQrError = context.l10n.t('booking_qr_load_failed');
       });
     }
   }

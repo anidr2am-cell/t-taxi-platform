@@ -147,6 +147,29 @@ void main() {
     expect(find.text('TX202607010001'), findsOneWidget);
   });
 
+  testWidgets('active job session card opens existing booking detail', (
+    tester,
+  ) async {
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      hasActiveJob: true,
+      jobs: DriverJobsToday(
+        date: '2026-07-01',
+        items: [_booking(status: 'DRIVER_ASSIGNED', number: 'TX202607010099')],
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.chevron_right), findsWidgets);
+    await tester.tap(find.text('TX202607010099').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
+    expect(find.text('TX202607010099'), findsWidgets);
+  });
+
   testWidgets('jobs empty state', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -398,7 +421,7 @@ class _FakeLoginApi extends DriverApiService {
       const DriverJobsToday(date: '2026-07-01', items: []);
 
   @override
-  Future<DriverStatus> getStatus() async => const DriverStatus(
+  Future<DriverStatus> getStatus() async => DriverStatus(
     driverId: 7,
     active: true,
     online: false,
@@ -408,11 +431,16 @@ class _FakeLoginApi extends DriverApiService {
 }
 
 class _FakeJobsApi extends DriverApiService {
-  _FakeJobsApi({this.jobs, this.error, String? initialToken})
-    : _token = initialToken;
+  _FakeJobsApi({
+    this.jobs,
+    this.error,
+    this.hasActiveJob = false,
+    String? initialToken,
+  }) : _token = initialToken;
 
   DriverJobsToday? jobs;
   final Object? error;
+  final bool hasActiveJob;
   final String? _token;
   int todayCalls = 0;
   int startRouteCalls = 0;
@@ -450,12 +478,19 @@ class _FakeJobsApi extends DriverApiService {
   }
 
   @override
-  Future<DriverStatus> getStatus() async => const DriverStatus(
+  Future<DriverBooking> getBookingDetail(String bookingNumber) async {
+    return jobs!.items.firstWhere(
+      (booking) => booking.bookingNumber == bookingNumber,
+    );
+  }
+
+  @override
+  Future<DriverStatus> getStatus() async => DriverStatus(
     driverId: 7,
     active: true,
     online: false,
     status: 'OFFLINE',
-    hasActiveJob: false,
+    hasActiveJob: hasActiveJob,
   );
 }
 

@@ -9,6 +9,7 @@ import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 import '../services/driver_api_service.dart';
+import 'driver_booking_detail_page.dart';
 import 'driver_jobs_page.dart';
 import 'driver_notifications_page.dart';
 import 'driver_profile_page.dart';
@@ -47,14 +48,28 @@ class _DriverShellPageState extends State<DriverShellPage> {
   void _refreshSession() {
     setState(() {
       _statusFuture = _api.getStatus().then((status) {
-        if (status.hasActiveJob) {
-          _activeJobFuture = _loadActiveJob();
-        } else {
-          _activeJobFuture = Future.value(null);
+        if (mounted) {
+          setState(() {
+            _activeJobFuture = status.hasActiveJob
+                ? _loadActiveJob()
+                : Future.value(null);
+          });
         }
         return status;
       });
     });
+  }
+
+  void _openActiveJob(DriverBooking booking) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DriverBookingDetailPage(
+          bookingNumber: booking.bookingNumber,
+          api: _api,
+        ),
+      ),
+    ).then((_) => _refreshSession());
   }
 
   Future<DriverBooking?> _loadActiveJob() async {
@@ -88,6 +103,7 @@ class _DriverShellPageState extends State<DriverShellPage> {
             statusFuture: _statusFuture,
             activeJobFuture: _activeJobFuture,
             onRefresh: _refreshSession,
+            onOpenJob: _openActiveJob,
           ),
           Expanded(child: pages[_index]),
         ],
@@ -130,11 +146,13 @@ class _DriverSessionBar extends StatelessWidget {
     required this.statusFuture,
     required this.activeJobFuture,
     required this.onRefresh,
+    required this.onOpenJob,
   });
 
   final Future<DriverStatus>? statusFuture;
   final Future<DriverBooking?>? activeJobFuture;
   final VoidCallback onRefresh;
+  final ValueChanged<DriverBooking> onOpenJob;
 
   @override
   Widget build(BuildContext context) {
@@ -259,6 +277,7 @@ class _DriverSessionBar extends StatelessWidget {
                         }
                         final nextKey = DriverUx.nextActionKey(job);
                         return AppUi.surfaceCard(
+                          onTap: () => onOpenJob(job),
                           backgroundColor: AppTokens.infoLight,
                           padding: const EdgeInsets.all(AppTokens.spaceMd),
                           child: Column(
@@ -288,6 +307,11 @@ class _DriverSessionBar extends StatelessWidget {
                                     tone: AppUi.toneForBookingStatus(
                                       job.status,
                                     ),
+                                  ),
+                                  const SizedBox(width: AppTokens.spaceSm),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    color: AppTokens.info,
                                   ),
                                 ],
                               ),

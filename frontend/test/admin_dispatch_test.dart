@@ -815,7 +815,7 @@ void main() {
     expect(find.text('Reissue boarding QR'), findsOneWidget);
   });
 
-  testWidgets('shows QR management section when reissue disabled', (
+  testWidgets('hides internal QR configuration when reissue disabled', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -865,6 +865,10 @@ void main() {
     expect(find.text('Reissue boarding QR'), findsNothing);
     expect(
       find.text('Set ALLOW_DEV_QR_REISSUE=true on the backend and restart'),
+      findsNothing,
+    );
+    expect(
+      find.text('QR reissue is not available in this environment.'),
       findsOneWidget,
     );
   });
@@ -921,7 +925,9 @@ void main() {
     expect(find.text('dev-boarding-token'), findsOneWidget);
   });
 
-  testWidgets('dispatch queue has no horizontal overflow at 360px', (tester) async {
+  testWidgets('dispatch queue has no horizontal overflow at 360px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -941,8 +947,10 @@ void main() {
                   'status': 'CONFIRMED',
                   'serviceTypeName': 'Airport Pickup',
                   'scheduledPickupAt': '2026-07-01T09:30:00+07:00',
-                  'originAddress': 'Suvarnabhumi Airport Terminal 1 International Arrivals',
-                  'destinationAddress': 'Pattaya Beach Road Hotel Resort Thailand',
+                  'originAddress':
+                      'Suvarnabhumi Airport Terminal 1 International Arrivals',
+                  'destinationAddress':
+                      'Pattaya Beach Road Hotel Resort Thailand',
                   'assignmentState': 'UNASSIGNED',
                 },
               ],
