@@ -111,7 +111,10 @@ void main() {
     expect(find.text('Customer onboard'), findsOneWidget);
     expect(find.text('Boarding QR'), findsNothing);
     expect(find.text('Issue dropoff QR'), findsNothing);
-    expect(find.text('You are on the way to your destination.'), findsOneWidget);
+    expect(
+      find.text('You are on the way to your destination.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('lookup page refresh updates status', (tester) async {
@@ -138,9 +141,7 @@ void main() {
     expect(service.refreshCount, 1);
   });
 
-  testWidgets('lookup page does not show or issue boarding QR', (
-    tester,
-  ) async {
+  testWidgets('lookup page does not show or issue boarding QR', (tester) async {
     final json = _lookupJson();
     json['status'] = 'DRIVER_ARRIVED';
     json['capabilities'] = {
@@ -185,9 +186,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: GuestBookingLookupPage(lookupService: lookupService),
-      ),
+      MaterialApp(home: GuestBookingLookupPage(lookupService: lookupService)),
     );
     await tester.pumpAndSettle();
 
@@ -390,10 +389,9 @@ void main() {
     expect(result.canReview, isTrue);
   });
 
-  testWidgets('completed booking with canReview shows review form', (tester) async {
+  test('fromJson falls back to reviewAvailable when canReview is absent', () {
     final json = _lookupJson();
     json['status'] = 'COMPLETED';
-    json['canReview'] = true;
     json['capabilities'] = {
       'chatAvailable': false,
       'notificationsAvailable': true,
@@ -403,22 +401,124 @@ void main() {
       'boardingQrPreviouslyIssued': false,
     };
     final result = GuestBookingLookupResult.fromJson(json);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: GuestBookingLookupPage(
-          lookupService: _FakeLookupService(cached: result),
-          enableCustomerTools: false,
-          reviewApi: _FakeLookupReviewApi(),
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.text('How was your ride?'), findsOneWidget);
-    expect(find.text('Submit rating'), findsOneWidget);
+    expect(result.canReview, isTrue);
   });
+
+  testWidgets(
+    'completed booking with canReview shows review form from lookup review state',
+    (tester) async {
+      final json = _lookupJson();
+      json['status'] = 'COMPLETED';
+      json['canReview'] = true;
+      json['capabilities'] = {
+        'chatAvailable': false,
+        'notificationsAvailable': true,
+        'dropoffQrIssueAvailable': false,
+        'reviewAvailable': true,
+        'boardingQrRecoverable': false,
+        'boardingQrPreviouslyIssued': false,
+      };
+      json['review'] = {
+        'eligible': true,
+        'submitted': false,
+        'rating': null,
+        'tags': [],
+        'comment': null,
+        'createdAt': null,
+      };
+      final result = GuestBookingLookupResult.fromJson(json);
+      final reviewApi = _FailingGetReviewApi();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(cached: result),
+            enableCustomerTools: false,
+            reviewApi: reviewApi,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('How was your ride?'), findsOneWidget);
+      expect(find.text('Submit rating'), findsOneWidget);
+      expect(reviewApi.getCalls, 0);
+    },
+  );
+
+  testWidgets(
+    'completed booking with canReview and null review still shows review form',
+    (tester) async {
+      final json = _lookupJson();
+      json['status'] = 'COMPLETED';
+      json['canReview'] = true;
+      json['capabilities'] = {
+        'chatAvailable': false,
+        'notificationsAvailable': true,
+        'dropoffQrIssueAvailable': false,
+        'reviewAvailable': true,
+        'boardingQrRecoverable': false,
+        'boardingQrPreviouslyIssued': false,
+      };
+      final result = GuestBookingLookupResult.fromJson(json);
+      final reviewApi = _FailingGetReviewApi();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(cached: result),
+            enableCustomerTools: false,
+            reviewApi: reviewApi,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('How was your ride?'), findsOneWidget);
+      expect(find.text('Submit rating'), findsOneWidget);
+      expect(reviewApi.getCalls, 0);
+    },
+  );
+
+  testWidgets(
+    'canReview true with submitted review shows thank you card first',
+    (tester) async {
+      final json = _lookupJson();
+      json['status'] = 'COMPLETED';
+      json['canReview'] = true;
+      json['capabilities'] = {
+        'chatAvailable': false,
+        'notificationsAvailable': true,
+        'dropoffQrIssueAvailable': false,
+        'reviewAvailable': true,
+        'boardingQrRecoverable': false,
+        'boardingQrPreviouslyIssued': false,
+      };
+      json['review'] = {
+        'eligible': true,
+        'submitted': true,
+        'rating': 5,
+        'tags': ['FRIENDLY'],
+        'comment': 'Great',
+      };
+      final result = GuestBookingLookupResult.fromJson(json);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(cached: result),
+            enableCustomerTools: false,
+            reviewApi: _FailingGetReviewApi(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Thank you for your feedback.'), findsOneWidget);
+      expect(find.text('Submit rating'), findsNothing);
+      expect(find.text('Great'), findsOneWidget);
+    },
+  );
 
   testWidgets('canReview false without submitted review hides review form', (
     tester,
@@ -433,7 +533,7 @@ void main() {
         home: GuestBookingLookupPage(
           lookupService: _FakeLookupService(cached: result),
           enableCustomerTools: false,
-          reviewApi: _FakeLookupReviewApi(),
+          reviewApi: _FailingGetReviewApi(),
         ),
       ),
     );
@@ -442,6 +542,71 @@ void main() {
     expect(find.text('How was your ride?'), findsNothing);
     expect(find.text('Submit rating'), findsNothing);
   });
+
+  testWidgets(
+    'successful review submission refreshes lookup and keeps submitted state',
+    (tester) async {
+      final pendingJson = _lookupJson();
+      pendingJson['status'] = 'COMPLETED';
+      pendingJson['canReview'] = true;
+      pendingJson['capabilities'] = {
+        'chatAvailable': false,
+        'notificationsAvailable': true,
+        'dropoffQrIssueAvailable': false,
+        'reviewAvailable': true,
+        'boardingQrRecoverable': false,
+        'boardingQrPreviouslyIssued': false,
+      };
+      pendingJson['review'] = {
+        'eligible': true,
+        'submitted': false,
+        'tags': [],
+      };
+
+      final submittedJson = Map<String, dynamic>.from(pendingJson);
+      submittedJson['canReview'] = false;
+      submittedJson['review'] = {
+        'eligible': true,
+        'submitted': true,
+        'rating': 5,
+        'tags': ['FRIENDLY'],
+        'comment': 'Great',
+      };
+
+      final service = _FakeLookupService(
+        cached: GuestBookingLookupResult.fromJson(
+          pendingJson,
+        ).copyWith(customerPhone: '+66 81 234 5678'),
+        refreshedResult: GuestBookingLookupResult.fromJson(
+          submittedJson,
+        ).copyWith(customerPhone: '+66 81 234 5678'),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: service,
+            enableCustomerTools: false,
+            reviewApi: _SubmittingLookupReviewApi(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('review_rating_5')));
+      await tester.pump();
+      final submitButton = find.widgetWithText(ElevatedButton, 'Submit rating');
+      await tester.ensureVisible(submitButton);
+      await tester.pump();
+      await tester.tap(submitButton);
+      await tester.pumpAndSettle();
+
+      expect(service.refreshCount, 1);
+      expect(find.text('Thank you for your feedback.'), findsOneWidget);
+      expect(find.text('Submit rating'), findsNothing);
+      expect(find.text('Great'), findsOneWidget);
+    },
+  );
 
   testWidgets('ja locale shows localized review guidance on trip end', (
     tester,
@@ -516,8 +681,8 @@ GuestBookingLookupResult _result() {
   return GuestBookingLookupResult.fromJson(_lookupJson());
 }
 
-class _FakeLookupReviewApi extends BookingReviewApi {
-  const _FakeLookupReviewApi();
+class _FailingGetReviewApi extends BookingReviewApi {
+  int getCalls = 0;
 
   @override
   Future<Map<String, dynamic>> getReview({
@@ -525,23 +690,46 @@ class _FakeLookupReviewApi extends BookingReviewApi {
     String? guestAccessToken,
     String? customerAccessToken,
   }) async {
-    return const {
+    getCalls += 1;
+    throw const BookingReviewApiException('Review GET should not be called');
+  }
+}
+
+class _SubmittingLookupReviewApi extends BookingReviewApi {
+  @override
+  Future<Map<String, dynamic>> submitReview({
+    required String bookingNumber,
+    required int rating,
+    List<String>? tags,
+    String? comment,
+    String? guestAccessToken,
+    String? customerAccessToken,
+  }) async {
+    return {
       'eligible': true,
-      'submitted': false,
+      'submitted': true,
+      'rating': rating,
+      'tags': tags ?? [],
+      'comment': comment,
     };
   }
 }
 
 class _FakeLookupService extends GuestBookingLookupService {
-  _FakeLookupService({this.cached, this.errorCode, this.refreshedStatus})
-    : super(
-        baseUrl: 'http://localhost:3000',
-        client: MockClient((_) async => http.Response('{}', 200)),
-      );
+  _FakeLookupService({
+    this.cached,
+    this.errorCode,
+    this.refreshedStatus,
+    this.refreshedResult,
+  }) : super(
+         baseUrl: 'http://localhost:3000',
+         client: MockClient((_) async => http.Response('{}', 200)),
+       );
 
   final GuestBookingLookupResult? cached;
   final String? errorCode;
   final String? refreshedStatus;
+  final GuestBookingLookupResult? refreshedResult;
   int refreshCount = 0;
 
   @override
@@ -557,6 +745,9 @@ class _FakeLookupService extends GuestBookingLookupService {
     }
     refreshCount += 1;
     final base = cached ?? _result();
+    if (refreshedResult != null) {
+      return refreshedResult!;
+    }
     if (refreshedStatus != null && refreshCount > 0) {
       return base.copyWith(status: refreshedStatus);
     }

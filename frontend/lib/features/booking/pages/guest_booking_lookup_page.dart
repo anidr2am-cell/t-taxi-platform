@@ -319,6 +319,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
 
   Widget _bookingDetail(GuestBookingLookupResult result) {
     final l10n = context.l10n;
+    final reviewSubmitted = result.review?.submitted == true;
+    final canShowReviewForm = result.canReview && !reviewSubmitted;
+    final reviewFormState =
+        result.review?.toFormState() ??
+        const {'eligible': true, 'submitted': false};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -380,23 +385,28 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
           ),
         ],
-        if (result.canReview) ...[
+        if (reviewSubmitted) ...[
           const SizedBox(height: AppTokens.spaceMd),
           BookingReviewForm(
-            key: ValueKey('guest_review_${result.bookingNumber}_${result.status}_pending'),
-            bookingNumber: result.bookingNumber,
-            guestAccessToken: result.guestAccessToken,
-            api: widget.reviewApi,
-            onSubmitted: _refresh,
-          ),
-        ] else if (result.review?.submitted == true) ...[
-          const SizedBox(height: AppTokens.spaceMd),
-          BookingReviewForm(
-            key: ValueKey('guest_review_${result.bookingNumber}_${result.status}_submitted'),
+            key: ValueKey(
+              'guest_review_${result.bookingNumber}_${result.status}_submitted',
+            ),
             bookingNumber: result.bookingNumber,
             guestAccessToken: result.guestAccessToken,
             api: widget.reviewApi,
             initialState: result.review!.toFormState(),
+          ),
+        ] else if (canShowReviewForm) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          BookingReviewForm(
+            key: ValueKey(
+              'guest_review_${result.bookingNumber}_${result.status}_pending',
+            ),
+            bookingNumber: result.bookingNumber,
+            guestAccessToken: result.guestAccessToken,
+            api: widget.reviewApi,
+            initialState: reviewFormState,
+            onSubmitted: _refresh,
           ),
         ],
         const SizedBox(height: AppTokens.spaceMd),
