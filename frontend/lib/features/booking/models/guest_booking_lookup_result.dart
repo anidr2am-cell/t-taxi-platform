@@ -13,6 +13,7 @@ class GuestBookingLookupResult {
     required this.guestAccessToken,
     required this.guestAccessExpiresAt,
     required this.capabilities,
+    this.canReview = false,
     this.review,
     this.serviceTypeCode,
     this.originAirportCode,
@@ -39,6 +40,7 @@ class GuestBookingLookupResult {
   final String guestAccessToken;
   final String? guestAccessExpiresAt;
   final GuestBookingCapabilities capabilities;
+  final bool canReview;
   final GuestBookingReviewSnapshot? review;
   final String? serviceTypeCode;
   final String? originAirportCode;
@@ -79,6 +81,10 @@ class GuestBookingLookupResult {
       throw const FormatException('Invalid booking lookup response');
     }
 
+    final capabilities = GuestBookingCapabilities.fromJson(
+      Map<String, dynamic>.from(json['capabilities'] as Map? ?? {}),
+    );
+
     return GuestBookingLookupResult(
       bookingId: json['bookingId'] as int?,
       bookingNumber: bookingNumber,
@@ -92,9 +98,9 @@ class GuestBookingLookupResult {
       paymentMethod: pricing['paymentMethod'] as String? ?? 'PAY_DRIVER',
       guestAccessToken: token,
       guestAccessExpiresAt: guestAccess['expiresAt'] as String?,
-      capabilities: GuestBookingCapabilities.fromJson(
-        Map<String, dynamic>.from(json['capabilities'] as Map? ?? {}),
-      ),
+      capabilities: capabilities,
+      canReview: json['canReview'] == true
+          || (json['canReview'] == null && capabilities.reviewAvailable),
       review: json['review'] is Map
           ? GuestBookingReviewSnapshot.fromJson(
               Map<String, dynamic>.from(json['review'] as Map),
@@ -145,6 +151,7 @@ class GuestBookingLookupResult {
     String? customerPhone,
     String? status,
     GuestBookingCapabilities? capabilities,
+    bool? canReview,
     GuestBookingReviewSnapshot? review,
   }) {
     return GuestBookingLookupResult(
@@ -161,6 +168,7 @@ class GuestBookingLookupResult {
       guestAccessToken: guestAccessToken,
       guestAccessExpiresAt: guestAccessExpiresAt,
       capabilities: capabilities ?? this.capabilities,
+      canReview: canReview ?? this.canReview,
       review: review ?? this.review,
       serviceTypeCode: serviceTypeCode,
       originAirportCode: originAirportCode,
@@ -219,6 +227,7 @@ class GuestBookingLookupResult {
         boardingQrRecoverable: boardingQrStatuses.contains(status),
         boardingQrPreviouslyIssued: boardingQrStatuses.contains(status),
       ),
+      canReview: false,
       serviceTypeCode: serviceTypeCode,
       originAirportCode: originAirportCode,
       nameSignRequested: nameSignRequested,
@@ -252,6 +261,7 @@ class GuestBookingLookupResult {
       'expiresAt': guestAccessExpiresAt,
     },
     'capabilities': capabilities.toJson(),
+    'canReview': canReview,
     if (review != null) 'review': review!.toJson(),
     'assignedDriver': driverName == null
         ? null
@@ -291,12 +301,16 @@ class GuestBookingReviewSnapshot {
     required this.submitted,
     this.rating,
     this.tags = const [],
+    this.comment,
+    this.createdAt,
   });
 
   final bool eligible;
   final bool submitted;
   final int? rating;
   final List<String> tags;
+  final String? comment;
+  final String? createdAt;
 
   factory GuestBookingReviewSnapshot.fromJson(Map<String, dynamic> json) {
     final rawTags = json['tags'];
@@ -307,6 +321,8 @@ class GuestBookingReviewSnapshot {
       tags: rawTags is List
           ? rawTags.map((item) => item.toString()).toList()
           : const [],
+      comment: json['comment'] as String?,
+      createdAt: json['createdAt'] as String?,
     );
   }
 
@@ -315,6 +331,8 @@ class GuestBookingReviewSnapshot {
     'submitted': submitted,
     if (rating != null) 'rating': rating,
     'tags': tags,
+    if (comment != null) 'comment': comment,
+    if (createdAt != null) 'createdAt': createdAt,
   };
 
   Map<String, dynamic> toJson() => {
@@ -322,6 +340,8 @@ class GuestBookingReviewSnapshot {
     'submitted': submitted,
     if (rating != null) 'rating': rating,
     'tags': tags,
+    if (comment != null) 'comment': comment,
+    if (createdAt != null) 'createdAt': createdAt,
   };
 }
 

@@ -766,11 +766,22 @@ test('parseStoredTags ignores unknown tag codes', () => {
   assert.deepEqual(parseStoredTags(['FRIENDLY', 'NOT_A_TAG']), ['FRIENDLY']);
 });
 
+test('mapCustomerReviewState returns customer comment for submitted review', () => {
+  const service = makeService();
+  const state = service.mapCustomerReviewState(
+    booking({ status: 'SETTLEMENT_PENDING' }),
+    reviewRow({ tags_json: null, comment: 'Nice ride' }),
+  );
+  assert.equal(state.submitted, true);
+  assert.deepEqual(state.tags, []);
+  assert.equal(state.comment, 'Nice ride');
+});
+
 test('mapCustomerReviewState returns empty tags when tags_json is null', () => {
   const service = makeService();
   const state = service.mapCustomerReviewState(
     booking({ status: 'SETTLEMENT_PENDING' }),
-    reviewRow({ tags_json: null }),
+    reviewRow({ tags_json: null, comment: null }),
   );
   assert.equal(state.submitted, true);
   assert.deepEqual(state.tags, []);

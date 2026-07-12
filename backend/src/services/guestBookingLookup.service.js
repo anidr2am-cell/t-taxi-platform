@@ -53,8 +53,13 @@ class GuestBookingLookupService {
   }
 
   isReviewEligible(row) {
-    return [BOOKING_STATUS.SETTLEMENT_PENDING, BOOKING_STATUS.COMPLETED].includes(row.status)
-      && Boolean(row.driver_name);
+    if ([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW].includes(row.status)) {
+      return false;
+    }
+    if (![BOOKING_STATUS.SETTLEMENT_PENDING, BOOKING_STATUS.COMPLETED].includes(row.status)) {
+      return false;
+    }
+    return Boolean(row.driver_id || row.driver_name);
   }
 
   mapGuestReviewState(row, review) {
@@ -67,6 +72,8 @@ class GuestBookingLookupService {
         submitted: false,
         rating: null,
         tags: [],
+        comment: null,
+        createdAt: null,
       };
     }
     return {
@@ -74,6 +81,8 @@ class GuestBookingLookupService {
       submitted: true,
       rating: review.rating,
       tags: parseStoredTags(review.tags_json),
+      comment: review.comment ?? null,
+      createdAt: review.created_at ?? null,
     };
   }
 
@@ -116,11 +125,13 @@ class GuestBookingLookupService {
 
     const reviewEligible = this.isReviewEligible(row);
     const reviewSubmitted = Boolean(review);
+    const canReview = reviewEligible && !reviewSubmitted;
 
     return {
       bookingId: row.id,
       bookingNumber: row.booking_number,
       status: row.status,
+      canReview,
       scheduledPickupAt: this.formatThailandIso(row.scheduled_pickup_at_text),
       serviceType: {
         code: row.service_type_code,
@@ -170,7 +181,7 @@ class GuestBookingLookupService {
         chatAvailable: Boolean(assignedDriver) && !terminalStatus,
         notificationsAvailable: true,
         dropoffQrIssueAvailable: row.status === BOOKING_STATUS.PICKED_UP,
-        reviewAvailable: reviewEligible && !reviewSubmitted,
+        reviewAvailable: canReview,
         boardingQrRecoverable,
         boardingQrPreviouslyIssued: Boolean(row.boarding_qr_token_hash) && !terminalStatus,
       },

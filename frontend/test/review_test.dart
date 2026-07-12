@@ -249,6 +249,27 @@ void main() {
     expect(find.text('Thank you for your feedback.'), findsOneWidget);
   });
 
+  testWidgets('already submitted state shows comment', (tester) async {
+    await tester.pumpWidget(
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {
+            'eligible': true,
+            'submitted': true,
+            'rating': 4,
+            'tags': ['ON_TIME'],
+            'comment': 'Smooth ride',
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Thank you for your feedback.'), findsOneWidget);
+    expect(find.text('Smooth ride'), findsOneWidget);
+    expect(find.text('Submit rating'), findsNothing);
+  });
+
   testWidgets('already submitted state', (tester) async {
     await tester.pumpWidget(
       _reviewFormScaffold(

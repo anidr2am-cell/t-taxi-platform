@@ -139,7 +139,7 @@ class ReviewService {
       submitted: true,
       rating: mapped.rating,
       tags: mapped.tags,
-      comment: null,
+      comment: mapped.comment,
       createdAt: mapped.createdAt,
       moderationStatus: mapped.moderationStatus,
     };

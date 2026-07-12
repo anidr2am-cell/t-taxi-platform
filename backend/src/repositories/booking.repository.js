@@ -241,6 +241,7 @@ class BookingRepository {
           b.id,
           b.booking_number,
           b.status,
+          b.driver_id,
           DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
           b.origin_address,
           b.destination_address,
@@ -309,10 +310,19 @@ class BookingRepository {
         LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
         LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
         LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
-        LEFT JOIN booking_driver_assignments bda ON bda.booking_id = b.id
-          AND bda.is_active = 1
-          AND bda.deleted_at IS NULL
-        LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+        LEFT JOIN booking_driver_assignments bda ON bda.id = (
+          SELECT bda2.id
+          FROM booking_driver_assignments bda2
+          WHERE bda2.booking_id = b.id
+            AND bda2.deleted_at IS NULL
+            AND (
+              bda2.is_active = 1
+              OR b.status IN ('SETTLEMENT_PENDING', 'COMPLETED')
+            )
+          ORDER BY bda2.is_active DESC, bda2.updated_at DESC, bda2.id DESC
+          LIMIT 1
+        )
+        LEFT JOIN drivers d ON d.id = COALESCE(bda.driver_id, b.driver_id) AND d.deleted_at IS NULL
         LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
         LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
         WHERE b.booking_number = ? AND b.deleted_at IS NULL

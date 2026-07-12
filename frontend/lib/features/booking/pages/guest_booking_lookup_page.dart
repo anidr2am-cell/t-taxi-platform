@@ -25,12 +25,14 @@ class GuestBookingLookupPage extends StatefulWidget {
     this.bookingChatApi,
     this.bookingChatSocketService,
     this.enableCustomerTools = false,
+    this.reviewApi,
   });
 
   final GuestBookingLookupService? lookupService;
   final BookingChatApi? bookingChatApi;
   final ChatSocketService? bookingChatSocketService;
   final bool enableCustomerTools;
+  final BookingReviewApi? reviewApi;
 
   @override
   State<GuestBookingLookupPage> createState() => _GuestBookingLookupPageState();
@@ -378,12 +380,14 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
           ),
         ],
-        if (result.capabilities.reviewAvailable) ...[
+        if (result.canReview) ...[
           const SizedBox(height: AppTokens.spaceMd),
           BookingReviewForm(
             key: ValueKey('guest_review_${result.bookingNumber}_${result.status}_pending'),
             bookingNumber: result.bookingNumber,
             guestAccessToken: result.guestAccessToken,
+            api: widget.reviewApi,
+            onSubmitted: _refresh,
           ),
         ] else if (result.review?.submitted == true) ...[
           const SizedBox(height: AppTokens.spaceMd),
@@ -391,6 +395,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             key: ValueKey('guest_review_${result.bookingNumber}_${result.status}_submitted'),
             bookingNumber: result.bookingNumber,
             guestAccessToken: result.guestAccessToken,
+            api: widget.reviewApi,
             initialState: result.review!.toFormState(),
           ),
         ],

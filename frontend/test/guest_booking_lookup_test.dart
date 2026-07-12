@@ -8,6 +8,7 @@ import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
+import 'package:frontend/features/booking/widgets/booking_review_form.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -352,6 +353,7 @@ void main() {
       'submitted': true,
       'rating': 4,
       'tags': ['ON_TIME'],
+      'comment': 'Smooth ride',
     };
     final result = GuestBookingLookupResult.fromJson(json);
 
@@ -369,6 +371,76 @@ void main() {
     expect(find.text('本次乘车体验如何？'), findsNothing);
     expect(find.text('提交评分'), findsNothing);
     expect(find.text('感谢您的评价'), findsOneWidget);
+    expect(find.text('Smooth ride'), findsOneWidget);
+  });
+
+  test('fromJson parses canReview from lookup response', () {
+    final json = _lookupJson();
+    json['status'] = 'COMPLETED';
+    json['canReview'] = true;
+    json['capabilities'] = {
+      'chatAvailable': false,
+      'notificationsAvailable': true,
+      'dropoffQrIssueAvailable': false,
+      'reviewAvailable': true,
+      'boardingQrRecoverable': false,
+      'boardingQrPreviouslyIssued': false,
+    };
+    final result = GuestBookingLookupResult.fromJson(json);
+    expect(result.canReview, isTrue);
+  });
+
+  testWidgets('completed booking with canReview shows review form', (tester) async {
+    final json = _lookupJson();
+    json['status'] = 'COMPLETED';
+    json['canReview'] = true;
+    json['capabilities'] = {
+      'chatAvailable': false,
+      'notificationsAvailable': true,
+      'dropoffQrIssueAvailable': false,
+      'reviewAvailable': true,
+      'boardingQrRecoverable': false,
+      'boardingQrPreviouslyIssued': false,
+    };
+    final result = GuestBookingLookupResult.fromJson(json);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: result),
+          enableCustomerTools: false,
+          reviewApi: _FakeLookupReviewApi(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('How was your ride?'), findsOneWidget);
+    expect(find.text('Submit rating'), findsOneWidget);
+  });
+
+  testWidgets('canReview false without submitted review hides review form', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['status'] = 'PICKED_UP';
+    json['canReview'] = false;
+    final result = GuestBookingLookupResult.fromJson(json);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: result),
+          enableCustomerTools: false,
+          reviewApi: _FakeLookupReviewApi(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('How was your ride?'), findsNothing);
+    expect(find.text('Submit rating'), findsNothing);
   });
 
   testWidgets('ja locale shows localized review guidance on trip end', (
@@ -442,6 +514,22 @@ Map<String, dynamic> _lookupJson() => {
 
 GuestBookingLookupResult _result() {
   return GuestBookingLookupResult.fromJson(_lookupJson());
+}
+
+class _FakeLookupReviewApi extends BookingReviewApi {
+  const _FakeLookupReviewApi();
+
+  @override
+  Future<Map<String, dynamic>> getReview({
+    required String bookingNumber,
+    String? guestAccessToken,
+    String? customerAccessToken,
+  }) async {
+    return const {
+      'eligible': true,
+      'submitted': false,
+    };
+  }
 }
 
 class _FakeLookupService extends GuestBookingLookupService {

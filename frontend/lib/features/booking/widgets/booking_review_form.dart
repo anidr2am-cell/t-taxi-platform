@@ -115,12 +115,14 @@ class BookingReviewForm extends StatefulWidget {
     this.guestAccessToken,
     this.api,
     this.initialState,
+    this.onSubmitted,
   });
 
   final String bookingNumber;
   final String? guestAccessToken;
   final BookingReviewApi? api;
   final Map<String, dynamic>? initialState;
+  final VoidCallback? onSubmitted;
 
   @override
   State<BookingReviewForm> createState() => BookingReviewFormState();
@@ -226,6 +228,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
         _state = state;
         _submitting = false;
       });
+      widget.onSubmitted?.call();
     } catch (err) {
       if (err is BookingReviewApiException &&
           err.errorCode == 'REVIEW_ALREADY_SUBMITTED') {
@@ -298,6 +301,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
   Widget _buildSubmittedCard(AppLocalizations l10n) {
     final rating = _state?['rating'];
     final tags = _submittedTags();
+    final comment = (_state?['comment'] as String?)?.trim();
     return AppUi.surfaceCard(
       backgroundColor: AppTokens.successLight,
       child: Column(
@@ -344,6 +348,16 @@ class BookingReviewFormState extends State<BookingReviewForm> {
                     ),
                   )
                   .toList(),
+            ),
+          ],
+          if (comment != null && comment.isNotEmpty) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              comment,
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                height: 1.45,
+              ),
             ),
           ],
         ],

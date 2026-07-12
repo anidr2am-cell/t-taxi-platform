@@ -47,6 +47,7 @@ function bookingRow(overrides = {}) {
     origin_location_code: 'BKK',
     destination_location_code: 'PATTAYA',
     name_sign_requested: 0,
+    driver_id: 4,
     driver_name: 'Driver A',
     driver_phone: '+66 80 000 0000',
     assigned_vehicle_plate: '1กข1234',
@@ -268,9 +269,47 @@ test('guest lookup exposes reviewAvailable when settlement pending without revie
     phone: '+66 81 234 5678',
   });
 
+  assert.equal(result.canReview, true);
   assert.equal(result.capabilities.reviewAvailable, true);
   assert.equal(result.review?.submitted, false);
   assert.deepEqual(result.review?.tags, []);
+});
+
+test('guest lookup exposes canReview for completed booking with driver_id but no active assignment name', async () => {
+  const { service } = buildService(bookingRow({
+    status: 'COMPLETED',
+    driver_id: 4,
+    driver_name: null,
+    driver_phone: null,
+    assigned_vehicle_plate: null,
+    assigned_vehicle_model: null,
+    assigned_vehicle_color: null,
+    assigned_vehicle_type_code: null,
+    assigned_vehicle_type_name: null,
+    driver_vehicle_photo_file_id: null,
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.canReview, true);
+  assert.equal(result.capabilities.reviewAvailable, true);
+  assert.equal(result.review?.submitted, false);
+  assert.equal(result.assignedDriver, null);
+});
+
+test('guest lookup hides review when booking status is not review eligible', async () => {
+  for (const status of ['PENDING', 'DRIVER_ASSIGNED', 'PICKED_UP', 'CANCELLED', 'NO_SHOW']) {
+    const { service } = buildService(bookingRow({ status }));
+    const result = await service.lookup({
+      bookingNumber: 'TX202607010001',
+      phone: '+66 81 234 5678',
+    });
+    assert.equal(result.canReview, false, status);
+    assert.equal(result.capabilities.reviewAvailable, false, status);
+  }
 });
 
 test('guest lookup hides reviewAvailable when review already submitted', async () => {
@@ -288,11 +327,31 @@ test('guest lookup hides reviewAvailable when review already submitted', async (
     phone: '+66 81 234 5678',
   });
 
+  assert.equal(result.canReview, false);
   assert.equal(result.capabilities.reviewAvailable, false);
   assert.equal(result.review?.submitted, true);
   assert.equal(result.review?.rating, 4);
   assert.deepEqual(result.review?.tags, ['ON_TIME']);
-  assert.ok(!JSON.stringify(result).includes('comment'));
+  assert.ok(!JSON.stringify(result).includes('reviewId'));
+  assert.ok(!JSON.stringify(result).includes('needsAction'));
+});
+
+test('guest lookup review state includes customer comment for submitted review', async () => {
+  const { service } = buildService(
+    bookingRow({ status: 'COMPLETED' }),
+    { id: 8, rating: 5, tags_json: null, comment: 'Great trip', created_at: '2026-07-02 10:00:00' },
+  );
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.canReview, false);
+  assert.equal(result.review?.submitted, true);
+  assert.equal(result.review?.comment, 'Great trip');
+  assert.deepEqual(result.review?.tags, []);
+  assert.ok(!JSON.stringify(result).includes('reviewId'));
 });
 
 test('guest lookup review state omits tags for null tags_json legacy review', async () => {
@@ -306,10 +365,11 @@ test('guest lookup review state omits tags for null tags_json legacy review', as
     phone: '+66 81 234 5678',
   });
 
+  assert.equal(result.canReview, false);
   assert.equal(result.capabilities.reviewAvailable, false);
   assert.equal(result.review?.submitted, true);
   assert.deepEqual(result.review?.tags, []);
-  assert.ok(!JSON.stringify(result).includes('Legacy comment'));
+  assert.equal(result.review?.comment, 'Legacy comment');
 });
 
 test('cancelled booking can be found but active customer actions are disabled', async () => {
