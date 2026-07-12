@@ -64,7 +64,7 @@ Documentation-only changes require no deployment. Runtime releases rebuild only 
 
 The migration runners replay all numbered SQL and have no migration history table. Do not run them wholesale against an existing commercial DB. Back up the explicit target, inspect schema, apply only missing SQL, and validate after each file.
 
-Staging selectively applied `37_add_settlement_pending_booking_status.sql`. Production must inspect its booking status enum before applying migration 32 or 37. No `31_settlement_pending` file exists.
+Staging selectively applied `37_add_settlement_pending_booking_status.sql`. Production must inspect its booking status enum before applying migration 32 or 37. There is no settlement-pending migration numbered 31.
 
 ## Minimum E2E
 
