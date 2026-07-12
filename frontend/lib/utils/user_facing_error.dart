@@ -38,6 +38,7 @@ bool looksLikeInternalApiMessage(String message) {
       normalized.contains("table '") ||
       normalized.contains('sql syntax') ||
       normalized.contains('er_') ||
+      normalized.contains('settlement not found') ||
       normalized.contains('internal server error') ||
       normalized.contains('an unexpected error occurred');
 }
@@ -51,6 +52,36 @@ String driverEndTripFailedMessage(String languageCode) {
     default:
       return 'We could not complete the trip. Please try again or contact an administrator.';
   }
+}
+
+String driverSettlementLoadFailedMessage(String languageCode) {
+  switch (languageCode) {
+    case 'ko':
+      return '정산 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    case 'th':
+      return 'ไม่สามารถโหลดข้อมูลการชำระเงินได้ กรุณาลองอีกครั้ง';
+    default:
+      return 'We could not load the settlement information. Please try again.';
+  }
+}
+
+String driverSettlementApiErrorMessage({
+  required String message,
+  String? errorCode,
+  required String languageCode,
+}) {
+  if (errorCode == 'RECEIPT_ALREADY_APPROVED' ||
+      errorCode == 'INVALID_FILE_TYPE' ||
+      errorCode == 'VALIDATION_ERROR') {
+    return message;
+  }
+
+  if (errorCode == 'SETTLEMENT_NOT_FOUND' ||
+      looksLikeInternalApiMessage(message)) {
+    return driverSettlementLoadFailedMessage(languageCode);
+  }
+
+  return message;
 }
 
 String driverApiErrorMessage({

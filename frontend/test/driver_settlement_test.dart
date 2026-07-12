@@ -77,6 +77,31 @@ void main() {
     expect(find.text('Network error'), findsOneWidget);
   });
 
+  testWidgets('driver settlement hides settlement not found message', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverSettlementDetailPage(
+          bookingNumber: 'TX202607120002',
+          api: _FakeSettlementApi(
+            error: const DriverSettlementApiException(
+              'Settlement not found',
+              errorCode: 'SETTLEMENT_NOT_FOUND',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settlement not found'), findsNothing);
+    expect(
+      find.textContaining('We could not load the settlement information'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('driver settlement detail selects file and uploads', (
     tester,
   ) async {

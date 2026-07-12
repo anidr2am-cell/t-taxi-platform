@@ -76,13 +76,25 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('ui_load_failed'),
-        );
+        _error = _settlementErrorMessage(err);
         _loading = false;
       });
     }
+  }
+
+  String _settlementErrorMessage(Object err) {
+    final l10n = context.l10n;
+    if (err is DriverSettlementApiException) {
+      return driverSettlementApiErrorMessage(
+        message: err.message,
+        errorCode: err.errorCode,
+        languageCode: l10n.languageCode,
+      );
+    }
+    return userFacingError(
+      err,
+      fallback: l10n.t('driver_settlement_loading_failed'),
+    );
   }
 
   AppStatusTone _settlementTone(String status) {
@@ -263,13 +275,25 @@ class _DriverSettlementDetailPageState
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('ui_load_failed'),
-        );
+        _error = _settlementErrorMessage(err);
         _loading = false;
       });
     }
+  }
+
+  String _settlementErrorMessage(Object err) {
+    final l10n = context.l10n;
+    if (err is DriverSettlementApiException) {
+      return driverSettlementApiErrorMessage(
+        message: err.message,
+        errorCode: err.errorCode,
+        languageCode: l10n.languageCode,
+      );
+    }
+    return userFacingError(
+      err,
+      fallback: l10n.t('driver_settlement_loading_failed'),
+    );
   }
 
   bool _canUpload(String status) {

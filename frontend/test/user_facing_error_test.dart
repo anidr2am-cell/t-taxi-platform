@@ -52,6 +52,17 @@ void main() {
     );
   });
 
+  test('driverSettlementApiErrorMessage hides settlement not found', () {
+    expect(
+      driverSettlementApiErrorMessage(
+        message: 'Settlement not found',
+        errorCode: 'SETTLEMENT_NOT_FOUND',
+        languageCode: 'en',
+      ),
+      driverSettlementLoadFailedMessage('en'),
+    );
+  });
+
   test('userFacingError does not return raw database text', () {
     expect(
       userFacingError(

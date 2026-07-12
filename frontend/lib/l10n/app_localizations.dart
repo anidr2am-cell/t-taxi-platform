@@ -592,7 +592,8 @@ class AppLocalizations {
       'driver_section_chat': 'Chat',
       'driver_next_action': 'Next action',
       'driver_section_settlement': 'Settlement',
-      'driver_settlement_loading_failed': 'Settlement details unavailable',
+      'driver_settlement_loading_failed':
+          'We could not load the settlement information. Please try again.',
       'driver_rejection_reason': 'Rejection reason',
       'driver_view_settlement': 'View settlement',
       'driver_qr_boarding_title': 'Boarding QR',
@@ -3612,7 +3613,7 @@ class AppLocalizations {
     'driver_next_action': '다음 작업\n(ขั้นตอนถัดไป)',
     'driver_section_settlement': '정산\n(การชำระบัญชี)',
     'driver_settlement_loading_failed':
-        '정산 정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลการชำระบัญชีได้)',
+        '정산 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.\n(ไม่สามารถโหลดข้อมูลการชำระเงินได้ กรุณาลองอีกครั้ง)',
     'driver_rejection_reason': '반려 사유\n(เหตุผลที่ไม่อนุมัติ)',
     'driver_view_settlement': '정산 상세 / ดูรายละเอียด',
     'driver_qr_boarding_title': '탑승 QR\n(QR ขึ้นรถ)',

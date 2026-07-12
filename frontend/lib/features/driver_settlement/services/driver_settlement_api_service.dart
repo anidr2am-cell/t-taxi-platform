@@ -7,8 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_config.dart';
 
 class DriverSettlementApiException implements Exception {
-  const DriverSettlementApiException(this.message);
+  const DriverSettlementApiException(this.message, {this.errorCode});
+
   final String message;
+  final String? errorCode;
   @override
   String toString() => message;
 }
@@ -35,9 +37,13 @@ class DriverSettlementApiService {
     );
     final decoded = jsonDecode(response.body);
     if (response.statusCode >= 400) {
-      throw DriverSettlementApiException(
-        decoded is Map ? decoded['message'] as String? ?? 'Request failed' : 'Request failed',
-      );
+      final message = decoded is Map
+          ? decoded['message'] as String? ?? 'Request failed'
+          : 'Request failed';
+      final errorCode = decoded is Map
+          ? decoded['error_code'] as String?
+          : null;
+      throw DriverSettlementApiException(message, errorCode: errorCode);
     }
     return decoded is Map ? decoded['data'] : decoded;
   }
@@ -67,9 +73,13 @@ class DriverSettlementApiService {
     final body = await streamed.stream.bytesToString();
     final decoded = jsonDecode(body);
     if (streamed.statusCode >= 400) {
-      throw DriverSettlementApiException(
-        decoded is Map ? decoded['message'] as String? ?? 'Upload failed' : 'Upload failed',
-      );
+      final message = decoded is Map
+          ? decoded['message'] as String? ?? 'Upload failed'
+          : 'Upload failed';
+      final errorCode = decoded is Map
+          ? decoded['error_code'] as String?
+          : null;
+      throw DriverSettlementApiException(message, errorCode: errorCode);
     }
     return decoded is Map ? decoded['data'] : decoded;
   }

@@ -1,5 +1,7 @@
 const database = require('../config/database');
 
+const SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL = "'SETTLEMENT_PENDING', 'COMPLETED'";
+
 class BookingRepository {
   constructor(pool = database.pool) {
     this.pool = pool;
@@ -1467,7 +1469,7 @@ class BookingRepository {
           ON bda.booking_id = b.id AND bda.deleted_at IS NULL
         WHERE b.booking_number = ?
           AND b.deleted_at IS NULL
-          AND b.status = 'COMPLETED'
+          AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND bda.driver_id = ?
         LIMIT 1
       `,
@@ -1483,11 +1485,11 @@ class BookingRepository {
         INNER JOIN booking_driver_assignments bda
           ON bda.booking_id = b.id AND bda.deleted_at IS NULL
         WHERE bda.driver_id = ?
-          AND b.status = 'COMPLETED'
+          AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND b.deleted_at IS NULL
           AND b.commission_status NOT IN ('NOT_DUE_YET', 'WAIVED')
         GROUP BY b.id
-        ORDER BY b.completed_at DESC, b.booking_number DESC
+        ORDER BY COALESCE(b.completed_at, b.updated_at) DESC, b.booking_number DESC
       `,
       [driverId],
     );
@@ -1497,7 +1499,7 @@ class BookingRepository {
   buildAdminSettlementFilters(filters) {
     const where = [
       'b.deleted_at IS NULL',
-      'b.status = \'COMPLETED\'',
+      `b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})`,
       'b.commission_status NOT IN (\'NOT_DUE_YET\', \'WAIVED\')',
     ];
     const params = [];
@@ -1564,7 +1566,7 @@ class BookingRepository {
       `
         ${this.settlementSelectSql()}
         WHERE ${whereSql}
-        ORDER BY b.completed_at DESC, b.booking_number DESC
+        ORDER BY COALESCE(b.completed_at, b.updated_at) DESC, b.booking_number DESC
         LIMIT ? OFFSET ?
       `,
       [...params, limit, offset],
@@ -1579,7 +1581,7 @@ class BookingRepository {
         FROM bookings b
         WHERE b.driver_id = ?
           AND b.deleted_at IS NULL
-          AND b.status = 'COMPLETED'
+          AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND b.commission_status IN ('DUE', 'OVERDUE')
           AND (
             b.commission_status = 'OVERDUE'
@@ -1678,7 +1680,7 @@ class BookingRepository {
         FROM bookings b
         WHERE b.driver_id = ?
           AND b.deleted_at IS NULL
-          AND b.status = 'COMPLETED'
+          AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND b.commission_status NOT IN ('PAID', 'WAIVED', 'NOT_DUE_YET')
       `,
       [driverId],
