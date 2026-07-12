@@ -129,6 +129,38 @@ function createEndTripHarness(initialBooking = createBooking()) {
   };
 }
 
+test('endTrip rolls back when status update fails with database truncation', async () => {
+  const harness = createEndTripHarness();
+  let committed = false;
+  let rolledBack = false;
+
+  const conn = {
+    async beginTransaction() {},
+    async commit() { committed = true; },
+    async rollback() { rolledBack = true; },
+    release() {},
+  };
+  harness.driverTripFlowService.pool = { async getConnection() { return conn; } };
+
+  harness.bookingRepository.updateStatus = async () => {
+    const err = new Error("Data truncated for column 'status' at row 1");
+    err.code = 'WARN_DATA_TRUNCATED';
+    throw err;
+  };
+
+  await assert.rejects(
+    () => harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER),
+    (err) => err.message.includes('Data truncated'),
+  );
+
+  assert.equal(harness.booking.status, BOOKING_STATUS.PICKED_UP);
+  assert.equal(harness.calls.commissionUpdates, 0);
+  assert.equal(harness.calls.statusLogs, 0);
+  assert.equal(harness.calls.outboxInserts, 0);
+  assert.equal(committed, false);
+  assert.equal(rolledBack, true);
+});
+
 test('endTrip moves PICKED_UP to SETTLEMENT_PENDING with 200 THB commission', async () => {
   const harness = createEndTripHarness();
 

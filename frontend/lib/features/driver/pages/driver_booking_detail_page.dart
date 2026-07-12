@@ -61,8 +61,9 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
 
   Future<void> _runAction(
     Future<DriverBooking> Function() action,
-    String messageKey,
-  ) async {
+    String messageKey, {
+    bool endTripAction = false,
+  }) async {
     if (_processing) return;
     setState(() {
       _processing = true;
@@ -92,7 +93,12 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       if (err.isStaleStatus) {
         _loadBooking();
       }
-      setState(() => _actionError = err.message);
+      setState(() => _actionError = driverApiErrorMessage(
+        message: err.message,
+        errorCode: err.errorCode,
+        languageCode: l10n.languageCode,
+        preferEndTripFailure: endTripAction,
+      ));
     } catch (err) {
       if (!mounted) return;
       setState(() {
@@ -434,7 +440,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
 
     final successKey =
         DriverTripFlow.successMessageKey(actionToken) ?? actionLabelKey;
-    await _runAction(action, successKey);
+    await _runAction(action, successKey, endTripAction: actionToken == 'END_TRIP');
   }
 
   String _formatLuggage(Map<String, dynamic> luggage) {

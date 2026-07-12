@@ -62,6 +62,43 @@ void main() {
     expect(find.text('Invalid status transition'), findsOneWidget);
   });
 
+  testWidgets('hides raw database error on end trip failure', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(status: 'PICKED_UP', actions: ['END_TRIP']),
+          actionError: const DriverApiException(
+            "Data truncated for column 'status' at row 1",
+            errorCode: 'INTERNAL_SERVER_ERROR',
+            statusCode: 500,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง').first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text("Data truncated for column 'status' at row 1"),
+      findsNothing,
+    );
+    expect(
+      find.textContaining('We could not complete the trip'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('shows mark arrived after on route', (tester) async {
     await tester.pumpWidget(
       _wrap(

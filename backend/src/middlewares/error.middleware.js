@@ -3,8 +3,13 @@
  */
 const logger = require('../utils/logger');
 const config = require('../config');
-const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const {
+  isDatabaseOrInternalError,
+  resolveClientErrorMessage,
+  isTripEndRequest,
+  resolveStatusCode,
+} = require('../utils/clientErrorMessage.util');
 
 function errorMiddleware(err, req, res, next) {
   if (res.headersSent) {
@@ -12,14 +17,16 @@ function errorMiddleware(err, req, res, next) {
   }
 
   const isAppError = err.isOperational === true;
-  const statusCode = err.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
+  const statusCode = resolveStatusCode(err);
   const errorCode = err.errorCode || ERROR_CODES.INTERNAL_SERVER_ERROR;
+  const exposeInternalDetails = isDatabaseOrInternalError(err);
 
   if (!isAppError || statusCode >= 500) {
     logger.error(err.message, {
       stack: err.stack,
       path: req.path,
       method: req.method,
+      code: err.code,
     });
   } else {
     logger.warn(err.message, { path: req.path, errorCode });
@@ -28,14 +35,16 @@ function errorMiddleware(err, req, res, next) {
   const body = {
     success: false,
     error_code: errorCode,
-    message: err.message || 'Internal server error',
+    message: resolveClientErrorMessage(err, {
+      tripEndFailure: isTripEndRequest(req),
+    }),
   };
 
   if (err.errors && config.server.nodeEnv !== 'production') {
     body.errors = err.errors;
   }
 
-  if (config.server.nodeEnv === 'development' && !isAppError) {
+  if (config.server.nodeEnv === 'development' && !isAppError && !exposeInternalDetails) {
     body.stack = err.stack;
   }
 
