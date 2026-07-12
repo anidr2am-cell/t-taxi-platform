@@ -100,3 +100,54 @@ Rollback triggers include booking creation failure, driver transition failure, s
 Decision: **PASS WITH NON-BLOCKING WARNINGS**
 
 No critical or high issue was known in the verified staging baseline. Main integration may be considered after diff/security/migration audit; production release remains conditional on the operational work above.
+
+## RC Smoke Test Record
+
+- Verification date: 2026-07-13 (Asia/Bangkok)
+- RC branch: `release/staging-commercialization-rc1`
+- RC commit: `54311d1827766d8e3f084c9a7cd9576061013b3c`
+- Functional baseline: `8ca1cf4522fd99314c3d3f85e34c9357c8a39a8a`
+- Test booking: `TX202607120002`
+- Staging path: `/opt/t-ride`
+- Services: `tride-db`, `tride-backend`, `tride-frontend`
+- Ports: backend 3100, frontend 3101
+
+### Confirmed Results
+
+Customer verification confirmed booking lookup, `COMPLETED` display, completed-review card, successful review submission, duplicate-review protection, and non-disclosure of commission, receipt, and admin-note data.
+
+Driver verification confirmed button-based status transitions, the `SETTLEMENT_PENDING` flow, transfer-slip submission, completed-trip display, and non-disclosure of raw review comments, negative tags, and admin notes.
+
+Admin verification confirmed booking detail, settlement approval, `COMPLETED`/`PAID`, rating, tags, raw customer comment, review timestamp, and separation between customer feedback and internal notes.
+
+Database verification for the test booking confirmed:
+
+- `booking.status = COMPLETED`
+- `commission_status = PAID`
+- `commission_amount = 200 THB`
+- Receipt linkage retained
+- `review_count = 1`
+- `rating = 2`
+
+System verification confirmed backend health, database connectivity, frontend HTTP 200, healthy T-Ride containers, the staging functional commit, and no observed impact on legacy KTaxi.
+
+### Decision
+
+**PASS WITH NON-BLOCKING WARNINGS**
+
+- Critical: none
+- High: none
+- Existing booking analyzer info: 1
+- Existing admin dispatch deprecation infos: 3
+- Production domain/HTTPS is not configured
+- Automated DB backup/restore has not been rehearsed
+- Administrator account recovery is incomplete
+- Staging test data remains
+- Production deployment topology is not finalized
+- Some non-authoritative historical checklists retain QR-era wording
+
+### Rollback Triggers And Principles
+
+Rollback is required for booking creation/lookup failure, driver transition failure, missing `SETTLEMENT_PENDING`, transfer-slip failure, `COMPLETED`/`PAID` mismatch, review submission failure, customer/driver exposure of admin data, cross-driver access, or failed backend/frontend health.
+
+Record `PREVIOUS_HEAD`, switch only T-Ride to the previous release, and rebuild only changed `tride-*` services. Do not tear down the compose stack, automatically reverse migrations, restore the full DB during live traffic, modify `ktaxi-*`, or change host 80/443. Database recovery requires the pre-deployment backup and a separate manual maintenance procedure.
