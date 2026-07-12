@@ -151,7 +151,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   bool get _hasTransferSlip => settlementReceiptPresent(_settlement);
 
   bool get _canConfirmSettlement =>
-      _detail?['status'] == 'SETTLEMENT_PENDING' && settlementCanApprove(_settlement);
+      _detail?['status'] == 'SETTLEMENT_PENDING' &&
+      settlementCanApprove(_settlement);
 
   Future<void> _viewTransferSlip() async {
     final l10n = context.l10n;
@@ -863,7 +864,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final tags = (review['tags'] as List<dynamic>? ?? [])
         .map((item) => item.toString())
         .toList();
-    final comment = review['comment'] as String?;
+    final comment = (review['comment'] as String?)?.trim();
+    final createdAt = (review['createdAt'] as String?)?.trim();
     final lowRating = review['lowRating'] == true;
 
     return AppUi.adminDetailSection(
@@ -874,25 +876,30 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (rating != null) ...[
-            Row(
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 4,
               children: [
                 Text(
-                  '${l10n.t('admin_booking_review_rating')}: ',
+                  '${l10n.t('admin_booking_review_rating')}:',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                ...List.generate(5, (index) {
-                  final value = index + 1;
-                  return Icon(
-                    value <= rating.toInt()
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    color: lowRating
-                        ? AppTokens.warning
-                        : Colors.amber.shade700,
-                    size: 20,
-                  );
-                }),
-                const SizedBox(width: 6),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (index) {
+                    final value = index + 1;
+                    return Icon(
+                      value <= rating.toInt()
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: lowRating
+                          ? AppTokens.warning
+                          : Colors.amber.shade700,
+                      size: 20,
+                    );
+                  }),
+                ),
                 Text('${rating.toInt()}/5'),
               ],
             ),
@@ -919,12 +926,117 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           ],
           if (comment != null && comment.trim().isNotEmpty) ...[
             const SizedBox(height: AppTokens.spaceSm),
-            AppUi.summaryRow(
-              label: l10n.t('admin_booking_review_comment'),
-              value: comment,
+            _customerReviewCommentCard(l10n, comment),
+          ] else ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            _customerReviewEmptyComment(l10n),
+          ],
+          if (createdAt != null && createdAt.isNotEmpty) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              l10n.t('admin_booking_review_created_at'),
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              createdAt,
+              style: const TextStyle(
+                color: AppTokens.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _customerReviewCommentCard(AppLocalizations l10n, String comment) {
+    final displayComment = _wrapLongReviewRuns(comment);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: AppTokens.surface,
+        borderRadius: AppTokens.borderRadiusMd,
+        border: Border.all(color: AppTokens.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              const Icon(
+                Icons.rate_review_outlined,
+                size: 18,
+                color: AppTokens.primary,
+              ),
+              Text(
+                l10n.t('admin_booking_review_comment'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppTokens.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            displayComment,
+            style: const TextStyle(
+              color: AppTokens.textPrimary,
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _wrapLongReviewRuns(String text) {
+    const wrapEvery = 32;
+    final buffer = StringBuffer();
+    var runLength = 0;
+    for (final rune in text.runes) {
+      final char = String.fromCharCode(rune);
+      buffer.write(char);
+      if (char.trim().isEmpty) {
+        runLength = 0;
+        continue;
+      }
+      runLength += 1;
+      if (runLength >= wrapEvery) {
+        buffer.write('\u200B');
+        runLength = 0;
+      }
+    }
+    return buffer.toString();
+  }
+
+  Widget _customerReviewEmptyComment(AppLocalizations l10n) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: AppTokens.surfaceMuted,
+        borderRadius: AppTokens.borderRadiusMd,
+        border: Border.all(color: AppTokens.border),
+      ),
+      child: Text(
+        l10n.t('admin_booking_review_comment_empty'),
+        style: const TextStyle(
+          color: AppTokens.textSecondary,
+          fontStyle: FontStyle.italic,
+        ),
       ),
     );
   }

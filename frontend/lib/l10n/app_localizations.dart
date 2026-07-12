@@ -881,6 +881,8 @@ class AppLocalizations {
       'admin_booking_review_rating': 'Rating',
       'admin_booking_review_tags': 'Tags',
       'admin_booking_review_comment': 'Comment',
+      'admin_booking_review_comment_empty': 'No written review was provided.',
+      'admin_booking_review_created_at': 'Submitted at',
       'booking_notification_updates': 'Updates',
       'booking_notification_enabling': 'Enabling...',
       'booking_notification_enable': 'Enable notifications',

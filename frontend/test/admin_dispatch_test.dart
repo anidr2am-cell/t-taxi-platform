@@ -1286,7 +1286,153 @@ void main() {
     expect(find.text('Customer review'), findsOneWidget);
     expect(find.text('Late arrival'), findsOneWidget);
     expect(find.text('Driver was late and rude.'), findsOneWidget);
+    expect(find.text('Submitted at'), findsOneWidget);
+    expect(find.text('2026-07-02 10:00:00'), findsOneWidget);
   });
+
+  testWidgets(
+    'admin booking detail shows empty state for blank review comment',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'COMPLETED',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': [],
+                'customerReview': {
+                  'reviewId': 10,
+                  'rating': 5,
+                  'tags': ['FRIENDLY'],
+                  'comment': '',
+                  'lowRating': false,
+                  'createdAt': '2026-07-02 11:00:00',
+                },
+              },
+            ),
+            onChanged: () {},
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Customer review'), findsOneWidget);
+      expect(find.text('5/5'), findsOneWidget);
+      expect(find.text('Friendly'), findsOneWidget);
+      expect(find.text('No written review was provided.'), findsOneWidget);
+      expect(find.text('2026-07-02 11:00:00'), findsOneWidget);
+    },
+  );
+
+  testWidgets('admin booking detail renders review comment as plain text', (
+    tester,
+  ) async {
+    const comment =
+        'Line one\nLine two with <script>alert("x")</script> and **markdown**';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'COMPLETED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': [],
+              'customerReview': {
+                'reviewId': 11,
+                'rating': 2,
+                'tags': ['OTHER_ISSUE'],
+                'comment': comment,
+                'lowRating': true,
+                'createdAt': '2026-07-02 12:00:00',
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text(comment), findsOneWidget);
+    expect(find.textContaining('<script>'), findsOneWidget);
+    expect(find.textContaining('**markdown**'), findsOneWidget);
+  });
+
+  testWidgets(
+    'admin booking detail long review comment has no 320px overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final longComment = 'https://example.com/${'a' * 480}';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'COMPLETED',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': [],
+                'customerReview': {
+                  'reviewId': 12,
+                  'rating': 5,
+                  'tags': [],
+                  'comment': longComment,
+                  'lowRating': false,
+                  'createdAt': '2026-07-02 13:00:00',
+                },
+              },
+            ),
+            onChanged: () {},
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('https://example.com/'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('admin detail follows operations workspace section order', (
     tester,
