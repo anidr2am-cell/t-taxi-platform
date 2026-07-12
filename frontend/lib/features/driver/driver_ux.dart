@@ -1,4 +1,5 @@
 import '../booking/utils/booking_status_display.dart';
+import '../settlement/utils/settlement_receipt.dart';
 import 'driver_trip_flow.dart';
 import 'services/driver_api_service.dart';
 import 'models/driver_booking.dart';
@@ -97,8 +98,9 @@ class DriverUx {
     final commissionStatus = settlement['commissionStatus'] as String? ?? '';
     final receiptStatus = settlement['receiptStatus'] as String? ?? '';
     if (commissionStatus == 'RECEIPT_SUBMITTED' ||
+        receiptStatus == 'RECEIPT_SUBMITTED' ||
         receiptStatus == 'SUBMITTED' ||
-        settlement['receiptUrl'] != null) {
+        settlementReceiptPresent(settlement)) {
       return SettlementActionHint.waitingForAdmin;
     }
     if (commissionStatus == 'PENDING' ||

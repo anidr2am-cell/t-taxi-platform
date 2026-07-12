@@ -101,7 +101,7 @@ function createLifecycleState() {
 }
 
 function bookingRow(state) {
-  return {
+  const row = {
     id: state.bookingId,
     booking_number: state.bookingNumber,
     status: state.status,
@@ -121,7 +121,18 @@ function bookingRow(state) {
     dropoff_qr_token_hash: state.dropoffToken ? hashToken(state.dropoffToken) : null,
     dropoff_qr_expires_at: state.dropoffToken ? '2099-01-01 00:00:00' : null,
     dropoff_qr_used_at: state.dropoffQrUsedAt ?? null,
+    receipt_mime_type: null,
+    receipt_file_size: null,
+    receipt_original_filename: null,
+    receipt_uploaded_at: null,
   };
+  if (state.commissionReceiptFileId != null) {
+    row.receipt_mime_type = state.receiptMimeType ?? 'application/pdf';
+    row.receipt_file_size = state.receiptFileSize ?? 8;
+    row.receipt_original_filename = state.receiptOriginalFilename ?? 'transfer-slip.pdf';
+    row.receipt_uploaded_at = state.receiptUploadedAt ?? '2026-07-12 12:00:00';
+  }
+  return row;
 }
 
 function buildMvpHarness(initialState = createLifecycleState()) {
@@ -255,6 +266,9 @@ function buildMvpHarness(initialState = createLifecycleState()) {
   const fileRepository = {
     async insert(_c, data) {
       state.storedReceiptPath = data.filePath;
+      state.receiptMimeType = data.mimeType;
+      state.receiptFileSize = data.fileSize;
+      state.receiptOriginalFilename = data.originalFilename;
       return 77;
     },
     async softDelete() {},

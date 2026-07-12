@@ -406,6 +406,109 @@ test('admin settlement list item keeps driver summary fields', () => {
   );
   assert.equal(item.driverId, 5);
   assert.equal(item.driverName, 'Driver A');
+  assert.equal(item.canApprove, false);
+});
+
+test('admin settlement list item exposes receipt and approval when file linked', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      status: 'SETTLEMENT_PENDING',
+      commission_receipt_file_id: 42,
+      metadata: { commissionReceiptSubmittedAt: '2026-07-12T04:00:00.000Z' },
+      receipt_mime_type: 'image/png',
+    }),
+    '/api/v1/admin/settlements',
+    ROLES.ADMIN,
+  );
+  assert.equal(item.commissionStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(item.receiptStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(item.receiptFileId, 42);
+  assert.equal(item.canApprove, true);
+  assert.equal(item.receiptUrl, '/api/v1/admin/settlements/TX202607010001/receipt');
+});
+
+test('orphaned commission_receipt_file_id without files row is not submitted', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      status: 'SETTLEMENT_PENDING',
+      commission_receipt_file_id: 99,
+      receipt_mime_type: null,
+      receipt_original_filename: null,
+      receipt_file_size: null,
+    }),
+    '/api/v1/admin/settlements',
+    ROLES.ADMIN,
+  );
+  assert.equal(item.commissionStatus, 'PENDING');
+  assert.equal(item.receiptStatus, 'NONE');
+  assert.equal(item.receiptFileId, undefined);
+  assert.equal(item.canApprove, false);
+});
+
+test('uploadReceipt persists receipt and returns RECEIPT_SUBMITTED', async () => {
+  let savedFileId = null;
+  let savedMetadata = null;
+  const bookingRepo = {
+    async findSettlementByBookingNumberForUpdate() {
+      return settlementRow({
+        status: 'SETTLEMENT_PENDING',
+        commission_receipt_file_id: null,
+      });
+    },
+    async driverOwnsSettlementBooking() { return true; },
+    async updateCommissionFields(_conn, _id, fields) {
+      savedFileId = fields.commissionReceiptFileId;
+      savedMetadata = fields.metadata;
+    },
+    async insertActivityLog() {},
+    async findSettlementByBookingNumber() {
+      return settlementRow({
+        status: 'SETTLEMENT_PENDING',
+        commission_receipt_file_id: savedFileId,
+        metadata: savedMetadata,
+        receipt_mime_type: 'application/pdf',
+        receipt_original_filename: 'receipt.pdf',
+      });
+    },
+  };
+  const driverRepo = {
+    async findByUserId() { return { id: 5 }; },
+  };
+  const fileRepo = {
+    async insert() { return 501; },
+    async softDelete() {},
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const pool = { async getConnection() { return conn; } };
+  const service = new CommissionSettlementService(pool, bookingRepo, driverRepo, fileRepo, {});
+
+  const tmp = path.join(uploadDir, 'test-upload-success.bin');
+  fs.writeFileSync(tmp, '%PDF');
+  const result = await service.uploadReceipt(44, 'TX202607010001', {
+    path: tmp,
+    mimetype: 'application/pdf',
+    size: 4,
+    originalname: 'receipt.pdf',
+  });
+
+  assert.equal(savedFileId, 501);
+  assert.ok(savedMetadata.commissionReceiptSubmittedAt);
+  assert.equal(result.commissionStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(result.receiptStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(result.receiptFileId, 501);
+  assert.equal(result.receiptUrl, '/api/v1/driver/settlements/TX202607010001/receipt');
+  if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+  const staged = path.join(uploadDir, 'settlements', 'TX202607010001');
+  if (fs.existsSync(staged)) {
+    fs.rmSync(staged, { recursive: true, force: true });
+  }
 });
 
 test('getDriverSettlement reconciles missing obligation on access', async () => {

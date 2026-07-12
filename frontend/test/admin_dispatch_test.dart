@@ -960,6 +960,8 @@ void main() {
       detail: {
         'bookingNumber': 'TX202607010001',
         'commissionStatus': 'RECEIPT_SUBMITTED',
+        'receiptStatus': 'RECEIPT_SUBMITTED',
+        'receiptFileId': 42,
         'commissionAmount': 200,
         'currency': 'THB',
         'receiptUrl': '/api/v1/admin/settlements/TX202607010001/receipt',

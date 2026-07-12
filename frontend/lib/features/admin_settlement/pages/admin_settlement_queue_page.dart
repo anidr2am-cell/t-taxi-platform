@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../../settlement/utils/settlement_receipt.dart';
 import '../services/admin_settlement_api_service.dart';
 
 class AdminSettlementQueuePage extends StatefulWidget {
@@ -141,6 +142,15 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                                                 fontSize: 12,
                                               ),
                                             ),
+                                          if (settlementReceiptPresent(item))
+                                            Text(
+                                              item['receiptStatus'] as String? ?? 'RECEIPT_SUBMITTED',
+                                              style: const TextStyle(
+                                                color: AppTokens.primary,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
@@ -264,10 +274,58 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
     }
   }
 
+  Future<void> _viewReceipt() async {
+    setState(() => _submitting = true);
+    try {
+      final receipt = await widget.api.getReceipt(widget.bookingNumber);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Transfer slip'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
+            child: receipt.contentType.startsWith('image/')
+                ? Image.memory(
+                    receipt.bytes,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Text('Unable to load transfer slip'),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.description_outlined, size: 52),
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(receipt.filename ?? 'Transfer slip'),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userFacingError(err, fallback: 'Unable to load transfer slip')),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _detail?['commissionStatus'] as String? ?? '';
-    final canReview = status == 'RECEIPT_SUBMITTED';
+    final canReview = settlementCanApprove(_detail);
+    final hasReceipt = settlementReceiptPresent(_detail);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.bookingNumber)),
@@ -305,14 +363,25 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                           Text('Status: $status', style: const TextStyle(fontSize: 18)),
                           if (_detail?['dueAt'] != null)
                             Text('Due: ${_detail?['dueAt']}'),
-                          if (_detail?['receiptUrl'] != null)
+                          if (hasReceipt)
                             Padding(
                               padding: const EdgeInsets.only(top: AppTokens.spaceSm),
-                              child: Text('Receipt on file'),
+                              child: Text(
+                                'Receipt: ${_detail?['receiptStatus'] ?? 'RECEIPT_SUBMITTED'}',
+                              ),
                             ),
                         ],
                       ),
                     ),
+                    if (hasReceipt) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.secondaryButton(
+                        label: 'View transfer slip',
+                        icon: Icons.receipt_long_outlined,
+                        onPressed: _submitting ? null : _viewReceipt,
+                        fullWidth: true,
+                      ),
+                    ],
                     if (canReview) ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       AppUi.adminDetailSection(

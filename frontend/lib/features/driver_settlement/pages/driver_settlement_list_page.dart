@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../../../utils/user_facing_error.dart';
 import '../services/driver_settlement_api_service.dart';
+import '../../settlement/utils/settlement_receipt.dart';
 
 typedef ReceiptPickResult = ({List<int> bytes, String filename});
 
@@ -349,16 +350,29 @@ class _DriverSettlementDetailPageState
       _uploadError = null;
     });
     try {
-      await widget.api.uploadReceipt(
+      final uploaded = await widget.api.uploadReceipt(
         widget.bookingNumber,
         _selectedBytes!,
         _selectedFilename!,
       );
+      if (!driverUploadResponseConfirmed(uploaded)) {
+        throw const DriverSettlementApiException(
+          'Upload did not complete',
+          errorCode: 'RECEIPT_NOT_SAVED',
+        );
+      }
       setState(() {
         _selectedFilename = null;
         _selectedBytes = null;
       });
       await _load();
+      final detail = _detail;
+      if (detail != null && !driverUploadResponseConfirmed(detail)) {
+        throw const DriverSettlementApiException(
+          'Upload did not complete',
+          errorCode: 'RECEIPT_NOT_SAVED',
+        );
+      }
     } catch (err) {
       setState(
         () => _uploadError = userFacingError(

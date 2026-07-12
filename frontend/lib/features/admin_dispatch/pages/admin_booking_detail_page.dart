@@ -10,6 +10,7 @@ import '../../../widgets/app_ui.dart';
 import '../../admin_chat/pages/admin_chat_queue_page.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../../admin_settlement/services/admin_settlement_api_service.dart';
+import '../../settlement/utils/settlement_receipt.dart';
 import '../widgets/assign_driver_dialog.dart';
 import '../widgets/recommend_drivers_dialog.dart';
 import '../utils/admin_operations_ux.dart';
@@ -147,16 +148,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     return actions.map((e) => e as String).toList();
   }
 
-  bool get _hasTransferSlip {
-    final receiptUrl = _settlement?['receiptUrl'];
-    final metadata = _settlement?['receiptMetadata'];
-    return (receiptUrl is String && receiptUrl.isNotEmpty) || metadata is Map;
-  }
+  bool get _hasTransferSlip => settlementReceiptPresent(_settlement);
 
   bool get _canConfirmSettlement =>
-      _detail?['status'] == 'SETTLEMENT_PENDING' &&
-      _settlement?['commissionStatus'] == 'RECEIPT_SUBMITTED' &&
-      _hasTransferSlip;
+      _detail?['status'] == 'SETTLEMENT_PENDING' && settlementCanApprove(_settlement);
 
   Future<void> _viewTransferSlip() async {
     final l10n = context.l10n;

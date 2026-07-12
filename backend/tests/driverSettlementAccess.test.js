@@ -147,4 +147,46 @@ test('getAdminSettlement exposes SETTLEMENT_PENDING booking for admin review', a
   assert.equal(detail.status, 'SETTLEMENT_PENDING');
   assert.equal(detail.commissionAmount, 200);
   assert.equal(detail.commissionStatus, 'PENDING');
+  assert.equal(detail.receiptStatus, 'NONE');
+  assert.equal(detail.canApprove, false);
+});
+
+test('getAdminSettlement marks receipt submitted from commission_receipt_file_id', async () => {
+  const bookingRepo = {
+    async findSettlementByBookingNumber() {
+      return {
+        booking_number: 'TX202607120002',
+        status: 'SETTLEMENT_PENDING',
+        completed_at: null,
+        total_amount: 1600,
+        currency: 'THB',
+        commission_status: COMMISSION_STATUS.DUE,
+        commission_amount: 200,
+        commission_due_at: null,
+        commission_paid_at: null,
+        commission_receipt_file_id: 88,
+        metadata: { commissionReceiptSubmittedAt: '2026-07-12T04:00:00.000Z' },
+        driver_id: 5,
+        driver_name: 'Driver A',
+        driver_phone: '+6600',
+        receipt_mime_type: 'image/jpeg',
+        receipt_file_size: 1200,
+        receipt_original_filename: 'slip.jpg',
+        receipt_uploaded_at: '2026-07-12 11:00:00',
+      };
+    },
+  };
+  const service = new CommissionSettlementService({}, bookingRepo, {}, {}, {});
+  service.reconcileMissingObligationForBooking = async () => {};
+
+  const detail = await service.getAdminSettlement('TX202607120002', '/api/v1/admin/settlements');
+  assert.equal(detail.commissionStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(detail.receiptStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(detail.receiptFileId, 88);
+  assert.equal(detail.canApprove, true);
+  assert.equal(
+    detail.receiptUrl,
+    '/api/v1/admin/settlements/TX202607120002/receipt',
+  );
+  assert.equal(detail.receiptMetadata.mimeType, 'image/jpeg');
 });
