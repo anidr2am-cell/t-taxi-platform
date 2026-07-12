@@ -480,6 +480,7 @@ class CommissionSettlementService {
     const driver = await this.resolveDriver(driverUserId);
     const conn = await this.pool.getConnection();
     let stagedFinalPath = null;
+    let transactionCommitted = false;
 
     try {
       await conn.beginTransaction();
@@ -569,13 +570,20 @@ class CommissionSettlementService {
       }
 
       await conn.commit();
+      transactionCommitted = true;
 
       if (outboxId && this.outboxProcessor) {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
       }
 
       if (file?.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+        try {
+          fs.unlinkSync(file.path);
+        } catch (cleanupError) {
+          logger.warn('Receipt temporary file cleanup failed', {
+            error: cleanupError.message,
+          });
+        }
       }
 
       const updated = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
@@ -598,12 +606,33 @@ class CommissionSettlementService {
       }
       return mapped;
     } catch (err) {
-      await conn.rollback();
-      if (stagedFinalPath && fs.existsSync(stagedFinalPath)) {
-        fs.unlinkSync(stagedFinalPath);
+      if (!transactionCommitted) {
+        try {
+          await conn.rollback();
+        } catch (rollbackError) {
+          logger.warn('Receipt transaction rollback failed', {
+            error: rollbackError.message,
+          });
+        }
+
+        if (stagedFinalPath && fs.existsSync(stagedFinalPath)) {
+          try {
+            fs.unlinkSync(stagedFinalPath);
+          } catch (cleanupError) {
+            logger.warn('Uncommitted receipt file cleanup failed', {
+              error: cleanupError.message,
+            });
+          }
+        }
       }
       if (file?.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+        try {
+          fs.unlinkSync(file.path);
+        } catch (cleanupError) {
+          logger.warn('Receipt temporary file cleanup failed', {
+            error: cleanupError.message,
+          });
+        }
       }
       throw err;
     } finally {
