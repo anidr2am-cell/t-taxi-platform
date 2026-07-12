@@ -4,6 +4,7 @@ const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const { parseStoredTags } = require('../constants/reviewTags');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
+const { isBookingReviewEligible } = require('../utils/reviewEligibility.util');
 const GuestVehiclePhotoService = require('./guestVehiclePhoto.service');
 
 const LOOKUP_GUEST_TOKEN_TTL_HOURS = 24;
@@ -53,13 +54,7 @@ class GuestBookingLookupService {
   }
 
   isReviewEligible(row) {
-    if ([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.NO_SHOW].includes(row.status)) {
-      return false;
-    }
-    if (![BOOKING_STATUS.SETTLEMENT_PENDING, BOOKING_STATUS.COMPLETED].includes(row.status)) {
-      return false;
-    }
-    return Boolean(row.driver_id || row.driver_name);
+    return isBookingReviewEligible(row);
   }
 
   mapGuestReviewState(row, review) {

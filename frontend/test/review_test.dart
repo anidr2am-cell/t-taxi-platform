@@ -17,7 +17,10 @@ class _FakeReviewApi extends BookingReviewApi {
   final Map<String, dynamic>? submitResult;
   final Object? submitError;
   int submitCalls = 0;
+  String? lastBookingNumber;
+  int? lastRating;
   List<String>? lastTags;
+  String? lastGuestAccessToken;
 
   @override
   Future<Map<String, dynamic>> getReview({
@@ -42,7 +45,10 @@ class _FakeReviewApi extends BookingReviewApi {
     String? customerAccessToken,
   }) async {
     submitCalls += 1;
+    lastBookingNumber = bookingNumber;
+    lastRating = rating;
     lastTags = tags;
+    lastGuestAccessToken = guestAccessToken;
     if (submitError != null) throw submitError!;
     return submitResult ?? {
       'eligible': true,
@@ -245,7 +251,10 @@ void main() {
     await tester.tap(find.text('Submit rating'));
     await tester.pump();
     expect(api.submitCalls, 1);
+    expect(api.lastBookingNumber, 'TX202607010001');
+    expect(api.lastRating, 5);
     expect(api.lastTags, contains('FRIENDLY'));
+    expect(api.lastGuestAccessToken, 'guest-token');
     expect(find.text('Thank you for your feedback.'), findsOneWidget);
   });
 

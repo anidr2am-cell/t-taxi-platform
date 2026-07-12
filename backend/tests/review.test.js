@@ -9,6 +9,7 @@ const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 const ReviewService = require('../src/services/review.service');
+const BookingRepository = require('../src/repositories/booking.repository');
 const MODERATION_STATUS = require('../src/constants/reviewModerationStatus');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const ROLES = require('../src/constants/roles');
@@ -666,6 +667,34 @@ test('driverId is derived from booking not request body', async () => {
     { id: 8, role: ROLES.CUSTOMER },
   );
   assert.equal(capturedDriverId, 42);
+});
+
+test('review booking lookup resolves driver from completed assignment history', async () => {
+  let capturedSql = '';
+  const repo = new BookingRepository({
+    async query(queryText) {
+      capturedSql = queryText;
+      return [[{
+        id: 10,
+        booking_number: 'TX202607010001',
+        status: 'COMPLETED',
+        driver_id: 42,
+      }]];
+    },
+  });
+
+  const row = await repo.findByBookingNumberForUpdate(
+    { query: repo.pool.query },
+    'TX202607010001',
+  );
+
+  assert.equal(row.driver_id, 42);
+  assert.match(capturedSql, /COALESCE\(b\.driver_id, bda\.driver_id\) AS driver_id/);
+  assert.match(capturedSql, /b\.status IN \('SETTLEMENT_PENDING', 'COMPLETED'\)/);
+  assert.match(
+    capturedSql,
+    /ORDER BY bda2\.is_active DESC, bda2\.updated_at DESC, bda2\.id DESC/,
+  );
 });
 
 test('transaction failure creates neither review nor activity log', async () => {

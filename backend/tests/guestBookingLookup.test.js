@@ -300,6 +300,24 @@ test('guest lookup exposes canReview for completed booking with driver_id but no
   assert.equal(result.assignedDriver, null);
 });
 
+test('guest lookup does not expose reviewAvailable from driver display name alone', async () => {
+  const { service } = buildService(bookingRow({
+    status: 'COMPLETED',
+    driver_id: null,
+    driver_name: 'Historical Driver',
+    driver_phone: '+66 80 000 0000',
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.canReview, false);
+  assert.equal(result.capabilities.reviewAvailable, false);
+  assert.equal(result.review, null);
+});
+
 test('guest lookup hides review when booking status is not review eligible', async () => {
   for (const status of ['PENDING', 'DRIVER_ASSIGNED', 'PICKED_UP', 'CANCELLED', 'NO_SHOW']) {
     const { service } = buildService(bookingRow({ status }));

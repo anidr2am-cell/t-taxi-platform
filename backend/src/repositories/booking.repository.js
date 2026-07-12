@@ -224,8 +224,20 @@ class BookingRepository {
           b.booking_number,
           b.status,
           b.customer_user_id,
-          b.driver_id
+          COALESCE(b.driver_id, bda.driver_id) AS driver_id
         FROM bookings b
+        LEFT JOIN booking_driver_assignments bda ON bda.id = (
+          SELECT bda2.id
+          FROM booking_driver_assignments bda2
+          WHERE bda2.booking_id = b.id
+            AND bda2.deleted_at IS NULL
+            AND (
+              bda2.is_active = 1
+              OR b.status IN ('SETTLEMENT_PENDING', 'COMPLETED')
+            )
+          ORDER BY bda2.is_active DESC, bda2.updated_at DESC, bda2.id DESC
+          LIMIT 1
+        )
         WHERE b.booking_number = ? AND b.deleted_at IS NULL
         LIMIT 1
       `,
@@ -241,7 +253,7 @@ class BookingRepository {
           b.id,
           b.booking_number,
           b.status,
-          b.driver_id,
+          COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
           b.origin_address,
           b.destination_address,
@@ -338,11 +350,24 @@ class BookingRepository {
       `
         SELECT
           b.id, b.booking_number, b.status, b.total_amount, b.currency,
-          b.payment_status, b.payment_method, b.customer_user_id, b.driver_id,
+          b.payment_status, b.payment_method, b.customer_user_id,
+          COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           b.dropoff_qr_token_hash, b.dropoff_qr_expires_at, b.dropoff_qr_used_at,
           d.user_id AS driver_user_id
         FROM bookings b
-        LEFT JOIN drivers d ON d.id = b.driver_id AND d.deleted_at IS NULL
+        LEFT JOIN booking_driver_assignments bda ON bda.id = (
+          SELECT bda2.id
+          FROM booking_driver_assignments bda2
+          WHERE bda2.booking_id = b.id
+            AND bda2.deleted_at IS NULL
+            AND (
+              bda2.is_active = 1
+              OR b.status IN ('SETTLEMENT_PENDING', 'COMPLETED')
+            )
+          ORDER BY bda2.is_active DESC, bda2.updated_at DESC, bda2.id DESC
+          LIMIT 1
+        )
+        LEFT JOIN drivers d ON d.id = COALESCE(b.driver_id, bda.driver_id) AND d.deleted_at IS NULL
         WHERE b.booking_number = ? AND b.deleted_at IS NULL
         LIMIT 1
         FOR UPDATE

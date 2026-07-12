@@ -5,20 +5,11 @@ const ROLES = require('../constants/roles');
 const MODERATION_STATUS = require('../constants/reviewModerationStatus');
 const { normalizeTags, parseStoredTags } = require('../constants/reviewTags');
 const { hashToken } = require('../utils/tokenHash.util');
+const { isBookingReviewEligible } = require('../utils/reviewEligibility.util');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
 
 const MAX_COMMENT_LENGTH = 500;
-const BOOKING_STATUS = {
-  SETTLEMENT_PENDING: 'SETTLEMENT_PENDING',
-  COMPLETED: 'COMPLETED',
-  CANCELLED: 'CANCELLED',
-  NO_SHOW: 'NO_SHOW',
-};
-const REVIEW_ELIGIBLE_STATUSES = new Set([
-  BOOKING_STATUS.SETTLEMENT_PENDING,
-  BOOKING_STATUS.COMPLETED,
-]);
 
 class ReviewService {
   constructor(
@@ -93,11 +84,7 @@ class ReviewService {
   }
 
   isReviewEligible(booking) {
-    if (!booking?.driver_id) return false;
-    if (booking.status === BOOKING_STATUS.CANCELLED || booking.status === BOOKING_STATUS.NO_SHOW) {
-      return false;
-    }
-    return REVIEW_ELIGIBLE_STATUSES.has(booking.status);
+    return isBookingReviewEligible(booking);
   }
 
   assertReviewEligible(booking) {
