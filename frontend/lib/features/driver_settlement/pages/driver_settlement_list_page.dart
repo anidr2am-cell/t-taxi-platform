@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../../../utils/user_facing_error.dart';
 import '../services/driver_settlement_api_service.dart';
+import '../../settlement/utils/settlement_receipt.dart';
 
 typedef ReceiptPickResult = ({List<int> bytes, String filename});
 
@@ -76,13 +77,25 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('ui_load_failed'),
-        );
+        _error = _settlementErrorMessage(err);
         _loading = false;
       });
     }
+  }
+
+  String _settlementErrorMessage(Object err) {
+    final l10n = context.l10n;
+    if (err is DriverSettlementApiException) {
+      return driverSettlementApiErrorMessage(
+        message: err.message,
+        errorCode: err.errorCode,
+        languageCode: l10n.languageCode,
+      );
+    }
+    return userFacingError(
+      err,
+      fallback: l10n.t('driver_settlement_loading_failed'),
+    );
   }
 
   AppStatusTone _settlementTone(String status) {
@@ -263,13 +276,25 @@ class _DriverSettlementDetailPageState
       });
     } catch (err) {
       setState(() {
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('ui_load_failed'),
-        );
+        _error = _settlementErrorMessage(err);
         _loading = false;
       });
     }
+  }
+
+  String _settlementErrorMessage(Object err) {
+    final l10n = context.l10n;
+    if (err is DriverSettlementApiException) {
+      return driverSettlementApiErrorMessage(
+        message: err.message,
+        errorCode: err.errorCode,
+        languageCode: l10n.languageCode,
+      );
+    }
+    return userFacingError(
+      err,
+      fallback: l10n.t('driver_settlement_loading_failed'),
+    );
   }
 
   bool _canUpload(String status) {
@@ -325,16 +350,29 @@ class _DriverSettlementDetailPageState
       _uploadError = null;
     });
     try {
-      await widget.api.uploadReceipt(
+      final uploaded = await widget.api.uploadReceipt(
         widget.bookingNumber,
         _selectedBytes!,
         _selectedFilename!,
       );
+      if (!driverUploadResponseConfirmed(uploaded)) {
+        throw const DriverSettlementApiException(
+          'Upload did not complete',
+          errorCode: 'RECEIPT_NOT_SAVED',
+        );
+      }
       setState(() {
         _selectedFilename = null;
         _selectedBytes = null;
       });
       await _load();
+      final detail = _detail;
+      if (detail != null && !driverUploadResponseConfirmed(detail)) {
+        throw const DriverSettlementApiException(
+          'Upload did not complete',
+          errorCode: 'RECEIPT_NOT_SAVED',
+        );
+      }
     } catch (err) {
       setState(
         () => _uploadError = userFacingError(

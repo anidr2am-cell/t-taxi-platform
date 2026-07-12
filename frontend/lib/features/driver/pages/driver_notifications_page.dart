@@ -58,7 +58,9 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
     try {
       final data = await _api.listNotifications();
       setState(() {
-        _items = data['items'] as List<dynamic>? ?? [];
+        _items = DriverUx.sortNotifications(
+          data['items'] as List<dynamic>? ?? [],
+        );
         _loading = false;
       });
     } catch (err) {
@@ -326,12 +328,21 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
                                 _items[index] as Map,
                               );
                               final read = item['read'] == true;
+                              final payload = Map<String, dynamic>.from(
+                                item['payload'] as Map? ?? {},
+                              );
+                              final bookingNumber =
+                                  payload['bookingNumber'] as String?;
+                              final createdAt =
+                                  item['createdAt'] as String? ?? '';
                               return _NotificationCard(
                                 title:
                                     item['title'] as String? ??
                                     l10n.t('driver_notification_default'),
                                 body: item['body'] as String? ?? '',
                                 typeLabel: _typeBadgeLabel(item, l10n),
+                                bookingNumber: bookingNumber,
+                                createdAt: createdAt,
                                 read: read,
                                 markReadLabel: l10n.t(
                                   'driver_notification_mark_read',
@@ -370,6 +381,8 @@ class _NotificationCard extends StatelessWidget {
     required this.onTap,
     required this.markReadLabel,
     required this.newBadgeLabel,
+    this.bookingNumber,
+    this.createdAt = '',
     this.onMarkRead,
   });
 
@@ -380,6 +393,8 @@ class _NotificationCard extends StatelessWidget {
   final VoidCallback onTap;
   final String markReadLabel;
   final String newBadgeLabel;
+  final String? bookingNumber;
+  final String createdAt;
   final VoidCallback? onMarkRead;
 
   @override
@@ -435,6 +450,22 @@ class _NotificationCard extends StatelessWidget {
                   runSpacing: AppTokens.spaceXs,
                   children: [
                     AppUi.statusBadge(typeLabel, tone: AppStatusTone.neutral),
+                    if (bookingNumber != null && bookingNumber!.isNotEmpty)
+                      Text(
+                        bookingNumber!,
+                        style: const TextStyle(
+                          color: AppTokens.textMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    if (createdAt.isNotEmpty)
+                      Text(
+                        createdAt,
+                        style: const TextStyle(
+                          color: AppTokens.textMuted,
+                          fontSize: 12,
+                        ),
+                      ),
                   ],
                 ),
                 if (body.isNotEmpty) ...[

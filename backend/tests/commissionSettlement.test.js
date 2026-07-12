@@ -364,6 +364,153 @@ test('reconciliation creates obligation for completed booking without event', as
   assert.equal(activateCalls, 2);
 });
 
+test('mapSettlementListItem includes trip summary fields with null-safe addresses', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      pickup_date: '2026-07-01',
+      pickup_time: '09:30:00',
+      origin_address: 'BKK Airport',
+      destination_address: 'Pattaya Hotel',
+    }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+  assert.equal(item.pickupDate, '2026-07-01');
+  assert.equal(item.pickupTime, '09:30:00');
+  assert.equal(item.origin, 'BKK Airport');
+  assert.equal(item.destination, 'Pattaya Hotel');
+  assert.equal(item.driverId, undefined);
+  assert.equal(item.driverName, undefined);
+
+  const nullItem = service.mapSettlementListItem(
+    settlementRow({
+      origin_address: null,
+      destination_address: null,
+      pickup_date: null,
+      pickup_time: null,
+    }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+  assert.equal(nullItem.origin, null);
+  assert.equal(nullItem.destination, null);
+});
+
+test('admin settlement list item keeps driver summary fields', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow(),
+    '/api/v1/admin/settlements',
+    ROLES.ADMIN,
+  );
+  assert.equal(item.driverId, 5);
+  assert.equal(item.driverName, 'Driver A');
+  assert.equal(item.canApprove, false);
+});
+
+test('admin settlement list item exposes receipt and approval when file linked', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      status: 'SETTLEMENT_PENDING',
+      commission_receipt_file_id: 42,
+      metadata: { commissionReceiptSubmittedAt: '2026-07-12T04:00:00.000Z' },
+      receipt_mime_type: 'image/png',
+    }),
+    '/api/v1/admin/settlements',
+    ROLES.ADMIN,
+  );
+  assert.equal(item.commissionStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(item.receiptStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(item.receiptFileId, 42);
+  assert.equal(item.canApprove, true);
+  assert.equal(item.receiptUrl, '/api/v1/admin/settlements/TX202607010001/receipt');
+});
+
+test('orphaned commission_receipt_file_id without files row is not submitted', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      status: 'SETTLEMENT_PENDING',
+      commission_receipt_file_id: 99,
+      receipt_mime_type: null,
+      receipt_original_filename: null,
+      receipt_file_size: null,
+    }),
+    '/api/v1/admin/settlements',
+    ROLES.ADMIN,
+  );
+  assert.equal(item.commissionStatus, 'PENDING');
+  assert.equal(item.receiptStatus, 'NONE');
+  assert.equal(item.receiptFileId, undefined);
+  assert.equal(item.canApprove, false);
+});
+
+test('uploadReceipt persists receipt and returns RECEIPT_SUBMITTED', async () => {
+  let savedFileId = null;
+  let savedMetadata = null;
+  const bookingRepo = {
+    async findSettlementByBookingNumberForUpdate() {
+      return settlementRow({
+        status: 'SETTLEMENT_PENDING',
+        commission_receipt_file_id: null,
+      });
+    },
+    async driverOwnsSettlementBooking() { return true; },
+    async updateCommissionFields(_conn, _id, fields) {
+      savedFileId = fields.commissionReceiptFileId;
+      savedMetadata = fields.metadata;
+    },
+    async insertActivityLog() {},
+    async findSettlementByBookingNumber() {
+      return settlementRow({
+        status: 'SETTLEMENT_PENDING',
+        commission_receipt_file_id: savedFileId,
+        metadata: savedMetadata,
+        receipt_mime_type: 'application/pdf',
+        receipt_original_filename: 'receipt.pdf',
+      });
+    },
+  };
+  const driverRepo = {
+    async findByUserId() { return { id: 5 }; },
+  };
+  const fileRepo = {
+    async insert() { return 501; },
+    async softDelete() {},
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const pool = { async getConnection() { return conn; } };
+  const service = new CommissionSettlementService(pool, bookingRepo, driverRepo, fileRepo, {});
+
+  const tmp = path.join(uploadDir, 'test-upload-success.bin');
+  fs.writeFileSync(tmp, '%PDF');
+  const result = await service.uploadReceipt(44, 'TX202607010001', {
+    path: tmp,
+    mimetype: 'application/pdf',
+    size: 4,
+    originalname: 'receipt.pdf',
+  });
+
+  assert.equal(savedFileId, 501);
+  assert.ok(savedMetadata.commissionReceiptSubmittedAt);
+  assert.equal(result.commissionStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(result.receiptStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(result.receiptFileId, 501);
+  assert.equal(result.receiptUrl, '/api/v1/driver/settlements/TX202607010001/receipt');
+  if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+  const staged = path.join(uploadDir, 'settlements', 'TX202607010001');
+  if (fs.existsSync(staged)) {
+    fs.rmSync(staged, { recursive: true, force: true });
+  }
+});
+
 test('getDriverSettlement reconciles missing obligation on access', async () => {
   let activated = false;
   const driverRepo = {
@@ -441,6 +588,7 @@ test('duplicate rejection does not add review history', async () => {
 test('upload failure does not orphan booking receipt reference', async () => {
   const previousFileId = 99;
   let committed = false;
+  let rolledBack = false;
   const bookingRepo = {
     async findSettlementByBookingNumberForUpdate() {
       return settlementRow({ commission_receipt_file_id: previousFileId });
@@ -461,7 +609,7 @@ test('upload failure does not orphan booking receipt reference', async () => {
   const conn = {
     async beginTransaction() {},
     async commit() { committed = true; },
-    async rollback() {},
+    async rollback() { rolledBack = true; },
     release() {},
   };
   const pool = { async getConnection() { return conn; } };
@@ -478,11 +626,123 @@ test('upload failure does not orphan booking receipt reference', async () => {
     }),
   );
   assert.equal(committed, false);
+  assert.equal(rolledBack, true);
   if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
   const staged = path.join(uploadDir, 'settlements', 'TX202607010001');
+  assert.deepEqual(fs.existsSync(staged) ? fs.readdirSync(staged) : [], []);
   if (fs.existsSync(staged)) {
     fs.rmSync(staged, { recursive: true, force: true });
   }
+});
+
+test('post-commit reload failure preserves committed receipt file', async () => {
+  let savedFileId = null;
+  let committed = false;
+  let rolledBack = false;
+  const bookingRepo = {
+    async findSettlementByBookingNumberForUpdate() {
+      return settlementRow({ commission_receipt_file_id: null });
+    },
+    async driverOwnsSettlementBooking() { return true; },
+    async updateCommissionFields(_conn, _id, fields) {
+      savedFileId = fields.commissionReceiptFileId;
+    },
+    async insertActivityLog() {},
+    async findSettlementByBookingNumber() {
+      throw new Error('post-commit reload failed');
+    },
+  };
+  const driverRepo = {
+    async findByUserId() { return { id: 5 }; },
+  };
+  const fileRepo = {
+    async insert() { return 502; },
+    async softDelete() {},
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() { committed = true; },
+    async rollback() { rolledBack = true; },
+    release() {},
+  };
+  const service = new CommissionSettlementService(
+    { async getConnection() { return conn; } },
+    bookingRepo,
+    driverRepo,
+    fileRepo,
+    {},
+  );
+  const tmp = path.join(uploadDir, 'test-upload-post-commit.bin');
+  fs.writeFileSync(tmp, '%PDF');
+
+  await assert.rejects(
+    () => service.uploadReceipt(44, 'TX202607010001', {
+      path: tmp,
+      mimetype: 'application/pdf',
+      size: 4,
+      originalname: 'receipt.pdf',
+    }),
+    /post-commit reload failed/,
+  );
+
+  const staged = path.join(uploadDir, 'settlements', 'TX202607010001');
+  assert.equal(savedFileId, 502);
+  assert.equal(committed, true);
+  assert.equal(rolledBack, false);
+  assert.equal(fs.readdirSync(staged).length, 1);
+  fs.rmSync(staged, { recursive: true, force: true });
+  if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+});
+
+test('absorbed post-commit outbox failure keeps receipt and returns success', async () => {
+  let savedFileId = null;
+  const bookingRepo = {
+    async findSettlementByBookingNumberForUpdate() {
+      return settlementRow({ commission_receipt_file_id: null });
+    },
+    async driverOwnsSettlementBooking() { return true; },
+    async updateCommissionFields(_conn, _id, fields) {
+      savedFileId = fields.commissionReceiptFileId;
+    },
+    async insertActivityLog() {},
+    async findSettlementByBookingNumber() {
+      return settlementRow({
+        commission_receipt_file_id: savedFileId,
+        receipt_mime_type: 'application/pdf',
+        receipt_original_filename: 'receipt.pdf',
+      });
+    },
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() { throw new Error('rollback must not run'); },
+    release() {},
+  };
+  const service = new CommissionSettlementService(
+    { async getConnection() { return conn; } },
+    bookingRepo,
+    { async findByUserId() { return { id: 5 }; } },
+    { async insert() { return 503; }, async softDelete() {} },
+    {},
+    { async insertNotificationEvent() { return 77; } },
+    { async dispatchOutboxIds() {} },
+  );
+  const tmp = path.join(uploadDir, 'test-upload-outbox.bin');
+  fs.writeFileSync(tmp, '%PDF');
+
+  const result = await service.uploadReceipt(44, 'TX202607010001', {
+    path: tmp,
+    mimetype: 'application/pdf',
+    size: 4,
+    originalname: 'receipt.pdf',
+  });
+
+  const staged = path.join(uploadDir, 'settlements', 'TX202607010001');
+  assert.equal(result.receiptFileId, 503);
+  assert.equal(fs.readdirSync(staged).length, 1);
+  fs.rmSync(staged, { recursive: true, force: true });
+  if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
 });
 
 test('sanitizeDownloadFilename strips unsafe characters', () => {

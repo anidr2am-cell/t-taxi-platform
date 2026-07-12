@@ -1,172 +1,58 @@
-# T-Ride staging — Docker Compose
+# T-Ride Staging Docker
 
-Isolated **T-Ride** stack for Gabia VPS staging. Runs beside legacy **KTaxi** at `/opt/ktaxi` without touching `ktaxi-*` containers, host **80/443**, or `ktaxi-postgres`.
+Isolated staging stack beside legacy KTaxi.
 
 | Item | Value |
-|------|-------|
-| Compose project | `tride-staging` |
-| Compose file | `deploy/docker/docker-compose.staging.yml` |
-| Server path | `/opt/t-ride` (clone repo; run compose from `deploy/docker/`) |
-| Network | `tride-net` |
-| DB | MariaDB 10.11 (`tride-db`), database `tride_staging` |
-| Backend | `tride-backend` — container **3000**, host **3100** |
-| Frontend | `tride-frontend` — nginx **80**, host **3101** |
+|---|---|
+| Server path | `/opt/t-ride` |
+| Compose | `deploy/docker/docker-compose.staging.yml` |
+| DB | `tride-db`, MariaDB 10.11, `tride_staging` |
+| Backend | `tride-backend`, host 3100 -> container 3000 |
+| Frontend | `tride-frontend`, host 3101 -> container 80 |
 | Volumes | `tride_mysql_data`, `tride_uploads`, `tride_logs` |
 
-## Prerequisites
+The backend image contains the database directory at `/srv/tride/database`. This does not authorize running the full migration runner.
 
-- Docker Engine + Docker Compose v2
-- **Do not** install host nginx, PM2, or Node for this stack
-- Legacy `ktaxi-nginx` continues to serve `88taxi.net` — **no changes in this step**
+## Selective Deployment
 
-## Quick start (server)
+Check Git and containers first:
 
 ```bash
-cd /opt/t-ride/deploy/docker
-cp .env.example .env
-# Edit .env: replace SERVER_IP, passwords, JWT secrets (openssl rand -base64 48)
+cd /opt/t-ride
+git status --short
+git branch --show-current
+git rev-parse HEAD
 
-docker compose -f docker-compose.staging.yml up -d --build
+cd deploy/docker
 docker compose -f docker-compose.staging.yml ps
 ```
 
-### Smoke (split ports)
-
-Replace `SERVER_IP` with the VPS public IP:
+Rebuild only a changed service:
 
 ```bash
-curl -s http://SERVER_IP:3100/api/v1/health
-curl -s http://SERVER_IP:3100/api/v1/health/readiness
-curl -s -o /dev/null -w "%{http_code}\n" http://SERVER_IP:3101/
-curl -s -o /dev/null -w "%{http_code}\n" http://SERVER_IP:3101/booking/lookup
-```
-
-Browser:
-
-- UI: `http://SERVER_IP:3101/`
-- API (direct): `http://SERVER_IP:3100/api/v1/health`
-
-**CORS:** frontend origin is `:3101`, API is `:3101` → `:3100`. Set in `.env`:
-
-```env
-CORS_ORIGIN=http://SERVER_IP:3101
-PUBLIC_API_URL=http://SERVER_IP:3100
-TRIDE_API_BASE_URL=http://SERVER_IP:3100
-```
-
-**Google Places:** booking origin/destination autocomplete is proxied by
-`tride-backend`; the Flutter frontend does not receive the Google API key. Set
-one backend key in `.env` and rebuild/recreate `tride-backend`:
-
-```env
-GOOGLE_MAPS_API_KEY=
-# or GOOGLE_PLACES_API_KEY=
-```
-
-If the key is missing, `/api/v1/places/autocomplete` returns
-`Google Places provider is not configured`. If the key exists but the error
-continues, verify Google Cloud has the new Places API enabled and that API key
-restrictions allow server-side requests from the staging backend.
-
-Rebuild frontend after changing `TRIDE_API_BASE_URL`:
-
-```bash
+docker compose -f docker-compose.staging.yml up -d --build tride-backend
 docker compose -f docker-compose.staging.yml up -d --build tride-frontend
 ```
 
-## Database image — MariaDB (not MySQL 8.4)
-
-`tride-db` uses **`mariadb:10.11`** so the MariaDB **mysql client** inside `tride-backend` can authenticate without MySQL 8.4’s `caching_sha2_password` plugin (which Alpine/MariaDB clients do not load).
-
-Env vars (`MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`) and charset/timezone `command` flags are compatible with the official MariaDB image.
-
-**Migrations:** `database/04_booking_core.sql` enforces one active assignment per booking via **`active_assignment_guard`** (STORED generated column) plus composite unique `(booking_id, active_assignment_guard)`. The guard avoids referencing FK columns in generated expressions (MariaDB 10.11).
-
-## Reset DB volume after image change (or failed first migration)
-
-If `tride-db` previously ran as **`mysql:8.4`**, or migration failed partway, **delete only the T-Ride data volume** and recreate the stack **before** re-running `migrate.sh`:
+Health checks:
 
 ```bash
-cd /opt/t-ride/deploy/docker
-docker compose -f docker-compose.staging.yml down
-
-# T-Ride ONLY — never remove ktaxi / infra volumes
-docker volume rm tride_mysql_data
-
-docker compose -f docker-compose.staging.yml up -d --build
-docker compose -f docker-compose.staging.yml ps
+curl -fsS http://127.0.0.1:3100/api/v1/health
+curl -fsSI http://127.0.0.1:3101/ | head -n 1
 ```
 
-**Never delete:** `ktaxi_*`, `infra_*`, or any volume attached to `/opt/ktaxi` containers.
+## Migration Policy
 
-Verify T-Ride volumes only:
+`database/migrate.sh` and `migrate.ps1` replay all numbered files and do not maintain `schema_migrations`. For commercialization:
 
-```bash
-docker volume ls | grep tride
-```
+1. Confirm `MYSQL_DATABASE=tride_staging`.
+2. Back up T-Ride DB.
+3. Inspect current schema.
+4. Apply only missing SQL files against the explicit target DB.
+5. Verify schema and affected data after every file.
 
-## Migration and seed
+Do not run the full migration runner for an existing commercial database.
 
-Wait until `tride-db` is healthy, then:
+## Legacy Protection
 
-```bash
-docker compose -f docker-compose.staging.yml exec tride-backend \
-  sh -c 'cd /srv/tride/database && ./migrate.sh'
-```
-
-Compose injects `DB_*` and JWT vars from `deploy/docker/.env` into the container environment. `database/migrate.sh` passes **`--skip-ssl`** for MariaDB client compatibility inside the container.
-
-Seed demo data (**tride_staging only**):
-
-```bash
-docker compose -f docker-compose.staging.yml exec tride-backend npm run seed:mvp-demo
-docker compose -f docker-compose.staging.yml exec tride-backend npm run rehearsal:mvp-e2e
-```
-
-## Uploads on Gabia
-
-Default: named volume `tride_uploads`. To use host path `/opt/t-ride/uploads`, add `docker-compose.override.yml`:
-
-```yaml
-services:
-  tride-backend:
-    volumes:
-      - /opt/t-ride/uploads:/srv/tride/uploads
-```
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `docker-compose.staging.yml` | `tride-db`, `tride-backend`, `tride-frontend` |
-| `Dockerfile.backend` | Node 22 + MariaDB-compatible mysql client + migrate.sh |
-| `Dockerfile.frontend` | Flutter web build + nginx |
-| `nginx.frontend.conf` | SPA fallback + `/api/` proxy (future same-origin) |
-| `.env.example` | Staging secrets template — copy to `.env` |
-
-`Dockerfile.backend` installs devDependencies intentionally because this
-staging image runs `npm run rehearsal:mvp-e2e`, which depends on `supertest`.
-Do not use this Dockerfile as a trimmed production runtime image without adding
-a separate production install stage.
-
-## Logs and teardown
-
-```bash
-docker compose -f docker-compose.staging.yml logs -f tride-backend
-docker compose -f docker-compose.staging.yml down        # stops tride-* only
-docker compose -f docker-compose.staging.yml down -v     # also removes volumes — destructive
-```
-
-## Static validation
-
-- **Gabia server:** `docker compose -f docker-compose.staging.yml config` (requires populated `.env`)
-- **Local dev machine:** Docker CLI may be unavailable — run `config` / `up` on the server
-
-## Future step — public domain (not this phase)
-
-`tride-staging.88taxi.net` will be added via **ktaxi-nginx** reverse proxy in a later phase. See [docs/GABIA_STAGING_DEPLOY_CHECKLIST.md](../../docs/GABIA_STAGING_DEPLOY_CHECKLIST.md) §7–8.
-
-## Related docs
-
-- [docs/GABIA_STAGING_DEPLOY_CHECKLIST.md](../../docs/GABIA_STAGING_DEPLOY_CHECKLIST.md)
-- [docs/MVP_DEPLOYMENT_PREP.md](../../docs/MVP_DEPLOYMENT_PREP.md)
+Never access or change `/opt/ktaxi`, `ktaxi-*`, `ktaxi-nginx`, host 80/443, `88taxi.net`, certbot, `infra_*`, or legacy databases. Do not use stack-wide teardown, system prune, volume prune, or network prune commands.

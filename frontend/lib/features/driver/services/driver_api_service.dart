@@ -27,6 +27,7 @@ class DriverApiService {
   const DriverApiService();
 
   static const _tokenKey = 'driver_access_token';
+  static const _driverNameKey = 'driver_display_name';
 
   String get _base => '${AppConfig.apiBaseUrl}/api/v1';
 
@@ -56,6 +57,12 @@ class DriverApiService {
       }
     }
     await prefs.remove(_tokenKey);
+    await prefs.remove(_driverNameKey);
+  }
+
+  Future<String?> getDriverDisplayName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_driverNameKey);
   }
 
   Future<void> login({required String email, required String password}) async {
@@ -86,6 +93,14 @@ class DriverApiService {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, data['accessToken'] as String);
+    final displayName =
+        user['name'] as String? ??
+        user['phone'] as String? ??
+        user['email'] as String? ??
+        '';
+    if (displayName.isNotEmpty) {
+      await prefs.setString(_driverNameKey, displayName);
+    }
   }
 
   Future<dynamic> _get(String path) async {
@@ -185,9 +200,18 @@ class DriverApiService {
     return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  Future<DriverBooking> markPickedUp(String bookingNumber) async {
+    final data = await _post('/driver/bookings/$bookingNumber/mark-picked-up');
+    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverBooking> endTrip(String bookingNumber) async {
+    final data = await _post('/driver/bookings/$bookingNumber/end-trip');
+    return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
   Future<DriverBooking> completeTrip(String bookingNumber) async {
-    await _post('/driver/bookings/$bookingNumber/complete');
-    return getBookingDetail(bookingNumber);
+    return endTrip(bookingNumber);
   }
 
   Future<DriverBooking> scanBoarding(String bookingNumber, String token) async {

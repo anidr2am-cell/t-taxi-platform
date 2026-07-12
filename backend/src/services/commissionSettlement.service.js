@@ -12,6 +12,11 @@ const { EVENTS } = require('../events');
 
 const ADMIN_RECONCILE_BATCH_LIMIT = 100;
 
+function settlementApiBase(segment) {
+  const config = require('../config');
+  return `/api/${config.server.apiVersion}/${segment}`;
+}
+
 const ALLOWED_MIME = new Set([
   'image/jpeg',
   'image/png',
@@ -146,21 +151,41 @@ class CommissionSettlementService {
     return true;
   }
 
+  hasCommissionReceipt(row) {
+    if (row.commission_receipt_file_id == null) return false;
+    // Require joined files row; orphaned file id must not count as submitted.
+    return row.receipt_mime_type != null
+      || row.receipt_original_filename != null
+      || row.receipt_file_size != null;
+  }
+
+  isReceiptRejected(row, metadata) {
+    return Boolean(
+      metadata.commissionRejectionReason
+      && !this.hasCommissionReceipt(row),
+    );
+  }
+
   mapPublicCommissionStatus(row, metadata, now = new Date()) {
     if (row.commission_status === COMMISSION_STATUS.PAID) return 'APPROVED';
-    if (metadata.commissionRejectionReason && !row.commission_receipt_file_id) {
-      return 'REJECTED';
-    }
-    if (row.commission_receipt_file_id) return 'RECEIPT_SUBMITTED';
+    if (this.isReceiptRejected(row, metadata)) return 'REJECTED';
+    if (this.hasCommissionReceipt(row)) return 'RECEIPT_SUBMITTED';
     if (this.isOverdue(row, now)) return 'OVERDUE';
     return 'PENDING';
   }
 
   mapReceiptStatus(row, metadata) {
     if (row.commission_status === COMMISSION_STATUS.PAID) return 'APPROVED';
-    if (metadata.commissionRejectionReason && !row.commission_receipt_file_id) return 'REJECTED';
-    if (row.commission_receipt_file_id) return 'SUBMITTED';
+    if (this.isReceiptRejected(row, metadata)) return 'REJECTED';
+    if (this.hasCommissionReceipt(row)) return 'RECEIPT_SUBMITTED';
     return 'NONE';
+  }
+
+  computeCanApprove(row, metadata) {
+    if (row.status !== 'SETTLEMENT_PENDING') return false;
+    if (row.commission_status === COMMISSION_STATUS.PAID) return false;
+    if (this.isReceiptRejected(row, metadata)) return false;
+    return this.hasCommissionReceipt(row);
   }
 
   mapSettlementListItem(row, apiBasePath, role) {
@@ -169,21 +194,31 @@ class CommissionSettlementService {
     const receiptStatus = this.mapReceiptStatus(row, metadata);
     const item = {
       bookingNumber: row.booking_number,
+      status: row.status,
+      pickupDate: row.pickup_date ?? null,
+      pickupTime: row.pickup_time ?? null,
+      origin: row.origin_address ?? null,
+      destination: row.destination_address ?? null,
       completedAt: row.completed_at,
       commissionAmount: row.commission_amount != null ? Number(row.commission_amount) : null,
       currency: row.currency,
       commissionStatus,
       dueAt: row.commission_due_at,
       receiptStatus,
+      receiptSubmittedAt: row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
       receiptUploadedAt: row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
       rejectionReason: metadata.commissionRejectionReason ?? null,
     };
+    if (this.hasCommissionReceipt(row)) {
+      item.receiptFileId = Number(row.commission_receipt_file_id);
+    }
     if (role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN) {
       item.driverId = row.driver_id;
       item.driverName = row.driver_name;
       item.driverPhone = row.driver_phone;
+      item.canApprove = this.computeCanApprove(row, metadata);
     }
-    if (row.commission_receipt_file_id && apiBasePath) {
+    if (this.hasCommissionReceipt(row) && apiBasePath) {
       item.receiptUrl = `${apiBasePath}/${row.booking_number}/receipt`;
     }
     return item;
@@ -194,6 +229,7 @@ class CommissionSettlementService {
     const listItem = this.mapSettlementListItem(row, apiBasePath, ROLES.ADMIN);
     return {
       ...listItem,
+      canApprove: this.computeCanApprove(row, metadata),
       bookingSummary: {
         bookingNumber: row.booking_number,
         completedAt: row.completed_at,
@@ -206,7 +242,7 @@ class CommissionSettlementService {
         phone: row.driver_phone,
       },
       commissionPaidAt: row.commission_paid_at,
-      receiptMetadata: row.commission_receipt_file_id
+      receiptMetadata: this.hasCommissionReceipt(row)
         ? {
             mimeType: row.receipt_mime_type,
             fileSize: row.receipt_file_size,
@@ -444,6 +480,7 @@ class CommissionSettlementService {
     const driver = await this.resolveDriver(driverUserId);
     const conn = await this.pool.getConnection();
     let stagedFinalPath = null;
+    let transactionCommitted = false;
 
     try {
       await conn.beginTransaction();
@@ -533,24 +570,69 @@ class CommissionSettlementService {
       }
 
       await conn.commit();
+      transactionCommitted = true;
 
       if (outboxId && this.outboxProcessor) {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
       }
 
       if (file?.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+        try {
+          fs.unlinkSync(file.path);
+        } catch (cleanupError) {
+          logger.warn('Receipt temporary file cleanup failed', {
+            error: cleanupError.message,
+          });
+        }
       }
 
       const updated = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
-      return this.mapSettlementListItem(updated, null, ROLES.DRIVER);
+      const mapped = this.mapSettlementListItem(
+        updated,
+        settlementApiBase('driver/settlements'),
+        ROLES.DRIVER,
+      );
+      if (!this.hasCommissionReceipt(updated)) {
+        throw new AppError('Receipt was not saved', {
+          statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+        });
+      }
+      if (mapped.receiptStatus !== 'RECEIPT_SUBMITTED') {
+        throw new AppError('Receipt was not saved', {
+          statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+        });
+      }
+      return mapped;
     } catch (err) {
-      await conn.rollback();
-      if (stagedFinalPath && fs.existsSync(stagedFinalPath)) {
-        fs.unlinkSync(stagedFinalPath);
+      if (!transactionCommitted) {
+        try {
+          await conn.rollback();
+        } catch (rollbackError) {
+          logger.warn('Receipt transaction rollback failed', {
+            error: rollbackError.message,
+          });
+        }
+
+        if (stagedFinalPath && fs.existsSync(stagedFinalPath)) {
+          try {
+            fs.unlinkSync(stagedFinalPath);
+          } catch (cleanupError) {
+            logger.warn('Uncommitted receipt file cleanup failed', {
+              error: cleanupError.message,
+            });
+          }
+        }
       }
       if (file?.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+        try {
+          fs.unlinkSync(file.path);
+        } catch (cleanupError) {
+          logger.warn('Receipt temporary file cleanup failed', {
+            error: cleanupError.message,
+          });
+        }
       }
       throw err;
     } finally {

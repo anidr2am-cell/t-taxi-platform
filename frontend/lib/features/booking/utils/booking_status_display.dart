@@ -1,10 +1,24 @@
 import '../../../l10n/app_localizations.dart';
 
+/// Audience for role-specific booking status copy.
+enum BookingStatusAudience { customer, driver, admin }
+
 /// Shared booking status labels and customer-facing guidance (Phase 5).
 class BookingStatusDisplay {
   BookingStatusDisplay._();
 
-  static String statusLabelKey(String status) {
+  static String statusLabelKey(
+    String status, {
+    BookingStatusAudience audience = BookingStatusAudience.customer,
+  }) {
+    if (status == 'SETTLEMENT_PENDING') {
+      return switch (audience) {
+        BookingStatusAudience.customer => 'status_customer_settlement_pending',
+        BookingStatusAudience.driver => 'status_driver_settlement_pending',
+        BookingStatusAudience.admin => 'status_admin_settlement_pending',
+      };
+    }
+
     switch (status) {
       case 'PENDING':
         return 'status_pending';
@@ -18,8 +32,6 @@ class BookingStatusDisplay {
         return 'status_driver_arrived';
       case 'PICKED_UP':
         return 'status_picked_up';
-      case 'SETTLEMENT_PENDING':
-        return 'status_settlement_pending';
       case 'COMPLETED':
         return 'status_completed';
       case 'CANCELLED':
@@ -31,8 +43,12 @@ class BookingStatusDisplay {
     }
   }
 
-  static String label(AppLocalizations l10n, String status) {
-    return l10n.t(statusLabelKey(status));
+  static String label(
+    AppLocalizations l10n,
+    String status, {
+    BookingStatusAudience audience = BookingStatusAudience.customer,
+  }) {
+    return l10n.t(statusLabelKey(status, audience: audience));
   }
 
   static String? customerGuidanceKey(String status) {
@@ -49,6 +65,8 @@ class BookingStatusDisplay {
         return 'guest_status_guidance_driver_arrived';
       case 'PICKED_UP':
         return 'guest_status_guidance_picked_up';
+      case 'SETTLEMENT_PENDING':
+        return 'guest_status_guidance_settlement_pending';
       case 'COMPLETED':
         return 'guest_status_guidance_completed';
       case 'CANCELLED':

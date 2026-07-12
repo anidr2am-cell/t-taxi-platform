@@ -24,6 +24,8 @@ class _FakeSettlementApi extends DriverSettlementApiService {
       return {
         'bookingNumber': bookingNumber,
         'commissionStatus': 'RECEIPT_SUBMITTED',
+        'receiptStatus': 'RECEIPT_SUBMITTED',
+        'receiptFileId': 42,
         'commissionAmount': 120,
         'currency': 'THB',
         'dueAt': '2026-07-08 12:00:00',
@@ -50,6 +52,8 @@ class _FakeSettlementApi extends DriverSettlementApiService {
     return {
       'bookingNumber': bookingNumber,
       'commissionStatus': 'RECEIPT_SUBMITTED',
+      'receiptStatus': 'RECEIPT_SUBMITTED',
+      'receiptFileId': 42,
     };
   }
 }
@@ -75,6 +79,31 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Network error'), findsOneWidget);
+  });
+
+  testWidgets('driver settlement hides settlement not found message', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverSettlementDetailPage(
+          bookingNumber: 'TX202607120002',
+          api: _FakeSettlementApi(
+            error: const DriverSettlementApiException(
+              'Settlement not found',
+              errorCode: 'SETTLEMENT_NOT_FOUND',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settlement not found'), findsNothing);
+    expect(
+      find.textContaining('We could not load the settlement information'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('driver settlement detail selects file and uploads', (
@@ -130,9 +159,49 @@ void main() {
     expect(find.text('업로드 재시도 / ลองอัปโหลดอีกครั้ง'), findsOneWidget);
   });
 
+  testWidgets('driver settlement detail rejects incomplete upload response', (
+    tester,
+  ) async {
+    final api = _IncompleteUploadApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverSettlementDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          receiptPicker: () async =>
+              (bytes: [0x25, 0x50, 0x44, 0x46], filename: 'receipt.pdf'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('송금증 선택 / เลือกสลิปโอนเงิน'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('상태\n(สถานะ): PENDING'), findsOneWidget);
+    expect(find.text('상태\n(สถานะ): RECEIPT_SUBMITTED'), findsNothing);
+  });
+
   test('isAllowedReceiptFilename validates extensions', () {
     expect(isAllowedReceiptFilename('receipt.pdf'), isTrue);
     expect(isAllowedReceiptFilename('photo.JPG'), isTrue);
     expect(isAllowedReceiptFilename('notes.txt'), isFalse);
   });
+}
+
+class _IncompleteUploadApi extends _FakeSettlementApi {
+  @override
+  Future<Map<String, dynamic>> uploadReceipt(
+    String bookingNumber,
+    List<int> bytes,
+    String filename,
+  ) async {
+    uploadCalls += 1;
+    return {
+      'bookingNumber': bookingNumber,
+      'commissionStatus': 'PENDING',
+    };
+  }
 }

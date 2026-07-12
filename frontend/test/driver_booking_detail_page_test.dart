@@ -21,11 +21,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'),
+      find.widgetWithText(FilledButton, '고객에게 출발 / ออกเดินทางไปรับลูกค้า'),
       findsOneWidget,
     );
     expect(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'),
       findsNothing,
     );
   });
@@ -53,11 +53,50 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '도착 / ถึงแล้ว'));
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid status transition'), findsOneWidget);
+  });
+
+  testWidgets('hides raw database error on end trip failure', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(status: 'PICKED_UP', actions: ['END_TRIP']),
+          actionError: const DriverApiException(
+            "Data truncated for column 'status' at row 1",
+            errorCode: 'INTERNAL_SERVER_ERROR',
+            statusCode: 500,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง').first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text("Data truncated for column 'status' at row 1"),
+      findsNothing,
+    );
+    expect(
+      find.textContaining('We could not complete the trip'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows mark arrived after on route', (tester) async {
@@ -70,24 +109,39 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'),
       findsOneWidget,
     );
   });
 
-  testWidgets('shows complete trip after arrival', (tester) async {
+  testWidgets('shows customer onboard after arrival', (tester) async {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
           detail: _booking(
             status: 'DRIVER_ARRIVED',
-            actions: ['COMPLETE_TRIP'],
+            actions: ['MARK_PICKED_UP'],
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, '운행 완료 / จบงาน'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '고객 탑승 / ลูกค้าขึ้นรถแล้ว'), findsOneWidget);
+  });
+
+  testWidgets('shows end trip after pickup', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'PICKED_UP',
+            actions: ['END_TRIP'],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง'), findsOneWidget);
   });
 
   testWidgets('hides primary action for completed booking', (tester) async {
@@ -102,14 +156,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(
-      find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'),
+      find.widgetWithText(FilledButton, '고객에게 출발 / ออกเดินทางไปรับลูกค้า'),
       findsNothing,
     );
     expect(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'),
       findsNothing,
     );
-    expect(find.widgetWithText(FilledButton, '운행 완료 / จบงาน'), findsNothing);
+    expect(find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง'), findsNothing);
   });
 
   testWidgets('hides primary action for no-show booking', (tester) async {
@@ -122,7 +176,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'),
+      find.widgetWithText(FilledButton, '고객에게 출발 / ออกเดินทางไปรับลูกค้า'),
       findsNothing,
     );
   });
@@ -287,14 +341,26 @@ class _FakeDriverApi extends DriverApiService {
   @override
   Future<DriverBooking> markArrived(String bookingNumber) async {
     if (actionError != null) throw actionError!;
-    _current = _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']);
+    _current = _booking(status: 'DRIVER_ARRIVED', actions: ['MARK_PICKED_UP']);
+    return _current;
+  }
+
+  @override
+  Future<DriverBooking> markPickedUp(String bookingNumber) async {
+    if (actionError != null) throw actionError!;
+    _current = _booking(status: 'PICKED_UP', actions: ['END_TRIP']);
+    return _current;
+  }
+
+  @override
+  Future<DriverBooking> endTrip(String bookingNumber) async {
+    if (actionError != null) throw actionError!;
+    _current = _booking(status: 'SETTLEMENT_PENDING', actions: []);
     return _current;
   }
 
   @override
   Future<DriverBooking> completeTrip(String bookingNumber) async {
-    if (actionError != null) throw actionError!;
-    _current = _booking(status: 'COMPLETED', actions: []);
-    return _current;
+    return endTrip(bookingNumber);
   }
 }

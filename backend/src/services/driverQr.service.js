@@ -5,6 +5,7 @@ const BOOKING_STATUS = require('../constants/reservationStatus');
 const ROLES = require('../constants/roles');
 const { hashToken } = require('../utils/tokenHash.util');
 
+// Legacy QR scan service — kept for API/DB compatibility; driver button flow must not use this.
 class DriverQrService {
   constructor(pool, bookingRepository, bookingStatusService, driverJobService) {
     this.pool = pool;

@@ -7,6 +7,7 @@ import 'package:frontend/features/admin_dispatch/pages/admin_dispatch_queue_page
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/features/admin_dispatch/widgets/recommend_drivers_dialog.dart';
 import 'package:frontend/features/admin_settlement/services/admin_settlement_api_service.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 
 class _FakeAdminApi extends AdminDispatchApiService {
   _FakeAdminApi({
@@ -27,8 +28,12 @@ class _FakeAdminApi extends AdminDispatchApiService {
   int assignCalls = 0;
   int reassignCalls = 0;
   int autoAssignCalls = 0;
+  int addNoteCalls = 0;
+  List<Map<String, dynamic>> notes = [];
+  Object? addNoteError;
   String? lastAssignmentState;
   String? lastStatus;
+  String? lastView;
   final Object? candidatesError;
 
   @override
@@ -36,18 +41,39 @@ class _FakeAdminApi extends AdminDispatchApiService {
 
   @override
   Future<Map<String, dynamic>> listBookings({
+    String? view,
     String? search,
     String? status,
     String? assignmentState,
     String? serviceDateFrom,
     String? serviceDateTo,
+    String? serviceType,
+    String? origin,
+    String? destination,
+    String? settlementStatus,
+    bool? lowRating,
+    bool? unassigned,
+    bool? hasInquiry,
     int page = 1,
     int limit = 20,
   }) async {
     lastAssignmentState = assignmentState;
     lastStatus = status;
+    lastView = view;
     if (bookingsError != null) throw bookingsError!;
     return bookingsResponse ?? {'page': 1, 'total': 0, 'items': []};
+  }
+
+  @override
+  Future<Map<String, dynamic>> getBookingsSummary() async {
+    return {
+      'needsAction': 2,
+      'unassigned': 1,
+      'today': 3,
+      'inProgress': 1,
+      'settlementPending': 1,
+      'issues': 1,
+    };
   }
 
   @override
@@ -77,6 +103,35 @@ class _FakeAdminApi extends AdminDispatchApiService {
           'activeAssignment': null,
           'allowedActions': ['ASSIGN_DRIVER'],
         };
+  }
+
+  @override
+  Future<Map<String, dynamic>> listBookingNotes(
+    String bookingNumber, {
+    int page = 1,
+    int limit = 20,
+  }) async => {
+    'page': page,
+    'page_size': limit,
+    'total': notes.length,
+    'items': notes,
+  };
+
+  @override
+  Future<Map<String, dynamic>> addBookingNote(
+    String bookingNumber,
+    String text,
+  ) async {
+    addNoteCalls += 1;
+    if (addNoteError != null) throw addNoteError!;
+    final note = {
+      'id': notes.length + 1,
+      'text': text,
+      'author': {'id': 1, 'name': 'Admin A'},
+      'createdAt': '2026-07-12 10:30:00',
+    };
+    notes.add(note);
+    return note;
   }
 
   @override
@@ -278,7 +333,9 @@ void main() {
     expect(find.text('Network error'), findsOneWidget);
   });
 
-  testWidgets('assignment filter requests UNASSIGNED bookings', (tester) async {
+  testWidgets('summary unassigned card requests UNASSIGNED bookings', (
+    tester,
+  ) async {
     final api = _FakeAdminApi(
       token: 'token',
       bookingsResponse: {'page': 1, 'total': 0, 'items': []},
@@ -287,9 +344,7 @@ void main() {
       MaterialApp(home: AdminDispatchQueuePage(api: api)),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButton<String?>).at(1));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Unassigned').last);
+    await tester.tap(find.text('Unassigned').first);
     await tester.pumpAndSettle();
     expect(api.lastAssignmentState, 'UNASSIGNED');
   });
@@ -315,7 +370,21 @@ void main() {
     expect(find.text('Assign driver'), findsOneWidget);
   });
 
-  testWidgets('separates new unassigned and existing assigned bookings', (
+  testWidgets('issues summary card switches to issues view', (tester) async {
+    final api = _FakeAdminApi(
+      token: 'token',
+      bookingsResponse: {'page': 1, 'total': 0, 'items': []},
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: AdminDispatchQueuePage(api: api)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Issues').first);
+    await tester.pumpAndSettle();
+    expect(api.lastView, 'issues');
+  });
+
+  testWidgets('shows needs action tab and summary cards by default', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -327,10 +396,9 @@ void main() {
               'page': 1,
               'total': 2,
               'items': [
-                {..._queueItem('TX-NEW'), 'bookingGroup': 'NEW'},
+                _queueItem('TX-NEW'),
                 {
                   ..._queueItem('TX-EXISTING'),
-                  'bookingGroup': 'EXISTING',
                   'activeAssignment': {
                     'driverDisplayName': 'Driver A',
                     'status': 'ASSIGNED',
@@ -344,10 +412,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('New bookings'), findsOneWidget);
-    expect(find.text('Newest request first'), findsOneWidget);
-    expect(find.text('Existing bookings'), findsOneWidget);
-    expect(find.text('Latest pickup first'), findsOneWidget);
+    expect(find.text('Needs action'), findsWidgets);
+    expect(find.text('TX-NEW'), findsOneWidget);
+    expect(find.text('TX-EXISTING'), findsOneWidget);
   });
 
   testWidgets('assigned driver is rendered in booking list', (tester) async {
@@ -600,7 +667,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Driver A'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Closer to pickup');
+    await tester.enterText(find.byType(TextField).last, 'Closer to pickup');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
@@ -665,7 +732,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Driver A'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Closer to pickup');
+    await tester.enterText(find.byType(TextField).last, 'Closer to pickup');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
@@ -893,6 +960,8 @@ void main() {
       detail: {
         'bookingNumber': 'TX202607010001',
         'commissionStatus': 'RECEIPT_SUBMITTED',
+        'receiptStatus': 'RECEIPT_SUBMITTED',
+        'receiptFileId': 42,
         'commissionAmount': 200,
         'currency': 'THB',
         'receiptUrl': '/api/v1/admin/settlements/TX202607010001/receipt',
@@ -1034,8 +1103,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('QR management'), findsOneWidget);
-    expect(find.text('Reissue boarding QR'), findsOneWidget);
+    expect(find.text('QR management'), findsNothing);
+    expect(find.text('Reissue boarding QR'), findsNothing);
   });
 
   testWidgets('hides internal QR configuration when reissue disabled', (
@@ -1084,19 +1153,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('QR management'), findsOneWidget);
+    expect(find.text('QR management'), findsNothing);
     expect(find.text('Reissue boarding QR'), findsNothing);
-    expect(
-      find.text('Set ALLOW_DEV_QR_REISSUE=true on the backend and restart'),
-      findsNothing,
-    );
-    expect(
-      find.text('QR reissue is not available in this environment.'),
-      findsOneWidget,
-    );
   });
 
-  testWidgets('dev QR reissue shows token once dialog', (tester) async {
+  testWidgets('dev QR reissue is hidden from admin booking detail', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: AdminBookingDetailPage(
@@ -1139,13 +1202,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Reissue boarding QR'));
-    await tester.tap(find.text('Reissue boarding QR'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Reissue'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('adminQrReissueToken')), findsOneWidget);
-    expect(find.text('dev-boarding-token'), findsOneWidget);
+    expect(find.text('Reissue boarding QR'), findsNothing);
+    expect(find.text('QR management'), findsNothing);
   });
 
   testWidgets('dispatch queue has no horizontal overflow at 360px', (
@@ -1186,5 +1244,372 @@ void main() {
 
     expect(find.text('TX202607010001'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('admin booking detail shows low rating review', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'COMPLETED',
+              'serviceType': {'name': 'Airport Pickup'},
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': [],
+              'customerReview': {
+                'reviewId': 9,
+                'rating': 2,
+                'tags': ['LATE_ARRIVAL', 'UNFRIENDLY_SERVICE'],
+                'comment': 'Driver was late and rude.',
+                'lowRating': true,
+                'createdAt': '2026-07-02 10:00:00',
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Low rating requires review'), findsOneWidget);
+    expect(find.text('Customer review'), findsOneWidget);
+    expect(find.text('Late arrival'), findsOneWidget);
+    expect(find.text('Driver was late and rude.'), findsOneWidget);
+    expect(find.text('Submitted at'), findsOneWidget);
+    expect(find.text('2026-07-02 10:00:00'), findsOneWidget);
+  });
+
+  testWidgets(
+    'admin booking detail shows empty state for blank review comment',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'COMPLETED',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': [],
+                'customerReview': {
+                  'reviewId': 10,
+                  'rating': 5,
+                  'tags': ['FRIENDLY'],
+                  'comment': '',
+                  'lowRating': false,
+                  'createdAt': '2026-07-02 11:00:00',
+                },
+              },
+            ),
+            onChanged: () {},
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Customer review'), findsOneWidget);
+      expect(find.text('5/5'), findsOneWidget);
+      expect(find.text('Friendly'), findsOneWidget);
+      expect(find.text('No written review was provided.'), findsOneWidget);
+      expect(find.text('2026-07-02 11:00:00'), findsOneWidget);
+    },
+  );
+
+  testWidgets('admin booking detail renders review comment as plain text', (
+    tester,
+  ) async {
+    const comment =
+        'Line one\nLine two with <script>alert("x")</script> and **markdown**';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'COMPLETED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': [],
+              'customerReview': {
+                'reviewId': 11,
+                'rating': 2,
+                'tags': ['OTHER_ISSUE'],
+                'comment': comment,
+                'lowRating': true,
+                'createdAt': '2026-07-02 12:00:00',
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text(comment), findsOneWidget);
+    expect(find.textContaining('<script>'), findsOneWidget);
+    expect(find.textContaining('**markdown**'), findsOneWidget);
+  });
+
+  testWidgets(
+    'admin booking detail long review comment has no 320px overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final longComment = 'https://example.com/${'a' * 480}';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'COMPLETED',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': [],
+                'customerReview': {
+                  'reviewId': 12,
+                  'rating': 5,
+                  'tags': [],
+                  'comment': longComment,
+                  'lowRating': false,
+                  'createdAt': '2026-07-02 13:00:00',
+                },
+              },
+            ),
+            onChanged: () {},
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('https://example.com/'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('admin detail follows operations workspace section order', (
+    tester,
+  ) async {
+    final detail = {
+      ..._settlementPendingDetail(),
+      'scheduledPickupAt': '2026-07-11 09:30:00',
+      'serviceType': {'code': 'AIRPORT_TO_CITY', 'name': 'Airport transfer'},
+      'vehicle': {'typeName': 'SUV'},
+      'passengers': {'adults': 2, 'children': 0, 'infants': 0},
+      'luggage': {'carriers20Inch': 1, 'carriers24InchPlus': 0, 'golfBags': 0},
+      'operations': {'adminUnreadCount': 3},
+      'statusHistory': [
+        {
+          'fromStatus': 'PICKED_UP',
+          'toStatus': 'SETTLEMENT_PENDING',
+          'changedByRole': 'DRIVER',
+          'createdAt': '2026-07-11 12:30:00',
+        },
+      ],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: detail),
+          settlementApi: _FakeSettlementApi(
+            detail: const {'commissionStatus': 'DUE'},
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final labels = [
+      'Customer information',
+      'Trip information',
+      'Driver and vehicle',
+      'Fare and settlement',
+      'Customer and driver chat',
+      'Status history',
+      'Technical information',
+    ];
+    for (final label in labels) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Customer chat unread'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('Customer review'), findsNothing);
+    expect(find.text('Raw booking status'), findsNothing);
+  });
+
+  testWidgets(
+    'admin detail shows one primary assign CTA and no 320px overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(),
+            onChanged: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Assign driver'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  test('admin detail operation labels are localized for KO EN and TH', () {
+    expect(AppLocalizations('ko').t('admin_detail_technical'), '기술 정보');
+    expect(
+      AppLocalizations('en').t('admin_detail_technical'),
+      'Technical information',
+    );
+    expect(
+      AppLocalizations('th').t('admin_detail_technical'),
+      'ข้อมูลทางเทคนิค',
+    );
+  });
+
+  testWidgets('internal notes show empty state and disable blank submit', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Internal notes'), findsOneWidget);
+    expect(find.text('Visible to administrators only.'), findsOneWidget);
+    expect(find.text('No internal notes yet.'), findsOneWidget);
+    final button = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Add note'),
+    );
+    expect(button.onPressed, isNull);
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Delete'), findsNothing);
+  });
+
+  testWidgets('internal note success appends item and clears input', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi();
+    api.notes.add({
+      'id': 1,
+      'text': 'Existing note',
+      'author': {'id': 1, 'name': 'Admin A'},
+      'createdAt': '2026-07-12 09:00:00',
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Existing note'), findsOneWidget);
+    expect(find.textContaining('Admin A'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('admin-note-input')),
+      'New operational note',
+    );
+    await tester.pump();
+    final addButton = find.widgetWithText(ElevatedButton, 'Add note');
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    expect(api.addNoteCalls, 1);
+    expect(find.text('New operational note'), findsOneWidget);
+    expect(find.text('Add an operational note'), findsOneWidget);
+  });
+
+  testWidgets('internal note failure keeps input for retry', (tester) async {
+    final api = _FakeAdminApi()
+      ..addNoteError = const AdminDispatchApiException('Save failed');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('admin-note-input')),
+      'Keep this text',
+    );
+    await tester.pump();
+    final addButton = find.widgetWithText(ElevatedButton, 'Add note');
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    expect(find.text('Save failed'), findsOneWidget);
+    expect(find.text('Keep this text'), findsOneWidget);
+  });
+
+  test('internal note labels are localized for KO EN and TH', () {
+    expect(AppLocalizations('ko').t('admin_notes_title'), '내부 메모');
+    expect(AppLocalizations('en').t('admin_notes_title'), 'Internal notes');
+    expect(AppLocalizations('th').t('admin_notes_title'), 'บันทึกภายใน');
   });
 }

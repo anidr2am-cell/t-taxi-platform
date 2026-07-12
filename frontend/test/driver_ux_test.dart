@@ -4,7 +4,10 @@ import 'package:frontend/features/driver/driver_ux.dart';
 import 'package:frontend/features/driver/models/driver_booking.dart';
 import 'package:frontend/features/driver/models/driver_status.dart';
 import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
-import 'package:frontend/features/driver/pages/driver_jobs_page.dart';
+import 'package:frontend/features/driver/pages/driver_account_page.dart';
+import 'package:frontend/features/driver/pages/driver_today_page.dart';
+import 'package:frontend/features/driver_settlement/pages/driver_settlement_list_page.dart';
+import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
 import 'package:frontend/features/driver/pages/driver_login_page.dart';
 import 'package:frontend/features/driver/pages/driver_qr_scan_page.dart';
 import 'package:frontend/features/driver/pages/driver_shell_page.dart';
@@ -47,9 +50,110 @@ void main() {
       expect(DriverUx.canMessageCustomer('PICKED_UP'), true);
       expect(DriverUx.canMessageCustomer('COMPLETED'), false);
     });
+    test('selectCurrentTrip prefers picked up over assigned', () {
+      final items = [
+        _booking(status: 'DRIVER_ASSIGNED', time: '08:00'),
+        _booking(
+          status: 'PICKED_UP',
+          time: '09:00',
+          number: 'TX202607010004',
+        ),
+      ];
+      final current = DriverUx.selectCurrentTrip(items);
+      expect(current?.status, 'PICKED_UP');
+    });
+
+    test('selectCurrentTrip uses nearest upcoming when no active trip', () {
+      final items = [
+        _booking(status: 'CONFIRMED', time: '12:00', number: 'TX202607010003'),
+        _booking(status: 'PENDING', time: '10:00', number: 'TX202607010002'),
+      ];
+      final current = DriverUx.selectCurrentTrip(items);
+      expect(current?.bookingNumber, 'TX202607010002');
+    });
+
+    test('remainingTodayTrips excludes current trip', () {
+      final current = _booking(status: 'PICKED_UP', number: 'TX202607010004');
+      final items = [
+        current,
+        _booking(status: 'DRIVER_ASSIGNED', number: 'TX202607010002'),
+        _booking(status: 'COMPLETED', number: 'TX202607010001'),
+      ];
+      final remaining = DriverUx.remainingTodayTrips(items, current: current);
+      expect(remaining.length, 1);
+      expect(remaining.first.bookingNumber, 'TX202607010002');
+    });
+
+    test('selectCurrentTrip prefers settlement pending over assigned', () {
+      final items = [
+        _booking(status: 'DRIVER_ASSIGNED', number: 'TX202607010002'),
+        _booking(
+          status: 'SETTLEMENT_PENDING',
+          number: 'TX202607010099',
+        ),
+      ];
+      final current = DriverUx.selectCurrentTrip(items);
+      expect(current?.status, 'SETTLEMENT_PENDING');
+    });
+
+    test('selectCurrentTrip prefers action-required settlement over picked up', () {
+      final items = [
+        _booking(status: 'PICKED_UP', number: 'TX202607010004'),
+        _booking(
+          status: 'SETTLEMENT_PENDING',
+          number: 'TX202607010099',
+        ),
+      ];
+      final current = DriverUx.selectCurrentTrip(
+        items,
+        settlementsByBooking: {
+          'TX202607010099': {'commissionStatus': 'PENDING'},
+        },
+      );
+      expect(current?.status, 'SETTLEMENT_PENDING');
+    });
+
+    test('selectCurrentTrip prefers picked up over waiting settlement', () {
+      final items = [
+        _booking(status: 'PICKED_UP', number: 'TX202607010004'),
+        _booking(
+          status: 'SETTLEMENT_PENDING',
+          number: 'TX202607010099',
+        ),
+      ];
+      final current = DriverUx.selectCurrentTrip(
+        items,
+        settlementsByBooking: {
+          'TX202607010099': {'commissionStatus': 'RECEIPT_SUBMITTED'},
+        },
+      );
+      expect(current?.status, 'PICKED_UP');
+    });
+
+    test('todayPrimaryCtaKey uses settlement-specific labels', () {
+      final booking = _booking(status: 'SETTLEMENT_PENDING');
+      expect(
+        DriverUx.todayPrimaryCtaKey(
+          booking,
+          settlement: {'commissionStatus': 'PENDING'},
+        ),
+        'driver_today_cta_settlement_submit',
+      );
+      expect(
+        DriverUx.todayPrimaryCtaKey(
+          booking,
+          settlement: {'commissionStatus': 'RECEIPT_SUBMITTED'},
+        ),
+        'driver_today_cta_settlement_waiting',
+      );
+      expect(
+        DriverUx.todayPrimaryCtaKey(booking),
+        'driver_today_cta_settlement',
+      );
+    });
   });
 
-  testWidgets('login success routes to Jobs shell', (tester) async {
+  testWidgets('login success routes to Today shell', (tester) async {
     await tester.pumpWidget(
       MaterialApp(home: DriverLoginPage(api: _FakeLoginApi())),
     );
@@ -63,12 +167,12 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(
-      find.text('오늘 배정된 예약이 없습니다\n(วันนี้ยังไม่มีงานที่ได้รับมอบหมาย)'),
+      find.textContaining('오늘 예정된 운행이 없습니다'),
       findsOneWidget,
     );
   });
 
-  testWidgets('saved token opens Jobs shell on login page load', (
+  testWidgets('saved token opens Today shell on login page load', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -99,17 +203,21 @@ void main() {
     expect(find.text('기사 로그인\n(เข้าสู่ระบบคนขับ)'), findsOneWidget);
   });
 
-  testWidgets('jobs list groups active, upcoming, and completed', (
+  testWidgets('today page shows remaining trips excluding current card', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: DriverJobsPage(
+        home: DriverTodayPage(
           api: _FakeJobsApi(
             jobs: DriverJobsToday(
               date: '2026-07-01',
               items: [
-                _booking(status: 'COMPLETED', time: '18:00'),
+                _booking(
+                  status: 'PICKED_UP',
+                  time: '09:00',
+                  number: 'TX202607010004',
+                ),
                 _booking(
                   status: 'DRIVER_ASSIGNED',
                   time: '10:00',
@@ -120,11 +228,6 @@ void main() {
                   time: '12:00',
                   number: 'TX202607010003',
                 ),
-                _booking(
-                  status: 'PICKED_UP',
-                  time: '09:00',
-                  number: 'TX202607010004',
-                ),
               ],
             ),
           ),
@@ -133,24 +236,155 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('진행 중\n(งานปัจจุบัน)'), findsOneWidget);
+    expect(find.text('운행 계속하기 / ดำเนินงานต่อ'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('예정\n(งานที่กำลังจะมาถึง)'),
+      find.textContaining('오늘 남은 예약'),
       120,
       scrollable: find.byType(Scrollable),
     );
-    expect(find.text('예정\n(งานที่กำลังจะมาถึง)'), findsOneWidget);
+    expect(find.textContaining('오늘 남은 예약'), findsOneWidget);
+    expect(find.text('Kim'), findsWidgets);
+  });
+
+  testWidgets('settlement pending CTA opens settlement detail only', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final api = _FakeJobsApi(
+      jobs: DriverJobsToday(
+        date: '2026-07-01',
+        items: [
+          _booking(status: 'SETTLEMENT_PENDING', number: 'TX202607010099'),
+        ],
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverTodayPage(
+          api: api,
+          settlementApi: _FakeSettlementApi(
+            settlements: {
+              'TX202607010099': {'commissionStatus': 'PENDING'},
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
-      find.text('TX202607010001'),
+      find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'),
       120,
       scrollable: find.byType(Scrollable),
     );
-    expect(find.text('TX202607010001'), findsOneWidget);
+    await tester.tap(
+      find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.startRouteCalls, 0);
+    expect(find.byType(DriverSettlementDetailPage), findsOneWidget);
+    expect(find.byType(DriverBookingDetailPage), findsNothing);
+  });
+
+  testWidgets('account page hides terms and privacy placeholder menus', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverAccountPage(
+          api: _FakeJobsApi(initialToken: 'tok'),
+          settlementApi: _FakeSettlementApi(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('이용약관'), findsNothing);
+    expect(find.textContaining('개인정보처리방침'), findsNothing);
+  });
+
+  testWidgets('today page fetches phone only for current trip', (tester) async {
+    _useTallViewport(tester);
+    final api = _TrackingDetailApi(
+      jobs: DriverJobsToday(
+        date: '2026-07-01',
+        items: [
+          _booking(
+            status: 'DRIVER_ASSIGNED',
+            number: 'TX202607010001',
+            phone: null,
+          ),
+          _booking(
+            status: 'CONFIRMED',
+            number: 'TX202607010003',
+            phone: null,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    expect(api.detailCalls, 1);
+    expect(api.detailCallsFor, 'TX202607010001');
+  });
+
+  testWidgets('driver shell has four bottom navigation tabs', (tester) async {
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      jobs: const DriverJobsToday(date: '2026-07-01', items: []),
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('오늘'), findsWidgets);
+    expect(find.textContaining('운행 기록'), findsOneWidget);
+    expect(find.textContaining('내 정보'), findsOneWidget);
+    expect(find.byIcon(Icons.receipt_long_outlined), findsNothing);
+    expect(find.byIcon(Icons.support_agent_outlined), findsNothing);
+  });
+
+  testWidgets('today page shows current trip CTA without status mutation', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final api = _FakeJobsApi(
+      jobs: DriverJobsToday(
+        date: '2026-07-01',
+        items: [
+          _booking(status: 'DRIVER_ASSIGNED', actions: ['START_ON_ROUTE']),
+        ],
+      ),
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('고객에게 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
+    expect(find.text('운행 계속하기 / ดำเนินงานต่อ'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('운행 계속하기 / ดำเนินงานต่อ'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.text('운행 계속하기 / ดำเนินงานต่อ'));
+    await tester.pumpAndSettle();
+
+    expect(api.startRouteCalls, 0);
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
   });
 
   testWidgets('active job session card opens existing booking detail', (
     tester,
   ) async {
+    _useTallViewport(tester);
     final api = _FakeJobsApi(
       initialToken: 'tok',
       hasActiveJob: true,
@@ -163,15 +397,19 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.chevron_right), findsWidgets);
-    await tester.tap(find.text('TX202607010099').first);
+    await tester.scrollUntilVisible(
+      find.text('운행 계속하기 / ดำเนินงานต่อ'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.text('운행 계속하기 / ดำเนินงานต่อ'));
     await tester.pumpAndSettle();
 
     expect(find.byType(DriverBookingDetailPage), findsOneWidget);
     expect(find.text('TX202607010099'), findsWidgets);
   });
 
-  testWidgets('driver QR menu opens scan page', (tester) async {
+  testWidgets('driver shell does not expose QR scan menu', (tester) async {
     final api = _FakeJobsApi(
       initialToken: 'tok',
       hasActiveJob: true,
@@ -183,48 +421,15 @@ void main() {
 
     await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.qr_code_scanner));
-    await tester.pumpAndSettle();
 
-    expect(find.byType(DriverQrScanPage), findsOneWidget);
-    expect(find.byIcon(Icons.qr_code_scanner), findsWidgets);
+    expect(find.byIcon(Icons.qr_code_scanner), findsNothing);
+    expect(find.byType(DriverQrScanPage), findsNothing);
   });
 
-  testWidgets('boarding QR scan calls API and opens booking detail', (
-    tester,
-  ) async {
-    final api = _FakeJobsApi(
-      jobs: DriverJobsToday(
-        date: '2026-07-01',
-        items: [_booking(status: 'DRIVER_ARRIVED')],
-      ),
-    );
-
+  testWidgets('today empty state', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: DriverQrScanPage(
-          api: api,
-          scannerLauncher: (context, isBoarding, onSubmit) async {
-            expect(isBoarding, true);
-            await onSubmit('boarding-token');
-            return true;
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.qr_code_scanner));
-    await tester.pumpAndSettle();
-
-    expect(api.boardingScanCalls, 1);
-    expect(api.lastScannedToken, 'boarding-token');
-    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
-  });
-
-  testWidgets('jobs empty state', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: DriverJobsPage(
+        home: DriverTodayPage(
           api: _FakeJobsApi(
             jobs: const DriverJobsToday(date: '2026-07-01', items: []),
           ),
@@ -234,41 +439,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('오늘 배정된 예약이 없습니다\n(วันนี้ยังไม่มีงานที่ได้รับมอบหมาย)'),
+      find.textContaining('오늘 예정된 운행이 없습니다'),
       findsOneWidget,
     );
   });
 
-  testWidgets('jobs error state with retry', (tester) async {
-    final api = _FakeJobsApi(error: Exception('network'));
-    await tester.pumpWidget(MaterialApp(home: DriverJobsPage(api: api)));
-    await tester.pumpAndSettle();
+  testWidgets('today layout has no horizontal overflow at 360px', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-    expect(find.textContaining('network'), findsOneWidget);
-    expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
-  });
-
-  testWidgets('jobs list action calls mutation and refreshes', (tester) async {
-    final api = _FakeJobsApi(
-      jobs: DriverJobsToday(
-        date: '2026-07-01',
-        items: [
-          _booking(status: 'DRIVER_ASSIGNED', actions: ['START_ON_ROUTE']),
-        ],
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverTodayPage(
+          api: _FakeJobsApi(
+            jobs: DriverJobsToday(
+              date: '2026-07-01',
+              items: [
+                _booking(
+                  status: 'DRIVER_ASSIGNED',
+                  origin:
+                      'Suvarnabhumi Airport Terminal 1 International Arrivals Hall',
+                  destination:
+                      'Pattaya Beach Road Hotel Resort and Spa Thailand',
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
-    await tester.pumpWidget(MaterialApp(home: DriverJobsPage(api: api)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, '운행 시작 / เริ่มเดินทาง'));
-    await tester.pumpAndSettle();
-
-    expect(api.startRouteCalls, 1);
-    expect(api.todayCalls, 2);
-    expect(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
-      findsOneWidget,
-    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('message button opens booking chat room', (tester) async {
@@ -356,7 +562,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('운행 시작 / เริ่มเดินทาง'), findsNothing);
+    expect(find.text('고객에게 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
     expect(find.text('Cancelled'), findsWidgets);
   });
 
@@ -367,7 +573,7 @@ void main() {
         'Invalid status transition',
         errorCode: 'INVALID_STATUS_TRANSITION',
       ),
-      refreshed: _booking(status: 'DRIVER_ARRIVED', actions: ['COMPLETE_TRIP']),
+      refreshed: _booking(status: 'DRIVER_ARRIVED', actions: ['MARK_PICKED_UP']),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -380,45 +586,17 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '기사 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '도착 / ถึงแล้ว'));
     await tester.pumpAndSettle();
 
     expect(find.text('Invalid status transition'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, '운행 완료 / จบงาน'), findsOneWidget);
-  });
-
-  testWidgets('jobs layout has no horizontal overflow at 360px', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: DriverJobsPage(
-          api: _FakeJobsApi(
-            jobs: DriverJobsToday(
-              date: '2026-07-01',
-              items: [
-                _booking(
-                  status: 'DRIVER_ASSIGNED',
-                  origin:
-                      'Suvarnabhumi Airport Terminal 1 International Arrivals Hall',
-                  destination:
-                      'Pattaya Beach Road Hotel Resort and Spa Thailand',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    expect(
+      find.widgetWithText(FilledButton, '고객 탑승 / ลูกค้าขึ้นรถแล้ว'),
+      findsOneWidget,
     );
-    await tester.pumpAndSettle();
-
-    expect(tester.takeException(), isNull);
   });
 }
 
@@ -468,6 +646,16 @@ class _FakeLoginApi extends DriverApiService {
   }
 
   @override
+  Future<String?> getDriverDisplayName() async => 'Somchai';
+
+  @override
+  Future<int> getUnreadNotificationCount() async => 0;
+
+  @override
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
+      {'items': []};
+
+  @override
   Future<DriverJobsToday> getTodayBookings() async =>
       const DriverJobsToday(date: '2026-07-01', items: []);
 
@@ -495,12 +683,23 @@ class _FakeJobsApi extends DriverApiService {
   final String? _token;
   int todayCalls = 0;
   int startRouteCalls = 0;
+  int markArrivedCalls = 0;
   int boardingScanCalls = 0;
   int dropoffScanCalls = 0;
   String? lastScannedToken;
 
   @override
   Future<String?> getSavedToken() async => _token;
+
+  @override
+  Future<String?> getDriverDisplayName() async => 'Somchai';
+
+  @override
+  Future<int> getUnreadNotificationCount() async => 0;
+
+  @override
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
+      {'items': []};
 
   @override
   Future<DriverJobsToday> getTodayBookings() async {
@@ -536,6 +735,12 @@ class _FakeJobsApi extends DriverApiService {
     return jobs!.items.firstWhere(
       (booking) => booking.bookingNumber == bookingNumber,
     );
+  }
+
+  @override
+  Future<DriverBooking> markArrived(String bookingNumber) async {
+    markArrivedCalls += 1;
+    throw UnimplementedError('list view must not call markArrived');
   }
 
   @override
@@ -602,5 +807,62 @@ class _FakeDetailApi extends DriverApiService {
       throw arrivedError!;
     }
     return _current;
+  }
+}
+
+class _FakeSettlementApi extends DriverSettlementApiService {
+  _FakeSettlementApi({this.settlements = const {}});
+
+  final Map<String, Map<String, dynamic>> settlements;
+
+  @override
+  Future<List<dynamic>> listSettlements() async => settlements.values.toList();
+
+  @override
+  Future<Map<String, dynamic>> getSettlement(String bookingNumber) async {
+    final item = settlements[bookingNumber];
+    if (item == null) {
+      throw const DriverSettlementApiException('Settlement not found');
+    }
+    return item;
+  }
+}
+
+class _TrackingDetailApi extends DriverApiService {
+  _TrackingDetailApi({required this.jobs});
+
+  final DriverJobsToday jobs;
+  int detailCalls = 0;
+  String? detailCallsFor;
+
+  @override
+  Future<DriverJobsToday> getTodayBookings() async => jobs;
+
+  @override
+  Future<String?> getDriverDisplayName() async => 'Somchai';
+
+  @override
+  Future<int> getUnreadNotificationCount() async => 0;
+
+  @override
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
+      {'items': []};
+
+  @override
+  Future<DriverStatus> getStatus() async => DriverStatus(
+    driverId: 7,
+    active: true,
+    online: false,
+    status: 'OFFLINE',
+    hasActiveJob: false,
+  );
+
+  @override
+  Future<DriverBooking> getBookingDetail(String bookingNumber) async {
+    detailCalls += 1;
+    detailCallsFor = bookingNumber;
+    return jobs.items.firstWhere(
+      (booking) => booking.bookingNumber == bookingNumber,
+    );
   }
 }

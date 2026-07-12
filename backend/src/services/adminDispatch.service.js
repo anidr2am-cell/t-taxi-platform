@@ -5,6 +5,9 @@ const ERROR_CODES = require("../constants/errorCodes");
 const BOOKING_STATUS = require("../constants/reservationStatus");
 const ROLES = require("../constants/roles");
 const { EVENTS } = require("../events");
+const { parseStoredTags } = require("../constants/reviewTags");
+const AdminOperationsService = require("./adminOperations.service");
+const { ADMIN_BOOKING_VIEWS } = require("../constants/adminOperations.constants");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -37,6 +40,7 @@ class AdminDispatchService {
     driverCandidateScoringService,
     adminQrReissueService = null,
     chatService = null,
+    reviewRepository = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -48,6 +52,8 @@ class AdminDispatchService {
     this.driverCandidateScoringService = driverCandidateScoringService;
     this.adminQrReissueService = adminQrReissueService;
     this.chatService = chatService;
+    this.reviewRepository = reviewRepository;
+    this.adminOperationsService = new AdminOperationsService();
   }
 
   actorFromUser(user) {
@@ -121,6 +127,7 @@ class AdminDispatchService {
   mapQueueItem(row) {
     const passengerCount =
       (row.adults ?? 0) + (row.children ?? 0) + (row.infants ?? 0);
+    const operations = this.adminOperationsService.evaluateOperations(row);
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -147,6 +154,8 @@ class AdminDispatchService {
       activeAssignment: this.mapActiveAssignment(row),
       bookingGroup: row.is_new_booking ? "NEW" : "EXISTING",
       createdAt: row.created_at,
+      operations,
+      primaryCta: operations.primaryCta,
     };
   }
 
@@ -235,8 +244,19 @@ class AdminDispatchService {
     };
   }
 
-  async listBookings(query) {
-    const filters = this.parseFilters(query);
+  async listBookings(query, actorUser = null) {
+    const adminUserId = this.adminOperationsService.resolveAdminUserId(actorUser);
+    const filters = this.adminOperationsService.buildFilters(
+      query,
+      adminUserId,
+    );
+    if (filters.invalidView) {
+      throw new AppError("Invalid booking view", {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
     const pagination = this.parsePagination(query);
     const total = await this.bookingRepository.countAdminBookings(filters);
     const rows = await this.bookingRepository.findAdminBookings(
@@ -244,15 +264,49 @@ class AdminDispatchService {
       pagination,
     );
 
+    let items = rows.map((row) => this.mapQueueItem(row));
+    if (
+      filters.view === ADMIN_BOOKING_VIEWS.NEEDS_ACTION ||
+      filters.view === ADMIN_BOOKING_VIEWS.ISSUES
+    ) {
+      items = this.adminOperationsService.sortQueueItems(items);
+    }
+
     return {
       page: pagination.page,
       pageSize: pagination.limit,
       total,
-      items: rows.map((row) => this.mapQueueItem(row)),
+      view: filters.view,
+      items,
     };
   }
 
-  async getBookingDetail(bookingNumber) {
+  async getBookingsSummary(actorUser = null) {
+    const adminUserId = this.adminOperationsService.resolveAdminUserId(actorUser);
+    const keys = this.adminOperationsService.summaryViewKeys();
+    const entries = await Promise.all(
+      keys.map(async (key) => {
+        const filters = this.adminOperationsService.buildSummaryFilter(
+          key,
+          adminUserId,
+        );
+        const count = await this.bookingRepository.countAdminBookings(filters);
+        return [key, count];
+      }),
+    );
+    const summary = Object.fromEntries(entries);
+    return {
+      needsAction: summary.needs_action ?? 0,
+      unassigned: summary.unassigned ?? 0,
+      today: summary.today ?? 0,
+      inProgress: summary.in_progress ?? 0,
+      settlementPending: summary.settlement ?? 0,
+      issues: summary.issues ?? 0,
+    };
+  }
+
+  async getBookingDetail(bookingNumber, actorUser = null) {
+    const adminUserId = this.adminOperationsService.resolveAdminUserId(actorUser);
     const row =
       await this.bookingRepository.findAdminBookingDetail(bookingNumber);
     if (!row) {
@@ -272,10 +326,45 @@ class AdminDispatchService {
     );
     const activeAssignment = assignments.find((a) => a.is_active === 1) ?? null;
     const metadata = this.parseMetadata(row.metadata);
+    const reviewRow = this.reviewRepository
+      ? await this.reviewRepository.findByBookingId(row.id)
+      : null;
+    const customerReview = reviewRow
+      ? {
+          reviewId: reviewRow.id,
+          rating: reviewRow.rating,
+          tags: parseStoredTags(reviewRow.tags_json),
+          comment: reviewRow.comment,
+          lowRating: Number(reviewRow.rating) <= 2,
+          createdAt: reviewRow.created_at,
+        }
+      : null;
+
+    const adminUnreadCount = adminUserId
+      ? await this.bookingRepository.countAdminUnreadForBooking(
+          adminUserId,
+          row.id,
+        )
+      : 0;
+
+    const operations = this.adminOperationsService.evaluateOperations({
+      status: row.status,
+      scheduled_pickup_at: row.scheduled_pickup_at,
+      driver_id: row.driver_id,
+      assignment_id: activeAssignment?.id ?? null,
+      commission_status: row.commission_status,
+      commission_receipt_file_id: row.commission_receipt_file_id,
+      metadata: row.metadata,
+      updated_at: row.updated_at,
+      review_rating: reviewRow?.rating ?? null,
+      admin_unread_count: adminUnreadCount,
+    });
 
     return {
       bookingNumber: row.booking_number,
       status: row.status,
+      operations,
+      primaryCta: operations.primaryCta,
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,
@@ -376,6 +465,7 @@ class AdminDispatchService {
         createdAt: item.created_at,
       })),
       allowedActions: this.computeAllowedActions(row, activeAssignment),
+      customerReview,
       devQrTools: this.adminQrReissueService?.buildDevTools(row) ?? {
         qrReissueEnabled: false,
         disabledReason: "QR reissue service unavailable",

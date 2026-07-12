@@ -85,6 +85,7 @@ class DriverTripFlowService {
       toStatus === BOOKING_STATUS.COMPLETED
       || toStatus === BOOKING_STATUS.CANCELLED
       || toStatus === BOOKING_STATUS.NO_SHOW
+      || toStatus === BOOKING_STATUS.SETTLEMENT_PENDING
     ) {
       return {
         bookingNumber: normalizedBookingNumber,
@@ -116,13 +117,26 @@ class DriverTripFlowService {
     );
   }
 
-  completeTrip(driverUserId, bookingNumber) {
+  markPickedUp(driverUserId, bookingNumber) {
     return this.runTransition(
       driverUserId,
       bookingNumber,
-      BOOKING_STATUS.COMPLETED,
-      'DRIVER_COMPLETE_TRIP',
+      BOOKING_STATUS.PICKED_UP,
+      'DRIVER_MARK_PICKED_UP',
     );
+  }
+
+  endTrip(driverUserId, bookingNumber) {
+    return this.runTransition(
+      driverUserId,
+      bookingNumber,
+      BOOKING_STATUS.SETTLEMENT_PENDING,
+      'DRIVER_END_TRIP',
+    );
+  }
+
+  completeTrip(driverUserId, bookingNumber) {
+    return this.endTrip(driverUserId, bookingNumber);
   }
 }
 

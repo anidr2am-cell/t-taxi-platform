@@ -2,17 +2,20 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
+const { parseStoredTags } = require('../constants/reviewTags');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
+const { isBookingReviewEligible } = require('../utils/reviewEligibility.util');
 const GuestVehiclePhotoService = require('./guestVehiclePhoto.service');
 
 const LOOKUP_GUEST_TOKEN_TTL_HOURS = 24;
 
 class GuestBookingLookupService {
-  constructor(pool, bookingRepository, guestVehiclePhotoService = null) {
+  constructor(pool, bookingRepository, guestVehiclePhotoService = null, reviewRepository = null) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.guestVehiclePhotoService = guestVehiclePhotoService
       ?? new GuestVehiclePhotoService(bookingRepository);
+    this.reviewRepository = reviewRepository;
   }
 
   normalizePhone(value) {
@@ -50,7 +53,35 @@ class GuestBookingLookupService {
     return value === true || value === 1 || value === '1';
   }
 
-  mapBooking(row, guestAccessToken, guestAccessExpiresAt) {
+  isReviewEligible(row) {
+    return isBookingReviewEligible(row);
+  }
+
+  mapGuestReviewState(row, review) {
+    if (!this.isReviewEligible(row)) {
+      return null;
+    }
+    if (!review) {
+      return {
+        eligible: true,
+        submitted: false,
+        rating: null,
+        tags: [],
+        comment: null,
+        createdAt: null,
+      };
+    }
+    return {
+      eligible: true,
+      submitted: true,
+      rating: review.rating,
+      tags: parseStoredTags(review.tags_json),
+      comment: review.comment ?? null,
+      createdAt: review.created_at ?? null,
+    };
+  }
+
+  mapBooking(row, guestAccessToken, guestAccessExpiresAt, review = null) {
     const adults = Number(row.adults ?? 0);
     const children = Number(row.children ?? 0);
     const infants = Number(row.infants ?? 0);
@@ -87,10 +118,15 @@ class GuestBookingLookupService {
       BOOKING_STATUS.DRIVER_ARRIVED,
     ].includes(row.status) && !row.boarding_qr_used_at;
 
+    const reviewEligible = this.isReviewEligible(row);
+    const reviewSubmitted = Boolean(review);
+    const canReview = reviewEligible && !reviewSubmitted;
+
     return {
       bookingId: row.id,
       bookingNumber: row.booking_number,
       status: row.status,
+      canReview,
       scheduledPickupAt: this.formatThailandIso(row.scheduled_pickup_at_text),
       serviceType: {
         code: row.service_type_code,
@@ -140,10 +176,11 @@ class GuestBookingLookupService {
         chatAvailable: Boolean(assignedDriver) && !terminalStatus,
         notificationsAvailable: true,
         dropoffQrIssueAvailable: row.status === BOOKING_STATUS.PICKED_UP,
-        reviewAvailable: row.status === BOOKING_STATUS.COMPLETED,
+        reviewAvailable: canReview,
         boardingQrRecoverable,
         boardingQrPreviouslyIssued: Boolean(row.boarding_qr_token_hash) && !terminalStatus,
       },
+      review: this.mapGuestReviewState(row, review),
       guestAccess: {
         token: guestAccessToken,
         expiresAt: this.formatUtcIso(guestAccessExpiresAt),
@@ -185,7 +222,11 @@ class GuestBookingLookupService {
 
       await conn.commit();
 
-      return this.mapBooking(booking, guestAccessToken, expiresAt);
+      const review = this.reviewRepository
+        ? await this.reviewRepository.findByBookingId(booking.id)
+        : null;
+
+      return this.mapBooking(booking, guestAccessToken, expiresAt, review);
     } catch (err) {
       await conn.rollback();
       throw err;

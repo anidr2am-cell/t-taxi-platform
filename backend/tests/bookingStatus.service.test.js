@@ -11,6 +11,7 @@ const BookingStatusService = require('../src/services/bookingStatus.service');
 const AppError = require('../src/utils/AppError');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const ROLES = require('../src/constants/roles');
+const BOOKING_STATUS = require('../src/constants/reservationStatus');
 const { appEvents, EVENTS } = require('../src/events');
 
 const actor = { id: 7, role: ROLES.ADMIN };
@@ -80,6 +81,7 @@ function createHarness({ booking = createBooking(), commitError = null } = {}) {
       calls.insertActivityLog += 1;
       records.activityLog = { bookingId, activity };
     },
+    async updateCommissionFields() {},
     async completeActiveAssignment(_conn, bookingId) {
       calls.completeActiveAssignment = (calls.completeActiveAssignment ?? 0) + 1;
       records.completeActiveAssignment = { bookingId };
@@ -233,6 +235,34 @@ test('transaction failure prevents outbox dispatch', async () => {
   assert.equal(harness.calls.outboxInsert, 1);
   assert.equal(harness.calls.outboxDispatch, 0);
   assert.equal(harness.calls.rollback, 1);
+});
+
+test('ON_ROUTE transition enqueues TRIP_ON_ROUTE outbox event', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.DRIVER_ASSIGNED }),
+  });
+
+  await harness.service.transition(
+    'TX202607010001',
+    { status: BOOKING_STATUS.ON_ROUTE },
+    { id: 99, role: ROLES.DRIVER },
+  );
+
+  assert.equal(harness.records.outbox.eventType, EVENTS.TRIP_ON_ROUTE);
+});
+
+test('SETTLEMENT_PENDING transition enqueues TRIP_ENDED outbox event', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.PICKED_UP }),
+  });
+
+  await harness.service.transition(
+    'TX202607010001',
+    { status: BOOKING_STATUS.SETTLEMENT_PENDING },
+    { id: 99, role: ROLES.DRIVER },
+  );
+
+  assert.equal(harness.records.outbox.eventType, EVENTS.TRIP_ENDED);
 });
 
 test('COMPLETED transition closes active driver assignment', async () => {

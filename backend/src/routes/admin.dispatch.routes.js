@@ -12,11 +12,19 @@ const {
   reassignDriverSchema,
   autoAssignDriverSchema,
   qrReissueSchema,
+  adminBookingNotesQuerySchema,
+  createAdminBookingNoteSchema,
 } = require('../validators/admin.validator');
 const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
 const router = express.Router();
 const adminOnly = [authMiddleware, roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN])];
+
+router.get(
+  '/bookings/summary',
+  adminOnly,
+  adminController.getBookingsSummary,
+);
 
 router.get(
   '/bookings',
@@ -30,6 +38,20 @@ router.get(
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   adminController.getBookingDetail,
+);
+
+router.get(
+  '/bookings/:bookingNumber/notes',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, query: adminBookingNotesQuerySchema }),
+  adminController.listBookingNotes,
+);
+
+router.post(
+  '/bookings/:bookingNumber/notes',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: createAdminBookingNoteSchema }),
+  adminController.createBookingNote,
 );
 
 router.post(

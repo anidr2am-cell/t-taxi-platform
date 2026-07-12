@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/widgets/booking_review_form.dart';
+import 'package:frontend/features/booking/utils/review_tags.dart';
 import 'package:frontend/features/admin_review/pages/admin_review_queue_page.dart';
 import 'package:frontend/features/admin_review/services/admin_review_api_service.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 
 class _FakeReviewApi extends BookingReviewApi {
   _FakeReviewApi({
@@ -15,6 +17,10 @@ class _FakeReviewApi extends BookingReviewApi {
   final Map<String, dynamic>? submitResult;
   final Object? submitError;
   int submitCalls = 0;
+  String? lastBookingNumber;
+  int? lastRating;
+  List<String>? lastTags;
+  String? lastGuestAccessToken;
 
   @override
   Future<Map<String, dynamic>> getReview({
@@ -33,16 +39,22 @@ class _FakeReviewApi extends BookingReviewApi {
   Future<Map<String, dynamic>> submitReview({
     required String bookingNumber,
     required int rating,
+    List<String>? tags,
     String? comment,
     String? guestAccessToken,
     String? customerAccessToken,
   }) async {
     submitCalls += 1;
+    lastBookingNumber = bookingNumber;
+    lastRating = rating;
+    lastTags = tags;
+    lastGuestAccessToken = guestAccessToken;
     if (submitError != null) throw submitError!;
     return submitResult ?? {
       'eligible': true,
       'submitted': true,
       'rating': rating,
+      'tags': tags ?? [],
       'comment': comment,
     };
   }
@@ -81,6 +93,16 @@ class _FakeAdminReviewApi extends AdminReviewApiService {
   }
 }
 
+Widget _reviewFormScaffold(Widget child) {
+  return MaterialApp(
+    home: Scaffold(
+      body: SingleChildScrollView(
+        child: child,
+      ),
+    ),
+  );
+}
+
 void main() {
   test('isValidReviewRating validates range', () {
     expect(isValidReviewRating(1), isTrue);
@@ -89,104 +111,218 @@ void main() {
     expect(isValidReviewRating(6), isFalse);
   });
 
-  testWidgets('review form hidden when not eligible', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BookingReviewForm(
-            bookingNumber: 'TX202607010001',
-            initialState: const {'eligible': false, 'submitted': false},
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-    expect(find.text('Rate your trip'), findsNothing);
+  test('ReviewTags visibility by rating', () {
+    expect(ReviewTags.visibleCodes(1), contains('UNSAFE_DRIVING'));
+    expect(ReviewTags.visibleCodes(2), contains('LATE_ARRIVAL'));
+    expect(ReviewTags.visibleCodes(4), isNot(contains('LATE_ARRIVAL')));
+    expect(ReviewTags.visibleCodes(4), contains('FRIENDLY'));
   });
 
-  testWidgets('review form visible after COMPLETED', (tester) async {
+  test('zh review strings resolve without English fallback', () {
+    final zh = AppLocalizations('zh');
+    final en = AppLocalizations('en');
+    expect(zh.t('review_card_title'), '本次乘车体验如何？');
+    expect(zh.t('review_card_subtitle'), '请选择评分');
+    expect(zh.t('review_rating_desc_5'), '非常满意');
+    expect(zh.t('review_tag_FRIENDLY'), '服务友好');
+    expect(zh.t('review_tag_UNSAFE_DRIVING'), '驾驶不安全');
+    expect(zh.t('review_submit_button'), '提交评分');
+    expect(zh.t('review_success_title'), '感谢您的评价');
+    expect(zh.t('review_success_body'), '您的反馈将帮助我们改进服务');
+    expect(zh.t('guest_status_guidance_settlement_pending'), contains('请为司机评分'));
+    expect(zh.t('status_customer_settlement_pending'), '行程已结束');
+    expect(zh.t('review_card_title'), isNot(en.t('review_card_title')));
+    expect(zh.t('review_submit_button'), isNot(en.t('review_submit_button')));
+  });
+
+  test('ja review strings resolve without English fallback', () {
+    final ja = AppLocalizations('ja');
+    final en = AppLocalizations('en');
+    expect(ja.t('review_card_title'), '今回の乗車はいかがでしたか？');
+    expect(ja.t('review_card_subtitle'), '評価を選択してください');
+    expect(ja.t('review_rating_desc_3'), '普通');
+    expect(ja.t('review_tag_CLEAN_VEHICLE'), '車内が清潔でした');
+    expect(ja.t('review_tag_LATE_ARRIVAL'), '到着が遅れました');
+    expect(ja.t('review_submit_button'), '評価を送信');
+    expect(ja.t('review_success_title'), 'ご評価ありがとうございます');
+    expect(ja.t('review_success_body'), 'サービス改善の参考にさせていただきます');
+    expect(ja.t('guest_status_guidance_settlement_pending'), contains('ドライバーを評価'));
+    expect(ja.t('status_customer_settlement_pending'), '運行終了');
+    expect(ja.t('review_card_title'), isNot(en.t('review_card_title')));
+    expect(ja.t('review_submit_button'), isNot(en.t('review_submit_button')));
+  });
+
+  testWidgets('review form hidden when not eligible', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BookingReviewForm(
-            bookingNumber: 'TX202607010001',
-            initialState: const {'eligible': true, 'submitted': false},
-          ),
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {'eligible': false, 'submitted': false},
         ),
       ),
     );
     await tester.pump();
-    expect(find.text('Rate your trip'), findsOneWidget);
+    expect(find.text('How was your ride?'), findsNothing);
+  });
+
+  testWidgets('review form visible when eligible', (tester) async {
+    await tester.pumpWidget(
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {'eligible': true, 'submitted': false},
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('How was your ride?'), findsOneWidget);
+    expect(find.text('Please select a rating.'), findsOneWidget);
+  });
+
+  testWidgets('submit disabled until rating selected', (tester) async {
+    await tester.pumpWidget(
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {'eligible': true, 'submitted': false},
+        ),
+      ),
+    );
+    await tester.pump();
+    final button = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Submit rating'),
+    );
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('rating description updates on star tap', (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {'eligible': true, 'submitted': false},
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('review_rating_2')));
+    await tester.pump();
+    expect(find.text('Dissatisfied'), findsOneWidget);
+    expect(find.text('Unsafe driving'), findsOneWidget);
+    expect(find.text('Friendly'), findsOneWidget);
+  });
+
+  testWidgets('negative tags hidden for high rating', (tester) async {
+    await tester.pumpWidget(
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {'eligible': true, 'submitted': false},
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('review_rating_5')));
+    await tester.pump();
+    expect(find.text('Unsafe driving'), findsNothing);
+    expect(find.text('Friendly'), findsOneWidget);
   });
 
   testWidgets('successful guest review submission', (tester) async {
     final api = _FakeReviewApi();
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BookingReviewForm(
-            bookingNumber: 'TX202607010001',
-            guestAccessToken: 'guest-token',
-            api: api,
-            initialState: const {'eligible': true, 'submitted': false},
-          ),
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          guestAccessToken: 'guest-token',
+          api: api,
+          initialState: const {'eligible': true, 'submitted': false},
         ),
       ),
     );
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('review_rating_5')));
     await tester.pump();
-    await tester.tap(find.text('Submit review'));
+    await tester.tap(find.text('Friendly'));
+    await tester.pump();
+    await tester.tap(find.text('Submit rating'));
     await tester.pump();
     expect(api.submitCalls, 1);
-    expect(find.text('Thank you for your review'), findsOneWidget);
+    expect(api.lastBookingNumber, 'TX202607010001');
+    expect(api.lastRating, 5);
+    expect(api.lastTags, contains('FRIENDLY'));
+    expect(api.lastGuestAccessToken, 'guest-token');
+    expect(find.text('Thank you for your feedback.'), findsOneWidget);
+  });
+
+  testWidgets('already submitted state shows comment', (tester) async {
+    await tester.pumpWidget(
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {
+            'eligible': true,
+            'submitted': true,
+            'rating': 4,
+            'tags': ['ON_TIME'],
+            'comment': 'Smooth ride',
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Thank you for your feedback.'), findsOneWidget);
+    expect(find.text('Smooth ride'), findsOneWidget);
+    expect(find.text('Submit rating'), findsNothing);
   });
 
   testWidgets('already submitted state', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BookingReviewForm(
-            bookingNumber: 'TX202607010001',
-            initialState: const {
-              'eligible': true,
-              'submitted': true,
-              'rating': 4,
-              'comment': 'Good',
-            },
-          ),
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          initialState: const {
+            'eligible': true,
+            'submitted': true,
+            'rating': 4,
+            'tags': ['ON_TIME'],
+          },
         ),
       ),
     );
     await tester.pump();
-    expect(find.text('Thank you for your review'), findsOneWidget);
-    expect(find.text('Rating: 4 / 5'), findsOneWidget);
+    expect(find.text('Thank you for your feedback.'), findsOneWidget);
+    expect(find.text('On time'), findsOneWidget);
+    expect(find.text('Submit rating'), findsNothing);
   });
 
-  testWidgets('retry state on upload failure', (tester) async {
+  testWidgets('submit failure keeps form state for retry', (tester) async {
     final api = _FakeReviewApi(submitError: const BookingReviewApiException('Network error'));
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BookingReviewForm(
-            bookingNumber: 'TX202607010001',
-            guestAccessToken: 'guest-token',
-            api: api,
-            initialState: const {'eligible': true, 'submitted': false},
-          ),
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          guestAccessToken: 'guest-token',
+          api: api,
+          initialState: const {'eligible': true, 'submitted': false},
         ),
       ),
     );
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('review_rating_5')));
     await tester.pump();
-    final submit = find.widgetWithText(ElevatedButton, 'Submit review');
+    final submit = find.widgetWithText(ElevatedButton, 'Submit rating');
     expect(submit, findsOneWidget);
     await tester.tap(submit);
     await tester.pump();
     await tester.pump();
     expect(api.submitCalls, 1);
-    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Network error'), findsOneWidget);
+    expect(find.text('Submit rating'), findsOneWidget);
+    expect(find.text('Very satisfied'), findsOneWidget);
   });
 
   testWidgets('admin review filters render', (tester) async {
@@ -238,28 +374,26 @@ void main() {
         'eligible': true,
         'submitted': true,
         'rating': 5,
-        'comment': 'Nice',
+        'tags': ['FRIENDLY'],
       },
     );
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: BookingReviewForm(
-            bookingNumber: 'TX202607010001',
-            guestAccessToken: 'guest-token',
-            api: api,
-            initialState: const {'eligible': true, 'submitted': false},
-          ),
+      _reviewFormScaffold(
+        BookingReviewForm(
+          bookingNumber: 'TX202607010001',
+          guestAccessToken: 'guest-token',
+          api: api,
+          initialState: const {'eligible': true, 'submitted': false},
         ),
       ),
     );
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('review_rating_5')));
     await tester.pump();
-    await tester.tap(find.text('Submit review'));
+    await tester.tap(find.text('Submit rating'));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Thank you for your review'), findsOneWidget);
+    expect(find.text('Thank you for your feedback.'), findsOneWidget);
     expect(api.submitCalls, 1);
   });
 

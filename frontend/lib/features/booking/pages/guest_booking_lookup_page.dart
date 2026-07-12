@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
@@ -8,7 +7,6 @@ import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
-import '../utils/boarding_qr_token.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
 import '../widgets/booking_chat_section.dart';
@@ -24,17 +22,17 @@ class GuestBookingLookupPage extends StatefulWidget {
   const GuestBookingLookupPage({
     super.key,
     this.lookupService,
-    this.bookingApiService,
     this.bookingChatApi,
     this.bookingChatSocketService,
     this.enableCustomerTools = false,
+    this.reviewApi,
   });
 
   final GuestBookingLookupService? lookupService;
-  final BookingApiService? bookingApiService;
   final BookingChatApi? bookingChatApi;
   final ChatSocketService? bookingChatSocketService;
   final bool enableCustomerTools;
+  final BookingReviewApi? reviewApi;
 
   @override
   State<GuestBookingLookupPage> createState() => _GuestBookingLookupPageState();
@@ -51,19 +49,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   final _phoneController = TextEditingController();
   late final GuestBookingLookupService _lookupService =
       widget.lookupService ?? GuestBookingLookupService();
-  late final BookingApiService _bookingApiService =
-      widget.bookingApiService ?? BookingApiService();
 
   GuestBookingLookupResult? _result;
   bool _loading = true;
   bool _refreshing = false;
   String? _error;
-  bool _loadingDropoffQr = false;
-  String? _dropoffQrToken;
-  bool _loadingBoardingQr = false;
-  String? _boardingQrToken;
-  String? _boardingQrExpiresAt;
-  int _boardingQrRequestGeneration = 0;
   final Set<String> _pickupAlertSentBookingNumbers = <String>{};
 
   @override
@@ -92,33 +82,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       _result = cached;
       _loading = false;
     });
-    if (cached?.capabilities.boardingQrRecoverable == true) {
-      await _restoreOrIssueBoardingQr(cached!);
-    }
-  }
-
-  Future<void> _restoreOrIssueBoardingQr(
-    GuestBookingLookupResult result, {
-    bool forceReissue = false,
-  }) async {
-    if (!result.capabilities.boardingQrRecoverable) return;
-
-    if (!forceReissue) {
-      final cached = await _lookupService.loadBoardingQr(result.bookingNumber);
-      if (cached != null &&
-          !isBoardingQrTokenExpired(cached.expiresAt) &&
-          mounted &&
-          _result?.bookingNumber == result.bookingNumber) {
-        setState(() {
-          _boardingQrToken = cached.token;
-          _boardingQrExpiresAt = cached.expiresAt;
-          _loadingBoardingQr = false;
-        });
-        return;
-      }
-    }
-
-    await _issueBoardingQr(result, forceReissue: forceReissue);
   }
 
   Future<void> _refresh() async {
@@ -146,11 +109,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       setState(() {
         _result = refreshed;
         _refreshing = false;
-        _dropoffQrToken = null;
       });
-      if (refreshed.capabilities.boardingQrRecoverable) {
-        await _restoreOrIssueBoardingQr(refreshed);
-      }
     } on BookingApiException catch (err) {
       if (!mounted) return;
       final l10n = context.l10n;
@@ -213,7 +172,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     setState(() {
       _loading = true;
       _error = null;
-      _dropoffQrToken = null;
     });
 
     try {
@@ -226,9 +184,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _result = result;
         _loading = false;
       });
-      if (result.capabilities.boardingQrRecoverable) {
-        await _restoreOrIssueBoardingQr(result);
-      }
     } on BookingApiException catch (err) {
       if (!mounted) return;
       final l10n = context.l10n;
@@ -253,123 +208,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     setState(() {
       _result = null;
       _error = null;
-      _dropoffQrToken = null;
-      _boardingQrToken = null;
-      _boardingQrExpiresAt = null;
       _bookingNumberController.clear();
       _phoneController.clear();
     });
-  }
-
-  Future<void> _issueDropoffQr() async {
-    final result = _result;
-    if (result == null) return;
-    setState(() {
-      _loadingDropoffQr = true;
-      _error = null;
-    });
-    try {
-      final qr = await _bookingApiService.issueDropoffQr(
-        bookingNumber: result.bookingNumber,
-        guestAccessToken: result.guestAccessToken,
-      );
-      if (!mounted) return;
-      setState(() {
-        _dropoffQrToken = qr.dropoffQrToken;
-        _loadingDropoffQr = false;
-      });
-    } on BookingApiException catch (err) {
-      if (!mounted) return;
-      setState(() {
-        _loadingDropoffQr = false;
-        _error = err.errorCode == 'INVALID_STATUS_TRANSITION'
-            ? context.l10n.t('booking_dropoff_qr_unavailable')
-            : userFacingError(
-                err,
-                fallback: context.l10n.t('guest_lookup_load_error'),
-              );
-      });
-    } catch (err) {
-      if (!mounted) return;
-      setState(() {
-        _loadingDropoffQr = false;
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('guest_lookup_load_error'),
-        );
-      });
-    }
-  }
-
-  Future<void> _issueBoardingQr(
-    GuestBookingLookupResult result, {
-    bool forceReissue = false,
-  }) async {
-    if (_loadingBoardingQr) return;
-    if (!forceReissue &&
-        _boardingQrToken != null &&
-        !isBoardingQrTokenExpired(_boardingQrExpiresAt) &&
-        _result?.bookingNumber == result.bookingNumber) {
-      return;
-    }
-
-    final generation = ++_boardingQrRequestGeneration;
-    setState(() {
-      _loadingBoardingQr = true;
-      _error = null;
-    });
-    try {
-      final qr = await _bookingApiService.issueBoardingQr(
-        bookingNumber: result.bookingNumber,
-        guestAccessToken: result.guestAccessToken,
-        forceReissue: forceReissue,
-      );
-      if (!mounted ||
-          generation != _boardingQrRequestGeneration ||
-          _result?.bookingNumber != result.bookingNumber) {
-        return;
-      }
-      await _lookupService.persistBoardingQr(
-        bookingNumber: result.bookingNumber,
-        token: qr.boardingQrToken,
-        expiresAt: qr.boardingQrExpiresAt,
-      );
-      setState(() {
-        _boardingQrToken = qr.boardingQrToken;
-        _boardingQrExpiresAt = qr.boardingQrExpiresAt;
-        _loadingBoardingQr = false;
-      });
-    } on BookingApiException catch (err) {
-      if (!mounted ||
-          generation != _boardingQrRequestGeneration ||
-          _result?.bookingNumber != result.bookingNumber) {
-        return;
-      }
-      if (err.errorCode == 'INVALID_STATUS_TRANSITION' &&
-          _boardingQrToken != null &&
-          !isBoardingQrTokenExpired(_boardingQrExpiresAt)) {
-        setState(() => _loadingBoardingQr = false);
-        return;
-      }
-      setState(() {
-        _loadingBoardingQr = false;
-        _boardingQrToken = null;
-        _boardingQrExpiresAt = null;
-        _error = context.l10n.t('booking_qr_load_failed');
-      });
-    } catch (_) {
-      if (!mounted ||
-          generation != _boardingQrRequestGeneration ||
-          _result?.bookingNumber != result.bookingNumber) {
-        return;
-      }
-      setState(() {
-        _loadingBoardingQr = false;
-        _boardingQrToken = null;
-        _boardingQrExpiresAt = null;
-        _error = context.l10n.t('booking_qr_load_failed');
-      });
-    }
   }
 
   @override
@@ -478,6 +319,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
 
   Widget _bookingDetail(GuestBookingLookupResult result) {
     final l10n = context.l10n;
+    final reviewSubmitted = result.review?.submitted == true;
+    final canShowReviewForm = result.canReview && !reviewSubmitted;
+    final reviewFormState =
+        result.review?.toFormState() ??
+        const {'eligible': true, 'submitted': false};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -537,6 +383,30 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                 ),
               ],
             ),
+          ),
+        ],
+        if (reviewSubmitted) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          BookingReviewForm(
+            key: ValueKey(
+              'guest_review_${result.bookingNumber}_${result.status}_submitted',
+            ),
+            bookingNumber: result.bookingNumber,
+            guestAccessToken: result.guestAccessToken,
+            api: widget.reviewApi,
+            initialState: result.review!.toFormState(),
+          ),
+        ] else if (canShowReviewForm) ...[
+          const SizedBox(height: AppTokens.spaceMd),
+          BookingReviewForm(
+            key: ValueKey(
+              'guest_review_${result.bookingNumber}_${result.status}_pending',
+            ),
+            bookingNumber: result.bookingNumber,
+            guestAccessToken: result.guestAccessToken,
+            api: widget.reviewApi,
+            initialState: reviewFormState,
+            onSubmitted: _refresh,
           ),
         ],
         const SizedBox(height: AppTokens.spaceMd),
@@ -621,7 +491,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           ),
         ),
         const SizedBox(height: AppTokens.spaceMd),
-        _qrSection(result),
         if (_error != null) ...[
           const SizedBox(height: AppTokens.spaceMd),
           AppUi.errorState(message: _error!),
@@ -651,13 +520,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               socketService: widget.bookingChatSocketService,
             ),
           ],
-          if (result.capabilities.reviewAvailable) ...[
-            const SizedBox(height: AppTokens.spaceMd),
-            BookingReviewForm(
-              bookingNumber: result.bookingNumber,
-              guestAccessToken: result.guestAccessToken,
-            ),
-          ],
         ],
         const SizedBox(height: AppTokens.spaceLg),
         AppUi.secondaryButton(
@@ -667,106 +529,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           fullWidth: true,
         ),
       ],
-    );
-  }
-
-  Widget _qrSection(GuestBookingLookupResult result) {
-    if (result.status == 'COMPLETED') {
-      return AppUi.surfaceCard(
-        backgroundColor: AppTokens.surfaceMuted,
-        child: Text(
-          context.l10n.t('guest_lookup_trip_completed_qr_hidden'),
-          style: const TextStyle(color: AppTokens.textSecondary),
-        ),
-      );
-    }
-
-    if (_dropoffQrToken != null) {
-      return _GuestQrDisplay(
-        title: context.l10n.t('booking_dropoff_qr_title'),
-        hint: context.l10n.t('booking_dropoff_qr_hint'),
-        token: _dropoffQrToken!,
-      );
-    }
-
-    if (result.capabilities.dropoffQrIssueAvailable) {
-      return AppUi.primaryButton(
-        label: context.l10n.t('guest_lookup_issue_dropoff_qr'),
-        icon: Icons.qr_code,
-        loading: _loadingDropoffQr,
-        onPressed: _loadingDropoffQr ? null : _issueDropoffQr,
-      );
-    }
-
-    if (_boardingQrToken != null) {
-      return _GuestQrDisplay(
-        title: context.l10n.t('boarding_qr_title'),
-        hint: context.l10n.t('boarding_qr_hint'),
-        token: _boardingQrToken!,
-      );
-    }
-
-    if (result.capabilities.boardingQrRecoverable) {
-      if (_loadingBoardingQr) {
-        return AppUi.loadingState(message: context.l10n.t('boarding_qr_title'));
-      }
-      return AppUi.secondaryButton(
-        label: context.l10n.t('boarding_qr_title'),
-        icon: Icons.refresh,
-        onPressed: () => _restoreOrIssueBoardingQr(result, forceReissue: true),
-        fullWidth: true,
-      );
-    }
-
-    return const SizedBox.shrink();
-  }
-}
-
-class _GuestQrDisplay extends StatelessWidget {
-  const _GuestQrDisplay({
-    required this.title,
-    required this.hint,
-    required this.token,
-  });
-
-  final String title;
-  final String hint;
-  final String token;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppUi.surfaceCard(
-      backgroundColor: AppTokens.primaryLight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppTokens.spaceSm),
-          Text(
-            hint,
-            style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppTokens.spaceMd),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(AppTokens.spaceMd),
-              color: AppTokens.surface,
-              child: QrImageView(
-                data: token,
-                size: 200,
-                backgroundColor: AppTokens.surface,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

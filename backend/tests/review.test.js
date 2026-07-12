@@ -9,6 +9,7 @@ const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 const ReviewService = require('../src/services/review.service');
+const BookingRepository = require('../src/repositories/booking.repository');
 const MODERATION_STATUS = require('../src/constants/reviewModerationStatus');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const ROLES = require('../src/constants/roles');
@@ -101,6 +102,17 @@ function makeService(overrides = {}) {
   );
 }
 
+test('SETTLEMENT_PENDING booking is eligible for review lookup', async () => {
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumber() { return booking({ status: 'SETTLEMENT_PENDING' }); },
+    },
+  });
+  const data = await service.getBookingReview('TX202607010001', { id: 8, role: ROLES.CUSTOMER }, null);
+  assert.equal(data.eligible, true);
+  assert.equal(data.submitted, false);
+});
+
 test('completed booking is eligible for review lookup', async () => {
   const service = makeService();
   const data = await service.getBookingReview('TX202607010001', { id: 8, role: ROLES.CUSTOMER }, null);
@@ -116,6 +128,141 @@ test('non-completed booking is not eligible', async () => {
   });
   const data = await service.getBookingReview('TX202607010001', { id: 8, role: ROLES.CUSTOMER }, null);
   assert.equal(data.eligible, false);
+});
+
+test('CANCELLED booking is not eligible', async () => {
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumber() { return booking({ status: 'CANCELLED' }); },
+    },
+  });
+  const data = await service.getBookingReview('TX202607010001', { id: 8, role: ROLES.CUSTOMER }, null);
+  assert.equal(data.eligible, false);
+});
+
+test('NO_SHOW booking is not eligible', async () => {
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumber() { return booking({ status: 'NO_SHOW' }); },
+    },
+  });
+  const data = await service.getBookingReview('TX202607010001', { id: 8, role: ROLES.CUSTOMER }, null);
+  assert.equal(data.eligible, false);
+});
+
+test('booking without driver is not eligible', async () => {
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumber() { return booking({ driver_id: null }); },
+    },
+  });
+  const data = await service.getBookingReview('TX202607010001', { id: 8, role: ROLES.CUSTOMER }, null);
+  assert.equal(data.eligible, false);
+});
+
+test('SETTLEMENT_PENDING booking can submit review', async () => {
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumber() { return booking({ status: 'SETTLEMENT_PENDING' }); },
+      async findByBookingNumberForUpdate() { return booking({ status: 'SETTLEMENT_PENDING' }); },
+    },
+    reviewRepository: {
+      async findByBookingIdForUpdate() { return null; },
+      async insert() { return 1; },
+      async findByBookingId() { return reviewRow({ rating: 4 }); },
+    },
+  });
+  const data = await service.submitBookingReview(
+    'TX202607010001',
+    { rating: 4, comment: 'Good trip' },
+    { id: 8, role: ROLES.CUSTOMER },
+  );
+  assert.equal(data.submitted, true);
+  assert.equal(data.rating, 4);
+});
+
+test('CANCELLED booking cannot submit review', async () => {
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumberForUpdate() { return booking({ status: 'CANCELLED' }); },
+    },
+  });
+  await assert.rejects(
+    () => service.submitBookingReview('TX202607010001', { rating: 5 }, { id: 8, role: ROLES.CUSTOMER }),
+    (err) => err.errorCode === ERROR_CODES.REVIEW_NOT_ELIGIBLE,
+  );
+});
+
+test('NO_SHOW booking cannot submit review', async () => {
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumberForUpdate() { return booking({ status: 'NO_SHOW' }); },
+    },
+  });
+  await assert.rejects(
+    () => service.submitBookingReview('TX202607010001', { rating: 5 }, { id: 8, role: ROLES.CUSTOMER }),
+    (err) => err.errorCode === ERROR_CODES.REVIEW_NOT_ELIGIBLE,
+  );
+});
+
+test('valid tags accepted for low rating', async () => {
+  let insertedTags = null;
+  const service = makeService({
+    reviewRepository: {
+      async findByBookingIdForUpdate() { return null; },
+      async insert(_conn, payload) {
+        insertedTags = payload.tags;
+        return 1;
+      },
+      async findByBookingId() {
+        return reviewRow({ rating: 2, tags_json: JSON.stringify(insertedTags) });
+      },
+    },
+  });
+  await service.submitBookingReview(
+    'TX202607010001',
+    {
+      rating: 2,
+      tags: ['FRIENDLY', 'LATE_ARRIVAL'],
+      comment: 'Late but friendly',
+    },
+    { id: 8, role: ROLES.CUSTOMER },
+  );
+  assert.deepEqual(insertedTags, ['FRIENDLY', 'LATE_ARRIVAL']);
+});
+
+test('negative tags rejected for high rating', async () => {
+  const service = makeService();
+  assert.throws(
+    () => service.normalizeTags(['LATE_ARRIVAL'], 5),
+    (err) => err.errorCode === ERROR_CODES.VALIDATION_ERROR,
+  );
+});
+
+test('unknown tag rejected', async () => {
+  const service = makeService();
+  assert.throws(
+    () => service.normalizeTags(['NOT_A_TAG'], 5),
+    (err) => err.errorCode === ERROR_CODES.VALIDATION_ERROR,
+  );
+});
+
+test('whitespace-only comment stored as null', () => {
+  const service = makeService();
+  assert.equal(service.normalizeComment('   '), null);
+});
+
+test('plain text comment is stored without HTML stripping', () => {
+  const service = makeService();
+  assert.equal(service.normalizeComment('<b>Great trip</b>'), '<b>Great trip</b>');
+  assert.equal(service.normalizeComment('  Nice ride  '), 'Nice ride');
+});
+
+test('low rating flagged in admin summary', () => {
+  const service = makeService();
+  const mapped = service.mapAdminReviewSummary(reviewRow({ rating: 2 }));
+  assert.equal(mapped.lowRating, true);
+  assert.equal(service.mapAdminReviewSummary(reviewRow({ rating: 4 })).lowRating, false);
 });
 
 test('guest with valid token can submit review', async () => {
@@ -522,6 +669,34 @@ test('driverId is derived from booking not request body', async () => {
   assert.equal(capturedDriverId, 42);
 });
 
+test('review booking lookup resolves driver from completed assignment history', async () => {
+  let capturedSql = '';
+  const repo = new BookingRepository({
+    async query(queryText) {
+      capturedSql = queryText;
+      return [[{
+        id: 10,
+        booking_number: 'TX202607010001',
+        status: 'COMPLETED',
+        driver_id: 42,
+      }]];
+    },
+  });
+
+  const row = await repo.findByBookingNumberForUpdate(
+    { query: repo.pool.query },
+    'TX202607010001',
+  );
+
+  assert.equal(row.driver_id, 42);
+  assert.match(capturedSql, /COALESCE\(b\.driver_id, bda\.driver_id\) AS driver_id/);
+  assert.match(capturedSql, /b\.status IN \('SETTLEMENT_PENDING', 'COMPLETED'\)/);
+  assert.match(
+    capturedSql,
+    /ORDER BY bda2\.is_active DESC, bda2\.updated_at DESC, bda2\.id DESC/,
+  );
+});
+
 test('transaction failure creates neither review nor activity log', async () => {
   let logged = false;
   const service = makeService({
@@ -603,4 +778,48 @@ test('hidden reviews excluded because aggregate uses VISIBLE status', async () =
   await repo.getVisibleRatingSummaryForDriver(5);
   assert.match(sql, /moderation_status = 'VISIBLE'/);
   assert.doesNotMatch(sql, /HIDDEN/);
+});
+
+const { parseStoredTags } = require('../src/constants/reviewTags');
+
+test('parseStoredTags returns empty array for null tags_json', () => {
+  assert.deepEqual(parseStoredTags(null), []);
+  assert.deepEqual(parseStoredTags(undefined), []);
+});
+
+test('parseStoredTags returns empty array for malformed JSON string', () => {
+  assert.deepEqual(parseStoredTags('{not-valid-json'), []);
+});
+
+test('parseStoredTags ignores unknown tag codes', () => {
+  assert.deepEqual(parseStoredTags(['FRIENDLY', 'NOT_A_TAG']), ['FRIENDLY']);
+});
+
+test('mapCustomerReviewState returns customer comment for submitted review', () => {
+  const service = makeService();
+  const state = service.mapCustomerReviewState(
+    booking({ status: 'SETTLEMENT_PENDING' }),
+    reviewRow({ tags_json: null, comment: 'Nice ride' }),
+  );
+  assert.equal(state.submitted, true);
+  assert.deepEqual(state.tags, []);
+  assert.equal(state.comment, 'Nice ride');
+});
+
+test('mapCustomerReviewState returns empty tags when tags_json is null', () => {
+  const service = makeService();
+  const state = service.mapCustomerReviewState(
+    booking({ status: 'SETTLEMENT_PENDING' }),
+    reviewRow({ tags_json: null, comment: null }),
+  );
+  assert.equal(state.submitted, true);
+  assert.deepEqual(state.tags, []);
+  assert.equal(state.comment, null);
+});
+
+test('mapAdminReviewSummary tolerates malformed tags_json', () => {
+  const service = makeService();
+  const summary = service.mapAdminReviewSummary(reviewRow({ tags_json: 'broken-json' }));
+  assert.deepEqual(summary.tags, []);
+  assert.equal(summary.lowRating, false);
 });

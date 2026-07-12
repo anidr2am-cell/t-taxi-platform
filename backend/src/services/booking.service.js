@@ -9,7 +9,7 @@ const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
 
-const TRUST_MESSAGE = 'Your booking has been received. Please show your boarding QR to the driver when you get in. After pickup, a new drop-off QR will be generated automatically.';
+const TRUST_MESSAGE = 'Keep your booking number. You can check driver assignment and trip status on the booking lookup page.';
 
 const GUEST_TOKEN_TTL_DAYS = 90;
 const BOARDING_QR_TTL_HOURS = 48;

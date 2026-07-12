@@ -1,92 +1,40 @@
 # Booking Lifecycle
 
-Booking statuses:
+```text
+PENDING
+-> CONFIRMED
+-> DRIVER_ASSIGNED
+-> ON_ROUTE
+-> DRIVER_ARRIVED
+-> PICKED_UP
+-> SETTLEMENT_PENDING
+-> COMPLETED
+```
 
-- PENDING
-- CONFIRMED
-- DRIVER_ASSIGNED
-- DRIVER_ARRIVED
-- PICKED_UP
-- COMPLETED
-- CANCELLED
-- NO_SHOW
+All status transitions pass through `BookingStatusService` or the established trip-flow service that delegates lifecycle changes to it.
 
-All status transitions must pass through `BookingStatusService`. Controllers and route handlers must not update booking status directly.
+`CANCELLED` and `NO_SHOW` are terminal alternatives.
 
-# QR Operation Flow
+# Driver Operation
 
-Booking created
--> boarding QR available
--> driver scans boarding QR
--> booking becomes PICKED_UP
--> boarding QR becomes unusable
--> dropoff QR becomes available
--> driver scans dropoff QR
--> booking becomes COMPLETED
--> dropoff QR becomes unusable
+Admin assigns a driver. The driver then uses buttons to start route, mark arrival, mark customer pickup, and end the trip. End trip does not immediately complete the booking; it creates the settlement-pending state.
 
-Repository evidence: booking creation currently issues a boarding QR token. Full driver QR scan endpoints and dropoff QR service behavior may still be pending.
+Customer boarding/dropoff QR is not the current commercial UX. Remaining QR packages, schema, and endpoints are compatibility artifacts.
 
-# Payment
+# Payment And Commission
 
-Customer pays the driver directly at destination.
+The customer pays the driver directly (`PAY_DRIVER`). There is no online customer payment in the current MVP.
 
-Payment model: `PAY_DRIVER`.
-
-No online payment in MVP.
-
-# Commission
-
-After COMPLETED, the driver owes the platform commission.
-
-Repository evidence shows commission status fields on bookings. Receipt upload, admin approval, and driver blocking are later implementation stages unless already present in code.
+After trip end, the driver owes 200 THB. The driver uploads a transfer slip. Admin approval requires an attached receipt and changes the booking to `COMPLETED` with commission `PAID`. Commission and receipt details are not exposed to customers.
 
 # Assignment
 
-Manual admin assignment is the MVP direction.
-
-Automatic assignment is Phase 2.
+Manual and recommended admin assignment are supported. Drivers with an active or unsettled job are ineligible. Reassignment uses the same server-side eligibility rules.
 
 # Reviews
 
-Review request occurs after COMPLETED.
+Review submission is available for `SETTLEMENT_PENDING` and `COMPLETED` when a resolved driver exists and the booking has no prior review. One review per booking: rating 1-5, tags, and optional comment up to 500 characters.
 
-Full review implementation may be pending.
+# Notifications And Chat
 
-# Notifications
-
-Intended event points:
-
-- booking created
-- booking confirmed
-- driver assigned
-- driver arrived
-- boarding completed
-- trip completed
-- commission required
-- review requested
-
-Domain events should be used instead of direct service coupling.
-
-# MVP and Phase 2
-
-Currently implemented or partially implemented, based on repository evidence:
-
-- Booking creation with PENDING status.
-- Route-based pricing and vehicle recommendation services.
-- Guest access token creation for guest bookings.
-- Boarding QR token creation on booking create.
-- Booking lifecycle transitions through `BookingStatusService`.
-- Public flight lookup through `/api/v1/public/flights/search`.
-- Domain event constants and in-process event bus.
-
-Planned or not fully implemented yet:
-
-- Full guest/member booking retrieval flow.
-- Driver QR scan endpoints for boarding and dropoff.
-- Dropoff QR generation service after pickup.
-- Driver assignment API and assignment workflow.
-- Notification delivery service wired to domain events.
-- Commission receipt upload, admin approval, and driver blocking.
-- Review service and review request delivery.
-- Automatic driver assignment.
+Domain events are used instead of direct service coupling. Booking, assignment, trip, settlement, and review events may trigger notifications. Customer, admin, and active driver share the booking chat subject to access policy.

@@ -107,7 +107,7 @@ function buildHarness(options = {}) {
   return { service, calls };
 }
 
-test('DRIVER_ASSIGNED -> ON_ROUTE -> DRIVER_ARRIVED -> COMPLETED flow', async () => {
+test('DRIVER_ASSIGNED -> ON_ROUTE -> DRIVER_ARRIVED -> PICKED_UP -> SETTLEMENT_PENDING flow', async () => {
   const startHarness = buildHarness({
     fromStatus: BOOKING_STATUS.DRIVER_ASSIGNED,
     detailStatus: BOOKING_STATUS.ON_ROUTE,
@@ -123,19 +123,25 @@ test('DRIVER_ASSIGNED -> ON_ROUTE -> DRIVER_ARRIVED -> COMPLETED flow', async ()
   const arrived = await arriveHarness.service.markArrived(44, 'TX202607010001');
   assert.equal(arrived.status, BOOKING_STATUS.DRIVER_ARRIVED);
 
-  const completeHarness = buildHarness({
+  const pickedUpHarness = buildHarness({
     fromStatus: BOOKING_STATUS.DRIVER_ARRIVED,
-    detailStatus: BOOKING_STATUS.COMPLETED,
+    detailStatus: BOOKING_STATUS.PICKED_UP,
   });
-  const completed = await completeHarness.service.completeTrip(44, 'TX202607010001');
-  assert.equal(completed.status, BOOKING_STATUS.COMPLETED);
-  assert.equal(completeHarness.calls.emitted, 1);
+  const pickedUp = await pickedUpHarness.service.markPickedUp(44, 'TX202607010001');
+  assert.equal(pickedUp.status, BOOKING_STATUS.PICKED_UP);
+
+  const endHarness = buildHarness({
+    fromStatus: BOOKING_STATUS.PICKED_UP,
+    detailStatus: BOOKING_STATUS.SETTLEMENT_PENDING,
+  });
+  const ended = await endHarness.service.endTrip(44, 'TX202607010001');
+  assert.equal(ended.status, BOOKING_STATUS.SETTLEMENT_PENDING);
 });
 
-test('completeTrip returns summary when active driver job is no longer listed', async () => {
+test('endTrip returns summary when active driver job is no longer listed', async () => {
   const { service } = buildHarness({
-    fromStatus: BOOKING_STATUS.DRIVER_ARRIVED,
-    detailStatus: BOOKING_STATUS.COMPLETED,
+    fromStatus: BOOKING_STATUS.PICKED_UP,
+    detailStatus: BOOKING_STATUS.SETTLEMENT_PENDING,
   });
   service.driverJobService.getDetail = async () => {
     throw Object.assign(new Error('Booking not found'), {
@@ -144,9 +150,9 @@ test('completeTrip returns summary when active driver job is no longer listed', 
     });
   };
 
-  const completed = await service.completeTrip(44, 'TX202607010001');
-  assert.equal(completed.status, BOOKING_STATUS.COMPLETED);
-  assert.equal(completed.bookingNumber, 'TX202607010001');
+  const ended = await service.endTrip(44, 'TX202607010001');
+  assert.equal(ended.status, BOOKING_STATUS.SETTLEMENT_PENDING);
+  assert.equal(ended.bookingNumber, 'TX202607010001');
 });
 
 test('markArrived rejects DRIVER_ASSIGNED without ON_ROUTE', async () => {

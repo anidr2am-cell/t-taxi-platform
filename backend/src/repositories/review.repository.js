@@ -15,8 +15,9 @@ class ReviewRepository {
           guest_access_token_id,
           rating,
           comment,
+          tags_json,
           moderation_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         data.bookingId,
@@ -25,6 +26,7 @@ class ReviewRepository {
         data.guestAccessTokenId ?? null,
         data.rating,
         data.comment ?? null,
+        data.tags?.length ? JSON.stringify(data.tags) : null,
         data.moderationStatus ?? 'VISIBLE',
       ],
     );
@@ -42,6 +44,7 @@ class ReviewRepository {
           r.guest_access_token_id,
           r.rating,
           r.comment,
+          r.tags_json,
           r.moderation_status,
           r.hidden_reason,
           r.reviewed_by,
@@ -71,6 +74,7 @@ class ReviewRepository {
           r.guest_access_token_id,
           r.rating,
           r.comment,
+          r.tags_json,
           r.moderation_status,
           r.hidden_reason,
           r.reviewed_by,
@@ -99,6 +103,7 @@ class ReviewRepository {
           r.guest_access_token_id,
           r.rating,
           r.comment,
+          r.tags_json,
           r.moderation_status,
           r.hidden_reason,
           r.reviewed_by,
@@ -136,6 +141,7 @@ class ReviewRepository {
           r.driver_id,
           r.rating,
           r.comment,
+          r.tags_json,
           r.moderation_status,
           r.hidden_reason,
           r.reviewed_by,
@@ -271,6 +277,7 @@ class ReviewRepository {
           r.customer_user_id,
           r.rating,
           r.comment,
+          r.tags_json,
           r.moderation_status,
           r.hidden_reason,
           r.created_at,

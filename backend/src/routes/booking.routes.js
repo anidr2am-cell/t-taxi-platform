@@ -64,6 +64,7 @@ router.patch(
   bookingController.updateBookingStatus,
 );
 
+// Legacy QR issue routes — compatibility only; customer UI must not call these.
 router.post(
   "/:bookingNumber/boarding-qr/issue",
   optionalAuthMiddleware,
