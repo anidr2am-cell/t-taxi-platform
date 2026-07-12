@@ -175,26 +175,18 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SuccessHero(l10n: l10n, trustMessage: result.trustMessage),
+              _SuccessHero(l10n: l10n),
               const SizedBox(height: AppTokens.spaceLg),
               _BookingNumberCard(
                 bookingNumber: result.bookingNumber,
-                statusLabel: BookingStatusDisplay.label(
-                  l10n,
-                  result.status,
-                ),
+                statusLabel: BookingStatusDisplay.label(l10n, result.status),
                 total: '${result.totalAmount} ${result.currency}',
                 paymentLabel: l10n.t('pay_driver_at_destination'),
                 l10n: l10n,
                 onCopy: _copyBookingNumber,
-                statusTone: AppUi.toneForBookingStatus(
-                  result.status,
-                ),
+                statusTone: AppUi.toneForBookingStatus(result.status),
               ),
-              if (BookingStatusDisplay.customerGuidance(
-                    l10n,
-                    result.status,
-                  ) !=
+              if (BookingStatusDisplay.customerGuidance(l10n, result.status) !=
                   null) ...[
                 const SizedBox(height: AppTokens.spaceMd),
                 AppUi.surfaceCard(
@@ -262,9 +254,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   vehicleInfo: widget.meetingVehicleInfo,
                   pickupAlertSent: _pickupAlertSent,
                   onNotifyPickup:
-                      _pickupAlertStatuses.contains(
-                            widget.result.status,
-                          ) &&
+                      _pickupAlertStatuses.contains(widget.result.status) &&
                           widget.meetingVehicleInfo?.hasAssignedDetails ==
                               true &&
                           widget.result.guestAccessToken?.isNotEmpty == true
@@ -315,11 +305,11 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 ] else ...[
                   const SizedBox(height: AppTokens.spaceMd),
                   BookingChatSection(
-                  bookingNumber: result.bookingNumber,
-                  guestAccessToken: result.guestAccessToken,
-                  api: widget.chatApi,
-                  socketService: widget.chatSocketService,
-                ),
+                    bookingNumber: result.bookingNumber,
+                    guestAccessToken: result.guestAccessToken,
+                    api: widget.chatApi,
+                    socketService: widget.chatSocketService,
+                  ),
                 ],
               ],
               const SizedBox(height: AppTokens.spaceLg),
@@ -341,10 +331,9 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
 }
 
 class _SuccessHero extends StatelessWidget {
-  const _SuccessHero({required this.l10n, required this.trustMessage});
+  const _SuccessHero({required this.l10n});
 
   final AppLocalizations l10n;
-  final String trustMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -376,9 +365,7 @@ class _SuccessHero extends StatelessWidget {
           ),
           const SizedBox(height: AppTokens.spaceSm),
           Text(
-            trustMessage.isNotEmpty
-                ? trustMessage
-                : l10n.t('booking_trust_message'),
+            l10n.t('booking_trust_message'),
             style: const TextStyle(color: AppTokens.textSecondary, height: 1.5),
             textAlign: TextAlign.center,
           ),

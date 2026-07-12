@@ -5,6 +5,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../utils/pricing_display.dart';
 import '../models/booking_complete_review.dart';
+import '../models/country_option.dart';
 
 class BookingCompleteReviewSection extends StatelessWidget {
   const BookingCompleteReviewSection({super.key, required this.review});
@@ -25,18 +26,28 @@ class BookingCompleteReviewSection extends StatelessWidget {
             children: [
               AppUi.summaryRow(
                 label: l10n.t('pickup_datetime'),
-                value: '${review.pickupDate ?? '-'} ${review.pickupTime ?? ''}'.trim(),
+                value: '${review.pickupDate ?? '-'} ${review.pickupTime ?? ''}'
+                    .trim(),
               ),
               if (review.showFlightNumber)
                 AppUi.summaryRow(
                   label: l10n.t('flight_number'),
                   value: review.flightNumber.trim(),
                 ),
-              AppUi.summaryRow(label: l10n.t('adults'), value: '${review.adults}'),
+              AppUi.summaryRow(
+                label: l10n.t('adults'),
+                value: '${review.adults}',
+              ),
               if (review.children > 0)
-                AppUi.summaryRow(label: l10n.t('children'), value: '${review.children}'),
+                AppUi.summaryRow(
+                  label: l10n.t('children'),
+                  value: '${review.children}',
+                ),
               if (review.infants > 0)
-                AppUi.summaryRow(label: l10n.t('infants'), value: '${review.infants}'),
+                AppUi.summaryRow(
+                  label: l10n.t('infants'),
+                  value: '${review.infants}',
+                ),
               if (review.luggage20 > 0)
                 AppUi.summaryRow(
                   label: l10n.t('small_carriers'),
@@ -48,14 +59,20 @@ class BookingCompleteReviewSection extends StatelessWidget {
                   value: '${review.luggage24}',
                 ),
               if (review.golfBags > 0)
-                AppUi.summaryRow(label: l10n.t('golf_bags'), value: '${review.golfBags}'),
+                AppUi.summaryRow(
+                  label: l10n.t('golf_bags'),
+                  value: '${review.golfBags}',
+                ),
               if (review.specialLuggageCount > 0)
                 AppUi.summaryRow(
                   label: l10n.t('special_luggage'),
                   value: '${review.specialLuggageCount}',
                 ),
               if (review.nameSign)
-                AppUi.summaryRow(label: l10n.t('name_sign'), value: l10n.t('yes')),
+                AppUi.summaryRow(
+                  label: l10n.t('name_sign'),
+                  value: l10n.t('yes'),
+                ),
               if (review.selectedVehicle != null)
                 AppUi.summaryRow(
                   label: l10n.t('vehicle'),
@@ -79,7 +96,10 @@ class BookingCompleteReviewSection extends StatelessWidget {
               if (review.showCountryCode)
                 AppUi.summaryRow(
                   label: l10n.t('country'),
-                  value: review.customerCountryCode.trim(),
+                  value: CountryCatalog.displayName(
+                    review.customerCountryCode,
+                    l10n,
+                  ),
                 ),
               if (review.messengerType.trim().isNotEmpty)
                 AppUi.summaryRow(
@@ -109,9 +129,9 @@ class BookingCompleteReviewSection extends StatelessWidget {
                 Text(
                   l10n.t('pricing_summary'),
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppTokens.primaryDark,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: AppTokens.primaryDark,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: AppTokens.spaceSm),
                 AppUi.summaryRow(

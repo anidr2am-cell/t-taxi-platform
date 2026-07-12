@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../booking/utils/booking_status_display.dart';
 import '../../booking/utils/review_tags.dart';
+import '../../booking/models/country_option.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
@@ -773,7 +774,12 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             ),
           AppUi.summaryRow(
             label: l10n.t('admin_detail_country'),
-            value: customer['countryCode'] as String? ?? '-',
+            value: (customer['countryCode'] as String? ?? '').trim().isEmpty
+                ? '-'
+                : CountryCatalog.displayName(
+                    customer['countryCode'] as String,
+                    l10n,
+                  ),
           ),
           AppUi.summaryRow(
             label: l10n.t('admin_detail_passengers'),

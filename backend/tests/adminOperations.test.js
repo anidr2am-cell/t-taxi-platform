@@ -79,6 +79,32 @@ test("evaluateOperations marks overdue unassigned as urgent", () => {
   assert.equal(ops.needsAction, true);
 });
 
+test("evaluateOperations keeps a four-hour-future unassigned booking out of needs action", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "PENDING",
+    scheduled_pickup_at: "2026-07-11 14:00:00",
+    driver_id: null,
+    assignment_id: null,
+    updated_at: "2026-07-11 10:00:00",
+  });
+  assert.equal(ops.needsAction, false);
+  assert.equal(ops.primaryActionReason, null);
+});
+
+test("evaluateOperations includes a 30-minute-future unassigned booking in needs action", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "PENDING",
+    scheduled_pickup_at: "2026-07-11 10:30:00",
+    driver_id: null,
+    assignment_id: null,
+    updated_at: "2026-07-11 10:00:00",
+  });
+  assert.equal(ops.needsAction, true);
+  assert.equal(ops.primaryActionReason, "PICKUP_SOON_UNASSIGNED");
+});
+
 test("evaluateOperations marks low rating as urgent", () => {
   const service = new AdminOperationsService(() => fixedNow());
   const ops = service.evaluateOperations({

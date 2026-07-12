@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_wizard_state.dart';
+import '../models/country_option.dart';
 import 'wizard_compact.dart';
 
 class StepCustomerInfo extends StatefulWidget {
@@ -42,6 +43,8 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   late final TextEditingController _messengerTypeController;
   late final TextEditingController _messengerIdController;
   late final TextEditingController _requestsController;
+  late final FocusNode _countryFocusNode;
+  bool _localizedInitialCountry = false;
 
   @override
   void initState() {
@@ -49,10 +52,19 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     _nameController = TextEditingController(text: widget.state.customerName);
     _emailController = TextEditingController(text: widget.state.customerEmail);
     _phoneController = TextEditingController(text: widget.state.customerPhone);
-    _countryController = TextEditingController(text: widget.state.customerCountryCode);
-    _messengerTypeController = TextEditingController(text: widget.state.messengerType);
-    _messengerIdController = TextEditingController(text: widget.state.messengerId);
-    _requestsController = TextEditingController(text: widget.state.additionalRequests);
+    _countryController = TextEditingController(
+      text: widget.state.customerCountryCode,
+    );
+    _countryFocusNode = FocusNode();
+    _messengerTypeController = TextEditingController(
+      text: widget.state.messengerType,
+    );
+    _messengerIdController = TextEditingController(
+      text: widget.state.messengerId,
+    );
+    _requestsController = TextEditingController(
+      text: widget.state.additionalRequests,
+    );
   }
 
   @override
@@ -61,10 +73,24 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     _emailController.dispose();
     _phoneController.dispose();
     _countryController.dispose();
+    _countryFocusNode.dispose();
     _messengerTypeController.dispose();
     _messengerIdController.dispose();
     _requestsController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_localizedInitialCountry) return;
+    _localizedInitialCountry = true;
+    final country = CountryCatalog.byCode(widget.state.customerCountryCode);
+    if (country != null) {
+      _countryController.text = country.localizedName(
+        context.l10n.languageCode,
+      );
+    }
   }
 
   InputDecoration _fieldDecoration(
@@ -132,15 +158,61 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
         Semantics(
           label: l10n.t('country'),
           textField: true,
-          child: TextField(
-            controller: _countryController,
-            decoration: _fieldDecoration(
-              l10n,
-              l10n.t('country'),
-              hint: l10n.t('country_code_hint'),
-            ),
-            textInputAction: TextInputAction.next,
-            onChanged: widget.onCountryChanged,
+          child: RawAutocomplete<CountryOption>(
+            textEditingController: _countryController,
+            focusNode: _countryFocusNode,
+            displayStringForOption: (option) =>
+                option.localizedName(l10n.languageCode),
+            optionsBuilder: (value) => CountryCatalog.search(value.text),
+            onSelected: (option) {
+              _countryController.text = option.localizedName(l10n.languageCode);
+              widget.onCountryChanged(option.code);
+            },
+            fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: _fieldDecoration(
+                  l10n,
+                  l10n.t('country'),
+                  hint: l10n.t('country_search_hint'),
+                ),
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => onSubmitted(),
+                onChanged: widget.onCountryChanged,
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              final items = options.toList(growable: false);
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: 520,
+                      maxHeight: 280,
+                    ),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final option = items[index];
+                        return ListTile(
+                          key: ValueKey('country_option_${option.code}'),
+                          title: Text(option.localizedName(l10n.languageCode)),
+                          trailing: Text(option.code),
+                          onTap: () => onSelected(option),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
         SizedBox(height: gap),
