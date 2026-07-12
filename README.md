@@ -1,97 +1,40 @@
-# T-Ride (TTaxi) — Thailand Airport Transfer Platform
+# T-Ride
 
-MVP scope: **guest booking → admin manual dispatch → driver trip flow → guest status lookup**.
+Thailand airport and city transfer platform.
 
-## Quick links
+Current commercialization RC flow:
 
-| Document | Purpose |
-|----------|---------|
-| **[docs/MVP_DEMO_GUIDE.md](docs/MVP_DEMO_GUIDE.md)** | Start here — full demo/test setup for a new operator |
-| **[docs/GABIA_STAGING_DEPLOY_CHECKLIST.md](docs/GABIA_STAGING_DEPLOY_CHECKLIST.md)** | **Gabia — T-Ride `tride-staging` at `/opt/t-ride` (coexist with `/opt/ktaxi`)** |
-| **[deploy/docker/README.md](deploy/docker/README.md)** | **Docker Compose staging — `3100` API / `3101` UI** |
-| **[docs/MVP_DEPLOYMENT_PREP.md](docs/MVP_DEPLOYMENT_PREP.md)** | Staging architecture, Docker/`tride-*` naming, CORS, env, smoke tests |
-| [docs/MVP_DEV_SETUP.md](docs/MVP_DEV_SETUP.md) | Developer reference (accounts, scripts, URLs) |
-| [docs/MVP_MANUAL_E2E_CHECKLIST.md](docs/MVP_MANUAL_E2E_CHECKLIST.md) | Manual verification checklist |
-| **[docs/STAGING_ACCOUNT_RESET.md](docs/STAGING_ACCOUNT_RESET.md)** | **Gabia staging — admin/driver password reset (T-Ride only)** |
-| **[docs/STAGING_MANUAL_E2E_CHECKLIST.md](docs/STAGING_MANUAL_E2E_CHECKLIST.md)** | **Gabia staging — manual E2E verification** |
-| **[docs/OPERATIONS_REHEARSAL_CHECKLIST.md](docs/OPERATIONS_REHEARSAL_CHECKLIST.md)** | **Pre-production customer/admin/driver rehearsal and release go/no-go checklist** |
-| **[docs/STAGING_DOMAIN_CUTOVER_PLAN.md](docs/STAGING_DOMAIN_CUTOVER_PLAN.md)** | **Future domain cutover risk plan (not for execution yet)** |
+`PENDING -> CONFIRMED -> DRIVER_ASSIGNED -> ON_ROUTE -> DRIVER_ARRIVED -> PICKED_UP -> SETTLEMENT_PENDING -> COMPLETED`
 
-## Tech stack
+Drivers operate trips with in-app status buttons. Customer boarding/dropoff QR is not part of the current commercial UX. QR schema and APIs may remain for compatibility and must not be treated as the active workflow.
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Flutter Web (PWA) |
-| Backend | Node.js 22+ / Express |
-| Database | MySQL 8.x |
+After trip end, the driver owes a fixed 200 THB commission. The booking remains `SETTLEMENT_PENDING` until the driver uploads a transfer slip and an administrator approves it. Approval changes the booking to `COMPLETED` and commission status to `PAID`.
 
-## Project structure
+Customer reviews are available in `SETTLEMENT_PENDING` and `COMPLETED`. Administrators can see rating, tags, comment, and timestamp. Drivers never receive raw comments, negative tags, admin issue reasons, or internal notes.
 
-```
-TTaxi/
-├── backend/     # REST API
-├── frontend/    # Flutter Web
-├── database/    # Migrations & seeds
-└── docs/        # MVP guides & OpenAPI
-```
+## Staging
 
-## Minimum commands (local demo)
+- Repository path: `/opt/t-ride`
+- Compose: `deploy/docker/docker-compose.staging.yml`
+- Services: `tride-db`, `tride-backend`, `tride-frontend`
+- API: `http://103.60.127.213:3100`
+- UI: `http://103.60.127.213:3101`
+- RC baseline: [docs/STAGING_COMMERCIALIZATION_RC.md](docs/STAGING_COMMERCIALIZATION_RC.md)
+
+## Safety
+
+T-Ride is isolated from legacy KTaxi. Never modify `/opt/ktaxi`, `ktaxi-*`, `ktaxi-nginx`, host 80/443, `88taxi.net`, `infra_*`, or legacy databases.
+
+Numbered migrations have no applied-history table and the runners replay all SQL files. Commercial deployment must back up the target DB, inspect its schema, and apply only required migrations to the explicitly selected database.
+
+## Development
 
 ```powershell
-# 1. Database + demo data
-cd C:\TTaxi\database
-.\setup-mvp-demo.ps1
-
-# 2. Backend
-cd C:\TTaxi\backend
-copy .env.example .env   # edit DB + JWT secrets — see MVP_DEMO_GUIDE.md
-npm install
-npm start
-
-# 3. Frontend (dev)
-cd C:\TTaxi\frontend
-flutter pub get
-flutter run -d chrome --web-port=8080
-
-# 4. Verify
 cd C:\TTaxi\backend
 npm test
-npm run rehearsal:mvp-e2e
+
 cd C:\TTaxi\frontend
 flutter test
-flutter build web
 ```
 
-## MVP direct URLs (dev)
-
-| Screen | URL |
-|--------|-----|
-| Customer landing | http://localhost:8080/ |
-| Guest lookup | http://localhost:8080/booking/lookup |
-| Admin dispatch | http://localhost:8080/admin |
-| Driver login | http://localhost:8080/driver |
-
-## Demo accounts (dev/staging only)
-
-| Role | Login | Password |
-|------|-------|----------|
-| Super Admin | `admin@ttaxi.dev` | `Admin123456!` |
-| Driver | `+66810000001` (phone) | `Driver123456!` |
-
-Created by `npm run seed:mvp-demo`. **Never use in production.**
-
-## MVP known limitations
-
-Not included in the current MVP demo:
-
-- Payment processing
-- Customer signup / member accounts
-- Chat (customer–driver–admin)
-- QR boarding / dropoff completion
-- Socket.IO live sync (guest refresh is manual)
-- Auto-dispatch
-- Driver live GPS map
-
-## License
-
-Proprietary — T-Ride / TTaxi
+See [docs/MVP_DEMO_GUIDE.md](docs/MVP_DEMO_GUIDE.md) for local setup and [docs/MVP_MANUAL_E2E_CHECKLIST.md](docs/MVP_MANUAL_E2E_CHECKLIST.md) for verification.
