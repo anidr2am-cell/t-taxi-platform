@@ -7,7 +7,7 @@ import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 
 void main() {
-  testWidgets('shows start route action when assigned', (tester) async {
+  testWidgets('shows confirm trip and release actions when assigned', (tester) async {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
@@ -21,7 +21,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(FilledButton, '고객에게 출발 / ออกเดินทางไปรับลูกค้า'),
+      find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
       findsOneWidget,
     );
     expect(
@@ -156,7 +160,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(
-      find.widgetWithText(FilledButton, '고객에게 출발 / ออกเดินทางไปรับลูกค้า'),
+      find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
       findsNothing,
     );
     expect(
@@ -176,7 +180,114 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '고객에게 출발 / ออกเดินทางไปรับลูกค้า'),
+      find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('release action confirms, calls API once, and pops detail', (
+    tester,
+  ) async {
+    final api = _FakeDriverApi(
+      detail: _booking(
+        status: 'DRIVER_ASSIGNED',
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+      ),
+    );
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('운행 포기'), findsWidgets);
+    expect(find.text('운행을 포기하시겠습니까?'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, '운행 포기'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.releaseCalls, 1);
+    expect(find.byType(DriverBookingDetailPage), findsNothing);
+  });
+
+  testWidgets('release dialog cancel does not call API', (tester) async {
+    final api = _FakeDriverApi(
+      detail: _booking(
+        status: 'DRIVER_ASSIGNED',
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+      ),
+    );
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, '취소'));
+    await tester.pumpAndSettle();
+
+    expect(api.releaseCalls, 0);
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
+  });
+
+  testWidgets('release failure keeps detail and refreshes stale status', (
+    tester,
+  ) async {
+    final api = _FakeDriverApi(
+      detail: _booking(
+        status: 'DRIVER_ASSIGNED',
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+      ),
+      releaseError: const DriverApiException(
+        'Booking can only be released before the trip starts',
+        errorCode: 'BOOKING_RELEASE_NOT_ALLOWED',
+        statusCode: 409,
+      ),
+    );
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, '운행 포기'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.releaseCalls, 1);
+    expect(api.detailCalls, greaterThan(1));
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
+    expect(find.textContaining('Booking can only be released'), findsOneWidget);
+  });
+
+  testWidgets('release button hidden after driver arrived', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ARRIVED',
+            actions: ['MARK_PICKED_UP'],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
       findsNothing,
     );
   });
@@ -312,6 +423,7 @@ class _FakeDriverApi extends DriverApiService {
     Future<DriverBooking>? detailFuture,
     this.detailError,
     this.actionError,
+    this.releaseError,
   }) {
     _current = detail ?? _booking();
     if (detailFuture != null) {
@@ -323,12 +435,24 @@ class _FakeDriverApi extends DriverApiService {
   Future<DriverBooking>? _detailFuture;
   final Exception? detailError;
   final Exception? actionError;
+  final Exception? releaseError;
+  int detailCalls = 0;
+  int releaseCalls = 0;
 
   @override
   Future<DriverBooking> getBookingDetail(String bookingNumber) async {
+    detailCalls += 1;
     if (detailError != null) throw detailError!;
     if (_detailFuture != null) return _detailFuture!;
     return _current;
+  }
+
+  @override
+  Future<Map<String, dynamic>> releaseAssignment(String bookingNumber) async {
+    releaseCalls += 1;
+    if (releaseError != null) throw releaseError!;
+    _current = _booking(status: 'OPEN', actions: []);
+    return {'bookingNumber': bookingNumber, 'status': 'OPEN', 'released': true};
   }
 
   @override

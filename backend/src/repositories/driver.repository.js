@@ -248,8 +248,9 @@ class DriverRepository {
     return rows[0] || null;
   }
 
-  async listEligibleForOpenBooking(conn, vehicleTypeId) {
+  async listEligibleForOpenBooking(conn, vehicleTypeId, options = {}) {
     const executor = conn ?? this.pool;
+    const excludeReleasedBookingId = options.excludeReleasedBookingId ?? null;
     const [rows] = await executor.query(
       `
         SELECT
@@ -291,9 +292,21 @@ class DriverRepository {
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
               AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
           )
+          AND (
+            ? IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM booking_driver_assignments released_bda
+              WHERE released_bda.booking_id = ?
+                AND released_bda.driver_id = d.id
+                AND released_bda.is_active = 0
+                AND released_bda.deleted_at IS NULL
+                AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+            )
+          )
         ORDER BY d.last_seen_at DESC, d.id ASC
       `,
-      [vehicleTypeId],
+      [vehicleTypeId, excludeReleasedBookingId, excludeReleasedBookingId],
     );
     return rows;
   }

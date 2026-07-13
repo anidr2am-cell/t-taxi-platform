@@ -114,6 +114,72 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     }
   }
 
+  Future<void> _releaseAssignment() async {
+    if (_processing) return;
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.t('driver_release_assignment_title')),
+        content: Text(l10n.t('driver_release_assignment_message')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.t('driver_release_assignment_cancel')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTokens.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.t('driver_release_assignment_confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _processing) return;
+
+    setState(() {
+      _processing = true;
+      _actionError = null;
+    });
+
+    try {
+      await widget.api.releaseAssignment(widget.bookingNumber);
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('driver_release_assignment_success'))),
+      );
+      Navigator.of(context).pop(true);
+    } on DriverApiException catch (err) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      if (driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
+      if (err.isStaleStatus || err.statusCode == 409) {
+        _loadBooking();
+      }
+      setState(() => _actionError = driverApiErrorMessage(
+            message: err.message,
+            errorCode: err.errorCode,
+            languageCode: l10n.languageCode,
+          ));
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _processing = false;
+        _actionError = userFacingError(
+          err,
+          fallback: l10n.t('driver_release_assignment_failed'),
+        );
+      });
+    }
+  }
+
   void _openCustomerChat() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -194,6 +260,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
           final readOnly = DriverUx.isReadOnly(booking.status);
           final showSettlementInfo = booking.status == 'SETTLEMENT_PENDING';
           final showCompletedInfo = booking.status == 'COMPLETED';
+          final canReleaseAssignment = booking.status == 'DRIVER_ASSIGNED';
 
           return Column(
             children: [
@@ -398,6 +465,22 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                         label: Text(l10n.t(primaryKey)),
                       ),
                     ),
+                    if (canReleaseAssignment) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      SizedBox(
+                        height: 48,
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTokens.error,
+                            side: const BorderSide(color: AppTokens.error),
+                          ),
+                          onPressed: _processing ? null : _releaseAssignment,
+                          icon: const Icon(Icons.cancel_outlined),
+                          label: Text(l10n.t('driver_release_assignment')),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
             ],

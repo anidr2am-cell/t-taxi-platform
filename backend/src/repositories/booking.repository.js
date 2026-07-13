@@ -613,6 +613,15 @@ class BookingRepository {
           )
           AND NOT EXISTS (
             SELECT 1
+            FROM booking_driver_assignments released_bda
+            WHERE released_bda.booking_id = b.id
+              AND released_bda.driver_id = d.id
+              AND released_bda.is_active = 0
+              AND released_bda.deleted_at IS NULL
+              AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          )
+          AND NOT EXISTS (
+            SELECT 1
             FROM booking_driver_assignments own_bda
             INNER JOIN bookings own_b ON own_b.id = own_bda.booking_id AND own_b.deleted_at IS NULL
             WHERE own_bda.driver_id = d.id
@@ -626,6 +635,21 @@ class BookingRepository {
       [driverUserId],
     );
     return rows;
+  }
+
+  async findOpenDriverCallByBookingId(conn, bookingId) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
+      `
+        ${this.openDriverCallSelectSql()}
+        WHERE b.id = ?
+          AND b.deleted_at IS NULL
+          AND b.status = 'OPEN'
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0] || null;
   }
 
   async findQrTokenBooking(conn, tokenHash) {
@@ -723,6 +747,21 @@ class BookingRepository {
         status,
         bookingId,
       ],
+    );
+  }
+
+  async reopenAfterDriverRelease(conn, bookingId, actorUserId) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          status = 'OPEN',
+          driver_id = NULL,
+          updated_by = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [actorUserId, bookingId],
     );
   }
 
@@ -1431,6 +1470,24 @@ class BookingRepository {
       [reason, assignmentId],
     );
     return result.affectedRows === 1;
+  }
+
+  async hasReleasedAssignment(conn, bookingId, driverId) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
+      `
+        SELECT 1
+        FROM booking_driver_assignments bda
+        WHERE bda.booking_id = ?
+          AND bda.driver_id = ?
+          AND bda.is_active = 0
+          AND bda.deleted_at IS NULL
+          AND bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+        LIMIT 1
+      `,
+      [bookingId, driverId],
+    );
+    return rows.length > 0;
   }
 
   async completeActiveAssignment(conn, bookingId) {
