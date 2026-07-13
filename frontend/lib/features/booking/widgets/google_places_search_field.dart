@@ -10,6 +10,7 @@ import '../models/location_option.dart';
 import '../models/place_prediction.dart';
 import '../services/places_api_service.dart';
 import '../services/recent_locations_storage.dart';
+import 'map_location_picker.dart';
 import 'wizard_status_views.dart';
 
 import 'wizard_compact.dart';
@@ -25,6 +26,12 @@ class GooglePlacesSearchField extends StatefulWidget {
   final FocusNode? focusNode;
   final ValueChanged<LocationOption> onSelected;
   final PlacesApiService? placesApi;
+  final Future<LocationOption?> Function(
+    BuildContext context,
+    LocationOption? current,
+    String languageCode,
+  )?
+  mapPicker;
 
   const GooglePlacesSearchField({
     super.key,
@@ -38,10 +45,12 @@ class GooglePlacesSearchField extends StatefulWidget {
     this.compact = false,
     this.focusNode,
     this.placesApi,
+    this.mapPicker,
   });
 
   @override
-  State<GooglePlacesSearchField> createState() => _GooglePlacesSearchFieldState();
+  State<GooglePlacesSearchField> createState() =>
+      _GooglePlacesSearchFieldState();
 }
 
 class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
@@ -140,7 +149,10 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       return;
     }
 
-    _debounce = Timer(const Duration(milliseconds: 300), () => _fetchPredictions(query));
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _fetchPredictions(query),
+    );
   }
 
   Future<void> _fetchPredictions(String query) async {
@@ -187,6 +199,23 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         _error = userFacingError(e, fallback: 'ui_load_failed');
       });
     }
+  }
+
+  Future<void> _selectFromMap() async {
+    _focusNode.unfocus();
+    final location =
+        await (widget.mapPicker?.call(
+              context,
+              widget.selected,
+              widget.languageCode,
+            ) ??
+            MapLocationPicker.show(
+              context,
+              languageCode: widget.languageCode,
+              initialLocation: widget.selected,
+            ));
+    if (!mounted || location == null) return;
+    _applyLocation(location);
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -261,7 +290,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           runSpacing: 8,
           children: AirportShortcuts.thailandAirports.map((airport) {
             return OutlinedButton(
-              onPressed: _loadingDetails ? null : () => _selectShortcut(airport),
+              onPressed: _loadingDetails
+                  ? null
+                  : () => _selectShortcut(airport),
               child: Text(airport.code ?? airport.displayName),
             );
           }).toList(),
@@ -319,7 +350,8 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
                           location.name ?? location.displayName,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        if (location.address != null && location.address!.isNotEmpty)
+                        if (location.address != null &&
+                            location.address!.isNotEmpty)
                           Text(
                             location.address!,
                             style: const TextStyle(
@@ -348,7 +380,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       meta: location.latitude != null && location.longitude != null
           ? '${location.latitude!.toStringAsFixed(5)}, ${location.longitude!.toStringAsFixed(5)}'
           : null,
-      icon: location.kind == LocationKind.airport ? Icons.flight : Icons.place_outlined,
+      icon: location.kind == LocationKind.airport
+          ? Icons.flight
+          : Icons.place_outlined,
       changeLabel: l10n.t('change_location'),
       onChange: _startEditing,
       loading: _loadingDetails,
@@ -364,13 +398,18 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!widget.compact) ...[
-            Text(widget.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              widget.label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 6),
           ],
           if (_loadingDetails)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: WizardLoadingView(message: l10n.t('loading_place_details')),
+              child: WizardLoadingView(
+                message: l10n.t('loading_place_details'),
+              ),
             )
           else
             _selectedCard(l10n),
@@ -387,7 +426,10 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!widget.compact) ...[
-          Text(widget.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            widget.label,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 6),
         ],
         if (widget.showAirportShortcuts) _airportShortcuts(l10n),
@@ -418,6 +460,16 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
                         : null,
                   ),
             onChanged: _onQueryChanged,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            key: const ValueKey('select_location_on_map'),
+            onPressed: _loadingDetails ? null : _selectFromMap,
+            icon: const Icon(Icons.map_outlined),
+            label: Text(l10n.t('select_on_map')),
           ),
         ),
         if (_error != null)
@@ -456,7 +508,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
                 final item = _predictions[index];
                 final highlighted = index == _highlightedIndex;
                 return Material(
-                  color: highlighted ? AppTokens.primary.withValues(alpha: 0.08) : null,
+                  color: highlighted
+                      ? AppTokens.primary.withValues(alpha: 0.08)
+                      : null,
                   child: ListTile(
                     leading: _locationIcon(LocationKind.place),
                     title: Text(

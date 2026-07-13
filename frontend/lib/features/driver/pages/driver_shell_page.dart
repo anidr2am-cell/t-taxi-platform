@@ -73,41 +73,44 @@ class _DriverShellPageState extends State<DriverShellPage> {
       ),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: Text(_titleForIndex(l10n))),
-      body: Column(
-        children: [
-          DriverStatusControl(api: _api, onStatusChanged: _refreshSession),
-          Expanded(child: pages[_index]),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        height: 72,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.today_outlined),
-            selectedIcon: const Icon(Icons.today),
-            label: l10n.t('driver_nav_today'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.history_outlined),
-            selectedIcon: const Icon(Icons.history),
-            label: l10n.t('driver_nav_history'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.notifications_outlined),
-            selectedIcon: const Icon(Icons.notifications),
-            label: l10n.t('driver_nav_notifications'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: l10n.t('driver_nav_account'),
-          ),
-        ],
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(title: Text(_titleForIndex(l10n))),
+        body: Column(
+          children: [
+            DriverStatusControl(api: _api, onStatusChanged: _refreshSession),
+            Expanded(child: pages[_index]),
+          ],
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          height: 72,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) => setState(() => _index = i),
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.today_outlined),
+              selectedIcon: const Icon(Icons.today),
+              label: l10n.t('driver_nav_today'),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.history_outlined),
+              selectedIcon: const Icon(Icons.history),
+              label: l10n.t('driver_nav_history'),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.notifications_outlined),
+              selectedIcon: const Icon(Icons.notifications),
+              label: l10n.t('driver_nav_notifications'),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: l10n.t('driver_nav_account'),
+            ),
+          ],
+        ),
       ),
     );
   }

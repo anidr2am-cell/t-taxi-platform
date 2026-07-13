@@ -55,11 +55,7 @@ void main() {
     test('selectCurrentTrip prefers picked up over assigned', () {
       final items = [
         _booking(status: 'DRIVER_ASSIGNED', time: '08:00'),
-        _booking(
-          status: 'PICKED_UP',
-          time: '09:00',
-          number: 'TX202607010004',
-        ),
+        _booking(status: 'PICKED_UP', time: '09:00', number: 'TX202607010004'),
       ];
       final current = DriverUx.selectCurrentTrip(items);
       expect(current?.status, 'PICKED_UP');
@@ -89,39 +85,33 @@ void main() {
     test('selectCurrentTrip prefers settlement pending over assigned', () {
       final items = [
         _booking(status: 'DRIVER_ASSIGNED', number: 'TX202607010002'),
-        _booking(
-          status: 'SETTLEMENT_PENDING',
-          number: 'TX202607010099',
-        ),
+        _booking(status: 'SETTLEMENT_PENDING', number: 'TX202607010099'),
       ];
       final current = DriverUx.selectCurrentTrip(items);
       expect(current?.status, 'SETTLEMENT_PENDING');
     });
 
-    test('selectCurrentTrip prefers action-required settlement over picked up', () {
-      final items = [
-        _booking(status: 'PICKED_UP', number: 'TX202607010004'),
-        _booking(
-          status: 'SETTLEMENT_PENDING',
-          number: 'TX202607010099',
-        ),
-      ];
-      final current = DriverUx.selectCurrentTrip(
-        items,
-        settlementsByBooking: {
-          'TX202607010099': {'commissionStatus': 'PENDING'},
-        },
-      );
-      expect(current?.status, 'SETTLEMENT_PENDING');
-    });
+    test(
+      'selectCurrentTrip prefers action-required settlement over picked up',
+      () {
+        final items = [
+          _booking(status: 'PICKED_UP', number: 'TX202607010004'),
+          _booking(status: 'SETTLEMENT_PENDING', number: 'TX202607010099'),
+        ];
+        final current = DriverUx.selectCurrentTrip(
+          items,
+          settlementsByBooking: {
+            'TX202607010099': {'commissionStatus': 'PENDING'},
+          },
+        );
+        expect(current?.status, 'SETTLEMENT_PENDING');
+      },
+    );
 
     test('selectCurrentTrip prefers picked up over waiting settlement', () {
       final items = [
         _booking(status: 'PICKED_UP', number: 'TX202607010004'),
-        _booking(
-          status: 'SETTLEMENT_PENDING',
-          number: 'TX202607010099',
-        ),
+        _booking(status: 'SETTLEMENT_PENDING', number: 'TX202607010099'),
       ];
       final current = DriverUx.selectCurrentTrip(
         items,
@@ -168,10 +158,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(
-      find.textContaining('오늘 예정된 운행이 없습니다'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('오늘 예정된 운행이 없습니다'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
   });
 
   testWidgets('saved token opens Today shell on login page load', (
@@ -274,18 +265,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'),
-      findsOneWidget,
-    );
+    expect(find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'),
       120,
       scrollable: find.byType(Scrollable),
     );
-    await tester.tap(
-      find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'),
-    );
+    await tester.tap(find.text('정산 및 송금증 제출 / ชำระเงินและส่งหลักฐาน'));
     await tester.pumpAndSettle();
 
     expect(api.startRouteCalls, 0);
@@ -321,11 +307,7 @@ void main() {
             number: 'TX202607010001',
             phone: null,
           ),
-          _booking(
-            status: 'CONFIRMED',
-            number: 'TX202607010003',
-            phone: null,
-          ),
+          _booking(status: 'CONFIRMED', number: 'TX202607010003', phone: null),
         ],
       ),
     );
@@ -428,30 +410,33 @@ void main() {
     expect(find.byType(DriverQrScanPage), findsNothing);
   });
 
-  testWidgets('driver shell fixed status control renders offline and goes online', (
-    tester,
-  ) async {
-    final api = _ShellStatusApi(
-      status: const DriverStatus(
-        driverId: 7,
-        active: true,
-        online: false,
-        status: 'OFFLINE',
-        hasActiveJob: false,
-      ),
-    );
+  testWidgets(
+    'driver shell fixed status control renders offline and goes online',
+    (tester) async {
+      final api = _ShellStatusApi(
+        status: const DriverStatus(
+          driverId: 7,
+          active: true,
+          online: false,
+          status: 'OFFLINE',
+          hasActiveJob: false,
+        ),
+      );
 
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('오프라인'), findsWidgets);
-    await tester.tap(find.widgetWithIcon(FilledButton, Icons.play_circle_fill));
-    await tester.pump();
-    await tester.pumpAndSettle();
+      expect(find.textContaining('오프라인'), findsWidgets);
+      await tester.tap(
+        find.widgetWithIcon(FilledButton, Icons.play_circle_fill),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
 
-    expect(api.onlineCalls, 1);
-    expect(find.textContaining('온라인'), findsWidgets);
-  });
+      expect(api.onlineCalls, 1);
+      expect(find.textContaining('온라인'), findsWidgets);
+    },
+  );
 
   testWidgets('driver shell offline action asks for confirmation', (
     tester,
@@ -481,7 +466,9 @@ void main() {
     expect(api.offlineCalls, 1);
   });
 
-  testWidgets('driver shell active job disables offline action', (tester) async {
+  testWidgets('driver shell active job disables offline action', (
+    tester,
+  ) async {
     final api = _ShellStatusApi(
       status: const DriverStatus(
         driverId: 7,
@@ -523,33 +510,34 @@ void main() {
     expect(find.text('Online failed'), findsOneWidget);
   });
 
-  testWidgets('driver shell status control blocks duplicate taps while loading', (
-    tester,
-  ) async {
-    final api = _ShellStatusApi(
-      status: const DriverStatus(
-        driverId: 7,
-        active: true,
-        online: false,
-        status: 'OFFLINE',
-        hasActiveJob: false,
-      ),
-      delayStatusChange: true,
-    );
+  testWidgets(
+    'driver shell status control blocks duplicate taps while loading',
+    (tester) async {
+      final api = _ShellStatusApi(
+        status: const DriverStatus(
+          driverId: 7,
+          active: true,
+          online: false,
+          status: 'OFFLINE',
+          hasActiveJob: false,
+        ),
+        delayStatusChange: true,
+      );
 
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+      await tester.pumpAndSettle();
 
-    final button = find.byType(FilledButton).first;
-    await tester.tap(button);
-    await tester.pump();
-    await tester.tap(button);
-    await tester.pump();
+      final button = find.byType(FilledButton).first;
+      await tester.tap(button);
+      await tester.pump();
+      await tester.tap(button);
+      await tester.pump();
 
-    expect(api.onlineCalls, 1);
-    api.completePending();
-    await tester.pumpAndSettle();
-  });
+      expect(api.onlineCalls, 1);
+      api.completePending();
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets('driver shell status control has no overflow on narrow mobile', (
     tester,
@@ -593,10 +581,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('오늘 예정된 운행이 없습니다'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('오늘 예정된 운행이 없습니다'), findsOneWidget);
   });
 
   testWidgets('today page shows waiting open calls and claim CTA', (
@@ -656,7 +641,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.claimCalls, 1);
-    expect(find.textContaining('Another driver claimed it first'), findsOneWidget);
+    expect(
+      find.textContaining('Another driver claimed it first'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('today layout has no horizontal overflow at 360px', (
@@ -788,7 +776,10 @@ void main() {
         'Invalid status transition',
         errorCode: 'INVALID_STATUS_TRANSITION',
       ),
-      refreshed: _booking(status: 'DRIVER_ARRIVED', actions: ['MARK_PICKED_UP']),
+      refreshed: _booking(
+        status: 'DRIVER_ARRIVED',
+        actions: ['MARK_PICKED_UP'],
+      ),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -888,8 +879,9 @@ class _FakeLoginApi extends DriverApiService {
   Future<int> getUnreadNotificationCount() async => 0;
 
   @override
-  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
-      {'items': []};
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async => {
+    'items': [],
+  };
 
   @override
   Future<DriverJobsToday> getTodayBookings() async =>
@@ -945,8 +937,9 @@ class _FakeJobsApi extends DriverApiService {
   Future<int> getUnreadNotificationCount() async => 0;
 
   @override
-  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
-      {'items': []};
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async => {
+    'items': [],
+  };
 
   @override
   Future<DriverJobsToday> getTodayBookings() async {
@@ -1064,8 +1057,9 @@ class _ShellStatusApi extends DriverApiService {
   Future<int> getUnreadNotificationCount() async => 0;
 
   @override
-  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
-      {'items': []};
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async => {
+    'items': [],
+  };
 
   @override
   Future<DriverJobsToday> getTodayBookings() async =>
@@ -1202,8 +1196,9 @@ class _TrackingDetailApi extends DriverApiService {
   Future<int> getUnreadNotificationCount() async => 0;
 
   @override
-  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
-      {'items': []};
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async => {
+    'items': [],
+  };
 
   @override
   Future<DriverStatus> getStatus() async => DriverStatus(
