@@ -11,13 +11,17 @@ RUN flutter pub get
 COPY frontend/ ./
 
 ARG APP_ENV=development
-ARG API_BASE_URL=http://localhost:3100
-ARG SOCKET_URL=
+ARG API_BASE_URL
+ARG SOCKET_URL
 
 RUN test -n "$APP_ENV" \
     && if [ "$APP_ENV" = "production" ]; then \
-      test -n "$API_BASE_URL"; \
-      test -n "$SOCKET_URL"; \
+      if [ -z "$API_BASE_URL" ]; then \
+        echo "API_BASE_URL is required when APP_ENV=production"; exit 1; \
+      fi; \
+      if [ -z "$SOCKET_URL" ]; then \
+        echo "SOCKET_URL is required when APP_ENV=production"; exit 1; \
+      fi; \
       case "$API_BASE_URL" in \
         /api|https://*) ;; \
         http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*) \
@@ -32,15 +36,16 @@ RUN test -n "$APP_ENV" \
       esac; \
     fi
 
-RUN if [ -n "$SOCKET_URL" ]; then \
+RUN EFFECTIVE_API_BASE_URL="${API_BASE_URL:-http://localhost:3100}" \
+    && if [ -n "$SOCKET_URL" ]; then \
       flutter build web --release \
         --dart-define=APP_ENV=${APP_ENV} \
-        --dart-define=API_BASE_URL=${API_BASE_URL} \
+        --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
         --dart-define=SOCKET_URL=${SOCKET_URL}; \
     else \
       flutter build web --release \
         --dart-define=APP_ENV=${APP_ENV} \
-        --dart-define=API_BASE_URL=${API_BASE_URL}; \
+        --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL}; \
     fi
 
 FROM nginx:1.27-alpine

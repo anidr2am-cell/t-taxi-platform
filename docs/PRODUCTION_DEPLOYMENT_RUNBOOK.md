@@ -139,6 +139,10 @@ The frontend production build must fail when:
 - `API_BASE_URL` is not `/api` or an absolute HTTPS URL.
 - `SOCKET_URL` is not an absolute HTTPS URL.
 
+The Dockerfile intentionally has no localhost default in the `API_BASE_URL` or
+`SOCKET_URL` build arg declarations. Localhost fallback is allowed only inside
+the non-production build path.
+
 Then deploy only during the approved window. Prefer rebuilding only changed
 services. Do not use stack-wide teardown.
 

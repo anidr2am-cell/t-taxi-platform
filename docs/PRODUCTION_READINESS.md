@@ -52,7 +52,7 @@ item is DONE and the owner explicitly approves the deployment window.
 | CORS | Production-like environments reject missing or wildcard `CORS_ORIGIN`. | Good guard. | Use exact HTTPS origin. |
 | QR dev reissue | Production-like environments reject `ALLOW_DEV_QR_REISSUE=true`. | Good guard. | Keep false. |
 | Frontend API URL | Flutter config keeps localhost fallback only outside production. `APP_ENV=production` fails when `API_BASE_URL` is missing, localhost, or invalid. | Docker build still needs validation on a Docker-enabled host. | Run compose/build validation before production. |
-| Frontend Dockerfile | Default build arg remains localhost for dev/staging compatibility, but `APP_ENV=production` requires explicit `API_BASE_URL` and `SOCKET_URL` and rejects localhost. | Direct Docker build without `APP_ENV=production` is not a production build. | Production compose passes `APP_ENV=production`. |
+| Frontend Dockerfile | `API_BASE_URL` and `SOCKET_URL` build args have no Docker ARG defaults. `APP_ENV=production` requires both values and rejects localhost. Non-production builds still use a local fallback when no API URL is passed. | Direct Docker build without `APP_ENV=production` is not a production build. | Production compose passes `APP_ENV=production`. |
 | Upload root | Backend defaults to local `./uploads` outside production. `NODE_ENV=production` requires explicit `UPLOAD_DIR` and `LOG_DIR`. | Direct production process must provide env values. | Keep env checklist mandatory. |
 
 ## Recommended production topology
