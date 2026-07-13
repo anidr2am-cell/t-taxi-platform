@@ -45,9 +45,36 @@ class LocationOption {
     );
   }
 
+  factory LocationOption.fromCoordinates({
+    required double latitude,
+    required double longitude,
+    String? address,
+  }) {
+    final coordinates =
+        '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}';
+    final resolvedAddress = address?.trim();
+    final hasAddress = resolvedAddress != null && resolvedAddress.isNotEmpty;
+    final displayName = hasAddress
+        ? resolvedAddress.split(',').first.trim()
+        : coordinates;
+    return LocationOption(
+      id: 'map:$coordinates',
+      displayName: displayName,
+      kind: LocationKind.place,
+      code: _knownInternalCodeForText(resolvedAddress ?? ''),
+      name: displayName,
+      address: hasAddress ? resolvedAddress : coordinates,
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
+
   static String? _knownInternalCodeForText(String value) {
     final text = value.toUpperCase();
-    final compact = text.replaceAll(RegExp(r'[^A-Z0-9\u0E00-\u0E7F\uAC00-\uD7AF\u3040-\u30FF\u3400-\u9FFF]'), '');
+    final compact = text.replaceAll(
+      RegExp(r'[^A-Z0-9\u0E00-\u0E7F\uAC00-\uD7AF\u3040-\u30FF\u3400-\u9FFF]'),
+      '',
+    );
     if (compact.contains('PATTAYA') ||
         compact.contains('파타야') ||
         compact.contains('เมืองพัทยา') ||
@@ -56,14 +83,6 @@ class LocationOption {
         compact.contains('パタヤ') ||
         compact.contains('パッタヤ')) {
       return 'PATTAYA';
-    }
-    if (compact.contains('BANGKOK') ||
-        compact.contains('방콕') ||
-        compact.contains('กรุงเทพ') ||
-        compact.contains('กรุงเทพมหานคร') ||
-        compact.contains('曼谷') ||
-        compact.contains('バンコク')) {
-      return 'BANGKOK';
     }
     if (compact.contains('BKK') ||
         compact.contains('SUVARNABHUMI') ||
@@ -80,21 +99,29 @@ class LocationOption {
         compact.contains('廊曼')) {
       return 'DMK';
     }
+    if (compact.contains('BANGKOK') ||
+        compact.contains('방콕') ||
+        compact.contains('กรุงเทพ') ||
+        compact.contains('กรุงเทพมหานคร') ||
+        compact.contains('曼谷') ||
+        compact.contains('バンコク')) {
+      return 'BANGKOK';
+    }
     return null;
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'displayName': displayName,
-        'kind': kind.name,
-        'code': code,
-        'placeId': placeId,
-        'region': region,
-        'name': name,
-        'address': address,
-        'latitude': latitude,
-        'longitude': longitude,
-      };
+    'id': id,
+    'displayName': displayName,
+    'kind': kind.name,
+    'code': code,
+    'placeId': placeId,
+    'region': region,
+    'name': name,
+    'address': address,
+    'latitude': latitude,
+    'longitude': longitude,
+  };
 
   factory LocationOption.fromJson(Map<String, dynamic> json) {
     return LocationOption(

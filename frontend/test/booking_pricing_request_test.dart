@@ -505,6 +505,55 @@ void main() {
     expect(payload['scheduledPickupAt'], isA<String>());
   });
 
+  test(
+    'map-selected locations retain address and coordinates in payload',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _CapturingBookingApi(),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+      final origin = LocationOption.fromCoordinates(
+        latitude: 13.6900,
+        longitude: 100.7501,
+        address: 'Suvarnabhumi Airport, Bangkok, Thailand',
+      );
+      final destination = LocationOption.fromCoordinates(
+        latitude: 12.9236,
+        longitude: 100.8825,
+        address: 'Pattaya, Chon Buri, Thailand',
+      );
+
+      await controller.selectService(BookingServiceType.airportPickup);
+      await controller.setOrigin(origin);
+      await controller.setDestination(destination);
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+      await controller.updateCustomerInfo(name: 'Kim', phone: '+66123456789');
+
+      final payload = controller.buildCreatePayload();
+      final originPayload = Map<String, dynamic>.from(payload['origin'] as Map);
+      final destinationPayload = Map<String, dynamic>.from(
+        payload['destination'] as Map,
+      );
+
+      expect(origin.code, 'BKK');
+      expect(destination.code, 'PATTAYA');
+      expect(originPayload, containsPair('address', origin.address));
+      expect(originPayload, containsPair('lat', 13.6900));
+      expect(originPayload, containsPair('lng', 100.7501));
+      expect(destinationPayload, containsPair('address', destination.address));
+      expect(destinationPayload, containsPair('lat', 12.9236));
+      expect(destinationPayload, containsPair('lng', 100.8825));
+      expect(controller.state.pricing, isNotNull);
+    },
+  );
+
   test('bookingPricingInquiryMessage maps route not found to inquiry key', () {
     final message = bookingPricingInquiryMessage(
       BookingApiException(

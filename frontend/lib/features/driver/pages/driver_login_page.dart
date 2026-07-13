@@ -42,9 +42,13 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
   }
 
   void _openHome() {
-    Navigator.pushReplacement(
+    Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => DriverShellPage(api: _api)),
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/driver/home'),
+        builder: (_) => DriverShellPage(api: _api),
+      ),
+      (_) => false,
     );
   }
 

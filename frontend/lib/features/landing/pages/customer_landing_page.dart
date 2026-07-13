@@ -4,8 +4,6 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/pwa_install_banner.dart';
 import '../../booking/pages/guest_booking_lookup_page.dart';
 import '../../booking/pages/booking_wizard_page.dart';
-import '../../driver/pages/driver_login_page.dart';
-import '../../../screens/admin/admin_screen.dart';
 import '../widgets/landing_booking_lookup_card.dart';
 import '../widgets/landing_bottom_cta.dart';
 import '../widgets/landing_footer.dart';
@@ -64,15 +62,15 @@ class CustomerLandingPage extends StatelessWidget {
                 const PwaInstallBanner(),
                 LandingBottomCta(onSupport: () => _openSupport(context)),
                 LandingFooter(
-                  onAdmin: () => Navigator.push(
+                  onAdmin: () => Navigator.pushNamedAndRemoveUntil(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const AdminScreen(initialTab: 1),
-                    ),
+                    '/admin',
+                    (_) => false,
                   ),
-                  onDriver: () => Navigator.push(
+                  onDriver: () => Navigator.pushNamedAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (_) => const DriverLoginPage()),
+                    '/driver',
+                    (_) => false,
                   ),
                 ),
               ],

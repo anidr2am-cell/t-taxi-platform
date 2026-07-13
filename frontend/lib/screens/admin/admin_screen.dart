@@ -167,62 +167,66 @@ class _AdminScreenState extends State<AdminScreen> {
       );
     }
 
-    return Scaffold(
-      key: _drawerKey,
-      appBar: AppBar(
-        title: Text(menuItems[_selectedIndex.clamp(0, menuItems.length - 1)]),
-        leading: compactNav
-            ? IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () => _drawerKey.currentState?.openDrawer(),
-              )
-            : null,
-        actions: [
-          if (_authGatedIndices.contains(_selectedIndex))
-            IconButton(
-              tooltip: l10n.t('admin_logout'),
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
-            ),
-          const LanguageSelector(),
-        ],
-      ),
-      drawer: compactNav
-          ? Drawer(
-              child: SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(AppTokens.spaceMd),
-                      child: Text(
-                        l10n.t('admin_dashboard'),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppTokens.primaryDark,
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        key: _drawerKey,
+        appBar: AppBar(
+          title: Text(menuItems[_selectedIndex.clamp(0, menuItems.length - 1)]),
+          leading: compactNav
+              ? IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => _drawerKey.currentState?.openDrawer(),
+                )
+              : null,
+          actions: [
+            if (_authGatedIndices.contains(_selectedIndex))
+              IconButton(
+                tooltip: l10n.t('admin_logout'),
+                onPressed: _logout,
+                icon: const Icon(Icons.logout),
+              ),
+            const LanguageSelector(),
+          ],
+        ),
+        drawer: compactNav
+            ? Drawer(
+                child: SafeArea(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(AppTokens.spaceMd),
+                        child: Text(
+                          l10n.t('admin_dashboard'),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppTokens.primaryDark,
+                              ),
                         ),
                       ),
-                    ),
-                    const Divider(height: 1),
-                    Expanded(child: buildDrawerList()),
-                  ],
+                      const Divider(height: 1),
+                      Expanded(child: buildDrawerList()),
+                    ],
+                  ),
                 ),
+              )
+            : null,
+        body: Row(
+          children: [
+            if (!compactNav) ...[
+              buildRail(extended: width >= 1200),
+              const VerticalDivider(width: 1, color: AppTokens.border),
+            ],
+            Expanded(
+              child: KeyedSubtree(
+                key: ValueKey(_sessionEpoch),
+                child: _buildContent(l10n),
               ),
-            )
-          : null,
-      body: Row(
-        children: [
-          if (!compactNav) ...[
-            buildRail(extended: width >= 1200),
-            const VerticalDivider(width: 1, color: AppTokens.border),
-          ],
-          Expanded(
-            child: KeyedSubtree(
-              key: ValueKey(_sessionEpoch),
-              child: _buildContent(l10n),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
