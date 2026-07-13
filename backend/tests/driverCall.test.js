@@ -68,6 +68,10 @@ function createHarness(overrides = {}) {
     statusUpdates: [],
     statusLogs: [],
     activityLogs: [],
+    deactivatedAssignments: [],
+    deactivatedChatParticipants: [],
+    reopened: [],
+    notifications: [],
   };
   const booking = {
     id: 10,
@@ -90,11 +94,17 @@ function createHarness(overrides = {}) {
     async findOpenDriverCallsForDriver() {
       return overrides.openRows ?? [openCallRow()];
     },
+    async findOpenDriverCallByBookingId() {
+      return overrides.reopenedOpenRow ?? openCallRow();
+    },
     async findByBookingNumberForUpdate() {
       return booking;
     },
     async findActiveAssignmentForUpdate() {
       return overrides.activeAssignment ?? null;
+    },
+    async hasReleasedAssignment() {
+      return overrides.hasReleasedAssignment ?? false;
     },
     async insertDriverAssignment(_conn, row) {
       calls.assignments.push(row);
@@ -102,6 +112,14 @@ function createHarness(overrides = {}) {
     },
     async updateStatus(_conn, bookingId, status, actorUserId) {
       calls.statusUpdates.push({ bookingId, status, actorUserId });
+    },
+    async reopenAfterDriverRelease(_conn, bookingId, actorUserId) {
+      calls.reopened.push({ bookingId, actorUserId });
+      booking.status = BOOKING_STATUS.OPEN;
+    },
+    async deactivateAssignment(_conn, assignmentId, reason) {
+      calls.deactivatedAssignments.push({ assignmentId, reason });
+      return overrides.deactivateAssignmentResult ?? true;
     },
     async insertStatusLog(_conn, bookingId, log) {
       calls.statusLogs.push({ bookingId, log });
@@ -121,6 +139,30 @@ function createHarness(overrides = {}) {
       return overrides.matchingVehicle === false
         ? null
         : { id: 55, vehicle_type_id: 3 };
+    },
+    async listEligibleForOpenBooking() {
+      return overrides.eligibleDrivers ?? [
+        { id: 8, user_id: 43 },
+        { id: 9, user_id: 44 },
+      ];
+    },
+  };
+  const notificationRepository = {
+    async insert(_conn, row) {
+      calls.notifications.push(row);
+    },
+  };
+  const chatRepository = {
+    async findRoomByBookingIdForUpdate() {
+      return overrides.chatRoom === false ? null : { id: 123 };
+    },
+    async deactivateParticipant(_conn, chatRoomId, participantRole, userId) {
+      calls.deactivatedChatParticipants.push({
+        chatRoomId,
+        participantRole,
+        userId,
+      });
+      return 1;
     },
   };
   const driverJobService = {
@@ -143,6 +185,8 @@ function createHarness(overrides = {}) {
       bookingRepository,
       driverRepository,
       driverJobService,
+      notificationRepository,
+      chatRepository,
     ),
   };
 }
@@ -226,6 +270,130 @@ test('claimOpenCall rejects vehicle type mismatch', async () => {
   await assert.rejects(
     () => service.claimOpenCall(42, 'TX202607130001'),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+  );
+});
+
+test('releaseAssignment reopens booking, clears active assignment, and notifies other drivers', async () => {
+  const emitted = [];
+  setRealtimeIo({
+    to(room) {
+      return {
+        emit(event, payload) {
+          emitted.push({ room, event, payload });
+        },
+      };
+    },
+  });
+  const { service, conn, calls } = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+
+  const result = await service.releaseAssignment(42, 'TX202607130001');
+
+  assert.equal(result.status, BOOKING_STATUS.OPEN);
+  assert.equal(result.released, true);
+  assert.equal(conn.committed, true);
+  assert.equal(conn.rolledBack, false);
+  assert.deepEqual(calls.deactivatedAssignments[0], {
+    assignmentId: 77,
+    reason: 'DRIVER_RELEASED_ASSIGNMENT',
+  });
+  assert.deepEqual(calls.reopened[0], { bookingId: 10, actorUserId: 42 });
+  assert.deepEqual(calls.deactivatedChatParticipants[0], {
+    chatRoomId: 123,
+    participantRole: 'DRIVER',
+    userId: 42,
+  });
+  assert.equal(calls.statusLogs[0].log.fromStatus, BOOKING_STATUS.DRIVER_ASSIGNED);
+  assert.equal(calls.statusLogs[0].log.toStatus, BOOKING_STATUS.OPEN);
+  assert.equal(calls.statusLogs[0].log.reason, 'DRIVER_RELEASED_ASSIGNMENT');
+  assert.equal(calls.notifications.length, 2);
+  assert.equal(calls.notifications[0].notificationType, NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE);
+  assert.equal(Object.hasOwn(calls.notifications[0].payload, 'customerPhone'), false);
+  assert.equal(
+    emitted.some((row) => row.room === driverUserRoom(42) && row.event === 'driver:assignment:released'),
+    true,
+  );
+  assert.equal(
+    emitted.filter((row) => row.event === 'driver:call:new').length,
+    2,
+  );
+  setRealtimeIo(null);
+});
+
+test('releaseAssignment rejects wrong driver and started trip', async () => {
+  const wrongDriver = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED },
+    activeAssignment: { id: 77, driver_id: 99, status: 'ASSIGNED', is_active: 1 },
+  });
+  await assert.rejects(
+    () => wrongDriver.service.releaseAssignment(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_NOT_ASSIGNED_TO_DRIVER,
+  );
+  assert.equal(wrongDriver.conn.rolledBack, true);
+
+  const started = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ARRIVED },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+  await assert.rejects(
+    () => started.service.releaseAssignment(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_RELEASE_NOT_ALLOWED,
+  );
+});
+
+test('releaseAssignment duplicate request returns conflict without reopening again', async () => {
+  const { service, conn, calls } = createHarness({
+    booking: { status: BOOKING_STATUS.OPEN },
+    activeAssignment: null,
+    hasReleasedAssignment: true,
+  });
+
+  await assert.rejects(
+    () => service.releaseAssignment(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.ASSIGNMENT_ALREADY_RELEASED,
+  );
+  assert.equal(conn.rolledBack, true);
+  assert.equal(calls.reopened.length, 0);
+  assert.equal(calls.notifications.length, 0);
+});
+
+test('releaseAssignment rolls back and emits no events when reopening fails', async () => {
+  const emitted = [];
+  setRealtimeIo({
+    to(room) {
+      return {
+        emit(event, payload) {
+          emitted.push({ room, event, payload });
+        },
+      };
+    },
+  });
+  const { service, conn } = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+  service.bookingRepository.reopenAfterDriverRelease = async () => {
+    throw new Error('update failed');
+  };
+
+  await assert.rejects(
+    () => service.releaseAssignment(42, 'TX202607130001'),
+    /update failed/,
+  );
+  assert.equal(conn.rolledBack, true);
+  assert.equal(conn.committed, false);
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+test('claimOpenCall rejects a booking previously released by the same driver', async () => {
+  const { service } = createHarness({ hasReleasedAssignment: true });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.ASSIGNMENT_ALREADY_RELEASED,
   );
 });
 

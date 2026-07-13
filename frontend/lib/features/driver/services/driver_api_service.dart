@@ -198,6 +198,11 @@ class DriverApiService {
     );
   }
 
+  Future<Map<String, dynamic>> releaseAssignment(String bookingNumber) async {
+    final data = await _post('/driver/bookings/$bookingNumber/release');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<DriverBooking> getBookingDetail(String bookingNumber) async {
     final data = await _get('/driver/bookings/$bookingNumber');
     return DriverBooking.fromJson(Map<String, dynamic>.from(data as Map));

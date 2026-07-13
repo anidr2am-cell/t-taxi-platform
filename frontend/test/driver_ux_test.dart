@@ -350,7 +350,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.text('고객에게 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
+    expect(find.text('운행 확정 / ยืนยันการรับงาน'), findsNothing);
     expect(find.text('운행 계속하기 / ดำเนินงานต่อ'), findsOneWidget);
 
     await tester.scrollUntilVisible(
@@ -765,7 +765,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('고객에게 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
+    expect(find.text('운행 확정 / ยืนยันการรับงาน'), findsNothing);
     expect(find.text('Cancelled'), findsWidgets);
   });
 

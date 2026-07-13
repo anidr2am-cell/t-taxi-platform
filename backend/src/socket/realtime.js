@@ -39,6 +39,11 @@ function emitDriverCallConfirmed(driverUserId, payload) {
   ioInstance.to(driverUserRoom(driverUserId)).emit('driver:call:confirmed', payload);
 }
 
+function emitDriverAssignmentReleased(driverUserId, payload) {
+  if (!ioInstance) return;
+  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:assignment:released', payload);
+}
+
 module.exports = {
   DRIVER_ALL_ROOM,
   driverUserRoom,
@@ -48,4 +53,5 @@ module.exports = {
   emitDriverCallAvailable,
   emitDriverCallClaimed,
   emitDriverCallConfirmed,
+  emitDriverAssignmentReleased,
 };

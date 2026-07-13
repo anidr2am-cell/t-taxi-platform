@@ -26,6 +26,14 @@ const claimOpenCall = asyncHandler(async (req, res) => {
   return success(res, data, 'OK');
 });
 
+const releaseAssignment = asyncHandler(async (req, res) => {
+  const data = await getDriverCallService().releaseAssignment(
+    req.user.id,
+    req.params.bookingNumber,
+  );
+  return success(res, data, 'OK');
+});
+
 const getBookingDetail = asyncHandler(async (req, res) => {
   const data = await getDriverJobService().getDetail(
     req.user.id,
@@ -111,6 +119,7 @@ module.exports = {
   listTodayBookings,
   listOpenCalls,
   claimOpenCall,
+  releaseAssignment,
   getBookingDetail,
   startOnRoute,
   markArrived,

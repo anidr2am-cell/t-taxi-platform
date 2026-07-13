@@ -259,6 +259,8 @@ container.register(
       c.get("bookingRepository"),
       c.get("driverRepository"),
       c.get("driverJobService"),
+      c.get("notificationRepository"),
+      c.get("chatRepository"),
     ),
 );
 container.register(

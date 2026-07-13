@@ -56,3 +56,11 @@ test('end-trip route requires driver role', async () => {
 
   assert.equal(res.status, 403);
 });
+
+test('release route requires driver role', async () => {
+  const res = await request(app)
+    .post('/api/v1/driver/bookings/TX202607010001/release')
+    .set('Authorization', `Bearer ${sign('CUSTOMER', 55)}`);
+
+  assert.equal(res.status, 403);
+});
