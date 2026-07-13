@@ -94,6 +94,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
         builder: (_) => DriverBookingDetailPage(
           bookingNumber: booking.bookingNumber,
           api: _api,
+          showStatusControl: true,
         ),
       ),
     ).then((_) => _refresh());
@@ -128,6 +129,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
           bookingDetailPageBuilder: (number) => DriverBookingDetailPage(
             bookingNumber: number,
             api: _api,
+            showStatusControl: true,
           ),
         ),
       ),

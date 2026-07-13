@@ -66,12 +66,18 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverProfilePage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.text('오프라인\n(ออฟไลน์)'), findsOneWidget);
-    await tester.tap(find.text('온라인 전환 / พร้อมรับงาน'));
+    expect(
+      find.widgetWithIcon(FilledButton, Icons.play_circle_fill),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithIcon(FilledButton, Icons.play_circle_fill));
     await tester.pumpAndSettle();
 
     expect(api.onlineCalls, 1);
-    expect(find.text('온라인\n(พร้อมรับงาน)'), findsOneWidget);
+    expect(
+      find.widgetWithIcon(OutlinedButton, Icons.power_settings_new),
+      findsOneWidget,
+    );
   });
 
   testWidgets('driver profile active-job offline conflict is shown', (
@@ -92,15 +98,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverProfilePage(api: api)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('오프라인 전환 / ออฟไลน์'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('계속 시도 / ลองต่อ'));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('Cannot go offline while an active trip is assigned'),
-      findsOneWidget,
+    final button = tester.widget<OutlinedButton>(
+      find.widgetWithIcon(OutlinedButton, Icons.power_settings_new),
     );
+    expect(button.onPressed, isNull);
+    expect(api.offlineCalls, 0);
   });
 }
 
@@ -125,6 +127,7 @@ class _FakeDriverApi extends DriverApiService {
   final Object? offlineError;
   DriverStatus _status;
   int onlineCalls = 0;
+  int offlineCalls = 0;
 
   @override
   Future<Map<String, dynamic>> getRatingSummary() async {
@@ -151,6 +154,7 @@ class _FakeDriverApi extends DriverApiService {
 
   @override
   Future<DriverStatus> goOffline() async {
+    offlineCalls += 1;
     if (offlineError != null) throw offlineError!;
     _status = const DriverStatus(
       driverId: 7,

@@ -20,12 +20,14 @@ class DriverNotificationsPage extends StatefulWidget {
     this.deviceRegistrationService,
     this.chatPageBuilder,
     this.detailPageBuilder,
+    this.showAppBar = true,
   });
 
   final DriverApiService? api;
   final NotificationDeviceRegistrationService? deviceRegistrationService;
   final Widget Function(String bookingNumber)? chatPageBuilder;
   final Widget Function(String bookingNumber)? detailPageBuilder;
+  final bool showAppBar;
 
   @override
   State<DriverNotificationsPage> createState() =>
@@ -253,29 +255,35 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
 
   Widget _buildDetailPage(String bookingNumber) {
     return widget.detailPageBuilder?.call(bookingNumber) ??
-        DriverBookingDetailPage(bookingNumber: bookingNumber, api: _api);
+        DriverBookingDetailPage(
+          bookingNumber: bookingNumber,
+          api: _api,
+          showStatusControl: true,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.t('driver_nav_notifications')),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-          IconButton(
-            onPressed: _enablingNotifications ? null : _enableNotifications,
-            icon: const Icon(Icons.notifications_active_outlined),
-            tooltip: l10n.t('driver_notification_enable'),
-          ),
-          IconButton(
-            onPressed: _markingAll ? null : _markAll,
-            icon: const Icon(Icons.done_all),
-            tooltip: l10n.t('driver_mark_all_read'),
-          ),
-        ],
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: Text(l10n.t('driver_nav_notifications')),
+              actions: [
+                IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+                IconButton(
+                  onPressed: _enablingNotifications ? null : _enableNotifications,
+                  icon: const Icon(Icons.notifications_active_outlined),
+                  tooltip: l10n.t('driver_notification_enable'),
+                ),
+                IconButton(
+                  onPressed: _markingAll ? null : _markAll,
+                  icon: const Icon(Icons.done_all),
+                  tooltip: l10n.t('driver_mark_all_read'),
+                ),
+              ],
+            )
+          : null,
       body: _loading
           ? AppUi.loadingState()
           : _error != null

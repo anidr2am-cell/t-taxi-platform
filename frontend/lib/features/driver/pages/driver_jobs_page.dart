@@ -57,6 +57,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
         builder: (_) => DriverBookingDetailPage(
           bookingNumber: booking.bookingNumber,
           api: _api,
+          showStatusControl: true,
         ),
       ),
     ).then((_) => _refresh());

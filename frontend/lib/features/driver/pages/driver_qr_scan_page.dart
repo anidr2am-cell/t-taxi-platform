@@ -96,6 +96,7 @@ class _DriverQrScanPageState extends State<DriverQrScanPage> {
         builder: (_) => DriverBookingDetailPage(
           bookingNumber: booking.bookingNumber,
           api: widget.api,
+          showStatusControl: true,
         ),
       ),
     );
