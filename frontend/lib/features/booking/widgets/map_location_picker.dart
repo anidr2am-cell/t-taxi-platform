@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
 import '../config/map_provider_config.dart';
 import '../models/location_option.dart';
+import '../services/current_location_service.dart';
+import '../services/device_locale_resolver.dart';
 import '../services/reverse_geocoding_service.dart';
 
 typedef ReverseLocationLookup =
@@ -23,17 +25,23 @@ class MapLocationPicker extends StatefulWidget {
     required this.languageCode,
     this.initialLocation,
     this.reverseLookup,
+    this.deviceLocaleResolver,
+    this.currentLocationProvider,
   });
 
   final String languageCode;
   final LocationOption? initialLocation;
   final ReverseLocationLookup? reverseLookup;
+  final DeviceLocaleResolver? deviceLocaleResolver;
+  final CurrentLocationProvider? currentLocationProvider;
 
   static Future<LocationOption?> show(
     BuildContext context, {
     required String languageCode,
     LocationOption? initialLocation,
     ReverseLocationLookup? reverseLookup,
+    DeviceLocaleResolver? deviceLocaleResolver,
+    CurrentLocationProvider? currentLocationProvider,
   }) {
     return showDialog<LocationOption>(
       context: context,
@@ -42,6 +50,8 @@ class MapLocationPicker extends StatefulWidget {
           languageCode: languageCode,
           initialLocation: initialLocation,
           reverseLookup: reverseLookup,
+          deviceLocaleResolver: deviceLocaleResolver,
+          currentLocationProvider: currentLocationProvider,
         ),
       ),
     );
@@ -54,16 +64,78 @@ class MapLocationPicker extends StatefulWidget {
 class _MapLocationPickerState extends State<MapLocationPicker> {
   static const _thailandCenter = LatLng(13.7563, 100.5018);
   static final _reverseGeocoding = ReverseGeocodingService();
+  final MapController _mapController = MapController();
   late LatLng _selected;
+  late final String _reverseGeocodingLanguage;
   bool _resolving = false;
+  bool _locating = false;
 
   @override
   void initState() {
     super.initState();
     final current = widget.initialLocation;
+    _reverseGeocodingLanguage =
+        (widget.deviceLocaleResolver ?? DeviceLocaleResolver()).resolve(
+          appLanguage: widget.languageCode,
+        );
     _selected = current?.latitude != null && current?.longitude != null
         ? LatLng(current!.latitude!, current.longitude!)
         : _thailandCenter;
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (_locating || _resolving) return;
+    setState(() => _locating = true);
+    try {
+      final location =
+          await (widget.currentLocationProvider ??
+                  GeolocatorCurrentLocationProvider())
+              .locate();
+      if (!mounted) return;
+      final point = LatLng(location.latitude, location.longitude);
+      setState(() {
+        _selected = point;
+        _locating = false;
+      });
+      _mapController.move(point, 16);
+      if (location.accuracyMeters > 100) {
+        _showMessage('low_location_accuracy');
+      }
+    } on CurrentLocationException catch (error) {
+      if (!mounted) return;
+      setState(() => _locating = false);
+      _showMessage(_messageKey(error.failure));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _locating = false);
+      _showMessage('location_unavailable');
+    }
+  }
+
+  void _showMessage(String key) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(context.l10n.t(key))));
+  }
+
+  String _messageKey(CurrentLocationFailure failure) {
+    return switch (failure) {
+      CurrentLocationFailure.permissionRequired =>
+        'location_permission_required',
+      CurrentLocationFailure.permissionDenied => 'location_permission_denied',
+      CurrentLocationFailure.permissionPermanentlyDenied =>
+        'location_permission_permanently_denied',
+      CurrentLocationFailure.serviceDisabled => 'location_service_disabled',
+      CurrentLocationFailure.unavailable => 'location_unavailable',
+      CurrentLocationFailure.timeout => 'location_timeout',
+      CurrentLocationFailure.requiresHttps => 'location_requires_https',
+    };
   }
 
   Future<void> _confirm() async {
@@ -81,7 +153,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
       address = await lookup(
         _selected.latitude,
         _selected.longitude,
-        widget.languageCode,
+        _reverseGeocodingLanguage,
       );
     } catch (_) {
       address = null;
@@ -112,6 +184,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
         children: [
           Expanded(
             child: FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: _selected,
                 initialZoom: widget.initialLocation?.latitude != null ? 15 : 6,
@@ -148,6 +221,33 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                     ),
                   ),
                 ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: SafeArea(
+                    child: FilledButton.tonalIcon(
+                      key: const ValueKey('map_current_location'),
+                      onPressed: _locating || _resolving
+                          ? null
+                          : _useCurrentLocation,
+                      icon: _locating
+                          ? const SizedBox(
+                              key: ValueKey('map_current_location_loading'),
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location),
+                      label: Text(
+                        l10n.t(
+                          _locating
+                              ? 'locating_current_position'
+                              : 'current_location',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -168,7 +268,7 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: _resolving ? null : _confirm,
+                    onPressed: _resolving || _locating ? null : _confirm,
                     icon: _resolving
                         ? const SizedBox(
                             width: 18,

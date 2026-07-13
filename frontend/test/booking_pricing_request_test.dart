@@ -524,7 +524,7 @@ void main() {
       final destination = LocationOption.fromCoordinates(
         latitude: 12.9236,
         longitude: 100.8825,
-        address: 'Pattaya, Chon Buri, Thailand',
+        address: 'เมืองพัทยา จังหวัดชลบุรี ประเทศไทย',
       );
 
       await controller.selectService(BookingServiceType.airportPickup);
@@ -548,6 +548,10 @@ void main() {
       expect(originPayload, containsPair('lat', 13.6900));
       expect(originPayload, containsPair('lng', 100.7501));
       expect(destinationPayload, containsPair('address', destination.address));
+      expect(
+        destinationPayload['address'],
+        'เมืองพัทยา จังหวัดชลบุรี ประเทศไทย',
+      );
       expect(destinationPayload, containsPair('lat', 12.9236));
       expect(destinationPayload, containsPair('lng', 100.8825));
       expect(controller.state.pricing, isNotNull);

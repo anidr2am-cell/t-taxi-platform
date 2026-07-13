@@ -956,6 +956,20 @@ class AppLocalizations {
       'map_picker_title': 'Select location on map',
       'map_picker_hint': 'Tap the map to place the marker.',
       'map_picker_confirm': 'Use this location',
+      'current_location': 'My location',
+      'locating_current_position': 'Locating...',
+      'location_permission_required':
+          'Location permission is required to use your current position.',
+      'location_permission_denied': 'Location permission was denied.',
+      'location_permission_permanently_denied':
+          'Allow location access in your browser or device settings.',
+      'location_service_disabled': 'Device location services are turned off.',
+      'location_unavailable': 'Your current location is unavailable.',
+      'location_timeout': 'Location request timed out. Please try again.',
+      'location_requires_https':
+          'Location is unavailable in this environment. Please try again from an HTTPS address.',
+      'low_location_accuracy':
+          'Location accuracy is low. Adjust the marker on the map.',
       'wizard_vehicle_prerequisites':
           'Complete service, origin, destination, pick-up time, and passengers first.',
       'wizard_pricing_after_vehicle':
@@ -1253,6 +1267,18 @@ class AppLocalizations {
       'map_picker_title': '지도에서 위치 선택',
       'map_picker_hint': '지도를 눌러 위치를 지정해 주세요.',
       'map_picker_confirm': '이 위치 선택',
+      'current_location': '내 위치',
+      'locating_current_position': '현재 위치를 확인하고 있습니다.',
+      'location_permission_required': '현재 위치를 사용하려면 위치 권한이 필요합니다.',
+      'location_permission_denied': '위치 권한이 거부되었습니다.',
+      'location_permission_permanently_denied':
+          '브라우저 또는 기기 설정에서 위치 권한을 허용해 주세요.',
+      'location_service_disabled': '기기의 위치 서비스가 꺼져 있습니다.',
+      'location_unavailable': '현재 위치를 확인할 수 없습니다.',
+      'location_timeout': '위치 확인 시간이 초과되었습니다.',
+      'location_requires_https':
+          '현재 접속 환경에서는 위치 기능을 사용할 수 없습니다. HTTPS 주소에서 다시 시도해 주세요.',
+      'low_location_accuracy': '위치 정확도가 낮습니다. 지도에서 정확한 위치를 조정해 주세요.',
       'wizard_vehicle_prerequisites':
           '서비스, 출발지, 도착지, 픽업 시간, 승객 정보를 먼저 입력해 주세요.',
       'wizard_pricing_after_vehicle': '차량 선택 후 요금이 계산됩니다.',
@@ -2006,6 +2032,16 @@ class AppLocalizations {
       'map_picker_title': '在地图上选择位置',
       'map_picker_hint': '点击地图放置标记。',
       'map_picker_confirm': '使用此位置',
+      'current_location': '我的位置',
+      'locating_current_position': '正在获取当前位置。',
+      'location_permission_required': '使用当前位置需要位置权限。',
+      'location_permission_denied': '位置权限已被拒绝。',
+      'location_permission_permanently_denied': '请在浏览器或设备设置中允许位置权限。',
+      'location_service_disabled': '设备的位置服务已关闭。',
+      'location_unavailable': '无法获取当前位置。',
+      'location_timeout': '获取位置超时，请重试。',
+      'location_requires_https': '当前环境无法使用位置功能，请通过 HTTPS 地址重试。',
+      'low_location_accuracy': '位置精度较低，请在地图上调整准确位置。',
       'wizard_vehicle_prerequisites': '请先填写服务、出发地、目的地、接送时间和乘客信息。',
       'wizard_pricing_after_vehicle': '选择车辆后将计算价格。',
       'admin_dispatch_retry': '重试',
@@ -2390,6 +2426,16 @@ class AppLocalizations {
       'map_picker_title': '地図で場所を選択',
       'map_picker_hint': '地図をタップして位置を指定してください。',
       'map_picker_confirm': 'この場所を使用',
+      'current_location': '現在地',
+      'locating_current_position': '現在地を確認しています。',
+      'location_permission_required': '現在地を使用するには位置情報の権限が必要です。',
+      'location_permission_denied': '位置情報の権限が拒否されました。',
+      'location_permission_permanently_denied': 'ブラウザまたは端末の設定で位置情報を許可してください。',
+      'location_service_disabled': '端末の位置情報サービスがオフです。',
+      'location_unavailable': '現在地を取得できません。',
+      'location_timeout': '位置情報の取得がタイムアウトしました。もう一度お試しください。',
+      'location_requires_https': '現在の接続環境では位置機能を使用できません。HTTPS アドレスから再試行してください。',
+      'low_location_accuracy': '位置の精度が低いため、地図上で正確な位置を調整してください。',
       'wizard_vehicle_prerequisites': 'サービス、出発地、目的地、ピックアップ時間、乗客情報を先に入力してください。',
       'wizard_pricing_after_vehicle': '車両選択後に料金が計算されます。',
       'admin_dispatch_retry': '再試行',
@@ -2850,6 +2896,20 @@ class AppLocalizations {
       'map_picker_title': 'เลือกตำแหน่งบนแผนที่',
       'map_picker_hint': 'แตะแผนที่เพื่อปักหมุดตำแหน่ง',
       'map_picker_confirm': 'ใช้ตำแหน่งนี้',
+      'current_location': 'ตำแหน่งของฉัน',
+      'locating_current_position': 'กำลังตรวจสอบตำแหน่งปัจจุบัน',
+      'location_permission_required':
+          'ต้องอนุญาตการเข้าถึงตำแหน่งเพื่อใช้ตำแหน่งปัจจุบัน',
+      'location_permission_denied': 'ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง',
+      'location_permission_permanently_denied':
+          'โปรดอนุญาตการเข้าถึงตำแหน่งในการตั้งค่าเบราว์เซอร์หรืออุปกรณ์',
+      'location_service_disabled': 'บริการตำแหน่งของอุปกรณ์ปิดอยู่',
+      'location_unavailable': 'ไม่สามารถตรวจสอบตำแหน่งปัจจุบันได้',
+      'location_timeout': 'หมดเวลาตรวจสอบตำแหน่ง โปรดลองอีกครั้ง',
+      'location_requires_https':
+          'ไม่สามารถใช้ตำแหน่งในสภาพแวดล้อมนี้ได้ โปรดลองอีกครั้งผ่านที่อยู่ HTTPS',
+      'low_location_accuracy':
+          'ความแม่นยำของตำแหน่งต่ำ โปรดปรับตำแหน่งบนแผนที่',
       'wizard_vehicle_prerequisites':
           'กรุณากรอกบริการ ต้นทาง ปลายทาง เวลารับ และผู้โดยสารก่อน',
       'wizard_pricing_after_vehicle': 'ราคาจะคำนวณหลังจากเลือกรถ',
