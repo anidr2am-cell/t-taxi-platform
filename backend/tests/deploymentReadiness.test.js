@@ -310,8 +310,12 @@ test('production proxy template uses isolated same-origin Caddy topology', () =>
   );
   const combined = [caddyfile, proxyCompose, proxyEnv, proxyReadme].join('\n');
 
-  assert.match(proxyEnv, /TRIDE_PRODUCTION_DOMAIN=ride\.example\.com/);
-  assert.match(caddyfile, /\{\$TRIDE_PRODUCTION_DOMAIN\}/);
+  assert.match(proxyEnv, /TRIDE_DOMAIN=ride\.example\.com/);
+  assert.match(proxyEnv, /ACME_EMAIL=REPLACE_WITH_OPERATIONS_EMAIL/);
+  assert.match(proxyCompose, /TRIDE_DOMAIN: \$\{TRIDE_DOMAIN\}/);
+  assert.match(proxyCompose, /ACME_EMAIL: \$\{ACME_EMAIL\}/);
+  assert.match(caddyfile, /\{\$TRIDE_DOMAIN\}/);
+  assert.match(caddyfile, /email \{\$ACME_EMAIL\}/);
   assert.match(caddyfile, /@api path \/api \/api\/\*/);
   assert.match(caddyfile, /handle @api/);
   assert.match(caddyfile, /reverse_proxy tride-prod-backend:3000/);
@@ -332,6 +336,8 @@ test('production proxy template uses isolated same-origin Caddy topology', () =>
   assert.match(productionEnv, /CORS_ORIGIN=https:\/\/ride\.example\.com/);
   assert.match(productionEnv, /PUBLIC_API_URL=https:\/\/ride\.example\.com\/api/);
   assert.match(productionCompose, /PUBLIC_API_URL: \$\{PUBLIC_API_URL:\?Set PUBLIC_API_URL in \.env\.production\}/);
+  assert.doesNotMatch(caddyfile, /handle_path/);
+  assert.doesNotMatch(caddyfile, /strip_prefix/);
   assert.doesNotMatch(combined, /88taxi\.net/);
   assert.doesNotMatch(combined, /\/opt\/ktaxi/);
   assert.doesNotMatch(combined, /ktaxi-/);

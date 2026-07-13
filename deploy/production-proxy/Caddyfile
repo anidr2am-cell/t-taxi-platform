@@ -2,7 +2,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$TRIDE_PRODUCTION_DOMAIN} {
+{$TRIDE_DOMAIN} {
 	encode zstd gzip
 	request_body {
 		max_size {$CLIENT_MAX_BODY_SIZE}
