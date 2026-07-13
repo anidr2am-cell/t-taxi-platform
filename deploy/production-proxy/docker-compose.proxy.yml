@@ -1,0 +1,43 @@
+# T-Ride production reverse proxy for a separate production VPS only.
+#
+# This compose file intentionally binds host 80/443. Do not run it on the
+# existing KTaxi/TTaxi server, and do not use it to modify legacy nginx/certbot.
+
+name: tride-production-proxy
+
+services:
+  tride-prod-proxy:
+    image: caddy:2.8-alpine
+    container_name: tride-prod-proxy
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TRIDE_DOMAIN: ${TRIDE_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      - "${PROXY_HTTP_BIND:-0.0.0.0}:${PROXY_HTTP_PORT:-80}:80"
+      - "${PROXY_HTTPS_BIND:-0.0.0.0}:${PROXY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - tride_prod_caddy_data:/data
+      - tride_prod_caddy_config:/config
+    networks:
+      - tride-prod-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  tride-prod-net:
+    external: true
+    name: ${TRIDE_PROD_NETWORK:-tride-prod-net}
+
+volumes:
+  tride_prod_caddy_data:
+    name: tride_prod_caddy_data
+  tride_prod_caddy_config:
+    name: tride_prod_caddy_config
