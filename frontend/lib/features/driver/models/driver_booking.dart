@@ -112,3 +112,81 @@ class DriverJobsToday {
     );
   }
 }
+
+class DriverOpenCall {
+  const DriverOpenCall({
+    required this.bookingNumber,
+    required this.status,
+    required this.pickupDate,
+    required this.pickupTime,
+    required this.origin,
+    required this.destination,
+    required this.serviceTypeName,
+    required this.vehicleTypeName,
+    required this.amount,
+    required this.currency,
+    required this.passengerCount,
+    this.luggage,
+  });
+
+  final String bookingNumber;
+  final String status;
+  final String pickupDate;
+  final String pickupTime;
+  final String origin;
+  final String destination;
+  final String serviceTypeName;
+  final String vehicleTypeName;
+  final double amount;
+  final String currency;
+  final int passengerCount;
+  final Map<String, dynamic>? luggage;
+
+  factory DriverOpenCall.fromJson(Map<String, dynamic> json) {
+    final serviceType = Map<String, dynamic>.from(
+      json['serviceType'] as Map? ?? {},
+    );
+    final vehicleType = Map<String, dynamic>.from(
+      json['vehicleType'] as Map? ?? {},
+    );
+    return DriverOpenCall(
+      bookingNumber: json['bookingNumber'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      pickupDate: json['pickupDate'] as String? ?? '',
+      pickupTime: json['pickupTime'] as String? ?? '',
+      origin: json['origin'] as String? ?? '',
+      destination: json['destination'] as String? ?? '',
+      serviceTypeName:
+          serviceType['name'] as String? ??
+          serviceType['code'] as String? ??
+          '',
+      vehicleTypeName:
+          vehicleType['name'] as String? ??
+          vehicleType['code'] as String? ??
+          '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? '',
+      passengerCount: (json['passengerCount'] as num?)?.toInt() ?? 0,
+      luggage: json['luggage'] == null
+          ? null
+          : Map<String, dynamic>.from(json['luggage'] as Map),
+    );
+  }
+}
+
+class DriverOpenCalls {
+  const DriverOpenCalls({required this.items});
+
+  final List<DriverOpenCall> items;
+
+  factory DriverOpenCalls.fromJson(Map<String, dynamic> json) {
+    return DriverOpenCalls(
+      items: (json['items'] as List? ?? [])
+          .map(
+            (item) =>
+                DriverOpenCall.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
+          .toList(),
+    );
+  }
+}

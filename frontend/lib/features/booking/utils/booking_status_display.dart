@@ -22,6 +22,7 @@ class BookingStatusDisplay {
     switch (status) {
       case 'PENDING':
         return 'status_pending';
+      case 'OPEN':
       case 'CONFIRMED':
         return 'status_confirmed';
       case 'DRIVER_ASSIGNED':
@@ -55,6 +56,7 @@ class BookingStatusDisplay {
     switch (status) {
       case 'PENDING':
         return 'guest_status_guidance_pending';
+      case 'OPEN':
       case 'CONFIRMED':
         return 'guest_status_guidance_confirmed';
       case 'DRIVER_ASSIGNED':

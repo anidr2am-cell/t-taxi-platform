@@ -3,6 +3,7 @@
  */
 module.exports = {
   PENDING: 'PENDING',
+  OPEN: 'OPEN',
   CONFIRMED: 'CONFIRMED',
   DRIVER_ASSIGNED: 'DRIVER_ASSIGNED',
   ON_ROUTE: 'ON_ROUTE',

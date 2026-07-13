@@ -63,19 +63,20 @@ test('isTripEndRequest matches driver end-trip route', () => {
   );
 });
 
-test('migration 37 includes every booking status and is idempotent', () => {
+test('latest booking status migration includes every booking status and is idempotent', () => {
   const migrationPath = path.resolve(
     __dirname,
     '..',
     '..',
     'database',
-    '37_add_settlement_pending_booking_status.sql',
+    '38_open_booking_status.sql',
   );
   const sql = fs.readFileSync(migrationPath, 'utf8');
 
+  assert.match(sql, /OPEN/);
   assert.match(sql, /SETTLEMENT_PENDING/);
   assert.match(sql, /information_schema\.COLUMNS/);
-  assert.match(sql, /NOT LIKE '%SETTLEMENT_PENDING%'/);
+  assert.match(sql, /NOT LIKE '%''OPEN''%'/);
   assert.doesNotMatch(sql, /USE ttaxi/i);
   assert.doesNotMatch(sql, /USE tride_staging/i);
 

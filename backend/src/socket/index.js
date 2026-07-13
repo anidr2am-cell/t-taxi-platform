@@ -6,6 +6,8 @@ const container = require('../helpers/container');
 const ERROR_CODES = require('../constants/errorCodes');
 const { registerChatHandlers } = require('./handlers/chat.handler');
 const { registerDriverLocationHandlers } = require('./handlers/driverLocation.handler');
+const { registerDriverCallHandlers } = require('./handlers/driverCalls.handler');
+const { setRealtimeIo } = require('./realtime');
 
 function rejectUnauthorized(next, message = 'Unauthorized') {
   const err = new Error(message);
@@ -14,6 +16,8 @@ function rejectUnauthorized(next, message = 'Unauthorized') {
 }
 
 function initSocket(io) {
+  setRealtimeIo(io);
+
   io.use((socket, next) => {
     if (socket.handshake.query?.token || socket.handshake.query?.guestAccessToken) {
       return rejectUnauthorized(next, 'Token query parameters are not allowed');
@@ -46,6 +50,7 @@ function initSocket(io) {
 
     registerChatHandlers(io, socket);
     registerDriverLocationHandlers(io, socket);
+    registerDriverCallHandlers(io, socket);
 
     socket.on('disconnect', (reason) => {
       logger.debug('Socket disconnected', { id: socket.id, reason });
