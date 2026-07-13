@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/driver/driver_ux.dart';
@@ -426,6 +428,159 @@ void main() {
     expect(find.byType(DriverQrScanPage), findsNothing);
   });
 
+  testWidgets('driver shell fixed status control renders offline and goes online', (
+    tester,
+  ) async {
+    final api = _ShellStatusApi(
+      status: const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: false,
+        status: 'OFFLINE',
+        hasActiveJob: false,
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('오프라인'), findsWidgets);
+    await tester.tap(find.widgetWithIcon(FilledButton, Icons.play_circle_fill));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(api.onlineCalls, 1);
+    expect(find.textContaining('온라인'), findsWidgets);
+  });
+
+  testWidgets('driver shell offline action asks for confirmation', (
+    tester,
+  ) async {
+    final api = _ShellStatusApi(
+      status: const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: true,
+        status: 'AVAILABLE',
+        hasActiveJob: false,
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.widgetWithIcon(OutlinedButton, Icons.power_settings_new),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(api.offlineCalls, 0);
+
+    await tester.tap(find.byType(FilledButton).last);
+    await tester.pumpAndSettle();
+    expect(api.offlineCalls, 1);
+  });
+
+  testWidgets('driver shell active job disables offline action', (tester) async {
+    final api = _ShellStatusApi(
+      status: const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: true,
+        status: 'AVAILABLE',
+        hasActiveJob: true,
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<OutlinedButton>(
+      find.widgetWithIcon(OutlinedButton, Icons.power_settings_new),
+    );
+    expect(button.onPressed, isNull);
+    expect(find.textContaining('운행 중'), findsWidgets);
+  });
+
+  testWidgets('driver shell status control shows API error', (tester) async {
+    final api = _ShellStatusApi(
+      status: const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: false,
+        status: 'OFFLINE',
+        hasActiveJob: false,
+      ),
+      onlineError: const DriverApiException('Online failed'),
+    );
+
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithIcon(FilledButton, Icons.play_circle_fill));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Online failed'), findsOneWidget);
+  });
+
+  testWidgets('driver shell status control blocks duplicate taps while loading', (
+    tester,
+  ) async {
+    final api = _ShellStatusApi(
+      status: const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: false,
+        status: 'OFFLINE',
+        hasActiveJob: false,
+      ),
+      delayStatusChange: true,
+    );
+
+    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpAndSettle();
+
+    final button = find.byType(FilledButton).first;
+    await tester.tap(button);
+    await tester.pump();
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(api.onlineCalls, 1);
+    api.completePending();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('driver shell status control has no overflow on narrow mobile', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final width in <double>[320, 360]) {
+      tester.view.physicalSize = Size(width, 800);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DriverShellPage(
+            api: _ShellStatusApi(
+              status: const DriverStatus(
+                driverId: 7,
+                active: true,
+                online: true,
+                status: 'AVAILABLE',
+                hasActiveJob: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('today empty state', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -626,7 +781,7 @@ DriverBooking _booking({
 }
 
 void _useTallViewport(WidgetTester tester) {
-  tester.view.physicalSize = const Size(800, 1000);
+  tester.view.physicalSize = const Size(800, 1400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -777,6 +932,96 @@ class _FakeJobsApi extends DriverApiService {
     status: 'OFFLINE',
     hasActiveJob: hasActiveJob,
   );
+}
+
+class _ShellStatusApi extends DriverApiService {
+  _ShellStatusApi({
+    required DriverStatus status,
+    this.onlineError,
+    this.delayStatusChange = false,
+  }) : _status = status;
+
+  DriverStatus _status;
+  final Object? onlineError;
+  final bool delayStatusChange;
+  int onlineCalls = 0;
+  int offlineCalls = 0;
+
+  Completer<DriverStatus>? _pending;
+  DriverStatus? _pendingStatus;
+
+  @override
+  Future<String?> getSavedToken() async => 'tok';
+
+  @override
+  Future<String?> getDriverDisplayName() async => 'Somchai';
+
+  @override
+  Future<int> getUnreadNotificationCount() async => 0;
+
+  @override
+  Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async =>
+      {'items': []};
+
+  @override
+  Future<DriverJobsToday> getTodayBookings() async =>
+      const DriverJobsToday(date: '2026-07-01', items: []);
+
+  @override
+  Future<DriverStatus> getStatus() async => _status;
+
+  @override
+  Future<DriverStatus> goOnline() async {
+    onlineCalls += 1;
+    if (onlineError != null) throw onlineError!;
+    return _finishStatusChange(
+      DriverStatus(
+        driverId: _status.driverId,
+        active: _status.active,
+        online: true,
+        status: 'AVAILABLE',
+        hasActiveJob: false,
+        lastSeenAt: _status.lastSeenAt,
+      ),
+    );
+  }
+
+  @override
+  Future<DriverStatus> goOffline() async {
+    offlineCalls += 1;
+    return _finishStatusChange(
+      DriverStatus(
+        driverId: _status.driverId,
+        active: _status.active,
+        online: false,
+        status: 'OFFLINE',
+        hasActiveJob: false,
+        lastSeenAt: _status.lastSeenAt,
+      ),
+    );
+  }
+
+  Future<DriverStatus> _finishStatusChange(DriverStatus next) {
+    if (!delayStatusChange) {
+      _status = next;
+      return Future.value(_status);
+    }
+    _pending = Completer<DriverStatus>();
+    _pendingStatus = next;
+    return _pending!.future.then((value) {
+      _status = value;
+      return _status;
+    });
+  }
+
+  void completePending() {
+    final pending = _pending;
+    final next = _pendingStatus;
+    if (pending == null || next == null || pending.isCompleted) return;
+    pending.complete(next);
+    _pending = null;
+    _pendingStatus = null;
+  }
 }
 
 class _FakeDetailApi extends DriverApiService {

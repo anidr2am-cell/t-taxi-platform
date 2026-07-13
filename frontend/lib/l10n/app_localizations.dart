@@ -627,6 +627,10 @@ class AppLocalizations {
       'driver_offline': 'Offline',
       'driver_session_ready': 'Ready for assignments',
       'driver_session_offline': 'You are offline',
+      'driver_status_online_ready': 'Online · Ready for assignments',
+      'driver_status_offline_unavailable':
+          'Offline · Cannot receive assignments',
+      'driver_status_active_busy': 'On trip · Cannot go offline',
       'driver_active_job_in_progress': 'Active job in progress',
       'driver_active_job_stay_online':
           'Active job in progress — stay online until finished.',
@@ -1387,6 +1391,9 @@ class AppLocalizations {
       'driver_offline': '오프라인',
       'driver_session_ready': '배차 대기 중',
       'driver_session_offline': '오프라인 상태입니다',
+      'driver_status_online_ready': '온라인 · 배차 대기중',
+      'driver_status_offline_unavailable': '오프라인 · 배차를 받을 수 없음',
+      'driver_status_active_busy': '운행 중 · 오프라인 전환 불가',
       'driver_active_job_in_progress': '진행 중인 운행',
       'driver_active_job_stay_online': '운행 진행 중 — 완료 전까지 온라인을 유지하세요.',
       'driver_notification_new': '새 알림',
@@ -3658,6 +3665,11 @@ class AppLocalizations {
     'driver_offline': '오프라인\n(ออฟไลน์)',
     'driver_session_ready': '배차 대기 중\n(พร้อมรับงาน)',
     'driver_session_offline': '오프라인 상태입니다\n(ขณะนี้ออฟไลน์)',
+    'driver_status_online_ready': '온라인 · 배차 대기중 / ออนไลน์ · พร้อมรับงาน',
+    'driver_status_offline_unavailable':
+        '오프라인 · 배차를 받을 수 없음 / ออฟไลน์ · ไม่สามารถรับงานได้',
+    'driver_status_active_busy':
+        '운행 중 · 오프라인 전환 불가 / กำลังให้บริการ · ไม่สามารถออฟไลน์ได้',
     'driver_active_job_in_progress': '진행 중인 운행이 있습니다\n(มีงานที่กำลังดำเนินการ)',
     'driver_active_job_stay_online':
         '운행 완료 전까지 온라인을 유지하세요.\n(กรุณาออนไลน์ไว้จนกว่าจะจบงาน)',

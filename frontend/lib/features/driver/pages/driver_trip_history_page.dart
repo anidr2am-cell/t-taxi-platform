@@ -14,10 +14,16 @@ import '../services/driver_api_service.dart';
 enum _HistoryRange { last7Days, last30Days, all }
 
 class DriverTripHistoryPage extends StatefulWidget {
-  const DriverTripHistoryPage({super.key, this.api, this.settlementApi});
+  const DriverTripHistoryPage({
+    super.key,
+    this.api,
+    this.settlementApi,
+    this.showAppBar = true,
+  });
 
   final DriverApiService? api;
   final DriverSettlementApiService? settlementApi;
+  final bool showAppBar;
 
   @override
   State<DriverTripHistoryPage> createState() => _DriverTripHistoryPageState();
@@ -116,6 +122,7 @@ class _DriverTripHistoryPageState extends State<DriverTripHistoryPage> {
         builder: (_) => DriverBookingDetailPage(
           bookingNumber: bookingNumber,
           api: _api,
+          showStatusControl: true,
         ),
       ),
     );
@@ -138,12 +145,14 @@ class _DriverTripHistoryPageState extends State<DriverTripHistoryPage> {
     final l10n = context.l10n;
     final filtered = _filteredItems();
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.t('driver_nav_history')),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
-        ],
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: Text(l10n.t('driver_nav_history')),
+              actions: [
+                IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+              ],
+            )
+          : null,
       body: _loading
           ? AppUi.loadingState()
           : _error != null

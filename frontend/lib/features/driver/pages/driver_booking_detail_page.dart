@@ -11,6 +11,7 @@ import '../driver_ux.dart';
 import '../driver_trip_flow.dart';
 import '../models/driver_booking.dart';
 import '../services/driver_api_service.dart';
+import '../widgets/driver_status_control.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
 import 'driver_chat_page.dart';
 
@@ -20,11 +21,13 @@ class DriverBookingDetailPage extends StatefulWidget {
     required this.bookingNumber,
     DriverApiService? api,
     this.chatPageBuilder,
+    this.showStatusControl = false,
   }) : api = api ?? const DriverApiService();
 
   final String bookingNumber;
   final DriverApiService api;
   final Widget Function(String bookingNumber)? chatPageBuilder;
+  final bool showStatusControl;
 
   @override
   State<DriverBookingDetailPage> createState() =>
@@ -194,6 +197,8 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
 
           return Column(
             children: [
+              if (widget.showStatusControl)
+                DriverStatusControl(api: widget.api),
               if (_processing) const LinearProgressIndicator(minHeight: 3),
               Expanded(
                 child: ListView(

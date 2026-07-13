@@ -22,12 +22,14 @@ class DriverAccountPage extends StatefulWidget {
     this.settlementApi,
     this.deviceRegistrationService,
     this.onStatusChanged,
+    this.showAppBar = true,
   });
 
   final DriverApiService? api;
   final DriverSettlementApiService? settlementApi;
   final NotificationDeviceRegistrationService? deviceRegistrationService;
   final VoidCallback? onStatusChanged;
+  final bool showAppBar;
 
   @override
   State<DriverAccountPage> createState() => _DriverAccountPageState();
@@ -159,7 +161,9 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('driver_nav_account'))),
+      appBar: widget.showAppBar
+          ? AppBar(title: Text(l10n.t('driver_nav_account')))
+          : null,
       body: ListView(
         padding: AppUi.pagePadding(context),
         children: [
