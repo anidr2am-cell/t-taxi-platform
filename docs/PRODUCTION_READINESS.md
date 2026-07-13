@@ -40,7 +40,7 @@ item is DONE and the owner explicitly approves the deployment window.
 | Dependency moderate vulnerabilities | TODO | `npm audit --omit=dev` reported moderate dependency issues in the Firebase/Google stack. Track upgrade separately. |
 | Staging/test data removal | TODO | Confirm no demo accounts, demo bookings, test reservations, or rehearsal data are present in production DB. |
 | Production seed blocked | TODO | Verify `NODE_ENV=production` and never run demo seed scripts against production. |
-| Frontend URL fail-fast | TODO | Runtime code still has localhost defaults if build args are omitted. Production build procedure must enforce API/SOCKET URLs. |
+| Frontend URL fail-fast | DONE | `APP_ENV=production` now requires explicit production API/SOCKET URLs and rejects localhost at Docker build/runtime config validation. Docker build itself still needs validation on a Docker-enabled host. |
 | Production runtime image hardening | TODO | Current backend Dockerfile is staging-oriented and includes devDependencies. A production runtime image/target should be created before final launch. |
 
 ## Fail-fast audit
@@ -51,9 +51,9 @@ item is DONE and the owner explicitly approves the deployment window.
 | Backend DB password | Production-like environments reject empty `DB_PASSWORD`. | Good guard. | Confirm production-only DB user and grants. |
 | CORS | Production-like environments reject missing or wildcard `CORS_ORIGIN`. | Good guard. | Use exact HTTPS origin. |
 | QR dev reissue | Production-like environments reject `ALLOW_DEV_QR_REISSUE=true`. | Good guard. | Keep false. |
-| Frontend API URL | Flutter config defaults to localhost if `API_BASE_URL` is omitted. | Dangerous production fallback. | Enforce build args in compose/runbook; later add code/build fail-fast. |
-| Frontend Dockerfile | Default build arg is localhost. | Dangerous if used directly outside compose. | Later remove localhost default or add production build target. |
-| Upload root | Backend defaults to local `./uploads` if unset. | In container it is overridden, but direct production process could use temporary path. | Require `UPLOAD_DIR` in production runbook. |
+| Frontend API URL | Flutter config keeps localhost fallback only outside production. `APP_ENV=production` fails when `API_BASE_URL` is missing, localhost, or invalid. | Docker build still needs validation on a Docker-enabled host. | Run compose/build validation before production. |
+| Frontend Dockerfile | `API_BASE_URL` and `SOCKET_URL` build args have no Docker ARG defaults. `APP_ENV=production` requires both values and rejects localhost. Non-production builds still use a local fallback when no API URL is passed. | Direct Docker build without `APP_ENV=production` is not a production build. | Production compose passes `APP_ENV=production`. |
+| Upload root | Backend defaults to local `./uploads` outside production. `NODE_ENV=production` requires explicit `UPLOAD_DIR` and `LOG_DIR`. | Direct production process must provide env values. | Keep env checklist mandatory. |
 
 ## Recommended production topology
 

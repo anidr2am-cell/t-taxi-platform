@@ -1,12 +1,20 @@
-/// Application configuration (Pack 18).
-///
-/// Production builds should pass:
-/// `--dart-define=API_BASE_URL=https://api.example.com`
-/// `--dart-define=SOCKET_URL=https://api.example.com`
+import 'app_config_validation.dart';
+
+// Application configuration (Pack 18).
+//
+// Production builds should pass:
+// `--dart-define=APP_ENV=production`
+// `--dart-define=API_BASE_URL=https://api.example.com`
+// `--dart-define=SOCKET_URL=https://api.example.com`
 class AppConfig {
+  static const String _appEnvironment = String.fromEnvironment(
+    'APP_ENV',
+    defaultValue: AppConfigValidation.development,
+  );
+
   static const String _apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: '',
   );
 
   static const String _socketUrl = String.fromEnvironment(
@@ -34,10 +42,22 @@ class AppConfig {
     'FIREBASE_VAPID_KEY',
   );
 
-  static String get apiBaseUrl => _normalizeLocalHost(_apiBaseUrl);
+  static String get appEnvironment =>
+      AppConfigValidation.normalizeEnvironment(_appEnvironment);
 
-  static String get socketUrl =>
-      _normalizeLocalHost(_socketUrl.trim().isEmpty ? apiBaseUrl : _socketUrl);
+  static bool get isProduction =>
+      AppConfigValidation.isProductionEnvironment(appEnvironment);
+
+  static String get apiBaseUrl => AppConfigValidation.resolveApiBaseUrl(
+    appEnvironment: appEnvironment,
+    apiBaseUrl: _apiBaseUrl,
+  );
+
+  static String get socketUrl => AppConfigValidation.resolveSocketUrl(
+    appEnvironment: appEnvironment,
+    socketUrl: _socketUrl,
+    apiBaseUrl: apiBaseUrl,
+  );
 
   static bool get isDevelopment =>
       apiBaseUrl.contains('localhost') || apiBaseUrl.contains('127.0.0.1');
@@ -47,12 +67,6 @@ class AppConfig {
       firebaseAppId.isNotEmpty &&
       firebaseMessagingSenderId.isNotEmpty &&
       firebaseProjectId.isNotEmpty;
-
-  static String _normalizeLocalHost(String value) {
-    final uri = Uri.tryParse(value);
-    if (uri == null || uri.host != 'location') return value;
-    return uri.replace(host: 'localhost').toString();
-  }
 }
 
 enum ServiceType { airportPickup, airportDropoff, cityTransfer, golfTransfer }

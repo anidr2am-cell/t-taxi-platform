@@ -81,6 +81,20 @@ function isWeakSecret(value) {
   return WEAK_SECRET_PATTERNS.some((pattern) => pattern.test(value.trim()));
 }
 
+const PLACEHOLDER_PATTERNS = [
+  /replace[_-]?with/i,
+  /change[_-]?me/i,
+  /changeme/i,
+  /placeholder/i,
+  /example/i,
+];
+
+function isPlaceholderValue(value) {
+  if (!value) return false;
+  const normalized = value.trim();
+  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
 if (error) {
   // eslint-disable-next-line no-console
   console.error('❌ Invalid environment variables:\n', error.details.map((d) => d.message).join('\n'));
@@ -113,6 +127,37 @@ if (isProductionLike) {
   if (productionErrors.length) {
     // eslint-disable-next-line no-console
     console.error('❌ Production environment validation failed:\n', productionErrors.join('\n'));
+    process.exit(1);
+  }
+}
+
+if (env.NODE_ENV === 'production') {
+  const productionOnlyErrors = [];
+  const guardedValues = {
+    DB_PASSWORD: env.DB_PASSWORD,
+    JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET,
+    JWT_REFRESH_SECRET: env.JWT_REFRESH_SECRET,
+  };
+
+  Object.entries(guardedValues).forEach(([name, value]) => {
+    if (isPlaceholderValue(value)) {
+      productionOnlyErrors.push(`${name} must not use a placeholder value in production`);
+    }
+  });
+
+  if (!env.DB_HOST || ['localhost', '127.0.0.1'].includes(env.DB_HOST.trim().toLowerCase())) {
+    productionOnlyErrors.push('DB_HOST must be explicit and must not be localhost in production');
+  }
+  if (!env.UPLOAD_DIR || env.UPLOAD_DIR === './uploads') {
+    productionOnlyErrors.push('UPLOAD_DIR must be explicit in production');
+  }
+  if (!env.LOG_DIR || env.LOG_DIR === './logs') {
+    productionOnlyErrors.push('LOG_DIR must be explicit in production');
+  }
+
+  if (productionOnlyErrors.length) {
+    // eslint-disable-next-line no-console
+    console.error('??Production-only environment validation failed:\n', productionOnlyErrors.join('\n'));
     process.exit(1);
   }
 }
