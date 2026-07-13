@@ -110,6 +110,7 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.frontend
       args:
+        APP_ENV: production
         API_BASE_URL: ${API_BASE_URL:?Set API_BASE_URL in .env.production}
         SOCKET_URL: ${SOCKET_URL:?Set SOCKET_URL in .env.production}
     container_name: tride-prod-frontend

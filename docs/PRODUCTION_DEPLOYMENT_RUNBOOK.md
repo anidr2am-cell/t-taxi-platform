@@ -57,7 +57,9 @@ Required values:
 - strong `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
 - exact HTTPS `CORS_ORIGIN` / `ALLOWED_ORIGINS`
 - exact HTTPS `PUBLIC_API_URL` / `BACKEND_PUBLIC_URL`
-- exact HTTPS `API_BASE_URL` and `SOCKET_URL`
+- `APP_ENV=production`
+- exact HTTPS `API_BASE_URL` and `SOCKET_URL`, or same-origin `/api` for
+  `API_BASE_URL`
 - `SWAGGER_ENABLED=false`
 - `ALLOW_DEV_QR_REISSUE=false`
 - persistent `UPLOAD_DIR`
@@ -126,6 +128,16 @@ Review the output for:
 - no DB host port publication
 - correct local backend/frontend ports
 - correct production URL build args
+- `APP_ENV=production` passed to the frontend build
+
+The frontend production build must fail when:
+
+- `APP_ENV` is missing.
+- `API_BASE_URL` is missing.
+- `SOCKET_URL` is missing.
+- `API_BASE_URL` or `SOCKET_URL` points to `localhost` or `127.0.0.1`.
+- `API_BASE_URL` is not `/api` or an absolute HTTPS URL.
+- `SOCKET_URL` is not an absolute HTTPS URL.
 
 Then deploy only during the approved window. Prefer rebuilding only changed
 services. Do not use stack-wide teardown.
