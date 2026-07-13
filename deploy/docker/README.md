@@ -28,6 +28,12 @@ Production planning files are separate from staging:
 
 The production draft does not bind host 80/443 and does not expose the DB port.
 TLS and reverse proxy routing require a separate reviewed production change.
+The production backend uses the `production` target from
+`deploy/docker/Dockerfile.backend`; staging keeps the default `staging` target
+with devDependencies for smoke/rehearsal tooling.
+Production upload/log named volumes mount to `/srv/tride/uploads` and
+`/srv/tride/logs`, which the production image prepares as `node:node`. Check
+ownership first when reusing an existing volume or using a bind mount.
 Read these documents before any production work:
 
 - `docs/PRODUCTION_READINESS.md`

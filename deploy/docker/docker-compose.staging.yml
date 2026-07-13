@@ -47,6 +47,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.backend
+      target: staging
     container_name: tride-backend
     restart: unless-stopped
     depends_on:

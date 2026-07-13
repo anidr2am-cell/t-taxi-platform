@@ -1,17 +1,60 @@
-# T-Ride staging backend — Node 22 on port 3000
-# Build context: repository root (see docker-compose.staging.yml)
+# T-Ride backend Dockerfile.
+#
+# Default final target: staging
+# Production compose must select: target: production
+# Build context: repository root.
 
-FROM node:22-alpine
+FROM node:22-alpine AS base
 
-RUN apk add --no-cache bash mysql-client tini
+RUN apk add --no-cache tini
+
+WORKDIR /srv/tride/backend
+
+COPY backend/package.json backend/package-lock.json ./
+
+FROM base AS staging-deps
+
+# Staging runs npm scripts such as smoke/rehearsal tests inside this container.
+# Keep devDependencies available for staging only.
+RUN npm ci --include=dev
+
+FROM base AS production-deps
+
+RUN npm ci --omit=dev \
+  && npm cache clean --force
+
+FROM base AS production
+
+ENV NODE_ENV=production \
+    PORT=3000 \
+    UPLOAD_DIR=/srv/tride/uploads \
+    LOG_DIR=/srv/tride/logs
+
+RUN mkdir -p /srv/tride/uploads /srv/tride/logs /srv/tride/backend/scripts
+
+COPY --from=production-deps /srv/tride/backend/node_modules ./node_modules
+COPY backend/package.json ./
+COPY backend/src ./src
+COPY backend/scripts/createAdminUser.js ./scripts/createAdminUser.js
+
+RUN chown -R node:node /srv/tride
+
+USER node
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=40s --retries=5 \
+  CMD node -e "fetch('http://127.0.0.1:3000/api/v1/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "src/server.js"]
+
+FROM base AS staging
+
+RUN apk add --no-cache bash mysql-client \
+  && npm ci --include=dev
 
 WORKDIR /srv/tride
-
-COPY backend/package.json backend/package-lock.json ./backend/
-# Staging runs npm scripts such as rehearsal:mvp-e2e inside this container.
-# Keep devDependencies available here; production runtime images should use a
-# separate Dockerfile or build target with npm ci --omit=dev.
-RUN cd backend && npm ci --include=dev
 
 COPY backend/ ./backend/
 COPY database/ ./database/

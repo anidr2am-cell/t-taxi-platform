@@ -129,6 +129,12 @@ Review the output for:
 - correct local backend/frontend ports
 - correct production URL build args
 - `APP_ENV=production` passed to the frontend build
+- backend build uses `target: production`
+- backend runtime runs as the non-root `node` user
+- backend production image does not include backend tests, full `database/`, or
+  devDependencies
+- backend upload/log mounts match `UPLOAD_DIR=/srv/tride/uploads` and
+  `LOG_DIR=/srv/tride/logs`
 
 The frontend production build must fail when:
 
@@ -154,6 +160,14 @@ docker compose \
   -f deploy/docker/docker-compose.production.yml \
   config
 ```
+
+### Backend upload/log volume permissions
+
+The production backend image creates `/srv/tride/uploads` and
+`/srv/tride/logs` as `node:node` before switching to `USER node`. New production
+named volumes are initialized from those prepared directories. If an existing
+volume is reused, or if an external bind mount is used instead of the named
+volumes, verify the UID/GID and write permissions before deployment.
 
 ## 7. Health checks
 
