@@ -6,9 +6,23 @@ const getDriverJobService = () => container.get('driverJobService');
 const getDriverTripFlowService = () => container.get('driverTripFlowService');
 const getDriverQrService = () => container.get('driverQrService');
 const getDriverStatusService = () => container.get('driverStatusService');
+const getDriverCallService = () => container.get('driverCallService');
 
 const listTodayBookings = asyncHandler(async (req, res) => {
   const data = await getDriverJobService().listToday(req.user.id);
+  return success(res, data, 'OK');
+});
+
+const listOpenCalls = asyncHandler(async (req, res) => {
+  const data = await getDriverCallService().listOpenCalls(req.user.id);
+  return success(res, data, 'OK');
+});
+
+const claimOpenCall = asyncHandler(async (req, res) => {
+  const data = await getDriverCallService().claimOpenCall(
+    req.user.id,
+    req.params.bookingNumber,
+  );
   return success(res, data, 'OK');
 });
 
@@ -95,6 +109,8 @@ const goOffline = asyncHandler(async (req, res) => {
 
 module.exports = {
   listTodayBookings,
+  listOpenCalls,
+  claimOpenCall,
   getBookingDetail,
   startOnRoute,
   markArrived,

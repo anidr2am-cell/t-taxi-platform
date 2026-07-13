@@ -112,6 +112,7 @@ class GuestBookingLookupService {
     ].includes(row.status);
     const boardingQrRecoverable = [
       BOOKING_STATUS.PENDING,
+      BOOKING_STATUS.OPEN,
       BOOKING_STATUS.CONFIRMED,
       BOOKING_STATUS.DRIVER_ASSIGNED,
       BOOKING_STATUS.ON_ROUTE,

@@ -33,7 +33,7 @@ abstract final class AppUi {
               ],
             ),
           ),
-          if (trailing != null) trailing,
+          ?trailing,
         ],
       ),
     );
@@ -624,6 +624,7 @@ abstract final class AppUi {
       case 'PICKED_UP':
         return AppStatusTone.info;
       case 'PENDING':
+      case 'OPEN':
       case 'CONFIRMED':
         return AppStatusTone.warning;
       default:

@@ -925,11 +925,12 @@ class _FilterSheetState extends State<_FilterSheet> {
               decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_date_to')),
             ),
             DropdownButtonFormField<String?>(
-              value: _status,
+              initialValue: _status,
               decoration: InputDecoration(labelText: l10n.t('status')),
               items: [
                 DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_statuses'))),
                 DropdownMenuItem(value: 'PENDING', child: Text(l10n.t('status_pending'))),
+                const DropdownMenuItem(value: 'OPEN', child: Text('Open')),
                 DropdownMenuItem(value: 'CONFIRMED', child: Text(l10n.t('status_confirmed'))),
                 DropdownMenuItem(value: 'DRIVER_ASSIGNED', child: Text(l10n.t('status_driver_assigned'))),
                 DropdownMenuItem(value: 'ON_ROUTE', child: Text(l10n.t('status_on_route'))),
@@ -940,7 +941,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               onChanged: (v) => setState(() => _status = v),
             ),
             DropdownButtonFormField<String?>(
-              value: _assignment,
+              initialValue: _assignment,
               decoration: InputDecoration(labelText: l10n.t('admin_dispatch_assignment')),
               items: [
                 DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_assignments'))),
@@ -962,7 +963,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_destination')),
             ),
             DropdownButtonFormField<String?>(
-              value: _settlement,
+              initialValue: _settlement,
               decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_settlement')),
               items: [
                 DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_statuses'))),

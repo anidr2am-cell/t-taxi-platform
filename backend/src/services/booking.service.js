@@ -4,10 +4,13 @@ const ERROR_CODES = require('../constants/errorCodes');
 const PAYMENT_METHODS = require('../constants/paymentMethods');
 const COMMISSION_STATUS = require('../constants/commissionStatus');
 const BOOKING_STATUS = require('../constants/reservationStatus');
+const NOTIFICATION_TYPES = require('../constants/notificationTypes');
+const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
 const ROLES = require('../constants/roles');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
+const { emitDriverCallAvailable } = require('../socket/realtime');
 
 const TRUST_MESSAGE = 'Keep your booking number. You can check driver assignment and trip status on the booking lookup page.';
 
@@ -17,6 +20,7 @@ const DROPOFF_QR_TTL_HOURS = 48;
 
 const BOARDING_QR_ISSUE_STATUSES = new Set([
   BOOKING_STATUS.PENDING,
+  BOOKING_STATUS.OPEN,
   BOOKING_STATUS.CONFIRMED,
   BOOKING_STATUS.DRIVER_ASSIGNED,
   BOOKING_STATUS.ON_ROUTE,
@@ -35,6 +39,8 @@ class BookingService {
     outboxRepository,
     outboxProcessor,
     flightService = null,
+    driverRepository = null,
+    notificationRepository = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -46,6 +52,80 @@ class BookingService {
     this.outboxRepository = outboxRepository;
     this.outboxProcessor = outboxProcessor;
     this.flightService = flightService;
+    this.driverRepository = driverRepository;
+    this.notificationRepository = notificationRepository;
+  }
+
+  buildOpenCallPayload({
+    bookingNumber,
+    scheduledPickupAt,
+    originAddress,
+    destinationAddress,
+    serviceType,
+    vehicleType,
+    pricing,
+    luggage,
+  }) {
+    return {
+      bookingNumber,
+      status: BOOKING_STATUS.OPEN,
+      scheduledPickupAt,
+      origin: originAddress,
+      destination: destinationAddress,
+      serviceType: {
+        code: serviceType.code,
+        name: serviceType.name,
+      },
+      vehicleType: {
+        code: vehicleType.code,
+        name: vehicleType.name,
+      },
+      amount: Number(pricing.totalAmount ?? pricing.total ?? 0),
+      currency: pricing.currency,
+      luggage: {
+        carriers20Inch: Number(luggage?.carriers20Inch ?? 0),
+        carriers24InchPlus: Number(luggage?.carriers24InchPlus ?? 0),
+        golfBags: Number(luggage?.golfBags ?? 0),
+        specialItems: luggage?.specialItems ?? null,
+      },
+    };
+  }
+
+  async notifyEligibleDriversForOpenBooking(conn, {
+    bookingId,
+    bookingNumber,
+    vehicleTypeId,
+    openCallPayload,
+  }) {
+    if (!this.driverRepository || !this.notificationRepository) {
+      return [];
+    }
+
+    const drivers = await this.driverRepository.listEligibleForOpenBooking(
+      conn,
+      vehicleTypeId,
+    );
+    const eventId = randomUUID();
+    for (const driver of drivers) {
+      await this.notificationRepository.insert(conn, {
+        recipientType: RECIPIENT_TYPES.USER,
+        userId: driver.user_id,
+        recipientDriverId: driver.id,
+        bookingId,
+        audienceRole: ROLES.DRIVER,
+        eventId,
+        eventName: 'driver.call.available',
+        idempotencyKey: `driver-call-open:${bookingId}:${driver.id}`,
+        notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+        title: '새 예약이 도착했습니다',
+        body: `${openCallPayload.origin} → ${openCallPayload.destination}`,
+        payload: openCallPayload,
+      });
+    }
+    return drivers.map((driver) => ({
+      driverId: driver.id,
+      userId: driver.user_id,
+    }));
   }
 
   buildPricingInput(input) {
@@ -208,15 +288,18 @@ class BookingService {
       const origin = input.origin ?? {};
       const destination = input.destination ?? {};
 
+      const originAddress = this.resolvePlaceAddress(origin);
+      const destinationAddress = this.resolvePlaceAddress(destination);
+
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
-        status: 'PENDING',
+        status: BOOKING_STATUS.OPEN,
         serviceTypeId: serviceType.id,
-        originAddress: this.resolvePlaceAddress(origin),
+        originAddress,
         originPlaceId: origin.placeId ?? null,
         originLat: origin.lat ?? null,
         originLng: origin.lng ?? null,
-        destinationAddress: this.resolvePlaceAddress(destination),
+        destinationAddress,
         destinationPlaceId: destination.placeId ?? null,
         destinationLat: destination.lat ?? null,
         destinationLng: destination.lng ?? null,
@@ -225,6 +308,7 @@ class BookingService {
         recommendedVehicleTypeId,
         vehicleCount: input.vehicleCount ?? 1,
         routeId: pricing.routeId,
+        totalAmount: pricing.totalAmount,
         currency: pricing.currency,
         paymentStatus: 'UNPAID',
         paymentMethod: PAYMENT_METHODS.PAY_DRIVER,
@@ -287,10 +371,10 @@ class BookingService {
 
       await this.bookingRepository.insertStatusLog(conn, bookingId, {
         fromStatus: null,
-        toStatus: 'PENDING',
+        toStatus: BOOKING_STATUS.OPEN,
         changedByUserId: customerUserId,
         changedByRole: customerUserId ? 'CUSTOMER' : 'SYSTEM',
-        reason: 'BOOKING_CREATED',
+        reason: 'BOOKING_CREATED_OPEN_CALL',
       });
 
       await this.bookingRepository.insertActivityLog(conn, bookingId, {
@@ -320,6 +404,28 @@ class BookingService {
       }
 
       let outboxId = null;
+      const openCallPayload = this.buildOpenCallPayload({
+        bookingNumber,
+        scheduledPickupAt,
+        originAddress,
+        destinationAddress,
+        serviceType,
+        vehicleType,
+        pricing,
+        luggage: {
+          carriers20Inch: input.luggage?.carriers20Inch ?? 0,
+          carriers24InchPlus: input.luggage?.carriers24InchPlus ?? 0,
+          golfBags: input.luggage?.golfBags ?? 0,
+          specialItems,
+        },
+      });
+      const openCallTargets = await this.notifyEligibleDriversForOpenBooking(conn, {
+        bookingId,
+        bookingNumber,
+        vehicleTypeId: vehicleType.id,
+        openCallPayload,
+      });
+
       if (this.outboxRepository) {
         outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
           aggregateId: bookingId,
@@ -338,6 +444,9 @@ class BookingService {
 
       if (this.outboxProcessor && outboxId) {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
+      for (const target of openCallTargets) {
+        emitDriverCallAvailable(target.userId, openCallPayload);
       }
 
       const booking = await this.bookingRepository.findById(bookingId);

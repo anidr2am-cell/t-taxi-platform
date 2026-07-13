@@ -25,6 +25,7 @@ const TERMINAL_REASSIGN_STATUSES = new Set([
 
 const CANDIDATE_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.PENDING,
+  BOOKING_STATUS.OPEN,
   BOOKING_STATUS.CONFIRMED,
 ]);
 
@@ -728,6 +729,7 @@ class AdminDispatchService {
     }
     if (
       initialStatus === BOOKING_STATUS.PENDING ||
+      initialStatus === BOOKING_STATUS.OPEN ||
       initialStatus === BOOKING_STATUS.CONFIRMED
     ) {
       transitions.push(BOOKING_STATUS.DRIVER_ASSIGNED);

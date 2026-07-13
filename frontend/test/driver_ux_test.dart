@@ -599,6 +599,66 @@ void main() {
     );
   });
 
+  testWidgets('today page shows waiting open calls and claim CTA', (
+    tester,
+  ) async {
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      openCalls: [_openCall(number: 'TX202607130001')],
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Waiting calls'), findsOneWidget);
+    expect(find.textContaining('BKK Airport'), findsOneWidget);
+    expect(find.textContaining('Pattaya Hotel'), findsOneWidget);
+    expect(find.textContaining('Claim call'), findsOneWidget);
+    expect(find.textContaining('+66'), findsNothing);
+  });
+
+  testWidgets('today page claim open call success refreshes jobs', (
+    tester,
+  ) async {
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      openCalls: [_openCall(number: 'TX202607130002')],
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('Claim call'));
+    await tester.pumpAndSettle();
+
+    expect(api.claimCalls, 1);
+    expect(api.todayCalls, greaterThan(1));
+    expect(find.textContaining('Assignment confirmed'), findsOneWidget);
+  });
+
+  testWidgets('today page claim conflict shows already claimed message', (
+    tester,
+  ) async {
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      claimError: const DriverApiException(
+        'Already assigned',
+        statusCode: 409,
+        errorCode: 'ALREADY_ASSIGNED',
+      ),
+      openCalls: [_openCall(number: 'TX202607130003')],
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('Claim call'));
+    await tester.pumpAndSettle();
+
+    expect(api.claimCalls, 1);
+    expect(find.textContaining('Another driver claimed it first'), findsOneWidget);
+  });
+
   testWidgets('today layout has no horizontal overflow at 360px', (
     tester,
   ) async {
@@ -780,6 +840,27 @@ DriverBooking _booking({
   );
 }
 
+DriverOpenCall _openCall({String number = 'TX202607130001'}) {
+  return DriverOpenCall(
+    bookingNumber: number,
+    status: 'OPEN',
+    pickupDate: '2026-07-13',
+    pickupTime: '10:30',
+    origin: 'BKK Airport',
+    destination: 'Pattaya Hotel',
+    serviceTypeName: 'Airport pickup',
+    vehicleTypeName: 'Van',
+    amount: 2500,
+    currency: 'THB',
+    passengerCount: 2,
+    luggage: const {
+      'carriers20Inch': 1,
+      'carriers24InchPlus': 2,
+      'golfBags': 1,
+    },
+  );
+}
+
 void _useTallViewport(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 1400);
   tester.view.devicePixelRatio = 1.0;
@@ -815,6 +896,10 @@ class _FakeLoginApi extends DriverApiService {
       const DriverJobsToday(date: '2026-07-01', items: []);
 
   @override
+  Future<DriverOpenCalls> getOpenCalls() async =>
+      const DriverOpenCalls(items: []);
+
+  @override
   Future<DriverStatus> getStatus() async => DriverStatus(
     driverId: 7,
     active: true,
@@ -827,16 +912,23 @@ class _FakeLoginApi extends DriverApiService {
 class _FakeJobsApi extends DriverApiService {
   _FakeJobsApi({
     this.jobs,
+    this.openCalls = const [],
     this.error,
+    this.claimError,
     this.hasActiveJob = false,
+    this.online = false,
     String? initialToken,
   }) : _token = initialToken;
 
   DriverJobsToday? jobs;
+  final List<DriverOpenCall> openCalls;
   final Object? error;
+  final Object? claimError;
   final bool hasActiveJob;
+  final bool online;
   final String? _token;
   int todayCalls = 0;
+  int claimCalls = 0;
   int startRouteCalls = 0;
   int markArrivedCalls = 0;
   int boardingScanCalls = 0;
@@ -861,6 +953,18 @@ class _FakeJobsApi extends DriverApiService {
     todayCalls += 1;
     if (error != null) throw error!;
     return jobs ?? const DriverJobsToday(date: '2026-07-01', items: []);
+  }
+
+  @override
+  Future<DriverOpenCalls> getOpenCalls() async {
+    return DriverOpenCalls(items: openCalls);
+  }
+
+  @override
+  Future<DriverBooking> claimOpenCall(String bookingNumber) async {
+    claimCalls += 1;
+    if (claimError != null) throw claimError!;
+    return _booking(status: 'DRIVER_ASSIGNED', number: bookingNumber);
   }
 
   @override
@@ -928,8 +1032,8 @@ class _FakeJobsApi extends DriverApiService {
   Future<DriverStatus> getStatus() async => DriverStatus(
     driverId: 7,
     active: true,
-    online: false,
-    status: 'OFFLINE',
+    online: online,
+    status: online ? 'AVAILABLE' : 'OFFLINE',
     hasActiveJob: hasActiveJob,
   );
 }
@@ -966,6 +1070,10 @@ class _ShellStatusApi extends DriverApiService {
   @override
   Future<DriverJobsToday> getTodayBookings() async =>
       const DriverJobsToday(date: '2026-07-01', items: []);
+
+  @override
+  Future<DriverOpenCalls> getOpenCalls() async =>
+      const DriverOpenCalls(items: []);
 
   @override
   Future<DriverStatus> getStatus() async => _status;
@@ -1082,6 +1190,10 @@ class _TrackingDetailApi extends DriverApiService {
 
   @override
   Future<DriverJobsToday> getTodayBookings() async => jobs;
+
+  @override
+  Future<DriverOpenCalls> getOpenCalls() async =>
+      const DriverOpenCalls(items: []);
 
   @override
   Future<String?> getDriverDisplayName() async => 'Somchai';

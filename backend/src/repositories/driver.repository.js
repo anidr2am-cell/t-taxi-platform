@@ -231,6 +231,73 @@ class DriverRepository {
     return rows[0] || null;
   }
 
+  async findMatchingVehicle(conn, driverId, vehicleTypeId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, vehicle_type_id, plate_number, model_name
+        FROM driver_vehicles
+        WHERE driver_id = ?
+          AND vehicle_type_id = ?
+          AND is_active = 1
+          AND deleted_at IS NULL
+        ORDER BY is_primary DESC, id ASC
+        LIMIT 1
+      `,
+      [driverId, vehicleTypeId],
+    );
+    return rows[0] || null;
+  }
+
+  async listEligibleForOpenBooking(conn, vehicleTypeId) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
+      `
+        SELECT
+          d.id,
+          d.user_id,
+          d.name,
+          d.status,
+          d.is_online,
+          d.is_active,
+          u.is_active AS user_is_active,
+          dv.id AS driver_vehicle_id,
+          dv.vehicle_type_id
+        FROM drivers d
+        INNER JOIN users u ON u.id = d.user_id
+          AND u.role = 'DRIVER'
+          AND u.is_active = 1
+          AND u.deleted_at IS NULL
+        INNER JOIN driver_vehicles dv ON dv.id = (
+          SELECT dv2.id
+          FROM driver_vehicles dv2
+          WHERE dv2.driver_id = d.id
+            AND dv2.vehicle_type_id = ?
+            AND dv2.is_active = 1
+            AND dv2.deleted_at IS NULL
+          ORDER BY dv2.is_primary DESC, dv2.id ASC
+          LIMIT 1
+        )
+        WHERE d.deleted_at IS NULL
+          AND d.is_active = 1
+          AND d.is_online = 1
+          AND d.status = 'AVAILABLE'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments bda
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            WHERE bda.driver_id = d.id
+              AND bda.is_active = 1
+              AND bda.deleted_at IS NULL
+              AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+              AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+          )
+        ORDER BY d.last_seen_at DESC, d.id ASC
+      `,
+      [vehicleTypeId],
+    );
+    return rows;
+  }
+
   async findById(driverId) {
     const [rows] = await this.pool.query(
       `

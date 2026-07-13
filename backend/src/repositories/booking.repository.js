@@ -24,7 +24,7 @@ class BookingRepository {
           ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?, 0.00, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?
@@ -47,6 +47,7 @@ class BookingRepository {
         row.recommendedVehicleTypeId,
         row.vehicleCount,
         row.routeId,
+        row.totalAmount ?? 0,
         row.currency,
         row.paymentStatus,
         row.paymentMethod,
@@ -349,7 +350,7 @@ class BookingRepository {
     const [rows] = await conn.query(
       `
         SELECT
-          b.id, b.booking_number, b.status, b.total_amount, b.currency,
+          b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
           b.payment_status, b.payment_method, b.customer_user_id,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           b.dropoff_qr_token_hash, b.dropoff_qr_expires_at, b.dropoff_qr_used_at,
@@ -546,6 +547,85 @@ class BookingRepository {
       [driverUserId, bookingNumber],
     );
     return rows[0] || null;
+  }
+
+  openDriverCallSelectSql() {
+    return `
+      SELECT
+        b.id,
+        b.booking_number,
+        b.status,
+        b.scheduled_pickup_at,
+        DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d') AS pickup_date,
+        DATE_FORMAT(b.scheduled_pickup_at, '%H:%i') AS pickup_time,
+        b.origin_address,
+        b.destination_address,
+        b.total_amount,
+        b.currency,
+        st.code AS service_type_code,
+        st.name AS service_type_name,
+        vt.code AS vehicle_type_code,
+        vt.name AS vehicle_type_name,
+        bp.adults,
+        bp.children,
+        bp.infants,
+        bl.carriers_20_inch,
+        bl.carriers_24_inch_plus,
+        bl.golf_bags,
+        bl.special_items
+      FROM bookings b
+      INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
+      INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+      LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
+      LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+    `;
+  }
+
+  async findOpenDriverCallsForDriver(driverUserId) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.openDriverCallSelectSql()}
+        INNER JOIN drivers d ON d.user_id = ?
+          AND d.deleted_at IS NULL
+          AND d.is_active = 1
+          AND d.is_online = 1
+          AND d.status = 'AVAILABLE'
+        INNER JOIN users u ON u.id = d.user_id
+          AND u.role = 'DRIVER'
+          AND u.is_active = 1
+          AND u.deleted_at IS NULL
+        WHERE b.deleted_at IS NULL
+          AND b.status = 'OPEN'
+          AND EXISTS (
+            SELECT 1
+            FROM driver_vehicles dv
+            WHERE dv.driver_id = d.id
+              AND dv.vehicle_type_id = b.vehicle_type_id
+              AND dv.is_active = 1
+              AND dv.deleted_at IS NULL
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments active_bda
+            WHERE active_bda.booking_id = b.id
+              AND active_bda.is_active = 1
+              AND active_bda.deleted_at IS NULL
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments own_bda
+            INNER JOIN bookings own_b ON own_b.id = own_bda.booking_id AND own_b.deleted_at IS NULL
+            WHERE own_bda.driver_id = d.id
+              AND own_bda.is_active = 1
+              AND own_bda.deleted_at IS NULL
+              AND own_bda.status IN ('ASSIGNED', 'ACCEPTED')
+              AND own_b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+          )
+        ORDER BY b.created_at DESC, b.scheduled_pickup_at ASC, b.booking_number ASC
+      `,
+      [driverUserId],
+    );
+    return rows;
   }
 
   async findQrTokenBooking(conn, tokenHash) {

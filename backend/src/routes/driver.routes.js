@@ -16,6 +16,8 @@ router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
 router.get('/status', driverController.getStatus);
 router.post('/online', driverController.goOnline);
 router.post('/offline', driverController.goOffline);
+router.get('/calls/open', driverController.listOpenCalls);
+router.post('/calls/:bookingNumber/claim', driverController.claimOpenCall);
 router.get('/bookings/today', driverController.listTodayBookings);
 router.post(
   '/location',
