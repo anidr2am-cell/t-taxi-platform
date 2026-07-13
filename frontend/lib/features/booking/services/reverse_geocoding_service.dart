@@ -58,7 +58,10 @@ class ReverseGeocodingService {
         'addressdetails': '0',
       },
     );
-    final headers = <String, String>{'Accept': 'application/json'};
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Accept-Language': language,
+    };
     // Browsers own User-Agent/Referer headers. Native clients identify T-Ride.
     if (!kIsWeb) {
       headers['User-Agent'] = MapProviderConfig.applicationIdentifier;

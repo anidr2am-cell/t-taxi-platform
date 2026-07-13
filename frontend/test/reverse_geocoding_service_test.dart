@@ -31,6 +31,8 @@ void main() {
       expect(result, 'Pattaya, Thailand');
       expect(captured.url.origin, 'https://geo.example.test');
       expect(captured.url.path, '/reverse');
+      expect(captured.url.queryParameters['accept-language'], 'en');
+      expect(captured.headers['Accept-Language'], 'en');
       expect(
         captured.headers['User-Agent'],
         MapProviderConfig.applicationIdentifier,
@@ -62,6 +64,38 @@ void main() {
     expect(await second, 'Bangkok');
     expect(requests, 1);
   });
+
+  test(
+    'same coordinates with different languages use separate requests',
+    () async {
+      var requests = 0;
+      final service = ReverseGeocodingService(
+        client: MockClient((request) async {
+          requests += 1;
+          final language = request.url.queryParameters['accept-language'];
+          return http.Response(
+            jsonEncode({'display_name': 'address-$language'}),
+            200,
+          );
+        }),
+      );
+
+      final korean = await service.lookup(
+        latitude: 13.7563,
+        longitude: 100.5018,
+        language: 'ko',
+      );
+      final thai = await service.lookup(
+        latitude: 13.7563,
+        longitude: 100.5018,
+        language: 'th',
+      );
+
+      expect(korean, 'address-ko');
+      expect(thai, 'address-th');
+      expect(requests, 2);
+    },
+  );
 
   test('timeout returns null without automatic retry', () async {
     var requests = 0;
