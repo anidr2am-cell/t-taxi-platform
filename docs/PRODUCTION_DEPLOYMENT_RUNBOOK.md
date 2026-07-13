@@ -56,7 +56,9 @@ Required values:
 - strong `MYSQL_ROOT_PASSWORD`
 - strong `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
 - exact HTTPS `CORS_ORIGIN` / `ALLOWED_ORIGINS`
-- exact HTTPS `PUBLIC_API_URL` / `BACKEND_PUBLIC_URL`
+- exact HTTPS `BACKEND_PUBLIC_URL`
+- exact HTTPS API base `PUBLIC_API_URL`, including `/api` for same-origin
+  topology
 - `APP_ENV=production`
 - exact HTTPS `API_BASE_URL` and `SOCKET_URL`, or same-origin `/api` for
   `API_BASE_URL`
@@ -148,6 +150,33 @@ The frontend production build must fail when:
 The Dockerfile intentionally has no localhost default in the `API_BASE_URL` or
 `SOCKET_URL` build arg declarations. Localhost fallback is allowed only inside
 the non-production build path.
+
+### Production domain and proxy
+
+Recommended initial production topology uses a separate VPS and one domain:
+
+```text
+https://ride.example.com/          -> tride-prod-frontend:80
+https://ride.example.com/api       -> tride-prod-backend:3000
+https://ride.example.com/socket.io -> tride-prod-backend:3000
+```
+
+Use `deploy/production-proxy` as the Caddy-based template. Caddy handles TLS
+issuance and renewal on the new production VPS only. Do not use the existing
+KTaxi/TTaxi server, legacy nginx/certbot, host 80/443, or `88taxi.net` for this
+topology.
+
+Expected same-origin env shape:
+
+```env
+API_BASE_URL=/api
+SOCKET_URL=https://ride.example.com
+ALLOWED_ORIGINS=https://ride.example.com
+CORS_ORIGIN=https://ride.example.com
+FRONTEND_PUBLIC_URL=https://ride.example.com
+BACKEND_PUBLIC_URL=https://ride.example.com
+PUBLIC_API_URL=https://ride.example.com/api
+```
 
 Then deploy only during the approved window. Prefer rebuilding only changed
 services. Do not use stack-wide teardown.

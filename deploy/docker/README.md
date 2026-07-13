@@ -42,6 +42,9 @@ Read these documents before any production work:
 - `docs/BACKUP_RESTORE_RUNBOOK.md`
 - `docs/ADMIN_ACCOUNT_RECOVERY.md`
 
+The optional production proxy template lives in `deploy/production-proxy`. It is
+for a separate production VPS and single-domain Caddy TLS topology only.
+
 ## Selective Deployment
 
 Check Git and containers first:

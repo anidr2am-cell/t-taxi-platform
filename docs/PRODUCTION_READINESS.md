@@ -20,9 +20,9 @@ item is DONE and the owner explicitly approves the deployment window.
 | Item | Status | Notes |
 |---|---|---|
 | Production compose draft | IN PROGRESS | `deploy/docker/docker-compose.production.yml` exists as a draft and still needs server review. |
-| Production env template | IN PROGRESS | `deploy/docker/.env.production.example` contains placeholders only. |
+| Production env template | IN PROGRESS | `deploy/docker/.env.production.example` contains placeholder/example values only. |
 | Production DB separation | TODO | Confirm a T-Ride-only production DB name, user, host, grants, and backup target. Never use legacy `ttaxi`, KTaxi, or staging DBs. |
-| Domain/TLS topology | TODO | Recommended topology is same-origin `https://tride.example.com` with `/api` and `/socket.io` routing. Actual domain/cert/proxy not configured here. |
+| Domain/TLS topology | IN PROGRESS | Recommended topology is same-origin `https://ride.example.com` with `/api` and `/socket.io` routing. Caddy proxy templates exist under `deploy/production-proxy`; actual DNS/cert/proxy deployment is not configured here. |
 | Backup/restore plan | IN PROGRESS | See `docs/BACKUP_RESTORE_RUNBOOK.md`; rehearsal still required. |
 | Migration preview | IN PROGRESS | See `docs/PRODUCTION_MIGRATION_CHECKLIST.md`; no SQL was executed. |
 | Admin account recovery | IN PROGRESS | See `docs/ADMIN_ACCOUNT_RECOVERY.md`; production credential handling still required. |
@@ -61,7 +61,7 @@ item is DONE and the owner explicitly approves the deployment window.
 Initial recommendation: same-origin.
 
 ```text
-https://tride.example.com/
+https://ride.example.com/
   /                  -> tride-prod-frontend
   /api               -> tride-prod-backend:3000
   /socket.io         -> tride-prod-backend:3000
@@ -69,7 +69,8 @@ https://tride.example.com/
 
 Requirements:
 
-- HTTPS termination with a valid certificate.
+- Separate production VPS, not the existing KTaxi/TTaxi host.
+- Caddy HTTPS termination with automatic certificate renewal.
 - HTTP to HTTPS redirect.
 - HSTS after the domain is confirmed stable.
 - WebSocket upgrade for Socket.IO.

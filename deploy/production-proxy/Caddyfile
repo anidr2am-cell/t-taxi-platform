@@ -1,0 +1,49 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$TRIDE_PRODUCTION_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size {$CLIENT_MAX_BODY_SIZE}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	respond /healthz 200
+
+	@api path /api /api/*
+	handle @api {
+		reverse_proxy tride-prod-backend:3000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	@socket path /socket.io /socket.io/*
+	handle @socket {
+		reverse_proxy tride-prod-backend:3000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		reverse_proxy tride-prod-frontend:80 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+}

@@ -293,3 +293,46 @@ test('staging compose explicitly uses the backend staging target', () => {
   assert.match(compose, /tride_uploads:\/srv\/tride\/uploads/);
   assert.match(compose, /tride_logs:\/srv\/tride\/logs/);
 });
+
+test('production proxy template uses isolated same-origin Caddy topology', () => {
+  const proxyRoot = path.join(repoRoot, 'deploy', 'production-proxy');
+  const caddyfile = fs.readFileSync(path.join(proxyRoot, 'Caddyfile'), 'utf8');
+  const proxyCompose = fs.readFileSync(path.join(proxyRoot, 'docker-compose.proxy.yml'), 'utf8');
+  const proxyEnv = fs.readFileSync(path.join(proxyRoot, '.env.example'), 'utf8');
+  const proxyReadme = fs.readFileSync(path.join(proxyRoot, 'README.md'), 'utf8');
+  const productionEnv = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', '.env.production.example'),
+    'utf8',
+  );
+  const productionCompose = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'docker-compose.production.yml'),
+    'utf8',
+  );
+  const combined = [caddyfile, proxyCompose, proxyEnv, proxyReadme].join('\n');
+
+  assert.match(proxyEnv, /TRIDE_PRODUCTION_DOMAIN=ride\.example\.com/);
+  assert.match(caddyfile, /\{\$TRIDE_PRODUCTION_DOMAIN\}/);
+  assert.match(caddyfile, /@api path \/api \/api\/\*/);
+  assert.match(caddyfile, /handle @api/);
+  assert.match(caddyfile, /reverse_proxy tride-prod-backend:3000/);
+  assert.match(caddyfile, /@socket path \/socket\.io \/socket\.io\/\*/);
+  assert.match(caddyfile, /handle @socket/);
+  assert.match(caddyfile, /handle \{/);
+  assert.match(caddyfile, /reverse_proxy tride-prod-frontend:80/);
+  assert.match(caddyfile, /Strict-Transport-Security/);
+  assert.match(caddyfile, /X-Content-Type-Options "nosniff"/);
+  assert.match(proxyCompose, /image: caddy:2\.8-alpine/);
+  assert.match(proxyCompose, /\$\{PROXY_HTTP_BIND:-0\.0\.0\.0\}:\$\{PROXY_HTTP_PORT:-80\}:80/);
+  assert.match(proxyCompose, /\$\{PROXY_HTTPS_BIND:-0\.0\.0\.0\}:\$\{PROXY_HTTPS_PORT:-443\}:443/);
+  assert.match(proxyCompose, /external: true/);
+  assert.match(proxyCompose, /name: \$\{TRIDE_PROD_NETWORK:-tride-prod-net\}/);
+  assert.match(productionEnv, /API_BASE_URL=\/api/);
+  assert.match(productionEnv, /TRIDE_API_BASE_URL=\/api/);
+  assert.match(productionEnv, /SOCKET_URL=https:\/\/ride\.example\.com/);
+  assert.match(productionEnv, /CORS_ORIGIN=https:\/\/ride\.example\.com/);
+  assert.match(productionEnv, /PUBLIC_API_URL=https:\/\/ride\.example\.com\/api/);
+  assert.match(productionCompose, /PUBLIC_API_URL: \$\{PUBLIC_API_URL:\?Set PUBLIC_API_URL in \.env\.production\}/);
+  assert.doesNotMatch(combined, /88taxi\.net/);
+  assert.doesNotMatch(combined, /\/opt\/ktaxi/);
+  assert.doesNotMatch(combined, /ktaxi-/);
+});
