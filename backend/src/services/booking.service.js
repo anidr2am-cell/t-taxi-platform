@@ -308,7 +308,7 @@ class BookingService {
         recommendedVehicleTypeId,
         vehicleCount: input.vehicleCount ?? 1,
         routeId: pricing.routeId,
-        totalAmount: pricing.totalAmount,
+        totalAmount: 0,
         currency: pricing.currency,
         paymentStatus: 'UNPAID',
         paymentMethod: PAYMENT_METHODS.PAY_DRIVER,
