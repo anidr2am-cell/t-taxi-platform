@@ -21,6 +21,18 @@ Customer reviews are available in `SETTLEMENT_PENDING` and `COMPLETED`. Administ
 - UI: `http://103.60.127.213:3101`
 - RC baseline: [docs/STAGING_COMMERCIALIZATION_RC.md](docs/STAGING_COMMERCIALIZATION_RC.md)
 
+## Production readiness
+
+Production is tracked separately from staging and is not approved until the
+readiness checklist, deployment runbook, migration checklist, backup/restore
+rehearsal, and admin recovery procedure are complete.
+
+- Readiness: [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md)
+- Deployment runbook: [docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md](docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md)
+- Migration checklist: [docs/PRODUCTION_MIGRATION_CHECKLIST.md](docs/PRODUCTION_MIGRATION_CHECKLIST.md)
+- Backup/restore: [docs/BACKUP_RESTORE_RUNBOOK.md](docs/BACKUP_RESTORE_RUNBOOK.md)
+- Admin recovery: [docs/ADMIN_ACCOUNT_RECOVERY.md](docs/ADMIN_ACCOUNT_RECOVERY.md)
+
 ## Safety
 
 T-Ride is isolated from legacy KTaxi. Never modify `/opt/ktaxi`, `ktaxi-*`, `ktaxi-nginx`, host 80/443, `88taxi.net`, `infra_*`, or legacy databases.

@@ -1,0 +1,137 @@
+# T-Ride production Docker Compose draft.
+#
+# This file is intentionally separated from staging. It must be reviewed with the
+# production runbook before use. Do not run it against legacy KTaxi/TTaxi assets.
+#
+# Safety rules:
+# - Do not bind host 80/443 here. Put TLS/reverse proxy routing in a separate,
+#   reviewed production proxy change.
+# - Do not expose the DB port to the host.
+# - Do not use staging volumes, networks, DB names, or containers.
+# - Do not use the full migration runner against an existing production DB.
+
+name: tride-production
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-5}
+
+services:
+  tride-prod-db:
+    image: mariadb:10.11
+    container_name: tride-prod-db
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env.production}
+      MYSQL_DATABASE: ${DB_NAME:?Set DB_NAME in .env.production}
+      MYSQL_USER: ${DB_USER:?Set DB_USER in .env.production}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.production}
+      TZ: ${TZ:-Asia/Bangkok}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+07:00
+    volumes:
+      - tride_prod_mysql_data:/var/lib/mysql
+    networks:
+      - tride-prod-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  tride-prod-backend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.backend
+    container_name: tride-prod-backend
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      tride-prod-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: tride-prod-db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:?Set DB_NAME in .env.production}
+      DB_USER: ${DB_USER:?Set DB_USER in .env.production}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.production}
+      CORS_ORIGIN: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS in .env.production}
+      PUBLIC_API_URL: ${BACKEND_PUBLIC_URL:?Set BACKEND_PUBLIC_URL in .env.production}
+      UPLOAD_DIR: /srv/tride/uploads
+      UPLOAD_MAX_FILE_SIZE_MB: ${UPLOAD_MAX_FILE_SIZE_MB:-10}
+      LOG_DIR: /srv/tride/logs
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET in .env.production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env.production}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-1h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      AVIATIONSTACK_API_KEY: ${AVIATIONSTACK_API_KEY:-}
+      AVIATIONSTACK_BASE_URL: ${AVIATIONSTACK_BASE_URL:-http://api.aviationstack.com/v1}
+      FLIGHT_SYNC_ENABLED: ${FLIGHT_SYNC_ENABLED:-false}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-T-Ride}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      ALLOW_DEV_QR_REISSUE: ${ALLOW_DEV_QR_REISSUE:-false}
+      TZ: ${TZ:-Asia/Bangkok}
+    ports:
+      - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:?Set BACKEND_PORT in .env.production}:3000"
+    volumes:
+      - tride_prod_uploads:/srv/tride/uploads
+      - tride_prod_logs:/srv/tride/logs
+    networks:
+      - tride-prod-net
+
+  tride-prod-frontend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.frontend
+      args:
+        API_BASE_URL: ${API_BASE_URL:?Set API_BASE_URL in .env.production}
+        SOCKET_URL: ${SOCKET_URL:?Set SOCKET_URL in .env.production}
+    container_name: tride-prod-frontend
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      tride-prod-backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:?Set FRONTEND_PORT in .env.production}:80"
+    networks:
+      - tride-prod-net
+
+networks:
+  tride-prod-net:
+    name: tride-prod-net
+    driver: bridge
+
+volumes:
+  tride_prod_mysql_data:
+    name: tride_prod_mysql_data
+  tride_prod_uploads:
+    name: tride_prod_uploads
+  tride_prod_logs:
+    name: tride_prod_logs

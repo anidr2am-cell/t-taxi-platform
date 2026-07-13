@@ -1,4 +1,4 @@
-# T-Ride Staging Docker
+# T-Ride Docker
 
 Isolated staging stack beside legacy KTaxi.
 
@@ -12,6 +12,29 @@ Isolated staging stack beside legacy KTaxi.
 | Volumes | `tride_mysql_data`, `tride_uploads`, `tride_logs` |
 
 The backend image contains the database directory at `/srv/tride/database`. This does not authorize running the full migration runner.
+
+## Production Draft
+
+Production planning files are separate from staging:
+
+| Item | Value |
+|---|---|
+| Compose draft | `deploy/docker/docker-compose.production.yml` |
+| Env template | `deploy/docker/.env.production.example` |
+| Project name | `tride-production` |
+| Services | `tride-prod-db`, `tride-prod-backend`, `tride-prod-frontend` |
+| Network | `tride-prod-net` |
+| Volumes | `tride_prod_mysql_data`, `tride_prod_uploads`, `tride_prod_logs` |
+
+The production draft does not bind host 80/443 and does not expose the DB port.
+TLS and reverse proxy routing require a separate reviewed production change.
+Read these documents before any production work:
+
+- `docs/PRODUCTION_READINESS.md`
+- `docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md`
+- `docs/PRODUCTION_MIGRATION_CHECKLIST.md`
+- `docs/BACKUP_RESTORE_RUNBOOK.md`
+- `docs/ADMIN_ACCOUNT_RECOVERY.md`
 
 ## Selective Deployment
 
