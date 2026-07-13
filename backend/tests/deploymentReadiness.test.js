@@ -239,3 +239,57 @@ test('frontend Dockerfile requires explicit production API and socket build args
   assert.match(dockerfile, /SOCKET_URL is required when APP_ENV=production/);
   assert.match(dockerfile, /EFFECTIVE_API_BASE_URL="\$\{API_BASE_URL:-http:\/\/localhost:3100\}"/);
 });
+
+test('backend Dockerfile separates staging and production runtime images', () => {
+  const dockerfile = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'Dockerfile.backend'),
+    'utf8',
+  );
+  const stageNames = [...dockerfile.matchAll(/^FROM .+ AS ([a-z-]+)$/gm)].map((match) => match[1]);
+  const productionStage = dockerfile.match(/^FROM base AS production\r?\n([\s\S]*?)^FROM base AS staging/m)[1];
+
+  assert.deepEqual(stageNames, ['base', 'staging-deps', 'production-deps', 'production', 'staging']);
+  assert.match(dockerfile, /^FROM node:22-alpine AS base$/m);
+  assert.match(dockerfile, /^FROM base AS production-deps$/m);
+  assert.match(dockerfile, /^FROM base AS production$/m);
+  assert.match(dockerfile, /^FROM base AS staging$/m);
+  assert.match(dockerfile, /npm ci --omit=dev/);
+  assert.match(productionStage, /RUN mkdir -p \/srv\/tride\/uploads \/srv\/tride\/logs \/srv\/tride\/backend\/scripts/);
+  assert.match(productionStage, /RUN chown -R node:node \/srv\/tride/);
+  assert.match(dockerfile, /COPY backend\/src \.\/src/);
+  assert.match(dockerfile, /COPY backend\/scripts\/createAdminUser\.js \.\/scripts\/createAdminUser\.js/);
+  assert.match(dockerfile, /^USER node$/m);
+  assert.match(dockerfile, /ENTRYPOINT \["\/sbin\/tini", "--"\]/);
+  assert.match(dockerfile, /CMD \["node", "src\/server\.js"\]/);
+  assert.match(dockerfile, /fetch\('http:\/\/127\.0\.0\.1:3000\/api\/v1\/health'\)/);
+  assert.doesNotMatch(productionStage, /COPY backend\/ \.\/backend\//);
+  assert.doesNotMatch(productionStage, /COPY database\/ \.\/database\//);
+  assert.doesNotMatch(productionStage, /npm ci --include=dev/);
+});
+
+test('production compose uses the hardened backend production target', () => {
+  const compose = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'docker-compose.production.yml'),
+    'utf8',
+  );
+
+  assert.match(compose, /dockerfile: deploy\/docker\/Dockerfile\.backend\s+target: production/);
+  assert.match(compose, /UPLOAD_DIR: \/srv\/tride\/uploads/);
+  assert.match(compose, /LOG_DIR: \/srv\/tride\/logs/);
+  assert.match(compose, /tride_prod_uploads:\/srv\/tride\/uploads/);
+  assert.match(compose, /tride_prod_logs:\/srv\/tride\/logs/);
+  assert.match(compose, /security_opt:\s+- no-new-privileges:true/);
+});
+
+test('staging compose explicitly uses the backend staging target', () => {
+  const compose = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'docker-compose.staging.yml'),
+    'utf8',
+  );
+
+  assert.match(compose, /dockerfile: deploy\/docker\/Dockerfile\.backend\s+target: staging/);
+  assert.match(compose, /container_name: tride-backend/);
+  assert.match(compose, /\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
+  assert.match(compose, /tride_uploads:\/srv\/tride\/uploads/);
+  assert.match(compose, /tride_logs:\/srv\/tride\/logs/);
+});

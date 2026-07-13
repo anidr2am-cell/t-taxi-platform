@@ -41,7 +41,7 @@ item is DONE and the owner explicitly approves the deployment window.
 | Staging/test data removal | TODO | Confirm no demo accounts, demo bookings, test reservations, or rehearsal data are present in production DB. |
 | Production seed blocked | TODO | Verify `NODE_ENV=production` and never run demo seed scripts against production. |
 | Frontend URL fail-fast | DONE | `APP_ENV=production` now requires explicit production API/SOCKET URLs and rejects localhost at Docker build/runtime config validation. Docker build itself still needs validation on a Docker-enabled host. |
-| Production runtime image hardening | TODO | Current backend Dockerfile is staging-oriented and includes devDependencies. A production runtime image/target should be created before final launch. |
+| Production runtime image hardening | IN PROGRESS | Backend Dockerfile now has a production target with production dependencies only, non-root `node` user, direct `node src/server.js` startup, and minimal runtime files. Docker build validation on a Docker-enabled host is still required. |
 
 ## Fail-fast audit
 
@@ -54,6 +54,7 @@ item is DONE and the owner explicitly approves the deployment window.
 | Frontend API URL | Flutter config keeps localhost fallback only outside production. `APP_ENV=production` fails when `API_BASE_URL` is missing, localhost, or invalid. | Docker build still needs validation on a Docker-enabled host. | Run compose/build validation before production. |
 | Frontend Dockerfile | `API_BASE_URL` and `SOCKET_URL` build args have no Docker ARG defaults. `APP_ENV=production` requires both values and rejects localhost. Non-production builds still use a local fallback when no API URL is passed. | Direct Docker build without `APP_ENV=production` is not a production build. | Production compose passes `APP_ENV=production`. |
 | Upload root | Backend defaults to local `./uploads` outside production. `NODE_ENV=production` requires explicit `UPLOAD_DIR` and `LOG_DIR`. | Direct production process must provide env values. | Keep env checklist mandatory. |
+| Backend upload/log volume permissions | Production image prepares `/srv/tride/uploads` and `/srv/tride/logs` as `node:node` before `USER node`; production compose mounts named volumes to those same paths. | Existing volumes or external bind mounts may preserve incompatible ownership. | Verify UID/GID and write permissions before reusing any existing production volume. |
 
 ## Recommended production topology
 

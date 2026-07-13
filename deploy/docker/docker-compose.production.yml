@@ -53,9 +53,12 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.backend
+      target: production
     container_name: tride-prod-backend
     restart: unless-stopped
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       tride-prod-db:
         condition: service_healthy
