@@ -41,6 +41,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   String? _settlementError;
   bool _submitting = false;
   final _noteController = TextEditingController();
+  final _manualSettlementNoteController = TextEditingController();
   List<Map<String, dynamic>> _notes = [];
   String? _notesError;
   bool _addingNote = false;
@@ -48,6 +49,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   @override
   void dispose() {
     _noteController.dispose();
+    _manualSettlementNoteController.dispose();
     super.dispose();
   }
 
@@ -153,6 +155,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   bool get _canConfirmSettlement =>
       _detail?['status'] == 'SETTLEMENT_PENDING' &&
       settlementCanApprove(_settlement);
+
+  bool get _canManualApproveSettlement =>
+      _detail?['status'] == 'SETTLEMENT_PENDING' &&
+      _settlement?['canManualApprove'] == true;
 
   Future<void> _viewTransferSlip() async {
     final l10n = context.l10n;
@@ -360,6 +366,89 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _manualApproveSettlement() async {
+    if (_submitting) return;
+    _manualSettlementNoteController.clear();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_manualSettlementText(context, 'title')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_manualSettlementText(context, 'body')),
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              _manualSettlementText(context, 'warning'),
+              style: const TextStyle(
+                color: AppTokens.warning,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: AppTokens.spaceMd),
+            TextField(
+              controller: _manualSettlementNoteController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: _manualSettlementText(context, 'note_label'),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_manualSettlementText(context, 'cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (_manualSettlementNoteController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      _manualSettlementText(context, 'note_required'),
+                    ),
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(context, true);
+            },
+            child: Text(_manualSettlementText(context, 'confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    try {
+      await widget.settlementApi.manualApprove(
+        widget.bookingNumber,
+        _manualSettlementNoteController.text.trim(),
+      );
+      widget.onChanged();
+      await _load();
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: context.l10n.t('ui_action_failed'),
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -663,6 +752,14 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         icon: Icons.payments_outlined,
         loading: _submitting,
         onPressed: _submitting ? null : _confirmSettlement,
+      );
+    }
+    if (_canManualApproveSettlement) {
+      return AppUi.primaryButton(
+        label: _manualSettlementText(context, 'button'),
+        icon: Icons.verified_user_outlined,
+        loading: _submitting,
+        onPressed: _submitting ? null : _manualApproveSettlement,
       );
     }
     if (primaryCta == 'OPEN_CHAT') {
@@ -1147,7 +1244,29 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             style: const TextStyle(color: AppTokens.error),
           )
         else if (!_hasTransferSlip)
-          Text(l10n.t('admin_settlement_waiting_slip'))
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.t('admin_settlement_waiting_slip')),
+              if (_canManualApproveSettlement) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                Text(
+                  _manualSettlementText(context, 'section_hint'),
+                  style: const TextStyle(
+                    color: AppTokens.warning,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceSm),
+                AppUi.primaryButton(
+                  label: _manualSettlementText(context, 'button'),
+                  icon: Icons.verified_user_outlined,
+                  loading: _submitting,
+                  onPressed: _submitting ? null : _manualApproveSettlement,
+                ),
+              ],
+            ],
+          )
         else
           AppUi.secondaryButton(
             label: l10n.t('admin_settlement_view_slip'),
@@ -1317,4 +1436,49 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   num? _chargeAmount(dynamic raw) {
     return Map<String, dynamic>.from(raw as Map)['amount'] as num?;
   }
+}
+
+String _manualSettlementText(BuildContext context, String key) {
+  final language = Localizations.localeOf(context).languageCode;
+  const values = {
+    'en': {
+      'button': 'Manual settlement approval',
+      'title': 'Manual settlement approval',
+      'body':
+          'No transfer slip has been uploaded. Have you confirmed the actual deposit or separate settlement?',
+      'warning':
+          'This settlement will be marked complete. If the driver has no other unresolved settlements, they can receive new calls again.',
+      'confirm': 'Confirm approval',
+      'note_label': 'Approval reason or confirmation note',
+      'note_required': 'Please enter an approval note.',
+      'section_hint':
+          'Use only after confirming payment outside the transfer slip flow.',
+      'cancel': 'Cancel',
+    },
+    'ko': {
+      'button': '수동 정산 승인',
+      'title': '수동 정산 승인',
+      'body': '송금증이 업로드되지 않았습니다. 실제 입금 또는 별도 정산이 완료된 것을 확인하셨습니까?',
+      'warning': '이 정산 건이 완료 처리됩니다. 다른 미정산 건이 없으면 해당 기사님은 다시 신규 콜을 받을 수 있습니다.',
+      'confirm': '확인 후 승인',
+      'note_label': '승인 사유 또는 확인 내용',
+      'note_required': '승인 메모를 입력해 주세요.',
+      'section_hint': '송금증 없이 외부 입금 확인이 끝난 경우에만 사용하세요.',
+      'cancel': '취소',
+    },
+    'th': {
+      'button': 'อนุมัติการชำระด้วยตนเอง',
+      'title': 'อนุมัติการชำระด้วยตนเอง',
+      'body':
+          'ยังไม่มีการอัปโหลดสลิปโอนเงิน คุณยืนยันการรับเงินหรือการชำระแยกแล้วใช่หรือไม่?',
+      'warning':
+          'รายการชำระนี้จะถูกทำเครื่องหมายว่าเสร็จสิ้น หากคนขับไม่มีรายการค้างชำระอื่น จะสามารถรับงานใหม่ได้อีกครั้ง',
+      'confirm': 'ยืนยันการอนุมัติ',
+      'note_label': 'เหตุผลหรือบันทึกการยืนยัน',
+      'note_required': 'กรุณากรอกบันทึกการอนุมัติ',
+      'section_hint': 'ใช้เฉพาะเมื่อยืนยันการชำระเงินนอกขั้นตอนสลิปโอนเงินแล้ว',
+      'cancel': 'ยกเลิก',
+    },
+  };
+  return values[language]?[key] ?? values['en']![key] ?? key;
 }

@@ -272,6 +272,207 @@ test('successful approval is idempotent', async () => {
   assert.equal(activityLogs, 0);
 });
 
+test('manual approval without receipt marks settlement paid and records audit metadata', async () => {
+  let savedFields = null;
+  let activityLog = null;
+  let transitionRequest = null;
+  let outboxPayload = null;
+  const bookingRepo = {
+    async findSettlementByBookingNumberForUpdate() {
+      return settlementRow({
+        status: 'SETTLEMENT_PENDING',
+        commission_receipt_file_id: null,
+        commission_status: COMMISSION_STATUS.DUE,
+        commission_amount: 200,
+      });
+    },
+    async updateCommissionFields(_conn, _id, fields) {
+      savedFields = fields;
+    },
+    async insertActivityLog(_conn, _id, log) {
+      activityLog = log;
+    },
+    async findSettlementByBookingNumber() {
+      return settlementRow({
+        status: 'COMPLETED',
+        commission_status: COMMISSION_STATUS.PAID,
+        commission_amount: 200,
+        commission_paid_at: savedFields.commissionPaidAt,
+        metadata: savedFields.metadata,
+      });
+    },
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+    async query() {
+      return [[{ driver_id: 5, driver_user_id: 44 }]];
+    },
+  };
+  const service = new CommissionSettlementService(
+    { async getConnection() { return conn; } },
+    bookingRepo,
+    {},
+    {},
+    {},
+    {
+      async insertNotificationEvent(_conn, event) {
+        outboxPayload = event.payload;
+        return 77;
+      },
+    },
+    { async dispatchOutboxIds() {} },
+    {
+      async transitionInTransaction(_conn, bookingNumber, request) {
+        transitionRequest = { bookingNumber, request };
+        return { outboxId: 88, domainEvent: null, eventPayload: null };
+      },
+      async dispatchOutboxAfterCommit() {},
+      emitDomainEvent() {},
+    },
+  );
+
+  const result = await service.manualApproveWithoutReceipt(
+    'TX202607010001',
+    'Bank transfer confirmed by administrator',
+    { id: 1, role: ROLES.SUPER_ADMIN },
+  );
+
+  assert.equal(savedFields.commissionStatus, COMMISSION_STATUS.PAID);
+  assert.equal(savedFields.metadata.commissionApprovalMode, 'MANUAL_WITHOUT_RECEIPT');
+  assert.equal(savedFields.metadata.commissionApprovalNote, 'Bank transfer confirmed by administrator');
+  assert.equal(savedFields.metadata.commissionApprovedByUserId, 1);
+  assert.equal(savedFields.metadata.commissionReceiptMissingAtApproval, true);
+  assert.equal(activityLog.activityType, 'MANUAL_SETTLEMENT_APPROVED_WITHOUT_RECEIPT');
+  assert.equal(activityLog.payload.approvalMode, 'MANUAL_WITHOUT_RECEIPT');
+  assert.equal(transitionRequest.request.status, 'COMPLETED');
+  assert.equal(outboxPayload.approvalMode, 'MANUAL_WITHOUT_RECEIPT');
+  assert.equal(result.commissionStatus, 'APPROVED');
+  assert.equal(result.approval.mode, 'MANUAL_WITHOUT_RECEIPT');
+});
+
+test('manual approval requires a note', async () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  await assert.rejects(
+    () => service.manualApproveWithoutReceipt(
+      'TX202607010001',
+      '   ',
+      { id: 1, role: ROLES.ADMIN },
+    ),
+    (err) => err.errorCode === ERROR_CODES.ADMIN_APPROVAL_NOTE_REQUIRED,
+  );
+});
+
+test('manual approval is rejected when a receipt exists', async () => {
+  const bookingRepo = {
+    async findSettlementByBookingNumberForUpdate() {
+      return settlementRow({
+        status: 'SETTLEMENT_PENDING',
+        commission_receipt_file_id: 42,
+        receipt_mime_type: 'image/png',
+        commission_status: COMMISSION_STATUS.DUE,
+      });
+    },
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const service = new CommissionSettlementService(
+    { async getConnection() { return conn; } },
+    bookingRepo,
+    {},
+    {},
+    {},
+  );
+
+  await assert.rejects(
+    () => service.manualApproveWithoutReceipt(
+      'TX202607010001',
+      'Confirmed elsewhere',
+      { id: 1, role: ROLES.ADMIN },
+    ),
+    (err) => err.errorCode === ERROR_CODES.SETTLEMENT_MANUAL_APPROVAL_NOT_ALLOWED,
+  );
+});
+
+test('manual approval rejects already approved settlements with 409 code', async () => {
+  const bookingRepo = {
+    async findSettlementByBookingNumberForUpdate() {
+      return settlementRow({
+        status: 'COMPLETED',
+        commission_status: COMMISSION_STATUS.PAID,
+      });
+    },
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const service = new CommissionSettlementService(
+    { async getConnection() { return conn; } },
+    bookingRepo,
+    {},
+    {},
+    {},
+  );
+
+  await assert.rejects(
+    () => service.manualApproveWithoutReceipt(
+      'TX202607010001',
+      'Confirmed elsewhere',
+      { id: 1, role: ROLES.ADMIN },
+    ),
+    (err) => err.statusCode === 409
+      && err.errorCode === ERROR_CODES.SETTLEMENT_ALREADY_APPROVED,
+  );
+});
+
+test('manual approve endpoint requires admin role and note body', async () => {
+  const driverRes = await request(app)
+    .post('/api/v1/admin/settlements/TX202607010001/manual-approve')
+    .set('Authorization', `Bearer ${sign('DRIVER', 44)}`)
+    .send({ note: 'confirmed' });
+  assert.equal(driverRes.status, 403);
+
+  const adminRes = await request(app)
+    .post('/api/v1/admin/settlements/TX202607010001/manual-approve')
+    .set('Authorization', `Bearer ${sign('ADMIN', 1)}`)
+    .send({});
+  assert.equal(adminRes.status, 400);
+});
+
+test('manual approve endpoint rejects inactive admin token', async () => {
+  container.register('userRepository', () => ({
+    async findById() {
+      return {
+        id: 1,
+        email: 'admin@example.com',
+        role: ROLES.ADMIN,
+        is_active: 0,
+      };
+    },
+  }));
+  container.register('commissionSettlementService', () => ({
+    async manualApproveWithoutReceipt() {
+      throw new Error('manual approval should not be reached');
+    },
+  }));
+
+  const res = await request(app)
+    .post('/api/v1/admin/settlements/TX202607010001/manual-approve')
+    .set('Authorization', `Bearer ${sign('ADMIN', 1)}`)
+    .send({ note: 'confirmed in bank account' });
+
+  assert.equal(res.status, 403);
+});
+
 test('rejection requires reason via validator', async () => {
   const res = await request(app)
     .post('/api/v1/admin/settlements/TX202607010001/reject')

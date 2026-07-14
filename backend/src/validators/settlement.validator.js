@@ -22,8 +22,13 @@ const settlementRejectSchema = Joi.object({
   reason: Joi.string().trim().min(1).max(500).required(),
 });
 
+const settlementManualApproveSchema = Joi.object({
+  note: Joi.string().trim().min(1).max(500).required(),
+});
+
 module.exports = {
   bookingNumberParamsSchema,
   adminSettlementListQuerySchema,
   settlementRejectSchema,
+  settlementManualApproveSchema,
 };
