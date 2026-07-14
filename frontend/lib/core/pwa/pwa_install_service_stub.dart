@@ -19,6 +19,9 @@ class StubPwaInstallService extends PwaInstallService {
   bool get isIos => false;
 
   @override
+  bool get isInAppBrowser => false;
+
+  @override
   Future<PwaInstallResult> promptInstall() async =>
       PwaInstallResult.unavailable;
 }

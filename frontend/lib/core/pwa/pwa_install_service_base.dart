@@ -14,6 +14,7 @@ abstract class PwaInstallService extends ChangeNotifier {
   bool get isInstalled;
   bool get canPromptInstall;
   bool get isIos;
+  bool get isInAppBrowser;
 
   Future<PwaInstallResult> promptInstall();
 }

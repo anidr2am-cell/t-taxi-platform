@@ -23,6 +23,16 @@
       let pwaInstalled = false;
       let listenerId = 0;
       const listeners = new Map();
+      const debugPwaInstall = true;
+
+      function logPwaInstall(message, detail) {
+        if (!debugPwaInstall || !window.console) return;
+        if (detail === undefined) {
+          console.debug('[T-Ride PWA]', message);
+        } else {
+          console.debug('[T-Ride PWA]', message, detail);
+        }
+      }
 
       function notifyPwaListeners() {
         listeners.forEach((listener) => {
@@ -35,13 +45,16 @@
       }
 
       window.addEventListener('beforeinstallprompt', (event) => {
+        logPwaInstall('beforeinstallprompt fired');
         event.preventDefault();
         deferredPwaInstallPrompt = event;
+        logPwaInstall('deferred prompt stored');
         window.dispatchEvent(new CustomEvent('tride-pwa-install-available'));
         notifyPwaListeners();
       });
 
       window.addEventListener('appinstalled', () => {
+        logPwaInstall('appinstalled fired');
         pwaInstalled = true;
         deferredPwaInstallPrompt = null;
         window.dispatchEvent(new CustomEvent('tride-pwa-installed'));
@@ -66,7 +79,9 @@
       };
 
       window.tridePwaCanInstall = function () {
-        return Boolean(deferredPwaInstallPrompt && !window.tridePwaIsInstalled());
+        const result = Boolean(deferredPwaInstallPrompt && !window.tridePwaIsInstalled());
+        logPwaInstall('tridePwaCanInstall result', result);
+        return result;
       };
 
       window.tridePwaIsIos = function () {
@@ -74,6 +89,11 @@
         const userAgent = (navigator.userAgent || '').toLowerCase();
         const touchMac = platform === 'macintel' && navigator.maxTouchPoints > 1;
         return /iphone|ipad|ipod/.test(userAgent) || touchMac;
+      };
+
+      window.tridePwaIsInAppBrowser = function () {
+        const userAgent = (navigator.userAgent || '').toLowerCase();
+        return /kakaotalk|line\/|fbav|fb_iab|instagram|naver|daumapps|wv;|; wv\)/.test(userAgent);
       };
 
       window.tridePwaPromptInstall = async function () {
@@ -85,8 +105,10 @@
         notifyPwaListeners();
 
         try {
+          logPwaInstall('prompt invoked');
           await promptEvent.prompt();
           const choice = await promptEvent.userChoice;
+          logPwaInstall('userChoice result', choice && choice.outcome);
           return choice && choice.outcome === 'accepted' ? 'accepted' : 'dismissed';
         } catch (_) {
           return 'error';
@@ -98,6 +120,7 @@
       window.tridePwaSubscribe = function (listener) {
         listenerId += 1;
         listeners.set(listenerId, listener);
+        logPwaInstall('Flutter subscribed', listenerId);
         return listenerId;
       };
 
