@@ -236,12 +236,17 @@ class _FakeAdminApi extends AdminDispatchApiService {
 }
 
 class _FakeSettlementApi extends AdminSettlementApiService {
-  _FakeSettlementApi({required this.detail, this.approveError});
+  _FakeSettlementApi({
+    required this.detail,
+    this.approveError,
+  });
 
   final Map<String, dynamic> detail;
   final Object? approveError;
   int approveCalls = 0;
+  int manualApproveCalls = 0;
   int receiptCalls = 0;
+  String? manualApproveNote;
 
   @override
   Future<Map<String, dynamic>> getSettlement(String bookingNumber) async =>
@@ -252,6 +257,20 @@ class _FakeSettlementApi extends AdminSettlementApiService {
     approveCalls += 1;
     if (approveError != null) throw approveError!;
     return {...detail, 'commissionStatus': 'APPROVED'};
+  }
+
+  @override
+  Future<Map<String, dynamic>> manualApprove(
+    String bookingNumber,
+    String note,
+  ) async {
+    manualApproveCalls += 1;
+    manualApproveNote = note;
+    return {
+      ...detail,
+      'commissionStatus': 'APPROVED',
+      'approval': {'mode': 'MANUAL_WITHOUT_RECEIPT', 'note': note},
+    };
   }
 
   @override
@@ -919,39 +938,66 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
   });
 
-  testWidgets('settlement pending without transfer slip hides confirmation', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AdminBookingDetailPage(
-          bookingNumber: 'TX202607010001',
-          api: _FakeAdminApi(detailResponse: _settlementPendingDetail()),
-          settlementApi: _FakeSettlementApi(
-            detail: {
-              'bookingNumber': 'TX202607010001',
-              'commissionStatus': 'PENDING',
-              'commissionAmount': 200,
-              'currency': 'THB',
-            },
+  testWidgets(
+    'settlement pending without transfer slip allows manual approval',
+    (tester) async {
+      final settlementApi = _FakeSettlementApi(
+        detail: {
+          'bookingNumber': 'TX202607010001',
+          'commissionStatus': 'PENDING',
+          'commissionAmount': 200,
+          'currency': 'THB',
+          'canManualApprove': true,
+        },
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(detailResponse: _settlementPendingDetail()),
+            settlementApi: settlementApi,
+            onChanged: () {},
           ),
-          onChanged: () {},
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Settlement confirmation'), findsOneWidget);
-    expect(find.text('PENDING'), findsOneWidget);
-    expect(
-      find.text(
-        'Payment can be confirmed after the driver uploads the transfer slip.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Confirm 200 THB received'), findsNothing);
-    expect(find.text('View transfer slip'), findsNothing);
-  });
+      expect(find.text('Settlement confirmation'), findsOneWidget);
+      expect(find.text('PENDING'), findsOneWidget);
+      expect(
+        find.text(
+          'Payment can be confirmed after the driver uploads the transfer slip.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Confirm 200 THB received'), findsNothing);
+      expect(find.text('View transfer slip'), findsNothing);
+      expect(find.text('Manual settlement approval'), findsWidgets);
+
+      await tester.ensureVisible(find.text('Manual settlement approval').last);
+      await tester.tap(find.text('Manual settlement approval').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('No transfer slip has been uploaded'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Confirm approval'));
+      await tester.pumpAndSettle();
+      expect(find.text('Please enter an approval note.'), findsOneWidget);
+      expect(settlementApi.manualApproveCalls, 0);
+
+      await tester.enterText(
+        find.byType(TextField).last,
+        'Verified bank deposit manually',
+      );
+      await tester.tap(find.text('Confirm approval'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(settlementApi.manualApproveCalls, 1);
+      expect(settlementApi.manualApproveNote, 'Verified bank deposit manually');
+    },
+  );
 
   testWidgets('submitted transfer slip can be viewed and confirmed', (
     tester,

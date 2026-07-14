@@ -7,6 +7,7 @@ const ROLES = require('../constants/roles');
 const {
   bookingNumberParamsSchema,
   adminSettlementListQuerySchema,
+  settlementManualApproveSchema,
   settlementRejectSchema,
 } = require('../validators/settlement.validator');
 
@@ -32,6 +33,13 @@ router.post(
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   settlementController.approveSettlement,
+);
+
+router.post(
+  '/settlements/:bookingNumber/manual-approve',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: settlementManualApproveSchema }),
+  settlementController.manualApproveSettlement,
 );
 
 router.post(

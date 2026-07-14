@@ -5,8 +5,27 @@ const config = require('../config');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const ROLES = require('../constants/roles');
 
 const getSettlementService = () => container.get('commissionSettlementService');
+const getUserRepository = () => container.get('userRepository');
+
+async function assertActiveSettlementAdmin(user) {
+  const actor = await getUserRepository().findById(user.id);
+  if (!actor
+    || !actor.is_active
+    || ![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(actor.role)) {
+    throw new AppError('Insufficient permissions', {
+      statusCode: HTTP_STATUS.FORBIDDEN,
+      errorCode: ERROR_CODES.FORBIDDEN,
+    });
+  }
+  return {
+    id: actor.id,
+    email: actor.email,
+    role: actor.role,
+  };
+}
 
 function settlementApiBase(segment) {
   return `/api/${config.server.apiVersion}/${segment}`;
@@ -76,6 +95,16 @@ const approveSettlement = asyncHandler(async (req, res) => {
   return success(res, data, 'Settlement approved');
 });
 
+const manualApproveSettlement = asyncHandler(async (req, res) => {
+  const actor = await assertActiveSettlementAdmin(req.user);
+  const data = await getSettlementService().manualApproveWithoutReceipt(
+    req.params.bookingNumber,
+    req.body.note,
+    actor,
+  );
+  return success(res, data, 'Settlement manually approved');
+});
+
 const rejectSettlement = asyncHandler(async (req, res) => {
   const data = await getSettlementService().reject(
     req.params.bookingNumber,
@@ -120,6 +149,7 @@ module.exports = {
   listAdminSettlements,
   getAdminSettlement,
   approveSettlement,
+  manualApproveSettlement,
   rejectSettlement,
   getAdminReceipt,
   handleUploadError,

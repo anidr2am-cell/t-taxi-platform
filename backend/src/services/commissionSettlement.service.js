@@ -11,6 +11,10 @@ const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
 
 const ADMIN_RECONCILE_BATCH_LIMIT = 100;
+const APPROVAL_MODES = {
+  RECEIPT_VERIFIED: 'RECEIPT_VERIFIED',
+  MANUAL_WITHOUT_RECEIPT: 'MANUAL_WITHOUT_RECEIPT',
+};
 
 function settlementApiBase(segment) {
   const config = require('../config');
@@ -188,6 +192,14 @@ class CommissionSettlementService {
     return this.hasCommissionReceipt(row);
   }
 
+  computeCanManualApprove(row, metadata) {
+    if (row.status !== 'SETTLEMENT_PENDING') return false;
+    if (row.commission_status === COMMISSION_STATUS.PAID) return false;
+    if (this.isReceiptRejected(row, metadata)) return false;
+    if (this.hasCommissionReceipt(row)) return false;
+    return Number(row.commission_amount) > 0;
+  }
+
   mapSettlementListItem(row, apiBasePath, role) {
     const metadata = this.parseMetadata(row.metadata);
     const commissionStatus = this.mapPublicCommissionStatus(row, metadata);
@@ -208,6 +220,11 @@ class CommissionSettlementService {
       receiptSubmittedAt: row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
       receiptUploadedAt: row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
       rejectionReason: metadata.commissionRejectionReason ?? null,
+      approvalMode: metadata.commissionApprovalMode ?? null,
+      approvalNote: metadata.commissionApprovalNote ?? null,
+      approvedByUserId: metadata.commissionApprovedByUserId ?? null,
+      approvalRecordedAt: metadata.commissionApprovedAt ?? row.commission_paid_at ?? null,
+      receiptMissingAtApproval: metadata.commissionReceiptMissingAtApproval ?? false,
     };
     if (this.hasCommissionReceipt(row)) {
       item.receiptFileId = Number(row.commission_receipt_file_id);
@@ -217,6 +234,7 @@ class CommissionSettlementService {
       item.driverName = row.driver_name;
       item.driverPhone = row.driver_phone;
       item.canApprove = this.computeCanApprove(row, metadata);
+      item.canManualApprove = this.computeCanManualApprove(row, metadata);
     }
     if (this.hasCommissionReceipt(row) && apiBasePath) {
       item.receiptUrl = `${apiBasePath}/${row.booking_number}/receipt`;
@@ -242,6 +260,13 @@ class CommissionSettlementService {
         phone: row.driver_phone,
       },
       commissionPaidAt: row.commission_paid_at,
+      approval: {
+        mode: metadata.commissionApprovalMode ?? null,
+        note: metadata.commissionApprovalNote ?? null,
+        approvedByUserId: metadata.commissionApprovedByUserId ?? null,
+        approvedAt: metadata.commissionApprovedAt ?? row.commission_paid_at ?? null,
+        receiptMissingAtApproval: metadata.commissionReceiptMissingAtApproval ?? false,
+      },
       receiptMetadata: this.hasCommissionReceipt(row)
         ? {
             mimeType: row.receipt_mime_type,
@@ -733,12 +758,19 @@ class CommissionSettlementService {
       }
 
       const metadata = this.parseMetadata(row.metadata);
+      const approvedAt = new Date().toISOString();
       const reviewEntry = {
         action: 'APPROVED',
+        approvalMode: APPROVAL_MODES.RECEIPT_VERIFIED,
         reviewedByUserId: user.id,
-        reviewedAt: new Date().toISOString(),
+        reviewedAt: approvedAt,
       };
       metadata.commissionReviewHistory = [...(metadata.commissionReviewHistory ?? []), reviewEntry];
+      metadata.commissionApprovalMode = APPROVAL_MODES.RECEIPT_VERIFIED;
+      metadata.commissionApprovedByUserId = user.id;
+      metadata.commissionApprovedAt = approvedAt;
+      metadata.commissionReceiptMissingAtApproval = false;
+      delete metadata.commissionApprovalNote;
       delete metadata.commissionRejectionReason;
 
       await this.bookingRepository.updateCommissionFields(conn, row.id, {
@@ -763,7 +795,13 @@ class CommissionSettlementService {
         actorUserId: user.id,
         actorRole: user.role,
         description: `Commission approved for ${bookingNumber}`,
-        payload: { bookingNumber },
+        payload: {
+          bookingNumber,
+          approvalMode: APPROVAL_MODES.RECEIPT_VERIFIED,
+          receiptPresent: true,
+          beforeStatus: row.commission_status,
+          afterStatus: COMMISSION_STATUS.PAID,
+        },
       });
 
       let outboxId = null;
@@ -815,6 +853,179 @@ class CommissionSettlementService {
       return this.mapAdminDetail(updatedSettlement, null);
     } catch (err) {
       await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async manualApproveWithoutReceipt(bookingNumber, note, user) {
+    const cleanNote = String(note ?? '').trim();
+    if (!cleanNote) {
+      throw new AppError('Manual approval note is required', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.ADMIN_APPROVAL_NOTE_REQUIRED,
+      });
+    }
+
+    const conn = await this.pool.getConnection();
+    let bookingTransition = null;
+    let outboxId = null;
+    let transactionCommitted = false;
+    try {
+      await conn.beginTransaction();
+      const row = await this.bookingRepository.findSettlementByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
+      if (!row) {
+        throw new AppError('Settlement not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,
+        });
+      }
+
+      if (row.commission_status === COMMISSION_STATUS.PAID) {
+        throw new AppError('Settlement already approved', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.SETTLEMENT_ALREADY_APPROVED,
+        });
+      }
+
+      if (row.status !== 'SETTLEMENT_PENDING') {
+        throw new AppError('Settlement is not awaiting confirmation', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.SETTLEMENT_STALE_STATUS,
+        });
+      }
+
+      const metadata = this.parseMetadata(row.metadata);
+      if (this.isReceiptRejected(row, metadata)) {
+        throw new AppError('Manual approval is not allowed for rejected settlements', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.SETTLEMENT_MANUAL_APPROVAL_NOT_ALLOWED,
+        });
+      }
+
+      if (this.hasCommissionReceipt(row)) {
+        throw new AppError('Use receipt approval when a transfer slip exists', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.SETTLEMENT_MANUAL_APPROVAL_NOT_ALLOWED,
+        });
+      }
+
+      if (!(Number(row.commission_amount) > 0)) {
+        throw new AppError('Settlement amount is not valid for manual approval', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.SETTLEMENT_MANUAL_APPROVAL_NOT_ALLOWED,
+        });
+      }
+
+      const approvedAt = new Date().toISOString();
+      const reviewEntry = {
+        action: 'APPROVED',
+        approvalMode: APPROVAL_MODES.MANUAL_WITHOUT_RECEIPT,
+        reviewedByUserId: user.id,
+        reviewedAt: approvedAt,
+        note: cleanNote,
+        receiptPresent: false,
+      };
+      metadata.commissionReviewHistory = [...(metadata.commissionReviewHistory ?? []), reviewEntry];
+      metadata.commissionApprovalMode = APPROVAL_MODES.MANUAL_WITHOUT_RECEIPT;
+      metadata.commissionApprovalNote = cleanNote;
+      metadata.commissionApprovedByUserId = user.id;
+      metadata.commissionApprovedAt = approvedAt;
+      metadata.commissionReceiptMissingAtApproval = true;
+      delete metadata.commissionRejectionReason;
+
+      await this.bookingRepository.updateCommissionFields(conn, row.id, {
+        commissionStatus: COMMISSION_STATUS.PAID,
+        commissionPaidAt: this.formatDateTime(new Date()),
+        metadata,
+        updatedBy: user.id,
+      });
+
+      if (this.bookingStatusService) {
+        bookingTransition = await this.bookingStatusService.transitionInTransaction(
+          conn,
+          bookingNumber,
+          { status: 'COMPLETED', reason: 'SETTLEMENT_MANUAL_CONFIRMED' },
+          user,
+          { skipAccessCheck: true },
+        );
+      }
+
+      await this.bookingRepository.insertActivityLog(conn, row.id, {
+        activityType: 'MANUAL_SETTLEMENT_APPROVED_WITHOUT_RECEIPT',
+        actorUserId: user.id,
+        actorRole: user.role,
+        description: `Commission manually approved without receipt for ${bookingNumber}`,
+        payload: {
+          bookingNumber,
+          driverId: row.driver_id,
+          approvalMode: APPROVAL_MODES.MANUAL_WITHOUT_RECEIPT,
+          approvalNote: cleanNote,
+          approvedByUserId: user.id,
+          approvedAt,
+          receiptPresent: false,
+          commissionAmount: Number(row.commission_amount),
+          beforeStatus: row.commission_status,
+          afterStatus: COMMISSION_STATUS.PAID,
+        },
+      });
+
+      if (this.outboxRepository) {
+        const [driverRows] = await conn.query(
+          `
+            SELECT b.driver_id, d.user_id AS driver_user_id
+            FROM bookings b
+            INNER JOIN drivers d ON d.id = b.driver_id
+            WHERE b.id = ? AND b.deleted_at IS NULL
+            LIMIT 1
+          `,
+          [row.id],
+        );
+        const driverRow = driverRows[0];
+        if (driverRow?.driver_user_id) {
+          outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+            aggregateId: row.id,
+            eventType: EVENTS.SETTLEMENT_APPROVED,
+            payload: {
+              eventId: randomUUID(),
+              eventName: EVENTS.SETTLEMENT_APPROVED,
+              bookingId: row.id,
+              bookingNumber,
+              driverUserId: driverRow.driver_user_id,
+              driverId: driverRow.driver_id,
+              approvalMode: APPROVAL_MODES.MANUAL_WITHOUT_RECEIPT,
+            },
+          });
+        }
+      }
+
+      await conn.commit();
+      transactionCommitted = true;
+
+      if (outboxId && this.outboxProcessor) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
+      if (bookingTransition) {
+        await this.bookingStatusService.dispatchOutboxAfterCommit(
+          bookingTransition.outboxId,
+        );
+        this.bookingStatusService.emitDomainEvent(
+          bookingTransition.domainEvent,
+          bookingTransition.eventPayload,
+        );
+      }
+
+      const updatedSettlement = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
+
+      return this.mapAdminDetail(updatedSettlement, null);
+    } catch (err) {
+      if (!transactionCommitted) {
+        await conn.rollback();
+      }
       throw err;
     } finally {
       conn.release();

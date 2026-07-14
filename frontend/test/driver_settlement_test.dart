@@ -4,10 +4,11 @@ import 'package:frontend/features/driver_settlement/pages/driver_settlement_list
 import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
 
 class _FakeSettlementApi extends DriverSettlementApiService {
-  _FakeSettlementApi({this.error, this.uploadError});
+  _FakeSettlementApi({this.error, this.uploadError, this.detail});
 
   final Object? error;
   final Object? uploadError;
+  final Map<String, dynamic>? detail;
   int uploadCalls = 0;
   bool uploaded = false;
 
@@ -20,6 +21,7 @@ class _FakeSettlementApi extends DriverSettlementApiService {
   @override
   Future<Map<String, dynamic>> getSettlement(String bookingNumber) async {
     if (error != null) throw error!;
+    if (detail != null) return detail!;
     if (uploaded) {
       return {
         'bookingNumber': bookingNumber,
@@ -184,6 +186,38 @@ void main() {
     expect(find.text('상태\n(สถานะ): RECEIPT_SUBMITTED'), findsNothing);
   });
 
+  testWidgets('driver settlement detail shows manual approval notice', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverSettlementDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeSettlementApi(
+            detail: {
+              'bookingNumber': 'TX202607010001',
+              'commissionStatus': 'APPROVED',
+              'approvalMode': 'MANUAL_WITHOUT_RECEIPT',
+              'commissionAmount': 120,
+              'currency': 'THB',
+              'dueAt': '2026-07-08 12:00:00',
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settlement approved'), findsOneWidget);
+    expect(
+      find.text(
+        'An administrator confirmed this settlement. If no other settlements are unresolved, you can receive new calls.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Upload'), findsNothing);
+  });
+
   test('isAllowedReceiptFilename validates extensions', () {
     expect(isAllowedReceiptFilename('receipt.pdf'), isTrue);
     expect(isAllowedReceiptFilename('photo.JPG'), isTrue);
@@ -199,9 +233,6 @@ class _IncompleteUploadApi extends _FakeSettlementApi {
     String filename,
   ) async {
     uploadCalls += 1;
-    return {
-      'bookingNumber': bookingNumber,
-      'commissionStatus': 'PENDING',
-    };
+    return {'bookingNumber': bookingNumber, 'commissionStatus': 'PENDING'};
   }
 }

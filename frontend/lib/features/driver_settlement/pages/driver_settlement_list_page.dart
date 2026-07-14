@@ -230,6 +230,28 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
   }
 }
 
+String _driverManualSettlementText(BuildContext context) {
+  final language = Localizations.localeOf(context).languageCode;
+  const values = {
+    'en': 'Settlement approved',
+    'ko': '정산 승인 완료',
+    'th': 'อนุมัติการชำระแล้ว',
+  };
+  return values[language] ?? values['en']!;
+}
+
+String _driverManualSettlementNotice(BuildContext context) {
+  final language = Localizations.localeOf(context).languageCode;
+  const values = {
+    'en':
+        'An administrator confirmed this settlement. If no other settlements are unresolved, you can receive new calls.',
+    'ko': '관리자가 정산을 승인했습니다. 다른 미정산 건이 없으면 신규 콜을 받을 수 있습니다.',
+    'th':
+        'ผู้ดูแลยืนยันการชำระนี้แล้ว หากไม่มีรายการค้างชำระอื่น คุณสามารถรับงานใหม่ได้',
+  };
+  return values[language] ?? values['en']!;
+}
+
 class DriverSettlementDetailPage extends StatefulWidget {
   const DriverSettlementDetailPage({
     super.key,
@@ -390,6 +412,7 @@ class _DriverSettlementDetailPageState
     final l10n = context.l10n;
     final status = _detail?['commissionStatus'] as String? ?? '';
     final canUpload = _canUpload(status);
+    final approvalMode = _detail?['approvalMode'] as String?;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.bookingNumber)),
@@ -442,6 +465,22 @@ class _DriverSettlementDetailPageState
                         AppUi.summaryRow(
                           label: l10n.t('driver_settlement_rejection'),
                           value: _detail?['rejectionReason'] as String,
+                        ),
+                      ],
+                      if (status == 'APPROVED' &&
+                          approvalMode == 'MANUAL_WITHOUT_RECEIPT') ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        AppUi.statusBadge(
+                          _driverManualSettlementText(context),
+                          tone: AppStatusTone.success,
+                        ),
+                        const SizedBox(height: AppTokens.spaceSm),
+                        Text(
+                          _driverManualSettlementNotice(context),
+                          style: const TextStyle(
+                            color: AppTokens.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ],

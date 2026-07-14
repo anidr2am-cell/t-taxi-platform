@@ -93,6 +93,18 @@ class AdminSettlementApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<Map<String, dynamic>> manualApprove(
+    String bookingNumber,
+    String note,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/settlements/$bookingNumber/manual-approve',
+      body: {'note': note},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<AdminSettlementReceipt> getReceipt(String bookingNumber) async {
     final token = await getSavedToken();
     if (token == null || token.isEmpty) {
