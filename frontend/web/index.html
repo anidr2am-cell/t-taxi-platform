@@ -14,7 +14,18 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link rel="icon" type="image/png" href="favicon.png">
   <title>T-Ride</title>
-  <link rel="manifest" href="manifest.json">
+  <script>
+    (function () {
+      const isDriverRoute =
+        window.location.pathname === '/driver' ||
+        window.location.pathname.startsWith('/driver/');
+      const manifestLink = document.createElement('link');
+      manifestLink.id = 'app-manifest';
+      manifestLink.rel = 'manifest';
+      manifestLink.href = isDriverRoute ? '/manifest-driver.json' : '/manifest.json';
+      document.head.appendChild(manifestLink);
+    })();
+  </script>
 </head>
 <body>
   <script>

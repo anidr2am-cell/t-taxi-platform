@@ -33,11 +33,21 @@ void main() {
     final manifest =
         jsonDecode(File('web/manifest.json').readAsStringSync())
             as Map<String, dynamic>;
+    final driverManifest =
+        jsonDecode(File('web/manifest-driver.json').readAsStringSync())
+            as Map<String, dynamic>;
 
     expect(index, contains('<title>T-Ride</title>'));
     expect(index, contains('apple-mobile-web-app-title" content="T-Ride"'));
+    expect(index, contains('id = \'app-manifest\''));
+    expect(index, contains('manifest-driver.json'));
+    expect(
+      index,
+      contains('window.location.pathname.startsWith(\'/driver/\')'),
+    );
     expect(manifest['name'], 'T-Ride');
     expect(manifest['short_name'], 'T-Ride');
+    expect(manifest['id'], '/');
     expect(manifest['start_url'], '/');
 
     final icons = manifest['icons'] as List<dynamic>;
@@ -48,6 +58,24 @@ void main() {
     expect(
       icons.firstWhere(
         (icon) => icon['src'] == 'icons/Icon-maskable-512.png',
+      )['purpose'],
+      'maskable',
+    );
+
+    expect(driverManifest['id'], '/driver');
+    expect(driverManifest['name'], 'T-Ride Driver');
+    expect(driverManifest['short_name'], 'T-Ride Driver');
+    expect(driverManifest['start_url'], '/driver');
+    expect(driverManifest['scope'], '/driver');
+
+    final driverIcons = driverManifest['icons'] as List<dynamic>;
+    expect(
+      driverIcons.firstWhere((icon) => icon['sizes'] == '192x192')['purpose'],
+      'any',
+    );
+    expect(
+      driverIcons.firstWhere(
+        (icon) => icon['src'] == '/icons/Icon-maskable-512.png',
       )['purpose'],
       'maskable',
     );
