@@ -635,11 +635,14 @@ class AppLocalizations {
       'driver_pwa_install_body':
           'Install T-Ride on your home screen for easier access to jobs and driver features.',
       'driver_pwa_install_now': 'Install now',
+      'driver_pwa_install_preparing': 'Preparing installation...',
       'driver_pwa_install_later': 'Later',
       'driver_pwa_install_manual':
           'If the install window does not appear, open the Chrome menu and choose “Install app” or “Add to Home screen”.',
       'driver_pwa_install_ios_steps':
           'On iPhone or iPad, open Safari, tap Share, choose “Add to Home Screen”, then tap Add.',
+      'driver_pwa_install_open_in_chrome':
+          'This browser cannot install the app automatically. Open this page in Chrome, then install T-Ride from the Chrome menu.',
       'driver_pwa_install_success': 'T-Ride has been installed.',
       'driver_pwa_install_dismissed':
           'Installation was cancelled. You can install it next time.',
@@ -1480,11 +1483,14 @@ class AppLocalizations {
       'driver_pwa_install_body':
           '신규 콜 확인과 편리한 이용을 위해 T-Ride를 휴대폰 홈 화면에 설치해 주세요.',
       'driver_pwa_install_now': '지금 설치',
+      'driver_pwa_install_preparing': '설치 준비 중...',
       'driver_pwa_install_later': '나중에',
       'driver_pwa_install_manual':
           'Chrome 오른쪽 위 메뉴를 누른 뒤 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하세요.',
       'driver_pwa_install_ios_steps':
           'iPhone 또는 iPad에서는 Safari 공유 버튼을 누르고 “홈 화면에 추가”를 선택한 뒤 “추가”를 누르세요.',
+      'driver_pwa_install_open_in_chrome':
+          '현재 브라우저에서는 자동 설치를 시작할 수 없습니다. Chrome에서 이 페이지를 연 뒤 Chrome 메뉴에서 T-Ride를 설치해 주세요.',
       'driver_pwa_install_success': 'T-Ride 설치가 완료되었습니다.',
       'driver_pwa_install_dismissed': '설치가 취소되었습니다. 다음에 다시 설치할 수 있습니다.',
       'driver_pwa_install_unavailable':
@@ -3110,11 +3116,14 @@ class AppLocalizations {
       'driver_pwa_install_body':
           'เพื่อรับงานและใช้งานได้สะดวกยิ่งขึ้น กรุณาติดตั้ง T-Ride ไว้บนหน้าจอหลักของโทรศัพท์',
       'driver_pwa_install_now': 'ติดตั้งตอนนี้',
+      'driver_pwa_install_preparing': 'กำลังเตรียมติดตั้ง...',
       'driver_pwa_install_later': 'ไว้ภายหลัง',
       'driver_pwa_install_manual':
           'หากหน้าต่างติดตั้งไม่แสดง ให้แตะเมนู ⋮ ของ Chrome แล้วเลือก “ติดตั้งแอป” หรือ “เพิ่มลงในหน้าจอหลัก”',
       'driver_pwa_install_ios_steps':
           'บน iPhone หรือ iPad ให้เปิด Safari แตะปุ่มแชร์ เลือก “เพิ่มไปยังหน้าจอโฮม” แล้วแตะ “เพิ่ม”',
+      'driver_pwa_install_open_in_chrome':
+          'เบราว์เซอร์นี้ไม่สามารถติดตั้งแอปอัตโนมัติได้ กรุณาเปิดหน้านี้ใน Chrome แล้วติดตั้ง T-Ride จากเมนู Chrome',
       'driver_pwa_install_success': 'ติดตั้ง T-Ride สำเร็จแล้ว',
       'driver_pwa_install_dismissed':
           'ยกเลิกการติดตั้งแล้ว สามารถติดตั้งใหม่ได้ในครั้งถัดไป',

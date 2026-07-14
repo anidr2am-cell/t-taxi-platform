@@ -18,6 +18,9 @@ external bool _pwaCanInstall();
 @JS('tridePwaIsIos')
 external bool _pwaIsIos();
 
+@JS('tridePwaIsInAppBrowser')
+external bool _pwaIsInAppBrowser();
+
 @JS('tridePwaPromptInstall')
 external JSPromise<JSString> _pwaPromptInstall();
 
@@ -90,9 +93,20 @@ class WebPwaInstallService extends PwaInstallService {
   }
 
   @override
+  bool get isInAppBrowser {
+    try {
+      return _pwaIsInAppBrowser();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
   Future<PwaInstallResult> promptInstall() async {
     if (isStandalone || isInstalled) return PwaInstallResult.alreadyInstalled;
-    if (!isSupported || !canPromptInstall) return PwaInstallResult.unavailable;
+    if (!isSupported || isInAppBrowser || isIos || !canPromptInstall) {
+      return PwaInstallResult.unavailable;
+    }
 
     try {
       final raw = (await _pwaPromptInstall().toDart).toDart;
