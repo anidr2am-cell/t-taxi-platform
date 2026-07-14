@@ -642,6 +642,37 @@ class AppLocalizations {
       'driver_active_job_in_progress': 'Active job in progress',
       'driver_active_job_stay_online':
           'Active job in progress — stay online until finished.',
+      'driver_call_status_ready': 'Ready for calls',
+      'driver_call_status_offline': 'Calls paused',
+      'driver_call_status_active_trip': 'On trip',
+      'driver_call_status_active_trip_helper': 'Cannot receive new calls',
+      'driver_call_status_settlement_required': 'Settlement required',
+      'driver_call_status_customer_issue_review': 'Customer issue review',
+      'driver_call_status_account_under_review': 'Account under review',
+      'driver_call_status_account_restricted': 'Account restricted',
+      'driver_call_status_driver_approval_pending': 'Driver approval pending',
+      'driver_call_status_vehicle_review_required': 'Vehicle review required',
+      'driver_call_status_unknown': 'Status review needed',
+      'driver_call_status_detail_title': 'Call status',
+      'driver_call_status_detail_ready': 'You can receive new booking calls.',
+      'driver_call_status_detail_offline':
+          'Go online when you are ready to receive new calls.',
+      'driver_call_status_detail_active_trip':
+          'Finish the current trip before receiving another call.',
+      'driver_call_status_detail_settlement_required':
+          'Settlement confirmation is required before receiving a new call.',
+      'driver_call_status_detail_customer_issue_review':
+          'The operations team is reviewing a customer issue.',
+      'driver_call_status_detail_account_under_review':
+          'Your driver account is under review by operations.',
+      'driver_call_status_detail_account_restricted':
+          'Your driver account is restricted. Please contact operations.',
+      'driver_call_status_detail_driver_approval_pending':
+          'Driver approval is not complete yet.',
+      'driver_call_status_detail_vehicle_review_required':
+          'A valid active vehicle is required before receiving calls.',
+      'driver_call_status_detail_unknown':
+          'Please refresh or contact operations if this continues.',
       'driver_notification_new': 'New',
       'driver_notification_mark_read': 'Mark read',
       'driver_qr_camera_unavailable': 'Camera unavailable',
@@ -1438,6 +1469,37 @@ class AppLocalizations {
       'driver_status_active_busy': '운행 중 · 오프라인 전환 불가',
       'driver_active_job_in_progress': '진행 중인 운행',
       'driver_active_job_stay_online': '운행 진행 중 — 완료 전까지 온라인을 유지하세요.',
+      'driver_call_status_ready': '콜 수신 가능',
+      'driver_call_status_offline': '콜 수신 일시 중지',
+      'driver_call_status_active_trip': '운행 중',
+      'driver_call_status_active_trip_helper': '새 콜 수신 불가',
+      'driver_call_status_settlement_required': '정산 확인 필요',
+      'driver_call_status_customer_issue_review': '고객 이슈 확인 중',
+      'driver_call_status_account_under_review': '계정 검토 중',
+      'driver_call_status_account_restricted': '계정 제한됨',
+      'driver_call_status_driver_approval_pending': '기사 승인 대기',
+      'driver_call_status_vehicle_review_required': '차량 확인 필요',
+      'driver_call_status_unknown': '상태 확인 필요',
+      'driver_call_status_detail_title': '콜 수신 상태',
+      'driver_call_status_detail_ready': '새 예약 콜을 받을 수 있습니다.',
+      'driver_call_status_detail_offline':
+          '콜을 받으려면 온라인으로 전환해 주세요.',
+      'driver_call_status_detail_active_trip':
+          '현재 운행을 마친 뒤 새 콜을 받을 수 있습니다.',
+      'driver_call_status_detail_settlement_required':
+          '이전 운행의 정산 확인이 완료되어야 새 콜을 받을 수 있습니다.',
+      'driver_call_status_detail_customer_issue_review':
+          '운영팀이 고객 이슈를 확인하고 있습니다.',
+      'driver_call_status_detail_account_under_review':
+          '운영팀이 기사 계정을 검토하고 있습니다.',
+      'driver_call_status_detail_account_restricted':
+          '기사 계정이 제한되어 있습니다. 운영팀에 문의해 주세요.',
+      'driver_call_status_detail_driver_approval_pending':
+          '기사 승인이 아직 완료되지 않았습니다.',
+      'driver_call_status_detail_vehicle_review_required':
+          '콜을 받으려면 유효한 활성 차량이 필요합니다.',
+      'driver_call_status_detail_unknown':
+          '계속 표시되면 새로고침하거나 운영팀에 문의해 주세요.',
       'driver_notification_new': '새 알림',
       'driver_notification_mark_read': '읽음 처리',
       'driver_qr_camera_unavailable': '카메라를 사용할 수 없습니다',
@@ -3737,6 +3799,37 @@ class AppLocalizations {
         '연결된 예약이 없는 알림입니다\n(การแจ้งเตือนนี้ไม่มีงานที่เชื่อมโยง)',
     'driver_mark_all_read': '모두 읽음 / อ่านทั้งหมด',
     'driver_notifications_empty': '알림이 없습니다\n(ยังไม่มีการแจ้งเตือน)',
+    'driver_call_status_ready': '콜 수신 가능 / พร้อมรับงาน',
+    'driver_call_status_offline': '콜 수신 일시 중지 / หยุดรับงานชั่วคราว',
+    'driver_call_status_active_trip': '운행 중 / กำลังให้บริการ',
+    'driver_call_status_active_trip_helper': '새 콜 수신 불가 / ยังรับงานใหม่ไม่ได้',
+    'driver_call_status_settlement_required': '정산 확인 필요 / ต้องตรวจสอบยอดชำระ',
+    'driver_call_status_customer_issue_review': '고객 이슈 확인 중 / กำลังตรวจสอบปัญหาลูกค้า',
+    'driver_call_status_account_under_review': '계정 검토 중 / กำลังตรวจสอบบัญชี',
+    'driver_call_status_account_restricted': '계정 제한됨 / บัญชีถูกจำกัด',
+    'driver_call_status_driver_approval_pending': '기사 승인 대기 / รออนุมัติคนขับ',
+    'driver_call_status_vehicle_review_required': '차량 확인 필요 / ต้องตรวจสอบรถ',
+    'driver_call_status_unknown': '상태 확인 필요 / ต้องตรวจสอบสถานะ',
+    'driver_call_status_detail_title': '콜 수신 상태 / สถานะการรับงาน',
+    'driver_call_status_detail_ready': '새 예약 콜을 받을 수 있습니다. / สามารถรับงานใหม่ได้',
+    'driver_call_status_detail_offline':
+        '콜을 받으려면 온라인으로 전환해 주세요. / กรุณาออนไลน์เมื่อต้องการรับงาน',
+    'driver_call_status_detail_active_trip':
+        '현재 운행을 마친 뒤 새 콜을 받을 수 있습니다. / รับงานใหม่ได้หลังจบทริปปัจจุบัน',
+    'driver_call_status_detail_settlement_required':
+        '이전 운행의 정산 확인이 완료되어야 새 콜을 받을 수 있습니다. / ต้องยืนยันยอดชำระของงานก่อนหน้าให้เรียบร้อยก่อนรับงานใหม่',
+    'driver_call_status_detail_customer_issue_review':
+        '운영팀이 고객 이슈를 확인하고 있습니다. / ทีมงานกำลังตรวจสอบปัญหาของลูกค้า',
+    'driver_call_status_detail_account_under_review':
+        '운영팀이 기사 계정을 검토하고 있습니다. / ทีมงานกำลังตรวจสอบบัญชีคนขับ',
+    'driver_call_status_detail_account_restricted':
+        '기사 계정이 제한되어 있습니다. 운영팀에 문의해 주세요. / บัญชีคนขับถูกจำกัด กรุณาติดต่อทีมงาน',
+    'driver_call_status_detail_driver_approval_pending':
+        '기사 승인이 아직 완료되지 않았습니다. / การอนุมัติคนขับยังไม่เสร็จสิ้น',
+    'driver_call_status_detail_vehicle_review_required':
+        '콜을 받으려면 유효한 활성 차량이 필요합니다. / ต้องมีรถที่ใช้งานได้ก่อนรับงาน',
+    'driver_call_status_detail_unknown':
+        '계속 표시되면 새로고침하거나 운영팀에 문의해 주세요. / หากยังแสดงอยู่ กรุณารีเฟรชหรือติดต่อทีมงาน',
     'driver_notification_new': '새 알림 / ใหม่',
     'driver_notification_mark_read': '읽음 / อ่านแล้ว',
     'driver_notification_enable': '알림 켜기 / เปิดการแจ้งเตือน',

@@ -14,6 +14,7 @@ import 'package:frontend/features/driver/pages/driver_login_page.dart';
 import 'package:frontend/features/driver/pages/driver_qr_scan_page.dart';
 import 'package:frontend/features/driver/pages/driver_shell_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
+import 'package:frontend/features/driver/widgets/driver_status_control.dart';
 
 void main() {
   group('DriverUx grouping', () {
@@ -569,6 +570,69 @@ void main() {
     }
   });
 
+  testWidgets('driver shell status control explains ready call eligibility', (
+    tester,
+  ) async {
+    final api = _ShellStatusApi(
+      status: const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: true,
+        status: 'AVAILABLE',
+        hasActiveJob: false,
+        callEligibility: DriverCallEligibility(
+          canReceiveCalls: true,
+          reasonCode: DriverCallEligibilityReason.ready,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        home: Scaffold(body: DriverStatusControl(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('온라인'), findsWidgets);
+    expect(find.textContaining('콜 수신 가능'), findsOneWidget);
+
+    await tester.tap(find.textContaining('콜 수신 가능'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('콜 수신 상태'), findsOneWidget);
+    expect(find.textContaining('새 예약 콜을 받을 수 있습니다'), findsOneWidget);
+  });
+
+  testWidgets('driver shell status control explains settlement blocker', (
+    tester,
+  ) async {
+    final api = _ShellStatusApi(
+      status: const DriverStatus(
+        driverId: 7,
+        active: true,
+        online: true,
+        status: 'AVAILABLE',
+        hasActiveJob: false,
+        callEligibility: DriverCallEligibility(
+          canReceiveCalls: false,
+          reasonCode: DriverCallEligibilityReason.unpaidSettlement,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        home: Scaffold(body: DriverStatusControl(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('정산 확인 필요'), findsOneWidget);
+    expect(find.textContaining('온라인'), findsWidgets);
+  });
+
   testWidgets('today empty state', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -1084,6 +1148,10 @@ class _ShellStatusApi extends DriverApiService {
         status: 'AVAILABLE',
         hasActiveJob: false,
         lastSeenAt: _status.lastSeenAt,
+        callEligibility: const DriverCallEligibility(
+          canReceiveCalls: true,
+          reasonCode: DriverCallEligibilityReason.ready,
+        ),
       ),
     );
   }
@@ -1099,6 +1167,10 @@ class _ShellStatusApi extends DriverApiService {
         status: 'OFFLINE',
         hasActiveJob: false,
         lastSeenAt: _status.lastSeenAt,
+        callEligibility: const DriverCallEligibility(
+          canReceiveCalls: false,
+          reasonCode: DriverCallEligibilityReason.offline,
+        ),
       ),
     );
   }

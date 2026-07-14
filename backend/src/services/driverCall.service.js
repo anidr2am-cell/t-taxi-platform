@@ -21,6 +21,7 @@ class DriverCallService {
     driverJobService,
     notificationRepository = null,
     chatRepository = null,
+    commissionSettlementService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -28,6 +29,7 @@ class DriverCallService {
     this.driverJobService = driverJobService;
     this.notificationRepository = notificationRepository;
     this.chatRepository = chatRepository;
+    this.commissionSettlementService = commissionSettlementService;
   }
 
   validateBookingNumber(bookingNumber) {
@@ -68,6 +70,18 @@ class DriverCallService {
   }
 
   async listOpenCalls(driverUserId) {
+    if (this.commissionSettlementService) {
+      const driver = await this.driverRepository.findByUserId(driverUserId);
+      if (!driver || !driver.is_active || driver.user_is_active === 0) {
+        throw new AppError('Driver not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
+        });
+      }
+      if (await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)) {
+        return { items: [] };
+      }
+    }
     const rows = await this.bookingRepository.findOpenDriverCallsForDriver(driverUserId);
     return {
       items: rows.map((row) => this.mapOpenCall(row)),
@@ -103,6 +117,16 @@ class DriverCallService {
     }
   }
 
+  async assertSettlementEligible(driver) {
+    if (!this.commissionSettlementService) return;
+    if (await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)) {
+      throw new AppError('This driver cannot receive a new job until the previous settlement is confirmed.', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+      });
+    }
+  }
+
   async claimOpenCall(driverUserId, bookingNumber) {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
     const conn = await this.pool.getConnection();
@@ -113,6 +137,7 @@ class DriverCallService {
 
       const driver = await this.driverRepository.findByUserIdForUpdate(conn, driverUserId);
       this.assertDriverCanClaim(driver);
+      await this.assertSettlementEligible(driver);
 
       const booking = await this.bookingRepository.findByBookingNumberForUpdate(
         conn,

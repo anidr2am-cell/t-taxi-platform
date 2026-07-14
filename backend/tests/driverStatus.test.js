@@ -134,9 +134,88 @@ test('GET status exposes safe online payload', async () => {
     status: 'AVAILABLE',
     hasActiveJob: true,
     lastSeenAt: '2026-06-30 09:00:00',
+    callEligibility: {
+      canReceiveCalls: false,
+      reasonCode: 'ACTIVE_TRIP',
+    },
   });
   assert.equal('phone' in result, false);
   assert.equal('userId' in result, false);
+});
+
+test('GET status exposes ready call eligibility', async () => {
+  const service = makeService({
+    current: driver({ status: 'AVAILABLE', is_online: 1, active_vehicle_count: 1 }),
+  });
+  const result = await service.getStatus(44);
+
+  assert.deepEqual(result.callEligibility, {
+    canReceiveCalls: true,
+    reasonCode: 'READY',
+  });
+});
+
+test('GET status explains offline call eligibility', async () => {
+  const service = makeService({
+    current: driver({ status: 'OFFLINE', is_online: 0, active_vehicle_count: 1 }),
+  });
+  const result = await service.getStatus(44);
+
+  assert.deepEqual(result.callEligibility, {
+    canReceiveCalls: false,
+    reasonCode: 'OFFLINE',
+  });
+});
+
+test('GET status explains settlement and vehicle restrictions', async () => {
+  const settlementBlocked = makeService({
+    current: driver({ status: 'AVAILABLE', is_online: 1, active_vehicle_count: 1 }),
+    blocked: true,
+  });
+  const settlement = await settlementBlocked.getStatus(44);
+  assert.deepEqual(settlement.callEligibility, {
+    canReceiveCalls: false,
+    reasonCode: 'UNPAID_SETTLEMENT',
+  });
+
+  const noVehicle = makeService({
+    current: driver({ status: 'AVAILABLE', is_online: 1, active_vehicle_count: 0 }),
+  });
+  const vehicle = await noVehicle.getStatus(44);
+  assert.deepEqual(vehicle.callEligibility, {
+    canReceiveCalls: false,
+    reasonCode: 'VEHICLE_REVIEW_REQUIRED',
+  });
+});
+
+test('GET status prioritizes account restrictions before other blockers', async () => {
+  const service = makeService({
+    current: driver({
+      status: 'SUSPENDED',
+      is_online: 1,
+      active_vehicle_count: 0,
+    }),
+    activeJob: true,
+    blocked: true,
+  });
+  const result = await service.getStatus(44);
+
+  assert.deepEqual(result.callEligibility, {
+    canReceiveCalls: false,
+    reasonCode: 'ACCOUNT_RESTRICTED',
+  });
+});
+
+test('GET status explains driver approval review states', async () => {
+  const service = makeService({
+    current: driver({ status: 'PENDING_APPROVAL', is_online: 1, active_vehicle_count: 1 }),
+  });
+  const result = await service.getStatus(44);
+
+  assert.deepEqual(result.callEligibility, {
+    canReceiveCalls: false,
+    reasonCode: 'DRIVER_APPROVAL_PENDING',
+  });
 });
 
 test('offline with active job is rejected', async () => {
