@@ -129,6 +129,9 @@ function createHarness(overrides = {}) {
     },
   };
   const driverRepository = {
+    async findByUserId() {
+      return driver;
+    },
     async findByUserIdForUpdate() {
       return driver;
     },
@@ -177,6 +180,11 @@ function createHarness(overrides = {}) {
       };
     },
   };
+  const commissionSettlementService = {
+    async driverHasBlockingSettlement() {
+      return overrides.commissionBlocked ?? false;
+    },
+  };
   return {
     conn,
     calls,
@@ -187,6 +195,7 @@ function createHarness(overrides = {}) {
       driverJobService,
       notificationRepository,
       chatRepository,
+      commissionSettlementService,
     ),
   };
 }
@@ -202,6 +211,14 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
   assert.equal(Object.hasOwn(result.items[0], 'customerEmail'), false);
   assert.equal(Object.hasOwn(result.items[0], 'specialInstructions'), false);
+});
+
+test('open call list hides calls when settlement confirmation is required', async () => {
+  const { service } = createHarness({ commissionBlocked: true });
+
+  const result = await service.listOpenCalls(42);
+
+  assert.deepEqual(result, { items: [] });
 });
 
 test('claimOpenCall atomically creates assignment and moves booking to DRIVER_ASSIGNED', async () => {
@@ -262,6 +279,16 @@ test('claimOpenCall rejects offline or busy drivers', async () => {
     () => busy.service.claimOpenCall(42, 'TX202607130001'),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_NOT_AVAILABLE,
   );
+});
+
+test('claimOpenCall rejects settlement-blocked drivers', async () => {
+  const { service, conn } = createHarness({ commissionBlocked: true });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+  );
+  assert.equal(conn.rolledBack, true);
 });
 
 test('claimOpenCall rejects vehicle type mismatch', async () => {

@@ -261,6 +261,7 @@ container.register(
       c.get("driverJobService"),
       c.get("notificationRepository"),
       c.get("chatRepository"),
+      c.get("commissionSettlementService"),
     ),
 );
 container.register(

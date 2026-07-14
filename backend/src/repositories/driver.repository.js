@@ -346,7 +346,14 @@ class DriverRepository {
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
               AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
-          ) AS active_job_count
+          ) AS active_job_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicles dv
+            WHERE dv.driver_id = d.id
+              AND dv.is_active = 1
+              AND dv.deleted_at IS NULL
+          ) AS active_vehicle_count
         FROM drivers d
         INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL
         WHERE d.user_id = ? AND d.deleted_at IS NULL

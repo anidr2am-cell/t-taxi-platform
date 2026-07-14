@@ -207,28 +207,40 @@ class _StatusContent extends StatelessWidget {
     final l10n = context.l10n;
     final activeJob = status.hasActiveJob;
     final online = status.online;
+    final eligibility = status.callEligibility;
+    final reasonCode = activeJob
+        ? DriverCallEligibilityReason.activeTrip
+        : eligibility.reasonCode;
     final state = activeJob
         ? _StatusVisual(
             icon: Icons.local_taxi,
-            label: l10n.t('driver_status_active_busy'),
-            helper: l10n.t('driver_active_job_stay_online'),
+            label: l10n.t('driver_call_status_active_trip'),
+            helper: l10n.t(_callStatusMessageKey(reasonCode)),
             backgroundColor: AppTokens.warningLight,
             borderColor: AppTokens.warning,
             iconColor: AppTokens.warning,
           )
         : online
         ? _StatusVisual(
-            icon: Icons.check_circle,
-            label: l10n.t('driver_status_online_ready'),
-            helper: l10n.t('driver_session_ready'),
-            backgroundColor: AppTokens.successLight,
-            borderColor: AppTokens.success,
-            iconColor: AppTokens.success,
+            icon: eligibility.canReceiveCalls
+                ? Icons.check_circle
+                : Icons.info_outline,
+            label: l10n.t('driver_online'),
+            helper: l10n.t(_callStatusMessageKey(reasonCode)),
+            backgroundColor: eligibility.canReceiveCalls
+                ? AppTokens.successLight
+                : AppTokens.warningLight,
+            borderColor: eligibility.canReceiveCalls
+                ? AppTokens.success
+                : AppTokens.warning,
+            iconColor: eligibility.canReceiveCalls
+                ? AppTokens.success
+                : AppTokens.warning,
           )
         : _StatusVisual(
             icon: Icons.pause_circle_filled,
-            label: l10n.t('driver_status_offline_unavailable'),
-            helper: l10n.t('driver_session_offline'),
+            label: l10n.t('driver_offline'),
+            helper: l10n.t(_callStatusMessageKey(reasonCode)),
             backgroundColor: AppTokens.surfaceMuted,
             borderColor: AppTokens.textMuted,
             iconColor: AppTokens.textMuted,
@@ -271,6 +283,7 @@ class _StatusContent extends StatelessWidget {
     return _StatusFrame(
       backgroundColor: state.backgroundColor,
       borderColor: state.borderColor,
+      onTap: () => _showStatusDetail(context, reasonCode),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -338,27 +351,133 @@ class _StatusContent extends StatelessWidget {
   }
 }
 
+String _callStatusMessageKey(String reasonCode) {
+  switch (reasonCode) {
+    case DriverCallEligibilityReason.ready:
+      return 'driver_call_status_ready';
+    case DriverCallEligibilityReason.offline:
+      return 'driver_call_status_offline';
+    case DriverCallEligibilityReason.activeTrip:
+      return 'driver_call_status_active_trip_helper';
+    case DriverCallEligibilityReason.unpaidSettlement:
+      return 'driver_call_status_settlement_required';
+    case DriverCallEligibilityReason.customerComplaintReview:
+      return 'driver_call_status_customer_issue_review';
+    case DriverCallEligibilityReason.accountUnderReview:
+      return 'driver_call_status_account_under_review';
+    case DriverCallEligibilityReason.accountRestricted:
+      return 'driver_call_status_account_restricted';
+    case DriverCallEligibilityReason.driverApprovalPending:
+      return 'driver_call_status_driver_approval_pending';
+    case DriverCallEligibilityReason.vehicleReviewRequired:
+      return 'driver_call_status_vehicle_review_required';
+    default:
+      return 'driver_call_status_unknown';
+  }
+}
+
+String _callStatusDetailKey(String reasonCode) {
+  switch (reasonCode) {
+    case DriverCallEligibilityReason.ready:
+      return 'driver_call_status_detail_ready';
+    case DriverCallEligibilityReason.offline:
+      return 'driver_call_status_detail_offline';
+    case DriverCallEligibilityReason.activeTrip:
+      return 'driver_call_status_detail_active_trip';
+    case DriverCallEligibilityReason.unpaidSettlement:
+      return 'driver_call_status_detail_settlement_required';
+    case DriverCallEligibilityReason.customerComplaintReview:
+      return 'driver_call_status_detail_customer_issue_review';
+    case DriverCallEligibilityReason.accountUnderReview:
+      return 'driver_call_status_detail_account_under_review';
+    case DriverCallEligibilityReason.accountRestricted:
+      return 'driver_call_status_detail_account_restricted';
+    case DriverCallEligibilityReason.driverApprovalPending:
+      return 'driver_call_status_detail_driver_approval_pending';
+    case DriverCallEligibilityReason.vehicleReviewRequired:
+      return 'driver_call_status_detail_vehicle_review_required';
+    default:
+      return 'driver_call_status_detail_unknown';
+  }
+}
+
+void _showStatusDetail(BuildContext context, String reasonCode) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppTokens.spaceLg,
+          AppTokens.spaceSm,
+          AppTokens.spaceLg,
+          AppTokens.spaceLg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.t('driver_call_status_detail_title'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              context.l10n.t(_callStatusMessageKey(reasonCode)),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppTokens.spaceXs),
+            Text(context.l10n.t(_callStatusDetailKey(reasonCode))),
+            const SizedBox(height: AppTokens.spaceMd),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(context.l10n.t('support_close_button')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _StatusFrame extends StatelessWidget {
   const _StatusFrame({
     required this.child,
     required this.backgroundColor,
     required this.borderColor,
+    this.onTap,
   });
 
   final Widget child;
   final Color backgroundColor;
   final Color borderColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: AppTokens.borderRadiusLg,
-        border: Border.all(color: borderColor.withValues(alpha: 0.45)),
+    final borderRadius = AppTokens.borderRadiusLg;
+    return Material(
+      color: backgroundColor,
+      borderRadius: borderRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor.withValues(alpha: 0.45)),
+          ),
+          padding: const EdgeInsets.all(AppTokens.spaceMd),
+          child: child,
+        ),
       ),
-      padding: const EdgeInsets.all(AppTokens.spaceMd),
-      child: child,
     );
   }
 }
