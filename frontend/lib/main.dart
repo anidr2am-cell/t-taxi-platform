@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
+import 'core/pwa/driver_pwa_install_prompt.dart';
 import 'l10n/app_localizations.dart';
 import 'features/booking/pages/guest_booking_lookup_page.dart';
 import 'features/driver_application/pages/driver_application_form_page.dart';
@@ -53,12 +54,16 @@ class TTaxiApp extends StatelessWidget {
       routes: {
         '/admin': (_) => const AdminScreen(initialTab: 1),
         '/booking/lookup': (_) => const GuestBookingLookupPage(),
-        '/driver': (_) => const DriverLoginPage(),
-        '/driver/login': (_) => const DriverLoginPage(),
+        '/driver': (_) =>
+            const DriverPwaInstallPromptHost(child: DriverLoginPage()),
+        '/driver/login': (_) =>
+            const DriverPwaInstallPromptHost(child: DriverLoginPage()),
         '/driver/apply': (_) => const DriverApplicationFormPage(),
         '/driver/application-status': (_) => const DriverApplicationFormPage(),
-        '/driver/home': (_) => const DriverShellPage(),
-        '/driver/jobs': (_) => const DriverShellPage(),
+        '/driver/home': (_) =>
+            const DriverPwaInstallPromptHost(child: DriverShellPage()),
+        '/driver/jobs': (_) =>
+            const DriverPwaInstallPromptHost(child: DriverShellPage()),
         '/support': (_) => const CustomerSupportPage(),
       },
       home: const HomeScreen(),

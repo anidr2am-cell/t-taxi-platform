@@ -631,6 +631,22 @@ class AppLocalizations {
       'driver_rating_average': 'average',
       'driver_rating_count': 'reviews',
       'driver_logout': 'Log out',
+      'driver_pwa_install_title': 'Install T-Ride Driver',
+      'driver_pwa_install_body':
+          'Install T-Ride on your home screen for easier access to jobs and driver features.',
+      'driver_pwa_install_now': 'Install now',
+      'driver_pwa_install_later': 'Later',
+      'driver_pwa_install_manual':
+          'If the install window does not appear, open the Chrome menu and choose “Install app” or “Add to Home screen”.',
+      'driver_pwa_install_ios_steps':
+          'On iPhone or iPad, open Safari, tap Share, choose “Add to Home Screen”, then tap Add.',
+      'driver_pwa_install_success': 'T-Ride has been installed.',
+      'driver_pwa_install_dismissed':
+          'Installation was cancelled. You can install it next time.',
+      'driver_pwa_install_unavailable':
+          'Automatic installation cannot start now. Use the browser menu to install the app.',
+      'driver_pwa_install_error':
+          'Could not start installation. Please use the browser menu.',
       'driver_online': 'Online',
       'driver_offline': 'Offline',
       'driver_session_ready': 'Ready for assignments',
@@ -1460,6 +1476,20 @@ class AppLocalizations {
       'booking_summary': '예약 확인',
       'service_type': '서비스 유형',
       'thb': 'THB',
+      'driver_pwa_install_title': 'T-Ride 기사 앱 설치',
+      'driver_pwa_install_body':
+          '신규 콜 확인과 편리한 이용을 위해 T-Ride를 휴대폰 홈 화면에 설치해 주세요.',
+      'driver_pwa_install_now': '지금 설치',
+      'driver_pwa_install_later': '나중에',
+      'driver_pwa_install_manual':
+          'Chrome 오른쪽 위 메뉴를 누른 뒤 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하세요.',
+      'driver_pwa_install_ios_steps':
+          'iPhone 또는 iPad에서는 Safari 공유 버튼을 누르고 “홈 화면에 추가”를 선택한 뒤 “추가”를 누르세요.',
+      'driver_pwa_install_success': 'T-Ride 설치가 완료되었습니다.',
+      'driver_pwa_install_dismissed': '설치가 취소되었습니다. 다음에 다시 설치할 수 있습니다.',
+      'driver_pwa_install_unavailable':
+          '지금은 자동 설치를 시작할 수 없습니다. 브라우저 메뉴에서 앱 설치를 선택해 주세요.',
+      'driver_pwa_install_error': '설치를 시작할 수 없습니다. 브라우저 메뉴에서 앱 설치를 선택해 주세요.',
       'driver_online': '온라인',
       'driver_offline': '오프라인',
       'driver_session_ready': '배차 대기 중',
@@ -1482,10 +1512,8 @@ class AppLocalizations {
       'driver_call_status_unknown': '상태 확인 필요',
       'driver_call_status_detail_title': '콜 수신 상태',
       'driver_call_status_detail_ready': '새 예약 콜을 받을 수 있습니다.',
-      'driver_call_status_detail_offline':
-          '콜을 받으려면 온라인으로 전환해 주세요.',
-      'driver_call_status_detail_active_trip':
-          '현재 운행을 마친 뒤 새 콜을 받을 수 있습니다.',
+      'driver_call_status_detail_offline': '콜을 받으려면 온라인으로 전환해 주세요.',
+      'driver_call_status_detail_active_trip': '현재 운행을 마친 뒤 새 콜을 받을 수 있습니다.',
       'driver_call_status_detail_settlement_required':
           '이전 운행의 정산 확인이 완료되어야 새 콜을 받을 수 있습니다.',
       'driver_call_status_detail_customer_issue_review':
@@ -1498,8 +1526,7 @@ class AppLocalizations {
           '기사 승인이 아직 완료되지 않았습니다.',
       'driver_call_status_detail_vehicle_review_required':
           '콜을 받으려면 유효한 활성 차량이 필요합니다.',
-      'driver_call_status_detail_unknown':
-          '계속 표시되면 새로고침하거나 운영팀에 문의해 주세요.',
+      'driver_call_status_detail_unknown': '계속 표시되면 새로고침하거나 운영팀에 문의해 주세요.',
       'driver_notification_new': '새 알림',
       'driver_notification_mark_read': '읽음 처리',
       'driver_qr_camera_unavailable': '카메라를 사용할 수 없습니다',
@@ -3079,6 +3106,22 @@ class AppLocalizations {
       'booking_summary': 'สรุปการจอง',
       'service_type': 'ประเภทบริการ',
       'thb': 'THB',
+      'driver_pwa_install_title': 'ติดตั้งแอป T-Ride Driver',
+      'driver_pwa_install_body':
+          'เพื่อรับงานและใช้งานได้สะดวกยิ่งขึ้น กรุณาติดตั้ง T-Ride ไว้บนหน้าจอหลักของโทรศัพท์',
+      'driver_pwa_install_now': 'ติดตั้งตอนนี้',
+      'driver_pwa_install_later': 'ไว้ภายหลัง',
+      'driver_pwa_install_manual':
+          'หากหน้าต่างติดตั้งไม่แสดง ให้แตะเมนู ⋮ ของ Chrome แล้วเลือก “ติดตั้งแอป” หรือ “เพิ่มลงในหน้าจอหลัก”',
+      'driver_pwa_install_ios_steps':
+          'บน iPhone หรือ iPad ให้เปิด Safari แตะปุ่มแชร์ เลือก “เพิ่มไปยังหน้าจอโฮม” แล้วแตะ “เพิ่ม”',
+      'driver_pwa_install_success': 'ติดตั้ง T-Ride สำเร็จแล้ว',
+      'driver_pwa_install_dismissed':
+          'ยกเลิกการติดตั้งแล้ว สามารถติดตั้งใหม่ได้ในครั้งถัดไป',
+      'driver_pwa_install_unavailable':
+          'ตอนนี้ยังเริ่มติดตั้งอัตโนมัติไม่ได้ กรุณาใช้เมนูของเบราว์เซอร์เพื่อติดตั้งแอป',
+      'driver_pwa_install_error':
+          'ไม่สามารถเริ่มการติดตั้งได้ กรุณาใช้เมนูของเบราว์เซอร์เพื่อติดตั้งแอป',
     },
   };
 
@@ -3804,14 +3847,16 @@ class AppLocalizations {
     'driver_call_status_active_trip': '운행 중 / กำลังให้บริการ',
     'driver_call_status_active_trip_helper': '새 콜 수신 불가 / ยังรับงานใหม่ไม่ได้',
     'driver_call_status_settlement_required': '정산 확인 필요 / ต้องตรวจสอบยอดชำระ',
-    'driver_call_status_customer_issue_review': '고객 이슈 확인 중 / กำลังตรวจสอบปัญหาลูกค้า',
+    'driver_call_status_customer_issue_review':
+        '고객 이슈 확인 중 / กำลังตรวจสอบปัญหาลูกค้า',
     'driver_call_status_account_under_review': '계정 검토 중 / กำลังตรวจสอบบัญชี',
     'driver_call_status_account_restricted': '계정 제한됨 / บัญชีถูกจำกัด',
     'driver_call_status_driver_approval_pending': '기사 승인 대기 / รออนุมัติคนขับ',
     'driver_call_status_vehicle_review_required': '차량 확인 필요 / ต้องตรวจสอบรถ',
     'driver_call_status_unknown': '상태 확인 필요 / ต้องตรวจสอบสถานะ',
     'driver_call_status_detail_title': '콜 수신 상태 / สถานะการรับงาน',
-    'driver_call_status_detail_ready': '새 예약 콜을 받을 수 있습니다. / สามารถรับงานใหม่ได้',
+    'driver_call_status_detail_ready':
+        '새 예약 콜을 받을 수 있습니다. / สามารถรับงานใหม่ได้',
     'driver_call_status_detail_offline':
         '콜을 받으려면 온라인으로 전환해 주세요. / กรุณาออนไลน์เมื่อต้องการรับงาน',
     'driver_call_status_detail_active_trip':

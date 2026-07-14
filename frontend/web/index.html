@@ -17,6 +17,95 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    (function () {
+      let deferredPwaInstallPrompt = null;
+      let pwaInstalled = false;
+      let listenerId = 0;
+      const listeners = new Map();
+
+      function notifyPwaListeners() {
+        listeners.forEach((listener) => {
+          try {
+            listener();
+          } catch (_) {
+            // Keep one listener failure from breaking the Flutter bridge.
+          }
+        });
+      }
+
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredPwaInstallPrompt = event;
+        window.dispatchEvent(new CustomEvent('tride-pwa-install-available'));
+        notifyPwaListeners();
+      });
+
+      window.addEventListener('appinstalled', () => {
+        pwaInstalled = true;
+        deferredPwaInstallPrompt = null;
+        window.dispatchEvent(new CustomEvent('tride-pwa-installed'));
+        notifyPwaListeners();
+      });
+
+      window.tridePwaIsSupported = function () {
+        return typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+      };
+
+      window.tridePwaIsStandalone = function () {
+        const standaloneDisplay = window.matchMedia &&
+          window.matchMedia('(display-mode: standalone)').matches;
+        const iosStandalone = window.navigator && window.navigator.standalone === true;
+        const androidReferrer = typeof document.referrer === 'string' &&
+          document.referrer.startsWith('android-app://');
+        return Boolean(standaloneDisplay || iosStandalone || androidReferrer);
+      };
+
+      window.tridePwaIsInstalled = function () {
+        return Boolean(pwaInstalled || window.tridePwaIsStandalone());
+      };
+
+      window.tridePwaCanInstall = function () {
+        return Boolean(deferredPwaInstallPrompt && !window.tridePwaIsInstalled());
+      };
+
+      window.tridePwaIsIos = function () {
+        const platform = (navigator.platform || '').toLowerCase();
+        const userAgent = (navigator.userAgent || '').toLowerCase();
+        const touchMac = platform === 'macintel' && navigator.maxTouchPoints > 1;
+        return /iphone|ipad|ipod/.test(userAgent) || touchMac;
+      };
+
+      window.tridePwaPromptInstall = async function () {
+        if (window.tridePwaIsInstalled()) return 'alreadyInstalled';
+        if (!deferredPwaInstallPrompt) return 'unavailable';
+
+        const promptEvent = deferredPwaInstallPrompt;
+        deferredPwaInstallPrompt = null;
+        notifyPwaListeners();
+
+        try {
+          await promptEvent.prompt();
+          const choice = await promptEvent.userChoice;
+          return choice && choice.outcome === 'accepted' ? 'accepted' : 'dismissed';
+        } catch (_) {
+          return 'error';
+        } finally {
+          notifyPwaListeners();
+        }
+      };
+
+      window.tridePwaSubscribe = function (listener) {
+        listenerId += 1;
+        listeners.set(listenerId, listener);
+        return listenerId;
+      };
+
+      window.tridePwaUnsubscribe = function (id) {
+        listeners.delete(Number(id));
+      };
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

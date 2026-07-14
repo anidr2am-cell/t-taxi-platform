@@ -34,12 +34,22 @@ void main() {
         jsonDecode(File('web/manifest.json').readAsStringSync())
             as Map<String, dynamic>;
 
-    expect(
-      index,
-      contains('<title>T-Ride - Thailand Airport Transfer</title>'),
-    );
+    expect(index, contains('<title>T-Ride</title>'));
     expect(index, contains('apple-mobile-web-app-title" content="T-Ride"'));
-    expect(manifest['name'], 'T-Ride - Thailand Airport Transfer');
+    expect(manifest['name'], 'T-Ride');
     expect(manifest['short_name'], 'T-Ride');
+    expect(manifest['start_url'], '/');
+
+    final icons = manifest['icons'] as List<dynamic>;
+    expect(
+      icons.firstWhere((icon) => icon['sizes'] == '192x192')['purpose'],
+      'any',
+    );
+    expect(
+      icons.firstWhere(
+        (icon) => icon['src'] == 'icons/Icon-maskable-512.png',
+      )['purpose'],
+      'maskable',
+    );
   });
 }
