@@ -34,6 +34,14 @@ function assertSafeEnvironment({ dryRun }) {
   if (missing.length) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
+  assertEmailEnv('TRIDE_ADMIN_EMAIL');
+  assertEmailEnv('TRIDE_TEST_DRIVER_EMAIL');
+  if (
+    process.env.TRIDE_TEST_ADMIN_EMAIL &&
+    normalizeEmail(process.env.TRIDE_TEST_ADMIN_EMAIL) !== normalizeEmail(process.env.TRIDE_ADMIN_EMAIL)
+  ) {
+    throw new Error('TRIDE_ADMIN_EMAIL must match TRIDE_TEST_ADMIN_EMAIL for staging regression.');
+  }
   if (process.env.TRIDE_ALLOW_LIVE_BOOKING_REGRESSION !== '1') {
     throw new Error('Set TRIDE_ALLOW_LIVE_BOOKING_REGRESSION=1 to create staging test bookings.');
   }
@@ -43,6 +51,20 @@ function assertSafeEnvironment({ dryRun }) {
 function normalizeBaseUrl(value) {
   if (!value) return '';
   return String(value).trim().replace(/\/$/, '');
+}
+
+function normalizeEmail(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+}
+
+function assertEmailEnv(name) {
+  if (!isValidEmail(process.env[name])) {
+    throw new Error(`${name} must be a valid email address.`);
+  }
 }
 
 function futurePickup(offsetDays = 7) {
@@ -163,7 +185,7 @@ async function fetchJson(baseUrl, path, options = {}) {
     const body = text ? JSON.parse(text) : null;
     if (!response.ok) {
       const message = body?.error_code || body?.message || `HTTP ${response.status}`;
-      throw new Error(`${path} failed: ${message}`);
+      throw new Error(formatHttpError(path, response.status, body, message));
     }
     return body;
   } finally {
@@ -171,10 +193,24 @@ async function fetchJson(baseUrl, path, options = {}) {
   }
 }
 
+function formatHttpError(path, status, body, message) {
+  const details = Array.isArray(body?.errors)
+    ? body.errors
+      .map((item) => [item.field, item.type, item.source].filter(Boolean).join(':'))
+      .filter(Boolean)
+      .join(', ')
+    : '';
+  const suffix = details ? ` (${details})` : '';
+  return `${path} failed: HTTP ${status} ${message}${suffix}`;
+}
+
 async function login(baseUrl, email, password) {
+  if (!isValidEmail(email)) {
+    throw new Error('Login email must be a valid email address.');
+  }
   const body = await fetchJson(baseUrl, '/api/v1/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: normalizeEmail(email), password }),
   });
   const token = body?.data?.accessToken || body?.data?.access_token;
   if (!token) throw new Error('Login response did not include an access token.');
@@ -396,7 +432,10 @@ module.exports = {
   assertSafeEnvironment,
   bookingPayload,
   candidateItems,
+  formatHttpError,
+  isValidEmail,
   isTestIdentity,
+  normalizeEmail,
   selectTestDriverCandidate,
   scenarios,
   toPricingPayload,
