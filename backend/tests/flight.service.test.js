@@ -70,6 +70,9 @@ test('normalizes flight number', () => {
   assert.equal(service.normalizeFlightNumber('TG409'), 'TG409');
   assert.equal(service.normalizeFlightNumber(' tg 409 '), 'TG409');
   assert.equal(service.normalizeFlightNumber('tg409'), 'TG409');
+  assert.equal(service.normalizeFlightNumber('7c-2203'), '7C2203');
+  assert.equal(service.normalizeFlightNumber('U2 8001'), 'U28001');
+  assert.equal(service.normalizeFlightNumber('THA401'), 'THA401');
 });
 
 test('invalid date validation uses INVALID_FLIGHT_DATE', () => {

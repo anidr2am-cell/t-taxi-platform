@@ -139,7 +139,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
             ),
           ),
         );
-        final errorStep = _controller.firstIncompleteStep() ?? 6;
+        final errorStep =
+            _controller.firstIncompleteStep() ?? _controller.state.step;
         _scrollToSection(errorStep);
       }
       return;

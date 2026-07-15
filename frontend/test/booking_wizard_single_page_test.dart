@@ -416,7 +416,7 @@ void main() {
         ),
       );
       await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
-      await controller.updateCustomerInfo(flightNumber: 'tg 401');
+      await controller.updateCustomerInfo(flightNumber: '7c-2203');
       await controller.updatePassengersAndLuggage(adults: 2);
       await controller.loadRecommendation();
       await controller.selectVehicle('SUV');
@@ -424,7 +424,7 @@ void main() {
       final payload = controller.buildCreatePayload();
 
       expect(payload['transfer'], isA<Map>());
-      expect(payload['transfer']['flightNumber'], 'TG401');
+      expect(payload['transfer']['flightNumber'], '7C2203');
     },
   );
 
@@ -433,58 +433,61 @@ void main() {
     expect(BookingWizardController.validationSteps, [0, 1, 2, 3, 4, 5, 6]);
   });
 
-  test('passenger and luggage changes reload recommendation immediately', () async {
-    var recommendCalls = 0;
-    int? lastAdults;
-    int? lastLuggage20;
-    final api = _TrackingRecommendApi(
-      onRecommend: (adults, luggage20) {
-        recommendCalls += 1;
-        lastAdults = adults;
-        lastLuggage20 = luggage20;
-      },
-    );
-    final controller = BookingWizardController(
-      apiService: api,
-      storage: _MemoryBookingStateStorage(),
-      recentLocationsStorage: RecentLocationsStorage(
-        guestRepository: _MemoryRecentLocationsRepository(),
-      ),
-      now: () => DateTime.utc(2026, 6, 29, 3),
-    );
+  test(
+    'passenger and luggage changes reload recommendation immediately',
+    () async {
+      var recommendCalls = 0;
+      int? lastAdults;
+      int? lastLuggage20;
+      final api = _TrackingRecommendApi(
+        onRecommend: (adults, luggage20) {
+          recommendCalls += 1;
+          lastAdults = adults;
+          lastLuggage20 = luggage20;
+        },
+      );
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
 
-    await controller.selectService(BookingServiceType.airportPickup);
-    await controller.setOrigin(
-      const LocationOption(
-        id: 'bkk',
-        displayName: 'Suvarnabhumi Airport',
-        kind: LocationKind.airport,
-        code: 'BKK',
-      ),
-    );
-    await controller.setDestination(
-      const LocationOption(
-        id: 'pattaya',
-        displayName: 'Pattaya',
-        kind: LocationKind.city,
-        code: 'PATTAYA',
-      ),
-    );
-    await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
-    final baselineCalls = recommendCalls;
+      await controller.selectService(BookingServiceType.airportPickup);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'bkk',
+          displayName: 'Suvarnabhumi Airport',
+          kind: LocationKind.airport,
+          code: 'BKK',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'pattaya',
+          displayName: 'Pattaya',
+          kind: LocationKind.city,
+          code: 'PATTAYA',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      final baselineCalls = recommendCalls;
 
-    await controller.updatePassengersAndLuggage(adults: 2, luggage20: 1);
-    expect(recommendCalls - baselineCalls, 1);
-    expect(lastAdults, 2);
-    expect(lastLuggage20, 1);
-    expect(controller.state.recommendation, isNotNull);
+      await controller.updatePassengersAndLuggage(adults: 2, luggage20: 1);
+      expect(recommendCalls - baselineCalls, 1);
+      expect(lastAdults, 2);
+      expect(lastLuggage20, 1);
+      expect(controller.state.recommendation, isNotNull);
 
-    await controller.updatePassengersAndLuggage(adults: 3);
-    expect(recommendCalls - baselineCalls, 2);
-    expect(lastAdults, 3);
-    expect(controller.state.adults, 3);
-    expect(controller.state.recommendation, isNotNull);
-  });
+      await controller.updatePassengersAndLuggage(adults: 3);
+      expect(recommendCalls - baselineCalls, 2);
+      expect(lastAdults, 3);
+      expect(controller.state.adults, 3);
+      expect(controller.state.recommendation, isNotNull);
+    },
+  );
 }
 
 class _TrackingRecommendApi implements BookingApiService {

@@ -6,6 +6,11 @@ const SERVICE_TYPES = require('../constants/serviceTypes');
 const VEHICLE_TYPES = require('../constants/vehicleTypes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const { unicodeText } = require('./common.validator');
+const {
+  FLIGHT_NUMBER_INVALID_MESSAGE,
+  isValidFlightNumber,
+  normalizeFlightNumber,
+} = require('../utils/flightNumber.util');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 
@@ -98,15 +103,15 @@ const createBookingSchema = Joi.object({
   }).default({}),
   transfer: Joi.object({
     airportIata: Joi.string().length(3).uppercase().allow(null),
-    flightNumber: Joi.string().max(20).allow(null, '').custom((value, helpers) => {
-      if (value == null || !String(value).trim()) return null;
-      const normalized = String(value).trim().replace(/\s+/g, '').toUpperCase();
-      if (!/^[A-Z]{2,3}\d{1,4}[A-Z]?$/.test(normalized)) {
+    flightNumber: Joi.string().max(20).allow(null).empty('').custom((value, helpers) => {
+      const normalized = normalizeFlightNumber(value);
+      if (normalized == null) return null;
+      if (!isValidFlightNumber(normalized)) {
         return helpers.error('any.invalid');
       }
       return normalized;
-    }).messages({
-      'any.invalid': 'Invalid flight number format. Example: TG401',
+    }).default(null).messages({
+      'any.invalid': FLIGHT_NUMBER_INVALID_MESSAGE,
     }),
     golfCourseId: Joi.number().integer().positive().allow(null),
     golfRegion: Joi.string().max(50).allow(null, ''),

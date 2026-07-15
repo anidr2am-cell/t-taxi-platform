@@ -338,7 +338,7 @@ void main() {
         ),
       );
       await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
-      await controller.updateCustomerInfo(flightNumber: 'tg 401');
+      await controller.updateCustomerInfo(flightNumber: '7c-2203');
       await controller.updatePassengersAndLuggage(adults: 2);
       await controller.loadRecommendation();
       await controller.selectVehicle('SUV');
@@ -346,9 +346,63 @@ void main() {
       final payload = controller.buildCreatePayload();
 
       expect(payload['transfer'], isA<Map>());
-      expect(payload['transfer']['flightNumber'], 'TG401');
+      expect(payload['transfer']['flightNumber'], '7C2203');
     },
   );
+
+  test('non-airport-pickup create payload omits stale flight number', () async {
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: _MemoryBookingStateStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.selectService(BookingServiceType.cityTransfer);
+    await controller.setOrigin(
+      const LocationOption(
+        id: 'origin',
+        displayName: 'Bangkok',
+        kind: LocationKind.city,
+        code: 'BANGKOK',
+      ),
+    );
+    await controller.setDestination(
+      const LocationOption(
+        id: 'destination',
+        displayName: 'Pattaya',
+        kind: LocationKind.city,
+        code: 'PATTAYA',
+      ),
+    );
+    await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+    await controller.updateCustomerInfo(flightNumber: '7C2203');
+    await controller.updatePassengersAndLuggage(adults: 2);
+    await controller.loadRecommendation();
+    await controller.selectVehicle('SUV');
+
+    final payload = controller.buildCreatePayload();
+
+    expect(payload.containsKey('transfer'), false);
+  });
+
+  test('service change clears stale flight number from wizard state', () async {
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: _MemoryBookingStateStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+    );
+
+    await controller.selectService(BookingServiceType.airportPickup);
+    await controller.updateCustomerInfo(flightNumber: '7C2203');
+    await controller.selectService(BookingServiceType.cityTransfer);
+
+    expect(controller.state.flightNumber, '');
+  });
 
   test(
     'place details keep localized display text while storing MVP internal code',
@@ -720,6 +774,63 @@ void main() {
       expect(result, isNull);
       expect(controller.state.step, 6);
       expect(controller.state.errorMessage, 'wizard_required_customer_name');
+      expect(controller.state.errorMessage, isNot('Validation failed'));
+    },
+  );
+
+  test(
+    'submit maps backend transfer.flightNumber validation error to pickup step',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _FailingCreateBookingApi(
+          BookingApiException('Validation failed', 'VALIDATION_ERROR', [
+            const BookingApiErrorDetail(
+              source: 'body',
+              field: 'transfer.flightNumber',
+              type: 'any.invalid',
+              message: 'Invalid flight number format. Examples: TG401, 7C2203',
+            ),
+          ]),
+        ),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.airportPickup);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'bkk',
+          displayName: 'Suvarnabhumi Airport',
+          kind: LocationKind.airport,
+          code: 'BKK',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'pattaya',
+          displayName: 'Pattaya',
+          kind: LocationKind.city,
+          code: 'PATTAYA',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2099, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+      await controller.updateCustomerInfo(
+        name: 'Kim',
+        phone: '+66123456789',
+        flightNumber: 'bad-flight',
+      );
+
+      final result = await controller.submitBooking();
+
+      expect(result, isNull);
+      expect(controller.state.step, 3);
+      expect(controller.state.errorMessage, 'flight_number_invalid');
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
   );

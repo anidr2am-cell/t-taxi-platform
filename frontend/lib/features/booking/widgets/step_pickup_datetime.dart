@@ -158,6 +158,10 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
         widget.controller.selectedPickupDateTime() ??
         widget.controller.defaultPickupDateTime();
     final min = widget.controller.minimumPickupDateTime();
+    final flightNumberError =
+        widget.state.errorMessage == 'flight_number_invalid'
+        ? l10n.t('flight_number_invalid')
+        : null;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -189,7 +193,8 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                     compact: widget.embedded,
                     icon: Icons.calendar_today_outlined,
                     title: l10n.t('pickup_date'),
-                    value: widget.state.pickupDate ??
+                    value:
+                        widget.state.pickupDate ??
                         widget.controller.formatDate(selected),
                     onTap: () => _pickDate(context, selected, min),
                   ),
@@ -207,18 +212,20 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
 
             final manualTimeField = TextField(
               controller: _manualTimeController,
-              decoration: WizardCompact.inputDecoration(
-                label: l10n.t('pickup_time_enter_manually'),
-                hint: PickupTimeFormat.formatDisplay(
-                  hour24: 9,
-                  minute: 30,
-                  amLabel: l10n.t('pickup_time_am'),
-                  pmLabel: l10n.t('pickup_time_pm'),
-                ),
-              ).copyWith(
-                errorText:
-                    _manualTimeErrorKey != null ? l10n.t(_manualTimeErrorKey!) : null,
-              ),
+              decoration:
+                  WizardCompact.inputDecoration(
+                    label: l10n.t('pickup_time_enter_manually'),
+                    hint: PickupTimeFormat.formatDisplay(
+                      hour24: 9,
+                      minute: 30,
+                      amLabel: l10n.t('pickup_time_am'),
+                      pmLabel: l10n.t('pickup_time_pm'),
+                    ),
+                  ).copyWith(
+                    errorText: _manualTimeErrorKey != null
+                        ? l10n.t(_manualTimeErrorKey!)
+                        : null,
+                  ),
               onSubmitted: (_) => _applyManualTime(selected),
               onChanged: (_) {
                 if (_manualTimeErrorKey != null) {
@@ -255,7 +262,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                     label: l10n.t('flight_number'),
                     hint: l10n.t('flight_number_hint'),
                     prefixIcon: const Icon(Icons.flight_outlined, size: 20),
-                  ),
+                  ).copyWith(errorText: flightNumberError),
                   textCapitalization: TextCapitalization.characters,
                   onChanged: widget.onFlightNumberChanged,
                 ),
@@ -272,10 +279,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
 
     if (widget.embedded) return content;
 
-    return ListView(
-      padding: AppUi.pagePadding(context),
-      children: [content],
-    );
+    return ListView(padding: AppUi.pagePadding(context), children: [content]);
   }
 
   Future<void> _pickDate(
@@ -328,9 +332,14 @@ class _PickerRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppTokens.borderRadiusMd,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: WizardCompact.minTouchHeight),
+          constraints: const BoxConstraints(
+            minHeight: WizardCompact.minTouchHeight,
+          ),
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 4),
+            padding: EdgeInsets.symmetric(
+              vertical: verticalPadding,
+              horizontal: 4,
+            ),
             child: Row(
               children: [
                 Container(
@@ -339,7 +348,11 @@ class _PickerRow extends StatelessWidget {
                     color: AppTokens.primary.withValues(alpha: 0.1),
                     borderRadius: AppTokens.borderRadiusSm,
                   ),
-                  child: Icon(icon, color: AppTokens.primary, size: compact ? 20 : 22),
+                  child: Icon(
+                    icon,
+                    color: AppTokens.primary,
+                    size: compact ? 20 : 22,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -365,7 +378,11 @@ class _PickerRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: AppTokens.textMuted, size: 20),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppTokens.textMuted,
+                  size: 20,
+                ),
               ],
             ),
           ),
