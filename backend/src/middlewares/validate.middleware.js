@@ -4,9 +4,9 @@
  * 사용:
  * validate({ body: loginSchema })
  */
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
 
 function validate(schemas = {}) {
   return (req, res, next) => {
@@ -22,10 +22,9 @@ function validate(schemas = {}) {
       if (error) {
         errors.push(
           ...error.details.map((d) => ({
-            field: d.path.join('.'),
+            field: d.path.join(".") || d.context?.field || "",
             type: d.type,
             message: d.message,
-            type: d.type,
             source,
           })),
         );
@@ -36,7 +35,7 @@ function validate(schemas = {}) {
 
     if (errors.length > 0) {
       return next(
-        new AppError('Validation failed', {
+        new AppError("Validation failed", {
           statusCode: HTTP_STATUS.BAD_REQUEST,
           errorCode: ERROR_CODES.VALIDATION_ERROR,
           errors,

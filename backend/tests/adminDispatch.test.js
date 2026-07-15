@@ -111,6 +111,62 @@ test("SUPER_ADMIN can list bookings", async () => {
   assert.equal(res.status, 200);
 });
 
+test("admin booking list accepts view search date range and pagination query", async () => {
+  let captured = null;
+  container.register("adminDispatchService", () => ({
+    async listBookings(query) {
+      captured = query;
+      return { page: 1, pageSize: 20, total: 0, items: [] };
+    },
+  }));
+
+  const res = await request(app)
+    .get("/api/v1/admin/bookings")
+    .query({
+      view: "all",
+      search: "TX202607160001",
+      serviceDateFrom: "2026-07-22",
+      serviceDateTo: "2026-07-24",
+      page: 1,
+      limit: 20,
+    })
+    .set("Authorization", `Bearer ${sign("ADMIN")}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(captured.search, "TX202607160001");
+  assert.equal(captured.serviceDateFrom, "2026-07-22");
+  assert.equal(captured.serviceDateTo, "2026-07-24");
+});
+
+test("admin booking list rejects impossible date and exposes validation details", async () => {
+  const res = await request(app)
+    .get("/api/v1/admin/bookings")
+    .query({ serviceDateFrom: "2026-02-31" })
+    .set("Authorization", `Bearer ${sign("ADMIN")}`);
+
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+  assert.deepEqual(res.body.errors[0], {
+    field: "serviceDateFrom",
+    type: "date.format",
+    message: '"serviceDateFrom" must be a real YYYY-MM-DD date',
+    source: "query",
+  });
+});
+
+test("admin booking list rejects end date before start date", async () => {
+  const res = await request(app)
+    .get("/api/v1/admin/bookings")
+    .query({ serviceDateFrom: "2026-07-24", serviceDateTo: "2026-07-22" })
+    .set("Authorization", `Bearer ${sign("ADMIN")}`);
+
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+  assert.equal(res.body.errors[0].field, "serviceDateTo");
+  assert.equal(res.body.errors[0].type, "date.range");
+  assert.equal(res.body.errors[0].source, "query");
+});
+
 test("DRIVER and CUSTOMER are rejected", async () => {
   const resDriver = await request(app)
     .get("/api/v1/admin/bookings")
@@ -169,8 +225,11 @@ test("driver active-job queries use all non-terminal operating statuses", async 
   await repository.hasActiveJob(pool, 6);
   await repository.findByUserId(66);
 
-  const activeStatuses = "('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')";
-  const activeQueries = queries.filter((sql) => sql.includes("booking_driver_assignments"));
+  const activeStatuses =
+    "('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')";
+  const activeQueries = queries.filter((sql) =>
+    sql.includes("booking_driver_assignments"),
+  );
   assert.ok(activeQueries.length >= 4);
   for (const sql of activeQueries) {
     assert.ok(sql.includes(`b.status IN ${activeStatuses}`));
@@ -184,19 +243,21 @@ test("auto-assignment candidates exclude a driver with an active or unsettled jo
     {},
     {
       async listForCandidateEvaluation() {
-        return [{
-          id: 6,
-          name: "Busy Driver",
-          is_active: 1,
-          user_is_active: 1,
-          status: "AVAILABLE",
-          is_online: 1,
-          primary_vehicle_id: 9,
-          primary_vehicle_type_id: 3,
-          primary_vehicle_type_code: "SUV",
-          active_assignment_count: 1,
-          schedule_conflict_count: 0,
-        }];
+        return [
+          {
+            id: 6,
+            name: "Busy Driver",
+            is_active: 1,
+            user_is_active: 1,
+            status: "AVAILABLE",
+            is_online: 1,
+            primary_vehicle_id: 9,
+            primary_vehicle_type_id: 3,
+            primary_vehicle_type_code: "SUV",
+            active_assignment_count: 1,
+            schedule_conflict_count: 0,
+          },
+        ];
       },
     },
     {},
@@ -206,7 +267,9 @@ test("auto-assignment candidates exclude a driver with an active or unsettled jo
     scoringService,
   );
 
-  const result = await service.buildDriverCandidatePreview({ vehicle_type_id: 3 });
+  const result = await service.buildDriverCandidatePreview({
+    vehicle_type_id: 3,
+  });
   assert.equal(result.candidates.length, 0);
   assert.deepEqual(result.excluded[0].reasons, ["MAX_ACTIVE_JOBS"]);
 });
@@ -221,19 +284,38 @@ for (const status of ["ON_ROUTE", "PICKED_UP", "SETTLEMENT_PENDING"]) {
       release() {},
     };
     const service = new AdminDispatchService(
-      { async getConnection() { return conn; } },
+      {
+        async getConnection() {
+          return conn;
+        },
+      },
       {
         async findByBookingNumberForUpdate() {
-          return { id: 1, status: BOOKING_STATUS.PENDING, booking_number: "TX202607010001" };
+          return {
+            id: 1,
+            status: BOOKING_STATUS.PENDING,
+            booking_number: "TX202607010001",
+          };
         },
-        async findActiveAssignmentForUpdate() { return null; },
-        async insertDriverAssignment() { inserted = true; },
+        async findActiveAssignmentForUpdate() {
+          return null;
+        },
+        async insertDriverAssignment() {
+          inserted = true;
+        },
       },
       {
         async findByIdForUpdate() {
-          return { id: 6, name: "Busy Driver", is_active: 1, status: "AVAILABLE" };
+          return {
+            id: 6,
+            name: "Busy Driver",
+            is_active: 1,
+            status: "AVAILABLE",
+          };
         },
-        async hasActiveJob() { return true; },
+        async hasActiveJob() {
+          return true;
+        },
       },
       {},
       settlementStub,
@@ -243,26 +325,38 @@ for (const status of ["ON_ROUTE", "PICKED_UP", "SETTLEMENT_PENDING"]) {
     );
 
     await assert.rejects(
-      () => service.assignDriver(
-        "TX202607010001",
-        { driverId: 6 },
-        { id: 1, role: "ADMIN" },
-      ),
-      (err) => err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE
-        && err.message === "This driver has an active or unsettled job and cannot receive a new booking.",
+      () =>
+        service.assignDriver(
+          "TX202607010001",
+          { driverId: 6 },
+          { id: 1, role: "ADMIN" },
+        ),
+      (err) =>
+        err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE &&
+        err.message ===
+          "This driver has an active or unsettled job and cannot receive a new booking.",
     );
     assert.equal(inserted, false);
   });
 }
 
 test("completed job no longer blocks driver eligibility", async () => {
-  const driver = { id: 6, name: "Available Driver", is_active: 1, status: "AVAILABLE" };
+  const driver = {
+    id: 6,
+    name: "Available Driver",
+    is_active: 1,
+    status: "AVAILABLE",
+  };
   const service = new AdminDispatchService(
     {},
     {},
     {
-      async findByIdForUpdate() { return driver; },
-      async hasActiveJob() { return false; },
+      async findByIdForUpdate() {
+        return driver;
+      },
+      async hasActiveJob() {
+        return false;
+      },
     },
     {},
     settlementStub,
@@ -417,7 +511,11 @@ test("reassign rejects SETTLEMENT_PENDING booking", async () => {
     release() {},
   };
   const service = new AdminDispatchService(
-    { async getConnection() { return conn; } },
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
     {
       async findByBookingNumberForUpdate() {
         return {
@@ -436,11 +534,12 @@ test("reassign rejects SETTLEMENT_PENDING booking", async () => {
   );
 
   await assert.rejects(
-    () => service.reassignDriver(
-      "TX202607010001",
-      { driverId: 6, reason: "swap" },
-      { id: 1, role: "ADMIN" },
-    ),
+    () =>
+      service.reassignDriver(
+        "TX202607010001",
+        { driverId: 6, reason: "swap" },
+        { id: 1, role: "ADMIN" },
+      ),
     (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
   );
 });
@@ -842,7 +941,7 @@ test("listBookings passes search and assignment filters to repository", async ()
   assert.equal(capturedFilters.status, "PENDING");
   assert.equal(capturedFilters.assignmentState, "UNASSIGNED");
   assert.equal(capturedFilters.serviceDateFrom, "2026-07-01 00:00:00");
-  assert.ok(capturedFilters.serviceDateTo);
+  assert.equal(capturedFilters.serviceDateTo, "2026-07-03 00:00:00");
 });
 
 test("listBookings defaults to visible bookings and supports archived-only mode", async () => {
@@ -868,7 +967,10 @@ test("listBookings defaults to visible bookings and supports archived-only mode"
   );
 
   await service.listBookings({ view: "all" }, { id: 1, role: "ADMIN" });
-  await service.listBookings({ view: "all", archived: true }, { id: 1, role: "ADMIN" });
+  await service.listBookings(
+    { view: "all", archived: true },
+    { id: 1, role: "ADMIN" },
+  );
 
   assert.equal(captured[0].archivedOnly, false);
   assert.equal(captured[0].includeArchived, undefined);
@@ -889,7 +991,11 @@ test("archiveBookings stores TEST_DATA reason and keeps child data intact", asyn
     async rollback() {},
     release() {},
   };
-  const pool = { async getConnection() { return conn; } };
+  const pool = {
+    async getConnection() {
+      return conn;
+    },
+  };
   const bookingRepo = {
     async findArchiveCandidatesForUpdate() {
       return [
@@ -943,7 +1049,11 @@ test("restoreBookings clears archive flags and writes audit log", async () => {
     async rollback() {},
     release() {},
   };
-  const pool = { async getConnection() { return conn; } };
+  const pool = {
+    async getConnection() {
+      return conn;
+    },
+  };
   const bookingRepo = {
     async findArchiveCandidatesForUpdate() {
       return [
@@ -990,7 +1100,11 @@ test("archiveDrivers stores TEST_DATA reason and blocks active drivers", async (
     async rollback() {},
     release() {},
   };
-  const pool = { async getConnection() { return conn; } };
+  const pool = {
+    async getConnection() {
+      return conn;
+    },
+  };
   const auditLogs = [];
   const driverRepo = {
     async findArchiveCandidatesForUpdate() {
@@ -1089,7 +1203,11 @@ test("restoreDriver clears archive flag through repository", async () => {
     async rollback() {},
     release() {},
   };
-  const pool = { async getConnection() { return conn; } };
+  const pool = {
+    async getConnection() {
+      return conn;
+    },
+  };
   let restored = null;
   const auditLogs = [];
   const driverRepo = {
@@ -1144,9 +1262,18 @@ test("admin booking query groups unassigned first with group-specific newest ord
   const repository = new BookingRepository(pool);
   await repository.findAdminBookings({}, { limit: 20, offset: 0 });
 
-  assert.match(capturedSql, /CASE WHEN b\.driver_id IS NULL THEN 0 ELSE 1 END ASC/);
-  assert.match(capturedSql, /CASE WHEN b\.driver_id IS NULL THEN b\.created_at END DESC/);
-  assert.match(capturedSql, /CASE WHEN b\.driver_id IS NOT NULL THEN b\.scheduled_pickup_at END DESC/);
+  assert.match(
+    capturedSql,
+    /CASE WHEN b\.driver_id IS NULL THEN 0 ELSE 1 END ASC/,
+  );
+  assert.match(
+    capturedSql,
+    /CASE WHEN b\.driver_id IS NULL THEN b\.created_at END DESC/,
+  );
+  assert.match(
+    capturedSql,
+    /CASE WHEN b\.driver_id IS NOT NULL THEN b\.scheduled_pickup_at END DESC/,
+  );
   assert.match(capturedSql, /b\.is_archived = 0/);
 });
 

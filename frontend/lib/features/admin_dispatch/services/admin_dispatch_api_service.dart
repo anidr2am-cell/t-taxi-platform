@@ -6,20 +6,53 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_config.dart';
 
 class AdminDispatchApiException implements Exception {
-  const AdminDispatchApiException(this.message);
+  const AdminDispatchApiException(
+    this.message, {
+    this.errorCode,
+    this.errors = const [],
+  });
 
   final String message;
+  final String? errorCode;
+  final List<AdminDispatchApiErrorDetail> errors;
 
   @override
   String toString() => message;
 }
 
+class AdminDispatchApiErrorDetail {
+  const AdminDispatchApiErrorDetail({
+    required this.field,
+    this.type,
+    this.source,
+    this.message,
+  });
+
+  final String field;
+  final String? type;
+  final String? source;
+  final String? message;
+
+  factory AdminDispatchApiErrorDetail.fromJson(Map<String, dynamic> json) {
+    return AdminDispatchApiErrorDetail(
+      field: json['field'] as String? ?? '',
+      type: json['type'] as String?,
+      source: json['source'] as String?,
+      message: json['message'] as String?,
+    );
+  }
+}
+
 class AdminDispatchApiService {
-  const AdminDispatchApiService();
+  const AdminDispatchApiService({http.Client? client, String? baseUrl})
+    : _client = client,
+      _baseUrl = baseUrl;
 
   static const _tokenKey = 'admin_access_token';
+  final http.Client? _client;
+  final String? _baseUrl;
 
-  String get _base => '${AppConfig.apiBaseUrl}/api/v1';
+  String get _base => '${_baseUrl ?? AppConfig.apiBaseUrl}/api/v1';
 
   Future<String?> getSavedToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -74,9 +107,18 @@ class AdminDispatchApiService {
       if (body != null) 'Content-Type': 'application/json',
     };
 
+    final client = _client;
     final response = await (method == 'GET'
-        ? http.get(uri, headers: headers)
-        : http.post(uri, headers: headers, body: jsonEncode(body ?? {})));
+        ? (client == null
+              ? http.get(uri, headers: headers)
+              : client.get(uri, headers: headers))
+        : (client == null
+              ? http.post(uri, headers: headers, body: jsonEncode(body ?? {}))
+              : client.post(
+                  uri,
+                  headers: headers,
+                  body: jsonEncode(body ?? {}),
+                )));
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode >= 400) {
@@ -84,7 +126,21 @@ class AdminDispatchApiService {
       final message = decoded is Map
           ? decoded['message'] as String? ?? 'Request failed'
           : 'Request failed';
-      throw AdminDispatchApiException(message);
+      final errors = decoded is Map && decoded['errors'] is List
+          ? (decoded['errors'] as List)
+                .whereType<Map>()
+                .map(
+                  (item) => AdminDispatchApiErrorDetail.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <AdminDispatchApiErrorDetail>[];
+      throw AdminDispatchApiException(
+        message,
+        errorCode: decoded is Map ? decoded['error_code'] as String? : null,
+        errors: errors,
+      );
     }
 
     if (decoded is Map && decoded.containsKey('data')) {
@@ -118,8 +174,12 @@ class AdminDispatchApiService {
     if (assignmentState != null && assignmentState.isNotEmpty) {
       query['assignmentState'] = assignmentState;
     }
-    if (serviceDateFrom != null) query['serviceDateFrom'] = serviceDateFrom;
-    if (serviceDateTo != null) query['serviceDateTo'] = serviceDateTo;
+    if (serviceDateFrom != null && serviceDateFrom.isNotEmpty) {
+      query['serviceDateFrom'] = serviceDateFrom;
+    }
+    if (serviceDateTo != null && serviceDateTo.isNotEmpty) {
+      query['serviceDateTo'] = serviceDateTo;
+    }
     if (serviceType != null && serviceType.isNotEmpty) {
       query['serviceType'] = serviceType;
     }

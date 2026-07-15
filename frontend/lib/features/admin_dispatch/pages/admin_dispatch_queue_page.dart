@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../booking/utils/booking_status_display.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/api_date_format.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
@@ -139,6 +140,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         _error = userFacingError(
           err,
           fallback: context.l10n.t('ui_action_failed'),
+          languageCode: context.l10n.languageCode,
         );
       });
     }
@@ -200,6 +202,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           _loadMoreError = userFacingError(
             err,
             fallback: context.l10n.t('admin_dispatch_load_more_failed'),
+            languageCode: context.l10n.languageCode,
           );
         });
         return;
@@ -212,6 +215,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           _error = userFacingError(
             err,
             fallback: context.l10n.t('ui_action_failed'),
+            languageCode: context.l10n.languageCode,
           );
         }
         _loading = false;
@@ -316,6 +320,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
               userFacingError(
                 err,
                 fallback: context.l10n.t('ui_action_failed'),
+                languageCode: context.l10n.languageCode,
               ),
             ),
           ),
@@ -344,6 +349,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
               userFacingError(
                 err,
                 fallback: context.l10n.t('ui_action_failed'),
+                languageCode: context.l10n.languageCode,
               ),
             ),
           ),
@@ -1113,6 +1119,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late bool _lowRating = widget.lowRating;
   late bool _unassigned = widget.unassignedOnly;
   late bool _hasInquiry = widget.hasInquiry;
+  String? _dateError;
 
   @override
   void dispose() {
@@ -1122,6 +1129,64 @@ class _FilterSheetState extends State<_FilterSheet> {
     _origin.dispose();
     _destination.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate(TextEditingController controller) async {
+    final initial = parseApiDate(controller.text) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    setState(() {
+      controller.text = formatApiDate(picked);
+      _dateError = null;
+    });
+  }
+
+  void _applyFilters() {
+    final from = _dateFrom.text.trim().isEmpty ? null : _dateFrom.text.trim();
+    final to = _dateTo.text.trim().isEmpty ? null : _dateTo.text.trim();
+    if (from != null && parseApiDate(from) == null) {
+      setState(() {
+        _dateError = widget.l10n.t('admin_ops_filter_date_from_invalid');
+      });
+      return;
+    }
+    if (to != null && parseApiDate(to) == null) {
+      setState(() {
+        _dateError = widget.l10n.t('admin_ops_filter_date_to_invalid');
+      });
+      return;
+    }
+    if (from != null && to != null && from.compareTo(to) > 0) {
+      setState(() {
+        _dateError = widget.l10n.t('admin_ops_filter_date_range_invalid');
+      });
+      return;
+    }
+    Navigator.pop(
+      context,
+      _FilterResult(
+        statusFilter: _status,
+        assignmentFilter: _assignment,
+        dateFrom: from,
+        dateTo: to,
+        serviceType: _serviceType.text.trim().isEmpty
+            ? null
+            : _serviceType.text.trim(),
+        origin: _origin.text.trim().isEmpty ? null : _origin.text.trim(),
+        destination: _destination.text.trim().isEmpty
+            ? null
+            : _destination.text.trim(),
+        settlementStatus: _settlement,
+        lowRating: _lowRating,
+        unassignedOnly: _unassigned,
+        hasInquiry: _hasInquiry,
+      ),
+    );
   }
 
   @override
@@ -1145,16 +1210,38 @@ class _FilterSheetState extends State<_FilterSheet> {
             const SizedBox(height: 12),
             TextField(
               controller: _dateFrom,
+              readOnly: true,
               decoration: InputDecoration(
                 labelText: l10n.t('admin_ops_filter_date_from'),
+                helperText: 'YYYY-MM-DD',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  onPressed: () => _pickDate(_dateFrom),
+                ),
               ),
+              onTap: () => _pickDate(_dateFrom),
             ),
             TextField(
               controller: _dateTo,
+              readOnly: true,
               decoration: InputDecoration(
                 labelText: l10n.t('admin_ops_filter_date_to'),
+                helperText: 'YYYY-MM-DD',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  onPressed: () => _pickDate(_dateTo),
+                ),
               ),
+              onTap: () => _pickDate(_dateTo),
             ),
+            if (_dateError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 8),
+                child: Text(
+                  _dateError!,
+                  style: const TextStyle(color: AppTokens.error),
+                ),
+              ),
             DropdownButtonFormField<String?>(
               initialValue: _status,
               decoration: InputDecoration(labelText: l10n.t('status')),
@@ -1289,32 +1376,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => Navigator.pop(
-                      context,
-                      _FilterResult(
-                        statusFilter: _status,
-                        assignmentFilter: _assignment,
-                        dateFrom: _dateFrom.text.trim().isEmpty
-                            ? null
-                            : _dateFrom.text.trim(),
-                        dateTo: _dateTo.text.trim().isEmpty
-                            ? null
-                            : _dateTo.text.trim(),
-                        serviceType: _serviceType.text.trim().isEmpty
-                            ? null
-                            : _serviceType.text.trim(),
-                        origin: _origin.text.trim().isEmpty
-                            ? null
-                            : _origin.text.trim(),
-                        destination: _destination.text.trim().isEmpty
-                            ? null
-                            : _destination.text.trim(),
-                        settlementStatus: _settlement,
-                        lowRating: _lowRating,
-                        unassignedOnly: _unassigned,
-                        hasInquiry: _hasInquiry,
-                      ),
-                    ),
+                    onPressed: _applyFilters,
                     child: Text(l10n.t('admin_ops_filter_apply')),
                   ),
                 ),

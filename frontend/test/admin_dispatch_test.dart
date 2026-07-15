@@ -2,12 +2,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_booking_detail_page.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/features/admin_dispatch/widgets/recommend_drivers_dialog.dart';
 import 'package:frontend/features/admin_settlement/services/admin_settlement_api_service.dart';
 import 'package:frontend/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAdminApi extends AdminDispatchApiService {
   _FakeAdminApi({
@@ -38,6 +41,9 @@ class _FakeAdminApi extends AdminDispatchApiService {
   String? lastAssignmentState;
   String? lastStatus;
   String? lastView;
+  String? lastSearch;
+  String? lastServiceDateFrom;
+  String? lastServiceDateTo;
   bool? lastArchived;
   final Object? candidatesError;
 
@@ -66,6 +72,9 @@ class _FakeAdminApi extends AdminDispatchApiService {
     lastAssignmentState = assignmentState;
     lastStatus = status;
     lastView = view;
+    lastSearch = search;
+    lastServiceDateFrom = serviceDateFrom;
+    lastServiceDateTo = serviceDateTo;
     lastArchived = archived;
     if (bookingsError != null) throw bookingsError!;
     return bookingsResponse ?? {'page': 1, 'total': 0, 'items': []};
@@ -384,6 +393,39 @@ void main() {
     expect(find.text('Network error'), findsOneWidget);
   });
 
+  testWidgets(
+    'maps backend validation detail instead of showing generic message',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminDispatchQueuePage(
+            api: _FakeAdminApi(
+              token: 'token',
+              bookingsError: const AdminDispatchApiException(
+                'Validation failed',
+                errorCode: 'VALIDATION_ERROR',
+                errors: [
+                  AdminDispatchApiErrorDetail(
+                    field: 'serviceDateTo',
+                    type: 'date.range',
+                    source: 'query',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Validation failed'), findsNothing);
+      expect(
+        find.text('The end date cannot be earlier than the start date.'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('summary unassigned card requests UNASSIGNED bookings', (
     tester,
   ) async {
@@ -399,6 +441,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.lastAssignmentState, 'UNASSIGNED');
   });
+
+  test(
+    'date filter API uses YYYY-MM-DD query names and omits null dates',
+    () async {
+      SharedPreferences.setMockInitialValues({'admin_access_token': 'token'});
+      late Uri captured;
+      final api = AdminDispatchApiService(
+        baseUrl: 'https://example.com',
+        client: MockClient((request) async {
+          captured = request.url;
+          return http.Response(
+            '{"success":true,"data":{"page":1,"total":0,"items":[]}}',
+            200,
+          );
+        }),
+      );
+
+      await api.listBookings(
+        view: 'all',
+        search: 'TX202607160001',
+        serviceDateFrom: '2026-07-22',
+        serviceDateTo: '2026-07-24',
+        page: 1,
+        limit: 20,
+      );
+
+      expect(captured.path, '/api/v1/admin/bookings');
+      expect(captured.queryParameters['view'], 'all');
+      expect(captured.queryParameters['search'], 'TX202607160001');
+      expect(captured.queryParameters['serviceDateFrom'], '2026-07-22');
+      expect(captured.queryParameters['serviceDateTo'], '2026-07-24');
+      expect(captured.queryParameters['dateFrom'], isNull);
+      expect(captured.queryParameters['dateTo'], isNull);
+    },
+  );
 
   testWidgets('opens booking detail from queue', (tester) async {
     await tester.pumpWidget(
