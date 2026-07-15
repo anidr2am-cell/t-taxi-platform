@@ -7,7 +7,9 @@ const ROLES = require("../constants/roles");
 const { EVENTS } = require("../events");
 const { parseStoredTags } = require("../constants/reviewTags");
 const AdminOperationsService = require("./adminOperations.service");
-const { ADMIN_BOOKING_VIEWS } = require("../constants/adminOperations.constants");
+const {
+  ADMIN_BOOKING_VIEWS,
+} = require("../constants/adminOperations.constants");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -28,6 +30,12 @@ const CANDIDATE_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.OPEN,
   BOOKING_STATUS.CONFIRMED,
 ]);
+
+function addDaysToApiDate(value, days) {
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return date.toISOString().slice(0, 10);
+}
 
 class AdminDispatchService {
   constructor(
@@ -83,9 +91,7 @@ class AdminDispatchService {
       filters.serviceDateFrom = `${query.serviceDateFrom} 00:00:00`;
     }
     if (query.serviceDateTo) {
-      const end = new Date(`${query.serviceDateTo}T00:00:00`);
-      end.setDate(end.getDate() + 1);
-      filters.serviceDateTo = end.toISOString().slice(0, 19).replace("T", " ");
+      filters.serviceDateTo = `${addDaysToApiDate(query.serviceDateTo, 1)} 00:00:00`;
     }
 
     return filters;
@@ -261,7 +267,8 @@ class AdminDispatchService {
   }
 
   async listBookings(query, actorUser = null) {
-    const adminUserId = this.adminOperationsService.resolveAdminUserId(actorUser);
+    const adminUserId =
+      this.adminOperationsService.resolveAdminUserId(actorUser);
     const filters = this.adminOperationsService.buildFilters(
       query,
       adminUserId,
@@ -298,7 +305,8 @@ class AdminDispatchService {
   }
 
   async getBookingsSummary(actorUser = null) {
-    const adminUserId = this.adminOperationsService.resolveAdminUserId(actorUser);
+    const adminUserId =
+      this.adminOperationsService.resolveAdminUserId(actorUser);
     const keys = this.adminOperationsService.summaryViewKeys();
     const entries = await Promise.all(
       keys.map(async (key) => {
@@ -322,7 +330,8 @@ class AdminDispatchService {
   }
 
   async getBookingDetail(bookingNumber, actorUser = null) {
-    const adminUserId = this.adminOperationsService.resolveAdminUserId(actorUser);
+    const adminUserId =
+      this.adminOperationsService.resolveAdminUserId(actorUser);
     const row =
       await this.bookingRepository.findAdminBookingDetail(bookingNumber);
     if (!row) {
@@ -512,11 +521,17 @@ class AdminDispatchService {
   }
 
   normalizeBookingNumbers(values) {
-    return [...new Set(
-      (values ?? [])
-        .map((value) => String(value ?? "").trim().toUpperCase())
-        .filter((value) => /^TX\d{12}$/.test(value)),
-    )];
+    return [
+      ...new Set(
+        (values ?? [])
+          .map((value) =>
+            String(value ?? "")
+              .trim()
+              .toUpperCase(),
+          )
+          .filter((value) => /^TX\d{12}$/.test(value)),
+      ),
+    ];
   }
 
   archiveWarningsFor(row) {
@@ -532,7 +547,10 @@ class AdminDispatchService {
     if (operatingStatuses.has(row.status) || row.has_assignment) {
       warnings.push("HAS_OPERATION_RECORD");
     }
-    if (row.status === BOOKING_STATUS.COMPLETED || row.commission_status === "PAID") {
+    if (
+      row.status === BOOKING_STATUS.COMPLETED ||
+      row.commission_status === "PAID"
+    ) {
       warnings.push("COMPLETED_OR_SETTLED");
     }
     if (row.has_trip_status_log) {
@@ -559,7 +577,9 @@ class AdminDispatchService {
         bookingNumbers,
       );
       const foundNumbers = new Set(rows.map((row) => row.booking_number));
-      const missing = bookingNumbers.filter((number) => !foundNumbers.has(number));
+      const missing = bookingNumbers.filter(
+        (number) => !foundNumbers.has(number),
+      );
       if (missing.length) {
         throw new AppError("One or more bookings were not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
@@ -621,7 +641,9 @@ class AdminDispatchService {
         bookingNumbers,
       );
       const foundNumbers = new Set(rows.map((row) => row.booking_number));
-      const missing = bookingNumbers.filter((number) => !foundNumbers.has(number));
+      const missing = bookingNumbers.filter(
+        (number) => !foundNumbers.has(number),
+      );
       if (missing.length) {
         throw new AppError("One or more bookings were not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
@@ -743,10 +765,13 @@ class AdminDispatchService {
         (row) => Number(row.active_assignment_count ?? 0) <= 0,
       );
       if (!archivableRows.length) {
-        throw new AppError("No drivers can be archived because active jobs exist", {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
-        });
+        throw new AppError(
+          "No drivers can be archived because active jobs exist",
+          {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+          },
+        );
       }
       const archivableIds = archivableRows.map((row) => Number(row.id));
       await this.driverRepository.archiveDrivers(conn, archivableIds, {
@@ -883,7 +908,10 @@ class AdminDispatchService {
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });
     }
-    const hasActiveJob = await this.driverRepository.hasActiveJob(conn, driver.id);
+    const hasActiveJob = await this.driverRepository.hasActiveJob(
+      conn,
+      driver.id,
+    );
     if (hasActiveJob) {
       throw new AppError(
         "This driver has an active or unsettled job and cannot receive a new booking.",
