@@ -15,6 +15,7 @@
     "smoke:staging": "node scripts/staging-smoke-test.js",
     "smoke:staging:fare-table": "node scripts/staging-fare-table-smoke.js",
     "regression:staging:booking": "node scripts/staging-booking-regression.js",
+    "provision:staging:test-accounts": "node scripts/provision-staging-test-accounts.js",
     "create-test-driver": "node scripts/create-test-driver.js",
     "create-test-admin": "node scripts/create-test-admin.js",
     "create-admin-user": "node scripts/createAdminUser.js",

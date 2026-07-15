@@ -7,6 +7,7 @@
  */
 const REGRESSION_MARKER = 'AUTOMATED_REGRESSION_TEST';
 const EXPECTED_BASE_URL = 'https://trider.taxi';
+const TEST_NAME_PREFIX = '[E2E]';
 const TIMEOUT_MS = Number(process.env.TRIDE_REGRESSION_TIMEOUT_MS || 15000);
 
 function hasArg(name) {
@@ -177,7 +178,59 @@ async function login(baseUrl, email, password) {
   });
   const token = body?.data?.accessToken || body?.data?.access_token;
   if (!token) throw new Error('Login response did not include an access token.');
-  return token;
+  return { token, user: body?.data?.user ?? null };
+}
+
+function isTestIdentity(user, expectedEmail, expectedRole) {
+  return (
+    user?.role === expectedRole &&
+    String(user?.email ?? '').trim().toLowerCase() === String(expectedEmail ?? '').trim().toLowerCase() &&
+    String(user?.name ?? '').startsWith(TEST_NAME_PREFIX)
+  );
+}
+
+async function fetchMe(baseUrl, token) {
+  const body = await fetchJson(baseUrl, '/api/v1/auth/me', {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return body?.data ?? null;
+}
+
+async function assertLoggedInTestIdentity(baseUrl, loginResult, {
+  expectedEmail,
+  allowedRoles,
+  label,
+}) {
+  const user = loginResult.user ?? await fetchMe(baseUrl, loginResult.token);
+  const expected = String(expectedEmail ?? '').trim().toLowerCase();
+  const actualEmail = String(user?.email ?? '').trim().toLowerCase();
+  if (!user || !allowedRoles.includes(user.role) || actualEmail !== expected) {
+    throw new Error(`${label} login did not return the expected test account identity.`);
+  }
+  if (!String(user.name ?? '').startsWith(TEST_NAME_PREFIX)) {
+    throw new Error(`${label} account display name must start with ${TEST_NAME_PREFIX}.`);
+  }
+  return user;
+}
+
+function candidateItems(payload) {
+  const data = payload?.data ?? {};
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.candidates)) return data.candidates;
+  return [];
+}
+
+function selectTestDriverCandidate(payload, driverUser) {
+  const candidates = candidateItems(payload);
+  const candidate = candidates.find((item) => (
+    item.eligible !== false &&
+    String(item.displayName ?? '').startsWith(TEST_NAME_PREFIX) &&
+    String(item.displayName ?? '') === String(driverUser.name ?? '')
+  ));
+  if (!candidate) {
+    throw new Error('Expected test driver was not returned as an eligible candidate.');
+  }
+  return candidate;
 }
 
 async function main() {
@@ -195,16 +248,28 @@ async function main() {
     return;
   }
 
-  const adminToken = await login(
+  const adminLogin = await login(
     baseUrl,
     process.env.TRIDE_ADMIN_EMAIL,
     process.env.TRIDE_ADMIN_PASSWORD,
   );
-  const driverToken = await login(
+  const driverLogin = await login(
     baseUrl,
     process.env.TRIDE_TEST_DRIVER_EMAIL,
     process.env.TRIDE_TEST_DRIVER_PASSWORD,
   );
+  const adminUser = await assertLoggedInTestIdentity(baseUrl, adminLogin, {
+    expectedEmail: process.env.TRIDE_ADMIN_EMAIL,
+    allowedRoles: ['ADMIN', 'SUPER_ADMIN'],
+    label: 'Admin',
+  });
+  const driverUser = await assertLoggedInTestIdentity(baseUrl, driverLogin, {
+    expectedEmail: process.env.TRIDE_TEST_DRIVER_EMAIL,
+    allowedRoles: ['DRIVER'],
+    label: 'Driver',
+  });
+  const adminToken = adminLogin.token;
+  const driverToken = driverLogin.token;
 
   const createdNumbers = [];
   try {
@@ -244,10 +309,7 @@ async function main() {
     const candidates = await fetchJson(baseUrl, `/api/v1/admin/bookings/${first}/driver-candidates`, {
       headers: { authorization: `Bearer ${adminToken}` },
     });
-    const candidate = (candidates?.data?.items || []).find((item) => item.eligible !== false);
-    if (!candidate) {
-      throw new Error('No eligible test driver candidate returned.');
-    }
+    const candidate = selectTestDriverCandidate(candidates, driverUser);
     await fetchJson(baseUrl, `/api/v1/admin/bookings/${first}/assign-driver`, {
       method: 'POST',
       headers: { authorization: `Bearer ${adminToken}` },
@@ -277,6 +339,8 @@ async function main() {
     });
 
     console.log(`Regression completed. Created/archived bookings: ${createdNumbers.join(', ')}`);
+    console.log(`Regression admin: ${adminUser.email}`);
+    console.log(`Regression driver: ${driverUser.email}`);
   } catch (err) {
     console.error(`Regression failed after bookings [${createdNumbers.join(', ')}]: ${err.message}`);
     process.exitCode = 1;
@@ -308,8 +372,12 @@ if (require.main === module) {
 
 module.exports = {
   REGRESSION_MARKER,
+  TEST_NAME_PREFIX,
   assertSafeEnvironment,
   bookingPayload,
+  candidateItems,
+  isTestIdentity,
+  selectTestDriverCandidate,
   scenarios,
   toPricingPayload,
 };
