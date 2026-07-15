@@ -82,6 +82,9 @@ class DriverApplicationService {
 
   parseFilters(query) {
     return {
+      view: ['needs_action', 'approved', 'closed', 'all'].includes(query.view)
+        ? query.view
+        : 'needs_action',
       status: query.status || null,
       countryCode: query.countryCode?.trim().toUpperCase() || null,
       vehicleTypeCode: query.vehicleTypeCode?.trim().toUpperCase() || null,

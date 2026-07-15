@@ -999,7 +999,7 @@ test("archiveDrivers stores TEST_DATA reason and blocks active drivers", async (
           id: 7,
           user_id: 70,
           name: "Test Driver",
-          is_online: 0,
+          is_online: 1,
           active_assignment_count: 0,
           completed_trip_count: 0,
           settlement_count: 0,
@@ -1041,7 +1041,32 @@ test("archiveDrivers stores TEST_DATA reason and blocks active drivers", async (
   assert.equal(auditLogs[0].action, "driver.archived");
   assert.equal(auditLogs[0].driverId, 7);
   assert.equal(auditLogs[0].payload.reason, "TEST_DATA");
+  assert.deepEqual(auditLogs[0].payload.warnings, ["WILL_FORCE_OFFLINE"]);
   assert.equal(result.archived, 1);
+  assert.equal(result.blocked.length, 0);
+
+  driverRepo.findArchiveCandidatesForUpdate = async () => [
+    {
+      id: 7,
+      name: "Test Driver",
+      is_online: 1,
+      active_assignment_count: 0,
+    },
+    {
+      id: 8,
+      name: "Busy Driver",
+      is_online: 1,
+      active_assignment_count: 1,
+    },
+  ];
+  const partial = await service.archiveDrivers(
+    { driverIds: [7, 8] },
+    { id: 1, role: "ADMIN" },
+  );
+  assert.equal(partial.archived, 1);
+  assert.deepEqual(partial.blocked, [
+    { driverId: 8, displayName: "Busy Driver", reason: "ACTIVE_ASSIGNMENT" },
+  ]);
 
   driverRepo.findArchiveCandidatesForUpdate = async () => [
     {

@@ -690,8 +690,11 @@ class AdminDispatchService {
 
   driverArchiveWarnings(row) {
     const warnings = [];
-    if (Number(row.active_assignment_count ?? 0) > 0 || row.is_online) {
-      warnings.push("ACTIVE_OR_ONLINE");
+    if (Number(row.active_assignment_count ?? 0) > 0) {
+      warnings.push("ACTIVE_ASSIGNMENT");
+    }
+    if (row.is_online) {
+      warnings.push("WILL_FORCE_OFFLINE");
     }
     if (Number(row.completed_trip_count ?? 0) > 0) {
       warnings.push("HAS_COMPLETED_TRIPS");
@@ -733,24 +736,25 @@ class AdminDispatchService {
           errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
         });
       }
-      const blocked = rows.find(
-        (row) => Number(row.active_assignment_count ?? 0) > 0 || row.is_online,
+      const blockedRows = rows.filter(
+        (row) => Number(row.active_assignment_count ?? 0) > 0,
       );
-      if (blocked) {
-        throw new AppError(
-          "Driver has an active job or is online. Take the driver offline and finish active jobs before archiving.",
-          {
-            statusCode: HTTP_STATUS.CONFLICT,
-            errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
-          },
-        );
+      const archivableRows = rows.filter(
+        (row) => Number(row.active_assignment_count ?? 0) <= 0,
+      );
+      if (!archivableRows.length) {
+        throw new AppError("No drivers can be archived because active jobs exist", {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+        });
       }
-      await this.driverRepository.archiveDrivers(conn, driverIds, {
+      const archivableIds = archivableRows.map((row) => Number(row.id));
+      await this.driverRepository.archiveDrivers(conn, archivableIds, {
         actorUserId: actor.id,
         reason: "TEST_DATA",
       });
       await Promise.all(
-        rows.map((row) =>
+        archivableRows.map((row) =>
           this.driverRepository.insertAuditLog(conn, {
             userId: actor.id,
             action: "driver.archived",
@@ -766,20 +770,25 @@ class AdminDispatchService {
         ),
       );
       await conn.commit();
+      return {
+        archived: archivableRows.length,
+        blocked: blockedRows.map((row) => ({
+          driverId: Number(row.id),
+          displayName: row.name,
+          reason: "ACTIVE_ASSIGNMENT",
+        })),
+        items: archivableRows.map((row) => ({
+          driverId: Number(row.id),
+          displayName: row.name,
+          warnings: this.driverArchiveWarnings(row),
+        })),
+      };
     } catch (err) {
       await conn.rollback();
       throw err;
     } finally {
       conn.release();
     }
-    return {
-      archived: rows.length,
-      items: rows.map((row) => ({
-        driverId: Number(row.id),
-        displayName: row.name,
-        warnings: this.driverArchiveWarnings(row),
-      })),
-    };
   }
 
   async restoreDriver(driverId, user) {
