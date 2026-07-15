@@ -138,7 +138,7 @@ test('provision refuses existing non-test accounts', () => {
   );
 
   assert.doesNotThrow(() => provision.assertExistingUserIsTestAccount({
-    email: 'tride.e2e.admin@invalid.example',
+    email: 'tride.e2e.admin@example.com',
     display_name: '[E2E] Regression Admin',
   }, 'Admin'));
 });
@@ -146,8 +146,8 @@ test('provision refuses existing non-test accounts', () => {
 test('booking regression runner refuses non-test identities and selects only matching test driver', () => {
   assert.equal(
     runner.isTestIdentity(
-      { email: 'tride.e2e.driver@invalid.example', role: 'DRIVER', name: '[E2E] Regression Driver' },
-      'tride.e2e.driver@invalid.example',
+      { email: 'tride.e2e.driver@example.com', role: 'DRIVER', name: '[E2E] Regression Driver' },
+      'tride.e2e.driver@example.com',
       'DRIVER',
     ),
     true,
@@ -184,7 +184,7 @@ test('booking regression runner validates live email env before login', () => {
     TRIDE_BASE_URL: 'https://trider.taxi',
     TRIDE_ADMIN_EMAIL: 'not-an-email',
     TRIDE_ADMIN_PASSWORD: 'secret',
-    TRIDE_TEST_DRIVER_EMAIL: 'tride.e2e.driver@invalid.example',
+    TRIDE_TEST_DRIVER_EMAIL: 'tride.e2e.driver@example.com',
     TRIDE_TEST_DRIVER_PASSWORD: 'secret',
     TRIDE_ALLOW_LIVE_BOOKING_REGRESSION: '1',
   }, () => {
@@ -196,10 +196,24 @@ test('booking regression runner validates live email env before login', () => {
 
   withEnv({
     TRIDE_BASE_URL: 'https://trider.taxi',
-    TRIDE_TEST_ADMIN_EMAIL: 'tride.e2e.admin@invalid.example',
-    TRIDE_ADMIN_EMAIL: 'other.admin@invalid.example',
+    TRIDE_ADMIN_EMAIL: 'tride.e2e.admin@invalid.example',
     TRIDE_ADMIN_PASSWORD: 'secret',
-    TRIDE_TEST_DRIVER_EMAIL: 'tride.e2e.driver@invalid.example',
+    TRIDE_TEST_DRIVER_EMAIL: 'tride.e2e.driver@example.com',
+    TRIDE_TEST_DRIVER_PASSWORD: 'secret',
+    TRIDE_ALLOW_LIVE_BOOKING_REGRESSION: '1',
+  }, () => {
+    assert.throws(
+      () => runner.assertSafeEnvironment({ dryRun: false }),
+      /TRIDE_ADMIN_EMAIL must be a valid email/,
+    );
+  });
+
+  withEnv({
+    TRIDE_BASE_URL: 'https://trider.taxi',
+    TRIDE_TEST_ADMIN_EMAIL: 'tride.e2e.admin@example.com',
+    TRIDE_ADMIN_EMAIL: 'other.admin@example.com',
+    TRIDE_ADMIN_PASSWORD: 'secret',
+    TRIDE_TEST_DRIVER_EMAIL: 'tride.e2e.driver@example.com',
     TRIDE_TEST_DRIVER_PASSWORD: 'secret',
     TRIDE_ALLOW_LIVE_BOOKING_REGRESSION: '1',
   }, () => {

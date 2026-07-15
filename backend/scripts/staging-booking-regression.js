@@ -9,6 +9,7 @@ const REGRESSION_MARKER = 'AUTOMATED_REGRESSION_TEST';
 const EXPECTED_BASE_URL = 'https://trider.taxi';
 const TEST_NAME_PREFIX = '[E2E]';
 const TIMEOUT_MS = Number(process.env.TRIDE_REGRESSION_TIMEOUT_MS || 15000);
+const { loginSchema } = require('../src/validators/auth.validator');
 
 function hasArg(name) {
   return process.argv.slice(2).includes(name);
@@ -58,7 +59,8 @@ function normalizeEmail(value) {
 }
 
 function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+  const { error } = loginSchema.validate({ email: normalizeEmail(value), password: 'validation-only' });
+  return !error;
 }
 
 function assertEmailEnv(name) {
