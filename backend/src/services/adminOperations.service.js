@@ -96,6 +96,7 @@ class AdminOperationsService {
     const lowRatingRaw = query.lowRating ?? query.low_rating;
     const unassignedRaw = query.unassigned;
     const hasInquiryRaw = query.hasInquiry ?? query.has_inquiry;
+    const archivedRaw = query.archived ?? query.archivedOnly ?? query.archived_only;
 
     return {
       view,
@@ -115,6 +116,8 @@ class AdminOperationsService {
         unassignedRaw === 'true' || unassignedRaw === true || unassignedRaw === '1',
       hasInquiry:
         hasInquiryRaw === 'true' || hasInquiryRaw === true || hasInquiryRaw === '1',
+      archivedOnly:
+        archivedRaw === 'true' || archivedRaw === true || archivedRaw === '1',
       adminUserId: null,
     };
   }
@@ -144,6 +147,11 @@ class AdminOperationsService {
     );
 
     const next = { ...filters, view, operationsNow: nowText, operationsUrgentCutoff: urgentCutoff };
+
+    if (next.archivedOnly) {
+      next.includeArchived = true;
+      return next;
+    }
 
     switch (view) {
       case ADMIN_BOOKING_VIEWS.NEEDS_ACTION:

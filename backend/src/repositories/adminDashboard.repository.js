@@ -28,6 +28,7 @@ class AdminDashboardRepository {
           SUM(CASE WHEN b.status = 'NO_SHOW' THEN 1 ELSE 0 END) AS no_show
         FROM bookings b
         WHERE b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.scheduled_pickup_at >= ?
           AND b.scheduled_pickup_at < ?
       `,
@@ -50,6 +51,7 @@ class AdminDashboardRepository {
           AND bda.status IN ('ASSIGNED', 'ACCEPTED')
         LEFT JOIN bookings b ON b.id = bda.booking_id
           AND b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
         WHERE d.deleted_at IS NULL
       `,
@@ -73,6 +75,7 @@ class AdminDashboardRepository {
             THEN 1 ELSE 0 END) AS overdue
         FROM bookings b
         WHERE b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status = 'COMPLETED'
           AND b.commission_status NOT IN ('NOT_DUE_YET', 'PAID', 'WAIVED')
       `,
@@ -96,6 +99,7 @@ class AdminDashboardRepository {
             THEN total_amount ELSE 0 END) AS today_completed
         FROM bookings
         WHERE deleted_at IS NULL
+          AND is_archived = 0
           AND (
             (scheduled_pickup_at >= ? AND scheduled_pickup_at < ?)
             OR (completed_at >= ? AND completed_at < ?)

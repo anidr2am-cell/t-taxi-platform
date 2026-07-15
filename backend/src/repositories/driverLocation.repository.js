@@ -24,7 +24,7 @@ class DriverLocationRepository {
       `
         SELECT 1
         FROM booking_driver_assignments bda
-        INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+        INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
         WHERE bda.driver_id = ?
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL
@@ -169,7 +169,7 @@ class DriverLocationRepository {
       `
         SELECT b.id AS booking_id
         FROM booking_driver_assignments bda
-        INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+        INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
         WHERE bda.driver_id = ?
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL

@@ -32,6 +32,9 @@ const adminBookingListQuerySchema = paginationQuery.keys({
   hasInquiry: Joi.boolean().optional(),
   has_inquiry: Joi.boolean().optional(),
   sort: Joi.string().optional(),
+  archived: Joi.boolean().optional(),
+  archivedOnly: Joi.boolean().optional(),
+  archived_only: Joi.boolean().optional(),
 });
 
 const bookingNumberParamsSchema = Joi.object({
@@ -74,6 +77,10 @@ const createAdminBookingNoteSchema = Joi.object({
   admin_user_id: Joi.forbidden(),
 });
 
+const archiveBookingsSchema = Joi.object({
+  bookingNumbers: Joi.array().items(bookingNumberParam).min(1).max(100).required(),
+});
+
 module.exports = {
   adminBookingListQuerySchema,
   bookingNumberParamsSchema,
@@ -83,4 +90,5 @@ module.exports = {
   qrReissueSchema,
   adminBookingNotesQuerySchema,
   createAdminBookingNoteSchema,
+  archiveBookingsSchema,
 };

@@ -25,7 +25,7 @@ class DriverRepository {
           (
             SELECT COUNT(*)
             FROM booking_driver_assignments bda
-            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
             WHERE bda.driver_id = d.id
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
@@ -79,7 +79,7 @@ class DriverRepository {
           (
             SELECT COUNT(*)
             FROM booking_driver_assignments bda
-            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
             WHERE bda.driver_id = d.id
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
@@ -95,7 +95,7 @@ class DriverRepository {
           (
             SELECT COUNT(*)
             FROM booking_driver_assignments bda
-            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
             WHERE bda.driver_id = d.id
               AND bda.deleted_at IS NULL
               AND DATE(bda.assigned_at) = CURDATE()
@@ -109,7 +109,7 @@ class DriverRepository {
           (
             SELECT COUNT(*)
             FROM booking_driver_assignments bda
-            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
             WHERE bda.driver_id = d.id
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
@@ -202,7 +202,7 @@ class DriverRepository {
       `
         SELECT 1
         FROM booking_driver_assignments bda
-        INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+        INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
         WHERE bda.driver_id = ?
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL
@@ -285,7 +285,7 @@ class DriverRepository {
           AND NOT EXISTS (
             SELECT 1
             FROM booking_driver_assignments bda
-            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
             WHERE bda.driver_id = d.id
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
@@ -340,7 +340,7 @@ class DriverRepository {
           (
             SELECT COUNT(*)
             FROM booking_driver_assignments bda
-            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+            INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
             WHERE bda.driver_id = d.id
               AND bda.is_active = 1
               AND bda.deleted_at IS NULL
