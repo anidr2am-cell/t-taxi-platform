@@ -31,7 +31,22 @@ const getBookingDetail = asyncHandler(async (req, res) => {
 });
 
 const listDrivers = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().listDrivers();
+  const data = await getAdminDispatchService().listDrivers(req.query);
+  return success(res, data);
+});
+
+const archiveDrivers = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().archiveDrivers(req.body, req.user);
+  return success(res, data, 'Drivers archived');
+});
+
+const restoreDriver = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().restoreDriver(req.params.id, req.user);
+  return success(res, data, 'Driver restored');
+});
+
+const getDriverDeletionPreview = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().getDriverDeletionPreview(req.params.id);
   return success(res, data);
 });
 
@@ -109,6 +124,9 @@ module.exports = {
   getBookingsSummary,
   getBookingDetail,
   listDrivers,
+  archiveDrivers,
+  restoreDriver,
+  getDriverDeletionPreview,
   assignDriver,
   reassignDriver,
   getDriverCandidates,

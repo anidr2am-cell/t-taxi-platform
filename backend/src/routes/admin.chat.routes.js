@@ -10,6 +10,9 @@ const {
   sendChatMessageSchema,
   markChatReadSchema,
   adminChatListQuerySchema,
+  adminChatMessageIdParamsSchema,
+  adminChatMessageHideSchema,
+  adminChatThreadArchiveSchema,
 } = require('../validators/chat.validator');
 
 const router = express.Router();
@@ -20,6 +23,38 @@ router.get(
   roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN]),
   validate({ query: adminChatListQuerySchema }),
   chatController.listAdminChats,
+);
+
+router.post(
+  '/chats/messages/:id/hide',
+  authMiddleware,
+  roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN]),
+  validate({ params: adminChatMessageIdParamsSchema, body: adminChatMessageHideSchema }),
+  chatController.hideAdminChatMessage,
+);
+
+router.post(
+  '/chats/messages/:id/restore',
+  authMiddleware,
+  roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN]),
+  validate({ params: adminChatMessageIdParamsSchema }),
+  chatController.restoreAdminChatMessage,
+);
+
+router.post(
+  '/chats/archive',
+  authMiddleware,
+  roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN]),
+  validate({ body: adminChatThreadArchiveSchema }),
+  chatController.archiveAdminChatThreads,
+);
+
+router.post(
+  '/chats/:bookingNumber/restore',
+  authMiddleware,
+  roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN]),
+  validate({ params: bookingNumberParamsSchema }),
+  chatController.restoreAdminChatThread,
 );
 
 router.get(

@@ -6,7 +6,7 @@ class DriverRepository {
     this.pool = pool;
   }
 
-  async listForAdminAssignment() {
+  async listForAdminAssignment({ archived = false } = {}) {
     const [rows] = await this.pool.query(
       `
         SELECT
@@ -16,6 +16,9 @@ class DriverRepository {
           d.status,
           d.is_online,
           d.is_active,
+          d.is_archived,
+          d.archived_at,
+          d.archive_reason,
           d.primary_vehicle_type_id,
           vt.code AS primary_vehicle_type_code,
           vt.name AS primary_vehicle_type_name,
@@ -51,8 +54,10 @@ class DriverRepository {
           AND dv.is_active = 1
           AND dv.deleted_at IS NULL
         WHERE d.deleted_at IS NULL
+          AND d.is_archived = ?
         ORDER BY d.name ASC
       `,
+      [archived ? 1 : 0],
     );
     return rows;
   }
@@ -127,6 +132,7 @@ class DriverRepository {
           AND dv.is_active = 1
           AND dv.deleted_at IS NULL
         WHERE d.deleted_at IS NULL
+          AND d.is_archived = 0
         ORDER BY d.name ASC
       `,
       [
@@ -148,7 +154,8 @@ class DriverRepository {
           d.phone,
           d.status,
           d.is_online,
-          d.is_active
+          d.is_active,
+          d.is_archived
         FROM drivers d
         WHERE d.id = ? AND d.deleted_at IS NULL
         LIMIT 1
@@ -174,7 +181,7 @@ class DriverRepository {
           u.is_active AS user_is_active
         FROM drivers d
         INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL
-        WHERE d.user_id = ? AND d.deleted_at IS NULL
+        WHERE d.user_id = ? AND d.deleted_at IS NULL AND d.is_archived = 0
         LIMIT 1
         FOR UPDATE
       `,
@@ -279,6 +286,7 @@ class DriverRepository {
           LIMIT 1
         )
         WHERE d.deleted_at IS NULL
+          AND d.is_archived = 0
           AND d.is_active = 1
           AND d.is_online = 1
           AND d.status = 'AVAILABLE'
@@ -356,12 +364,137 @@ class DriverRepository {
           ) AS active_vehicle_count
         FROM drivers d
         INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL
-        WHERE d.user_id = ? AND d.deleted_at IS NULL
+        WHERE d.user_id = ? AND d.deleted_at IS NULL AND d.is_archived = 0
         LIMIT 1
       `,
       [userId],
     );
     return rows[0] || null;
+  }
+
+  async findArchiveCandidatesForUpdate(conn, driverIds) {
+    if (!driverIds.length) return [];
+    const placeholders = driverIds.map(() => '?').join(', ');
+    const [rows] = await conn.query(
+      `
+        SELECT
+          d.id,
+          d.user_id,
+          d.name,
+          d.status,
+          d.is_online,
+          d.is_active,
+          d.is_archived,
+          d.archive_reason,
+          (
+            SELECT COUNT(*)
+            FROM booking_driver_assignments bda
+            WHERE bda.driver_id = d.id
+              AND bda.deleted_at IS NULL
+          ) AS assignment_count,
+          (
+            SELECT COUNT(*)
+            FROM booking_driver_assignments bda
+            INNER JOIN bookings b ON b.id = bda.booking_id
+              AND b.deleted_at IS NULL
+              AND b.is_archived = 0
+            WHERE bda.driver_id = d.id
+              AND bda.is_active = 1
+              AND bda.deleted_at IS NULL
+              AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+              AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+          ) AS active_assignment_count,
+          (
+            SELECT COUNT(*)
+            FROM bookings b
+            WHERE b.driver_id = d.id
+              AND b.deleted_at IS NULL
+              AND b.status IN ('COMPLETED', 'SETTLEMENT_PENDING')
+          ) AS completed_trip_count,
+          (
+            SELECT COUNT(*)
+            FROM bookings b
+            WHERE b.driver_id = d.id
+              AND b.deleted_at IS NULL
+              AND b.commission_status IS NOT NULL
+              AND b.commission_status <> 'NOT_DUE_YET'
+          ) AS settlement_count,
+          (
+            SELECT COUNT(*)
+            FROM chat_messages cm
+            INNER JOIN chat_participants cp ON cp.id = cm.sender_participant_id
+            WHERE cp.user_id = d.user_id
+              AND cm.deleted_at IS NULL
+          ) AS message_count,
+          (
+            SELECT COUNT(*)
+            FROM reviews r
+            WHERE r.driver_id = d.id
+          ) AS review_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicles dv
+            WHERE dv.driver_id = d.id
+              AND dv.deleted_at IS NULL
+          ) AS vehicle_count
+        FROM drivers d
+        WHERE d.id IN (${placeholders})
+          AND d.deleted_at IS NULL
+        FOR UPDATE
+      `,
+      driverIds,
+    );
+    return rows;
+  }
+
+  async archiveDrivers(conn, driverIds, { actorUserId, reason }) {
+    if (!driverIds.length) return 0;
+    const placeholders = driverIds.map(() => '?').join(', ');
+    const [result] = await conn.query(
+      `
+        UPDATE drivers
+        SET
+          is_archived = 1,
+          archived_at = CURRENT_TIMESTAMP,
+          archived_by = ?,
+          archive_reason = ?,
+          is_online = 0,
+          status = 'OFFLINE',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (${placeholders})
+          AND deleted_at IS NULL
+      `,
+      [actorUserId, reason, ...driverIds],
+    );
+    return result.affectedRows;
+  }
+
+  async restoreDriver(conn, driverId, { actorUserId }) {
+    const [result] = await conn.query(
+      `
+        UPDATE drivers
+        SET
+          is_archived = 0,
+          archived_at = NULL,
+          archived_by = NULL,
+          archive_reason = NULL,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `,
+      [driverId],
+    );
+    return result.affectedRows;
+  }
+
+  async insertAuditLog(conn, { userId, action, driverId, payload }) {
+    await conn.query(
+      `
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, payload)
+        VALUES (?, ?, 'driver', ?, ?)
+      `,
+      [userId, action, driverId, JSON.stringify(payload ?? {})],
+    );
   }
 }
 

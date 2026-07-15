@@ -81,6 +81,18 @@ const archiveBookingsSchema = Joi.object({
   bookingNumbers: Joi.array().items(bookingNumberParam).min(1).max(100).required(),
 });
 
+const archiveDriversSchema = Joi.object({
+  driverIds: Joi.array()
+    .items(Joi.number().integer().positive())
+    .min(1)
+    .max(100)
+    .required(),
+});
+
+const driverIdParamsSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+});
+
 module.exports = {
   adminBookingListQuerySchema,
   bookingNumberParamsSchema,
@@ -91,4 +103,6 @@ module.exports = {
   adminBookingNotesQuerySchema,
   createAdminBookingNoteSchema,
   archiveBookingsSchema,
+  archiveDriversSchema,
+  driverIdParamsSchema,
 };

@@ -100,6 +100,36 @@ const markAdminChatRead = asyncHandler(async (req, res) => {
   return success(res, data);
 });
 
+const hideAdminChatMessage = asyncHandler(async (req, res) => {
+  const data = await getChatService().hideAdminMessage(
+    Number(req.params.id),
+    req.user,
+    req.body,
+  );
+  return success(res, data);
+});
+
+const restoreAdminChatMessage = asyncHandler(async (req, res) => {
+  const data = await getChatService().restoreAdminMessage(
+    Number(req.params.id),
+    req.user,
+  );
+  return success(res, data);
+});
+
+const archiveAdminChatThreads = asyncHandler(async (req, res) => {
+  const data = await getChatService().archiveAdminThreads(req.body, req.user);
+  return success(res, data);
+});
+
+const restoreAdminChatThread = asyncHandler(async (req, res) => {
+  const data = await getChatService().restoreAdminThread(
+    req.params.bookingNumber,
+    req.user,
+  );
+  return success(res, data);
+});
+
 module.exports = {
   getBookingChat,
   listBookingChatMessages,
@@ -111,4 +141,8 @@ module.exports = {
   listAdminChatMessages,
   sendAdminChatMessage,
   markAdminChatRead,
+  hideAdminChatMessage,
+  restoreAdminChatMessage,
+  archiveAdminChatThreads,
+  restoreAdminChatThread,
 };

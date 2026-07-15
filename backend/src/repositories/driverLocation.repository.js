@@ -10,7 +10,7 @@ class DriverLocationRepository {
       `
         SELECT id, user_id, name, status, is_online, is_active
         FROM drivers
-        WHERE user_id = ? AND deleted_at IS NULL
+        WHERE user_id = ? AND deleted_at IS NULL AND is_archived = 0
         LIMIT 1
         FOR UPDATE
       `,
@@ -68,6 +68,7 @@ class DriverLocationRepository {
   async listAdminDriverLocations(filters = {}) {
     const where = [
       'd.deleted_at IS NULL',
+      'd.is_archived = 0',
       'd.is_active = 1',
       'd.current_lat IS NOT NULL',
       'd.current_lng IS NOT NULL',
@@ -150,6 +151,7 @@ class DriverLocationRepository {
         LEFT JOIN drivers d ON d.id = bda.driver_id
           AND d.deleted_at IS NULL
           AND d.is_active = 1
+          AND d.is_archived = 0
         LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id
           AND dv.is_primary = 1
           AND dv.is_active = 1

@@ -28,6 +28,25 @@ const adminChatListQuerySchema = Joi.object({
   q: Joi.string().max(100).allow('').optional(),
   unreadOnly: Joi.boolean().optional(),
   unread_only: Joi.string().valid('true', 'false').optional(),
+  archived: Joi.boolean().truthy('true').falsy('false').optional(),
+});
+
+const adminChatMessageIdParamsSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+});
+
+const adminChatMessageHideSchema = Joi.object({
+  reason: Joi.string()
+    .valid('TEST_DATA', 'ADMIN_MODERATION', 'DUPLICATE', 'OTHER')
+    .default('ADMIN_MODERATION'),
+});
+
+const adminChatThreadArchiveSchema = Joi.object({
+  bookingNumbers: Joi.array()
+    .items(Joi.string().pattern(/^TX\d{12}$/))
+    .min(1)
+    .max(100)
+    .required(),
 });
 
 module.exports = {
@@ -36,4 +55,7 @@ module.exports = {
   sendChatMessageSchema,
   markChatReadSchema,
   adminChatListQuerySchema,
+  adminChatMessageIdParamsSchema,
+  adminChatMessageHideSchema,
+  adminChatThreadArchiveSchema,
 };

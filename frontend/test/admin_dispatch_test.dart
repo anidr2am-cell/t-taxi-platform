@@ -170,7 +170,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
   }
 
   @override
-  Future<List<dynamic>> listDrivers() async {
+  Future<List<dynamic>> listDrivers({bool? archived}) async {
     return [
       {
         'driverId': 6,

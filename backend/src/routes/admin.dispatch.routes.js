@@ -15,6 +15,8 @@ const {
   adminBookingNotesQuerySchema,
   createAdminBookingNoteSchema,
   archiveBookingsSchema,
+  archiveDriversSchema,
+  driverIdParamsSchema,
 } = require('../validators/admin.validator');
 const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
@@ -108,6 +110,27 @@ router.get(
   '/drivers',
   adminOnly,
   adminController.listDrivers,
+);
+
+router.post(
+  '/drivers/archive',
+  adminOnly,
+  validate({ body: archiveDriversSchema }),
+  adminController.archiveDrivers,
+);
+
+router.post(
+  '/drivers/:id/restore',
+  adminOnly,
+  validate({ params: driverIdParamsSchema }),
+  adminController.restoreDriver,
+);
+
+router.get(
+  '/drivers/:id/deletion-preview',
+  adminOnly,
+  validate({ params: driverIdParamsSchema }),
+  adminController.getDriverDeletionPreview,
 );
 
 router.get(
