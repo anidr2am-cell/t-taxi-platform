@@ -834,6 +834,131 @@ void main() {
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
   );
+
+  test(
+    'submit maps backend scheduledPickupAt validation error to pickup step',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _FailingCreateBookingApi(
+          BookingApiException('Validation failed', 'VALIDATION_ERROR', [
+            const BookingApiErrorDetail(
+              source: 'body',
+              field: 'scheduledPickupAt',
+              type: 'any.custom',
+              message: 'scheduledPickupAt must be at least 2 hours from now',
+            ),
+          ]),
+        ),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+      );
+
+      await _fillSubmittableCityTransfer(controller);
+
+      final result = await controller.submitBooking();
+
+      expect(result, isNull);
+      expect(controller.state.step, 3);
+      expect(controller.state.errorMessage, 'pickup_datetime_required');
+      expect(controller.state.errorMessage, isNot('Validation failed'));
+    },
+  );
+
+  test(
+    'submit maps backend customer.email validation error to customer step',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _FailingCreateBookingApi(
+          BookingApiException('Validation failed', 'VALIDATION_ERROR', [
+            const BookingApiErrorDetail(
+              source: 'body',
+              field: 'customer.email',
+              type: 'string.email',
+              message: 'customer.email must be a valid email',
+            ),
+          ]),
+        ),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+      );
+
+      await _fillSubmittableCityTransfer(controller);
+
+      final result = await controller.submitBooking();
+
+      expect(result, isNull);
+      expect(controller.state.step, 6);
+      expect(controller.state.errorMessage, 'wizard_customer_email_invalid');
+      expect(controller.state.errorMessage, isNot('Validation failed'));
+    },
+  );
+
+  test(
+    'submit maps backend passengers.adults validation error to passenger step',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _FailingCreateBookingApi(
+          BookingApiException('Validation failed', 'VALIDATION_ERROR', [
+            const BookingApiErrorDetail(
+              source: 'body',
+              field: 'passengers.adults',
+              type: 'number.min',
+              message: 'passengers.adults must be greater than or equal to 1',
+            ),
+          ]),
+        ),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+      );
+
+      await _fillSubmittableCityTransfer(controller);
+
+      final result = await controller.submitBooking();
+
+      expect(result, isNull);
+      expect(controller.state.step, 4);
+      expect(controller.state.errorMessage, 'wizard_required_passengers');
+      expect(controller.state.errorMessage, isNot('Validation failed'));
+    },
+  );
+}
+
+Future<void> _fillSubmittableCityTransfer(
+  BookingWizardController controller,
+) async {
+  await controller.initialize();
+  await controller.selectService(BookingServiceType.cityTransfer);
+  await controller.setOrigin(
+    const LocationOption(
+      id: 'origin',
+      displayName: 'Bangkok',
+      kind: LocationKind.city,
+      code: 'BANGKOK',
+    ),
+  );
+  await controller.setDestination(
+    const LocationOption(
+      id: 'destination',
+      displayName: 'Pattaya',
+      kind: LocationKind.city,
+      code: 'PATTAYA',
+    ),
+  );
+  await controller.setPickupDateTime(DateTime(2099, 7, 1, 9, 30));
+  await controller.updatePassengersAndLuggage(adults: 2);
+  await controller.loadRecommendation();
+  await controller.selectVehicle('SUV');
+  await controller.updateCustomerInfo(
+    name: 'Kim',
+    email: 'kim@example.com',
+    phone: '+66123456789',
+  );
 }
 
 class _CapturingBookingApi implements BookingApiService {
