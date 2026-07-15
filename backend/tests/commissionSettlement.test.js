@@ -16,6 +16,7 @@ const { uploadDir } = require('../src/config/multer');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const COMMISSION_STATUS = require('../src/constants/commissionStatus');
 const ROLES = require('../src/constants/roles');
+const BookingRepository = require('../src/repositories/booking.repository');
 const CommissionSettlementService = require('../src/services/commissionSettlement.service');
 const container = require('../src/helpers/container');
 const app = require('../src/app');
@@ -177,6 +178,17 @@ test('ADMIN can list settlements', async () => {
     .get('/api/v1/admin/settlements')
     .set('Authorization', `Bearer ${sign('SUPER_ADMIN', 1)}`);
   assert.equal(res.status, 200);
+});
+
+test('admin settlement repository excludes paid settlements by default', () => {
+  const repository = new BookingRepository({});
+
+  const defaultFilters = repository.buildAdminSettlementFilters({});
+  const approvedFilters = repository.buildAdminSettlementFilters({ status: 'APPROVED' });
+
+  assert.match(defaultFilters.whereSql, /b\.commission_status <> 'PAID'/);
+  assert.doesNotMatch(approvedFilters.whereSql, /b\.commission_status <> 'PAID'/);
+  assert.match(approvedFilters.whereSql, /b\.commission_status = 'PAID'/);
 });
 
 test('DRIVER cannot access admin settlements', async () => {

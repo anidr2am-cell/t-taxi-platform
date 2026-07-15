@@ -244,6 +244,7 @@ class DriverApplicationApiService {
   }
 
   Future<DriverApplicationAdminListResult> listAdminApplications({
+    String? view,
     String? status,
     String? countryCode,
     String? vehicleTypeCode,
@@ -254,6 +255,7 @@ class DriverApplicationApiService {
     int limit = 20,
   }) async {
     final query = <String, String>{'page': '$page', 'limit': '$limit'};
+    if (view != null && view.isNotEmpty) query['view'] = view;
     if (status != null && status.isNotEmpty) query['status'] = status;
     if (countryCode != null && countryCode.isNotEmpty) {
       query['countryCode'] = countryCode;

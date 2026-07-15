@@ -27,6 +27,7 @@ class _AdminDriverApplicationListPageState
   bool _loading = true;
   bool _loadingMore = false;
   String? _error;
+  String _view = 'needs_action';
   String? _status;
   String? _countryCode;
   String? _vehicleTypeCode;
@@ -60,6 +61,7 @@ class _AdminDriverApplicationListPageState
       final data = await _api.listAdminApplications(
         page: page,
         limit: _limit,
+        view: _status == null ? _view : null,
         status: _status,
         countryCode: _countryCode,
         vehicleTypeCode: _vehicleTypeCode,
@@ -108,6 +110,19 @@ class _AdminDriverApplicationListPageState
         return context.l10n.t('driver_application_status_rejected');
       default:
         return context.l10n.t('driver_application_status_pending');
+    }
+  }
+
+  String _viewLabel(String view) {
+    switch (view) {
+      case 'approved':
+        return context.l10n.t('admin_driver_application_view_approved');
+      case 'closed':
+        return context.l10n.t('admin_driver_application_view_closed');
+      case 'all':
+        return context.l10n.t('admin_driver_application_view_all');
+      default:
+        return context.l10n.t('admin_driver_application_view_needs_action');
     }
   }
 
@@ -162,6 +177,25 @@ class _AdminDriverApplicationListPageState
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    DropdownButton<String>(
+                      value: _view,
+                      items: ['needs_action', 'approved', 'closed', 'all']
+                          .map(
+                            (view) => DropdownMenuItem(
+                              value: view,
+                              child: Text(_viewLabel(view)),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _view = value;
+                          _status = null;
+                        });
+                        _load(page: 1);
+                      },
+                    ),
                     DropdownButton<String?>(
                       value: _status,
                       hint: Text(

@@ -3321,6 +3321,10 @@ class AppLocalizations {
       'admin_driver_application_processed':
           'This application has already been processed.',
       'admin_driver_application_review_info': 'Review result',
+      'admin_driver_application_view_needs_action': 'Needs action',
+      'admin_driver_application_view_approved': 'Approved',
+      'admin_driver_application_view_closed': 'Closed',
+      'admin_driver_application_view_all': 'All',
     },
     'ko': {
       'driver_application_cta': '기사 등록 신청',
@@ -3406,6 +3410,10 @@ class AppLocalizations {
       'admin_driver_application_rejected': '신청을 반려했습니다',
       'admin_driver_application_processed': '이미 처리된 신청입니다.',
       'admin_driver_application_review_info': '검토 결과',
+      'admin_driver_application_view_needs_action': '처리 필요',
+      'admin_driver_application_view_approved': '승인 완료',
+      'admin_driver_application_view_closed': '종료',
+      'admin_driver_application_view_all': '전체',
     },
     'th': {
       'driver_application_cta': 'สมัครเป็นคนขับ',
@@ -3497,6 +3505,10 @@ class AppLocalizations {
       'admin_driver_application_rejected': 'ปฏิเสธใบสมัครแล้ว',
       'admin_driver_application_processed': 'ใบสมัครนี้ถูกดำเนินการแล้ว',
       'admin_driver_application_review_info': 'ผลการตรวจสอบ',
+      'admin_driver_application_view_needs_action': 'ต้องดำเนินการ',
+      'admin_driver_application_view_approved': 'อนุมัติแล้ว',
+      'admin_driver_application_view_closed': 'ปิดแล้ว',
+      'admin_driver_application_view_all': 'ทั้งหมด',
     },
     'ja': {
       'driver_application_cta': 'ドライバー登録申請',
@@ -3582,6 +3594,10 @@ class AppLocalizations {
       'admin_driver_application_rejected': '申請を却下しました',
       'admin_driver_application_processed': 'この申請は処理済みです。',
       'admin_driver_application_review_info': '審査結果',
+      'admin_driver_application_view_needs_action': '対応が必要',
+      'admin_driver_application_view_approved': '承認済み',
+      'admin_driver_application_view_closed': '終了',
+      'admin_driver_application_view_all': 'すべて',
     },
     'zh': {
       'driver_application_cta': '申请成为司机',
@@ -3666,6 +3682,10 @@ class AppLocalizations {
       'admin_driver_application_rejected': '申请已驳回',
       'admin_driver_application_processed': '此申请已处理。',
       'admin_driver_application_review_info': '审核结果',
+      'admin_driver_application_view_needs_action': '需处理',
+      'admin_driver_application_view_approved': '已批准',
+      'admin_driver_application_view_closed': '已结束',
+      'admin_driver_application_view_all': '全部',
     },
   };
 

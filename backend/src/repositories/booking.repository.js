@@ -1711,6 +1711,8 @@ class BookingRepository {
       } else if (filters.status === 'REJECTED') {
         where.push('JSON_UNQUOTE(JSON_EXTRACT(b.metadata, \'$.commissionRejectionReason\')) IS NOT NULL AND b.commission_receipt_file_id IS NULL');
       }
+    } else {
+      where.push('b.commission_status <> \'PAID\'');
     }
 
     if (filters.driverId) {

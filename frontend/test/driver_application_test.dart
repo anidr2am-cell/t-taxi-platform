@@ -181,6 +181,7 @@ class _FakeDriverApplicationApi extends DriverApplicationApiService {
 
   @override
   Future<DriverApplicationAdminListResult> listAdminApplications({
+    String? view,
     String? status,
     String? countryCode,
     String? vehicleTypeCode,

@@ -12,6 +12,7 @@ const request = require('supertest');
 
 const app = require('../src/app');
 const container = require('../src/helpers/container');
+const DriverApplicationRepository = require('../src/repositories/driverApplication.repository');
 const DriverApplicationService = require('../src/services/driverApplication.service');
 const ERROR_CODES = require('../src/constants/errorCodes');
 
@@ -471,6 +472,39 @@ describe('Driver application admin routes', () => {
 });
 
 describe('DriverApplicationService', () => {
+  test('admin application repository defaults to pending needs-action rows', async () => {
+    const queries = [];
+    const pool = {
+      async query(sql, params = []) {
+        queries.push({ sql, params });
+        return sql.includes('COUNT') ? [[{ total: 0 }]] : [[]];
+      },
+    };
+    const repository = new DriverApplicationRepository(pool);
+
+    await repository.listAdmin({ view: 'needs_action' }, { limit: 20, offset: 0 });
+
+    assert.match(queries[0].sql, /da\.status = \?/);
+    assert.deepEqual(queries[0].params, ['PENDING']);
+  });
+
+  test('admin application repository can explicitly list approved and all rows', async () => {
+    const captured = [];
+    const pool = {
+      async query(sql, params = []) {
+        captured.push({ sql, params });
+        return sql.includes('COUNT') ? [[{ total: 0 }]] : [[]];
+      },
+    };
+    const repository = new DriverApplicationRepository(pool);
+
+    await repository.listAdmin({ view: 'approved' }, { limit: 20, offset: 0 });
+    await repository.listAdmin({ view: 'all' }, { limit: 20, offset: 0 });
+
+    assert.deepEqual(captured[0].params, ['APPROVED']);
+    assert.doesNotMatch(captured[2].sql, /da\.status = \?/);
+  });
+
   test('file validation allows supported image MIME types for image fields', () => {
     const { service } = createHarness();
 

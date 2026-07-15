@@ -59,6 +59,7 @@ const adminDriverApplicationListQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).optional(),
   page_size: Joi.number().integer().min(1).max(100).optional(),
   limit: Joi.number().integer().min(1).max(100).optional(),
+  view: Joi.string().valid('needs_action', 'approved', 'closed', 'all').optional(),
   status: Joi.string().valid(...statusValues).optional(),
   countryCode: Joi.string().trim().uppercase().length(2).optional(),
   vehicleTypeCode: Joi.string().trim().uppercase().max(30).optional(),

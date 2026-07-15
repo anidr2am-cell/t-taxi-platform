@@ -235,6 +235,15 @@ class DriverApplicationRepository {
     if (filters.status) {
       where.push('da.status = ?');
       params.push(filters.status);
+    } else if (filters.view === 'approved') {
+      where.push('da.status = ?');
+      params.push('APPROVED');
+    } else if (filters.view === 'closed') {
+      where.push('da.status = ?');
+      params.push('REJECTED');
+    } else if (filters.view !== 'all') {
+      where.push('da.status = ?');
+      params.push('PENDING');
     }
     if (filters.countryCode) {
       where.push('da.country_code = ?');
