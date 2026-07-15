@@ -272,7 +272,14 @@ async function main() {
   const driverToken = driverLogin.token;
 
   const createdNumbers = [];
+  let driverWasPreparedOnline = false;
   try {
+    await fetchJson(baseUrl, '/api/v1/driver/online', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${driverToken}` },
+    });
+    driverWasPreparedOnline = true;
+
     for (const item of plan) {
       await fetchJson(baseUrl, '/api/v1/bookings/pricing/calculate', {
         method: 'POST',
@@ -344,6 +351,19 @@ async function main() {
   } catch (err) {
     console.error(`Regression failed after bookings [${createdNumbers.join(', ')}]: ${err.message}`);
     process.exitCode = 1;
+  } finally {
+    if (driverWasPreparedOnline) {
+      try {
+        await fetchJson(baseUrl, '/api/v1/driver/offline', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${driverToken}` },
+        });
+        console.log('Regression driver returned offline.');
+      } catch (err) {
+        console.error(`Regression driver offline cleanup failed: ${err.message}`);
+        process.exitCode = 1;
+      }
+    }
   }
 }
 
