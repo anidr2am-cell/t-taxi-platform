@@ -178,3 +178,51 @@ test('booking regression runner refuses non-test identities and selects only mat
     /Expected test driver/,
   );
 });
+
+test('booking regression runner validates live email env before login', () => {
+  withEnv({
+    TRIDE_BASE_URL: 'https://trider.taxi',
+    TRIDE_ADMIN_EMAIL: 'not-an-email',
+    TRIDE_ADMIN_PASSWORD: 'secret',
+    TRIDE_TEST_DRIVER_EMAIL: 'tride.e2e.driver@invalid.example',
+    TRIDE_TEST_DRIVER_PASSWORD: 'secret',
+    TRIDE_ALLOW_LIVE_BOOKING_REGRESSION: '1',
+  }, () => {
+    assert.throws(
+      () => runner.assertSafeEnvironment({ dryRun: false }),
+      /TRIDE_ADMIN_EMAIL must be a valid email/,
+    );
+  });
+
+  withEnv({
+    TRIDE_BASE_URL: 'https://trider.taxi',
+    TRIDE_TEST_ADMIN_EMAIL: 'tride.e2e.admin@invalid.example',
+    TRIDE_ADMIN_EMAIL: 'other.admin@invalid.example',
+    TRIDE_ADMIN_PASSWORD: 'secret',
+    TRIDE_TEST_DRIVER_EMAIL: 'tride.e2e.driver@invalid.example',
+    TRIDE_TEST_DRIVER_PASSWORD: 'secret',
+    TRIDE_ALLOW_LIVE_BOOKING_REGRESSION: '1',
+  }, () => {
+    assert.throws(
+      () => runner.assertSafeEnvironment({ dryRun: false }),
+      /TRIDE_ADMIN_EMAIL must match TRIDE_TEST_ADMIN_EMAIL/,
+    );
+  });
+});
+
+test('booking regression runner formats validation details without request body', () => {
+  const message = runner.formatHttpError(
+    '/api/v1/auth/login',
+    400,
+    {
+      error_code: 'VALIDATION_ERROR',
+      message: 'Validation failed',
+      errors: [{ field: 'email', type: 'string.email', source: 'body' }],
+    },
+    'VALIDATION_ERROR',
+  );
+
+  assert.match(message, /HTTP 400 VALIDATION_ERROR/);
+  assert.match(message, /email:string.email:body/);
+  assert.equal(message.includes('password'), false);
+});
