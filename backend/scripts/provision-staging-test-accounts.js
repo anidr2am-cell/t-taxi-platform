@@ -8,10 +8,11 @@
 const path = require('node:path');
 
 const ROLES = require('../src/constants/roles');
+const { loginSchema } = require('../src/validators/auth.validator');
 const { hashPassword } = require('../src/utils/passwordHash.util');
 
-const DEFAULT_ADMIN_EMAIL = 'tride.e2e.admin@invalid.example';
-const DEFAULT_DRIVER_EMAIL = 'tride.e2e.driver@invalid.example';
+const DEFAULT_ADMIN_EMAIL = 'tride.e2e.admin@example.com';
+const DEFAULT_DRIVER_EMAIL = 'tride.e2e.driver@example.com';
 const DEFAULT_ADMIN_NAME = '[E2E] Regression Admin';
 const DEFAULT_DRIVER_NAME = '[E2E] Regression Driver';
 const DEFAULT_DRIVER_PHONE = '+66000000999';
@@ -39,7 +40,8 @@ function normalizeEmail(value) {
 }
 
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const { error } = loginSchema.validate({ email: normalizeEmail(email), password: 'validation-only' });
+  return !error;
 }
 
 function assertPasswordPolicy(name, password) {
