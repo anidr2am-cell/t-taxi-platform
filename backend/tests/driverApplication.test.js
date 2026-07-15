@@ -12,6 +12,7 @@ const request = require('supertest');
 
 const app = require('../src/app');
 const container = require('../src/helpers/container');
+const { normalizeMultipartBody } = require('../src/controllers/driverApplication.controller');
 const DriverApplicationRepository = require('../src/repositories/driverApplication.repository');
 const DriverApplicationService = require('../src/services/driverApplication.service');
 const ERROR_CODES = require('../src/constants/errorCodes');
@@ -292,6 +293,19 @@ function uploadFile(field, filename, mimetype = 'image/jpeg') {
   };
 }
 
+async function normalizeMultipart(body) {
+  const req = {
+    body,
+    is(type) {
+      return type === 'multipart/form-data';
+    },
+  };
+  await new Promise((resolve, reject) => {
+    normalizeMultipartBody(req, {}, (err) => (err ? reject(err) : resolve()));
+  });
+  return req.body;
+}
+
 describe('Driver application public routes', () => {
   beforeEach(() => {
     container.register('driverApplicationService', () => ({
@@ -379,6 +393,88 @@ describe('Driver application public routes', () => {
     assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
   });
 
+  test('submit rejects missing consent before service call', async () => {
+    const input = validInput();
+    delete input.personalDataConsent;
+
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(input)
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'personalDataConsent');
+    assert.equal(res.body.errors[0].type, 'any.required');
+  });
+
+  test('submit reports vehicle year field validation details', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ vehicleYear: 'abcd' }))
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'vehicleYear');
+    assert.equal(res.body.errors[0].type, 'number.base');
+    assert.match(res.body.errors[0].message, /ปีรถ/);
+  });
+
+  test('submit rejects vehicle year before 1980', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ vehicleYear: 1979 }))
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'vehicleYear');
+  });
+
+  test('multipart normalization accepts optional blank strings and numeric year', async () => {
+    const body = await normalizeMultipart({
+      vehicleYear: '',
+      email: ' ',
+      vehicleMake: '',
+      vehicleModel: '',
+      bankName: '',
+      yearsOfDrivingExperience: '7',
+      serviceAreas: 'Bangkok,Pattaya',
+      languages: '["th","en"]',
+      personalDataConsent: 'true',
+      driverTermsConsent: '1',
+    });
+
+    assert.equal(body.vehicleYear, null);
+    assert.equal(body.email, null);
+    assert.equal(body.vehicleMake, null);
+    assert.equal(body.vehicleModel, null);
+    assert.equal(body.bankName, null);
+    assert.equal(body.yearsOfDrivingExperience, 7);
+    assert.deepEqual(body.serviceAreas, ['Bangkok', 'Pattaya']);
+    assert.deepEqual(body.languages, ['th', 'en']);
+    assert.equal(body.personalDataConsent, true);
+    assert.equal(body.driverTermsConsent, true);
+  });
+
+  test('multipart normalization handles array and empty service areas without forcing consent', async () => {
+    const body = await normalizeMultipart({
+      serviceAreas: ['Bangkok', ' Pattaya ', ''],
+      languages: '',
+      personalDataConsent: 'false',
+      driverTermsConsent: '0',
+    });
+
+    assert.deepEqual(body.serviceAreas, ['Bangkok', 'Pattaya']);
+    assert.deepEqual(body.languages, []);
+    assert.equal(body.personalDataConsent, false);
+    assert.equal(body.driverTermsConsent, false);
+
+    const empty = await normalizeMultipart({ serviceAreas: '' });
+    assert.deepEqual(empty.serviceAreas, []);
+    assert.equal(empty.personalDataConsent, undefined);
+    assert.equal(empty.driverTermsConsent, undefined);
+  });
+
   test('multipart invalid file type reports field and file name', async () => {
     const res = await request(app)
       .post('/api/v1/driver-applications')
@@ -419,6 +515,7 @@ describe('Driver application public routes', () => {
       .field('bankAccountHolder', 'Driver Kim')
       .field('lineId', '@driver')
       .field('primaryServiceArea', 'Bangkok')
+      .field('yearsOfDrivingExperience', '5')
       .field('vehicleTypeId', '11')
       .field('vehiclePlateNumber', 'AB1234')
       .field('serviceAreas', 'Bangkok')

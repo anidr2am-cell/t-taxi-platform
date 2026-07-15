@@ -9,6 +9,47 @@ const AppError = require('../utils/AppError');
 
 const getService = () => container.get('driverApplicationService');
 
+const emptyToNull = (value) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  return value;
+};
+
+const parseOptionalNumber = (value) => {
+  const normalized = emptyToNull(value);
+  if (normalized === null) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : normalized;
+};
+
+const parseBoolean = (value) => {
+  if (value === true || value === 'true' || value === '1' || value === 1) return true;
+  if (value === false || value === 'false' || value === '0' || value === 0) return false;
+  return value;
+};
+
+const parseListField = (value) => {
+  const normalized = emptyToNull(value);
+  if (normalized === null) return [];
+  if (Array.isArray(normalized)) {
+    return normalized.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof normalized !== 'string') return normalized;
+  const trimmed = normalized.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item).trim()).filter(Boolean);
+      }
+    } catch {
+      // Fall back to CSV parsing so validation can report the real field.
+    }
+  }
+  return trimmed.split(',').map((item) => item.trim()).filter(Boolean);
+};
+
 const handleUploadError = (err, req, res, next) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {
     return next(new AppError('File too large', {
@@ -47,20 +88,41 @@ const normalizeMultipartBody = (req, res, next) => {
   if (!body.vehicleTypeCode && body.vehicleTypeId) {
     body.vehicleTypeCode = `#${body.vehicleTypeId}`;
   }
-  if (body.primaryServiceArea && !body.serviceAreas) {
+
+  for (const field of [
+    'vehicleYear',
+    'drivingLicenseExpiryDate',
+    'email',
+    'phoneCountryCode',
+    'vehicleMake',
+    'vehicleModel',
+    'vehicleColor',
+    'notes',
+    'bankName',
+    'bankAccountNumber',
+    'bankAccountHolder',
+    'lineId',
+    'primaryServiceArea',
+  ]) {
+    body[field] = emptyToNull(body[field]);
+  }
+
+  body.vehicleYear = parseOptionalNumber(body.vehicleYear);
+  if (body.yearsOfDrivingExperience !== undefined) {
+    body.yearsOfDrivingExperience = parseOptionalNumber(body.yearsOfDrivingExperience);
+  }
+
+  body.serviceAreas = parseListField(body.serviceAreas);
+  body.languages = parseListField(body.languages);
+  if (body.primaryServiceArea && body.serviceAreas.length === 0) {
     body.serviceAreas = [body.primaryServiceArea];
   }
-  if (typeof body.serviceAreas === 'string') {
-    body.serviceAreas = body.serviceAreas.split(',').map((item) => item.trim()).filter(Boolean);
-  }
-  if (typeof body.languages === 'string') {
-    body.languages = body.languages.split(',').map((item) => item.trim()).filter(Boolean);
-  }
+
+  body.personalDataConsent = parseBoolean(body.personalDataConsent);
+  body.driverTermsConsent = parseBoolean(body.driverTermsConsent);
+
   body.vehicleOwnershipType = body.vehicleOwnershipType || 'OWNED';
   body.drivingLicenseCountry = body.drivingLicenseCountry || body.countryCode || 'TH';
-  body.yearsOfDrivingExperience = body.yearsOfDrivingExperience || 0;
-  body.personalDataConsent = body.personalDataConsent ?? true;
-  body.driverTermsConsent = body.driverTermsConsent ?? true;
   body.locale = body.locale || 'ko';
   body.countryCode = body.countryCode || 'TH';
   req.body = body;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -57,10 +58,17 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
   final _bankAccountNumber = TextEditingController();
   final _bankAccountHolder = TextEditingController();
   final _lineId = TextEditingController();
+  final _fieldKeys = <String, GlobalKey>{
+    'vehicleYear': GlobalKey(),
+    'serviceAreas': GlobalKey(),
+    'personalDataConsent': GlobalKey(),
+    'driverTermsConsent': GlobalKey(),
+  };
 
   bool _loadingVehicles = true;
   bool _submitting = false;
   String? _error;
+  Map<String, String> _fieldErrors = const {};
   List<DriverApplicationVehicleType> _vehicleTypes = [];
   String? _vehicleTypeCode;
   String _locale = 'ko';
@@ -258,6 +266,39 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     return null;
   }
 
+  String? _serverFieldError(String field) => _fieldErrors[field];
+
+  String? _validateVehicleYear(String? value) {
+    final serverError = _serverFieldError('vehicleYear');
+    if (serverError != null) return serverError;
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    if (!RegExp(r'^\d{4}$').hasMatch(trimmed)) {
+      return context.l10n.t('driver_apply_vehicle_year_invalid');
+    }
+    final year = int.tryParse(trimmed);
+    final currentYear = DateTime.now().year;
+    if (year == null || year < 1980 || year > currentYear) {
+      return context.l10n.t('driver_apply_vehicle_year_invalid');
+    }
+    return null;
+  }
+
+  Future<void> _scrollToFirstFieldError() async {
+    if (_fieldErrors.isEmpty) return;
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    final key = _fieldKeys[_fieldErrors.keys.first];
+    final fieldContext = key?.currentContext;
+    if (fieldContext == null || !fieldContext.mounted) return;
+    await Scrollable.ensureVisible(
+      fieldContext,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+      alignment: 0.15,
+    );
+  }
+
   DriverApplicationDraft? _buildDraft() {
     if (widget.debugSubmitDraft != null) return widget.debugSubmitDraft;
     setState(() => _showDocumentErrors = true);
@@ -347,7 +388,10 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
 
   Future<void> _submit() async {
     if (_submitting) return;
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _fieldErrors = const {};
+    });
     final draft = _buildDraft();
     if (draft == null) return;
     setState(() => _submitting = true);
@@ -365,12 +409,18 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
       setState(() => _submitted = true);
     } catch (err) {
       if (!mounted) return;
+      final fieldErrors = err is DriverApplicationApiException
+          ? err.fieldErrors
+          : const <String, String>{};
       setState(() {
+        _fieldErrors = fieldErrors;
         _error = userFacingError(
           err,
           fallback: context.l10n.t('driver_apply_submit_failed'),
         );
       });
+      _formKey.currentState?.validate();
+      await _scrollToFirstFieldError();
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -516,8 +566,12 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                   _text(
                     _year,
                     'driver_apply_vehicle_year',
+                    fieldName: 'vehicleYear',
                     requiredField: false,
                     keyboardType: TextInputType.number,
+                    maxLength: 4,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: _validateVehicleYear,
                   ),
                   _text(
                     _color,
@@ -528,7 +582,10 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                   _text(
                     _serviceAreas,
                     'driver_apply_service_areas',
+                    fieldName: 'serviceAreas',
                     hint: l10n.t('driver_apply_service_areas_hint'),
+                    validator: (value) =>
+                        _serverFieldError('serviceAreas') ?? _required(value),
                   ),
                   _text(_lineId, 'driver_apply_line_id'),
                 ],
@@ -584,19 +641,31 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                     missing: _taxCertificate == null,
                   ),
                   CheckboxListTile(
+                    key: _fieldKeys['personalDataConsent'],
                     value: _personalConsent,
                     onChanged: (value) =>
                         setState(() => _personalConsent = value ?? false),
                     title: Text(l10n.t('driver_apply_personal_consent')),
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
+                  if (_fieldErrors['personalDataConsent'] != null)
+                    Text(
+                      _fieldErrors['personalDataConsent']!,
+                      style: const TextStyle(color: AppTokens.error),
+                    ),
                   CheckboxListTile(
+                    key: _fieldKeys['driverTermsConsent'],
                     value: _termsConsent,
                     onChanged: (value) =>
                         setState(() => _termsConsent = value ?? false),
                     title: Text(l10n.t('driver_apply_terms_consent')),
                     controlAffinity: ListTileControlAffinity.leading,
                   ),
+                  if (_fieldErrors['driverTermsConsent'] != null)
+                    Text(
+                      _fieldErrors['driverTermsConsent']!,
+                      style: const TextStyle(color: AppTokens.error),
+                    ),
                   Text(
                     l10n.t('driver_apply_false_info_notice'),
                     style: const TextStyle(color: AppTokens.textSecondary),
@@ -733,16 +802,22 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     String labelKey, {
     bool obscure = false,
     bool requiredField = true,
+    String? fieldName,
     String? hint,
     TextInputType? keyboardType,
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
     AutovalidateMode? autovalidateMode,
     Widget? suffixIcon,
   }) {
     return TextFormField(
+      key: fieldName == null ? null : _fieldKeys[fieldName],
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
       autovalidateMode: autovalidateMode,
       decoration: InputDecoration(
         labelText: requiredField

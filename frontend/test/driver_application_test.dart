@@ -260,6 +260,20 @@ class _FakeDriverApplicationApi extends DriverApplicationApiService {
   }
 }
 
+class _FieldErrorDriverApplicationApi extends _FakeDriverApplicationApi {
+  @override
+  Future<DriverApplicationReceipt> submitApplication(
+    DriverApplicationDraft draft,
+  ) async {
+    throw const DriverApplicationApiException(
+      'Validation failed',
+      errorCode: 'VALIDATION_ERROR',
+      statusCode: 400,
+      fieldErrors: {'vehicleYear': 'กรุณากรอกปีรถเป็นตัวเลข 4 หลัก เช่น 2020'},
+    );
+  }
+}
+
 void main() {
   test(
     'submit application uses exact public path and request payload',
@@ -301,6 +315,45 @@ void main() {
       expect(result.statusToken, 'raw-token');
     },
   );
+
+  test('submit application exposes backend field validation errors', () async {
+    final api = DriverApplicationApiService(
+      baseUrl: 'http://localhost:3000',
+      client: _CaptureClient((request, bodyText) async {
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'success': false,
+              'message': 'Validation failed',
+              'code': 'VALIDATION_ERROR',
+              'error_code': 'VALIDATION_ERROR',
+              'errors': [
+                {
+                  'field': 'vehicleYear',
+                  'message': 'กรุณากรอกปีรถเป็นตัวเลข 4 หลัก เช่น 2020',
+                },
+              ],
+            }),
+          ),
+          400,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    await expectLater(
+      api.submitApplication(_draft()),
+      throwsA(
+        isA<DriverApplicationApiException>()
+            .having((err) => err.errorCode, 'errorCode', 'VALIDATION_ERROR')
+            .having(
+              (err) => err.fieldErrors['vehicleYear'],
+              'vehicleYear',
+              contains('2020'),
+            ),
+      ),
+    );
+  });
 
   test(
     'submit application rejects invalid file type before sending request',
@@ -513,6 +566,33 @@ void main() {
 
     expect(find.byType(TextFormField), findsWidgets);
     expect(find.textContaining('Select', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('driver apply shows backend vehicle year field error', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _FieldErrorDriverApplicationApi(),
+          debugSubmitDraft: _draft(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2020', skipOffstage: false), findsWidgets);
   });
 
   testWidgets('driver apply password shorter than 6 chars shows red error', (

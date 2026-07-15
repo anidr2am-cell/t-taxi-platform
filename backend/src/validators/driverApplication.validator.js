@@ -3,10 +3,18 @@ const Joi = require('joi');
 const statusValues = ['PENDING', 'APPROVED', 'REJECTED'];
 const ownershipValues = ['OWNED', 'RENTED', 'COMPANY', 'OTHER'];
 const localeValues = ['ko', 'en', 'th', 'ja', 'zh'];
+const currentVehicleYear = new Date().getFullYear();
 
 const applicationNumberSchema = Joi.string().trim().pattern(/^DA[0-9A-F]{14}$/).required();
 const tokenSchema = Joi.string().trim().min(32).max(128).required();
-const optionalEmailSchema = Joi.string().trim().lowercase().email().max(255).empty('').optional();
+const optionalEmailSchema = Joi.string()
+  .trim()
+  .lowercase()
+  .email()
+  .max(255)
+  .empty('')
+  .allow(null)
+  .optional();
 
 const driverApplicationCreateSchema = Joi.object({
   fullName: Joi.string().trim().min(1).max(100).required(),
@@ -27,10 +35,28 @@ const driverApplicationCreateSchema = Joi.object({
   vehicleTypeCode: Joi.string().trim().uppercase().min(2).max(30).required(),
   vehicleMake: Joi.string().trim().max(50).allow('', null),
   vehicleModel: Joi.string().trim().max(100).allow('', null),
-  vehicleYear: Joi.number().integer().min(1980).max(2100).allow(null),
+  vehicleYear: Joi.number()
+    .integer()
+    .min(1980)
+    .max(currentVehicleYear)
+    .allow(null)
+    .messages({
+      'number.base': 'กรุณากรอกปีรถเป็นตัวเลข 4 หลัก เช่น 2020',
+      'number.integer': 'กรุณากรอกปีรถเป็นตัวเลข 4 หลัก เช่น 2020',
+      'number.min': 'กรุณากรอกปีรถตั้งแต่ปี 1980 เป็นต้นไป',
+      'number.max': `กรุณากรอกปีรถไม่เกินปี ${currentVehicleYear}`,
+    }),
   vehicleColor: Joi.string().trim().max(30).allow('', null),
   vehiclePlateNumber: Joi.string().trim().uppercase().min(2).max(20).required(),
-  serviceAreas: Joi.array().items(Joi.string().trim().min(1).max(100)).min(1).max(30).required(),
+  serviceAreas: Joi.array()
+    .items(Joi.string().trim().min(1).max(100))
+    .min(1)
+    .max(30)
+    .required()
+    .messages({
+      'array.min': 'กรุณาเลือกพื้นที่ให้บริการอย่างน้อย 1 แห่ง',
+      'any.required': 'กรุณาเลือกพื้นที่ให้บริการอย่างน้อย 1 แห่ง',
+    }),
   languages: Joi.array().items(Joi.string().trim().min(2).max(10)).max(20).default([]),
   notes: Joi.string().trim().max(2000).allow('', null),
   bankName: Joi.string().trim().max(100).allow('', null),
@@ -38,8 +64,14 @@ const driverApplicationCreateSchema = Joi.object({
   bankAccountHolder: Joi.string().trim().max(100).allow('', null),
   lineId: Joi.string().trim().max(100).allow('', null),
   primaryServiceArea: Joi.string().trim().max(100).allow('', null),
-  personalDataConsent: Joi.boolean().valid(true).required(),
-  driverTermsConsent: Joi.boolean().valid(true).required(),
+  personalDataConsent: Joi.boolean().valid(true).required().messages({
+    'any.only': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
+    'any.required': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
+  }),
+  driverTermsConsent: Joi.boolean().valid(true).required().messages({
+    'any.only': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
+    'any.required': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
+  }),
 });
 
 const driverApplicationStatusQuerySchema = Joi.object({
