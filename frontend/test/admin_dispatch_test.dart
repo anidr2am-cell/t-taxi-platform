@@ -45,6 +45,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
   String? lastServiceDateFrom;
   String? lastServiceDateTo;
   bool? lastArchived;
+  bool? lastUnassigned;
   final Object? candidatesError;
 
   @override
@@ -76,6 +77,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
     lastServiceDateFrom = serviceDateFrom;
     lastServiceDateTo = serviceDateTo;
     lastArchived = archived;
+    lastUnassigned = unassigned;
     if (bookingsError != null) throw bookingsError!;
     return bookingsResponse ?? {'page': 1, 'total': 0, 'items': []};
   }
@@ -440,6 +442,30 @@ void main() {
     await tester.tap(find.text('Unassigned').first);
     await tester.pumpAndSettle();
     expect(api.lastAssignmentState, 'UNASSIGNED');
+    expect(api.lastUnassigned, isNull);
+  });
+
+  testWidgets('unassigned list separates total and visible item count', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi(
+      token: 'token',
+      bookingsResponse: {
+        'page': 1,
+        'total': 5,
+        'items': [_queueItem('TX202607160001'), _queueItem('TX202607160002')],
+      },
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: AdminDispatchQueuePage(api: api)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unassigned').first);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('All unassigned 5'), findsOneWidget);
+    expect(find.textContaining('Showing 2'), findsOneWidget);
   });
 
   test(

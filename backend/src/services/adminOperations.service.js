@@ -7,6 +7,7 @@ const {
   TERMINAL_BOOKING_STATUSES,
   ACTIVE_OPERATING_STATUSES,
   PRE_PICKUP_STATUSES,
+  UNASSIGNED_BOOKING_STATUSES,
 } = require('../constants/adminOperations.constants');
 const {
   SERVICE_TIME_ZONE,
@@ -188,8 +189,10 @@ class AdminOperationsService {
         if (!next.serviceDateTo) next.serviceDateTo = history.serviceDateTo;
         break;
       case ADMIN_BOOKING_VIEWS.ALL:
-        if (!next.serviceDateFrom) next.serviceDateFrom = history.serviceDateFrom;
-        if (!next.serviceDateTo) next.serviceDateTo = history.serviceDateTo;
+        if (!next.unassignedOnly) {
+          if (!next.serviceDateFrom) next.serviceDateFrom = history.serviceDateFrom;
+          if (!next.serviceDateTo) next.serviceDateTo = history.serviceDateTo;
+        }
         break;
       default:
         break;
@@ -202,6 +205,21 @@ class AdminOperationsService {
       next.settlementStatus = null;
     }
 
+    return next;
+  }
+
+  applyUnassignedDefinition(filters) {
+    const next = { ...filters };
+    if (next.unassigned || next.assignmentState === 'UNASSIGNED') {
+      next.unassignedOnly = true;
+      next.unassigned = false;
+      next.assignmentState = 'UNASSIGNED';
+      if (!next.status) {
+        next.statuses = UNASSIGNED_BOOKING_STATUSES;
+      }
+      next.excludeTerminalStatuses = false;
+      next.needsActionOnly = false;
+    }
     return next;
   }
 
@@ -221,7 +239,8 @@ class AdminOperationsService {
     filters = this.applyDateQuery(filters, query);
     filters.view = view;
     filters.adminUserId = adminUserId;
-    return this.applyViewDefaults(filters, view);
+    filters = this.applyUnassignedDefinition(filters);
+    return this.applyUnassignedDefinition(this.applyViewDefaults(filters, view));
   }
 
   parseMetadata(raw) {
@@ -525,20 +544,10 @@ class AdminOperationsService {
 
   buildSummaryFilter(viewKey, adminUserId = null) {
     if (viewKey === 'unassigned') {
-      const history = this.historyRange();
-      const filters = this.buildFilters(
-        {
-          view: ADMIN_BOOKING_VIEWS.ALL,
-          unassigned: 'true',
-          serviceDateFrom: history.serviceDateFrom.slice(0, 10),
-          serviceDateTo: history.serviceDateTo.slice(0, 10),
-        },
+      return this.buildFilters(
+        { view: ADMIN_BOOKING_VIEWS.ALL, assignmentState: 'UNASSIGNED' },
         adminUserId,
       );
-      filters.excludeTerminalStatuses = true;
-      filters.assignmentState = 'UNASSIGNED';
-      filters.needsActionOnly = false;
-      return filters;
     }
     if (viewKey === 'issues') {
       return this.buildFilters(
