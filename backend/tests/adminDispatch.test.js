@@ -983,6 +983,131 @@ test("restoreBookings clears archive flags and writes audit log", async () => {
   assert.equal(result.restored, 1);
 });
 
+test("archiveDrivers stores TEST_DATA reason and blocks active drivers", async () => {
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const pool = { async getConnection() { return conn; } };
+  const auditLogs = [];
+  const driverRepo = {
+    async findArchiveCandidatesForUpdate() {
+      return [
+        {
+          id: 7,
+          user_id: 70,
+          name: "Test Driver",
+          is_online: 0,
+          active_assignment_count: 0,
+          completed_trip_count: 0,
+          settlement_count: 0,
+          message_count: 0,
+          review_count: 0,
+        },
+      ];
+    },
+    async archiveDrivers(_conn, ids, options) {
+      return { ids, options };
+    },
+    async insertAuditLog(_conn, log) {
+      auditLogs.push(log);
+    },
+  };
+  let archivedCall;
+  driverRepo.archiveDrivers = async (_conn, ids, options) => {
+    archivedCall = { ids, options };
+    return ids.length;
+  };
+  const service = new AdminDispatchService(
+    pool,
+    {},
+    driverRepo,
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const result = await service.archiveDrivers(
+    { driverIds: [7] },
+    { id: 1, role: "ADMIN" },
+  );
+
+  assert.deepEqual(archivedCall.ids, [7]);
+  assert.equal(archivedCall.options.reason, "TEST_DATA");
+  assert.equal(auditLogs[0].action, "driver.archived");
+  assert.equal(auditLogs[0].driverId, 7);
+  assert.equal(auditLogs[0].payload.reason, "TEST_DATA");
+  assert.equal(result.archived, 1);
+
+  driverRepo.findArchiveCandidatesForUpdate = async () => [
+    {
+      id: 8,
+      name: "Busy Driver",
+      is_online: 1,
+      active_assignment_count: 1,
+    },
+  ];
+  await assert.rejects(
+    () => service.archiveDrivers({ driverIds: [8] }, { id: 1, role: "ADMIN" }),
+    (err) => err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+  );
+});
+
+test("restoreDriver clears archive flag through repository", async () => {
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const pool = { async getConnection() { return conn; } };
+  let restored = null;
+  const auditLogs = [];
+  const driverRepo = {
+    async findArchiveCandidatesForUpdate() {
+      return [
+        {
+          id: 7,
+          user_id: 70,
+          name: "Test Driver",
+          is_archived: 1,
+          archive_reason: "TEST_DATA",
+        },
+      ];
+    },
+    async restoreDriver(_conn, driverId, options) {
+      restored = { driverId, options };
+      return 1;
+    },
+    async insertAuditLog(_conn, log) {
+      auditLogs.push(log);
+    },
+  };
+  const service = new AdminDispatchService(
+    pool,
+    {},
+    driverRepo,
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const result = await service.restoreDriver(7, { id: 1, role: "ADMIN" });
+
+  assert.equal(restored.driverId, 7);
+  assert.equal(restored.options.actorUserId, 1);
+  assert.equal(auditLogs[0].action, "driver.restored");
+  assert.equal(auditLogs[0].driverId, 7);
+  assert.equal(auditLogs[0].payload.previousReason, "TEST_DATA");
+  assert.equal(result.restored, true);
+});
+
 test("admin booking query groups unassigned first with group-specific newest ordering", async () => {
   let capturedSql = "";
   const pool = {

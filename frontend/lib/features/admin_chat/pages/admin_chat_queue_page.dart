@@ -62,6 +62,9 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
   String? _error;
   List<dynamic> _items = [];
   bool _unreadOnly = false;
+  bool _showArchived = false;
+  bool _archiveSubmitting = false;
+  final Set<String> _selectedThreads = {};
   final _searchController = TextEditingController();
   String? _selectedBooking;
 
@@ -86,10 +89,12 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
       final data = await _api.listChats(
         unreadOnly: _unreadOnly,
         search: _searchController.text.trim(),
+        archived: _showArchived,
       );
       if (!mounted) return;
       setState(() {
         _items = data['items'] as List<dynamic>? ?? [];
+        _selectedThreads.clear();
         _loading = false;
       });
     } catch (err) {
@@ -105,6 +110,72 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
     setState(() => _selectedBooking = bookingNumber);
   }
 
+  void _toggleThreadSelection(String bookingNumber, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedThreads.add(bookingNumber);
+      } else {
+        _selectedThreads.remove(bookingNumber);
+      }
+    });
+  }
+
+  Future<void> _archiveSelectedThreads() async {
+    if (_selectedThreads.isEmpty || _archiveSubmitting) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('선택한 채팅을 테스트 데이터로 보관하시겠습니까?'),
+        content: const Text(
+          '기본 관리자 채팅 목록에서 숨겨지며, 고객/기사 화면에는 새로 열리지 않습니다. 메시지와 예약 기록은 삭제하지 않습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('테스트 채팅 보관'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _archiveSubmitting = true);
+    try {
+      await _api.archiveThreads(_selectedThreads.toList());
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('선택한 채팅을 보관했습니다.')));
+      await _load();
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlyLoadError(err, context.l10n))),
+      );
+    } finally {
+      if (mounted) setState(() => _archiveSubmitting = false);
+    }
+  }
+
+  Future<void> _restoreThread(String bookingNumber) async {
+    try {
+      await _api.restoreThread(bookingNumber);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('보관한 채팅을 복원했습니다.')));
+      await _load();
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlyLoadError(err, context.l10n))),
+      );
+    }
+  }
+
   Widget _queueCard(AppLocalizations l10n, Map<String, dynamic> item) {
     final bookingNumber = item['bookingNumber'] as String? ?? '';
     final customer = item['customerDisplayName'] as String? ?? '';
@@ -116,6 +187,7 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
       item['lastMessageAt'] as String?,
     );
     final hasUnread = unread > 0;
+    final archived = item['archived'] == true;
 
     return AppUi.adminQueueCard(
       onTap: () => _openChat(bookingNumber),
@@ -125,6 +197,12 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (!_showArchived)
+            Checkbox(
+              value: _selectedThreads.contains(bookingNumber),
+              onChanged: (value) =>
+                  _toggleThreadSelection(bookingNumber, value == true),
+            ),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -165,6 +243,13 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
                       ),
                   ],
                 ),
+                if (archived) ...[
+                  const SizedBox(height: 4),
+                  AppUi.statusBadge(
+                    'Archived/Test',
+                    tone: AppStatusTone.neutral,
+                  ),
+                ],
                 const SizedBox(height: 4),
                 Text(
                   '$customer · $driver',
@@ -198,6 +283,14 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
           if (hasUnread) ...[
             const SizedBox(width: AppTokens.spaceSm),
             AppUi.statusBadge(unread.toString(), tone: AppStatusTone.info),
+          ],
+          if (_showArchived) ...[
+            const SizedBox(width: AppTokens.spaceSm),
+            OutlinedButton.icon(
+              onPressed: () => _restoreThread(bookingNumber),
+              icon: const Icon(Icons.restore, size: 16),
+              label: const Text('복원'),
+            ),
           ],
         ],
       ),
@@ -245,6 +338,25 @@ class _AdminChatQueuePageState extends State<AdminChatQueuePage> {
                   _load();
                 },
               ),
+              FilterChip(
+                label: const Text('보관한 채팅 보기'),
+                selected: _showArchived,
+                onSelected: (v) {
+                  setState(() {
+                    _showArchived = v;
+                    _selectedThreads.clear();
+                  });
+                  _load();
+                },
+              ),
+              if (!_showArchived)
+                FilledButton.icon(
+                  onPressed: _selectedThreads.isEmpty || _archiveSubmitting
+                      ? null
+                      : _archiveSelectedThreads,
+                  icon: const Icon(Icons.archive_outlined),
+                  label: Text('테스트 채팅 보관 (${_selectedThreads.length})'),
+                ),
               IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
             ],
           ),
@@ -369,6 +481,8 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
         l10n.t('admin_chat_participant');
     final text = item['text'] as String? ?? '';
     final createdAt = _formatChatTimestamp(item['createdAt'] as String?);
+    final hidden = item['hidden'] == true;
+    final messageId = item['messageId'] as int? ?? 0;
 
     return AppUi.surfaceCard(
       padding: const EdgeInsets.symmetric(
@@ -397,15 +511,70 @@ class _AdminChatDetailPageState extends State<AdminChatDetailPage> {
                     fontSize: 11,
                   ),
                 ),
+              PopupMenuButton<String>(
+                onSelected: (value) => _handleMessageAction(value, messageId),
+                itemBuilder: (context) => [
+                  if (!hidden)
+                    const PopupMenuItem(value: 'hide', child: Text('메시지 숨기기')),
+                  if (hidden)
+                    const PopupMenuItem(
+                      value: 'restore',
+                      child: Text('메시지 복원'),
+                    ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          ChatRoleBadge(message: item, l10n: l10n),
+          Wrap(
+            spacing: AppTokens.spaceXs,
+            runSpacing: AppTokens.spaceXs,
+            children: [
+              ChatRoleBadge(message: item, l10n: l10n),
+              if (hidden)
+                AppUi.statusBadge('Hidden', tone: AppStatusTone.neutral),
+            ],
+          ),
           const SizedBox(height: 4),
           Text(text, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
+  }
+
+  Future<void> _handleMessageAction(String action, int messageId) async {
+    if (messageId <= 0) return;
+    try {
+      if (action == 'hide') {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('선택한 메시지를 숨기시겠습니까?'),
+            content: const Text('고객과 기사 화면에는 삭제된 메시지로 표시됩니다.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('숨기기'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+        await _api.hideMessage(messageId: messageId);
+      } else if (action == 'restore') {
+        await _api.restoreMessage(messageId: messageId);
+      }
+      await _session.refresh();
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlyLoadError(err, context.l10n))),
+      );
+    }
   }
 
   @override

@@ -134,6 +134,7 @@ class FakeAdminChatApi extends AdminChatApiService {
   Future<Map<String, dynamic>> listChats({
     bool unreadOnly = false,
     String? search,
+    bool archived = false,
   }) async {
     final items = [
       {

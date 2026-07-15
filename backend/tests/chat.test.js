@@ -148,6 +148,8 @@ function buildHarness(overrides = {}) {
         sender_name: message.senderName,
         content: message.content,
         client_message_id: message.clientMessageId,
+        is_hidden: 0,
+        hide_reason: null,
         created_at: new Date(),
       };
       state.messages.push(row);
@@ -170,6 +172,7 @@ function buildHarness(overrides = {}) {
       return state.messages.filter(
         (m) =>
           m.chat_room_id === roomId &&
+          !m.is_hidden &&
           m.sender_participant_id !== participant.id &&
           (!participant.last_read_at ||
             m.created_at > participant.last_read_at),
@@ -181,8 +184,59 @@ function buildHarness(overrides = {}) {
     },
     async insertMessageRead() {},
     async findLastMessage(_c, roomId) {
-      const rows = state.messages.filter((m) => m.chat_room_id === roomId);
+      const rows = state.messages.filter(
+        (m) => m.chat_room_id === roomId && !m.is_hidden,
+      );
       return rows.length ? rows[rows.length - 1] : null;
+    },
+    async findMessageWithRoomForUpdate(_c, messageId) {
+      const message = state.messages.find((m) => m.id === messageId);
+      if (!message) return null;
+      const room = state.rooms.find((r) => r.id === message.chat_room_id);
+      return {
+        ...message,
+        booking_id: room.booking_id,
+        booking_number: "TX202607010001",
+      };
+    },
+    async hideMessage(_c, messageId, options) {
+      const message = state.messages.find((m) => m.id === messageId);
+      if (!message) return 0;
+      message.is_hidden = 1;
+      message.hide_reason = options.reason;
+      return 1;
+    },
+    async restoreMessage(_c, messageId) {
+      const message = state.messages.find((m) => m.id === messageId);
+      if (!message) return 0;
+      message.is_hidden = 0;
+      message.hide_reason = null;
+      return 1;
+    },
+    async findRoomsForArchiveByBookingNumbersForUpdate(_c, bookingNumbers) {
+      return state.rooms
+        .filter((room) => bookingNumbers.includes("TX202607010001"))
+        .map((room) => ({
+          ...room,
+          booking_number: "TX202607010001",
+          booking_status: BOOKING_STATUS.DRIVER_ASSIGNED,
+        }));
+    },
+    async archiveRooms(_c, roomIds, options) {
+      for (const room of state.rooms) {
+        if (roomIds.includes(room.id)) {
+          room.is_archived = 1;
+          room.archive_reason = options.reason;
+        }
+      }
+      return roomIds.length;
+    },
+    async restoreRoom(_c, roomId) {
+      const room = state.rooms.find((item) => item.id === roomId);
+      if (!room) return 0;
+      room.is_archived = 0;
+      room.archive_reason = null;
+      return 1;
     },
     async listAdminChatSummaries() {
       return [];
@@ -214,6 +268,9 @@ function buildHarness(overrides = {}) {
       return overrides.driverAssigned === false
         ? null
         : { id: 1, driver_id: 9 };
+    },
+    async insertActivityLog(_c, bookingId, activity) {
+      state.outbox.push({ activityLog: true, bookingId, activity });
     },
     ...overrides.bookingRepository,
   };
@@ -752,4 +809,123 @@ test("read state decreases unread count", async () => {
     },
   );
   assert.equal(read.unreadCount, 0);
+});
+
+test("admin can hide and restore a chat message without exposing original text", async () => {
+  const { service, state } = buildHarness();
+  state.rooms.push({
+    id: 1,
+    booking_id: 10,
+    room_code: "CHAT-TX202607010001",
+    is_active: 1,
+    is_archived: 0,
+    created_at: new Date(),
+  });
+  state.participants.push(
+    {
+      id: 1,
+      chat_room_id: 1,
+      user_id: 8,
+      participant_role: "CUSTOMER",
+      display_name: "Kim",
+      last_read_at: null,
+    },
+    {
+      id: 2,
+      chat_room_id: 1,
+      user_id: 1,
+      participant_role: "ADMIN",
+      display_name: "Admin",
+      last_read_at: null,
+    },
+  );
+  state.messages.push({
+    id: 1,
+    chat_room_id: 1,
+    sender_participant_id: 1,
+    sender_role: "CUSTOMER",
+    sender_name: "Kim",
+    content: "private original",
+    client_message_id: "hidden-message-1",
+    is_hidden: 0,
+    hide_reason: null,
+    created_at: new Date(),
+  });
+
+  await service.hideAdminMessage(1, { id: 1, role: ROLES.ADMIN }, {
+    reason: "ADMIN_MODERATION",
+  });
+  const customerMessages = await service.listMessages(
+    "TX202607010001",
+    { id: 8, role: ROLES.CUSTOMER },
+    null,
+  );
+  assert.equal(customerMessages.items[0].text, "삭제된 메시지입니다.");
+  assert.equal(customerMessages.items[0].text.includes("private original"), false);
+
+  const adminMessages = await service.listAdminMessages(
+    "TX202607010001",
+    { id: 1, role: ROLES.ADMIN },
+  );
+  assert.equal(adminMessages.items[0].text, "관리자가 숨긴 메시지입니다.");
+  assert.equal(adminMessages.items[0].hideReason, "ADMIN_MODERATION");
+
+  await service.restoreAdminMessage(1, { id: 1, role: ROLES.ADMIN });
+  const restored = await service.listAdminMessages(
+    "TX202607010001",
+    { id: 1, role: ROLES.ADMIN },
+  );
+  assert.equal(restored.items[0].text, "private original");
+});
+
+test("archived chat room is blocked for customer but restorable by admin", async () => {
+  const { service, state } = buildHarness();
+  state.rooms.push({
+    id: 1,
+    booking_id: 10,
+    room_code: "CHAT-TX202607010001",
+    is_active: 1,
+    is_archived: 0,
+    created_at: new Date(),
+  });
+  state.participants.push({
+    id: 1,
+    chat_room_id: 1,
+    user_id: 8,
+    participant_role: "CUSTOMER",
+    display_name: "Kim",
+    last_read_at: null,
+  });
+
+  const archived = await service.archiveAdminThreads(
+    { bookingNumbers: ["TX202607010001"] },
+    { id: 1, role: ROLES.ADMIN },
+  );
+  assert.equal(archived.archived, 1);
+  await assert.rejects(
+    () =>
+      service.getRoom(
+        "TX202607010001",
+        { id: 8, role: ROLES.CUSTOMER },
+        null,
+      ),
+    (err) => err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+  );
+
+  const adminRoom = await service.getAdminRoom("TX202607010001", {
+    id: 1,
+    role: ROLES.ADMIN,
+  });
+  assert.equal(adminRoom.archived, true);
+
+  await service.restoreAdminThread("TX202607010001", {
+    id: 1,
+    role: ROLES.ADMIN,
+  });
+  const customerRoom = await service.getRoom(
+    "TX202607010001",
+    { id: 8, role: ROLES.CUSTOMER },
+    null,
+  );
+  assert.equal(customerRoom.archived, false);
 });

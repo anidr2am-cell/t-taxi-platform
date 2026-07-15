@@ -44,6 +44,11 @@ function emitDriverAssignmentReleased(driverUserId, payload) {
   ioInstance.to(driverUserRoom(driverUserId)).emit('driver:assignment:released', payload);
 }
 
+function emitChatRoomEvent(roomId, eventName, payload) {
+  if (!ioInstance || !roomId) return;
+  ioInstance.to(`chat:${roomId}`).emit(eventName, payload);
+}
+
 module.exports = {
   DRIVER_ALL_ROOM,
   driverUserRoom,
@@ -54,4 +59,5 @@ module.exports = {
   emitDriverCallClaimed,
   emitDriverCallConfirmed,
   emitDriverAssignmentReleased,
+  emitChatRoomEvent,
 };

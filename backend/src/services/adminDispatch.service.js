@@ -177,7 +177,11 @@ class AdminDispatchService {
   }
 
   isDriverAssignable(driver) {
-    return driver.is_active === 1 && driver.status !== "SUSPENDED";
+    return (
+      driver.is_active === 1 &&
+      driver.is_archived !== 1 &&
+      driver.status !== "SUSPENDED"
+    );
   }
 
   mapDriverListItem(
@@ -195,6 +199,11 @@ class AdminDispatchService {
       activeState: row.is_active ? "ACTIVE" : "INACTIVE",
       onlineState: row.is_online ? "ONLINE" : "OFFLINE",
       driverStatus: row.status,
+      archive: {
+        isArchived: Boolean(row.is_archived),
+        archivedAt: row.archived_at ?? null,
+        reason: row.archive_reason ?? null,
+      },
       eligibilityState,
       assignmentEligible: eligibilityState !== "NOT_ELIGIBLE",
       settlementBlockReason: settlementBlockReason ?? null,
@@ -651,8 +660,10 @@ class AdminDispatchService {
     }
   }
 
-  async listDrivers() {
-    const rows = await this.driverRepository.listForAdminAssignment();
+  async listDrivers(query = {}) {
+    const rows = await this.driverRepository.listForAdminAssignment({
+      archived: query.archived === true || query.archived === "true",
+    });
     const items = [];
     for (const row of rows) {
       const blocked =
@@ -665,6 +676,185 @@ class AdminDispatchService {
       items.push(this.mapDriverListItem(row, blocked, blockReason));
     }
     return items;
+  }
+
+  normalizeDriverIds(values) {
+    return [
+      ...new Set(
+        (values ?? [])
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value > 0),
+      ),
+    ];
+  }
+
+  driverArchiveWarnings(row) {
+    const warnings = [];
+    if (Number(row.active_assignment_count ?? 0) > 0 || row.is_online) {
+      warnings.push("ACTIVE_OR_ONLINE");
+    }
+    if (Number(row.completed_trip_count ?? 0) > 0) {
+      warnings.push("HAS_COMPLETED_TRIPS");
+    }
+    if (Number(row.settlement_count ?? 0) > 0) {
+      warnings.push("HAS_SETTLEMENTS");
+    }
+    if (Number(row.message_count ?? 0) > 0) {
+      warnings.push("HAS_CHAT_MESSAGES");
+    }
+    if (Number(row.review_count ?? 0) > 0) {
+      warnings.push("HAS_REVIEWS");
+    }
+    return warnings;
+  }
+
+  async archiveDrivers(input, user) {
+    const driverIds = this.normalizeDriverIds(input.driverIds);
+    if (!driverIds.length) {
+      throw new AppError("Driver ids are required", {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    const actor = this.actorFromUser(user);
+    const conn = await this.pool.getConnection();
+    let rows = [];
+    try {
+      await conn.beginTransaction();
+      rows = await this.driverRepository.findArchiveCandidatesForUpdate(
+        conn,
+        driverIds,
+      );
+      const found = new Set(rows.map((row) => Number(row.id)));
+      const missing = driverIds.filter((id) => !found.has(id));
+      if (missing.length) {
+        throw new AppError("One or more drivers were not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
+        });
+      }
+      const blocked = rows.find(
+        (row) => Number(row.active_assignment_count ?? 0) > 0 || row.is_online,
+      );
+      if (blocked) {
+        throw new AppError(
+          "Driver has an active job or is online. Take the driver offline and finish active jobs before archiving.",
+          {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+          },
+        );
+      }
+      await this.driverRepository.archiveDrivers(conn, driverIds, {
+        actorUserId: actor.id,
+        reason: "TEST_DATA",
+      });
+      await Promise.all(
+        rows.map((row) =>
+          this.driverRepository.insertAuditLog(conn, {
+            userId: actor.id,
+            action: "driver.archived",
+            driverId: Number(row.id),
+            payload: {
+              reason: "TEST_DATA",
+              driverId: Number(row.id),
+              userId: row.user_id ? Number(row.user_id) : null,
+              displayName: row.name,
+              warnings: this.driverArchiveWarnings(row),
+            },
+          }),
+        ),
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+    return {
+      archived: rows.length,
+      items: rows.map((row) => ({
+        driverId: Number(row.id),
+        displayName: row.name,
+        warnings: this.driverArchiveWarnings(row),
+      })),
+    };
+  }
+
+  async restoreDriver(driverId, user) {
+    const actor = this.actorFromUser(user);
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const rows = await this.driverRepository.findArchiveCandidatesForUpdate(
+        conn,
+        [Number(driverId)],
+      );
+      if (!rows[0]) {
+        throw new AppError("Driver not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
+        });
+      }
+      await this.driverRepository.restoreDriver(conn, Number(driverId), {
+        actorUserId: actor.id,
+      });
+      await this.driverRepository.insertAuditLog(conn, {
+        userId: actor.id,
+        action: "driver.restored",
+        driverId: Number(driverId),
+        payload: {
+          driverId: Number(driverId),
+          userId: rows[0].user_id ? Number(rows[0].user_id) : null,
+          displayName: rows[0].name,
+          previousReason: rows[0].archive_reason ?? null,
+        },
+      });
+      await conn.commit();
+      return { driverId: Number(driverId), restored: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async getDriverDeletionPreview(driverId) {
+    const conn = await this.pool.getConnection();
+    try {
+      const rows = await this.driverRepository.findArchiveCandidatesForUpdate(
+        conn,
+        [Number(driverId)],
+      );
+      const row = rows[0];
+      if (!row) {
+        throw new AppError("Driver not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
+        });
+      }
+      const dependencies = {
+        bookings: Number(row.assignment_count ?? 0),
+        completedTrips: Number(row.completed_trip_count ?? 0),
+        settlements: Number(row.settlement_count ?? 0),
+        messages: Number(row.message_count ?? 0),
+        reviews: Number(row.review_count ?? 0),
+        vehicles: Number(row.vehicle_count ?? 0),
+        documents: 0,
+      };
+      const canDelete =
+        !row.is_online &&
+        Object.values(dependencies).every((value) => Number(value) === 0);
+      return {
+        canDelete,
+        dependencies,
+        recommendedAction: canDelete ? "DELETE" : "ARCHIVE",
+      };
+    } finally {
+      conn.release();
+    }
   }
 
   async ensureDriverEligible(conn, driverId) {

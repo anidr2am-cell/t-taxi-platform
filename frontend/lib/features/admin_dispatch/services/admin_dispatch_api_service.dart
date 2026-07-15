@@ -173,11 +173,35 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<List<dynamic>> listDrivers() async {
-    final data = await _request('GET', '/admin/drivers');
+  Future<List<dynamic>> listDrivers({bool? archived}) async {
+    final query = <String, String>{};
+    if (archived == true) query['archived'] = 'true';
+    final data = await _request('GET', '/admin/drivers', query: query);
     if (data is List) return data;
     if (data is Map) return data['items'] as List<dynamic>? ?? [];
     return [];
+  }
+
+  Future<Map<String, dynamic>> archiveDrivers(List<int> driverIds) async {
+    final data = await _request(
+      'POST',
+      '/admin/drivers/archive',
+      body: {'driverIds': driverIds},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> restoreDriver(int driverId) async {
+    final data = await _request('POST', '/admin/drivers/$driverId/restore');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> getDriverDeletionPreview(int driverId) async {
+    final data = await _request(
+      'GET',
+      '/admin/drivers/$driverId/deletion-preview',
+    );
+    return Map<String, dynamic>.from(data as Map);
   }
 
   Future<Map<String, dynamic>> assignDriver(

@@ -6,6 +6,7 @@ const BOOKING_STATUS = require("../constants/reservationStatus");
 const ROLES = require("../constants/roles");
 const { EVENTS } = require("../events");
 const { hashToken } = require("../utils/tokenHash.util");
+const { emitChatRoomEvent } = require("../socket/realtime");
 
 const MAX_MESSAGE_LENGTH = 2000;
 const PICKUP_ALERT_TEXT = "도착하고 수화물을 찾았습니다";
@@ -60,15 +61,26 @@ class ChatService {
     return `${value.slice(0, max - 1)}…`;
   }
 
-  mapMessage(row, participant, readByCurrentUser = false) {
+  mapMessage(
+    row,
+    participant,
+    readByCurrentUser = false,
+    { adminView = false } = {},
+  ) {
+    const hidden = Boolean(row.is_hidden);
+    const hiddenText = adminView
+      ? "관리자가 숨긴 메시지입니다."
+      : "삭제된 메시지입니다.";
     return {
       messageId: row.id,
       senderType: row.sender_role,
       senderDisplayName: row.sender_name,
-      text: row.content,
+      text: hidden ? hiddenText : row.content,
       createdAt: row.created_at,
       readByCurrentUser,
       clientMessageId: row.client_message_id ?? undefined,
+      hidden,
+      hideReason: adminView ? row.hide_reason ?? null : undefined,
     };
   }
 
@@ -90,6 +102,7 @@ class ChatService {
         booking_id: booking.id,
         room_code: roomCode,
         is_active: 1,
+        is_archived: 0,
         created_at: new Date(),
       };
     } catch (err) {
@@ -350,6 +363,14 @@ class ChatService {
       });
     }
     const room = await this.ensureRoom(conn, booking);
+    const adminLike =
+      authUser?.role === ROLES.ADMIN || authUser?.role === ROLES.SUPER_ADMIN;
+    if (room.is_archived && !adminLike) {
+      throw new AppError("Chat is not accessible", {
+        statusCode: HTTP_STATUS.FORBIDDEN,
+        errorCode: ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+      });
+    }
 
     if (authUser?.role === ROLES.DRIVER) {
       const access = await this.ensureDriverParticipant(
@@ -414,6 +435,10 @@ class ChatService {
           }
         : null,
       createdAt: context.room.created_at,
+      archived: Boolean(context.room.is_archived),
+      archiveReason: context.actorRole === ROLES.ADMIN || context.actorRole === ROLES.SUPER_ADMIN
+        ? context.room.archive_reason ?? null
+        : undefined,
     };
   }
 
@@ -461,7 +486,12 @@ class ChatService {
           ? new Date(row.created_at) <=
             new Date(context.participant.last_read_at)
           : false;
-        return this.mapMessage(row, context.participant, readByCurrentUser);
+        const adminView =
+          context.actorRole === ROLES.ADMIN ||
+          context.actorRole === ROLES.SUPER_ADMIN;
+        return this.mapMessage(row, context.participant, readByCurrentUser, {
+          adminView,
+        });
       });
       return {
         items,
@@ -590,7 +620,11 @@ class ChatService {
       if (existing) {
         await conn.commit();
         return {
-          message: this.mapMessage(existing, context.participant, true),
+          message: this.mapMessage(existing, context.participant, true, {
+            adminView:
+              context.actorRole === ROLES.ADMIN ||
+              context.actorRole === ROLES.SUPER_ADMIN,
+          }),
           roomId: context.room.id,
           broadcast: false,
         };
@@ -630,7 +664,11 @@ class ChatService {
       }
 
       return {
-        message: this.mapMessage(saved, context.participant, true),
+        message: this.mapMessage(saved, context.participant, true, {
+          adminView:
+            context.actorRole === ROLES.ADMIN ||
+            context.actorRole === ROLES.SUPER_ADMIN,
+        }),
         roomId: context.room.id,
         roomCode: context.room.room_code,
         broadcast: true,
@@ -733,6 +771,7 @@ class ChatService {
         {
           search: query.search ?? query.q ?? null,
           unreadOnly: query.unreadOnly === true || query.unread_only === "true",
+          archived: query.archived === true || query.archived === "true",
           limit,
           offset,
         },
@@ -743,6 +782,7 @@ class ChatService {
         {
           search: query.search ?? query.q ?? null,
           unreadOnly: query.unreadOnly === true || query.unread_only === "true",
+          archived: query.archived === true || query.archived === "true",
         },
       );
       const items = [];
@@ -771,6 +811,8 @@ class ChatService {
           lastMessageAt: row.last_message_at,
           unreadCount,
           roomStatus: row.is_active ? "ACTIVE" : "INACTIVE",
+          archived: Boolean(row.is_archived),
+          archiveReason: row.archive_reason ?? null,
         });
       }
       return { page, pageSize: limit, total, items };
@@ -793,6 +835,223 @@ class ChatService {
 
   async markAdminRead(bookingNumber, authUser, input) {
     return this.markRead(bookingNumber, authUser, null, input);
+  }
+
+  normalizeArchiveReason(value, fallback = "ADMIN_MODERATION") {
+    const reason = String(value ?? fallback).trim().toUpperCase();
+    const allowed = new Set([
+      "TEST_DATA",
+      "ADMIN_MODERATION",
+      "DUPLICATE",
+      "OTHER",
+    ]);
+    return allowed.has(reason) ? reason : fallback;
+  }
+
+  actorFromUser(user) {
+    return {
+      id: user?.id ?? null,
+      role: user?.role ?? ROLES.ADMIN,
+    };
+  }
+
+  async hideAdminMessage(messageId, authUser, input = {}) {
+    const reason = this.normalizeArchiveReason(input.reason);
+    const actor = this.actorFromUser(authUser);
+    const conn = await this.pool.getConnection();
+    let message;
+    try {
+      await conn.beginTransaction();
+      message = await this.chatRepository.findMessageWithRoomForUpdate(
+        conn,
+        Number(messageId),
+      );
+      if (!message) {
+        throw new AppError("Message not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.CHAT_MESSAGE_NOT_FOUND,
+        });
+      }
+      await this.chatRepository.hideMessage(conn, message.id, {
+        actorUserId: actor.id,
+        reason,
+      });
+      await this.bookingRepository.insertActivityLog(conn, message.booking_id, {
+        activityType: "CHAT_MESSAGE_HIDDEN",
+        actorUserId: actor.id,
+        actorRole: actor.role,
+        description: "Chat message hidden by admin",
+        payload: {
+          messageId: message.id,
+          bookingNumber: message.booking_number,
+          reason,
+        },
+      });
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    const payload = {
+      messageId: message.id,
+      bookingNumber: message.booking_number,
+      roomId: message.chat_room_id,
+    };
+    emitChatRoomEvent(message.chat_room_id, "chat:message:hidden", payload);
+    return payload;
+  }
+
+  async restoreAdminMessage(messageId, authUser) {
+    const actor = this.actorFromUser(authUser);
+    const conn = await this.pool.getConnection();
+    let message;
+    try {
+      await conn.beginTransaction();
+      message = await this.chatRepository.findMessageWithRoomForUpdate(
+        conn,
+        Number(messageId),
+      );
+      if (!message) {
+        throw new AppError("Message not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.CHAT_MESSAGE_NOT_FOUND,
+        });
+      }
+      await this.chatRepository.restoreMessage(conn, message.id);
+      await this.bookingRepository.insertActivityLog(conn, message.booking_id, {
+        activityType: "CHAT_MESSAGE_RESTORED",
+        actorUserId: actor.id,
+        actorRole: actor.role,
+        description: "Hidden chat message restored by admin",
+        payload: {
+          messageId: message.id,
+          bookingNumber: message.booking_number,
+          previousReason: message.hide_reason ?? null,
+        },
+      });
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    const payload = {
+      messageId: message.id,
+      bookingNumber: message.booking_number,
+      roomId: message.chat_room_id,
+    };
+    emitChatRoomEvent(message.chat_room_id, "chat:message:restored", payload);
+    return payload;
+  }
+
+  normalizeBookingNumbers(values) {
+    return [...new Set((values ?? []).map((value) => String(value).trim()).filter(Boolean))];
+  }
+
+  async archiveAdminThreads(input, authUser) {
+    const bookingNumbers = this.normalizeBookingNumbers(input.bookingNumbers);
+    if (!bookingNumbers.length) {
+      throw new AppError("Booking numbers are required", {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    const reason = "TEST_DATA";
+    const actor = this.actorFromUser(authUser);
+    const conn = await this.pool.getConnection();
+    let rows = [];
+    try {
+      await conn.beginTransaction();
+      rows = await this.chatRepository.findRoomsForArchiveByBookingNumbersForUpdate(
+        conn,
+        bookingNumbers,
+      );
+      const found = new Set(rows.map((row) => row.booking_number));
+      const missing = bookingNumbers.filter((number) => !found.has(number));
+      if (missing.length) {
+        throw new AppError("One or more chats were not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+        });
+      }
+      await this.chatRepository.archiveRooms(
+        conn,
+        rows.map((row) => row.id),
+        { actorUserId: actor.id, reason },
+      );
+      for (const row of rows) {
+        await this.bookingRepository.insertActivityLog(conn, row.booking_id, {
+          activityType: "CHAT_THREAD_ARCHIVED",
+          actorUserId: actor.id,
+          actorRole: actor.role,
+          description: "Chat thread archived as test data",
+          payload: { bookingNumber: row.booking_number, reason },
+        });
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+    for (const row of rows) {
+      emitChatRoomEvent(row.id, "chat:thread:archived", {
+        roomId: row.id,
+        bookingNumber: row.booking_number,
+      });
+    }
+    return {
+      archived: rows.length,
+      items: rows.map((row) => ({ bookingNumber: row.booking_number })),
+    };
+  }
+
+  async restoreAdminThread(bookingNumber, authUser) {
+    const actor = this.actorFromUser(authUser);
+    const conn = await this.pool.getConnection();
+    let row;
+    try {
+      await conn.beginTransaction();
+      const rows = await this.chatRepository.findRoomsForArchiveByBookingNumbersForUpdate(
+        conn,
+        [bookingNumber],
+      );
+      row = rows[0];
+      if (!row) {
+        throw new AppError("Chat not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+        });
+      }
+      await this.chatRepository.restoreRoom(conn, row.id);
+      await this.bookingRepository.insertActivityLog(conn, row.booking_id, {
+        activityType: "CHAT_THREAD_RESTORED",
+        actorUserId: actor.id,
+        actorRole: actor.role,
+        description: "Archived chat thread restored",
+        payload: {
+          bookingNumber: row.booking_number,
+          previousReason: row.archive_reason ?? null,
+        },
+      });
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+    emitChatRoomEvent(row.id, "chat:thread:restored", {
+      roomId: row.id,
+      bookingNumber: row.booking_number,
+    });
+    return { bookingNumber: row.booking_number, restored: true };
   }
 
   async isDriverAuthorizedForBooking(bookingNumber, driverUserId) {

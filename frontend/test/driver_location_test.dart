@@ -315,7 +315,7 @@ class _FakeDispatchDriversApi extends AdminDispatchApiService {
   final List<Map<String, dynamic>> drivers;
 
   @override
-  Future<List<dynamic>> listDrivers() async => drivers;
+  Future<List<dynamic>> listDrivers({bool? archived}) async => drivers;
 }
 
 class _FakeAdminLocationApi extends DriverLocationApiService {
