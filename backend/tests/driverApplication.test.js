@@ -368,6 +368,43 @@ describe('Driver application public routes', () => {
 
     assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
     assert.equal(res.body.errors[0].field, 'email');
+    assert.equal(res.body.errors[0].type, 'string.email');
+  });
+
+  test('JSON application accepts multilingual names and vehicle plates', async () => {
+    for (const input of [
+      { fullName: 'สมชาย ใจดี', vehiclePlateNumber: 'กข 1234' },
+      { fullName: '박용세', vehiclePlateNumber: '12가3456' },
+      { fullName: '王小明', vehiclePlateNumber: 'AB-1234' },
+      { fullName: 'محمد علي', vehiclePlateNumber: '1กข 1234' },
+    ]) {
+      const res = await request(app)
+        .post('/api/v1/driver-applications')
+        .send(validInput(input))
+        .expect(201);
+
+      assert.equal(res.body.success, true);
+    }
+  });
+
+  test('JSON application rejects blank and unsafe vehicle plates', async () => {
+    const blank = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ vehiclePlateNumber: '   ' }))
+      .expect(400);
+    assert.equal(blank.body.errors[0].field, 'vehiclePlateNumber');
+
+    const control = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ vehiclePlateNumber: 'กข\u00001234' }))
+      .expect(400);
+    assert.equal(control.body.errors[0].type, 'string.controlCharacters');
+
+    const emoji = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ vehiclePlateNumber: 'กข 🚕 1234' }))
+      .expect(400);
+    assert.equal(emoji.body.errors[0].type, 'string.vehiclePlate');
   });
 
   test('JSON application still requires phone password and confirmation', async () => {
@@ -683,7 +720,7 @@ describe('DriverApplicationService', () => {
     const stored = repository.applications[0];
     assert.equal(stored.email, 'driver+66123456789@driver.local');
     assert.equal(stored.vehicle_type_code, 'SEDAN');
-    assert.equal(stored.vehicle_plate_number, 'AB-1234');
+    assert.equal(stored.vehicle_plate_number, 'ab-1234');
     assert.notEqual(stored.password_hash, 'strongpass123');
     assert.equal(await bcrypt.compare('strongpass123', stored.password_hash), true);
     assert.notEqual(stored.status_lookup_token_hash, result.statusToken);
@@ -732,6 +769,27 @@ describe('DriverApplicationService', () => {
     await service.submit(validInput({ email: ' Driver.Local@Example.com ' }));
 
     assert.equal(repository.applications[0].email, 'driver.local@example.com');
+  });
+
+  test('submit preserves multilingual driver name, bank holder, and plate text', async () => {
+    const { repository, service } = createHarness();
+    await service.submit(validInput({
+      fullName: 'สมชาย ใจดี',
+      vehicleMake: 'โตโยต้า',
+      vehicleModel: 'คัมรี่',
+      vehicleColor: 'สีขาว',
+      vehiclePlateNumber: '  1กข   1234  ',
+      serviceAreas: ['กรุงเทพฯ', 'พัทยา'],
+      notes: 'Hotel & Residence / Soi 6/1',
+    }));
+
+    const stored = repository.applications[0];
+    assert.equal(stored.full_name, 'สมชาย ใจดี');
+    assert.equal(stored.vehicle_make, 'โตโยต้า');
+    assert.equal(stored.vehicle_model, 'คัมรี่');
+    assert.equal(stored.vehicle_color, 'สีขาว');
+    assert.equal(stored.vehicle_plate_number, '1กข 1234');
+    assert.deepEqual(JSON.parse(stored.service_areas), ['กรุงเทพฯ', 'พัทยา']);
   });
 
   test('submit blocks duplicate pending email when legacy email is provided', async () => {

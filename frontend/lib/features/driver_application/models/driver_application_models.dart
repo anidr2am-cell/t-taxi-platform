@@ -85,7 +85,10 @@ class DriverApplicationDraft {
       'vehicleModel': vehicleModel?.trim(),
       'vehicleYear': vehicleYear,
       'vehicleColor': vehicleColor?.trim(),
-      'vehiclePlateNumber': vehiclePlateNumber.trim().toUpperCase(),
+      'vehiclePlateNumber': vehiclePlateNumber.trim().replaceAll(
+        RegExp(r'\s+'),
+        ' ',
+      ),
       'serviceAreas': serviceAreas,
       'languages': languages,
       'notes': notes?.trim(),

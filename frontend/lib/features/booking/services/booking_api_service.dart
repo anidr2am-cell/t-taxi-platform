@@ -8,11 +8,35 @@ import '../models/vehicle_recommendation.dart';
 class BookingApiException implements Exception {
   final String message;
   final String? errorCode;
+  final List<BookingApiErrorDetail> errors;
 
-  BookingApiException(this.message, [this.errorCode]);
+  BookingApiException(this.message, [this.errorCode, this.errors = const []]);
 
   @override
   String toString() => message;
+}
+
+class BookingApiErrorDetail {
+  const BookingApiErrorDetail({
+    required this.field,
+    this.type,
+    this.source,
+    this.message,
+  });
+
+  final String field;
+  final String? type;
+  final String? source;
+  final String? message;
+
+  factory BookingApiErrorDetail.fromJson(Map<String, dynamic> json) {
+    return BookingApiErrorDetail(
+      field: json['field'] as String? ?? '',
+      type: json['type'] as String?,
+      source: json['source'] as String?,
+      message: json['message'] as String?,
+    );
+  }
 }
 
 class BookingApiService {
@@ -58,7 +82,17 @@ class BookingApiService {
           ? (decoded['message'] as String? ?? 'Request failed')
           : 'Request failed';
       final code = decoded is Map ? decoded['error_code'] as String? : null;
-      throw BookingApiException(message, code);
+      final errors = decoded is Map && decoded['errors'] is List
+          ? (decoded['errors'] as List)
+                .whereType<Map>()
+                .map(
+                  (item) => BookingApiErrorDetail.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const <BookingApiErrorDetail>[];
+      throw BookingApiException(message, code, errors);
     }
 
     if (decoded is Map && decoded.containsKey('data')) {

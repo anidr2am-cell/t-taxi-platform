@@ -480,7 +480,7 @@ class BookingWizardController extends ChangeNotifier {
       'customer': {
         'name': _state.customerName.trim(),
         'phone': _state.customerPhone.trim(),
-      if (_state.customerCountryCode.trim().isNotEmpty)
+        if (_state.customerCountryCode.trim().isNotEmpty)
           'countryCode': _state.customerCountryCode.trim(),
         if (_state.customerEmail.trim().isNotEmpty)
           'email': _state.customerEmail.trim(),
@@ -542,8 +542,12 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return result;
     } catch (e) {
+      final fieldError = _bookingValidationError(e);
       _state = _state.copyWith(
-        errorMessage: userFacingError(e, fallback: 'ui_load_failed'),
+        step: fieldError?.step ?? _state.step,
+        errorMessage:
+            fieldError?.messageKey ??
+            userFacingError(e, fallback: 'ui_load_failed'),
       );
       notifyListeners();
       return null;
@@ -551,6 +555,48 @@ class BookingWizardController extends ChangeNotifier {
       _isSubmitting = false;
       _setLoading(false);
     }
+  }
+
+  ({int step, String messageKey})? _bookingValidationError(Object error) {
+    if (error is! BookingApiException ||
+        error.errorCode != 'VALIDATION_ERROR' ||
+        error.errors.isEmpty) {
+      return null;
+    }
+
+    final first = error.errors.firstWhere(
+      (item) => item.field.isNotEmpty,
+      orElse: () => error.errors.first,
+    );
+    final field = first.field;
+    if (field == 'customer.name') {
+      return (step: 6, messageKey: 'wizard_required_customer_name');
+    }
+    if (field == 'customer.phone') {
+      return (step: 6, messageKey: 'wizard_required_customer_phone');
+    }
+    if (field == 'customer.email') {
+      return (step: 6, messageKey: 'wizard_customer_email_invalid');
+    }
+    if (field.startsWith('customer.')) {
+      return (step: 6, messageKey: 'wizard_required_customer');
+    }
+    if (field == 'origin' || field.startsWith('origin.')) {
+      return (step: 1, messageKey: 'wizard_required_origin');
+    }
+    if (field == 'destination' || field.startsWith('destination.')) {
+      return (step: 2, messageKey: 'wizard_required_destination');
+    }
+    if (field == 'scheduledPickupAt') {
+      return (step: 3, messageKey: 'pickup_datetime_required');
+    }
+    if (field.startsWith('passengers.') || field.startsWith('luggage.')) {
+      return (step: 4, messageKey: 'wizard_required_passengers');
+    }
+    if (field == 'vehicleTypeCode' || field == 'vehicleCount') {
+      return (step: 5, messageKey: 'wizard_required_vehicle');
+    }
+    return (step: _state.step, messageKey: 'ui_action_failed');
   }
 
   Future<void> loadRecommendation() async {
@@ -670,11 +716,13 @@ class BookingWizardController extends ChangeNotifier {
           ? _regionFromLocation(destination)
           : null;
     } else if (service == BookingServiceType.airportDropoff) {
-      originLocationCode = _internalLocationCodeFromOption(origin) ??
+      originLocationCode =
+          _internalLocationCodeFromOption(origin) ??
           _regionFromLocation(origin);
       final destinationAirportIata = _airportIataFromOption(destination);
       destinationLocationCode =
-          _internalLocationCodeFromOption(destination) ?? destinationAirportIata;
+          _internalLocationCodeFromOption(destination) ??
+          destinationAirportIata;
       destinationRegion = destinationLocationCode == null
           ? _regionFromLocation(destination)
           : null;
@@ -823,8 +871,9 @@ class BookingWizardController extends ChangeNotifier {
         return;
       }
       _state = _state.copyWith(
-        errorMessage: bookingPricingInquiryMessage(e)
-            ?? userFacingError(e, fallback: 'ui_action_failed'),
+        errorMessage:
+            bookingPricingInquiryMessage(e) ??
+            userFacingError(e, fallback: 'ui_action_failed'),
         clearPricing: true,
       );
     } finally {
@@ -1029,9 +1078,9 @@ String? bookingPricingInquiryMessage(Object err) {
   if (err is! BookingApiException) return null;
   if (err.errorCode != 'NOT_FOUND') return null;
   final message = err.message;
-  if (message.contains('Route not found')
-      || message.contains('Vehicle price not configured')
-      || message.contains('Origin or destination location not found')) {
+  if (message.contains('Route not found') ||
+      message.contains('Vehicle price not configured') ||
+      message.contains('Origin or destination location not found')) {
     return 'pricing_inquiry_required';
   }
   return null;

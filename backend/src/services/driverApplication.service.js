@@ -62,7 +62,7 @@ class DriverApplicationService {
       vehicleMake: input.vehicleMake?.trim() || null,
       vehicleModel: input.vehicleModel?.trim() || null,
       vehicleColor: input.vehicleColor?.trim() || null,
-      vehiclePlateNumber: input.vehiclePlateNumber.trim().toUpperCase(),
+      vehiclePlateNumber: input.vehiclePlateNumber.trim().replace(/\s+/gu, ' '),
       serviceAreas: input.serviceAreas,
       languages: input.languages ?? [],
       notes: input.notes?.trim() || null,

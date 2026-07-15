@@ -1,12 +1,13 @@
 const Joi = require('joi');
 const SupportInquiryService = require('../services/supportInquiry.service');
+const { unicodeText } = require('./common.validator');
 
 const localeValues = ['ko', 'en', 'th', 'ja', 'zh'];
 const statusValues = SupportInquiryService.STATUS_VALUES;
 
 const createSupportInquirySchema = Joi.object({
-  message: Joi.string().trim().min(1).max(5000).required(),
-  customerName: Joi.string().trim().max(100).allow('', null),
+  message: unicodeText({ max: 5000 }),
+  customerName: unicodeText({ max: 100, allowEmpty: true }).default(null),
   customerPhone: Joi.string().trim().max(30).allow('', null),
   customerEmail: Joi.string().trim().lowercase().email().max(255).empty('').optional(),
   kakaoId: Joi.string().trim().max(100).allow('', null),
@@ -27,7 +28,7 @@ const adminSupportInquiryListQuerySchema = Joi.object({
   page_size: Joi.number().integer().min(1).max(100).optional(),
   limit: Joi.number().integer().min(1).max(100).optional(),
   status: Joi.string().valid(...statusValues).optional(),
-  search: Joi.string().trim().max(100).allow('', null),
+  search: unicodeText({ max: 100, allowEmpty: true }).default(null),
 });
 
 const adminSupportInquiryIdParamsSchema = Joi.object({
@@ -44,7 +45,7 @@ const adminSupportInquiryStatusSchema = Joi.object({
 });
 
 const supportInquiryMessageSchema = Joi.object({
-  message: Joi.string().trim().min(1).max(5000).required(),
+  message: unicodeText({ max: 5000 }),
 });
 
 module.exports = {

@@ -24,4 +24,7 @@ class StubPwaInstallService extends PwaInstallService {
   @override
   Future<PwaInstallResult> promptInstall() async =>
       PwaInstallResult.unavailable;
+
+  @override
+  Future<bool> tryCloseWindow() async => false;
 }
