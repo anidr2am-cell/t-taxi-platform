@@ -13,6 +13,8 @@ const { hashPassword } = require('../src/utils/passwordHash.util');
 
 const DEFAULT_ADMIN_EMAIL = 'tride.e2e.admin@example.com';
 const DEFAULT_DRIVER_EMAIL = 'tride.e2e.driver@example.com';
+const LEGACY_ADMIN_EMAIL = 'tride.e2e.admin@invalid.example';
+const LEGACY_DRIVER_EMAIL = 'tride.e2e.driver@invalid.example';
 const DEFAULT_ADMIN_NAME = '[E2E] Regression Admin';
 const DEFAULT_DRIVER_NAME = '[E2E] Regression Driver';
 const DEFAULT_DRIVER_PHONE = '+66000000999';
@@ -182,6 +184,115 @@ function assertExistingUserIsTestAccount(user, label) {
   }
 }
 
+function assertRole(user, role, label) {
+  if (user.role !== role) {
+    throw new Error(`${label} legacy account has unexpected role`);
+  }
+}
+
+function assertExactTestName(name, expected, label) {
+  if (String(name ?? '').trim() !== expected) {
+    throw new Error(`${label} is not the expected staging test record`);
+  }
+}
+
+async function findDriverByUserId(conn, userId) {
+  const [rows] = await conn.query(
+    `
+      SELECT id, name
+      FROM drivers
+      WHERE user_id = ?
+        AND deleted_at IS NULL
+      LIMIT 1
+      FOR UPDATE
+    `,
+    [userId],
+  );
+  return rows[0] ?? null;
+}
+
+async function findVehicleByPlate(conn, plate) {
+  const [rows] = await conn.query(
+    `
+      SELECT
+        dv.id,
+        dv.driver_id,
+        d.name AS driver_name,
+        u.email AS user_email,
+        u.role AS user_role,
+        up.display_name
+      FROM driver_vehicles dv
+      INNER JOIN drivers d
+        ON d.id = dv.driver_id AND d.deleted_at IS NULL
+      INNER JOIN users u
+        ON u.id = d.user_id AND u.deleted_at IS NULL
+      LEFT JOIN user_profiles up
+        ON up.user_id = u.id AND up.deleted_at IS NULL
+      WHERE dv.plate_number = ?
+        AND dv.deleted_at IS NULL
+      LIMIT 1
+      FOR UPDATE
+    `,
+    [plate],
+  );
+  return rows[0] ?? null;
+}
+
+async function migrateLegacyUserEmail(conn, {
+  currentEmail,
+  legacyEmail,
+  role,
+  label,
+  expectedDisplayName,
+  driverConfig,
+}) {
+  if (!legacyEmail || currentEmail === legacyEmail) return null;
+
+  const current = await findUserWithProfile(conn, currentEmail);
+  const legacy = await findUserWithProfile(conn, legacyEmail);
+  if (current && legacy) {
+    throw new Error(`${label} current and legacy test emails both exist; manual review required`);
+  }
+  if (!legacy) return current;
+
+  assertExistingUserIsTestAccount(legacy, label);
+  assertRole(legacy, role, label);
+  if (expectedDisplayName) {
+    assertExactTestName(legacy.display_name, expectedDisplayName, `${label} display name`);
+  }
+
+  if (role === ROLES.DRIVER) {
+    const driver = await findDriverByUserId(conn, legacy.id);
+    if (!driver) {
+      throw new Error('Legacy test driver user has no driver record');
+    }
+    assertExactTestName(driver.name, driverConfig.name, 'Legacy test driver name');
+
+    const vehicle = await findVehicleByPlate(conn, driverConfig.plate);
+    if (!vehicle) {
+      throw new Error('Legacy test driver vehicle was not found');
+    }
+    if (Number(vehicle.driver_id) !== Number(driver.id)) {
+      throw new Error('Test vehicle plate already belongs to another driver');
+    }
+  }
+
+  await conn.query(
+    `
+      UPDATE users
+      SET email = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    [currentEmail, legacy.id],
+  );
+  return {
+    ...legacy,
+    email: currentEmail,
+    migratedFromEmail: legacyEmail,
+  };
+}
+
 async function ensureUserProfile(conn, userId, displayName) {
   const [profiles] = await conn.query(
     `
@@ -212,7 +323,7 @@ async function ensureUserProfile(conn, userId, displayName) {
 }
 
 async function upsertUser(conn, account, role, { resetPassword }) {
-  const existing = await findUserWithProfile(conn, account.email);
+  const existing = account.existingUser ?? await findUserWithProfile(conn, account.email);
   assertExistingUserIsTestAccount(existing, role);
 
   let userId = existing?.id ?? null;
@@ -243,7 +354,7 @@ async function upsertUser(conn, account, role, { resetPassword }) {
       `,
       values,
     );
-    action = resetPassword ? 'updated' : 'verified';
+    action = existing.migratedFromEmail ? 'migrated' : (resetPassword ? 'updated' : 'verified');
   } else {
     const [result] = await conn.query(
       `
@@ -426,7 +537,26 @@ async function provisionAccounts(pool, config) {
       };
     }
 
-    const adminUser = await upsertUser(conn, config.admin, config.admin.role, {
+    const migratedAdmin = await migrateLegacyUserEmail(conn, {
+      currentEmail: config.admin.email,
+      legacyEmail: LEGACY_ADMIN_EMAIL,
+      role: config.admin.role,
+      label: 'Admin',
+      expectedDisplayName: config.admin.name,
+    });
+    const migratedDriver = await migrateLegacyUserEmail(conn, {
+      currentEmail: config.driver.email,
+      legacyEmail: LEGACY_DRIVER_EMAIL,
+      role: ROLES.DRIVER,
+      label: 'Driver',
+      expectedDisplayName: config.driver.name,
+      driverConfig: config.driver,
+    });
+
+    const adminUser = await upsertUser(conn, {
+      ...config.admin,
+      existingUser: migratedAdmin,
+    }, config.admin.role, {
       resetPassword: config.resetPasswords,
     });
     const driverUser = await upsertUser(
@@ -434,6 +564,7 @@ async function provisionAccounts(pool, config) {
       {
         ...config.driver,
         phone: config.driver.phone,
+        existingUser: migratedDriver,
       },
       ROLES.DRIVER,
       { resetPassword: config.resetPasswords },
