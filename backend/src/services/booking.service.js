@@ -8,6 +8,10 @@ const NOTIFICATION_TYPES = require('../constants/notificationTypes');
 const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
 const ROLES = require('../constants/roles');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
+const {
+  extractAirlineCode,
+  normalizeFlightNumber,
+} = require('../utils/flightNumber.util');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
 const { emitDriverCallAvailable } = require('../socket/realtime');
@@ -187,8 +191,7 @@ class BookingService {
   }
 
   extractAirlineCode(flightNumber) {
-    const match = String(flightNumber).match(/^([A-Z]{2,3})\d/);
-    return match ? match[1] : null;
+    return extractAirlineCode(flightNumber);
   }
 
   resolveTransferFlight(input) {
@@ -197,9 +200,10 @@ class BookingService {
       return { flightNumber: null, airlineCode: null, flightDate: null };
     }
     if (!this.flightService) {
+      const flightNumber = normalizeFlightNumber(raw);
       return {
-        flightNumber: String(raw).trim().replace(/\s+/g, '').toUpperCase(),
-        airlineCode: null,
+        flightNumber,
+        airlineCode: this.extractAirlineCode(flightNumber),
         flightDate: input.scheduledPickupAt ? String(input.scheduledPickupAt).slice(0, 10) : null,
       };
     }

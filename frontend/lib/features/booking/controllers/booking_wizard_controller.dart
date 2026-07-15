@@ -169,6 +169,7 @@ class BookingWizardController extends ChangeNotifier {
       clearRecommendation: true,
       clearPricing: true,
       clearError: true,
+      flightNumber: '',
     );
     await _persist();
     notifyListeners();
@@ -408,6 +409,14 @@ class BookingWizardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  String _normalizeFlightNumber(String value) {
+    final compact = value.trim().replaceAll(RegExp(r'\s+'), '').toUpperCase();
+    return compact.replaceFirstMapped(
+      RegExp(r'^([A-Z0-9]{2}|[A-Z]{3})-(?=\d)'),
+      (match) => match.group(1)!,
+    );
+  }
+
   Map<String, dynamic> _placePayload(LocationOption? location) {
     if (location == null) return {};
     return {
@@ -472,10 +481,7 @@ class BookingWizardController extends ChangeNotifier {
           'airportIata': airportIata,
           if (_state.serviceType == BookingServiceType.airportPickup &&
               _state.flightNumber.trim().isNotEmpty)
-            'flightNumber': _state.flightNumber
-                .trim()
-                .replaceAll(' ', '')
-                .toUpperCase(),
+            'flightNumber': _normalizeFlightNumber(_state.flightNumber),
         },
       'customer': {
         'name': _state.customerName.trim(),
@@ -589,6 +595,9 @@ class BookingWizardController extends ChangeNotifier {
     }
     if (field == 'scheduledPickupAt') {
       return (step: 3, messageKey: 'pickup_datetime_required');
+    }
+    if (field == 'transfer.flightNumber') {
+      return (step: 3, messageKey: 'flight_number_invalid');
     }
     if (field.startsWith('passengers.') || field.startsWith('luggage.')) {
       return (step: 4, messageKey: 'wizard_required_passengers');

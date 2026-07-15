@@ -4,6 +4,10 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const logger = require('../utils/logger');
 const { createFlightProviderAdapter } = require('../adapters/flightProvider.factory');
+const {
+  isValidFlightNumber,
+  normalizeFlightNumber,
+} = require('../utils/flightNumber.util');
 
 const SOURCE = 'AVIATIONSTACK';
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -31,8 +35,8 @@ class FlightService {
   }
 
   normalizeFlightNumber(flightNumber) {
-    const normalized = String(flightNumber ?? '').trim().replace(/\s+/g, '').toUpperCase();
-    if (!/^[A-Z]{2,3}\d{1,4}[A-Z]?$/.test(normalized)) {
+    const normalized = normalizeFlightNumber(flightNumber);
+    if (!normalized || !isValidFlightNumber(normalized)) {
       throw new AppError('Invalid flight number', {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.INVALID_FLIGHT_NUMBER,

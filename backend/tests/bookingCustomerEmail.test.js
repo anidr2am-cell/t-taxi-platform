@@ -5,6 +5,8 @@ const {
   createBookingSchema,
   normalizeOptionalEmail,
 } = require('../src/validators/booking.validator');
+const validate = require('../src/middlewares/validate.middleware');
+const ERROR_CODES = require('../src/constants/errorCodes');
 
 function validPayload(overrides = {}) {
   return {
@@ -221,4 +223,91 @@ test('booking validator accepts missing countryCode', () => {
 
   assert.equal(error, undefined);
   assert.equal(value.customer.countryCode, null);
+});
+
+test('booking validator accepts and normalizes alphanumeric flight numbers', () => {
+  const cases = [
+    ['TG401', 'TG401'],
+    [' TG 401 ', 'TG401'],
+    ['TG-401', 'TG401'],
+    ['KE651', 'KE651'],
+    ['OZ741', 'OZ741'],
+    ['7C2203', '7C2203'],
+    ['7c 2203', '7C2203'],
+    ['7c-2203', '7C2203'],
+    ['5J931', '5J931'],
+    ['6E1053', '6E1053'],
+    ['3K513', '3K513'],
+    ['U28001', 'U28001'],
+    ['EK372', 'EK372'],
+    ['THA401', 'THA401'],
+    ['TG401A', 'TG401A'],
+  ];
+
+  for (const [input, expected] of cases) {
+    const { error, value } = createBookingSchema.validate(validPayload({
+      serviceTypeCode: 'AIRPORT_PICKUP',
+      transfer: { airportIata: 'BKK', flightNumber: input },
+    }));
+
+    assert.equal(error, undefined, input);
+    assert.equal(value.transfer.flightNumber, expected);
+  }
+});
+
+test('booking validator treats blank flight numbers as null', () => {
+  for (const flightNumber of [null, '', '   ']) {
+    const { error, value } = createBookingSchema.validate(validPayload({
+      serviceTypeCode: 'AIRPORT_PICKUP',
+      transfer: { airportIata: 'BKK', flightNumber },
+    }));
+
+    assert.equal(error, undefined, JSON.stringify(flightNumber));
+    assert.equal(value.transfer.flightNumber, null);
+  }
+});
+
+test('booking validator rejects unsafe or malformed flight numbers', () => {
+  for (const flightNumber of [
+    '1234',
+    '122203',
+    'T401',
+    'TTTT401',
+    'TG',
+    'TGABC',
+    'TG@401',
+    'TG/401',
+    '✈️TG401',
+    'TG\u0000401',
+    'TG123456789012345678901',
+  ]) {
+    const { error } = createBookingSchema.validate(validPayload({
+      serviceTypeCode: 'AIRPORT_PICKUP',
+      transfer: { airportIata: 'BKK', flightNumber },
+    }));
+
+    assert.ok(error, flightNumber);
+    assert.equal(error.details[0].path.join('.'), 'transfer.flightNumber');
+    assert.equal(error.details[0].type, flightNumber.length > 20 ? 'string.max' : 'any.invalid');
+  }
+});
+
+test('booking validation middleware reports flight number field details', () => {
+  const req = {
+    body: validPayload({
+      serviceTypeCode: 'AIRPORT_PICKUP',
+      transfer: { airportIata: 'BKK', flightNumber: 'TG/401' },
+    }),
+  };
+  let capturedError;
+
+  validate({ body: createBookingSchema })(req, {}, (err) => {
+    capturedError = err;
+  });
+
+  assert.equal(capturedError.errorCode, ERROR_CODES.VALIDATION_ERROR);
+  assert.equal(capturedError.errors[0].field, 'transfer.flightNumber');
+  assert.equal(capturedError.errors[0].type, 'any.invalid');
+  assert.equal(capturedError.errors[0].source, 'body');
+  assert.match(capturedError.errors[0].message, /TG401, 7C2203/);
 });
