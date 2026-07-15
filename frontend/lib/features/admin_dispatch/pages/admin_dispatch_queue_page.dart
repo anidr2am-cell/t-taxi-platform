@@ -47,6 +47,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
   bool _lowRating = false;
   bool _unassignedOnly = false;
   bool _hasInquiry = false;
+  bool _showArchived = false;
+  bool _archiveSubmitting = false;
+  final Set<String> _selectedForArchive = {};
   String? _loadMoreError;
   bool _needsLogin = false;
   String? _selectedBookingNumber;
@@ -167,6 +170,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         lowRating: _lowRating ? true : null,
         unassigned: _unassignedOnly ? true : null,
         hasInquiry: _hasInquiry ? true : null,
+        archived: _showArchived ? true : null,
         page: page,
         limit: _limit,
       );
@@ -175,6 +179,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         _page = page;
         _total = data['total'] as int? ?? items.length;
         _items = append ? [..._items, ...items] : items;
+        if (!append) _selectedForArchive.clear();
         _loading = false;
         _loadingMore = false;
         _loadMoreError = null;
@@ -218,6 +223,8 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
   void _switchView(String view, {bool? unassignedOnly}) {
     setState(() {
       _view = view;
+      _showArchived = false;
+      _selectedForArchive.clear();
       if (unassignedOnly != null) {
         _unassignedOnly = unassignedOnly;
       } else if (view != AdminBookingView.all) {
@@ -225,6 +232,126 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
       }
     });
     _load(page: 1);
+  }
+
+  void _toggleArchivedView(bool value) {
+    setState(() {
+      _showArchived = value;
+      _selectedForArchive.clear();
+      if (value) {
+        _view = AdminBookingView.all;
+        _unassignedOnly = false;
+      }
+    });
+    _load(page: 1);
+  }
+
+  void _toggleArchiveSelection(String bookingNumber, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedForArchive.add(bookingNumber);
+      } else {
+        _selectedForArchive.remove(bookingNumber);
+      }
+    });
+  }
+
+  bool _hasArchiveWarning(Map<String, dynamic> item) {
+    final status = item['status'] as String? ?? '';
+    final assignment = item['activeAssignment'];
+    return assignment is Map ||
+        {
+          'DRIVER_ASSIGNED',
+          'ON_ROUTE',
+          'DRIVER_ARRIVED',
+          'PICKED_UP',
+          'SETTLEMENT_PENDING',
+          'COMPLETED',
+        }.contains(status);
+  }
+
+  Future<void> _archiveSelected() async {
+    if (_selectedForArchive.isEmpty || _archiveSubmitting) return;
+    final selectedItems = _items
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .where((item) => _selectedForArchive.contains(item['bookingNumber']))
+        .toList();
+    final hasWarning = selectedItems.any(_hasArchiveWarning);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('선택한 예약을 테스트 데이터로 숨기시겠습니까?'),
+        content: Text(
+          hasWarning
+              ? '이미 배정, 운행, 정산 기록이 있는 예약이 포함되어 있습니다. 예약과 연결 데이터는 삭제되지 않고 관리자 기본 목록에서만 숨겨집니다.'
+              : '예약과 연결 데이터는 삭제되지 않고 관리자 기본 목록에서만 숨겨집니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.t('driver_cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('테스트 예약 숨기기'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _archiveSubmitting = true);
+    try {
+      await _api.archiveBookings(_selectedForArchive.toList());
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('선택한 예약을 숨겼습니다.')));
+      await Future.wait([_loadSummary(), _load(page: 1)]);
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: context.l10n.t('ui_action_failed'),
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _archiveSubmitting = false);
+    }
+  }
+
+  Future<void> _restoreBooking(String bookingNumber) async {
+    if (_archiveSubmitting) return;
+    setState(() => _archiveSubmitting = true);
+    try {
+      await _api.restoreBookings([bookingNumber]);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('숨긴 예약을 복원했습니다.')));
+      await Future.wait([_loadSummary(), _load(page: 1)]);
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: context.l10n.t('ui_action_failed'),
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _archiveSubmitting = false);
+    }
   }
 
   Future<void> _openDetail(String bookingNumber) async {
@@ -308,6 +435,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
       body: Column(
         children: [
           _buildToolbar(l10n),
+          _buildArchiveActions(l10n),
           _buildSummaryCards(l10n),
           _buildTabs(l10n),
           Expanded(child: _buildWorkbench(l10n)),
@@ -363,6 +491,46 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
     );
   }
 
+  Widget _buildArchiveActions(AppLocalizations l10n) {
+    return Padding(
+      padding: AppUi.pagePadding(
+        context,
+      ).copyWith(top: 0, bottom: AppTokens.spaceSm),
+      child: Wrap(
+        spacing: AppTokens.spaceSm,
+        runSpacing: AppTokens.spaceXs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          FilterChip(
+            selected: _showArchived,
+            avatar: const Icon(Icons.archive_outlined, size: 18),
+            label: const Text('숨긴 예약 보기'),
+            onSelected: _toggleArchivedView,
+          ),
+          if (!_showArchived)
+            FilledButton.icon(
+              onPressed: _selectedForArchive.isEmpty || _archiveSubmitting
+                  ? null
+                  : _archiveSelected,
+              icon: _archiveSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.visibility_off_outlined),
+              label: Text('테스트 예약 숨기기 (${_selectedForArchive.length})'),
+            ),
+          if (_showArchived)
+            Text(
+              '숨긴 예약은 기본 운영 화면, 기사/고객 화면, 정산 대기 목록에서 제외됩니다.',
+              style: const TextStyle(color: AppTokens.textSecondary),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryCards(AppLocalizations l10n) {
     const keys = [
       'needsAction',
@@ -387,7 +555,8 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
             label: AdminOperationsUx.summaryCardLabel(l10n, key),
             count: count,
             loading: _loadingSummary,
-            selected: view == _view &&
+            selected:
+                view == _view &&
                 (key != 'unassigned' || _unassignedOnly) &&
                 (key != 'issues' || _view == AdminBookingView.issues),
             onTap: () {
@@ -452,10 +621,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           children: [
             Expanded(flex: 5, child: _buildList(l10n, masterDetail: true)),
             const VerticalDivider(width: 1),
-            Expanded(
-              flex: 4,
-              child: _buildPreviewPanel(l10n),
-            ),
+            Expanded(flex: 4, child: _buildPreviewPanel(l10n)),
           ],
         );
       },
@@ -501,6 +667,11 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
               item: item,
               l10n: l10n,
               selected: selected,
+              archiveSelected: _selectedForArchive.contains(bookingNumber),
+              showArchived: _showArchived,
+              onArchiveSelected: (value) =>
+                  _toggleArchiveSelection(bookingNumber, value),
+              onRestore: () => _restoreBooking(bookingNumber),
               onTap: () {
                 if (masterDetail) {
                   setState(() => _selectedBookingNumber = bookingNumber);
@@ -530,8 +701,8 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         ? Map<String, dynamic>.from(item['operations'] as Map)
         : null;
     final status = item['status'] as String? ?? '';
-    final cta = item['primaryCta'] as String? ??
-        operations?['primaryCta'] as String?;
+    final cta =
+        item['primaryCta'] as String? ?? operations?['primaryCta'] as String?;
 
     return Padding(
       padding: AppUi.pagePadding(context),
@@ -541,41 +712,47 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            Text(
-              item['bookingNumber'] as String? ?? '',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: AppTokens.spaceSm),
-            AppUi.statusBadge(
-              BookingStatusDisplay.label(
-                l10n,
-                status,
-                audience: BookingStatusAudience.admin,
+              Text(
+                item['bookingNumber'] as String? ?? '',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-              tone: AppUi.toneForBookingStatus(status),
-            ),
-            const SizedBox(height: AppTokens.spaceSm),
-            Text(
-              AdminOperationsUx.nextActionLabel(l10n, operations, item),
-              style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
-            ),
-            const SizedBox(height: AppTokens.spaceMd),
-            Text(
-              '${item['origin']} → ${item['destination']}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: AppTokens.spaceSm),
-            Text(item['scheduledPickupAt'] as String? ?? '-'),
-            const Spacer(),
-            AppUi.primaryButton(
-              label: AdminOperationsUx.primaryCtaLabel(l10n, cta),
-              icon: Icons.open_in_new,
-              onPressed: () => _openDetail(item['bookingNumber'] as String),
-            ),
-          ],
+              const SizedBox(height: AppTokens.spaceSm),
+              AppUi.statusBadge(
+                BookingStatusDisplay.label(
+                  l10n,
+                  status,
+                  audience: BookingStatusAudience.admin,
+                ),
+                tone: AppUi.toneForBookingStatus(status),
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              Text(
+                AdminOperationsUx.nextActionLabel(l10n, operations, item),
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              Text(
+                '${item['origin']} → ${item['destination']}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              Text(item['scheduledPickupAt'] as String? ?? '-'),
+              const Spacer(),
+              AppUi.primaryButton(
+                label: AdminOperationsUx.primaryCtaLabel(l10n, cta),
+                icon: Icons.open_in_new,
+                onPressed: () => _openDetail(item['bookingNumber'] as String),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -664,7 +841,10 @@ class _SummaryCard extends StatelessWidget {
               label,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTokens.textSecondary,
+              ),
             ),
             loading
                 ? const SizedBox(
@@ -693,6 +873,10 @@ class _BookingListCard extends StatelessWidget {
     required this.l10n,
     required this.onTap,
     required this.onPrimaryAction,
+    required this.archiveSelected,
+    required this.showArchived,
+    required this.onArchiveSelected,
+    required this.onRestore,
     this.selected = false,
   });
 
@@ -700,6 +884,10 @@ class _BookingListCard extends StatelessWidget {
   final AppLocalizations l10n;
   final VoidCallback onTap;
   final VoidCallback onPrimaryAction;
+  final bool archiveSelected;
+  final bool showArchived;
+  final ValueChanged<bool> onArchiveSelected;
+  final VoidCallback onRestore;
   final bool selected;
 
   @override
@@ -721,14 +909,20 @@ class _BookingListCard extends StatelessWidget {
         : null;
     final severity = operations?['severity'] as String?;
     final reason = AdminOperationsUx.formatActionReason(l10n, operations);
-    final cta = item['primaryCta'] as String? ??
-        operations?['primaryCta'] as String?;
+    final cta =
+        item['primaryCta'] as String? ?? operations?['primaryCta'] as String?;
+    final archive = item['archive'] is Map
+        ? Map<String, dynamic>.from(item['archive'] as Map)
+        : const <String, dynamic>{};
+    final isArchived = archive['isArchived'] == true;
 
     return AppUi.surfaceCard(
       onTap: onTap,
       backgroundColor: selected
           ? AppTokens.primaryLight
-          : (unassigned ? AppTokens.warningLight : AppTokens.surface),
+          : (isArchived
+                ? AppTokens.surfaceMuted
+                : (unassigned ? AppTokens.warningLight : AppTokens.surface)),
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -736,10 +930,19 @@ class _BookingListCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (!showArchived)
+                Checkbox(
+                  value: archiveSelected,
+                  onChanged: (value) => onArchiveSelected(value ?? false),
+                  visualDensity: VisualDensity.compact,
+                ),
               Expanded(
                 child: Text(
                   item['bookingNumber'] as String? ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -751,6 +954,10 @@ class _BookingListCard extends StatelessWidget {
                 ),
                 tone: AppUi.toneForBookingStatus(status),
               ),
+              if (isArchived) ...[
+                const SizedBox(width: 6),
+                AppUi.statusBadge('Archived/Test', tone: AppStatusTone.neutral),
+              ],
             ],
           ),
           if (severity != null && severity.isNotEmpty) ...[
@@ -785,7 +992,10 @@ class _BookingListCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '${item['scheduledPickupAt'] ?? '-'} · ${item['customerDisplayName'] ?? '-'} · ${item['passengerCount'] ?? '-'} pax',
-            style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 13,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -799,13 +1009,27 @@ class _BookingListCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-          Text(amountLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            amountLabel,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: onPrimaryAction,
-              child: Text(AdminOperationsUx.primaryCtaLabel(l10n, cta)),
+            child: Wrap(
+              spacing: AppTokens.spaceXs,
+              children: [
+                if (isArchived)
+                  OutlinedButton.icon(
+                    onPressed: onRestore,
+                    icon: const Icon(Icons.restore),
+                    label: const Text('복원'),
+                  ),
+                TextButton(
+                  onPressed: onPrimaryAction,
+                  child: Text(AdminOperationsUx.primaryCtaLabel(l10n, cta)),
+                ),
+              ],
             ),
           ),
         ],
@@ -914,62 +1138,124 @@ class _FilterSheetState extends State<_FilterSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(l10n.t('admin_ops_filters'), style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              l10n.t('admin_ops_filters'),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _dateFrom,
-              decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_date_from')),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_ops_filter_date_from'),
+              ),
             ),
             TextField(
               controller: _dateTo,
-              decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_date_to')),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_ops_filter_date_to'),
+              ),
             ),
             DropdownButtonFormField<String?>(
               initialValue: _status,
               decoration: InputDecoration(labelText: l10n.t('status')),
               items: [
-                DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_statuses'))),
-                DropdownMenuItem(value: 'PENDING', child: Text(l10n.t('status_pending'))),
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(l10n.t('admin_dispatch_all_statuses')),
+                ),
+                DropdownMenuItem(
+                  value: 'PENDING',
+                  child: Text(l10n.t('status_pending')),
+                ),
                 const DropdownMenuItem(value: 'OPEN', child: Text('Open')),
-                DropdownMenuItem(value: 'CONFIRMED', child: Text(l10n.t('status_confirmed'))),
-                DropdownMenuItem(value: 'DRIVER_ASSIGNED', child: Text(l10n.t('status_driver_assigned'))),
-                DropdownMenuItem(value: 'ON_ROUTE', child: Text(l10n.t('status_on_route'))),
-                DropdownMenuItem(value: 'DRIVER_ARRIVED', child: Text(l10n.t('status_driver_arrived'))),
-                DropdownMenuItem(value: 'PICKED_UP', child: Text(l10n.t('status_picked_up'))),
-                DropdownMenuItem(value: 'SETTLEMENT_PENDING', child: Text(l10n.t('status_settlement_pending'))),
+                DropdownMenuItem(
+                  value: 'CONFIRMED',
+                  child: Text(l10n.t('status_confirmed')),
+                ),
+                DropdownMenuItem(
+                  value: 'DRIVER_ASSIGNED',
+                  child: Text(l10n.t('status_driver_assigned')),
+                ),
+                DropdownMenuItem(
+                  value: 'ON_ROUTE',
+                  child: Text(l10n.t('status_on_route')),
+                ),
+                DropdownMenuItem(
+                  value: 'DRIVER_ARRIVED',
+                  child: Text(l10n.t('status_driver_arrived')),
+                ),
+                DropdownMenuItem(
+                  value: 'PICKED_UP',
+                  child: Text(l10n.t('status_picked_up')),
+                ),
+                DropdownMenuItem(
+                  value: 'SETTLEMENT_PENDING',
+                  child: Text(l10n.t('status_settlement_pending')),
+                ),
               ],
               onChanged: (v) => setState(() => _status = v),
             ),
             DropdownButtonFormField<String?>(
               initialValue: _assignment,
-              decoration: InputDecoration(labelText: l10n.t('admin_dispatch_assignment')),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_dispatch_assignment'),
+              ),
               items: [
-                DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_assignments'))),
-                DropdownMenuItem(value: 'UNASSIGNED', child: Text(l10n.t('admin_dispatch_unassigned'))),
-                DropdownMenuItem(value: 'ASSIGNED', child: Text(l10n.t('admin_dispatch_assigned'))),
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(l10n.t('admin_dispatch_all_assignments')),
+                ),
+                DropdownMenuItem(
+                  value: 'UNASSIGNED',
+                  child: Text(l10n.t('admin_dispatch_unassigned')),
+                ),
+                DropdownMenuItem(
+                  value: 'ASSIGNED',
+                  child: Text(l10n.t('admin_dispatch_assigned')),
+                ),
               ],
               onChanged: (v) => setState(() => _assignment = v),
             ),
             TextField(
               controller: _serviceType,
-              decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_service_type')),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_ops_filter_service_type'),
+              ),
             ),
             TextField(
               controller: _origin,
-              decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_origin')),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_ops_filter_origin'),
+              ),
             ),
             TextField(
               controller: _destination,
-              decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_destination')),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_ops_filter_destination'),
+              ),
             ),
             DropdownButtonFormField<String?>(
               initialValue: _settlement,
-              decoration: InputDecoration(labelText: l10n.t('admin_ops_filter_settlement')),
+              decoration: InputDecoration(
+                labelText: l10n.t('admin_ops_filter_settlement'),
+              ),
               items: [
-                DropdownMenuItem(value: null, child: Text(l10n.t('admin_dispatch_all_statuses'))),
-                DropdownMenuItem(value: 'RECEIPT_REJECTED', child: Text(l10n.t('admin_ops_settlement_rejected'))),
-                DropdownMenuItem(value: 'RECEIPT_SUBMITTED', child: Text(l10n.t('admin_ops_settlement_submitted'))),
-                DropdownMenuItem(value: 'RECEIPT_MISSING', child: Text(l10n.t('admin_ops_settlement_missing'))),
+                DropdownMenuItem(
+                  value: null,
+                  child: Text(l10n.t('admin_dispatch_all_statuses')),
+                ),
+                DropdownMenuItem(
+                  value: 'RECEIPT_REJECTED',
+                  child: Text(l10n.t('admin_ops_settlement_rejected')),
+                ),
+                DropdownMenuItem(
+                  value: 'RECEIPT_SUBMITTED',
+                  child: Text(l10n.t('admin_ops_settlement_submitted')),
+                ),
+                DropdownMenuItem(
+                  value: 'RECEIPT_MISSING',
+                  child: Text(l10n.t('admin_ops_settlement_missing')),
+                ),
               ],
               onChanged: (v) => setState(() => _settlement = v),
             ),
@@ -1008,11 +1294,21 @@ class _FilterSheetState extends State<_FilterSheet> {
                       _FilterResult(
                         statusFilter: _status,
                         assignmentFilter: _assignment,
-                        dateFrom: _dateFrom.text.trim().isEmpty ? null : _dateFrom.text.trim(),
-                        dateTo: _dateTo.text.trim().isEmpty ? null : _dateTo.text.trim(),
-                        serviceType: _serviceType.text.trim().isEmpty ? null : _serviceType.text.trim(),
-                        origin: _origin.text.trim().isEmpty ? null : _origin.text.trim(),
-                        destination: _destination.text.trim().isEmpty ? null : _destination.text.trim(),
+                        dateFrom: _dateFrom.text.trim().isEmpty
+                            ? null
+                            : _dateFrom.text.trim(),
+                        dateTo: _dateTo.text.trim().isEmpty
+                            ? null
+                            : _dateTo.text.trim(),
+                        serviceType: _serviceType.text.trim().isEmpty
+                            ? null
+                            : _serviceType.text.trim(),
+                        origin: _origin.text.trim().isEmpty
+                            ? null
+                            : _origin.text.trim(),
+                        destination: _destination.text.trim().isEmpty
+                            ? null
+                            : _destination.text.trim(),
                         settlementStatus: _settlement,
                         lowRating: _lowRating,
                         unassignedOnly: _unassigned,

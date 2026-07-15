@@ -107,6 +107,7 @@ class AdminDispatchApiService {
     bool? lowRating,
     bool? unassigned,
     bool? hasInquiry,
+    bool? archived,
     int page = 1,
     int limit = 20,
   }) async {
@@ -132,6 +133,7 @@ class AdminDispatchApiService {
     if (lowRating == true) query['lowRating'] = 'true';
     if (unassigned == true) query['unassigned'] = 'true';
     if (hasInquiry == true) query['hasInquiry'] = 'true';
+    if (archived == true) query['archived'] = 'true';
     final data = await _request('GET', '/admin/bookings', query: query);
     return Map<String, dynamic>.from(data as Map);
   }
@@ -239,6 +241,28 @@ class AdminDispatchApiService {
       'POST',
       '/admin/bookings/$bookingNumber/qr/reissue',
       body: {'type': type},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> archiveBookings(
+    List<String> bookingNumbers,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/bookings/archive',
+      body: {'bookingNumbers': bookingNumbers},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> restoreBookings(
+    List<String> bookingNumbers,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/bookings/restore',
+      body: {'bookingNumbers': bookingNumbers},
     );
     return Map<String, dynamic>.from(data as Map);
   }

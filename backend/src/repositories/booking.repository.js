@@ -239,7 +239,7 @@ class BookingRepository {
           ORDER BY bda2.is_active DESC, bda2.updated_at DESC, bda2.id DESC
           LIMIT 1
         )
-        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL AND b.is_archived = 0
         LIMIT 1
       `,
       [bookingNumber],
@@ -338,7 +338,7 @@ class BookingRepository {
         LEFT JOIN drivers d ON d.id = COALESCE(bda.driver_id, b.driver_id) AND d.deleted_at IS NULL
         LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
         LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
-        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL AND b.is_archived = 0
         LIMIT 1
       `,
       [bookingNumber],
@@ -369,7 +369,7 @@ class BookingRepository {
           LIMIT 1
         )
         LEFT JOIN drivers d ON d.id = COALESCE(b.driver_id, bda.driver_id) AND d.deleted_at IS NULL
-        WHERE b.booking_number = ? AND b.deleted_at IS NULL
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL AND b.is_archived = 0
         LIMIT 1
         FOR UPDATE
       `,
@@ -421,6 +421,7 @@ class BookingRepository {
           AND f.deleted_at IS NULL
         WHERE b.id = ?
           AND b.deleted_at IS NULL
+          AND b.is_archived = 0
         ORDER BY daf.sort_order ASC, f.id ASC
         LIMIT 1
       `,
@@ -468,7 +469,7 @@ class BookingRepository {
         btd.delay_minutes
       FROM booking_driver_assignments bda
       INNER JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
-      INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL
+      INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
       INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
       INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
       LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
@@ -485,6 +486,7 @@ class BookingRepository {
         AND bda.is_active = 1
         AND bda.deleted_at IS NULL
         AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+        AND b.is_archived = 0
     `;
   }
 
@@ -529,6 +531,7 @@ class BookingRepository {
           AND bda.status = 'COMPLETED'
           AND b.status IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
           AND b.booking_number = ?
+          AND b.is_archived = 0
         LIMIT 1
       `,
       [driverUserId, bookingNumber],
@@ -595,6 +598,7 @@ class BookingRepository {
           AND u.is_active = 1
           AND u.deleted_at IS NULL
         WHERE b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status = 'OPEN'
           AND EXISTS (
             SELECT 1
@@ -623,7 +627,7 @@ class BookingRepository {
           AND NOT EXISTS (
             SELECT 1
             FROM booking_driver_assignments own_bda
-            INNER JOIN bookings own_b ON own_b.id = own_bda.booking_id AND own_b.deleted_at IS NULL
+            INNER JOIN bookings own_b ON own_b.id = own_bda.booking_id AND own_b.deleted_at IS NULL AND own_b.is_archived = 0
             WHERE own_bda.driver_id = d.id
               AND own_bda.is_active = 1
               AND own_bda.deleted_at IS NULL
@@ -644,6 +648,7 @@ class BookingRepository {
         ${this.openDriverCallSelectSql()}
         WHERE b.id = ?
           AND b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status = 'OPEN'
         LIMIT 1
       `,
@@ -666,6 +671,7 @@ class BookingRepository {
         FROM bookings
         WHERE
           deleted_at IS NULL
+          AND is_archived = 0
           AND (boarding_qr_token_hash = ? OR dropoff_qr_token_hash = ?)
         LIMIT 1
       `,
@@ -958,6 +964,12 @@ class BookingRepository {
     const where = ['b.deleted_at IS NULL'];
     const params = [];
 
+    if (filters.archivedOnly) {
+      where.push('b.is_archived = 1');
+    } else if (!filters.includeArchived) {
+      where.push('b.is_archived = 0');
+    }
+
     if (filters.status) {
       where.push('b.status = ?');
       params.push(filters.status);
@@ -1149,6 +1161,10 @@ class BookingRepository {
         b.commission_status,
         b.commission_receipt_file_id,
         b.metadata,
+        b.is_archived,
+        b.archived_at,
+        b.archived_by,
+        b.archive_reason,
         CASE WHEN b.driver_id IS NULL THEN 1 ELSE 0 END AS is_new_booking,
         st.code AS service_type_code,
         st.name AS service_type_name,
@@ -1314,6 +1330,10 @@ class BookingRepository {
           b.created_at,
           b.updated_at,
           b.metadata,
+          b.is_archived,
+          b.archived_at,
+          b.archived_by,
+          b.archive_reason,
           b.boarding_qr_token_hash,
           b.boarding_qr_used_at,
           b.dropoff_qr_token_hash,
@@ -1641,6 +1661,7 @@ class BookingRepository {
           ON bda.booking_id = b.id AND bda.deleted_at IS NULL
         WHERE b.booking_number = ?
           AND b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND bda.driver_id = ?
         LIMIT 1
@@ -1659,6 +1680,7 @@ class BookingRepository {
         WHERE bda.driver_id = ?
           AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.commission_status NOT IN ('NOT_DUE_YET', 'WAIVED')
         GROUP BY b.id
         ORDER BY COALESCE(b.completed_at, b.updated_at) DESC, b.booking_number DESC
@@ -1671,6 +1693,7 @@ class BookingRepository {
   buildAdminSettlementFilters(filters) {
     const where = [
       'b.deleted_at IS NULL',
+      'b.is_archived = 0',
       `b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})`,
       'b.commission_status NOT IN (\'NOT_DUE_YET\', \'WAIVED\')',
     ];
@@ -1753,6 +1776,7 @@ class BookingRepository {
         FROM bookings b
         WHERE b.driver_id = ?
           AND b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND b.commission_status IN ('DUE', 'OVERDUE')
           AND (
@@ -1772,6 +1796,7 @@ class BookingRepository {
   buildAdminMissingObligationScope(filters) {
     const where = [
       'b.deleted_at IS NULL',
+      'b.is_archived = 0',
       'b.status = \'COMPLETED\'',
       `(
         b.commission_status = 'NOT_DUE_YET'
@@ -1828,6 +1853,7 @@ class BookingRepository {
           AND bda.driver_id = ?
           AND bda.deleted_at IS NULL
         WHERE b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status = 'COMPLETED'
           AND (
             b.commission_status = 'NOT_DUE_YET'
@@ -1852,12 +1878,95 @@ class BookingRepository {
         FROM bookings b
         WHERE b.driver_id = ?
           AND b.deleted_at IS NULL
+          AND b.is_archived = 0
           AND b.status IN (${SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL})
           AND b.commission_status NOT IN ('PAID', 'WAIVED', 'NOT_DUE_YET')
       `,
       [driverId],
     );
     return rows;
+  }
+
+  async findArchiveCandidatesForUpdate(conn, bookingNumbers) {
+    if (!bookingNumbers.length) return [];
+    const placeholders = bookingNumbers.map(() => '?').join(', ');
+    const [rows] = await conn.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.status,
+          b.commission_status,
+          b.completed_at,
+          b.is_archived,
+          b.archive_reason,
+          EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments bda
+            WHERE bda.booking_id = b.id
+              AND bda.deleted_at IS NULL
+            LIMIT 1
+          ) AS has_assignment,
+          EXISTS (
+            SELECT 1
+            FROM booking_status_logs bsl
+            WHERE bsl.booking_id = b.id
+              AND (
+                bsl.to_status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING', 'COMPLETED')
+                OR bsl.from_status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING', 'COMPLETED')
+              )
+            LIMIT 1
+          ) AS has_trip_status_log
+        FROM bookings b
+        WHERE b.booking_number IN (${placeholders})
+          AND b.deleted_at IS NULL
+        FOR UPDATE
+      `,
+      bookingNumbers,
+    );
+    return rows;
+  }
+
+  async archiveBookings(conn, bookingIds, { actorUserId, reason }) {
+    if (!bookingIds.length) return 0;
+    const placeholders = bookingIds.map(() => '?').join(', ');
+    const [result] = await conn.query(
+      `
+        UPDATE bookings
+        SET
+          is_archived = 1,
+          archived_at = CURRENT_TIMESTAMP,
+          archived_by = ?,
+          archive_reason = ?,
+          updated_by = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (${placeholders})
+          AND deleted_at IS NULL
+      `,
+      [actorUserId, reason, actorUserId, ...bookingIds],
+    );
+    return result.affectedRows;
+  }
+
+  async restoreBookings(conn, bookingIds, { actorUserId }) {
+    if (!bookingIds.length) return 0;
+    const placeholders = bookingIds.map(() => '?').join(', ');
+    const [result] = await conn.query(
+      `
+        UPDATE bookings
+        SET
+          is_archived = 0,
+          archived_at = NULL,
+          archived_by = NULL,
+          archive_reason = NULL,
+          updated_by = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (${placeholders})
+          AND deleted_at IS NULL
+      `,
+      [actorUserId, ...bookingIds],
+    );
+    return result.affectedRows;
   }
 }
 

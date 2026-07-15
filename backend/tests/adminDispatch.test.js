@@ -124,6 +124,16 @@ test("DRIVER and CUSTOMER are rejected", async () => {
   assert.equal(resCustomer.body.error_code, ERROR_CODES.FORBIDDEN);
 });
 
+test("non-admin archive requests are rejected", async () => {
+  const res = await request(app)
+    .post("/api/v1/admin/bookings/archive")
+    .set("Authorization", `Bearer ${sign("DRIVER", 9)}`)
+    .send({ bookingNumbers: ["TX202607010001"] });
+
+  assert.equal(res.status, 403);
+  assert.equal(res.body.error_code, ERROR_CODES.FORBIDDEN);
+});
+
 test("service maps queue item without secrets", () => {
   const service = new AdminDispatchService(
     {},
@@ -835,6 +845,144 @@ test("listBookings passes search and assignment filters to repository", async ()
   assert.ok(capturedFilters.serviceDateTo);
 });
 
+test("listBookings defaults to visible bookings and supports archived-only mode", async () => {
+  const captured = [];
+  const bookingRepo = {
+    async countAdminBookings(filters) {
+      captured.push(filters);
+      return 0;
+    },
+    async findAdminBookings() {
+      return [];
+    },
+  };
+  const service = new AdminDispatchService(
+    {},
+    bookingRepo,
+    {},
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  await service.listBookings({ view: "all" }, { id: 1, role: "ADMIN" });
+  await service.listBookings({ view: "all", archived: true }, { id: 1, role: "ADMIN" });
+
+  assert.equal(captured[0].archivedOnly, false);
+  assert.equal(captured[0].includeArchived, undefined);
+  assert.equal(captured[1].archivedOnly, true);
+  assert.equal(captured[1].includeArchived, true);
+});
+
+test("archiveBookings stores TEST_DATA reason and keeps child data intact", async () => {
+  const calls = {
+    archived: null,
+    restored: null,
+    activity: [],
+    deleted: 0,
+  };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const pool = { async getConnection() { return conn; } };
+  const bookingRepo = {
+    async findArchiveCandidatesForUpdate() {
+      return [
+        {
+          id: 10,
+          booking_number: "TX202607010001",
+          status: BOOKING_STATUS.COMPLETED,
+          commission_status: "PAID",
+          is_archived: 0,
+          has_assignment: 1,
+          has_trip_status_log: 1,
+        },
+      ];
+    },
+    async archiveBookings(_conn, ids, options) {
+      calls.archived = { ids, options };
+      return ids.length;
+    },
+    async insertActivityLog(_conn, bookingId, activity) {
+      calls.activity.push({ bookingId, activity });
+    },
+  };
+  const service = new AdminDispatchService(
+    pool,
+    bookingRepo,
+    {},
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const result = await service.archiveBookings(
+    { bookingNumbers: ["TX202607010001"] },
+    { id: 1, role: "ADMIN" },
+  );
+
+  assert.deepEqual(calls.archived.ids, [10]);
+  assert.equal(calls.archived.options.reason, "TEST_DATA");
+  assert.equal(calls.deleted, 0);
+  assert.equal(calls.activity[0].activity.activityType, "BOOKING_ARCHIVED");
+  assert.ok(result.items[0].warnings.includes("COMPLETED_OR_SETTLED"));
+});
+
+test("restoreBookings clears archive flags and writes audit log", async () => {
+  const calls = { restored: null, activity: [] };
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const pool = { async getConnection() { return conn; } };
+  const bookingRepo = {
+    async findArchiveCandidatesForUpdate() {
+      return [
+        {
+          id: 10,
+          booking_number: "TX202607010001",
+          archive_reason: "TEST_DATA",
+        },
+      ];
+    },
+    async restoreBookings(_conn, ids, options) {
+      calls.restored = { ids, options };
+      return ids.length;
+    },
+    async insertActivityLog(_conn, bookingId, activity) {
+      calls.activity.push({ bookingId, activity });
+    },
+  };
+  const service = new AdminDispatchService(
+    pool,
+    bookingRepo,
+    {},
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const result = await service.restoreBookings(
+    { bookingNumbers: ["TX202607010001"] },
+    { id: 1, role: "ADMIN" },
+  );
+
+  assert.deepEqual(calls.restored.ids, [10]);
+  assert.equal(calls.activity[0].activity.activityType, "BOOKING_RESTORED");
+  assert.equal(result.restored, 1);
+});
+
 test("admin booking query groups unassigned first with group-specific newest ordering", async () => {
   let capturedSql = "";
   const pool = {
@@ -849,6 +997,7 @@ test("admin booking query groups unassigned first with group-specific newest ord
   assert.match(capturedSql, /CASE WHEN b\.driver_id IS NULL THEN 0 ELSE 1 END ASC/);
   assert.match(capturedSql, /CASE WHEN b\.driver_id IS NULL THEN b\.created_at END DESC/);
   assert.match(capturedSql, /CASE WHEN b\.driver_id IS NOT NULL THEN b\.scheduled_pickup_at END DESC/);
+  assert.match(capturedSql, /b\.is_archived = 0/);
 });
 
 test("ADMIN can get booking detail", async () => {

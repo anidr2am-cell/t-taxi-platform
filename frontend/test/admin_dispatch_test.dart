@@ -29,11 +29,16 @@ class _FakeAdminApi extends AdminDispatchApiService {
   int reassignCalls = 0;
   int autoAssignCalls = 0;
   int addNoteCalls = 0;
+  int archiveCalls = 0;
+  int restoreCalls = 0;
   List<Map<String, dynamic>> notes = [];
+  List<String> lastArchivedBookings = [];
+  List<String> lastRestoredBookings = [];
   Object? addNoteError;
   String? lastAssignmentState;
   String? lastStatus;
   String? lastView;
+  bool? lastArchived;
   final Object? candidatesError;
 
   @override
@@ -54,14 +59,44 @@ class _FakeAdminApi extends AdminDispatchApiService {
     bool? lowRating,
     bool? unassigned,
     bool? hasInquiry,
+    bool? archived,
     int page = 1,
     int limit = 20,
   }) async {
     lastAssignmentState = assignmentState;
     lastStatus = status;
     lastView = view;
+    lastArchived = archived;
     if (bookingsError != null) throw bookingsError!;
     return bookingsResponse ?? {'page': 1, 'total': 0, 'items': []};
+  }
+
+  @override
+  Future<Map<String, dynamic>> archiveBookings(
+    List<String> bookingNumbers,
+  ) async {
+    archiveCalls += 1;
+    lastArchivedBookings = bookingNumbers;
+    return {
+      'archived': bookingNumbers.length,
+      'items': bookingNumbers
+          .map((bookingNumber) => {'bookingNumber': bookingNumber})
+          .toList(),
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> restoreBookings(
+    List<String> bookingNumbers,
+  ) async {
+    restoreCalls += 1;
+    lastRestoredBookings = bookingNumbers;
+    return {
+      'restored': bookingNumbers.length,
+      'items': bookingNumbers
+          .map((bookingNumber) => {'bookingNumber': bookingNumber})
+          .toList(),
+    };
   }
 
   @override
@@ -236,10 +271,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
 }
 
 class _FakeSettlementApi extends AdminSettlementApiService {
-  _FakeSettlementApi({
-    required this.detail,
-    this.approveError,
-  });
+  _FakeSettlementApi({required this.detail, this.approveError});
 
   final Map<String, dynamic> detail;
   final Object? approveError;
@@ -461,6 +493,68 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Assigned driver: Driver A'), findsOneWidget);
+  });
+
+  testWidgets('archives selected bookings after confirmation', (tester) async {
+    final api = _FakeAdminApi(
+      token: 'token',
+      bookingsResponse: {
+        'page': 1,
+        'total': 1,
+        'items': [_queueItem('TX202607010001')],
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: AdminDispatchQueuePage(api: api)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('테스트 예약 숨기기 (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('선택한 예약을 테스트 데이터로 숨기시겠습니까?'), findsOneWidget);
+
+    await tester.tap(find.text('테스트 예약 숨기기').last);
+    await tester.pumpAndSettle();
+
+    expect(api.archiveCalls, 1);
+    expect(api.lastArchivedBookings, ['TX202607010001']);
+  });
+
+  testWidgets('archived view requests hidden bookings and restores them', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi(
+      token: 'token',
+      bookingsResponse: {
+        'page': 1,
+        'total': 1,
+        'items': [
+          {
+            ..._queueItem('TX202607010001'),
+            'archive': {'isArchived': true, 'reason': 'TEST_DATA'},
+          },
+        ],
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: AdminDispatchQueuePage(api: api)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('숨긴 예약 보기'));
+    await tester.pumpAndSettle();
+
+    expect(api.lastArchived, isTrue);
+    expect(find.text('Archived/Test'), findsOneWidget);
+
+    await tester.tap(find.text('복원'));
+    await tester.pumpAndSettle();
+
+    expect(api.restoreCalls, 1);
+    expect(api.lastRestoredBookings, ['TX202607010001']);
   });
 
   testWidgets('unassigned label is rendered in booking list and detail', (

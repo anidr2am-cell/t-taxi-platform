@@ -14,6 +14,7 @@ const {
   qrReissueSchema,
   adminBookingNotesQuerySchema,
   createAdminBookingNoteSchema,
+  archiveBookingsSchema,
 } = require('../validators/admin.validator');
 const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
@@ -38,6 +39,20 @@ router.get(
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   adminController.getBookingDetail,
+);
+
+router.post(
+  '/bookings/archive',
+  adminOnly,
+  validate({ body: archiveBookingsSchema }),
+  adminController.archiveBookings,
+);
+
+router.post(
+  '/bookings/restore',
+  adminOnly,
+  validate({ body: archiveBookingsSchema }),
+  adminController.restoreBookings,
 );
 
 router.get(

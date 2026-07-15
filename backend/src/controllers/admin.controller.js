@@ -94,6 +94,16 @@ const createBookingNote = asyncHandler(async (req, res) => {
   return success(res, data, 'Internal note added', 201);
 });
 
+const archiveBookings = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().archiveBookings(req.body, req.user);
+  return success(res, data, 'Bookings archived');
+});
+
+const restoreBookings = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().restoreBookings(req.body, req.user);
+  return success(res, data, 'Bookings restored');
+});
+
 module.exports = {
   listBookings,
   getBookingsSummary,
@@ -106,4 +116,6 @@ module.exports = {
   reissueQr,
   listBookingNotes,
   createBookingNote,
+  archiveBookings,
+  restoreBookings,
 };

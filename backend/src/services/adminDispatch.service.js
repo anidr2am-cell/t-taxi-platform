@@ -154,6 +154,12 @@ class AdminDispatchService {
       currency: row.currency,
       activeAssignment: this.mapActiveAssignment(row),
       bookingGroup: row.is_new_booking ? "NEW" : "EXISTING",
+      archive: {
+        isArchived: Boolean(row.is_archived),
+        archivedAt: row.archived_at ?? null,
+        archivedBy: row.archived_by ?? null,
+        reason: row.archive_reason ?? null,
+      },
       createdAt: row.created_at,
       operations,
       primaryCta: operations.primaryCta,
@@ -364,6 +370,12 @@ class AdminDispatchService {
     return {
       bookingNumber: row.booking_number,
       status: row.status,
+      archive: {
+        isArchived: Boolean(row.is_archived),
+        archivedAt: row.archived_at ?? null,
+        archivedBy: row.archived_by ?? null,
+        reason: row.archive_reason ?? null,
+      },
       operations,
       primaryCta: operations.primaryCta,
       serviceType: {
@@ -465,7 +477,9 @@ class AdminDispatchService {
         memo: item.memo,
         createdAt: item.created_at,
       })),
-      allowedActions: this.computeAllowedActions(row, activeAssignment),
+      allowedActions: row.is_archived
+        ? []
+        : this.computeAllowedActions(row, activeAssignment),
       customerReview,
       devQrTools: this.adminQrReissueService?.buildDevTools(row) ?? {
         qrReissueEnabled: false,
@@ -486,6 +500,155 @@ class AdminDispatchService {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
+  }
+
+  normalizeBookingNumbers(values) {
+    return [...new Set(
+      (values ?? [])
+        .map((value) => String(value ?? "").trim().toUpperCase())
+        .filter((value) => /^TX\d{12}$/.test(value)),
+    )];
+  }
+
+  archiveWarningsFor(row) {
+    const warnings = [];
+    const operatingStatuses = new Set([
+      BOOKING_STATUS.DRIVER_ASSIGNED,
+      BOOKING_STATUS.ON_ROUTE,
+      BOOKING_STATUS.DRIVER_ARRIVED,
+      BOOKING_STATUS.PICKED_UP,
+      BOOKING_STATUS.SETTLEMENT_PENDING,
+      BOOKING_STATUS.COMPLETED,
+    ]);
+    if (operatingStatuses.has(row.status) || row.has_assignment) {
+      warnings.push("HAS_OPERATION_RECORD");
+    }
+    if (row.status === BOOKING_STATUS.COMPLETED || row.commission_status === "PAID") {
+      warnings.push("COMPLETED_OR_SETTLED");
+    }
+    if (row.has_trip_status_log) {
+      warnings.push("HAS_TRIP_STATUS_LOG");
+    }
+    return warnings;
+  }
+
+  async archiveBookings(input, user) {
+    const actor = this.actorFromUser(user);
+    const bookingNumbers = this.normalizeBookingNumbers(input.bookingNumbers);
+    if (!bookingNumbers.length) {
+      throw new AppError("Booking numbers are required", {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const rows = await this.bookingRepository.findArchiveCandidatesForUpdate(
+        conn,
+        bookingNumbers,
+      );
+      const foundNumbers = new Set(rows.map((row) => row.booking_number));
+      const missing = bookingNumbers.filter((number) => !foundNumbers.has(number));
+      if (missing.length) {
+        throw new AppError("One or more bookings were not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      const ids = rows.map((row) => row.id);
+      await this.bookingRepository.archiveBookings(conn, ids, {
+        actorUserId: actor.id,
+        reason: "TEST_DATA",
+      });
+
+      const results = rows.map((row) => ({
+        bookingNumber: row.booking_number,
+        wasArchived: Boolean(row.is_archived),
+        warnings: this.archiveWarningsFor(row),
+      }));
+
+      for (const row of rows) {
+        await this.bookingRepository.insertActivityLog(conn, row.id, {
+          activityType: "BOOKING_ARCHIVED",
+          actorUserId: actor.id,
+          actorRole: actor.role,
+          description: "Booking hidden as test data",
+          payload: {
+            bookingNumber: row.booking_number,
+            reason: "TEST_DATA",
+            warnings: this.archiveWarningsFor(row),
+          },
+        });
+      }
+
+      await conn.commit();
+      return { archived: results.length, items: results };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async restoreBookings(input, user) {
+    const actor = this.actorFromUser(user);
+    const bookingNumbers = this.normalizeBookingNumbers(input.bookingNumbers);
+    if (!bookingNumbers.length) {
+      throw new AppError("Booking numbers are required", {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const rows = await this.bookingRepository.findArchiveCandidatesForUpdate(
+        conn,
+        bookingNumbers,
+      );
+      const foundNumbers = new Set(rows.map((row) => row.booking_number));
+      const missing = bookingNumbers.filter((number) => !foundNumbers.has(number));
+      if (missing.length) {
+        throw new AppError("One or more bookings were not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      const ids = rows.map((row) => row.id);
+      await this.bookingRepository.restoreBookings(conn, ids, {
+        actorUserId: actor.id,
+      });
+
+      for (const row of rows) {
+        await this.bookingRepository.insertActivityLog(conn, row.id, {
+          activityType: "BOOKING_RESTORED",
+          actorUserId: actor.id,
+          actorRole: actor.role,
+          description: "Archived booking restored",
+          payload: {
+            bookingNumber: row.booking_number,
+            previousReason: row.archive_reason ?? null,
+          },
+        });
+      }
+
+      await conn.commit();
+      return {
+        restored: rows.length,
+        items: rows.map((row) => ({ bookingNumber: row.booking_number })),
+      };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 
   async listDrivers() {
