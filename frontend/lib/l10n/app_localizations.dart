@@ -3167,6 +3167,8 @@ class AppLocalizations {
       'driver_apply_vehicle_make': 'ยี่ห้อรถ (제조사)',
       'driver_apply_vehicle_model': 'รุ่นรถ (모델)',
       'driver_apply_vehicle_year': 'ปีรถ (연식)',
+      'driver_apply_vehicle_year_invalid':
+          'กรุณากรอกปีรถเป็นตัวเลข 4 หลัก เช่น 2020',
       'driver_apply_vehicle_color': 'สีรถ (색상)',
       'driver_apply_vehicle_plate': 'ทะเบียนรถ (차량번호)',
       'driver_apply_service_areas': 'พื้นที่ที่ขับเป็นหลัก (주로 운행 하는 지역)',

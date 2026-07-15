@@ -12,11 +12,13 @@ class DriverApplicationApiException implements Exception {
     this.message, {
     this.errorCode,
     this.statusCode,
+    this.fieldErrors = const {},
   });
 
   final String message;
   final String? errorCode;
   final int? statusCode;
+  final Map<String, String> fieldErrors;
 
   @override
   String toString() => message;
@@ -65,6 +67,24 @@ class DriverApplicationApiService {
     return MediaType.parse(mimeType);
   }
 
+  Map<String, String> _fieldErrors(dynamic decoded) {
+    if (decoded is! Map || decoded['errors'] is! List) return const {};
+    final result = <String, String>{};
+    for (final item in decoded['errors'] as List) {
+      if (item is! Map) continue;
+      final field = item['field']?.toString();
+      final message = item['message']?.toString();
+      if (field == null ||
+          field.isEmpty ||
+          message == null ||
+          message.isEmpty) {
+        continue;
+      }
+      result.putIfAbsent(field, () => message);
+    }
+    return result;
+  }
+
   Future<String?> _adminToken() async {
     final provider = _adminTokenProvider;
     if (provider != null) return provider();
@@ -110,6 +130,7 @@ class DriverApplicationApiService {
         message,
         errorCode: decoded is Map ? decoded['error_code'] as String? : null,
         statusCode: response.statusCode,
+        fieldErrors: _fieldErrors(decoded),
       );
     }
 
@@ -182,6 +203,7 @@ class DriverApplicationApiService {
         message,
         errorCode: decoded is Map ? decoded['error_code'] as String? : null,
         statusCode: response.statusCode,
+        fieldErrors: _fieldErrors(decoded),
       );
     }
     if (decoded is Map && decoded.containsKey('data')) return decoded['data'];

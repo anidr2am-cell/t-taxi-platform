@@ -29,18 +29,26 @@ function errorMiddleware(err, req, res, next) {
       code: err.code,
     });
   } else {
-    logger.warn(err.message, { path: req.path, errorCode });
+    const validationErrors = errorCode === ERROR_CODES.VALIDATION_ERROR && Array.isArray(err.errors)
+      ? err.errors.map((item) => ({
+        field: item.field,
+        type: item.type,
+        source: item.source,
+      }))
+      : undefined;
+    logger.warn(err.message, { path: req.path, errorCode, validationErrors });
   }
 
   const body = {
     success: false,
     error_code: errorCode,
+    code: errorCode,
     message: resolveClientErrorMessage(err, {
       tripEndFailure: isTripEndRequest(req),
     }),
   };
 
-  if (err.errors && config.server.nodeEnv !== 'production') {
+  if (err.errors && (config.server.nodeEnv !== 'production' || errorCode === ERROR_CODES.VALIDATION_ERROR)) {
     body.errors = err.errors;
   }
 
