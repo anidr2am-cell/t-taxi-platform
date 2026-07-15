@@ -9,6 +9,8 @@ const REGRESSION_MARKER = 'AUTOMATED_REGRESSION_TEST';
 const EXPECTED_BASE_URL = 'https://trider.taxi';
 const TEST_NAME_PREFIX = '[E2E]';
 const TIMEOUT_MS = Number(process.env.TRIDE_REGRESSION_TIMEOUT_MS || 15000);
+const ADMIN_LIST_PAGE_LIMIT = 20;
+const ADMIN_LIST_MAX_PAGES = 10;
 const { loginSchema } = require('../src/validators/auth.validator');
 const { createBookingSchema } = require('../src/validators/booking.validator');
 
@@ -235,6 +237,10 @@ function formatHttpError(path, status, body, message) {
   return `${path} failed: HTTP ${status} ${message}${suffix}`;
 }
 
+function responseData(body) {
+  return body?.data ?? body;
+}
+
 async function login(baseUrl, email, password) {
   if (!isValidEmail(email)) {
     throw new Error('Login email must be a valid email address.');
@@ -300,6 +306,86 @@ function selectTestDriverCandidate(payload, driverUser) {
   return candidate;
 }
 
+function serviceDateFromPayload(payload) {
+  return String(payload.scheduledPickupAt ?? '').slice(0, 10);
+}
+
+function buildQuery(params) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value != null && value !== '') query.set(key, String(value));
+  }
+  return query.toString();
+}
+
+async function findCreatedBookingInAdminList(baseUrl, adminToken, record) {
+  const serviceDate = serviceDateFromPayload(record.payload);
+  for (let page = 1; page <= ADMIN_LIST_MAX_PAGES; page += 1) {
+    const query = buildQuery({
+      view: 'all',
+      search: record.bookingNumber,
+      serviceDateFrom: serviceDate,
+      serviceDateTo: serviceDate,
+      page,
+      limit: ADMIN_LIST_PAGE_LIMIT,
+    });
+    const body = await fetchJson(baseUrl, `/api/v1/admin/bookings?${query}`, {
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    const data = responseData(body);
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const found = items.find((item) => item.bookingNumber === record.bookingNumber);
+    if (found) return found;
+    const total = Number(data?.total ?? items.length);
+    const pageSize = Number(data?.pageSize ?? ADMIN_LIST_PAGE_LIMIT);
+    if (!Number.isFinite(total) || !Number.isFinite(pageSize) || page * pageSize >= total) {
+      break;
+    }
+  }
+  return null;
+}
+
+async function assertAdminListIncludesCreatedBookings(baseUrl, adminToken, records) {
+  for (const record of records) {
+    const item = await findCreatedBookingInAdminList(baseUrl, adminToken, record);
+    if (!item) {
+      throw new Error(`Admin list did not include ${record.bookingNumber}`);
+    }
+  }
+}
+
+function assertSafeRegressionBookingDetail(detail, record) {
+  const data = responseData(detail);
+  if (data?.bookingNumber !== record.bookingNumber) {
+    throw new Error(`Cleanup detail mismatch for ${record.bookingNumber}`);
+  }
+  if (!String(data?.customer?.name ?? '').startsWith(TEST_NAME_PREFIX)) {
+    throw new Error(`Cleanup refused non-E2E booking ${record.bookingNumber}`);
+  }
+  if (data?.specialRequests !== REGRESSION_MARKER) {
+    throw new Error(`Cleanup refused booking without regression marker ${record.bookingNumber}`);
+  }
+}
+
+async function archiveCreatedRegressionBookings(baseUrl, adminToken, records) {
+  if (!records.length) return { archived: 0 };
+  for (const record of records) {
+    const detail = await fetchJson(baseUrl, `/api/v1/admin/bookings/${record.bookingNumber}`, {
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    assertSafeRegressionBookingDetail(detail, record);
+  }
+  const body = await fetchJson(baseUrl, '/api/v1/admin/bookings/archive', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({
+      bookingNumbers: records.map((record) => record.bookingNumber),
+      reason: REGRESSION_MARKER,
+    }),
+  });
+  return responseData(body);
+}
+
 async function main() {
   const dryRun = hasArg('--dry-run');
   const { baseUrl } = assertSafeEnvironment({ dryRun });
@@ -339,7 +425,8 @@ async function main() {
   const adminToken = adminLogin.token;
   const driverToken = driverLogin.token;
 
-  const createdNumbers = [];
+  const createdRecords = [];
+  let archivedCreatedBookings = false;
   let driverWasPreparedOnline = false;
   try {
     await fetchJson(baseUrl, '/api/v1/driver/online', {
@@ -359,7 +446,7 @@ async function main() {
       });
       const bookingNumber = created?.data?.bookingNumber;
       if (!bookingNumber) throw new Error(`${item.label} did not return bookingNumber`);
-      createdNumbers.push(bookingNumber);
+      createdRecords.push({ bookingNumber, label: item.label, payload: item.payload });
       await fetchJson(baseUrl, '/api/v1/public/bookings/lookup', {
         method: 'POST',
         body: JSON.stringify({
@@ -370,17 +457,9 @@ async function main() {
       console.log(`PASS ${item.label}: ${bookingNumber}`);
     }
 
-    const adminList = await fetchJson(baseUrl, '/api/v1/admin/bookings', {
-      headers: { authorization: `Bearer ${adminToken}` },
-    });
-    const listedNumbers = new Set((adminList?.data?.items || []).map((item) => item.bookingNumber));
-    for (const bookingNumber of createdNumbers) {
-      if (!listedNumbers.has(bookingNumber)) {
-        throw new Error(`Admin list did not include ${bookingNumber}`);
-      }
-    }
+    await assertAdminListIncludesCreatedBookings(baseUrl, adminToken, createdRecords);
 
-    const first = createdNumbers[0];
+    const first = createdRecords[0].bookingNumber;
     const candidates = await fetchJson(baseUrl, `/api/v1/admin/bookings/${first}/driver-candidates`, {
       headers: { authorization: `Bearer ${adminToken}` },
     });
@@ -404,21 +483,25 @@ async function main() {
       });
     }
 
-    await fetchJson(baseUrl, '/api/v1/admin/bookings/archive', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${adminToken}` },
-      body: JSON.stringify({
-        bookingNumbers: createdNumbers,
-        reason: REGRESSION_MARKER,
-      }),
-    });
+    await archiveCreatedRegressionBookings(baseUrl, adminToken, createdRecords);
+    archivedCreatedBookings = true;
 
-    console.log(`Regression completed. Created/archived bookings: ${createdNumbers.join(', ')}`);
+    console.log(`Regression completed. Created/archived bookings: ${createdRecords.map((record) => record.bookingNumber).join(', ')}`);
     console.log(`Regression admin: ${adminUser.email}`);
     console.log(`Regression driver: ${driverUser.email}`);
   } catch (err) {
-    console.error(`Regression failed after bookings [${createdNumbers.join(', ')}]: ${err.message}`);
+    console.error(`Regression failed after bookings [${createdRecords.map((record) => record.bookingNumber).join(', ')}]: ${err.message}`);
     process.exitCode = 1;
+    if (createdRecords.length && !archivedCreatedBookings) {
+      try {
+        const cleanup = await archiveCreatedRegressionBookings(baseUrl, adminToken, createdRecords);
+        archivedCreatedBookings = true;
+        console.log(`Regression cleanup archived bookings: ${createdRecords.map((record) => record.bookingNumber).join(', ')} (${cleanup?.archived ?? createdRecords.length})`);
+      } catch (cleanupErr) {
+        console.error(`Regression cleanup archive failed: ${cleanupErr.message}`);
+        process.exitCode = 1;
+      }
+    }
   } finally {
     if (driverWasPreparedOnline) {
       try {
@@ -467,6 +550,9 @@ module.exports = {
   formatHttpError,
   assertValidBookingPayload,
   assertValidScenarioPayloads,
+  assertAdminListIncludesCreatedBookings,
+  archiveCreatedRegressionBookings,
+  findCreatedBookingInAdminList,
   isValidEmail,
   isTestIdentity,
   normalizeEmail,

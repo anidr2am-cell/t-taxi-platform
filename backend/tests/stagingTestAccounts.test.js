@@ -32,6 +32,43 @@ function strongPassword(suffix) {
   return `E2e-${suffix}-Password-2026!`;
 }
 
+function regressionRecord(bookingNumber = 'TX202607160001') {
+  return {
+    bookingNumber,
+    label: 'airport pickup ko 7C',
+    payload: runner.bookingPayload({
+      customerName: '[E2E] 박용세',
+      flightNumber: '7C2203',
+    }),
+  };
+}
+
+function jsonResponse(body, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return JSON.stringify(body);
+    },
+  };
+}
+
+async function withMockFetch(handler, fn) {
+  const original = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options = {}) => {
+    const call = { url: String(url), options };
+    calls.push(call);
+    const result = await handler(call, calls);
+    return jsonResponse(result.body, result.status ?? 200);
+  };
+  try {
+    return await fn(calls);
+  } finally {
+    global.fetch = original;
+  }
+}
+
 function fakeDryRunPool() {
   const calls = [];
   const conn = {
@@ -631,4 +668,149 @@ test('booking regression runner scenarios all use booking-valid customer emails'
     plan.every((item) => item.payload.customer.email === 'regression@example.com'),
     true,
   );
+});
+
+test('booking regression runner finds created bookings across admin list pages', async () => {
+  const record = regressionRecord();
+
+  const found = await withMockFetch(async ({ url }) => {
+    assert.match(url, /\/api\/v1\/admin\/bookings\?/);
+    assert.match(url, /view=all/);
+    assert.match(url, new RegExp(`search=${record.bookingNumber}`));
+    if (url.includes('page=1')) {
+      return {
+        body: {
+          success: true,
+          data: {
+            page: 1,
+            pageSize: 20,
+            total: 21,
+            items: [],
+          },
+        },
+      };
+    }
+    if (url.includes('page=2')) {
+      return {
+        body: {
+          success: true,
+          data: {
+            page: 2,
+            pageSize: 20,
+            total: 21,
+            items: [{ bookingNumber: record.bookingNumber }],
+          },
+        },
+      };
+    }
+    throw new Error(`Unexpected admin list URL: ${url}`);
+  }, (calls) => runner.findCreatedBookingInAdminList('https://trider.taxi', 'admin-token', record)
+    .then((item) => ({ item, calls })));
+
+  assert.equal(found.item.bookingNumber, record.bookingNumber);
+  assert.equal(found.calls.length, 2);
+});
+
+test('booking regression runner caps admin list pagination when booking is missing', async () => {
+  const record = regressionRecord();
+
+  const result = await withMockFetch(async () => ({
+    body: {
+      success: true,
+      data: {
+        page: 1,
+        pageSize: 20,
+        total: 1000,
+        items: [],
+      },
+    },
+  }), (calls) => runner.findCreatedBookingInAdminList('https://trider.taxi', 'admin-token', record)
+    .then((item) => ({ item, calls })));
+
+  assert.equal(result.item, null);
+  assert.equal(result.calls.length, 10);
+});
+
+test('booking regression runner archives only verified E2E regression bookings', async () => {
+  const records = [
+    regressionRecord('TX202607160001'),
+    regressionRecord('TX202607160002'),
+  ];
+
+  const result = await withMockFetch(async ({ url, options }) => {
+    if (url.includes('/api/v1/admin/bookings/archive')) {
+      const body = JSON.parse(options.body);
+      assert.deepEqual(body.bookingNumbers, records.map((record) => record.bookingNumber));
+      assert.equal(body.reason, runner.REGRESSION_MARKER);
+      return { body: { success: true, data: { archived: 2 } } };
+    }
+    const record = records.find((item) => url.endsWith(`/api/v1/admin/bookings/${item.bookingNumber}`));
+    if (record) {
+      return {
+        body: {
+          success: true,
+          data: {
+            bookingNumber: record.bookingNumber,
+            customer: { name: record.payload.customer.name },
+            specialRequests: runner.REGRESSION_MARKER,
+          },
+        },
+      };
+    }
+    throw new Error(`Unexpected cleanup URL: ${url}`);
+  }, (calls) => runner.archiveCreatedRegressionBookings('https://trider.taxi', 'admin-token', records)
+    .then((archive) => ({ archive, calls })));
+
+  assert.equal(result.archive.archived, 2);
+  assert.equal(result.calls.length, 3);
+});
+
+test('booking regression runner refuses to archive non-regression bookings', async () => {
+  const record = regressionRecord();
+
+  await withMockFetch(async ({ url }) => {
+    if (url.endsWith(`/api/v1/admin/bookings/${record.bookingNumber}`)) {
+      return {
+        body: {
+          success: true,
+          data: {
+            bookingNumber: record.bookingNumber,
+            customer: { name: 'Real Customer' },
+            specialRequests: runner.REGRESSION_MARKER,
+          },
+        },
+      };
+    }
+    throw new Error(`Archive endpoint should not be called: ${url}`);
+  }, async () => {
+    await assert.rejects(
+      () => runner.archiveCreatedRegressionBookings('https://trider.taxi', 'admin-token', [record]),
+      /Cleanup refused non-E2E booking/,
+    );
+  });
+});
+
+test('booking regression runner refuses to archive E2E bookings without marker', async () => {
+  const record = regressionRecord();
+
+  await withMockFetch(async ({ url }) => {
+    if (url.endsWith(`/api/v1/admin/bookings/${record.bookingNumber}`)) {
+      return {
+        body: {
+          success: true,
+          data: {
+            bookingNumber: record.bookingNumber,
+            customer: { name: record.payload.customer.name },
+            specialRequests: 'manual test',
+          },
+        },
+      };
+    }
+    throw new Error(`Archive endpoint should not be called: ${url}`);
+  }, async () => {
+    await assert.rejects(
+      () => runner.archiveCreatedRegressionBookings('https://trider.taxi', 'admin-token', [record]),
+      /without regression marker/,
+    );
+  });
 });
