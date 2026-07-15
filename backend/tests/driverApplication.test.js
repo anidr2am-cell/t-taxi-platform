@@ -16,6 +16,7 @@ const { normalizeMultipartBody } = require('../src/controllers/driverApplication
 const DriverApplicationRepository = require('../src/repositories/driverApplication.repository');
 const DriverApplicationService = require('../src/services/driverApplication.service');
 const ERROR_CODES = require('../src/constants/errorCodes');
+const currentVehicleYear = new Date().getFullYear();
 
 function sign(role = 'ADMIN', id = 1) {
   return jwt.sign(
@@ -428,6 +429,8 @@ describe('Driver application public routes', () => {
       .expect(400);
 
     assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'personalDataConsent');
+    assert.match(res.body.errors[0].message, /กรุณายอมรับเงื่อนไข/);
   });
 
   test('submit rejects missing consent before service call', async () => {
@@ -443,6 +446,22 @@ describe('Driver application public routes', () => {
     assert.equal(res.body.code, ERROR_CODES.VALIDATION_ERROR);
     assert.equal(res.body.errors[0].field, 'personalDataConsent');
     assert.equal(res.body.errors[0].type, 'any.required');
+    assert.match(res.body.errors[0].message, /กรุณายอมรับเงื่อนไข/);
+  });
+
+  test('submit rejects missing driver terms consent before service call', async () => {
+    const input = validInput();
+    delete input.driverTermsConsent;
+
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(input)
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'driverTermsConsent');
+    assert.equal(res.body.errors[0].type, 'any.required');
+    assert.match(res.body.errors[0].message, /กรุณายอมรับเงื่อนไข/);
   });
 
   test('submit reports vehicle year field validation details', async () => {
@@ -465,6 +484,32 @@ describe('Driver application public routes', () => {
 
     assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
     assert.equal(res.body.errors[0].field, 'vehicleYear');
+    assert.equal(res.body.errors[0].type, 'number.min');
+    assert.match(res.body.errors[0].message, /ตั้งแต่ปี 1980/);
+  });
+
+  test('submit rejects vehicle year after current allowed year', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ vehicleYear: currentVehicleYear + 1 }))
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'vehicleYear');
+    assert.equal(res.body.errors[0].type, 'number.max');
+    assert.match(res.body.errors[0].message, new RegExp(`ไม่เกินปี ${currentVehicleYear}`));
+  });
+
+  test('submit rejects empty service areas with Thai validation message', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .send(validInput({ serviceAreas: [] }))
+      .expect(400);
+
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'serviceAreas');
+    assert.equal(res.body.errors[0].type, 'array.min');
+    assert.match(res.body.errors[0].message, /พื้นที่ให้บริการอย่างน้อย 1 แห่ง/);
   });
 
   test('multipart normalization accepts optional blank strings and numeric year', async () => {

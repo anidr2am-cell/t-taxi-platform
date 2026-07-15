@@ -34,9 +34,8 @@ const driverApplicationCreateSchema = Joi.object({
   yearsOfDrivingExperience: Joi.number().integer().min(0).max(80).required(),
   vehicleOwnershipType: Joi.string().valid(...ownershipValues).required(),
   vehicleTypeCode: Joi.string().trim().uppercase().min(2).max(30).required(),
-<<<<<<< Updated upstream
-  vehicleMake: Joi.string().trim().max(50).allow('', null),
-  vehicleModel: Joi.string().trim().max(100).allow('', null),
+  vehicleMake: unicodeText({ max: 50, allowEmpty: true }).default(null),
+  vehicleModel: unicodeText({ max: 100, allowEmpty: true }).default(null),
   vehicleYear: Joi.number()
     .integer()
     .min(1980)
@@ -48,10 +47,10 @@ const driverApplicationCreateSchema = Joi.object({
       'number.min': 'กรุณากรอกปีรถตั้งแต่ปี 1980 เป็นต้นไป',
       'number.max': `กรุณากรอกปีรถไม่เกินปี ${currentVehicleYear}`,
     }),
-  vehicleColor: Joi.string().trim().max(30).allow('', null),
-  vehiclePlateNumber: Joi.string().trim().uppercase().min(2).max(20).required(),
+  vehicleColor: unicodeText({ max: 30, allowEmpty: true }).default(null),
+  vehiclePlateNumber: vehiclePlateText({ min: 1, max: 30 }),
   serviceAreas: Joi.array()
-    .items(Joi.string().trim().min(1).max(100))
+    .items(unicodeText({ max: 100 }).optional())
     .min(1)
     .max(30)
     .required()
@@ -59,22 +58,13 @@ const driverApplicationCreateSchema = Joi.object({
       'array.min': 'กรุณาเลือกพื้นที่ให้บริการอย่างน้อย 1 แห่ง',
       'any.required': 'กรุณาเลือกพื้นที่ให้บริการอย่างน้อย 1 แห่ง',
     }),
-=======
-  vehicleMake: unicodeText({ max: 50, allowEmpty: true }).default(null),
-  vehicleModel: unicodeText({ max: 100, allowEmpty: true }).default(null),
-  vehicleYear: Joi.number().integer().min(1980).max(2100).allow(null),
-  vehicleColor: unicodeText({ max: 30, allowEmpty: true }).default(null),
-  vehiclePlateNumber: vehiclePlateText({ min: 1, max: 30 }),
-  serviceAreas: Joi.array().items(unicodeText({ max: 100 })).min(1).max(30).required(),
->>>>>>> Stashed changes
   languages: Joi.array().items(Joi.string().trim().min(2).max(10)).max(20).default([]),
   notes: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   bankName: unicodeText({ max: 100, allowEmpty: true }).default(null),
   bankAccountNumber: Joi.string().trim().max(80).allow('', null),
   bankAccountHolder: unicodeText({ max: 100, allowEmpty: true }).default(null),
   lineId: Joi.string().trim().max(100).allow('', null),
-<<<<<<< Updated upstream
-  primaryServiceArea: Joi.string().trim().max(100).allow('', null),
+  primaryServiceArea: unicodeText({ max: 100, allowEmpty: true }).default(null),
   personalDataConsent: Joi.boolean().valid(true).required().messages({
     'any.only': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
     'any.required': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
@@ -83,11 +73,6 @@ const driverApplicationCreateSchema = Joi.object({
     'any.only': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
     'any.required': 'กรุณายอมรับเงื่อนไขก่อนส่งใบสมัคร',
   }),
-=======
-  primaryServiceArea: unicodeText({ max: 100, allowEmpty: true }).default(null),
-  personalDataConsent: Joi.boolean().valid(true).required(),
-  driverTermsConsent: Joi.boolean().valid(true).required(),
->>>>>>> Stashed changes
 });
 
 const driverApplicationStatusQuerySchema = Joi.object({

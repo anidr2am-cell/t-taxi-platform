@@ -91,6 +91,10 @@ test('error middleware exposes validation error details in production', () => {
     assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
     assert.equal(res.body.errors[0].field, 'customer.name');
     assert.equal(res.body.errors[0].type, 'string.empty');
+    assert.equal(res.body.errors[0].source, 'body');
+    assert.equal(JSON.stringify(res.body).includes('+66123456789'), false);
+    assert.equal(JSON.stringify(res.body).includes('password'), false);
+    assert.equal(JSON.stringify(res.body).includes('1234567890'), false);
   } finally {
     config.server.nodeEnv = originalNodeEnv;
   }
