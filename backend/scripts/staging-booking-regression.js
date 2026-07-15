@@ -10,6 +10,7 @@ const EXPECTED_BASE_URL = 'https://trider.taxi';
 const TEST_NAME_PREFIX = '[E2E]';
 const TIMEOUT_MS = Number(process.env.TRIDE_REGRESSION_TIMEOUT_MS || 15000);
 const { loginSchema } = require('../src/validators/auth.validator');
+const { createBookingSchema } = require('../src/validators/booking.validator');
 
 function hasArg(name) {
   return process.argv.slice(2).includes(name);
@@ -134,7 +135,7 @@ function bookingPayload({
     customer: {
       name: customerName,
       phone: '+66000000001',
-      email: 'regression@example.test',
+      email: 'regression@example.com',
       countryCode: 'TH',
     },
     additionalRequests: REGRESSION_MARKER,
@@ -169,6 +170,34 @@ function bookingPayload({
     destinationLocationCode: 'PATTAYA',
     transfer: { airportIata: 'BKK', flightNumber },
   };
+}
+
+function formatValidationErrors(errors) {
+  return errors
+    .map((item) => [item.field, item.type, item.source].filter(Boolean).join(':'))
+    .filter(Boolean)
+    .join(', ');
+}
+
+function assertValidBookingPayload(payload, label) {
+  const { error } = createBookingSchema.validate(payload, {
+    abortEarly: false,
+    stripUnknown: false,
+  });
+  if (!error) return;
+  const errors = error.details.map((detail) => ({
+    field: detail.path.join('.'),
+    type: detail.type,
+    source: 'body',
+  }));
+  const suffix = formatValidationErrors(errors);
+  throw new Error(`${label} booking payload is invalid${suffix ? ` (${suffix})` : ''}`);
+}
+
+function assertValidScenarioPayloads(plan) {
+  for (const item of plan) {
+    assertValidBookingPayload(item.payload, item.label);
+  }
 }
 
 async function fetchJson(baseUrl, path, options = {}) {
@@ -275,6 +304,7 @@ async function main() {
   const dryRun = hasArg('--dry-run');
   const { baseUrl } = assertSafeEnvironment({ dryRun });
   const plan = scenarios();
+  assertValidScenarioPayloads(plan);
 
   console.log(`T-Ride staging booking regression plan (${dryRun ? 'dry-run' : 'live'}):`);
   for (const item of plan) {
@@ -435,6 +465,8 @@ module.exports = {
   bookingPayload,
   candidateItems,
   formatHttpError,
+  assertValidBookingPayload,
+  assertValidScenarioPayloads,
   isValidEmail,
   isTestIdentity,
   normalizeEmail,

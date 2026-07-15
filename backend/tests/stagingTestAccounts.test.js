@@ -593,3 +593,42 @@ test('booking regression runner formats validation details without request body'
   assert.match(message, /email:string.email:body/);
   assert.equal(message.includes('password'), false);
 });
+
+test('booking regression runner validates customer email with booking schema before live create', () => {
+  const valid = runner.bookingPayload({
+    customerName: '[E2E] Valid Customer',
+    flightNumber: null,
+  });
+  valid.customer.email = 'regression@example.com';
+  assert.doesNotThrow(() => runner.assertValidBookingPayload(valid, 'valid'));
+
+  const dotTest = runner.bookingPayload({
+    customerName: '[E2E] Invalid Dot Test',
+    flightNumber: null,
+  });
+  dotTest.customer.email = 'regression@example.test';
+  assert.throws(
+    () => runner.assertValidBookingPayload(dotTest, 'dot test'),
+    /customer.email:string.email:body/,
+  );
+
+  const invalidExample = runner.bookingPayload({
+    customerName: '[E2E] Invalid Example',
+    flightNumber: null,
+  });
+  invalidExample.customer.email = 'regression@invalid.example';
+  assert.throws(
+    () => runner.assertValidBookingPayload(invalidExample, 'invalid example'),
+    /customer.email:string.email:body/,
+  );
+});
+
+test('booking regression runner scenarios all use booking-valid customer emails', () => {
+  const plan = runner.scenarios();
+  assert.equal(plan.length, 5);
+  assert.doesNotThrow(() => runner.assertValidScenarioPayloads(plan));
+  assert.equal(
+    plan.every((item) => item.payload.customer.email === 'regression@example.com'),
+    true,
+  );
+});
