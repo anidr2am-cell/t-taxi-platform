@@ -10,10 +10,12 @@ void main() {
   ) async {
     final service = _FakePwaInstallService(isStandaloneValue: true);
 
-    await tester.pumpWidget(_host(service: service));
+    await tester.pumpWidget(
+      _host(service: service, locale: const Locale('ko')),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Install T-Ride Driver'), findsNothing);
+    expect(find.text('ติดตั้งแอป T-Ride Driver'), findsNothing);
   });
 
   testWidgets('driver login page shows install prompt before installation', (
@@ -24,8 +26,37 @@ void main() {
     await tester.pumpWidget(_host(service: service));
     await tester.pumpAndSettle();
 
-    expect(find.text('Install T-Ride Driver'), findsOneWidget);
-    expect(find.text('Install now'), findsOneWidget);
+    expect(find.text('ติดตั้งแอป T-Ride Driver'), findsOneWidget);
+    expect(find.text('ติดตั้งตอนนี้'), findsOneWidget);
+  });
+
+  testWidgets('driver install prompt stays Thai when locale is Korean', (
+    tester,
+  ) async {
+    final service = _FakePwaInstallService(canPromptInstallValue: true);
+
+    await tester.pumpWidget(
+      _host(service: service, locale: const Locale('ko')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('ติดตั้งแอป T-Ride Driver'), findsOneWidget);
+    expect(find.text('ติดตั้งตอนนี้'), findsOneWidget);
+    expect(find.text('T-Ride 기사 앱 설치'), findsNothing);
+  });
+
+  testWidgets('driver install prompt stays Thai when locale is English', (
+    tester,
+  ) async {
+    final service = _FakePwaInstallService();
+
+    await tester.pumpWidget(
+      _host(service: service, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('กำลังเตรียมการติดตั้ง...'), findsWidgets);
+    expect(find.text('Preparing installation...'), findsNothing);
   });
 
   testWidgets(
@@ -36,14 +67,14 @@ void main() {
       await tester.pumpWidget(_host(service: service));
       await tester.pumpAndSettle();
 
-      expect(find.text('Preparing installation...'), findsWidgets);
+      expect(find.text('กำลังเตรียมการติดตั้ง...'), findsWidgets);
       expect(_installNowButton(tester).enabled, isFalse);
 
       service.markInstallPromptAvailable();
       await tester.pumpAndSettle();
 
-      expect(find.text('Preparing installation...'), findsNothing);
-      expect(find.text('Install now'), findsOneWidget);
+      expect(find.text('กำลังเตรียมการติดตั้ง...'), findsNothing);
+      expect(find.text('ติดตั้งตอนนี้'), findsOneWidget);
       expect(_installNowButton(tester).enabled, isTrue);
     },
   );
@@ -67,18 +98,12 @@ void main() {
 
     await tester.pumpWidget(_host(service: service));
     await tester.pumpAndSettle();
-    expect(
-      find.textContaining('If the install window does not appear'),
-      findsNothing,
-    );
+    expect(find.textContaining('หากหน้าต่างติดตั้งไม่แสดง'), findsNothing);
 
     await tester.pump(const Duration(seconds: 10));
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('If the install window does not appear'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('หากหน้าต่างติดตั้งไม่แสดง'), findsOneWidget);
     expect(_installNowButton(tester).enabled, isFalse);
   });
 
@@ -87,11 +112,78 @@ void main() {
 
     await tester.pumpWidget(_host(service: service));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Install now'));
+    await tester.tap(find.text('ติดตั้งตอนนี้'));
     await tester.pumpAndSettle();
 
     expect(service.promptCalls, 1);
-    expect(find.text('Install T-Ride Driver'), findsNothing);
+    expect(find.text('ติดตั้งสำเร็จแล้ว'), findsOneWidget);
+    expect(service.closeWindowCalls, 1);
+  });
+
+  testWidgets('accepted install keeps current driver route and avoids root', (
+    tester,
+  ) async {
+    final service = _FakePwaInstallService(canPromptInstallValue: true);
+
+    await tester.pumpWidget(_hostWithRoutes(service: service));
+    await tester.pumpAndSettle();
+    expect(find.text('driver route'), findsOneWidget);
+    expect(find.text('customer root'), findsNothing);
+
+    await tester.tap(find.text('ติดตั้งตอนนี้'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('driver route'), findsOneWidget);
+    expect(find.text('customer root'), findsNothing);
+    expect(find.text('ติดตั้งสำเร็จแล้ว'), findsOneWidget);
+  });
+
+  testWidgets(
+    'accepted and appinstalled events show completion once and close once',
+    (tester) async {
+      final service = _FakePwaInstallService(canPromptInstallValue: true);
+
+      await tester.pumpWidget(_host(service: service));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ติดตั้งตอนนี้'));
+      service.markInstalled();
+      await tester.pumpAndSettle();
+
+      expect(find.text('ติดตั้งสำเร็จแล้ว'), findsOneWidget);
+      expect(service.promptCalls, 1);
+      expect(service.closeWindowCalls, 1);
+    },
+  );
+
+  testWidgets('manual close guidance appears when browser stays open', (
+    tester,
+  ) async {
+    final service = _FakePwaInstallService(canPromptInstallValue: true);
+
+    await tester.pumpWidget(_host(service: service));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ติดตั้งตอนนี้'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ติดตั้งสำเร็จแล้ว'), findsOneWidget);
+    expect(find.textContaining('กรุณาปิดเบราว์เซอร์นี้'), findsOneWidget);
+    expect(find.text('ปิดเบราว์เซอร์'), findsOneWidget);
+  });
+
+  testWidgets('dismissed install does not navigate to customer root', (
+    tester,
+  ) async {
+    final service = _FakePwaInstallService(canPromptInstallValue: true)
+      ..nextResult = PwaInstallResult.dismissed;
+
+    await tester.pumpWidget(_hostWithRoutes(service: service));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ติดตั้งตอนนี้'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('driver route'), findsOneWidget);
+    expect(find.text('customer root'), findsNothing);
   });
 
   testWidgets('later dismisses the prompt for the current page session', (
@@ -101,13 +193,13 @@ void main() {
 
     await tester.pumpWidget(_host(service: service));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Later'));
+    await tester.tap(find.text('ไว้ภายหลัง'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Install T-Ride Driver'), findsNothing);
+    expect(find.text('ติดตั้งแอป T-Ride Driver'), findsNothing);
     service.emitChange();
     await tester.pumpAndSettle();
-    expect(find.text('Install T-Ride Driver'), findsNothing);
+    expect(find.text('ติดตั้งแอป T-Ride Driver'), findsNothing);
   });
 
   testWidgets(
@@ -117,27 +209,29 @@ void main() {
         const MaterialApp(home: Scaffold(body: Text('customer'))),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Install T-Ride Driver'), findsNothing);
+      expect(find.text('ติดตั้งแอป T-Ride Driver'), findsNothing);
 
       await tester.pumpWidget(
         const MaterialApp(home: Scaffold(body: Text('admin'))),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Install T-Ride Driver'), findsNothing);
+      expect(find.text('ติดตั้งแอป T-Ride Driver'), findsNothing);
     },
   );
 
-  testWidgets('installed event closes an open prompt', (tester) async {
+  testWidgets('installed event shows one completion prompt', (tester) async {
     final service = _FakePwaInstallService(canPromptInstallValue: true);
 
     await tester.pumpWidget(_host(service: service));
     await tester.pumpAndSettle();
-    expect(find.text('Install T-Ride Driver'), findsOneWidget);
+    expect(find.text('ติดตั้งแอป T-Ride Driver'), findsOneWidget);
 
     service.markInstalled();
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Install T-Ride Driver'), findsNothing);
+    expect(find.text('ติดตั้งสำเร็จแล้ว'), findsOneWidget);
   });
 
   testWidgets('in-app browser shows Chrome guidance and skips auto install', (
@@ -151,15 +245,18 @@ void main() {
     await tester.pumpWidget(_host(service: service));
     await tester.pumpAndSettle();
 
-    expect(find.text('Install T-Ride Driver'), findsOneWidget);
-    expect(find.textContaining('Open this page in Chrome'), findsOneWidget);
+    expect(find.text('ติดตั้งแอป T-Ride Driver'), findsOneWidget);
+    expect(
+      find.textContaining('กรุณาเปิดลิงก์นี้ด้วย Google Chrome'),
+      findsOneWidget,
+    );
     expect(_installNowButton(tester).enabled, isFalse);
-    await tester.tap(find.text('Install now'));
+    await tester.tap(find.text('ติดตั้งตอนนี้'));
     await tester.pumpAndSettle();
     expect(service.promptCalls, 0);
   });
 
-  testWidgets('Thai copy is available for the driver install prompt', (
+  testWidgets('Thai copy is used for the driver install prompt', (
     tester,
   ) async {
     final service = _FakePwaInstallService(canPromptInstallValue: true);
@@ -199,6 +296,21 @@ Widget _host({
   );
 }
 
+Widget _hostWithRoutes({required PwaInstallService service}) {
+  return MaterialApp(
+    initialRoute: '/driver',
+    routes: {
+      '/': (_) => const Scaffold(body: Text('customer root')),
+      '/driver': (_) => Scaffold(
+        body: DriverPwaInstallPromptHost(
+          service: service,
+          child: const Text('driver route'),
+        ),
+      ),
+    },
+  );
+}
+
 class _FakePwaInstallService extends PwaInstallService {
   _FakePwaInstallService({
     this.isStandaloneValue = false,
@@ -214,6 +326,7 @@ class _FakePwaInstallService extends PwaInstallService {
   bool isInAppBrowserValue;
   PwaInstallResult nextResult = PwaInstallResult.accepted;
   int promptCalls = 0;
+  int closeWindowCalls = 0;
 
   @override
   bool get isSupported => isSupportedValue;
@@ -242,6 +355,12 @@ class _FakePwaInstallService extends PwaInstallService {
       notifyListeners();
     }
     return nextResult;
+  }
+
+  @override
+  Future<bool> tryCloseWindow() async {
+    closeWindowCalls += 1;
+    return false;
   }
 
   void markInstalled() {

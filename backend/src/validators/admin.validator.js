@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { paginationQuery, bookingNumberParam } = require('./common.validator');
+const { paginationQuery, bookingNumberParam, unicodeText } = require('./common.validator');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const { ADMIN_BOOKING_VIEWS } = require('../constants/adminOperations.constants');
 const adminBookingListQuerySchema = paginationQuery.keys({
@@ -8,7 +8,7 @@ const adminBookingListQuerySchema = paginationQuery.keys({
   view: Joi.string()
     .valid(...Object.values(ADMIN_BOOKING_VIEWS))
     .optional(),
-  search: Joi.string().max(100).allow('', null),
+  search: unicodeText({ max: 100, allowEmpty: true }).default(null),
   status: Joi.string().valid(...Object.values(BOOKING_STATUS)).optional(),
   serviceDateFrom: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
   serviceDateTo: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -18,8 +18,8 @@ const adminBookingListQuerySchema = paginationQuery.keys({
   assignmentState: Joi.string().valid('ASSIGNED', 'UNASSIGNED').optional(),
   serviceType: Joi.string().max(64).optional(),
   service_type: Joi.string().max(64).optional(),
-  origin: Joi.string().max(200).optional(),
-  destination: Joi.string().max(200).optional(),
+  origin: unicodeText({ max: 200, allowEmpty: true }).optional(),
+  destination: unicodeText({ max: 200, allowEmpty: true }).optional(),
   settlementStatus: Joi.string()
     .valid('RECEIPT_REJECTED', 'RECEIPT_SUBMITTED', 'RECEIPT_MISSING', 'ADMIN_CONFIRMED')
     .optional(),
@@ -44,22 +44,22 @@ const bookingNumberParamsSchema = Joi.object({
 const assignDriverSchema = Joi.object({
   driverId: Joi.number().integer().positive().required(),
   driverVehicleId: Joi.number().integer().positive().optional(),
-  assignmentReason: Joi.string().max(255).allow('', null),
-  reason: Joi.string().max(255).allow('', null),
+  assignmentReason: unicodeText({ max: 255, allowEmpty: true }).default(null),
+  reason: unicodeText({ max: 255, allowEmpty: true }).default(null),
 });
 
 const reassignDriverSchema = Joi.object({
   driverId: Joi.number().integer().positive().required(),
   driverVehicleId: Joi.number().integer().positive().optional(),
-  reason: Joi.string().max(255).required(),
-  assignmentReason: Joi.string().max(255).allow('', null),
+  reason: unicodeText({ max: 255 }),
+  assignmentReason: unicodeText({ max: 255, allowEmpty: true }).default(null),
 });
 
 const autoAssignDriverSchema = Joi.object({
   driverId: Joi.number().integer().positive().optional(),
   useTopCandidate: Joi.boolean().optional(),
   expectedAssignmentVersion: Joi.number().integer().min(0).optional(),
-  assignmentReason: Joi.string().max(255).allow('', null),
+  assignmentReason: unicodeText({ max: 255, allowEmpty: true }).default(null),
 }).or('driverId', 'useTopCandidate');
 
 const qrReissueSchema = Joi.object({
@@ -72,7 +72,7 @@ const adminBookingNotesQuerySchema = Joi.object({
 });
 
 const createAdminBookingNoteSchema = Joi.object({
-  text: Joi.string().trim().min(1).max(1000).required(),
+  text: unicodeText({ max: 1000 }),
   adminUserId: Joi.forbidden(),
   admin_user_id: Joi.forbidden(),
 });

@@ -106,6 +106,44 @@ void main() {
     },
   );
 
+  test('createBooking preserves structured validation errors', () async {
+    final api = BookingApiService.test(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'success': false,
+            'message': 'Validation failed',
+            'error_code': 'VALIDATION_ERROR',
+            'errors': [
+              {
+                'source': 'body',
+                'field': 'customer.name',
+                'type': 'string.empty',
+                'message': 'customer.name is required',
+              },
+            ],
+          }),
+          400,
+        );
+      }),
+    );
+
+    await expectLater(
+      api.createBooking({
+        'serviceTypeCode': 'CITY_TRANSFER',
+        'vehicleTypeCode': 'SUV',
+        'scheduledPickupAt': '2026-07-01T09:30:00+07:00',
+      }),
+      throwsA(
+        isA<BookingApiException>()
+            .having((e) => e.errorCode, 'errorCode', 'VALIDATION_ERROR')
+            .having((e) => e.errors.first.field, 'field', 'customer.name')
+            .having((e) => e.errors.first.type, 'type', 'string.empty'),
+      ),
+    );
+  });
+
   test(
     'createBooking preserves intended Bangkok wall time for local DateTime input',
     () async {
@@ -628,6 +666,63 @@ void main() {
       expect(controller.buildCreatePayload, throwsA(isA<StateError>()));
     },
   );
+
+  test(
+    'submit maps backend customer.name validation error to customer step',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _FailingCreateBookingApi(
+          BookingApiException('Validation failed', 'VALIDATION_ERROR', [
+            const BookingApiErrorDetail(
+              source: 'body',
+              field: 'customer.name',
+              type: 'string.empty',
+              message: 'customer.name is required',
+            ),
+          ]),
+        ),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'origin',
+          displayName: 'Bangkok',
+          kind: LocationKind.city,
+          code: 'BANGKOK',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'destination',
+          displayName: 'Pattaya',
+          kind: LocationKind.city,
+          code: 'PATTAYA',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2099, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+      await controller.updateCustomerInfo(
+        name: 'สมชาย ใจดี',
+        email: 'kim@example.com',
+        phone: '+66123456789',
+      );
+
+      final result = await controller.submitBooking();
+
+      expect(result, isNull);
+      expect(controller.state.step, 6);
+      expect(controller.state.errorMessage, 'wizard_required_customer_name');
+      expect(controller.state.errorMessage, isNot('Validation failed'));
+    },
+  );
 }
 
 class _CapturingBookingApi implements BookingApiService {
@@ -730,6 +825,17 @@ class _CapturingBookingApi implements BookingApiService {
     bool forceReissue = false,
   }) {
     throw UnimplementedError();
+  }
+}
+
+class _FailingCreateBookingApi extends _CapturingBookingApi {
+  _FailingCreateBookingApi(this.error);
+
+  final BookingApiException error;
+
+  @override
+  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+    throw error;
   }
 }
 

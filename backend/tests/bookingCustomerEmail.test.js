@@ -132,6 +132,61 @@ test('booking validator still requires customer name and phone', () => {
   assert.match(missingPhone.error.message, /phone/i);
 });
 
+test('booking validator accepts multilingual customer names and free-text places', () => {
+  const names = [
+    'สมชาย ใจดี',
+    '박용세',
+    "John O'Connor",
+    'Nguyễn Văn An',
+    'محمد علي',
+    '王小明',
+    'Kim 123',
+  ];
+
+  for (const name of names) {
+    const { error, value } = createBookingSchema.validate(validPayload({
+      origin: {
+        address: 'กรุงเทพฯ / พัทยา',
+        placeId: 'origin',
+        lat: 13.7563,
+        lng: 100.5018,
+        name: 'Hotel & Residence',
+      },
+      customer: {
+        name: `  ${name}  `,
+        phone: '+66123456789',
+        countryCode: 'TH',
+      },
+      additionalRequests: 'Soi 6/1 — พบที่ล็อบบี้',
+    }));
+
+    assert.equal(error, undefined, name);
+    assert.equal(value.customer.name, name.normalize('NFC'));
+    assert.equal(value.origin.address, 'กรุงเทพฯ / พัทยา');
+    assert.equal(value.additionalRequests, 'Soi 6/1 — พบที่ล็อบบี้');
+  }
+});
+
+test('booking validator rejects blank, control-character, and too-long customer names', () => {
+  const blank = createBookingSchema.validate(validPayload({
+    customer: { name: '   ', phone: '+66123456789' },
+  }));
+  assert.ok(blank.error);
+  assert.equal(blank.error.details[0].path.join('.'), 'customer.name');
+
+  const control = createBookingSchema.validate(validPayload({
+    customer: { name: 'Kim\u0000', phone: '+66123456789' },
+  }));
+  assert.ok(control.error);
+  assert.equal(control.error.details[0].type, 'string.controlCharacters');
+
+  const tooLong = createBookingSchema.validate(validPayload({
+    customer: { name: '가'.repeat(101), phone: '+66123456789' },
+  }));
+  assert.ok(tooLong.error);
+  assert.equal(tooLong.error.details[0].type, 'string.max');
+});
+
 test('booking validator accepts optional countryCode and free text', () => {
   const cases = [
     { countryCode: ' th ', expected: 'th' },

@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { paginationQuery, bookingNumberParam } = require('./common.validator');
+const { paginationQuery, bookingNumberParam, unicodeText } = require('./common.validator');
 
 const bookingNumberParamsSchema = Joi.object({
   bookingNumber: bookingNumberParam.required(),
@@ -19,11 +19,11 @@ const adminSettlementListQuerySchema = paginationQuery.keys({
 });
 
 const settlementRejectSchema = Joi.object({
-  reason: Joi.string().trim().min(1).max(500).required(),
+  reason: unicodeText({ max: 500 }),
 });
 
 const settlementManualApproveSchema = Joi.object({
-  note: Joi.string().trim().min(1).max(500).required(),
+  note: unicodeText({ max: 500 }),
 });
 
 module.exports = {

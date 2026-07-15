@@ -5,6 +5,7 @@ const Joi = require('joi');
 const SERVICE_TYPES = require('../constants/serviceTypes');
 const VEHICLE_TYPES = require('../constants/vehicleTypes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
+const { unicodeText } = require('./common.validator');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 
@@ -61,11 +62,11 @@ const vehicleRecommendSchema = Joi.object({
 });
 
 const placeSchema = Joi.object({
-  address: Joi.string().max(500).required(),
+  address: unicodeText({ max: 500 }),
   placeId: Joi.string().max(255).allow(null, ''),
   lat: Joi.number().allow(null),
   lng: Joi.number().allow(null),
-  name: Joi.string().max(255).allow(null, ''),
+  name: unicodeText({ max: 255, allowEmpty: true }).default(null),
 });
 
 const createBookingSchema = Joi.object({
@@ -89,7 +90,7 @@ const createBookingSchema = Joi.object({
     carriers20Inch: luggageCountField,
     carriers24InchPlus: luggageCountField,
     golfBags: luggageCountField,
-    specialItems: Joi.string().max(500).allow(null, ''),
+    specialItems: unicodeText({ max: 500, allowEmpty: true }).default(null),
     specialLuggageCount: luggageCountField,
   }).default({}),
   options: Joi.object({
@@ -112,21 +113,21 @@ const createBookingSchema = Joi.object({
     driverIncluded: Joi.boolean().default(false),
   }).default({}),
   customer: Joi.object({
-    name: Joi.string().max(100).required(),
+    name: unicodeText({ max: 100 }),
     email: optionalEmailField,
     phone: Joi.string().max(30).required(),
     countryCode: optionalCountryField,
     messengerType: Joi.string().max(30).allow(null, ''),
     messengerId: Joi.string().max(100).allow(null, ''),
   }).required(),
-  additionalRequests: Joi.string().max(2000).allow(null, ''),
-  specialRequests: Joi.string().max(2000).allow(null, ''),
+  additionalRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
+  specialRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
 });
 
 const updateBookingStatusSchema = Joi.object({
   status: Joi.string().valid(...Object.values(BOOKING_STATUS)).required(),
-  reason: Joi.string().max(100).allow(null, ''),
-  memo: Joi.string().max(500).allow(null, ''),
+  reason: unicodeText({ max: 100, allowEmpty: true }).default(null),
+  memo: unicodeText({ max: 500, allowEmpty: true }).default(null),
 });
 
 const guestBookingLookupSchema = Joi.object({

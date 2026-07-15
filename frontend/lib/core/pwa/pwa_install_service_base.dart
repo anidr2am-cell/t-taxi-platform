@@ -17,4 +17,5 @@ abstract class PwaInstallService extends ChangeNotifier {
   bool get isInAppBrowser;
 
   Future<PwaInstallResult> promptInstall();
+  Future<bool> tryCloseWindow();
 }

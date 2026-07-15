@@ -48,7 +48,14 @@ function errorMiddleware(err, req, res, next) {
     }),
   };
 
+<<<<<<< Updated upstream
   if (err.errors && (config.server.nodeEnv !== 'production' || errorCode === ERROR_CODES.VALIDATION_ERROR)) {
+=======
+  if (
+    err.errors &&
+    (config.server.nodeEnv !== 'production' || errorCode === ERROR_CODES.VALIDATION_ERROR)
+  ) {
+>>>>>>> Stashed changes
     body.errors = err.errors;
   }
 

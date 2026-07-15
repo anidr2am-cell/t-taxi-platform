@@ -30,6 +30,9 @@ external JSNumber _pwaSubscribe(JSFunction listener);
 @JS('tridePwaUnsubscribe')
 external void _pwaUnsubscribe(JSNumber id);
 
+@JS('tridePwaTryCloseWindow')
+external bool _pwaTryCloseWindow();
+
 PwaInstallService createPwaInstallService() => WebPwaInstallService();
 
 class WebPwaInstallService extends PwaInstallService {
@@ -121,6 +124,15 @@ class WebPwaInstallService extends PwaInstallService {
       return PwaInstallResult.error;
     } finally {
       notifyListeners();
+    }
+  }
+
+  @override
+  Future<bool> tryCloseWindow() async {
+    try {
+      return _pwaTryCloseWindow();
+    } catch (_) {
+      return false;
     }
   }
 

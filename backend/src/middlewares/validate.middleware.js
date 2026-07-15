@@ -23,6 +23,7 @@ function validate(schemas = {}) {
         errors.push(
           ...error.details.map((d) => ({
             field: d.path.join('.'),
+            type: d.type,
             message: d.message,
             type: d.type,
             source,
