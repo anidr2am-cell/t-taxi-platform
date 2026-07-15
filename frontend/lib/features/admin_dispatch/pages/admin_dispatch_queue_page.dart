@@ -170,7 +170,6 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         destination: _destination,
         settlementStatus: _settlementStatus,
         lowRating: _lowRating ? true : null,
-        unassigned: _unassignedOnly ? true : null,
         hasInquiry: _hasInquiry ? true : null,
         archived: _showArchived ? true : null,
         page: page,
@@ -635,16 +634,22 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
   }
 
   Widget _buildList(AppLocalizations l10n, {required bool masterDetail}) {
+    final showLoadMore = _items.length < _total;
     return RefreshIndicator(
       onRefresh: () async {
         await _loadSummary();
         await _load(page: 1);
       },
       child: ListView.builder(
-        itemCount: _items.length + (_items.length < _total ? 1 : 0),
+        itemCount: _items.length + 1 + (showLoadMore ? 1 : 0),
         padding: AppUi.pagePadding(context).copyWith(top: 0),
         itemBuilder: (context, index) {
-          if (index >= _items.length) {
+          if (index == 0) {
+            return _buildResultHeader(l10n);
+          }
+
+          final itemIndex = index - 1;
+          if (itemIndex >= _items.length) {
             return Padding(
               padding: const EdgeInsets.all(AppTokens.spaceMd),
               child: Center(
@@ -664,7 +669,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
             );
           }
 
-          final item = Map<String, dynamic>.from(_items[index] as Map);
+          final item = Map<String, dynamic>.from(_items[itemIndex] as Map);
           final bookingNumber = item['bookingNumber'] as String? ?? '';
           final selected = _selectedBookingNumber == bookingNumber;
           return Padding(
@@ -689,6 +694,47 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  bool get _hasAdditionalFilters {
+    return _searchController.text.trim().isNotEmpty ||
+        _statusFilter != null ||
+        _dateFrom != null ||
+        _dateTo != null ||
+        _serviceType != null ||
+        _origin != null ||
+        _destination != null ||
+        _settlementStatus != null ||
+        _lowRating ||
+        _hasInquiry ||
+        _showArchived;
+  }
+
+  Widget _buildResultHeader(AppLocalizations l10n) {
+    final totalText = l10n
+        .t(
+          _unassignedOnly
+              ? 'admin_ops_unassigned_result_total'
+              : 'admin_ops_result_total',
+        )
+        .replaceAll('{total}', '$_total');
+    final showingText = l10n
+        .t('admin_ops_result_showing')
+        .replaceAll('{count}', '${_items.length}');
+    final filteredText = _hasAdditionalFilters
+        ? ' · ${l10n.t('admin_ops_result_filtered')}'
+        : '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+      child: Text(
+        '$totalText · $showingText$filteredText',
+        style: const TextStyle(
+          color: AppTokens.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

@@ -944,6 +944,65 @@ test("listBookings passes search and assignment filters to repository", async ()
   assert.equal(capturedFilters.serviceDateTo, "2026-07-03 00:00:00");
 });
 
+test("unassigned booking filters use the same official dispatch definition", async () => {
+  const captured = [];
+  const bookingRepo = {
+    async countAdminBookings(filters) {
+      captured.push(filters);
+      return 5;
+    },
+    async findAdminBookings() {
+      return [];
+    },
+  };
+  const service = new AdminDispatchService(
+    {},
+    bookingRepo,
+    {},
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  await service.listBookings({
+    view: "all",
+    assignmentState: "UNASSIGNED",
+    page: 1,
+    limit: 100,
+  });
+  await service.listBookings({
+    view: "all",
+    unassigned: "true",
+    page: 1,
+    limit: 100,
+  });
+  await service.getBookingsSummary({ id: 1, role: "ADMIN" });
+
+  const listFilter = captured[0];
+  const legacyFilter = captured[1];
+  const summaryFilter = captured.find(
+    (filter) =>
+      filter.unassignedOnly === true &&
+      filter.adminUserId === 1 &&
+      filter.view === "all",
+  );
+
+  for (const filter of [listFilter, legacyFilter, summaryFilter]) {
+    assert.equal(filter.assignmentState, "UNASSIGNED");
+    assert.equal(filter.unassignedOnly, true);
+    assert.deepEqual(filter.statuses, [
+      BOOKING_STATUS.PENDING,
+      BOOKING_STATUS.OPEN,
+      BOOKING_STATUS.CONFIRMED,
+    ]);
+    assert.equal(filter.serviceDateFrom, null);
+    assert.equal(filter.serviceDateTo, null);
+    assert.equal(filter.needsActionOnly, false);
+  }
+});
+
 test("listBookings defaults to visible bookings and supports archived-only mode", async () => {
   const captured = [];
   const bookingRepo = {
@@ -1275,6 +1334,39 @@ test("admin booking query groups unassigned first with group-specific newest ord
     /CASE WHEN b\.driver_id IS NOT NULL THEN b\.scheduled_pickup_at END DESC/,
   );
   assert.match(capturedSql, /b\.is_archived = 0/);
+});
+
+test("admin unassigned count uses active-assignment absence and distinct bookings", async () => {
+  let capturedSql = "";
+  let capturedParams = [];
+  const pool = {
+    async query(sql, params) {
+      capturedSql = sql;
+      capturedParams = params;
+      return [[{ total: 5 }]];
+    },
+  };
+  const repository = new BookingRepository(pool);
+  const total = await repository.countAdminBookings({
+    assignmentState: "UNASSIGNED",
+    statuses: [
+      BOOKING_STATUS.PENDING,
+      BOOKING_STATUS.OPEN,
+      BOOKING_STATUS.CONFIRMED,
+    ],
+  });
+
+  assert.equal(total, 5);
+  assert.match(capturedSql, /COUNT\(DISTINCT b\.id\)/);
+  assert.match(capturedSql, /b\.status IN \(\?, \?, \?\)/);
+  assert.match(capturedSql, /NOT EXISTS/);
+  assert.match(capturedSql, /bda\.is_active = 1/);
+  assert.match(capturedSql, /bda\.deleted_at IS NULL/);
+  assert.deepEqual(capturedParams.slice(-3), [
+    BOOKING_STATUS.PENDING,
+    BOOKING_STATUS.OPEN,
+    BOOKING_STATUS.CONFIRMED,
+  ]);
 });
 
 test("ADMIN can get booking detail", async () => {

@@ -975,6 +975,11 @@ class BookingRepository {
       params.push(filters.status);
     }
 
+    if (Array.isArray(filters.statuses) && filters.statuses.length) {
+      where.push(`b.status IN (${filters.statuses.map(() => '?').join(', ')})`);
+      params.push(...filters.statuses);
+    }
+
     if (filters.cancelledTab) {
       where.push(`b.status IN ('CANCELLED', 'NO_SHOW')`);
     }
