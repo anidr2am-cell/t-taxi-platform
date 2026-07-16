@@ -27,6 +27,7 @@ class GuestBookingLookupPage extends StatefulWidget {
     this.bookingChatSocketService,
     this.enableCustomerTools = false,
     this.reviewApi,
+    this.trackingBuilder,
   });
 
   final GuestBookingLookupService? lookupService;
@@ -34,6 +35,7 @@ class GuestBookingLookupPage extends StatefulWidget {
   final ChatSocketService? bookingChatSocketService;
   final bool enableCustomerTools;
   final BookingReviewApi? reviewApi;
+  final Widget Function(GuestBookingLookupResult result)? trackingBuilder;
 
   @override
   State<GuestBookingLookupPage> createState() => _GuestBookingLookupPageState();
@@ -177,8 +179,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     };
     return widget.enableCustomerTools &&
         result.bookingId != null &&
+        result.capabilities.trackingAvailable &&
         trackingStatuses.contains(result.status) &&
-        result.driverName?.trim().isNotEmpty == true &&
         result.guestAccessToken.trim().isNotEmpty;
   }
 
@@ -204,6 +206,15 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     return activeStatuses.contains(result.status) &&
         result.driverPhone?.trim().isNotEmpty == true &&
         result.guestAccessToken.trim().isNotEmpty;
+  }
+
+  Widget _trackingSection(GuestBookingLookupResult result) {
+    return widget.trackingBuilder?.call(result) ??
+        GuestDriverTrackingSection(
+          bookingId: result.bookingId!,
+          guestAccessToken: result.guestAccessToken,
+          bookingStatus: result.status,
+        );
   }
 
   Future<void> _lookup() async {
@@ -549,12 +560,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         ],
         if (widget.enableCustomerTools) ...[
           const SizedBox(height: AppTokens.spaceMd),
-          if (_canShowTracking(result))
-            GuestDriverTrackingSection(
-              bookingId: result.bookingId!,
-              guestAccessToken: result.guestAccessToken,
-              bookingStatus: result.status,
-            ),
+          if (_canShowTracking(result)) _trackingSection(result),
           if (_canShowTracking(result))
             const SizedBox(height: AppTokens.spaceMd),
           if (_canShowNotifications(result))

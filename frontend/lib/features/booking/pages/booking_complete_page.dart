@@ -137,6 +137,12 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       widget.result.bookingId != null &&
       widget.result.guestAccessToken?.isNotEmpty == true;
 
+  bool get _canShowReviewForm =>
+      widget.enableCustomerTools &&
+      widget.result.status == 'COMPLETED' &&
+      widget.result.guestAccessToken?.isNotEmpty == true &&
+      widget.review == null;
+
   Future<void> _copyBookingNumber() async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
@@ -362,6 +368,15 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                   ],
+                  if (_canShowReviewForm)
+                    BookingReviewForm(
+                      bookingNumber: result.bookingNumber,
+                      guestAccessToken: result.guestAccessToken,
+                      initialState: const {
+                        'eligible': true,
+                        'submitted': false,
+                      },
+                    ),
                 ] else if (_canShowChat) ...[
                   const SizedBox(height: AppTokens.spaceMd),
                   BookingChatSection(
