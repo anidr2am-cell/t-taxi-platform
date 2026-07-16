@@ -254,7 +254,7 @@ class AdminOperationsService {
   }
 
   isUnassigned(row) {
-    return row.driver_id == null && !row.assignment_id;
+    return !row.assignment_id;
   }
 
   hasReceiptRejected(row) {

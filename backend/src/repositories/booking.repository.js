@@ -7,6 +7,35 @@ class BookingRepository {
     this.pool = pool;
   }
 
+  activeAssignmentExistsSql() {
+    return `
+      EXISTS (
+        SELECT 1 FROM booking_driver_assignments active_bda
+        WHERE active_bda.booking_id = b.id
+          AND active_bda.is_active = 1
+          AND active_bda.deleted_at IS NULL
+      )
+    `;
+  }
+
+  activeAssignmentMissingSql() {
+    return `
+      NOT EXISTS (
+        SELECT 1 FROM booking_driver_assignments active_bda
+        WHERE active_bda.booking_id = b.id
+          AND active_bda.is_active = 1
+          AND active_bda.deleted_at IS NULL
+      )
+    `;
+  }
+
+  unassignedBookingSql() {
+    return `
+      ${this.activeAssignmentMissingSql()}
+      AND b.status IN ('PENDING', 'OPEN', 'CONFIRMED')
+    `;
+  }
+
   async insertBooking(conn, row) {
     const [result] = await conn.query(
       `
@@ -847,8 +876,7 @@ class BookingRepository {
 
     where.push(`
       (
-        b.driver_id IS NULL
-        AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+        ${this.unassignedBookingSql()}
         AND b.scheduled_pickup_at <= ?
       )
     `);
@@ -921,8 +949,7 @@ class BookingRepository {
 
     where.push(`
       (
-        b.driver_id IS NULL
-        AND b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
+        ${this.unassignedBookingSql()}
         AND b.scheduled_pickup_at < ?
       )
     `);
@@ -1039,7 +1066,7 @@ class BookingRepository {
     }
 
     if (filters.unassigned) {
-      where.push('b.driver_id IS NULL');
+      where.push(this.unassignedBookingSql());
     }
 
     if (filters.hasInquiry && filters.adminUserId) {
@@ -1074,23 +1101,9 @@ class BookingRepository {
     }
 
     if (filters.assignmentState === 'ASSIGNED') {
-      where.push(`
-        EXISTS (
-          SELECT 1 FROM booking_driver_assignments bda
-          WHERE bda.booking_id = b.id
-            AND bda.is_active = 1
-            AND bda.deleted_at IS NULL
-        )
-      `);
+      where.push(this.activeAssignmentExistsSql());
     } else if (filters.assignmentState === 'UNASSIGNED') {
-      where.push(`
-        NOT EXISTS (
-          SELECT 1 FROM booking_driver_assignments bda
-          WHERE bda.booking_id = b.id
-            AND bda.is_active = 1
-            AND bda.deleted_at IS NULL
-        )
-      `);
+      where.push(this.activeAssignmentMissingSql());
     }
 
     if (filters.search) {
@@ -1170,7 +1183,7 @@ class BookingRepository {
         b.archived_at,
         b.archived_by,
         b.archive_reason,
-        CASE WHEN b.driver_id IS NULL THEN 1 ELSE 0 END AS is_new_booking,
+        CASE WHEN ${this.activeAssignmentMissingSql()} THEN 1 ELSE 0 END AS is_new_booking,
         st.code AS service_type_code,
         st.name AS service_type_name,
         vt.code AS vehicle_type_code,
@@ -1241,9 +1254,9 @@ class BookingRepository {
     }
     return `
       ORDER BY
-        CASE WHEN b.driver_id IS NULL THEN 0 ELSE 1 END ASC,
-        CASE WHEN b.driver_id IS NULL THEN b.created_at END DESC,
-        CASE WHEN b.driver_id IS NOT NULL THEN b.scheduled_pickup_at END DESC,
+        CASE WHEN ${this.activeAssignmentMissingSql()} THEN 0 ELSE 1 END ASC,
+        CASE WHEN ${this.activeAssignmentMissingSql()} THEN b.created_at END DESC,
+        CASE WHEN ${this.activeAssignmentExistsSql()} THEN b.scheduled_pickup_at END DESC,
         b.booking_number DESC
     `;
   }
