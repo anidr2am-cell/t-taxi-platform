@@ -283,18 +283,23 @@ class _FakeAdminApi extends AdminDispatchApiService {
 }
 
 class _FakeSettlementApi extends AdminSettlementApiService {
-  _FakeSettlementApi({required this.detail, this.approveError});
+  _FakeSettlementApi({required this.detail, this.approveError, this.loadError});
 
   final Map<String, dynamic> detail;
   final Object? approveError;
+  final Object? loadError;
+  int getSettlementCalls = 0;
   int approveCalls = 0;
   int manualApproveCalls = 0;
   int receiptCalls = 0;
   String? manualApproveNote;
 
   @override
-  Future<Map<String, dynamic>> getSettlement(String bookingNumber) async =>
-      detail;
+  Future<Map<String, dynamic>> getSettlement(String bookingNumber) async {
+    getSettlementCalls += 1;
+    if (loadError != null) throw loadError!;
+    return detail;
+  }
 
   @override
   Future<Map<String, dynamic>> approve(String bookingNumber) async {
@@ -343,6 +348,22 @@ Map<String, dynamic> _settlementPendingDetail() => {
   },
   'activeAssignment': {'driverDisplayName': 'Driver A'},
   'allowedActions': [],
+};
+
+Map<String, dynamic> _completedDueDetail() => {
+  ..._settlementPendingDetail(),
+  'status': 'COMPLETED',
+  'commissionStatus': 'DUE',
+  'updatedAt': '2026-07-16 10:00:00',
+  'statusHistory': [
+    {
+      'fromStatus': 'PICKED_UP',
+      'toStatus': 'COMPLETED',
+      'changedByRole': 'DRIVER',
+      'createdAt': '2026-07-16 09:00:00',
+      'memo': 'Dropoff completed',
+    },
+  ],
 };
 
 Map<String, dynamic> _queueItem(String bookingNumber) => {
@@ -861,7 +882,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Driver A'), findsOneWidget);
-    expect(find.text('AVAILABLE'), findsOneWidget);
+    expect(find.text('AVAILABLE'), findsWidgets);
     expect(find.text('SUV · LOCAL-SUV-D2 · Local Test SUV'), findsOneWidget);
     expect(find.text('2026-06-30T23:14:47.000Z'), findsOneWidget);
     expect(find.text('ASSIGNED'), findsOneWidget);
@@ -1265,7 +1286,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Settlement confirmation'), findsOneWidget);
-      expect(find.text('PENDING'), findsOneWidget);
+      expect(find.text('Settlement required'), findsWidgets);
       expect(
         find.text(
           'Payment can be confirmed after the driver uploads the transfer slip.',
@@ -1312,8 +1333,14 @@ void main() {
         'receiptFileId': 42,
         'commissionAmount': 200,
         'currency': 'THB',
+        'canApprove': true,
+        'receiptSubmittedAt': '2026-07-16 12:00:00',
         'receiptUrl': '/api/v1/admin/settlements/TX202607010001/receipt',
-        'receiptMetadata': {'mimeType': 'application/pdf'},
+        'receiptMetadata': {
+          'mimeType': 'application/pdf',
+          'originalFilename': 'receipt.pdf',
+          'fileSize': 2048,
+        },
       },
     );
     await tester.pumpWidget(
@@ -1328,9 +1355,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Transfer slip submitted'), findsOneWidget);
+    expect(find.text('Transfer slip submitted'), findsWidgets);
     expect(find.text('View transfer slip'), findsOneWidget);
     expect(find.text('Confirm 200 THB received'), findsOneWidget);
+    expect(find.text('receipt.pdf'), findsOneWidget);
+    expect(find.text('application/pdf'), findsOneWidget);
+    expect(find.text('2 KB'), findsOneWidget);
 
     await tester.ensureVisible(find.text('View transfer slip'));
     await tester.tap(find.text('View transfer slip'));
@@ -1358,6 +1388,108 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(settlementApi.approveCalls, 1);
+  });
+
+  testWidgets('completed due booking shows settlement info without approval', (
+    tester,
+  ) async {
+    final settlementApi = _FakeSettlementApi(
+      detail: {
+        'bookingNumber': 'TX202607010001',
+        'status': 'COMPLETED',
+        'commissionStatus': 'PENDING',
+        'receiptStatus': 'NONE',
+        'commissionAmount': 200,
+        'currency': 'THB',
+        'canApprove': false,
+        'canManualApprove': false,
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: _completedDueDetail()),
+          settlementApi: settlementApi,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(settlementApi.getSettlementCalls, 1);
+    expect(find.text('Operations summary'), findsOneWidget);
+    expect(find.text('Settlement confirmation'), findsOneWidget);
+    expect(find.text('Settlement required'), findsWidgets);
+    expect(find.text('Transfer slip missing'), findsWidgets);
+    expect(
+      find.textContaining(
+        'The trip is completed, but the booking has not moved',
+      ),
+      findsWidgets,
+    );
+    expect(find.text('Confirm 200 THB received'), findsNothing);
+    expect(find.text('Manual settlement approval'), findsNothing);
+  });
+
+  testWidgets('settlement load failure keeps booking detail visible', (
+    tester,
+  ) async {
+    final settlementApi = _FakeSettlementApi(
+      detail: const {},
+      loadError: const AdminSettlementApiException('Settlement unavailable'),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: _completedDueDetail()),
+          settlementApi: settlementApi,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Operations summary'), findsOneWidget);
+    expect(find.text('Fare and settlement'), findsOneWidget);
+    expect(find.text('Settlement unavailable'), findsOneWidget);
+    expect(find.text('Retry settlement'), findsOneWidget);
+    expect(settlementApi.getSettlementCalls, 1);
+  });
+
+  testWidgets('rejected transfer slip reason is highlighted', (tester) async {
+    final settlementApi = _FakeSettlementApi(
+      detail: {
+        'bookingNumber': 'TX202607010001',
+        'status': 'SETTLEMENT_PENDING',
+        'commissionStatus': 'REJECTED',
+        'receiptStatus': 'REJECTED',
+        'commissionAmount': 200,
+        'currency': 'THB',
+        'rejectionReason': 'Amount cannot be verified.',
+        'canApprove': false,
+        'canManualApprove': false,
+        'reviewHistory': [
+          {'action': 'REJECTED', 'reviewedAt': '2026-07-16T12:30:00Z'},
+        ],
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: _settlementPendingDetail()),
+          settlementApi: settlementApi,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transfer slip rejected'), findsWidgets);
+    expect(find.textContaining('Amount cannot be verified.'), findsOneWidget);
+    expect(find.text('Confirm 200 THB received'), findsNothing);
   });
 
   testWidgets('settlement detail CTA scrolls to settlement section', (
@@ -1448,7 +1580,7 @@ void main() {
     expect(find.text('Customer review'), findsOneWidget);
   });
 
-  testWidgets('check status CTA scrolls to status history section', (
+  testWidgets('check status CTA keeps operations summary visible', (
     tester,
   ) async {
     final detail = {
@@ -1478,6 +1610,13 @@ void main() {
       'primaryCta': 'CHECK_STATUS',
       'statusHistory': [
         {
+          'fromStatus': 'DRIVER_ASSIGNED',
+          'toStatus': 'ON_ROUTE',
+          'changedByRole': 'DRIVER',
+          'createdAt': '2026-07-11 10:30:00',
+          'memo': 'Driver started route',
+        },
+        {
           'fromStatus': 'CONFIRMED',
           'toStatus': 'DRIVER_ASSIGNED',
           'changedByRole': 'ADMIN',
@@ -1496,9 +1635,28 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Operations summary'), findsOneWidget);
+    expect(find.text('Current status'), findsOneWidget);
+    expect(find.text('Last status change'), findsOneWidget);
+    expect(find.text('Current status duration'), findsOneWidget);
+    expect(find.text('Driver A · ASSIGNED'), findsOneWidget);
+    expect(find.text('AVAILABLE'), findsWidgets);
+    expect(
+      find.text(
+        'The booking status has not changed for a long time. Check the current driver and trip status.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Driver started route'), findsWidgets);
+    expect(find.text('Driver'), findsWidgets);
+
     await tester.tap(find.text('Check status'));
     await tester.pumpAndSettle();
-    expect(find.text('Status history'), findsOneWidget);
+    expect(find.text('Operations summary'), findsOneWidget);
+
+    final onRouteY = tester.getTopLeft(find.text('On the way').first).dy;
+    final assignedY = tester.getTopLeft(find.text('Driver Assigned').last).dy;
+    expect(onRouteY, lessThan(assignedY));
   });
 
   testWidgets('receipt-required approval race shows friendly guidance', (
@@ -1508,6 +1666,8 @@ void main() {
       detail: {
         'bookingNumber': 'TX202607010001',
         'commissionStatus': 'RECEIPT_SUBMITTED',
+        'receiptStatus': 'RECEIPT_SUBMITTED',
+        'canApprove': true,
         'receiptUrl': '/api/v1/admin/settlements/TX202607010001/receipt',
       },
       approveError: const AdminSettlementApiException(
