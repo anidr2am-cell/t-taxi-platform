@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_booking_detail_page.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_dispatch_queue_page.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
+import 'package:frontend/features/admin_dispatch/utils/admin_operations_ux.dart';
 import 'package:frontend/features/admin_dispatch/widgets/recommend_drivers_dialog.dart';
 import 'package:frontend/features/admin_settlement/services/admin_settlement_api_service.dart';
 import 'package:frontend/l10n/app_localizations.dart';
@@ -536,6 +537,33 @@ void main() {
     await tester.tap(find.text('Issues').first);
     await tester.pumpAndSettle();
     expect(api.lastView, 'issues');
+  });
+
+  test('summary card keys map to matching booking list views', () {
+    expect(
+      AdminOperationsUx.viewForSummaryCard('needsAction'),
+      AdminBookingView.needsAction,
+    );
+    expect(
+      AdminOperationsUx.viewForSummaryCard('unassigned'),
+      AdminBookingView.all,
+    );
+    expect(
+      AdminOperationsUx.viewForSummaryCard('today'),
+      AdminBookingView.today,
+    );
+    expect(
+      AdminOperationsUx.viewForSummaryCard('inProgress'),
+      AdminBookingView.inProgress,
+    );
+    expect(
+      AdminOperationsUx.viewForSummaryCard('settlementPending'),
+      AdminBookingView.settlement,
+    );
+    expect(
+      AdminOperationsUx.viewForSummaryCard('issues'),
+      AdminBookingView.issues,
+    );
   });
 
   testWidgets('shows needs action tab and summary cards by default', (

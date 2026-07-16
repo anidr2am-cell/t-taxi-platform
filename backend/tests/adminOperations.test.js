@@ -79,6 +79,33 @@ test("evaluateOperations marks overdue unassigned as urgent", () => {
   assert.equal(ops.needsAction, true);
 });
 
+test("evaluateOperations treats stale driver_id without active assignment as unassigned", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "OPEN",
+    scheduled_pickup_at: "2026-07-11 08:00:00",
+    driver_id: 42,
+    assignment_id: null,
+    updated_at: "2026-07-11 08:00:00",
+  });
+  assert.equal(ops.primaryActionReason, "PICKUP_OVERDUE_UNASSIGNED");
+  assert.equal(ops.primaryCta, "ASSIGN_DRIVER");
+  assert.equal(ops.needsAction, true);
+});
+
+test("evaluateOperations does not mark active assignment as unassigned", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "OPEN",
+    scheduled_pickup_at: "2026-07-11 08:00:00",
+    driver_id: 42,
+    assignment_id: 7,
+    updated_at: "2026-07-11 08:00:00",
+  });
+  assert.notEqual(ops.primaryActionReason, "PICKUP_OVERDUE_UNASSIGNED");
+  assert.notEqual(ops.primaryCta, "ASSIGN_DRIVER");
+});
+
 test("evaluateOperations keeps a four-hour-future unassigned booking out of needs action", () => {
   const service = new AdminOperationsService(() => fixedNow());
   const ops = service.evaluateOperations({
@@ -280,6 +307,43 @@ test("issues summary filter uses issues view not needs_action", () => {
   assert.equal(filters.issuesOnly, true);
   assert.equal(filters.adminUserId, 3);
   assert.notEqual(filters.needsActionOnly, true);
+});
+
+test("summary card filters match their list filters", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const fields = [
+    "view",
+    "status",
+    "statuses",
+    "serviceDateFrom",
+    "serviceDateTo",
+    "assignmentState",
+    "unassignedOnly",
+    "archivedOnly",
+    "settlementStatus",
+    "issuesOnly",
+    "needsActionOnly",
+    "excludeTerminalStatuses",
+    "adminUserId",
+  ];
+  const comparable = (filters) =>
+    Object.fromEntries(fields.map((field) => [field, filters[field] ?? null]));
+  const cases = [
+    ["needs_action", { view: ADMIN_BOOKING_VIEWS.NEEDS_ACTION }],
+    ["unassigned", { view: ADMIN_BOOKING_VIEWS.ALL, assignmentState: "UNASSIGNED" }],
+    ["today", { view: ADMIN_BOOKING_VIEWS.TODAY }],
+    ["in_progress", { view: ADMIN_BOOKING_VIEWS.IN_PROGRESS }],
+    ["settlement", { view: ADMIN_BOOKING_VIEWS.SETTLEMENT }],
+    ["issues", { view: ADMIN_BOOKING_VIEWS.ISSUES }],
+  ];
+
+  for (const [summaryKey, listQuery] of cases) {
+    assert.deepEqual(
+      comparable(service.buildSummaryFilter(summaryKey, 3)),
+      comparable(service.buildFilters(listQuery, 3)),
+      summaryKey,
+    );
+  }
 });
 
 test("issues SQL is narrower than needs action SQL", () => {

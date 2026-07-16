@@ -1323,16 +1323,18 @@ test("admin booking query groups unassigned first with group-specific newest ord
 
   assert.match(
     capturedSql,
-    /CASE WHEN b\.driver_id IS NULL THEN 0 ELSE 1 END ASC/,
+    /CASE WHEN\s+NOT EXISTS\s+\(/,
+  );
+  assert.match(capturedSql, /active_bda\.booking_id = b\.id/);
+  assert.match(
+    capturedSql,
+    /THEN b\.created_at END DESC/,
   );
   assert.match(
     capturedSql,
-    /CASE WHEN b\.driver_id IS NULL THEN b\.created_at END DESC/,
+    /EXISTS\s+\([\s\S]*THEN b\.scheduled_pickup_at END DESC/,
   );
-  assert.match(
-    capturedSql,
-    /CASE WHEN b\.driver_id IS NOT NULL THEN b\.scheduled_pickup_at END DESC/,
-  );
+  assert.doesNotMatch(capturedSql, /b\.driver_id IS NULL THEN 0 ELSE 1/);
   assert.match(capturedSql, /b\.is_archived = 0/);
 });
 
@@ -1360,13 +1362,28 @@ test("admin unassigned count uses active-assignment absence and distinct booking
   assert.match(capturedSql, /COUNT\(DISTINCT b\.id\)/);
   assert.match(capturedSql, /b\.status IN \(\?, \?, \?\)/);
   assert.match(capturedSql, /NOT EXISTS/);
-  assert.match(capturedSql, /bda\.is_active = 1/);
-  assert.match(capturedSql, /bda\.deleted_at IS NULL/);
+  assert.match(capturedSql, /active_bda\.is_active = 1/);
+  assert.match(capturedSql, /active_bda\.deleted_at IS NULL/);
+  assert.doesNotMatch(capturedSql, /b\.driver_id IS NULL/);
   assert.deepEqual(capturedParams.slice(-3), [
     BOOKING_STATUS.PENDING,
     BOOKING_STATUS.OPEN,
     BOOKING_STATUS.CONFIRMED,
   ]);
+});
+
+test("needs action SQL uses official active-assignment absence for unassigned reasons", () => {
+  const repository = new BookingRepository({});
+  const where = repository.buildNeedsActionWhere({
+    operationsNow: "2026-07-11 10:00:00",
+    operationsUrgentCutoff: "2026-07-11 10:30:00",
+    adminUserId: null,
+  });
+
+  assert.match(where.sql, /NOT EXISTS/);
+  assert.match(where.sql, /active_bda\.booking_id = b\.id/);
+  assert.match(where.sql, /b\.status IN \('PENDING', 'OPEN', 'CONFIRMED'\)/);
+  assert.doesNotMatch(where.sql, /b\.driver_id IS NULL/);
 });
 
 test("ADMIN can get booking detail", async () => {
