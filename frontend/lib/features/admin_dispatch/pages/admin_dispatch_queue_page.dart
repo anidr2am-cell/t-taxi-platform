@@ -777,8 +777,6 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         ? Map<String, dynamic>.from(item['operations'] as Map)
         : null;
     final status = item['status'] as String? ?? '';
-    final cta =
-        item['primaryCta'] as String? ?? operations?['primaryCta'] as String?;
 
     return Padding(
       padding: AppUi.pagePadding(context),
@@ -833,7 +831,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
               Text(item['scheduledPickupAt'] as String? ?? '-'),
               const Spacer(),
               AppUi.primaryButton(
-                label: AdminOperationsUx.primaryCtaLabel(l10n, cta),
+                label: AdminOperationsUx.listCtaLabel(l10n),
                 icon: Icons.open_in_new,
                 onPressed: () => _openDetail(item['bookingNumber'] as String),
               ),
@@ -997,8 +995,10 @@ class _BookingListCard extends StatelessWidget {
         : null;
     final severity = operations?['severity'] as String?;
     final reason = AdminOperationsUx.formatActionReason(l10n, operations);
-    final cta =
-        item['primaryCta'] as String? ?? operations?['primaryCta'] as String?;
+    final secondaryReasons = AdminOperationsUx.secondaryActionReasonLabels(
+      l10n,
+      operations,
+    );
     final archive = item['archive'] is Map
         ? Map<String, dynamic>.from(item['archive'] as Map)
         : const <String, dynamic>{};
@@ -1073,6 +1073,40 @@ class _BookingListCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+          if (secondaryReasons.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              title: Text(
+                l10n
+                    .t('admin_ops_more_reasons')
+                    .replaceAll('{count}', '${secondaryReasons.length}'),
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              children: [
+                for (final secondaryReason in secondaryReasons)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $secondaryReason',
+                        style: const TextStyle(
+                          color: AppTokens.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             AdminOperationsUx.routeContextLabel(
@@ -1130,7 +1164,7 @@ class _BookingListCard extends StatelessWidget {
                   ),
                 TextButton(
                   onPressed: onPrimaryAction,
-                  child: Text(AdminOperationsUx.primaryCtaLabel(l10n, cta)),
+                  child: Text(AdminOperationsUx.listCtaLabel(l10n)),
                 ),
               ],
             ),

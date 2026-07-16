@@ -134,12 +134,20 @@ class AdminOperationsUx {
     if (operations == null) return '';
     final primary = operations['primaryActionReason'] as String?;
     if (primary == null || primary.isEmpty) return '';
-    final label = actionReasonLabel(l10n, primary);
-    final extra = operations['extraActionReasonCount'] as int? ?? 0;
-    if (extra > 0) {
-      return '$label (+$extra)';
-    }
-    return label;
+    return actionReasonLabel(l10n, primary);
+  }
+
+  static List<String> secondaryActionReasonLabels(
+    AppLocalizations l10n,
+    Map<String, dynamic>? operations,
+  ) {
+    final reasons = operations?['actionReasons'];
+    if (reasons is! List || reasons.length <= 1) return const [];
+    return reasons
+        .skip(1)
+        .map((code) => actionReasonLabel(l10n, code?.toString()))
+        .where((label) => label.isNotEmpty)
+        .toList();
   }
 
   static String nextActionLabel(
@@ -196,6 +204,10 @@ class AdminOperationsUx {
       default:
         return l10n.t('admin_ops_cta_view_booking');
     }
+  }
+
+  static String listCtaLabel(AppLocalizations l10n) {
+    return l10n.t('admin_ops_cta_review_act');
   }
 
   static String routeContextLabel(

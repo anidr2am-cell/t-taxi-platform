@@ -1,6 +1,7 @@
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const {
   ADMIN_BOOKING_VIEWS,
+  OPERATIONS_CTA,
   OPERATIONS_SEVERITY,
   OPERATIONS_THRESHOLDS,
   DEFAULT_HISTORY_DAYS,
@@ -466,35 +467,40 @@ class AdminOperationsService {
     const status = row.status;
     if (!primaryReason) {
       if (status === BOOKING_STATUS.COMPLETED || status === BOOKING_STATUS.CANCELLED || status === BOOKING_STATUS.NO_SHOW) {
-        return 'VIEW_BOOKING';
+        return OPERATIONS_CTA.VIEW_BOOKING;
       }
       if (ACTIVE_OPERATING_STATUSES.includes(status)) {
-        return 'CHECK_STATUS';
+        return OPERATIONS_CTA.CHECK_STATUS;
       }
-      return 'VIEW_BOOKING';
+      return OPERATIONS_CTA.VIEW_BOOKING;
     }
 
     switch (primaryReason.code) {
       case 'LOW_RATING':
-        return 'REVIEW_RATING';
+        return OPERATIONS_CTA.REVIEW_RATING;
       case 'RECEIPT_REJECTED':
-        return 'SETTLEMENT_DETAIL';
+        return OPERATIONS_CTA.SETTLEMENT_DETAIL;
       case 'RECEIPT_REVIEW':
-        return 'CONFIRM_SETTLEMENT';
+        return OPERATIONS_CTA.CONFIRM_SETTLEMENT;
       case 'RECEIPT_MISSING':
-        return 'SETTLEMENT_DETAIL';
+        return OPERATIONS_CTA.SETTLEMENT_DETAIL;
       case 'PICKUP_OVERDUE_UNASSIGNED':
       case 'PICKUP_SOON_UNASSIGNED':
-        return 'ASSIGN_DRIVER';
+        return OPERATIONS_CTA.ASSIGN_DRIVER;
       case 'CUSTOMER_INQUIRY':
-        return 'OPEN_CHAT';
+        return OPERATIONS_CTA.OPEN_CHAT;
+      case 'PICKUP_OVERDUE_STALLED':
+      case 'BOARDING_DELAY':
+      case 'LONG_TRIP':
+      case 'STATUS_STALE':
+        return OPERATIONS_CTA.CHECK_STATUS;
       default:
         if (this.isUnassigned(row) && !TERMINAL_BOOKING_STATUSES.includes(status)) {
-          return 'ASSIGN_DRIVER';
+          return OPERATIONS_CTA.ASSIGN_DRIVER;
         }
-        if (this.hasReceiptSubmitted(row)) return 'CONFIRM_SETTLEMENT';
-        if (status === BOOKING_STATUS.SETTLEMENT_PENDING) return 'SETTLEMENT_DETAIL';
-        return 'VIEW_BOOKING';
+        if (this.hasReceiptSubmitted(row)) return OPERATIONS_CTA.CONFIRM_SETTLEMENT;
+        if (status === BOOKING_STATUS.SETTLEMENT_PENDING) return OPERATIONS_CTA.SETTLEMENT_DETAIL;
+        return OPERATIONS_CTA.VIEW_BOOKING;
     }
   }
 

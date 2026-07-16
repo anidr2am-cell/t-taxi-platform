@@ -740,6 +740,57 @@ void main() {
     expect(find.text('Unassigned'), findsWidgets);
   });
 
+  testWidgets('queue card uses review-and-act CTA and expands extra reasons', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final item = {
+      ..._queueItem('TX202607010001'),
+      'operations': {
+        'severity': 'URGENT',
+        'primaryActionReason': 'PICKUP_OVERDUE_UNASSIGNED',
+        'primaryCta': 'ASSIGN_DRIVER',
+        'actionReasons': [
+          'PICKUP_OVERDUE_UNASSIGNED',
+          'CUSTOMER_INQUIRY',
+          'STATUS_STALE',
+        ],
+        'extraActionReasonCount': 2,
+      },
+      'primaryCta': 'ASSIGN_DRIVER',
+    };
+    final api = _FakeAdminApi(
+      token: 'token',
+      bookingsResponse: {
+        'page': 1,
+        'total': 1,
+        'items': [item],
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: AdminDispatchQueuePage(api: api)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pickup overdue · unassigned'), findsOneWidget);
+    expect(find.text('2 more reasons'), findsOneWidget);
+    expect(find.text('Review & act'), findsOneWidget);
+    expect(find.text('Assign driver'), findsNothing);
+    expect(find.text('CUSTOMER_INQUIRY'), findsNothing);
+
+    await tester.tap(find.byType(ExpansionTile).first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Customer inquiry pending'), findsOneWidget);
+    expect(find.textContaining('No recent status change'), findsOneWidget);
+
+    await tester.tap(find.byType(ExpansionTile).first);
+    await tester.pumpAndSettle();
+    expect(api.assignCalls, 0);
+  });
+
   testWidgets('terminal booking hides assign action', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -1307,6 +1358,147 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(settlementApi.approveCalls, 1);
+  });
+
+  testWidgets('settlement detail CTA scrolls to settlement section', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final detail = {
+      ..._settlementPendingDetail(),
+      'operations': {
+        'primaryActionReason': 'RECEIPT_MISSING',
+        'primaryCta': 'SETTLEMENT_DETAIL',
+        'actionReasons': ['RECEIPT_MISSING'],
+      },
+      'primaryCta': 'SETTLEMENT_DETAIL',
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: detail),
+          settlementApi: _FakeSettlementApi(
+            detail: const {
+              'bookingNumber': 'TX202607010001',
+              'commissionStatus': 'DUE',
+              'commissionAmount': 200,
+              'currency': 'THB',
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Settlement detail'));
+    await tester.pumpAndSettle();
+    expect(find.text('Settlement confirmation'), findsOneWidget);
+  });
+
+  testWidgets('review rating CTA scrolls to customer review section', (
+    tester,
+  ) async {
+    final detail = {
+      'bookingNumber': 'TX202607010001',
+      'status': 'COMPLETED',
+      'route': {
+        'origin': {'address': 'BKK'},
+        'destination': {'address': 'Pattaya'},
+      },
+      'customer': {'name': 'Kim', 'phone': '+66123456789'},
+      'pricing': {
+        'totalAmount': 1200,
+        'currency': 'THB',
+        'paymentMethod': 'PAY_DRIVER',
+      },
+      'allowedActions': [],
+      'operations': {
+        'primaryActionReason': 'LOW_RATING',
+        'primaryCta': 'REVIEW_RATING',
+        'actionReasons': ['LOW_RATING'],
+      },
+      'primaryCta': 'REVIEW_RATING',
+      'customerReview': {
+        'reviewId': 9,
+        'rating': 2,
+        'tags': ['LATE_ARRIVAL'],
+        'comment': 'Driver was late.',
+        'lowRating': true,
+        'createdAt': '2026-07-02 10:00:00',
+      },
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: detail),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Review rating'));
+    await tester.pumpAndSettle();
+    expect(find.text('Customer review'), findsOneWidget);
+  });
+
+  testWidgets('check status CTA scrolls to status history section', (
+    tester,
+  ) async {
+    final detail = {
+      'bookingNumber': 'TX202607010001',
+      'status': 'DRIVER_ASSIGNED',
+      'route': {
+        'origin': {'address': 'BKK'},
+        'destination': {'address': 'Pattaya'},
+      },
+      'customer': {'name': 'Kim', 'phone': '+66123456789'},
+      'pricing': {
+        'totalAmount': 1200,
+        'currency': 'THB',
+        'paymentMethod': 'PAY_DRIVER',
+      },
+      'activeAssignment': {
+        'driverDisplayName': 'Driver A',
+        'driverStatus': 'AVAILABLE',
+        'status': 'ASSIGNED',
+      },
+      'allowedActions': ['REASSIGN_DRIVER'],
+      'operations': {
+        'primaryActionReason': 'STATUS_STALE',
+        'primaryCta': 'CHECK_STATUS',
+        'actionReasons': ['STATUS_STALE'],
+      },
+      'primaryCta': 'CHECK_STATUS',
+      'statusHistory': [
+        {
+          'fromStatus': 'CONFIRMED',
+          'toStatus': 'DRIVER_ASSIGNED',
+          'changedByRole': 'ADMIN',
+          'createdAt': '2026-07-11 09:30:00',
+        },
+      ],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: detail),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Check status'));
+    await tester.pumpAndSettle();
+    expect(find.text('Status history'), findsOneWidget);
   });
 
   testWidgets('receipt-required approval race shows friendly guidance', (
