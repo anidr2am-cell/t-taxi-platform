@@ -9,6 +9,7 @@ import '../services/booking_api_service.dart';
 import '../services/booking_chat_api.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
+import '../utils/customer_booking_format.dart';
 import '../widgets/booking_chat_section.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
@@ -26,6 +27,7 @@ class GuestBookingLookupPage extends StatefulWidget {
     this.bookingChatSocketService,
     this.enableCustomerTools = false,
     this.reviewApi,
+    this.trackingBuilder,
   });
 
   final GuestBookingLookupService? lookupService;
@@ -33,6 +35,7 @@ class GuestBookingLookupPage extends StatefulWidget {
   final ChatSocketService? bookingChatSocketService;
   final bool enableCustomerTools;
   final BookingReviewApi? reviewApi;
+  final Widget Function(GuestBookingLookupResult result)? trackingBuilder;
 
   @override
   State<GuestBookingLookupPage> createState() => _GuestBookingLookupPageState();
@@ -165,6 +168,53 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     return _pickupAlertStatuses.contains(result.status) &&
         hasDriver &&
         result.guestAccessToken.trim().isNotEmpty;
+  }
+
+  bool _canShowTracking(GuestBookingLookupResult result) {
+    const trackingStatuses = {
+      'DRIVER_ASSIGNED',
+      'ON_ROUTE',
+      'DRIVER_ARRIVED',
+      'PICKED_UP',
+    };
+    return widget.enableCustomerTools &&
+        result.bookingId != null &&
+        result.capabilities.trackingAvailable &&
+        trackingStatuses.contains(result.status) &&
+        result.guestAccessToken.trim().isNotEmpty;
+  }
+
+  bool _canShowNotifications(GuestBookingLookupResult result) {
+    return widget.enableCustomerTools &&
+        result.capabilities.notificationsAvailable &&
+        result.guestAccessToken.trim().isNotEmpty;
+  }
+
+  bool _canShowChat(GuestBookingLookupResult result) {
+    return widget.enableCustomerTools &&
+        result.capabilities.chatAvailable &&
+        result.guestAccessToken.trim().isNotEmpty;
+  }
+
+  bool _canShowDriverPhone(GuestBookingLookupResult result) {
+    const activeStatuses = {
+      'DRIVER_ASSIGNED',
+      'ON_ROUTE',
+      'DRIVER_ARRIVED',
+      'PICKED_UP',
+    };
+    return activeStatuses.contains(result.status) &&
+        result.driverPhone?.trim().isNotEmpty == true &&
+        result.guestAccessToken.trim().isNotEmpty;
+  }
+
+  Widget _trackingSection(GuestBookingLookupResult result) {
+    return widget.trackingBuilder?.call(result) ??
+        GuestDriverTrackingSection(
+          bookingId: result.bookingId!,
+          guestAccessToken: result.guestAccessToken,
+          bookingStatus: result.status,
+        );
   }
 
   Future<void> _lookup() async {
@@ -358,6 +408,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ],
           ),
         ),
+        const SizedBox(height: AppTokens.spaceMd),
+        _actionSummary(result),
         if (result.driverName?.trim().isNotEmpty == true) ...[
           const SizedBox(height: AppTokens.spaceMd),
           AssignedDriverStatusCard(result: result),
@@ -419,7 +471,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             children: [
               AppUi.summaryRow(
                 label: l10n.t('guest_lookup_pickup'),
-                value: result.scheduledPickupAt ?? '-',
+                value: CustomerBookingFormat.pickupDateTime(
+                  l10n,
+                  result.scheduledPickupAt,
+                ),
               ),
               AppUi.summaryRow(
                 label: l10n.t('guest_lookup_service'),
@@ -439,10 +494,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                   label: l10n.t('guest_lookup_driver'),
                   value: result.driverName!,
                 ),
-                if (result.driverPhone != null)
+                if (_canShowDriverPhone(result))
                   AppUi.summaryRow(
                     label: l10n.t('guest_lookup_driver_phone'),
-                    value: result.driverPhone!,
+                    value: result.driverPhone!.trim(),
                   ),
               ],
             ],
@@ -462,7 +517,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
             vehicleInfo: AirportMeetingVehicleInfo(
               driverName: result.driverName,
-              driverPhone: result.driverPhone,
+              driverPhone: _canShowDriverPhone(result)
+                  ? result.driverPhone
+                  : null,
               vehicleType: result.vehicleType,
               vehicleColor: result.vehicleColor,
               vehiclePlateNumber: result.vehiclePlateNumber,
@@ -480,12 +537,18 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             children: [
               AppUi.summaryRow(
                 label: l10n.t('guest_lookup_total'),
-                value: '${result.totalAmount} ${result.currency}',
+                value: CustomerBookingFormat.money(
+                  result.totalAmount,
+                  result.currency,
+                ),
                 emphasize: true,
               ),
               AppUi.summaryRow(
                 label: l10n.t('guest_lookup_payment'),
-                value: result.paymentMethod,
+                value: CustomerBookingFormat.paymentMethod(
+                  l10n,
+                  result.paymentMethod,
+                ),
               ),
             ],
           ),
@@ -497,21 +560,16 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         ],
         if (widget.enableCustomerTools) ...[
           const SizedBox(height: AppTokens.spaceMd),
-          if (result.bookingId != null)
-            GuestDriverTrackingSection(
-              bookingId: result.bookingId!,
-              guestAccessToken: result.guestAccessToken,
-              bookingStatus: result.status,
-            ),
-          if (result.bookingId != null)
+          if (_canShowTracking(result)) _trackingSection(result),
+          if (_canShowTracking(result))
             const SizedBox(height: AppTokens.spaceMd),
-          if (result.capabilities.notificationsAvailable)
+          if (_canShowNotifications(result))
             BookingNotificationSection(
               bookingNumber: result.bookingNumber,
               bookingId: result.bookingId,
               guestAccessToken: result.guestAccessToken,
             ),
-          if (result.capabilities.chatAvailable) ...[
+          if (_canShowChat(result)) ...[
             const SizedBox(height: AppTokens.spaceMd),
             BookingChatSection(
               bookingNumber: result.bookingNumber,
@@ -530,5 +588,74 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         ),
       ],
     );
+  }
+
+  Widget _actionSummary(GuestBookingLookupResult result) {
+    final l10n = context.l10n;
+    final driverSummary = _driverSummary(result, l10n);
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.infoLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.t('customer_next_action'),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppTokens.info,
+            ),
+          ),
+          const SizedBox(height: 8),
+          AppUi.summaryRow(
+            label: l10n.t('status'),
+            value: BookingStatusDisplay.label(l10n, result.status),
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('pickup_datetime'),
+            value: CustomerBookingFormat.pickupDateTime(
+              l10n,
+              result.scheduledPickupAt,
+            ),
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('customer_driver_assignment'),
+            value: driverSummary,
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('customer_payment_method'),
+            value: CustomerBookingFormat.paymentMethod(
+              l10n,
+              result.paymentMethod,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            BookingStatusDisplay.customerGuidance(l10n, result.status) ??
+                l10n.t('customer_status_unknown_guidance'),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _driverSummary(
+    GuestBookingLookupResult result,
+    AppLocalizations l10n,
+  ) {
+    final driverName = result.driverName?.trim();
+    if (driverName == null || driverName.isEmpty) {
+      return l10n.t('customer_driver_pending');
+    }
+    final vehicle =
+        [result.vehicleType, result.vehicleColor, result.vehiclePlateNumber]
+            .whereType<String>()
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .join(' · ');
+    return vehicle.isEmpty ? driverName : '$driverName · $vehicle';
   }
 }

@@ -54,7 +54,7 @@ void main() {
 
     expect(enLabel.toLowerCase(), isNot(contains('settlement')));
     expect(enGuidance.toLowerCase(), isNot(contains('settlement')));
-    expect(enGuidance, contains('Please rate your driver'));
+    expect(enGuidance, contains('Thank you for riding with us'));
 
     final koLabel = BookingStatusDisplay.label(
       ko,
@@ -67,13 +67,13 @@ void main() {
     )!;
     expect(koLabel, isNot(contains('정산')));
     expect(koGuidance, isNot(contains('정산')));
-    expect(koGuidance, contains('평가'));
+    expect(koGuidance, contains('이용해 주셔서 감사합니다'));
 
     final thGuidance = BookingStatusDisplay.customerGuidance(
       th,
       'SETTLEMENT_PENDING',
     )!;
-    expect(thGuidance, contains('กรุณาให้คะแนนคนขับ'));
+    expect(thGuidance, contains('ขอบคุณที่ใช้บริการ'));
   });
 
   test('admin SETTLEMENT_PENDING label keeps settlement wording', () {

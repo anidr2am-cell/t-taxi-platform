@@ -99,8 +99,9 @@ class GuestBookingLookupResult {
       guestAccessToken: token,
       guestAccessExpiresAt: guestAccess['expiresAt'] as String?,
       capabilities: capabilities,
-      canReview: json['canReview'] == true
-          || (json['canReview'] == null && capabilities.reviewAvailable),
+      canReview:
+          json['canReview'] == true ||
+          (json['canReview'] == null && capabilities.reviewAvailable),
       review: json['review'] is Map
           ? GuestBookingReviewSnapshot.fromJson(
               Map<String, dynamic>.from(json['review'] as Map),
@@ -224,6 +225,7 @@ class GuestBookingLookupResult {
         notificationsAvailable: false,
         dropoffQrIssueAvailable: false,
         reviewAvailable: false,
+        trackingAvailable: false,
         boardingQrRecoverable: boardingQrStatuses.contains(status),
         boardingQrPreviouslyIssued: boardingQrStatuses.contains(status),
       ),
@@ -351,6 +353,7 @@ class GuestBookingCapabilities {
     required this.notificationsAvailable,
     required this.dropoffQrIssueAvailable,
     required this.reviewAvailable,
+    required this.trackingAvailable,
     required this.boardingQrRecoverable,
     required this.boardingQrPreviouslyIssued,
   });
@@ -359,6 +362,7 @@ class GuestBookingCapabilities {
   final bool notificationsAvailable;
   final bool dropoffQrIssueAvailable;
   final bool reviewAvailable;
+  final bool trackingAvailable;
   final bool boardingQrRecoverable;
   final bool boardingQrPreviouslyIssued;
 
@@ -368,6 +372,7 @@ class GuestBookingCapabilities {
       notificationsAvailable: json['notificationsAvailable'] != false,
       dropoffQrIssueAvailable: json['dropoffQrIssueAvailable'] == true,
       reviewAvailable: json['reviewAvailable'] == true,
+      trackingAvailable: json['trackingAvailable'] == true,
       boardingQrRecoverable: json['boardingQrRecoverable'] == true,
       boardingQrPreviouslyIssued: json['boardingQrPreviouslyIssued'] == true,
     );
@@ -378,6 +383,7 @@ class GuestBookingCapabilities {
     'notificationsAvailable': notificationsAvailable,
     'dropoffQrIssueAvailable': dropoffQrIssueAvailable,
     'reviewAvailable': reviewAvailable,
+    'trackingAvailable': trackingAvailable,
     'boardingQrRecoverable': boardingQrRecoverable,
     'boardingQrPreviouslyIssued': boardingQrPreviouslyIssued,
   };

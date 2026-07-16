@@ -53,7 +53,8 @@ class TTaxiApp extends StatelessWidget {
       ],
       routes: {
         '/admin': (_) => const AdminScreen(initialTab: 1),
-        '/booking/lookup': (_) => const GuestBookingLookupPage(),
+        '/booking/lookup': (_) =>
+            const GuestBookingLookupPage(enableCustomerTools: true),
         '/driver': (_) =>
             const DriverPwaInstallPromptHost(child: DriverLoginPage()),
         '/driver/login': (_) =>

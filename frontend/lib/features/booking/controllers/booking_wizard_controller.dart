@@ -38,7 +38,8 @@ class BookingWizardController extends ChangeNotifier {
   bool get isSubmitting => _isSubmitting;
   bool get isInitialized => _isInitialized;
 
-  static const validationSteps = [0, 1, 2, 3, 4, 5, 6];
+  static const validationSteps = [0, 1, 2, 3, 4, 5, 6, 7];
+  static const preConfirmationSteps = [0, 1, 2, 3, 4, 5, 6];
 
   static const vehicleTierOrder = [
     'SEDAN',
@@ -550,7 +551,7 @@ class BookingWizardController extends ChangeNotifier {
     } catch (e) {
       final fieldError = _bookingValidationError(e);
       _state = _state.copyWith(
-        step: fieldError?.step ?? _state.step,
+        step: _state.step == 7 ? 7 : (fieldError?.step ?? _state.step),
         errorMessage:
             fieldError?.messageKey ??
             userFacingError(e, fallback: 'ui_load_failed'),
@@ -972,6 +973,8 @@ class BookingWizardController extends ChangeNotifier {
         return _state.selectedVehicle != null && _state.pricing != null;
       case 6:
         return _isCustomerStepValid();
+      case 7:
+        return canProceedToConfirmation();
       default:
         return false;
     }
@@ -980,6 +983,13 @@ class BookingWizardController extends ChangeNotifier {
   bool isStepComplete(int step) => canProceedFromStep(step);
 
   bool canProceedFromCurrentStep() => canProceedFromStep(_state.step);
+
+  bool canProceedToConfirmation() {
+    for (final step in preConfirmationSteps) {
+      if (!canProceedFromStep(step)) return false;
+    }
+    return true;
+  }
 
   bool canLoadRecommendation() {
     if (_state.serviceType == null ||
@@ -1071,6 +1081,8 @@ class BookingWizardController extends ChangeNotifier {
           return 'wizard_customer_email_invalid';
         }
         return 'wizard_required_customer';
+      case 7:
+        return 'customer_confirmation_required';
       default:
         return null;
     }

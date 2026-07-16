@@ -108,13 +108,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TX202607010001'), findsOneWidget);
-    expect(find.text('Customer onboard'), findsOneWidget);
+    expect(find.text('Customer onboard'), findsWidgets);
     expect(find.text('Boarding QR'), findsNothing);
     expect(find.text('Issue dropoff QR'), findsNothing);
-    expect(
-      find.text('You are on the way to your destination.'),
-      findsOneWidget,
-    );
+    expect(find.text('You are on the way to your destination.'), findsWidgets);
   });
 
   testWidgets('lookup page refresh updates status', (tester) async {
@@ -133,11 +130,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Customer onboard'), findsOneWidget);
+    expect(find.text('Customer onboard'), findsWidgets);
     await tester.tap(find.byKey(const ValueKey('guest_lookup_refresh')));
     await tester.pumpAndSettle();
 
-    expect(find.text('On the way'), findsOneWidget);
+    expect(find.text('On the way'), findsWidgets);
     expect(service.refreshCount, 1);
   });
 
@@ -226,7 +223,7 @@ void main() {
       find.text(
         'Booking not found. Please check your booking number and phone.',
       ),
-      findsOneWidget,
+      findsWidgets,
     );
   });
 
@@ -307,8 +304,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Cancelled'), findsOneWidget);
-    expect(find.text('This booking was cancelled.'), findsOneWidget);
+    expect(find.text('Cancelled'), findsWidgets);
+    expect(
+      find.text(
+        'This booking was cancelled. Please contact customer support for details.',
+      ),
+      findsWidgets,
+    );
   });
 
   testWidgets('SETTLEMENT_PENDING customer copy avoids settlement wording', (
@@ -328,10 +330,145 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Trip ended'), findsOneWidget);
+    expect(find.text('Trip ended'), findsWidgets);
     expect(find.textContaining('settlement', findRichText: true), findsNothing);
     expect(find.textContaining('Settlement'), findsNothing);
-    expect(find.textContaining('Please rate your driver'), findsOneWidget);
+    expect(find.textContaining('Thank you for riding with us'), findsWidgets);
+  });
+
+  testWidgets('lookup summary formats payment and pickup without raw codes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: _result()),
+          enableCustomerTools: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jul 1, 2026, 9:30 AM'), findsWidgets);
+    expect(find.text('฿1,500'), findsOneWidget);
+    expect(find.text('Pay the driver at the destination'), findsWidgets);
+    expect(find.text('PAY_DRIVER'), findsNothing);
+    expect(find.text('2026-07-01T09:30:00+07:00'), findsNothing);
+  });
+
+  testWidgets(
+    'completed lookup hides driver phone while keeping driver summary',
+    (tester) async {
+      final result = _result().copyWith(status: 'COMPLETED');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(cached: result),
+            enableCustomerTools: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Driver A'), findsWidgets);
+      expect(find.text('+66 80 000 0000'), findsNothing);
+    },
+  );
+
+  testWidgets('assigned booking hides tracking when capability is false', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['bookingId'] = 10;
+    json['status'] = 'DRIVER_ASSIGNED';
+    json['capabilities'] = _capabilities(trackingAvailable: false);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(
+            cached: GuestBookingLookupResult.fromJson(json),
+          ),
+          enableCustomerTools: true,
+          trackingBuilder: (_) => const Text('Track driver'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Track driver'), findsNothing);
+  });
+
+  testWidgets('assigned booking hides tracking when capability is absent', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['bookingId'] = 10;
+    json['status'] = 'DRIVER_ASSIGNED';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(
+            cached: GuestBookingLookupResult.fromJson(json),
+          ),
+          enableCustomerTools: true,
+          trackingBuilder: (_) => const Text('Track driver'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Track driver'), findsNothing);
+  });
+
+  testWidgets('active booking shows tracking only when capability is true', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['bookingId'] = 10;
+    json['status'] = 'DRIVER_ASSIGNED';
+    json['capabilities'] = _capabilities(trackingAvailable: true);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(
+            cached: GuestBookingLookupResult.fromJson(json),
+          ),
+          enableCustomerTools: true,
+          trackingBuilder: (_) => const Text('Track driver'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Track driver'), findsOneWidget);
+  });
+
+  testWidgets('terminal booking hides tracking even when capability is true', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['bookingId'] = 10;
+    json['status'] = 'COMPLETED';
+    json['capabilities'] = _capabilities(trackingAvailable: true);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(
+            cached: GuestBookingLookupResult.fromJson(json),
+          ),
+          enableCustomerTools: true,
+          trackingBuilder: (_) => const Text('Track driver'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Track driver'), findsNothing);
   });
 
   testWidgets('submitted review shows thank you card without submit form', (
@@ -593,7 +730,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const ValueKey('review_rating_5')));
+      final ratingButton = find.byKey(const ValueKey('review_rating_5'));
+      await tester.ensureVisible(ratingButton);
+      await tester.pump();
+      await tester.tap(ratingButton);
       await tester.pump();
       final submitButton = find.widgetWithText(ElevatedButton, 'Submit rating');
       await tester.ensureVisible(submitButton);
@@ -626,8 +766,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('運行終了'), findsOneWidget);
-    expect(find.textContaining('ドライバーを評価'), findsOneWidget);
+    expect(find.text('運行終了'), findsWidgets);
+    expect(find.textContaining('ご利用ありがとうございました'), findsWidgets);
     expect(find.text('How was your ride?'), findsNothing);
   });
 }
@@ -675,6 +815,16 @@ Map<String, dynamic> _lookupJson() => {
     'boardingQrPreviouslyIssued': true,
   },
   'guestAccess': {'token': 'guest-token', 'expiresAt': '2099-07-02T00:00:00Z'},
+};
+
+Map<String, dynamic> _capabilities({bool trackingAvailable = false}) => {
+  'chatAvailable': false,
+  'notificationsAvailable': false,
+  'dropoffQrIssueAvailable': false,
+  'reviewAvailable': false,
+  'trackingAvailable': trackingAvailable,
+  'boardingQrRecoverable': false,
+  'boardingQrPreviouslyIssued': true,
 };
 
 GuestBookingLookupResult _result() {
@@ -782,32 +932,5 @@ class _CountingBookingApi extends BookingApiService {
   }) async {
     dropoffIssueCalls += 1;
     throw UnimplementedError();
-  }
-}
-
-class _FakeBookingApi extends BookingApiService {
-  _FakeBookingApi()
-    : super.test(
-        client: MockClient((_) async => http.Response('{}', 500)),
-        baseUrl: 'http://localhost:3000',
-      );
-
-  int boardingIssueCalls = 0;
-  String? lastGuestAccessToken;
-
-  @override
-  Future<BoardingQrIssueResult> issueBoardingQr({
-    required String bookingNumber,
-    required String? guestAccessToken,
-    bool forceReissue = false,
-  }) async {
-    boardingIssueCalls += 1;
-    lastGuestAccessToken = guestAccessToken;
-    return BoardingQrIssueResult(
-      bookingNumber: bookingNumber,
-      status: 'DRIVER_ARRIVED',
-      boardingQrToken: 'recovered-boarding-token',
-      boardingQrExpiresAt: '2099-01-01 00:00:00',
-    );
   }
 }
