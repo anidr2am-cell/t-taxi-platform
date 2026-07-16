@@ -12,6 +12,16 @@ import '../services/admin_dispatch_api_service.dart';
 import '../utils/admin_operations_ux.dart';
 import 'admin_booking_detail_page.dart';
 
+String? _serviceTypeCodeFromItem(Map<String, dynamic> item) {
+  final serviceType = item['serviceType'];
+  if (serviceType is Map) {
+    final code = serviceType['code'];
+    if (code is String && code.isNotEmpty) return code;
+  }
+  final code = item['serviceTypeCode'];
+  return code is String && code.isNotEmpty ? code : null;
+}
+
 class AdminDispatchQueuePage extends StatefulWidget {
   const AdminDispatchQueuePage({super.key, this.api});
 
@@ -275,6 +285,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
 
   Future<void> _archiveSelected() async {
     if (_selectedForArchive.isEmpty || _archiveSubmitting) return;
+    final l10n = context.l10n;
     final selectedItems = _items
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
@@ -284,11 +295,11 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('선택한 예약을 테스트 데이터로 숨기시겠습니까?'),
+        title: Text(l10n.t('admin_ops_archive_confirm_title')),
         content: Text(
           hasWarning
-              ? '이미 배정, 운행, 정산 기록이 있는 예약이 포함되어 있습니다. 예약과 연결 데이터는 삭제되지 않고 관리자 기본 목록에서만 숨겨집니다.'
-              : '예약과 연결 데이터는 삭제되지 않고 관리자 기본 목록에서만 숨겨집니다.',
+              ? l10n.t('admin_ops_archive_warning')
+              : l10n.t('admin_ops_archive_info'),
         ),
         actions: [
           TextButton(
@@ -297,7 +308,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('테스트 예약 숨기기'),
+            child: Text(
+              l10n.t('admin_ops_archive_bulk').replaceAll(' ({count})', ''),
+            ),
           ),
         ],
       ),
@@ -307,9 +320,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
     try {
       await _api.archiveBookings(_selectedForArchive.toList());
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('선택한 예약을 숨겼습니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('admin_ops_archive_success'))),
+      );
       await Future.wait([_loadSummary(), _load(page: 1)]);
     } catch (err) {
       if (mounted) {
@@ -318,8 +331,8 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
             content: Text(
               userFacingError(
                 err,
-                fallback: context.l10n.t('ui_action_failed'),
-                languageCode: context.l10n.languageCode,
+                fallback: l10n.t('admin_ops_archive_failed'),
+                languageCode: l10n.languageCode,
               ),
             ),
           ),
@@ -332,13 +345,14 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
 
   Future<void> _restoreBooking(String bookingNumber) async {
     if (_archiveSubmitting) return;
+    final l10n = context.l10n;
     setState(() => _archiveSubmitting = true);
     try {
       await _api.restoreBookings([bookingNumber]);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('숨긴 예약을 복원했습니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('admin_ops_archive_restore_success'))),
+      );
       await Future.wait([_loadSummary(), _load(page: 1)]);
     } catch (err) {
       if (mounted) {
@@ -347,8 +361,8 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
             content: Text(
               userFacingError(
                 err,
-                fallback: context.l10n.t('ui_action_failed'),
-                languageCode: context.l10n.languageCode,
+                fallback: l10n.t('admin_ops_archive_restore_failed'),
+                languageCode: l10n.languageCode,
               ),
             ),
           ),
@@ -509,7 +523,13 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
           FilterChip(
             selected: _showArchived,
             avatar: const Icon(Icons.archive_outlined, size: 18),
-            label: const Text('숨긴 예약 보기'),
+            label: Text(
+              l10n.t(
+                _showArchived
+                    ? 'admin_ops_archive_hide'
+                    : 'admin_ops_archive_show',
+              ),
+            ),
             onSelected: _toggleArchivedView,
           ),
           if (!_showArchived)
@@ -524,11 +544,15 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.visibility_off_outlined),
-              label: Text('테스트 예약 숨기기 (${_selectedForArchive.length})'),
+              label: Text(
+                l10n
+                    .t('admin_ops_archive_bulk')
+                    .replaceAll('{count}', '${_selectedForArchive.length}'),
+              ),
             ),
           if (_showArchived)
             Text(
-              '숨긴 예약은 기본 운영 화면, 기사/고객 화면, 정산 대기 목록에서 제외됩니다.',
+              l10n.t('admin_ops_archive_hidden_notice'),
               style: const TextStyle(color: AppTokens.textSecondary),
             ),
         ],
@@ -790,6 +814,18 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
               ),
               const SizedBox(height: AppTokens.spaceMd),
               Text(
+                AdminOperationsUx.routeContextLabel(
+                  l10n,
+                  _serviceTypeCodeFromItem(item),
+                ),
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
                 '${item['origin']} → ${item['destination']}',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
@@ -1008,7 +1044,10 @@ class _BookingListCard extends StatelessWidget {
               ),
               if (isArchived) ...[
                 const SizedBox(width: 6),
-                AppUi.statusBadge('Archived/Test', tone: AppStatusTone.neutral),
+                AppUi.statusBadge(
+                  l10n.t('admin_ops_archive_badge'),
+                  tone: AppStatusTone.neutral,
+                ),
               ],
             ],
           ),
@@ -1035,6 +1074,18 @@ class _BookingListCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 8),
+          Text(
+            AdminOperationsUx.routeContextLabel(
+              l10n,
+              _serviceTypeCodeFromItem(item),
+            ),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 3),
           Text(
             '${item['origin']} → ${item['destination']}',
             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1075,7 +1126,7 @@ class _BookingListCard extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: onRestore,
                     icon: const Icon(Icons.restore),
-                    label: const Text('복원'),
+                    label: Text(l10n.t('admin_ops_archive_restore')),
                   ),
                 TextButton(
                   onPressed: onPrimaryAction,
