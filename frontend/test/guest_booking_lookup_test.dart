@@ -108,13 +108,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TX202607010001'), findsOneWidget);
-    expect(find.text('Customer onboard'), findsOneWidget);
+    expect(find.text('Customer onboard'), findsWidgets);
     expect(find.text('Boarding QR'), findsNothing);
     expect(find.text('Issue dropoff QR'), findsNothing);
-    expect(
-      find.text('You are on the way to your destination.'),
-      findsOneWidget,
-    );
+    expect(find.text('You are on the way to your destination.'), findsWidgets);
   });
 
   testWidgets('lookup page refresh updates status', (tester) async {
@@ -133,11 +130,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Customer onboard'), findsOneWidget);
+    expect(find.text('Customer onboard'), findsWidgets);
     await tester.tap(find.byKey(const ValueKey('guest_lookup_refresh')));
     await tester.pumpAndSettle();
 
-    expect(find.text('On the way'), findsOneWidget);
+    expect(find.text('On the way'), findsWidgets);
     expect(service.refreshCount, 1);
   });
 
@@ -226,7 +223,7 @@ void main() {
       find.text(
         'Booking not found. Please check your booking number and phone.',
       ),
-      findsOneWidget,
+      findsWidgets,
     );
   });
 
@@ -307,8 +304,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Cancelled'), findsOneWidget);
-    expect(find.text('This booking was cancelled.'), findsOneWidget);
+    expect(find.text('Cancelled'), findsWidgets);
+    expect(
+      find.text(
+        'This booking was cancelled. Please contact customer support for details.',
+      ),
+      findsWidgets,
+    );
   });
 
   testWidgets('SETTLEMENT_PENDING customer copy avoids settlement wording', (
@@ -328,11 +330,51 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Trip ended'), findsOneWidget);
+    expect(find.text('Trip ended'), findsWidgets);
     expect(find.textContaining('settlement', findRichText: true), findsNothing);
     expect(find.textContaining('Settlement'), findsNothing);
-    expect(find.textContaining('Please rate your driver'), findsOneWidget);
+    expect(find.textContaining('Thank you for riding with us'), findsWidgets);
   });
+
+  testWidgets('lookup summary formats payment and pickup without raw codes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          lookupService: _FakeLookupService(cached: _result()),
+          enableCustomerTools: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jul 1, 2026, 9:30 AM'), findsWidgets);
+    expect(find.text('฿1,500'), findsOneWidget);
+    expect(find.text('Pay the driver at the destination'), findsWidgets);
+    expect(find.text('PAY_DRIVER'), findsNothing);
+    expect(find.text('2026-07-01T09:30:00+07:00'), findsNothing);
+  });
+
+  testWidgets(
+    'completed lookup hides driver phone while keeping driver summary',
+    (tester) async {
+      final result = _result().copyWith(status: 'COMPLETED');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(cached: result),
+            enableCustomerTools: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Driver A'), findsWidgets);
+      expect(find.text('+66 80 000 0000'), findsNothing);
+    },
+  );
 
   testWidgets('submitted review shows thank you card without submit form', (
     tester,
@@ -593,7 +635,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const ValueKey('review_rating_5')));
+      final ratingButton = find.byKey(const ValueKey('review_rating_5'));
+      await tester.ensureVisible(ratingButton);
+      await tester.pump();
+      await tester.tap(ratingButton);
       await tester.pump();
       final submitButton = find.widgetWithText(ElevatedButton, 'Submit rating');
       await tester.ensureVisible(submitButton);
@@ -626,8 +671,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('運行終了'), findsOneWidget);
-    expect(find.textContaining('ドライバーを評価'), findsOneWidget);
+    expect(find.text('運行終了'), findsWidgets);
+    expect(find.textContaining('ご利用ありがとうございました'), findsWidgets);
     expect(find.text('How was your ride?'), findsNothing);
   });
 }

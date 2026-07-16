@@ -44,13 +44,25 @@ class _FakeChatSocketService extends ChatSocketService {
 }
 
 void main() {
-  testWidgets('customer tools enabled without QR UI', (tester) async {
+  testWidgets('customer tools enabled before assignment keeps chat hidden', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(_page()));
 
     expect(find.text('Boarding QR'), findsNothing);
     expect(find.text('Ride completion QR'), findsNothing);
     expect(find.text('Refresh dropoff QR'), findsNothing);
     expect(find.text('Issue new dropoff QR'), findsNothing);
+    expect(find.text('Booking chat'), findsNothing);
+  });
+
+  testWidgets('customer tools show chat after driver assignment', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(_page(result: _result(status: 'ON_ROUTE'))));
+
+    expect(find.text('Boarding QR'), findsNothing);
+    expect(find.text('Ride completion QR'), findsNothing);
     expect(find.text('Booking chat'), findsOneWidget);
   });
 

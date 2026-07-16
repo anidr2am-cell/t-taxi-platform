@@ -27,7 +27,9 @@ class CustomerLandingPage extends StatelessWidget {
   void _openBookingLookup(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const GuestBookingLookupPage()),
+      MaterialPageRoute(
+        builder: (_) => const GuestBookingLookupPage(enableCustomerTools: true),
+      ),
     );
   }
 

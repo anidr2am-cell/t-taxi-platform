@@ -16,6 +16,18 @@ class AssignedDriverStatusCard extends StatelessWidget {
   final GuestBookingLookupResult result;
   final String? apiBaseUrl;
 
+  bool get _canShowDriverPhone {
+    const activeStatuses = {
+      'DRIVER_ASSIGNED',
+      'ON_ROUTE',
+      'DRIVER_ARRIVED',
+      'PICKED_UP',
+    };
+    return activeStatuses.contains(result.status) &&
+        result.driverPhone?.trim().isNotEmpty == true &&
+        result.guestAccessToken.trim().isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -25,9 +37,12 @@ class AssignedDriverStatusCard extends StatelessWidget {
     }
 
     final vehicleLines = <String>[
-      if (result.vehicleType?.trim().isNotEmpty == true) result.vehicleType!.trim(),
-      if (result.vehicleColor?.trim().isNotEmpty == true) result.vehicleColor!.trim(),
-      if (result.vehiclePlateNumber?.trim().isNotEmpty == true) result.vehiclePlateNumber!.trim(),
+      if (result.vehicleType?.trim().isNotEmpty == true)
+        result.vehicleType!.trim(),
+      if (result.vehicleColor?.trim().isNotEmpty == true)
+        result.vehicleColor!.trim(),
+      if (result.vehiclePlateNumber?.trim().isNotEmpty == true)
+        result.vehiclePlateNumber!.trim(),
     ];
 
     return AppUi.surfaceCard(
@@ -47,7 +62,7 @@ class AssignedDriverStatusCard extends StatelessWidget {
             label: l10n.t('guest_lookup_driver'),
             value: driverName,
           ),
-          if (result.driverPhone?.trim().isNotEmpty == true)
+          if (_canShowDriverPhone)
             AppUi.summaryRow(
               label: l10n.t('guest_lookup_driver_phone'),
               value: result.driverPhone!.trim(),

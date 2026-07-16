@@ -17,6 +17,7 @@ import '../widgets/step_destination_select.dart';
 import '../widgets/step_origin_select.dart';
 import '../widgets/step_passengers_luggage.dart';
 import '../widgets/step_pickup_datetime.dart';
+import '../widgets/step_confirmation.dart';
 import '../widgets/step_service_select.dart';
 import '../widgets/step_vehicle_select.dart';
 import '../widgets/wizard_compact.dart';
@@ -100,6 +101,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         return l10n.t('select_vehicle');
       case 6:
         return l10n.t('customer_info');
+      case 7:
+        return l10n.t('customer_confirmation_title');
       default:
         return l10n.t('book_your_ride');
     }
@@ -114,8 +117,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     await _controller.prepareForSubmit();
 
     final firstIncomplete = _controller.firstIncompleteStep();
-    if (firstIncomplete != null) {
+    if (firstIncomplete != null && firstIncomplete < 7) {
       _scrollToSection(firstIncomplete);
+      return;
+    }
+
+    if (_controller.state.step != 7) {
+      await _controller.goToStep(7);
+      _scrollToSection(7);
       return;
     }
 
@@ -161,6 +170,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               : null,
           nameSignRequested: snapshot.nameSign,
           customerPhone: snapshot.customerPhone,
+          scheduledPickupAt: _controller.scheduledPickupAtIso(),
+          selectedVehicle: snapshot.selectedVehicle,
+          enableCustomerTools: true,
           meetingVehicleInfo: AirportMeetingVehicleInfo(
             vehicleType: snapshot.selectedVehicle,
           ),
@@ -234,6 +246,15 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           onAdditionalRequestsChanged: (v) =>
               _controller.updateCustomerInfo(additionalRequests: v),
         );
+      case 7:
+        return StepConfirmation(
+          embedded: true,
+          state: state,
+          onEditStep: (step) {
+            _controller.goToStep(step);
+            _scrollToSection(step);
+          },
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -255,8 +276,11 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         }
 
         final state = _controller.state;
+        final isConfirmationStep = state.step == 7;
         final canSubmit =
-            _controller.canSubmitAll() &&
+            (isConfirmationStep
+                ? _controller.canSubmitAll()
+                : _controller.canProceedToConfirmation()) &&
             !_controller.isLoading &&
             !_controller.isSubmitting;
 
@@ -329,14 +353,32 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                           child: ElevatedButton(
                             onPressed: canSubmit ? _handleSubmit : null,
                             child: _controller.isSubmitting
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Flexible(
+                                        child: Text(
+                                          l10n.t('customer_booking_processing'),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   )
-                                : Text(l10n.t('confirm')),
+                                : Text(
+                                    l10n.t(
+                                      isConfirmationStep
+                                          ? 'customer_confirm_booking'
+                                          : 'customer_review_booking',
+                                    ),
+                                  ),
                           ),
                         ),
                       ),

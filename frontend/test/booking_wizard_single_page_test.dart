@@ -87,18 +87,18 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('shows 7 expanded sections without booking confirmation step', (
+    testWidgets('shows 8 expanded sections with final confirmation step', (
       tester,
     ) async {
       await pumpWizard(tester);
 
-      expect(find.byType(WizardSectionCard), findsNWidgets(7));
+      expect(find.byType(WizardSectionCard), findsNWidgets(8));
       expect(find.text('Select Service Type'), findsOneWidget);
       expect(find.text('Customer Information'), findsOneWidget);
       expect(find.text('Select Vehicle'), findsOneWidget);
-      expect(find.text('Booking Summary'), findsNothing);
+      expect(find.text('Final booking check'), findsWidgets);
       expect(find.text('Next'), findsNothing);
-      expect(find.text('Edit'), findsNothing);
+      expect(find.text('Edit'), findsWidgets);
     });
 
     testWidgets('allows customer input before pickup step is complete', (
@@ -112,7 +112,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Jane Doe'), findsOneWidget);
+      expect(find.text('Jane Doe'), findsWidgets);
       expect(
         find.text(
           'Complete service, origin, destination, pick-up time, and passengers first.',
@@ -128,7 +128,7 @@ void main() {
 
       final confirmButton = find.widgetWithText(
         ElevatedButton,
-        'Confirm Booking',
+        'Review booking',
       );
       expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
 
@@ -147,7 +147,7 @@ void main() {
 
       final confirmButton = find.widgetWithText(
         ElevatedButton,
-        'Confirm Booking',
+        'Review booking',
       );
       expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
       expect(find.text('Please select an origin.'), findsOneWidget);
@@ -213,8 +213,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(WizardSectionCard), findsNWidgets(7));
-      expect(find.text('Kim'), findsOneWidget);
+      expect(find.byType(WizardSectionCard), findsNWidgets(8));
+      expect(find.text('Kim'), findsWidgets);
     });
 
     testWidgets('has no horizontal overflow at 360px', (tester) async {
@@ -267,13 +267,13 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Airport Pickup'), findsOneWidget);
-        expect(find.text('BKK Airport'), findsOneWidget);
-        expect(find.text('Pattaya Hotel'), findsOneWidget);
+        expect(find.text('Airport Pickup'), findsWidgets);
+        expect(find.text('BKK Airport'), findsWidgets);
+        expect(find.text('Pattaya Hotel'), findsWidgets);
         expect(find.text('TG401'), findsOneWidget);
         expect(find.text('Kim'), findsOneWidget);
         expect(find.text('Child seat'), findsOneWidget);
-        expect(find.text('1500 THB'), findsOneWidget);
+        expect(find.text('฿1,500'), findsOneWidget);
       },
     );
 
@@ -428,9 +428,10 @@ void main() {
     },
   );
 
-  test('validationSteps covers 7 wizard sections', () {
-    expect(BookingWizardState.stepCount, 7);
-    expect(BookingWizardController.validationSteps, [0, 1, 2, 3, 4, 5, 6]);
+  test('validationSteps covers 8 wizard sections', () {
+    expect(BookingWizardState.stepCount, 8);
+    expect(BookingWizardController.validationSteps, [0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(BookingWizardController.preConfirmationSteps, [0, 1, 2, 3, 4, 5, 6]);
   });
 
   test(

@@ -52,13 +52,17 @@ class StepPassengersLuggage extends StatelessWidget {
     final l10n = context.l10n;
     final gap = embedded ? WizardCompact.fieldGap : AppTokens.spaceMd;
     final cardPadding = embedded
-        ? const EdgeInsets.symmetric(horizontal: WizardCompact.cardPadding, vertical: 4)
+        ? const EdgeInsets.symmetric(
+            horizontal: WizardCompact.cardPadding,
+            vertical: 4,
+          )
         : const EdgeInsets.all(AppTokens.spaceMd);
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!embedded) AppUi.sectionHeader(context, title: l10n.t('passengers')),
+        if (!embedded)
+          AppUi.sectionHeader(context, title: l10n.t('passengers')),
         AppUi.surfaceCard(
           padding: cardPadding,
           child: Column(
@@ -68,19 +72,22 @@ class StepPassengersLuggage extends StatelessWidget {
                 label: l10n.t('adults'),
                 value: state.adults,
                 min: 1,
-                onChanged: (v) => controller.updatePassengersAndLuggage(adults: v),
+                onChanged: (v) =>
+                    controller.updatePassengersAndLuggage(adults: v),
               ),
               _counter(
                 compact: embedded,
                 label: l10n.t('children'),
                 value: state.children,
-                onChanged: (v) => controller.updatePassengersAndLuggage(children: v),
+                onChanged: (v) =>
+                    controller.updatePassengersAndLuggage(children: v),
               ),
               _counter(
                 compact: embedded,
                 label: l10n.t('infants'),
                 value: state.infants,
-                onChanged: (v) => controller.updatePassengersAndLuggage(infants: v),
+                onChanged: (v) =>
+                    controller.updatePassengersAndLuggage(infants: v),
               ),
             ],
           ),
@@ -98,28 +105,44 @@ class StepPassengersLuggage extends StatelessWidget {
                 compact: embedded,
                 label: l10n.t('small_carriers'),
                 value: state.luggage20,
-                onChanged: (v) => controller.updatePassengersAndLuggage(luggage20: v),
+                onChanged: (v) =>
+                    controller.updatePassengersAndLuggage(luggage20: v),
               ),
               _counter(
                 compact: embedded,
                 label: l10n.t('large_carriers'),
                 value: state.luggage24,
-                onChanged: (v) => controller.updatePassengersAndLuggage(luggage24: v),
+                onChanged: (v) =>
+                    controller.updatePassengersAndLuggage(luggage24: v),
               ),
               _counter(
                 compact: embedded,
                 label: l10n.t('golf_bags'),
                 value: state.golfBags,
-                onChanged: (v) => controller.updatePassengersAndLuggage(golfBags: v),
+                onChanged: (v) =>
+                    controller.updatePassengersAndLuggage(golfBags: v),
               ),
               _counter(
                 compact: embedded,
                 label: l10n.t('special_luggage'),
                 value: state.specialLuggageCount,
-                onChanged: (v) =>
-                    controller.updatePassengersAndLuggage(specialLuggageCount: v),
+                onChanged: (v) => controller.updatePassengersAndLuggage(
+                  specialLuggageCount: v,
+                ),
               ),
             ],
+          ),
+        ),
+        SizedBox(height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm),
+        AppUi.surfaceCard(
+          backgroundColor: AppTokens.infoLight,
+          padding: cardPadding,
+          child: Text(
+            l10n.t('customer_luggage_guidance'),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              height: 1.45,
+            ),
           ),
         ),
         SizedBox(height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm),
@@ -136,7 +159,8 @@ class StepPassengersLuggage extends StatelessWidget {
               ),
             ),
             value: state.nameSign,
-            onChanged: (v) => controller.updatePassengersAndLuggage(nameSign: v),
+            onChanged: (v) =>
+                controller.updatePassengersAndLuggage(nameSign: v),
           ),
         ),
         NameSignInfoCard(visible: state.nameSign),
@@ -179,7 +203,10 @@ class _RecommendationCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.directions_car_filled_outlined, color: AppTokens.warning),
+            const Icon(
+              Icons.directions_car_filled_outlined,
+              color: AppTokens.warning,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -193,7 +220,10 @@ class _RecommendationCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       recommendation.message,
-                      style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+                      style: const TextStyle(
+                        color: AppTokens.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ],
@@ -215,7 +245,10 @@ class _RecommendationCard extends StatelessWidget {
               color: AppTokens.accent.withValues(alpha: 0.15),
               borderRadius: AppTokens.borderRadiusSm,
             ),
-            child: const Icon(Icons.recommend_outlined, color: AppTokens.accent),
+            child: const Icon(
+              Icons.recommend_outlined,
+              color: AppTokens.accent,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

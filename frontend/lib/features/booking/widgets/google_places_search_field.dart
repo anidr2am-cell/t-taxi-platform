@@ -377,9 +377,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     return AppUi.selectedInfoCard(
       title: location.name ?? location.displayName,
       subtitle: location.address,
-      meta: location.latitude != null && location.longitude != null
-          ? '${location.latitude!.toStringAsFixed(5)}, ${location.longitude!.toStringAsFixed(5)}'
-          : null,
+      meta: location.kind == LocationKind.airport
+          ? l10n.t('airport')
+          : l10n.t('selected_location'),
       icon: location.kind == LocationKind.airport
           ? Icons.flight
           : Icons.place_outlined,

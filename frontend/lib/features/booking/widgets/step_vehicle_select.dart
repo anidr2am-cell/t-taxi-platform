@@ -68,7 +68,8 @@ class StepVehicleSelect extends StatelessWidget {
           AppUi.sectionHeader(
             context,
             title: l10n.t('select_vehicle'),
-            subtitle: '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
+            subtitle:
+                '${l10n.t('recommended')}: ${recommendation.recommendedVehicle}',
           ),
         if (embedded && !recommendation.multipleVehicles)
           Padding(
@@ -78,30 +79,48 @@ class StepVehicleSelect extends StatelessWidget {
               style: WizardCompact.hintTextStyle,
             ),
           ),
+        AppUi.surfaceCard(
+          backgroundColor: AppTokens.infoLight,
+          padding: const EdgeInsets.all(WizardCompact.cardPadding),
+          child: Text(
+            l10n.t('customer_vehicle_guidance'),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ),
+        const SizedBox(height: WizardCompact.fieldGap),
         ...BookingWizardController.customerVehicleTierOrder.map((vehicle) {
           final enabled = controller.isVehicleEnabled(vehicle);
           final selected = state.selectedVehicle == vehicle;
           final isRecommended = recommendation.recommendedVehicle == vehicle;
           return Padding(
-            padding: EdgeInsets.only(bottom: embedded ? WizardCompact.fieldGap : 10),
+            padding: EdgeInsets.only(
+              bottom: embedded ? WizardCompact.fieldGap : 10,
+            ),
             child: embedded
                 ? WizardUi.selectionTile(
                     title: vehicle,
                     subtitle: enabled
                         ? (isRecommended ? recommendation.message : null)
-                        : l10n.t('pricing_inquiry_required'),
+                        : l10n.t('customer_vehicle_not_suitable'),
                     icon: _iconForVehicle(vehicle),
                     selected: selected,
-                    onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
+                    onTap: enabled
+                        ? () => controller.selectVehicle(vehicle)
+                        : null,
                   )
                 : AppUi.selectionTile(
                     title: vehicle,
                     subtitle: enabled
                         ? (isRecommended ? recommendation.message : null)
-                        : l10n.t('pricing_inquiry_required'),
+                        : l10n.t('customer_vehicle_not_suitable'),
                     icon: _iconForVehicle(vehicle),
                     selected: selected,
-                    onTap: enabled ? () => controller.selectVehicle(vehicle) : null,
+                    onTap: enabled
+                        ? () => controller.selectVehicle(vehicle)
+                        : null,
                   ),
           );
         }),
@@ -124,7 +143,23 @@ class StepVehicleSelect extends StatelessWidget {
           const SizedBox(height: WizardCompact.fieldGap),
           if (!embedded)
             AppUi.sectionHeader(context, title: l10n.t('pricing_summary')),
-          _PricingBreakdown(pricing: state.pricing!, l10n: l10n, compact: embedded),
+          _PricingBreakdown(
+            pricing: state.pricing!,
+            l10n: l10n,
+            compact: embedded,
+          ),
+          const SizedBox(height: WizardCompact.fieldGap),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.accentLight,
+            padding: const EdgeInsets.all(WizardCompact.cardPadding),
+            child: Text(
+              l10n.t('customer_price_conditions'),
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ),
         ],
       ],
     );
