@@ -348,6 +348,7 @@ Map<String, dynamic> _settlementPendingDetail() => {
 Map<String, dynamic> _queueItem(String bookingNumber) => {
   'bookingNumber': bookingNumber,
   'status': 'PENDING',
+  'serviceType': {'code': 'AIRPORT_PICKUP', 'name': 'Airport Pickup'},
   'scheduledPickupAt': '2026-07-01 09:30:00',
   'origin': 'BKK',
   'destination': 'Pattaya',
@@ -566,6 +567,28 @@ void main() {
     );
   });
 
+  test(
+    'route context labels explain service direction without swapping data',
+    () {
+      final ko = AppLocalizations('ko');
+      final en = AppLocalizations('en');
+      final th = AppLocalizations('th');
+
+      expect(
+        AdminOperationsUx.routeContextLabel(ko, 'AIRPORT_PICKUP'),
+        '공항 → 목적지',
+      );
+      expect(
+        AdminOperationsUx.routeContextLabel(en, 'AIRPORT_DROPOFF'),
+        'Origin → Airport',
+      );
+      expect(
+        AdminOperationsUx.routeContextLabel(th, 'CITY_TRANSFER'),
+        'จุดต้นทาง → จุดหมาย',
+      );
+    },
+  );
+
   testWidgets('shows needs action tab and summary cards by default', (
     tester,
   ) async {
@@ -642,12 +665,15 @@ void main() {
 
     await tester.tap(find.byType(Checkbox).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('테스트 예약 숨기기 (1)'));
+    await tester.tap(find.text('Hide test bookings (1)'));
     await tester.pumpAndSettle();
 
-    expect(find.text('선택한 예약을 테스트 데이터로 숨기시겠습니까?'), findsOneWidget);
+    expect(
+      find.text('Hide the selected bookings as test data?'),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.text('테스트 예약 숨기기').last);
+    await tester.tap(find.text('Hide test bookings').last);
     await tester.pumpAndSettle();
 
     expect(api.archiveCalls, 1);
@@ -675,13 +701,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('숨긴 예약 보기'));
+    await tester.tap(find.text('Show hidden bookings'));
     await tester.pumpAndSettle();
 
     expect(api.lastArchived, isTrue);
     expect(find.text('Archived/Test'), findsOneWidget);
 
-    await tester.tap(find.text('복원'));
+    await tester.tap(find.text('Restore'));
     await tester.pumpAndSettle();
 
     expect(api.restoreCalls, 1);

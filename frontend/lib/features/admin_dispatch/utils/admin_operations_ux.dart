@@ -197,4 +197,21 @@ class AdminOperationsUx {
         return l10n.t('admin_ops_cta_view_booking');
     }
   }
+
+  static String routeContextLabel(
+    AppLocalizations l10n,
+    String? serviceTypeCode,
+  ) {
+    switch (serviceTypeCode?.toUpperCase()) {
+      case 'AIRPORT_PICKUP':
+      case 'AIRPORT_TO_CITY':
+        return l10n.t('admin_ops_route_airport_pickup');
+      case 'AIRPORT_DROPOFF':
+      case 'CITY_TO_AIRPORT':
+        return l10n.t('admin_ops_route_airport_dropoff');
+      case 'CITY_TRANSFER':
+      default:
+        return l10n.t('admin_ops_route_city_transfer');
+    }
+  }
 }
