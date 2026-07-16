@@ -187,6 +187,21 @@ class AdminOperationsUx {
     }
   }
 
+  static String statusDiagnosticLabel(AppLocalizations l10n, String? code) {
+    switch (code) {
+      case 'PICKUP_OVERDUE_STALLED':
+        return l10n.t('admin_detail_diag_pickup_overdue_stalled');
+      case 'BOARDING_DELAY':
+        return l10n.t('admin_detail_diag_boarding_delay');
+      case 'LONG_TRIP':
+        return l10n.t('admin_detail_diag_long_trip');
+      case 'STATUS_STALE':
+        return l10n.t('admin_detail_diag_status_stale');
+      default:
+        return '';
+    }
+  }
+
   static String primaryCtaLabel(AppLocalizations l10n, String? cta) {
     switch (cta) {
       case 'ASSIGN_DRIVER':

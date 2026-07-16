@@ -44,6 +44,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   final _manualSettlementNoteController = TextEditingController();
   final _tripSectionKey = GlobalKey();
   final _assignmentSectionKey = GlobalKey();
+  final _operationsSummaryKey = GlobalKey();
   final _pricingSectionKey = GlobalKey();
   final _chatSectionKey = GlobalKey();
   final _reviewSectionKey = GlobalKey();
@@ -90,7 +91,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       }
       Map<String, dynamic>? settlement;
       String? settlementError;
-      if (detail['status'] == 'SETTLEMENT_PENDING') {
+      if (_shouldLoadSettlementDetail(detail)) {
         try {
           settlement = await widget.settlementApi.getSettlement(
             widget.bookingNumber,
@@ -160,11 +161,70 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
   bool get _canConfirmSettlement =>
       _detail?['status'] == 'SETTLEMENT_PENDING' &&
-      settlementCanApprove(_settlement);
+      _settlement?['canApprove'] == true;
 
   bool get _canManualApproveSettlement =>
       _detail?['status'] == 'SETTLEMENT_PENDING' &&
       _settlement?['canManualApprove'] == true;
+
+  bool _shouldLoadSettlementDetail(Map<String, dynamic> detail) {
+    final status = detail['status'] as String?;
+    final commissionStatus = detail['commissionStatus'] as String?;
+    return status == 'SETTLEMENT_PENDING' ||
+        commissionStatus == 'DUE' ||
+        commissionStatus == 'OVERDUE' ||
+        commissionStatus == 'PAID';
+  }
+
+  bool _settlementVisible(Map<String, dynamic> detail) {
+    final status = detail['status'] as String?;
+    final commissionStatus =
+        (_settlement?['commissionStatus'] as String?) ??
+        detail['commissionStatus'] as String?;
+    final receiptStatus = _settlement?['receiptStatus'] as String?;
+    return status == 'SETTLEMENT_PENDING' ||
+        commissionStatus == 'DUE' ||
+        commissionStatus == 'OVERDUE' ||
+        commissionStatus == 'PAID' ||
+        receiptStatus != null ||
+        _settlement != null ||
+        _settlementError != null;
+  }
+
+  bool _hasSettlementStateMismatch(Map<String, dynamic> detail) {
+    final status = detail['status'] as String?;
+    final commissionStatus =
+        (_settlement?['commissionStatus'] as String?) ??
+        detail['commissionStatus'] as String?;
+    return status == 'COMPLETED' &&
+        (commissionStatus == 'DUE' ||
+            commissionStatus == 'OVERDUE' ||
+            commissionStatus == 'PENDING');
+  }
+
+  Future<void> _retrySettlement() async {
+    setState(() {
+      _submitting = true;
+      _settlementError = null;
+    });
+    try {
+      final settlement = await widget.settlementApi.getSettlement(
+        widget.bookingNumber,
+      );
+      if (!mounted) return;
+      setState(() => _settlement = settlement);
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _settlementError = userFacingError(
+          err,
+          fallback: context.l10n.t('admin_detail_settlement_load_failed'),
+        );
+      });
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
 
   Future<void> _viewTransferSlip() async {
     final l10n = context.l10n;
@@ -488,8 +548,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   Future<void> _scrollToReview() => _scrollToSection(_reviewSectionKey);
 
   Future<void> _scrollToStatusArea() async {
-    if (_activitySectionKey.currentContext != null) {
-      await _scrollToSection(_activitySectionKey);
+    if (_operationsSummaryKey.currentContext != null) {
+      await _scrollToSection(_operationsSummaryKey);
       return;
     }
     if (_assignmentSectionKey.currentContext != null) {
@@ -526,6 +586,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _summaryHeader(l10n, detail!, actions),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    KeyedSubtree(
+                      key: _operationsSummaryKey,
+                      child: _operationsSummarySection(l10n, detail),
+                    ),
                     const SizedBox(height: AppTokens.spaceMd),
                     _notesSection(l10n),
                     const SizedBox(height: AppTokens.spaceMd),
@@ -685,6 +750,175 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     return buttons.isEmpty ? null : AppUi.adminStickyActions(actions: buttons);
   }
 
+  DateTime? _parseDateTime(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    final normalized = text.contains('T') ? text : text.replaceFirst(' ', 'T');
+    final parsed = DateTime.tryParse(normalized);
+    if (parsed == null) return null;
+    return parsed.isUtc ? parsed.toLocal() : parsed;
+  }
+
+  List<Map<String, dynamic>> _sortedStatusHistory(Map<String, dynamic> detail) {
+    final copy = _statusHistory(detail);
+    copy.sort((a, b) {
+      final bTime = _parseDateTime(b['createdAt']);
+      final aTime = _parseDateTime(a['createdAt']);
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
+    return copy;
+  }
+
+  Map<String, dynamic>? _latestStatusEvent(Map<String, dynamic> detail) {
+    final history = _sortedStatusHistory(
+      detail,
+    ).where((entry) => _parseDateTime(entry['createdAt']) != null).toList();
+    return history.isEmpty ? null : history.first;
+  }
+
+  DateTime? _latestStatusChangedAt(Map<String, dynamic> detail) {
+    final latest = _latestStatusEvent(detail);
+    return _parseDateTime(latest?['createdAt']) ??
+        _parseDateTime(detail['updatedAt']);
+  }
+
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+  String _formatAbsolute(DateTime value) {
+    return '${value.year}-${_twoDigits(value.month)}-${_twoDigits(value.day)} '
+        '${_twoDigits(value.hour)}:${_twoDigits(value.minute)}';
+  }
+
+  String _formatAbsoluteWithRelative(AppLocalizations l10n, DateTime value) {
+    final relative = _formatDuration(l10n, DateTime.now().difference(value));
+    return '${_formatAbsolute(value)} · $relative ${_agoSuffix(l10n)}';
+  }
+
+  String? _formatOptionalDate(AppLocalizations l10n, dynamic value) {
+    final parsed = _parseDateTime(value);
+    return parsed == null ? null : _formatAbsoluteWithRelative(l10n, parsed);
+  }
+
+  String _agoSuffix(AppLocalizations l10n) {
+    switch (l10n.languageCode) {
+      case 'ko':
+        return '전';
+      case 'th':
+        return 'ที่ผ่านมา';
+      default:
+        return 'ago';
+    }
+  }
+
+  String _formatDuration(AppLocalizations l10n, Duration duration) {
+    final safe = duration.isNegative ? Duration.zero : duration;
+    final days = safe.inDays;
+    final hours = safe.inHours % 24;
+    final minutes = safe.inMinutes % 60;
+    String unit(String en, String ko, String th) {
+      switch (l10n.languageCode) {
+        case 'ko':
+          return ko;
+        case 'th':
+          return th;
+        default:
+          return en;
+      }
+    }
+
+    if (days > 0) {
+      final dayLabel = unit(days == 1 ? 'day' : 'days', '일', 'วัน');
+      final hourLabel = unit('hr', '시간', 'ชั่วโมง');
+      return hours > 0
+          ? '$days $dayLabel $hours $hourLabel'
+          : '$days $dayLabel';
+    }
+    if (safe.inHours > 0) {
+      final hourLabel = unit('hr', '시간', 'ชั่วโมง');
+      final minuteLabel = unit('min', '분', 'นาที');
+      return minutes > 0
+          ? '${safe.inHours} $hourLabel $minutes $minuteLabel'
+          : '${safe.inHours} $hourLabel';
+    }
+    final minuteLabel = unit('min', '분', 'นาที');
+    return '${safe.inMinutes} $minuteLabel';
+  }
+
+  String _settlementStatusLabel(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+  ) {
+    final status =
+        (_settlement?['commissionStatus'] as String?) ??
+        detail['commissionStatus'] as String?;
+    switch (status) {
+      case 'DUE':
+      case 'OVERDUE':
+      case 'PENDING':
+        return l10n.t('admin_detail_settlement_required');
+      case 'PAID':
+      case 'APPROVED':
+        return l10n.t('admin_detail_settlement_completed');
+      case 'RECEIPT_SUBMITTED':
+        return l10n.t('admin_detail_receipt_submitted');
+      case 'REJECTED':
+        return l10n.t('admin_detail_receipt_rejected');
+      case 'NOT_DUE_YET':
+      case 'WAIVED':
+      case null:
+        return '-';
+      default:
+        return status;
+    }
+  }
+
+  String _receiptStatusLabel(AppLocalizations l10n) {
+    final status = _settlement?['receiptStatus'] as String?;
+    if (_hasTransferSlip) return l10n.t('admin_detail_receipt_submitted');
+    switch (status) {
+      case 'REJECTED':
+        return l10n.t('admin_detail_receipt_rejected');
+      case 'APPROVED':
+        return l10n.t('admin_detail_settlement_completed');
+      case 'NONE':
+      case null:
+        return l10n.t('admin_detail_receipt_missing');
+      default:
+        return status;
+    }
+  }
+
+  String _actorRoleLabel(AppLocalizations l10n, String? role) {
+    switch (role) {
+      case 'SYSTEM':
+        return l10n.t('admin_detail_actor_system');
+      case 'ADMIN':
+      case 'SUPER_ADMIN':
+        return l10n.t('admin_detail_actor_admin');
+      case 'DRIVER':
+        return l10n.t('admin_detail_actor_driver');
+      case 'CUSTOMER':
+        return l10n.t('admin_detail_actor_customer');
+      default:
+        return l10n.t('admin_detail_actor_unknown');
+    }
+  }
+
+  String _formatFileSize(dynamic value) {
+    final bytes = value is num ? value.toDouble() : double.tryParse('$value');
+    if (bytes == null || bytes <= 0) return '-';
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    if (bytes >= 1024) {
+      return '${(bytes / 1024).toStringAsFixed(0)} KB';
+    }
+    return '${bytes.toStringAsFixed(0)} bytes';
+  }
+
   Widget _summaryHeader(
     AppLocalizations l10n,
     Map<String, dynamic> detail,
@@ -812,6 +1046,163 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             const SizedBox(height: AppTokens.spaceMd),
             action,
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _operationsSummarySection(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+  ) {
+    final status = detail['status'] as String? ?? '';
+    final operations = detail['operations'] is Map
+        ? Map<String, dynamic>.from(detail['operations'] as Map)
+        : null;
+    final assignment = detail['activeAssignment'] is Map
+        ? Map<String, dynamic>.from(detail['activeAssignment'] as Map)
+        : null;
+    final latest = _latestStatusEvent(detail);
+    final changedAt = _latestStatusChangedAt(detail);
+    final reason = operations?['primaryActionReason'] as String?;
+    final diagnostic = AdminOperationsUx.statusDiagnosticLabel(l10n, reason);
+    final driverName =
+        assignment?['driverDisplayName'] as String? ??
+        l10n.t('admin_dispatch_unassigned');
+    final driverStatus = assignment?['driverStatus'] as String?;
+    final assignmentStatus = assignment == null
+        ? l10n.t('admin_dispatch_unassigned')
+        : assignment['status'] as String? ?? '-';
+
+    return AppUi.adminDetailSection(
+      context: context,
+      title: l10n.t('admin_detail_operations_summary'),
+      backgroundColor:
+          diagnostic.isNotEmpty || _hasSettlementStateMismatch(detail)
+          ? AppTokens.warningLight
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _summaryGrid([
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_current_status'),
+              value: BookingStatusDisplay.label(
+                l10n,
+                status,
+                audience: BookingStatusAudience.admin,
+              ),
+            ),
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_last_status_change'),
+              value: changedAt == null
+                  ? '-'
+                  : _formatAbsoluteWithRelative(l10n, changedAt),
+            ),
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_status_duration'),
+              value: changedAt == null
+                  ? '-'
+                  : _formatDuration(l10n, DateTime.now().difference(changedAt)),
+            ),
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_driver_assignment_status'),
+              value: '$driverName · $assignmentStatus',
+            ),
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_driver_status'),
+              value: driverStatus ?? '-',
+            ),
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_settlement_status'),
+              value: _settlementStatusLabel(l10n, detail),
+            ),
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_receipt_status'),
+              value: _receiptStatusLabel(l10n),
+            ),
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_recommended_action'),
+              value: AdminOperationsUx.nextActionLabel(
+                l10n,
+                operations,
+                detail,
+              ),
+            ),
+          ]),
+          if (latest != null &&
+              (latest['memo'] as String?)?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            _noticeBox(
+              icon: Icons.sticky_note_2_outlined,
+              text:
+                  '${l10n.t('admin_detail_additional_memo')}: ${latest['memo']}',
+            ),
+          ],
+          if (diagnostic.isNotEmpty) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            _noticeBox(icon: Icons.manage_search_outlined, text: diagnostic),
+          ],
+          if (_hasSettlementStateMismatch(detail)) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            _noticeBox(
+              icon: Icons.warning_amber_outlined,
+              text: l10n.t('admin_detail_settlement_state_mismatch'),
+              isWarning: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryGrid(List<Widget> rows) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 640) {
+          return Column(children: rows);
+        }
+        return Wrap(
+          spacing: AppTokens.spaceMd,
+          runSpacing: 0,
+          children: rows
+              .map(
+                (row) => SizedBox(
+                  width: (constraints.maxWidth - AppTokens.spaceMd) / 2,
+                  child: row,
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _noticeBox({
+    required IconData icon,
+    required String text,
+    bool isWarning = false,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppTokens.spaceSm),
+      decoration: BoxDecoration(
+        color: isWarning ? AppTokens.warningLight : AppTokens.surfaceMuted,
+        borderRadius: AppTokens.borderRadiusMd,
+        border: Border.all(
+          color: isWarning ? AppTokens.warning : AppTokens.border,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isWarning ? AppTokens.warning : AppTokens.textSecondary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
         ],
       ),
     );
@@ -1322,45 +1713,177 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               label: 'Payment status',
               value: pricing['paymentStatus'] as String,
             ),
-          if (detail['status'] == 'SETTLEMENT_PENDING') ...[
+          if (_settlementVisible(detail)) ...[
             const Divider(height: 24),
             Text(
               l10n.t('admin_settlement_section'),
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: AppTokens.spaceSm),
-            _settlementSectionContent(l10n),
+            _settlementSectionContent(l10n, detail),
           ],
         ],
       ),
     );
   }
 
-  Widget _settlementSectionContent(AppLocalizations l10n) {
-    final status = _settlement?['commissionStatus'] as String? ?? '-';
+  Widget _settlementSectionContent(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+  ) {
+    final settlement = _settlement;
+    final metadata = settlement?['receiptMetadata'] is Map
+        ? Map<String, dynamic>.from(settlement!['receiptMetadata'] as Map)
+        : null;
+    final approval = settlement?['approval'] is Map
+        ? Map<String, dynamic>.from(settlement!['approval'] as Map)
+        : null;
+    final reviewHistory = settlement?['reviewHistory'] as List<dynamic>? ?? [];
+    final latestReview = reviewHistory.whereType<Map>().isEmpty
+        ? null
+        : Map<String, dynamic>.from(reviewHistory.whereType<Map>().last);
+    final rejectionReason = settlement?['rejectionReason'] as String?;
+    final isRejected =
+        settlement?['receiptStatus'] == 'REJECTED' ||
+        settlement?['commissionStatus'] == 'REJECTED';
+    final amount = settlement?['commissionAmount'];
+    final currency = settlement?['currency'] as String? ?? 'THB';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            AppUi.statusBadge(
+              _settlementStatusLabel(l10n, detail),
+              tone: isRejected
+                  ? AppStatusTone.error
+                  : _hasTransferSlip
+                  ? AppStatusTone.warning
+                  : AppStatusTone.info,
+            ),
+            AppUi.statusBadge(
+              _receiptStatusLabel(l10n),
+              tone: isRejected ? AppStatusTone.error : AppStatusTone.info,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTokens.spaceSm),
         AppUi.summaryRow(
           label: l10n.t('admin_settlement_status'),
-          value: status,
+          value: _settlementStatusLabel(l10n, detail),
+        ),
+        if (amount != null)
+          AppUi.summaryRow(label: l10n.t('amount'), value: '$amount $currency'),
+        AppUi.summaryRow(
+          label: l10n.t('admin_detail_settlement_actionable'),
+          value: _canConfirmSettlement || _canManualApproveSettlement
+              ? l10n.t('yes')
+              : l10n.t('admin_detail_settlement_not_actionable'),
         ),
         AppUi.summaryRow(
           label: l10n.t('admin_settlement_transfer_slip'),
-          value: _hasTransferSlip
-              ? l10n.t('admin_settlement_slip_submitted')
-              : l10n.t('admin_settlement_slip_not_submitted'),
+          value: _receiptStatusLabel(l10n),
         ),
+        if (settlement?['receiptSubmittedAt'] != null)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_receipt_submitted_at'),
+            value:
+                _formatOptionalDate(l10n, settlement?['receiptSubmittedAt']) ??
+                '${settlement?['receiptSubmittedAt']}',
+          ),
+        if (settlement?['receiptUploadedAt'] != null &&
+            settlement?['receiptUploadedAt'] !=
+                settlement?['receiptSubmittedAt'])
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_receipt_uploaded_at'),
+            value:
+                _formatOptionalDate(l10n, settlement?['receiptUploadedAt']) ??
+                '${settlement?['receiptUploadedAt']}',
+          ),
+        if (metadata?['originalFilename'] != null)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_receipt_file'),
+            value: metadata!['originalFilename'] as String,
+          ),
+        if (metadata?['mimeType'] != null)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_receipt_content_type'),
+            value: metadata!['mimeType'] as String,
+          ),
+        if (metadata?['fileSize'] != null)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_receipt_file_size'),
+            value: _formatFileSize(metadata!['fileSize']),
+          ),
+        if (isRejected) ...[
+          const SizedBox(height: AppTokens.spaceSm),
+          _noticeBox(
+            icon: Icons.report_problem_outlined,
+            isWarning: true,
+            text:
+                '${l10n.t('admin_detail_rejection_reason')}: '
+                '${(rejectionReason?.trim().isNotEmpty == true) ? rejectionReason : l10n.t('admin_detail_rejection_reason_missing')}',
+          ),
+          if (latestReview?['reviewedAt'] != null)
+            AppUi.summaryRow(
+              label: l10n.t('admin_detail_rejected_at'),
+              value:
+                  _formatOptionalDate(l10n, latestReview?['reviewedAt']) ??
+                  '${latestReview?['reviewedAt']}',
+            ),
+        ],
+        if (approval?['approvedAt'] != null)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_settlement_approved_at'),
+            value:
+                _formatOptionalDate(l10n, approval?['approvedAt']) ??
+                '${approval?['approvedAt']}',
+          ),
+        if (approval?['mode'] != null)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_settlement_approval_mode'),
+            value: '${approval?['mode']}',
+          ),
+        if (approval?['receiptMissingAtApproval'] == true)
+          AppUi.summaryRow(
+            label: l10n.t('admin_detail_settlement_manual_approval'),
+            value: l10n.t('yes'),
+          ),
+        if (_hasSettlementStateMismatch(detail)) ...[
+          const SizedBox(height: AppTokens.spaceSm),
+          _noticeBox(
+            icon: Icons.warning_amber_outlined,
+            text: l10n.t('admin_detail_settlement_state_mismatch'),
+            isWarning: true,
+          ),
+        ],
         if (_settlementError != null)
-          Text(
-            _settlementError!,
-            style: const TextStyle(color: AppTokens.error),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                _settlementError!,
+                style: const TextStyle(color: AppTokens.error),
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              AppUi.secondaryButton(
+                label: l10n.t('admin_detail_retry_settlement'),
+                icon: Icons.refresh,
+                onPressed: _submitting ? null : _retrySettlement,
+                fullWidth: true,
+              ),
+            ],
           )
         else if (!_hasTransferSlip)
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(l10n.t('admin_settlement_waiting_slip')),
+              if (!_canManualApproveSettlement)
+                Text(l10n.t('admin_detail_settlement_not_actionable')),
               if (_canManualApproveSettlement) ...[
                 const SizedBox(height: AppTokens.spaceSm),
                 Text(
@@ -1428,7 +1951,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Widget _activitySection(AppLocalizations l10n, Map<String, dynamic> detail) {
-    final history = _statusHistory(detail);
+    final history = _sortedStatusHistory(detail);
     return AppUi.adminDetailSection(
       context: context,
       title: l10n.t('admin_detail_status_history'),
@@ -1436,8 +1959,12 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         children: history.map((entry) {
           final from = entry['fromStatus'] as String? ?? '-';
           final to = entry['toStatus'] as String? ?? '-';
-          final when = entry['createdAt'] as String? ?? '';
+          final when =
+              _formatOptionalDate(l10n, entry['createdAt']) ??
+              entry['createdAt'] as String? ??
+              '';
           final role = entry['changedByRole'] as String? ?? '';
+          final memo = (entry['memo'] as String?)?.trim();
           final fromLabel = from == '-'
               ? from
               : BookingStatusDisplay.label(
@@ -1477,7 +2004,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                         ),
                       if (role.isNotEmpty)
                         Text(
-                          role,
+                          _actorRoleLabel(l10n, role),
                           style: const TextStyle(
                             color: AppTokens.textMuted,
                             fontSize: 12,
@@ -1486,6 +2013,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                       if (entry['reason'] != null)
                         Text(
                           '${entry['reason']}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      if (memo != null && memo.isNotEmpty)
+                        Text(
+                          '${l10n.t('admin_detail_additional_memo')}: $memo',
                           style: const TextStyle(fontSize: 13),
                         ),
                     ],
