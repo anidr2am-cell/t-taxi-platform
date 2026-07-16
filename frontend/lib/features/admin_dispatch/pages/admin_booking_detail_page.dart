@@ -42,6 +42,12 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   bool _submitting = false;
   final _noteController = TextEditingController();
   final _manualSettlementNoteController = TextEditingController();
+  final _tripSectionKey = GlobalKey();
+  final _assignmentSectionKey = GlobalKey();
+  final _pricingSectionKey = GlobalKey();
+  final _chatSectionKey = GlobalKey();
+  final _reviewSectionKey = GlobalKey();
+  final _activitySectionKey = GlobalKey();
   List<Map<String, dynamic>> _notes = [];
   String? _notesError;
   bool _addingNote = false;
@@ -466,6 +472,33 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     );
   }
 
+  Future<void> _scrollToSection(GlobalKey key) async {
+    final target = key.currentContext;
+    if (target == null) return;
+    await Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      alignment: 0.08,
+    );
+  }
+
+  Future<void> _scrollToSettlement() => _scrollToSection(_pricingSectionKey);
+
+  Future<void> _scrollToReview() => _scrollToSection(_reviewSectionKey);
+
+  Future<void> _scrollToStatusArea() async {
+    if (_activitySectionKey.currentContext != null) {
+      await _scrollToSection(_activitySectionKey);
+      return;
+    }
+    if (_assignmentSectionKey.currentContext != null) {
+      await _scrollToSection(_assignmentSectionKey);
+      return;
+    }
+    await _scrollToSection(_tripSectionKey);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -498,22 +531,40 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                     const SizedBox(height: AppTokens.spaceMd),
                     _responsivePair(
                       _customerSection(l10n, detail),
-                      _tripSection(l10n, detail),
+                      KeyedSubtree(
+                        key: _tripSectionKey,
+                        child: _tripSection(l10n, detail),
+                      ),
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                     _responsivePair(
-                      _assignmentSection(l10n, detail),
-                      _pricingSection(l10n, detail),
+                      KeyedSubtree(
+                        key: _assignmentSectionKey,
+                        child: _assignmentSection(l10n, detail),
+                      ),
+                      KeyedSubtree(
+                        key: _pricingSectionKey,
+                        child: _pricingSection(l10n, detail),
+                      ),
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
-                    _chatSection(l10n, detail),
+                    KeyedSubtree(
+                      key: _chatSectionKey,
+                      child: _chatSection(l10n, detail),
+                    ),
                     if (detail['customerReview'] is Map) ...[
                       const SizedBox(height: AppTokens.spaceMd),
-                      _customerReviewSection(l10n, detail),
+                      KeyedSubtree(
+                        key: _reviewSectionKey,
+                        child: _customerReviewSection(l10n, detail),
+                      ),
                     ],
                     if (_statusHistory(detail).isNotEmpty) ...[
                       const SizedBox(height: AppTokens.spaceMd),
-                      _activitySection(l10n, detail),
+                      KeyedSubtree(
+                        key: _activitySectionKey,
+                        child: _activitySection(l10n, detail),
+                      ),
                     ],
                     const SizedBox(height: AppTokens.spaceMd),
                     _technicalSection(l10n, detail),
@@ -651,7 +702,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         operations?['lowRating'] == true;
     final severity = operations?['severity'] as String?;
     final reason = AdminOperationsUx.formatActionReason(l10n, operations);
-    final extraReasonCount = operations?['extraActionReasonCount'] as int? ?? 0;
+    final secondaryReasons = AdminOperationsUx.secondaryActionReasonLabels(
+      l10n,
+      operations,
+    );
     final route = Map<String, dynamic>.from(detail['route'] as Map? ?? {});
     final origin = Map<String, dynamic>.from(route['origin'] as Map? ?? {});
     final destination = Map<String, dynamic>.from(
@@ -708,11 +762,33 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               ),
             ),
           ],
-          if (extraReasonCount > 0)
-            Text(
-              l10n
-                  .t('admin_detail_more_reasons')
-                  .replaceFirst('{count}', '$extraReasonCount'),
+          if (secondaryReasons.isNotEmpty)
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              title: Text(
+                l10n
+                    .t('admin_ops_more_reasons')
+                    .replaceAll('{count}', '${secondaryReasons.length}'),
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              children: [
+                for (final secondaryReason in secondaryReasons)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $secondaryReason',
+                        style: const TextStyle(color: AppTokens.textSecondary),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           const SizedBox(height: AppTokens.spaceSm),
           Text(
@@ -746,6 +822,50 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final primaryCta =
         _detail?['primaryCta'] as String? ??
         operations?['primaryCta'] as String?;
+    if (primaryCta == 'ASSIGN_DRIVER' && actions.contains('ASSIGN_DRIVER')) {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_dispatch_assign_driver'),
+        icon: Icons.person_add_alt,
+        loading: _submitting,
+        onPressed: _submitting ? null : _assign,
+      );
+    }
+    if (primaryCta == 'OPEN_CHAT') {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_ops_cta_open_chat'),
+        icon: Icons.chat_bubble_outline,
+        onPressed: _openChat,
+      );
+    }
+    if (primaryCta == 'CONFIRM_SETTLEMENT' && _canConfirmSettlement) {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_settlement_confirm_200'),
+        icon: Icons.payments_outlined,
+        loading: _submitting,
+        onPressed: _submitting ? null : _confirmSettlement,
+      );
+    }
+    if (primaryCta == 'SETTLEMENT_DETAIL') {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_ops_cta_settlement_detail'),
+        icon: Icons.receipt_long_outlined,
+        onPressed: _scrollToSettlement,
+      );
+    }
+    if (primaryCta == 'REVIEW_RATING') {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_ops_cta_review_rating'),
+        icon: Icons.rate_review_outlined,
+        onPressed: _scrollToReview,
+      );
+    }
+    if (primaryCta == 'CHECK_STATUS') {
+      return AppUi.primaryButton(
+        label: l10n.t('admin_ops_cta_check_status'),
+        icon: Icons.manage_search_outlined,
+        onPressed: _scrollToStatusArea,
+      );
+    }
     if (_canConfirmSettlement) {
       return AppUi.primaryButton(
         label: l10n.t('admin_settlement_confirm_200'),
@@ -760,13 +880,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         icon: Icons.verified_user_outlined,
         loading: _submitting,
         onPressed: _submitting ? null : _manualApproveSettlement,
-      );
-    }
-    if (primaryCta == 'OPEN_CHAT') {
-      return AppUi.primaryButton(
-        label: l10n.t('admin_ops_cta_open_chat'),
-        icon: Icons.chat_bubble_outline,
-        onPressed: _openChat,
       );
     }
     if (actions.contains('ASSIGN_DRIVER')) {

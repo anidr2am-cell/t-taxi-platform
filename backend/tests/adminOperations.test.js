@@ -197,6 +197,73 @@ test("evaluateOperations keeps rejected receipt out of approve CTA path", () => 
   assert.equal(ops.settlementState, "RECEIPT_REJECTED");
 });
 
+test("evaluateOperations maps stalled pickup to check status CTA", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "DRIVER_ASSIGNED",
+    scheduled_pickup_at: "2026-07-11 08:00:00",
+    driver_id: 3,
+    assignment_id: 9,
+    updated_at: "2026-07-11 08:00:00",
+  });
+  assert.equal(ops.primaryActionReason, "PICKUP_OVERDUE_STALLED");
+  assert.equal(ops.primaryCta, "CHECK_STATUS");
+});
+
+test("evaluateOperations maps boarding delay to check status CTA", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "DRIVER_ARRIVED",
+    scheduled_pickup_at: "2026-07-11 11:00:00",
+    driver_id: 3,
+    assignment_id: 9,
+    updated_at: "2026-07-11 09:00:00",
+  });
+  assert.equal(ops.primaryActionReason, "BOARDING_DELAY");
+  assert.equal(ops.primaryCta, "CHECK_STATUS");
+});
+
+test("evaluateOperations maps long trip to check status CTA", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "PICKED_UP",
+    scheduled_pickup_at: "2026-07-11 02:00:00",
+    driver_id: 3,
+    assignment_id: 9,
+    updated_at: "2026-07-11 03:00:00",
+  });
+  assert.equal(ops.primaryActionReason, "LONG_TRIP");
+  assert.equal(ops.primaryCta, "CHECK_STATUS");
+});
+
+test("evaluateOperations maps stale status to check status CTA", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const ops = service.evaluateOperations({
+    status: "CONFIRMED",
+    scheduled_pickup_at: "2026-07-11 14:00:00",
+    driver_id: 3,
+    assignment_id: 9,
+    updated_at: "2026-07-11 07:00:00",
+  });
+  assert.equal(ops.primaryActionReason, "STATUS_STALE");
+  assert.equal(ops.primaryCta, "CHECK_STATUS");
+});
+
+test("buildPrimaryCta keeps unknown reason on view booking fallback", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const cta = service.buildPrimaryCta(
+    {
+      status: "DRIVER_ASSIGNED",
+      scheduled_pickup_at: "2026-07-11 14:00:00",
+      driver_id: 3,
+      assignment_id: 9,
+      updated_at: "2026-07-11 10:00:00",
+    },
+    { code: "UNKNOWN_REASON" },
+  );
+  assert.equal(cta, "VIEW_BOOKING");
+});
+
 test("sortQueueItems orders urgent before review", () => {
   const service = new AdminOperationsService(() => fixedNow());
   const dispatch = new AdminDispatchService(
