@@ -623,9 +623,12 @@ void main() {
     },
   );
 
-  testWidgets('guest tracking unavailable and terminal states render safely', (
+  testWidgets('guest tracking waits in assigned status without location load', (
     tester,
   ) async {
+    final api = _FakeGuestLocationApi(
+      result: const GuestDriverLocationResult(available: false),
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -633,9 +636,7 @@ void main() {
             bookingId: 99,
             guestAccessToken: 'guest-token',
             bookingStatus: 'DRIVER_ASSIGNED',
-            api: _FakeGuestLocationApi(
-              result: const GuestDriverLocationResult(available: false),
-            ),
+            api: api,
             socket: _FakeLocationSocket(),
           ),
         ),
@@ -643,9 +644,100 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Track driver'), findsOneWidget);
-    expect(find.text('Driver location is not available yet.'), findsOneWidget);
+    expect(api.calls, 0);
+    expect(find.text('Driver location'), findsOneWidget);
+    expect(find.textContaining('driver has been assigned'), findsOneWidget);
+  });
 
+  testWidgets('guest tracking shows initial live location on route', (
+    tester,
+  ) async {
+    final api = _FakeGuestLocationApi(
+      result: GuestDriverLocationResult(
+        available: true,
+        bookingNumber: 'TX202607010001',
+        bookingStatus: 'ON_ROUTE',
+        driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GuestDriverTrackingSection(
+            bookingId: 99,
+            guestAccessToken: 'guest-token',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            socket: _FakeLocationSocket(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.calls, 1);
+    expect(find.text('Driver location sharing'), findsOneWidget);
+    expect(find.text('Somchai'), findsOneWidget);
+    expect(find.text('Open in map'), findsOneWidget);
+  });
+
+  testWidgets('guest tracking ignores older and other booking socket events', (
+    tester,
+  ) async {
+    final socket = _FakeLocationSocket();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GuestDriverTrackingSection(
+            bookingId: 99,
+            guestAccessToken: 'guest-token',
+            bookingStatus: 'ON_ROUTE',
+            api: _FakeGuestLocationApi(
+              result: GuestDriverLocationResult(
+                available: true,
+                driver: _guestDriver(
+                  name: 'Fresh Driver',
+                  recordedAt: '2026-07-01T10:00:00.000Z',
+                ),
+              ),
+            ),
+            socket: socket,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    socket.emitGuest({
+      'bookingId': 100,
+      'available': true,
+      'driver': {
+        'displayName': 'Other Booking',
+        'latitude': 13,
+        'longitude': 100,
+        'recordedAt': '2026-07-01T10:05:00.000Z',
+      },
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Fresh Driver'), findsOneWidget);
+    expect(find.text('Other Booking'), findsNothing);
+
+    socket.emitGuest({
+      'bookingId': 99,
+      'available': true,
+      'driver': {
+        'displayName': 'Old Driver',
+        'latitude': 13,
+        'longitude': 100,
+        'recordedAt': '2026-07-01T09:59:00.000Z',
+      },
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Fresh Driver'), findsOneWidget);
+    expect(find.text('Old Driver'), findsNothing);
+  });
+
+  testWidgets('guest tracking terminal states render safely', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -663,22 +755,36 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Track driver'), findsNothing);
+    expect(find.text('Driver location'), findsNothing);
   });
 }
 
 class _FakeLocationSocket extends DriverLocationSocketService {
-  @override
-  Future<void> connect({String? accessToken, String? guestAccessToken}) async {}
+  String? connectedGuestToken;
+  int? subscribedBookingId;
+  bool disconnected = false;
 
   @override
-  void subscribeGuest(int bookingId) {}
+  Future<void> connect({String? accessToken, String? guestAccessToken}) async {
+    connectedGuestToken = guestAccessToken;
+  }
+
+  @override
+  void subscribeGuest(int bookingId) {
+    subscribedBookingId = bookingId;
+  }
 
   @override
   void subscribeAdmin() {}
 
   @override
-  void disconnect() {}
+  void disconnect() {
+    disconnected = true;
+  }
+
+  void emitGuest(Map<String, dynamic> payload) {
+    onGuestChanged?.call(payload);
+  }
 }
 
 class _FakeDispatchDriversApi extends AdminDispatchApiService {
@@ -711,14 +817,29 @@ class _FakeGuestLocationApi extends DriverLocationApiService {
   _FakeGuestLocationApi({required this.result});
 
   final GuestDriverLocationResult result;
+  int calls = 0;
 
   @override
   Future<GuestDriverLocationResult> getGuestDriverLocation({
     required int bookingId,
     required String guestAccessToken,
   }) async {
+    calls += 1;
     return result;
   }
+}
+
+DriverLocation _guestDriver({String name = 'Somchai', String? recordedAt}) {
+  return DriverLocation(
+    driverId: 0,
+    displayName: name,
+    vehicle: 'SUV / TEST-001',
+    latitude: 12.9236,
+    longitude: 100.8825,
+    recordedAt: recordedAt,
+    lastSeenAt: recordedAt,
+    stale: false,
+  );
 }
 
 Position _position() => Position(

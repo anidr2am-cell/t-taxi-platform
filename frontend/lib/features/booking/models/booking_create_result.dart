@@ -10,6 +10,7 @@ class BookingCreateResult {
   final String chatRoomCode;
   final String boardingQrToken;
   final String trustMessage;
+  final bool trackingAvailable;
 
   const BookingCreateResult({
     this.bookingId,
@@ -23,9 +24,13 @@ class BookingCreateResult {
     required this.chatRoomCode,
     required this.boardingQrToken,
     required this.trustMessage,
+    this.trackingAvailable = false,
   });
 
   factory BookingCreateResult.fromJson(Map<String, dynamic> json) {
+    final capabilities = json['capabilities'] is Map
+        ? Map<String, dynamic>.from(json['capabilities'] as Map)
+        : const <String, dynamic>{};
     return BookingCreateResult(
       bookingId: json['bookingId'] as int?,
       bookingNumber: json['bookingNumber'] as String? ?? '',
@@ -38,6 +43,7 @@ class BookingCreateResult {
       chatRoomCode: json['chatRoomCode'] as String? ?? '',
       boardingQrToken: json['boardingQrToken'] as String? ?? '',
       trustMessage: json['trustMessage'] as String? ?? '',
+      trackingAvailable: capabilities['trackingAvailable'] == true,
     );
   }
 }

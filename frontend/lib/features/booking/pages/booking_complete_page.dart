@@ -14,6 +14,7 @@ import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
 import '../../chat/services/chat_socket_service.dart';
+import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/booking_chat_section.dart';
 import 'customer_booking_chat_page.dart';
@@ -136,6 +137,20 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       widget.enableCustomerTools &&
       widget.result.bookingId != null &&
       widget.result.guestAccessToken?.isNotEmpty == true;
+
+  bool get _canShowTracking {
+    const statuses = {
+      'DRIVER_ASSIGNED',
+      'ON_ROUTE',
+      'DRIVER_ARRIVED',
+      'PICKED_UP',
+    };
+    return widget.enableCustomerTools &&
+        widget.result.bookingId != null &&
+        widget.result.guestAccessToken?.isNotEmpty == true &&
+        widget.result.trackingAvailable &&
+        statuses.contains(widget.result.status);
+  }
 
   bool get _canShowReviewForm =>
       widget.enableCustomerTools &&
@@ -336,6 +351,14 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               ),
               const SizedBox(height: AppTokens.spaceLg),
               if (widget.enableCustomerTools) ...[
+                if (_canShowTracking) ...[
+                  GuestDriverTrackingSection(
+                    bookingId: result.bookingId!,
+                    guestAccessToken: result.guestAccessToken!,
+                    bookingStatus: result.status,
+                  ),
+                  const SizedBox(height: AppTokens.spaceMd),
+                ],
                 if (_isCompleted) ...[
                   AppUi.surfaceCard(
                     backgroundColor: AppTokens.successLight,

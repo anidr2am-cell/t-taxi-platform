@@ -169,7 +169,6 @@ test('guest can access only assigned driver for own booking', async () => {
       return {
         available: true,
         driver: {
-          driverId: 7,
           displayName: 'Somchai',
           latitude: 12.9,
           longitude: 100.8,
@@ -185,6 +184,8 @@ test('guest can access only assigned driver for own booking', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.data.available, true);
   assert.equal(res.body.data.driver.displayName, 'Somchai');
+  assert.equal(res.body.data.driver.driverId, undefined);
+  assert.equal(res.body.data.driver.userId, undefined);
 });
 
 test('terminal or unassigned booking returns safe unavailable response', async () => {
@@ -203,6 +204,39 @@ test('terminal or unassigned booking returns safe unavailable response', async (
   const result = await service.getGuestDriverLocation(3, 'guest-token');
   assert.equal(result.available, false);
   assert.equal(result.driver, null);
+  assert.equal(result.bookingStatus, 'COMPLETED');
+});
+
+test('guest driver location availability follows public booking statuses', async () => {
+  const service = new DriverLocationService({}, {
+    async findGuestAssignedDriverLocation(_bookingId, _tokenHash) {
+      return {
+        booking_number: 'TX202607010001',
+        booking_status: this.status,
+        driver_id: 7,
+        driver_name: 'Somchai',
+        current_lat: 12.9,
+        current_lng: 100.8,
+        location_updated_at: new Date().toISOString(),
+      };
+    },
+  });
+  const repository = service.driverLocationRepository;
+
+  for (const status of ['DRIVER_ASSIGNED', 'SETTLEMENT_PENDING', 'COMPLETED', 'CANCELLED', 'NO_SHOW']) {
+    repository.status = status;
+    const result = await service.getGuestDriverLocation(3, 'guest-token');
+    assert.equal(result.available, false, status);
+    assert.equal(result.driver, null, status);
+  }
+
+  for (const status of ['ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP']) {
+    repository.status = status;
+    const result = await service.getGuestDriverLocation(3, 'guest-token');
+    assert.equal(result.available, true, status);
+    assert.equal(result.driver.displayName, 'Somchai');
+    assert.equal(result.driver.driverId, undefined);
+  }
 });
 
 test('stale flag is true when location is older than sixty seconds', () => {
@@ -361,6 +395,10 @@ test('socket driver location update ignores client supplied driverId and broadca
       [bookingDriverLocationRoom(99), 'booking:driver-location:changed'],
     ],
   );
+  const guestEvent = io.emitted.find((item) => item.event === 'booking:driver-location:changed');
+  assert.equal(guestEvent.payload.driver.displayName, 'Somchai');
+  assert.equal(guestEvent.payload.driver.driverId, undefined);
+  assert.equal(guestEvent.payload.driver.userId, undefined);
 });
 
 test('socket location update does not broadcast stale no-op result', async () => {
@@ -408,6 +446,35 @@ test('socket guest cannot subscribe to another booking', async () => {
   let ack;
   await socket.handlers['booking:driver-location:subscribe'](
     { bookingId: 100 },
+    (value) => { ack = value; },
+  );
+
+  assert.equal(ack.ok, false);
+  assert.equal(socket.joinedRooms.size, 0);
+  assert.equal(ack.error.code, ERROR_CODES.BOOKING_NOT_ACCESSIBLE);
+});
+
+test('socket guest cannot subscribe before live location is trackable', async () => {
+  const io = buildIo();
+  const socket = buildSocket({ guestAccessToken: 'guest-token' });
+  registerDriverLocationService({
+    async getGuestDriverLocation(bookingId, guestAccessToken) {
+      assert.equal(bookingId, 99);
+      assert.equal(guestAccessToken, 'guest-token');
+      return {
+        available: false,
+        bookingNumber: 'TX202607010001',
+        bookingStatus: 'DRIVER_ASSIGNED',
+        reason: 'LOCATION_UNAVAILABLE',
+        driver: null,
+      };
+    },
+  });
+  registerDriverLocationHandlers(io, socket);
+
+  let ack;
+  await socket.handlers['booking:driver-location:subscribe'](
+    { bookingId: 99 },
     (value) => { ack = value; },
   );
 

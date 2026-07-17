@@ -158,7 +158,7 @@ class DriverLocationRepository {
           AND dv.deleted_at IS NULL
         LEFT JOIN vehicle_types vt ON vt.id = COALESCE(dv.vehicle_type_id, d.primary_vehicle_type_id)
           AND vt.deleted_at IS NULL
-        WHERE b.id = ? AND b.deleted_at IS NULL
+        WHERE b.id = ? AND b.deleted_at IS NULL AND b.is_archived = 0
         LIMIT 1
       `,
       [tokenHash, bookingId],
