@@ -8,6 +8,12 @@ const { isBookingReviewEligible } = require('../utils/reviewEligibility.util');
 const GuestVehiclePhotoService = require('./guestVehiclePhoto.service');
 
 const LOOKUP_GUEST_TOKEN_TTL_HOURS = 24;
+const CUSTOMER_TRACKING_STATUSES = new Set([
+  BOOKING_STATUS.DRIVER_ASSIGNED,
+  BOOKING_STATUS.ON_ROUTE,
+  BOOKING_STATUS.DRIVER_ARRIVED,
+  BOOKING_STATUS.PICKED_UP,
+]);
 
 class GuestBookingLookupService {
   constructor(pool, bookingRepository, guestVehiclePhotoService = null, reviewRepository = null) {
@@ -178,6 +184,7 @@ class GuestBookingLookupService {
         notificationsAvailable: true,
         dropoffQrIssueAvailable: row.status === BOOKING_STATUS.PICKED_UP,
         reviewAvailable: canReview,
+        trackingAvailable: CUSTOMER_TRACKING_STATUSES.has(row.status),
         boardingQrRecoverable,
         boardingQrPreviouslyIssued: Boolean(row.boarding_qr_token_hash) && !terminalStatus,
       },

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
+import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/features/driver_location/models/driver_location.dart';
 import 'package:frontend/features/driver_location/pages/admin_driver_monitor_page.dart';
@@ -649,6 +651,100 @@ void main() {
     expect(find.textContaining('driver has been assigned'), findsOneWidget);
   });
 
+  testWidgets('guest tracking starts after assigned booking becomes on route', (
+    tester,
+  ) async {
+    final api = _FakeGuestLocationApi(
+      result: GuestDriverLocationResult(
+        available: true,
+        bookingNumber: 'TX202607010001',
+        bookingStatus: 'ON_ROUTE',
+        driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+      ),
+    );
+    final socket = _FakeLocationSocket();
+    final lookup = _FakeGuestBookingLookupService([
+      _guestLookup(status: 'ON_ROUTE', trackingAvailable: true),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GuestDriverTrackingSection(
+            bookingId: 99,
+            guestAccessToken: 'guest-token',
+            bookingStatus: 'DRIVER_ASSIGNED',
+            bookingNumber: 'TX202607010001',
+            customerPhone: '+66 81 234 5678',
+            lookupService: lookup,
+            api: api,
+            socket: socket,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(api.calls, 0);
+    expect(socket.subscribedBookingId, isNull);
+    expect(lookup.calls, 0);
+
+    await tester.pump(const Duration(seconds: 15));
+    await tester.pumpAndSettle();
+
+    expect(lookup.calls, 1);
+    expect(api.calls, 1);
+    expect(socket.connectedGuestToken, 'guest-token-refreshed-1');
+    expect(socket.subscribedBookingId, 99);
+    expect(find.text('Driver location sharing'), findsOneWidget);
+    expect(find.text('Somchai'), findsOneWidget);
+  });
+
+  testWidgets('guest tracking cleans up when status polling reaches terminal', (
+    tester,
+  ) async {
+    final socket = _FakeLocationSocket();
+    final lookup = _FakeGuestBookingLookupService([
+      _guestLookup(status: 'SETTLEMENT_PENDING', trackingAvailable: false),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GuestDriverTrackingSection(
+            bookingId: 99,
+            guestAccessToken: 'guest-token',
+            bookingStatus: 'PICKED_UP',
+            bookingNumber: 'TX202607010001',
+            customerPhone: '+66 81 234 5678',
+            lookupService: lookup,
+            api: _FakeGuestLocationApi(
+              result: GuestDriverLocationResult(
+                available: true,
+                driver: _guestDriver(
+                  recordedAt: DateTime.now().toIso8601String(),
+                ),
+              ),
+            ),
+            socket: socket,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Somchai'), findsOneWidget);
+    expect(socket.subscribedBookingId, 99);
+
+    await tester.pump(const Duration(seconds: 15));
+    await tester.pumpAndSettle();
+
+    expect(lookup.calls, 1);
+    expect(socket.disconnectCalls, greaterThanOrEqualTo(1));
+    expect(find.text('Driver location'), findsNothing);
+    expect(find.text('Somchai'), findsNothing);
+  });
+
   testWidgets('guest tracking shows initial live location on route', (
     tester,
   ) async {
@@ -763,6 +859,7 @@ class _FakeLocationSocket extends DriverLocationSocketService {
   String? connectedGuestToken;
   int? subscribedBookingId;
   bool disconnected = false;
+  int disconnectCalls = 0;
 
   @override
   Future<void> connect({String? accessToken, String? guestAccessToken}) async {
@@ -780,10 +877,28 @@ class _FakeLocationSocket extends DriverLocationSocketService {
   @override
   void disconnect() {
     disconnected = true;
+    disconnectCalls += 1;
   }
 
   void emitGuest(Map<String, dynamic> payload) {
     onGuestChanged?.call(payload);
+  }
+}
+
+class _FakeGuestBookingLookupService extends GuestBookingLookupService {
+  _FakeGuestBookingLookupService(this.results);
+
+  final List<GuestBookingLookupResult> results;
+  int calls = 0;
+
+  @override
+  Future<GuestBookingLookupResult> lookup({
+    required String bookingNumber,
+    required String phone,
+  }) async {
+    calls += 1;
+    final index = (calls - 1).clamp(0, results.length - 1).toInt();
+    return results[index];
   }
 }
 
@@ -839,6 +954,36 @@ DriverLocation _guestDriver({String name = 'Somchai', String? recordedAt}) {
     recordedAt: recordedAt,
     lastSeenAt: recordedAt,
     stale: false,
+  );
+}
+
+GuestBookingLookupResult _guestLookup({
+  required String status,
+  required bool trackingAvailable,
+}) {
+  return GuestBookingLookupResult(
+    bookingId: 99,
+    bookingNumber: 'TX202607010001',
+    status: status,
+    scheduledPickupAt: '2026-07-01T09:30:00+07:00',
+    serviceTypeName: 'Airport Pickup',
+    originAddress: 'BKK Airport',
+    destinationAddress: 'Pattaya Hotel',
+    totalAmount: 1500,
+    currency: 'THB',
+    paymentMethod: 'PAY_DRIVER',
+    guestAccessToken: 'guest-token-refreshed-1',
+    guestAccessExpiresAt: '2026-07-02T00:00:00Z',
+    capabilities: GuestBookingCapabilities(
+      chatAvailable: true,
+      notificationsAvailable: true,
+      dropoffQrIssueAvailable: status == 'PICKED_UP',
+      reviewAvailable: false,
+      trackingAvailable: trackingAvailable,
+      boardingQrRecoverable: false,
+      boardingQrPreviouslyIssued: false,
+    ),
+    customerPhone: '+66 81 234 5678',
   );
 }
 

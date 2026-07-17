@@ -7,6 +7,9 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../../booking/models/guest_booking_lookup_result.dart';
+import '../../booking/services/booking_api_service.dart';
+import '../../booking/services/guest_booking_lookup_service.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
 import '../services/driver_location_socket_service.dart';
@@ -18,6 +21,9 @@ class GuestDriverTrackingSection extends StatefulWidget {
     required this.bookingId,
     required this.guestAccessToken,
     required this.bookingStatus,
+    this.bookingNumber,
+    this.customerPhone,
+    this.lookupService,
     this.api,
     this.socket,
   });
@@ -25,6 +31,9 @@ class GuestDriverTrackingSection extends StatefulWidget {
   final int bookingId;
   final String guestAccessToken;
   final String bookingStatus;
+  final String? bookingNumber;
+  final String? customerPhone;
+  final GuestBookingLookupService? lookupService;
   final DriverLocationApiService? api;
   final DriverLocationSocketService? socket;
 
@@ -42,29 +51,51 @@ class _GuestDriverTrackingSectionState
     'DRIVER_ARRIVED',
     'PICKED_UP',
   };
+  static const _terminalStatuses = {
+    'SETTLEMENT_PENDING',
+    'COMPLETED',
+    'CANCELLED',
+    'NO_SHOW',
+  };
   static const _freshLocation = Duration(seconds: 60);
+  static const _statusPollingInterval = Duration(seconds: 15);
 
   late final DriverLocationApiService _api =
       widget.api ?? DriverLocationApiService();
   late final DriverLocationSocketService _socket =
       widget.socket ?? DriverLocationSocketService();
+  late final GuestBookingLookupService _lookupService =
+      widget.lookupService ?? GuestBookingLookupService();
 
+  Timer? _statusPollingTimer;
   Timer? _staleTimer;
+  late String _currentBookingStatus;
+  late String _currentGuestAccessToken;
   bool _loading = false;
   bool _connected = false;
+  bool _locationLifecycleStarted = false;
   String? _error;
   GuestDriverLocationResult? _result;
   int _generation = 0;
 
-  bool get _visible => _visibleStatuses.contains(widget.bookingStatus);
+  bool get _visible => _visibleStatuses.contains(_currentBookingStatus);
+
+  bool get _terminal => _terminalStatuses.contains(_currentBookingStatus);
 
   bool get _canLoadLocation =>
-      _locationStatuses.contains(widget.bookingStatus) &&
-      widget.guestAccessToken.trim().isNotEmpty;
+      _locationStatuses.contains(_currentBookingStatus) &&
+      _currentGuestAccessToken.trim().isNotEmpty;
+
+  bool get _canPollStatus =>
+      _visible &&
+      widget.bookingNumber?.trim().isNotEmpty == true &&
+      widget.customerPhone?.trim().isNotEmpty == true;
 
   @override
   void initState() {
     super.initState();
+    _currentBookingStatus = widget.bookingStatus;
+    _currentGuestAccessToken = widget.guestAccessToken;
     _syncLifecycle();
   }
 
@@ -73,10 +104,14 @@ class _GuestDriverTrackingSectionState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.bookingId != widget.bookingId ||
         oldWidget.guestAccessToken != widget.guestAccessToken ||
+        oldWidget.bookingNumber != widget.bookingNumber ||
+        oldWidget.customerPhone != widget.customerPhone ||
         oldWidget.bookingStatus != widget.bookingStatus) {
       _generation += 1;
-      _socket.disconnect();
-      _staleTimer?.cancel();
+      _currentBookingStatus = widget.bookingStatus;
+      _currentGuestAccessToken = widget.guestAccessToken;
+      _resetLocationLifecycle();
+      _statusPollingTimer?.cancel();
       _syncLifecycle();
     }
   }
@@ -84,30 +119,153 @@ class _GuestDriverTrackingSectionState
   @override
   void dispose() {
     _generation += 1;
-    _staleTimer?.cancel();
-    _socket.disconnect();
+    _statusPollingTimer?.cancel();
+    _resetLocationLifecycle();
     super.dispose();
   }
 
   void _syncLifecycle() {
+    if (_terminal) {
+      _enterTerminalState();
+      return;
+    }
     if (!_visible) {
       _loading = false;
       _result = null;
       _error = null;
+      _statusPollingTimer?.cancel();
+      _resetLocationLifecycle();
       return;
     }
+    _startStatusPolling();
     if (!_canLoadLocation) {
       _loading = false;
       _result = const GuestDriverLocationResult(
         available: false,
         reason: 'WAITING_FOR_DRIVER',
       );
+      _resetLocationLifecycle();
       return;
     }
+    if (_locationLifecycleStarted) return;
+    _locationLifecycleStarted = true;
     final generation = _generation;
     _load(generation: generation);
     _connectSocket(generation: generation);
     _startStaleTimer(generation);
+  }
+
+  void _resetLocationLifecycle() {
+    _locationLifecycleStarted = false;
+    _staleTimer?.cancel();
+    _staleTimer = null;
+    _socket.disconnect();
+    _connected = false;
+  }
+
+  void _enterTerminalState() {
+    _generation += 1;
+    _statusPollingTimer?.cancel();
+    _statusPollingTimer = null;
+    _resetLocationLifecycle();
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _error = null;
+        _result = null;
+      });
+    } else {
+      _loading = false;
+      _error = null;
+      _result = null;
+    }
+  }
+
+  void _startStatusPolling() {
+    if (!_canPollStatus || _statusPollingTimer != null) return;
+    final generation = _generation;
+    _statusPollingTimer = Timer.periodic(_statusPollingInterval, (_) {
+      _pollBookingStatus(generation: generation);
+    });
+  }
+
+  Future<void> _pollBookingStatus({required int generation}) async {
+    if (!mounted || generation != _generation || !_canPollStatus) return;
+    try {
+      final result = await _lookupService.lookup(
+        bookingNumber: widget.bookingNumber!.trim(),
+        phone: widget.customerPhone!.trim(),
+      );
+      if (!mounted || generation != _generation) return;
+      _applyBookingStatus(result);
+    } on BookingApiException catch (err) {
+      if (!mounted || generation != _generation) return;
+      if (_isAuthorizationError(err)) {
+        _generation += 1;
+        _statusPollingTimer?.cancel();
+        _statusPollingTimer = null;
+        _resetLocationLifecycle();
+        setState(() {
+          _loading = false;
+          _result = null;
+          _error = userFacingError(
+            err,
+            fallback: context.l10n.t('customer_driver_location_load_failed'),
+          );
+        });
+      }
+    } catch (_) {
+      // Temporary network/refresh errors should not tear down the waiting UI.
+      // The next polling tick can recover without exposing a noisy banner.
+    }
+  }
+
+  bool _isAuthorizationError(BookingApiException err) {
+    return err.errorCode == 'UNAUTHORIZED' ||
+        err.errorCode == 'AUTH_REQUIRED' ||
+        err.errorCode == 'AUTH_INVALID' ||
+        err.errorCode == 'TOKEN_EXPIRED' ||
+        err.errorCode == 'BOOKING_NOT_ACCESSIBLE';
+  }
+
+  void _applyBookingStatus(GuestBookingLookupResult result) {
+    final nextStatus = result.status;
+    final nextToken = result.guestAccessToken;
+    final wasLocationActive = _canLoadLocation;
+    final statusChanged = nextStatus != _currentBookingStatus;
+    final tokenChanged =
+        nextToken.trim().isNotEmpty && nextToken != _currentGuestAccessToken;
+
+    if (!statusChanged && !tokenChanged) return;
+
+    if (_terminalStatuses.contains(nextStatus)) {
+      _currentBookingStatus = nextStatus;
+      if (tokenChanged) _currentGuestAccessToken = nextToken;
+      _enterTerminalState();
+      return;
+    }
+
+    _currentBookingStatus = nextStatus;
+    if (tokenChanged) _currentGuestAccessToken = nextToken;
+
+    if (tokenChanged || wasLocationActive != _canLoadLocation) {
+      _generation += 1;
+      _resetLocationLifecycle();
+      _statusPollingTimer?.cancel();
+      _statusPollingTimer = null;
+    }
+
+    setState(() {
+      _error = null;
+      if (!_canLoadLocation) {
+        _loading = false;
+        _result = const GuestDriverLocationResult(
+          available: false,
+          reason: 'WAITING_FOR_DRIVER',
+        );
+      }
+    });
+    _syncLifecycle();
   }
 
   Future<void> _connectSocket({required int generation}) async {
@@ -123,8 +281,30 @@ class _GuestDriverTrackingSectionState
         _error = null;
       });
     };
-    _socket.onError = (_) {
+    _socket.onError = (payload) {
       if (!mounted || generation != _generation) return;
+      final code = payload['code']?.toString();
+      if (code == 'BOOKING_NOT_TRACKABLE' || code == 'LOCATION_UNAVAILABLE') {
+        setState(() {
+          _loading = false;
+          _error = null;
+          _result = const GuestDriverLocationResult(
+            available: false,
+            reason: 'WAITING_FOR_DRIVER',
+          );
+        });
+        return;
+      }
+      if (code == 'BOOKING_NOT_ACCESSIBLE' ||
+          code == 'UNAUTHORIZED' ||
+          code == 'AUTH_REQUIRED' ||
+          code == 'AUTH_INVALID' ||
+          code == 'TOKEN_EXPIRED') {
+        _generation += 1;
+        _statusPollingTimer?.cancel();
+        _statusPollingTimer = null;
+        _resetLocationLifecycle();
+      }
       setState(() {
         _error = context.l10n.t('customer_driver_location_load_failed');
       });
@@ -133,7 +313,7 @@ class _GuestDriverTrackingSectionState
       if (!mounted || generation != _generation) return;
       setState(() => _connected = _socket.connected);
     };
-    await _socket.connect(guestAccessToken: widget.guestAccessToken);
+    await _socket.connect(guestAccessToken: _currentGuestAccessToken);
     if (!mounted || generation != _generation || !_canLoadLocation) return;
     _socket.subscribeGuest(widget.bookingId);
   }
@@ -148,7 +328,7 @@ class _GuestDriverTrackingSectionState
     try {
       final result = await _api.getGuestDriverLocation(
         bookingId: widget.bookingId,
-        guestAccessToken: widget.guestAccessToken,
+        guestAccessToken: _currentGuestAccessToken,
       );
       if (!mounted || expectedGeneration != _generation) return;
       setState(() {
@@ -192,7 +372,7 @@ class _GuestDriverTrackingSectionState
   }
 
   String _statusMessage(AppLocalizations l10n) {
-    switch (widget.bookingStatus) {
+    switch (_currentBookingStatus) {
       case 'DRIVER_ASSIGNED':
         return l10n.t('customer_driver_location_waiting');
       case 'ON_ROUTE':
@@ -289,7 +469,7 @@ class _GuestDriverTrackingSectionState
               retryLabel: l10n.t('customer_driver_location_retry'),
             ),
           ] else if (!hasLocation) ...[
-            if (widget.bookingStatus != 'DRIVER_ASSIGNED') ...[
+            if (_currentBookingStatus != 'DRIVER_ASSIGNED') ...[
               const SizedBox(height: AppTokens.spaceMd),
               Text(
                 l10n.t('customer_driver_location_temporarily_unavailable'),

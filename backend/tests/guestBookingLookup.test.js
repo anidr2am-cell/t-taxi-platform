@@ -154,6 +154,26 @@ test('guest lookup allows boarding QR recovery before pickup', async () => {
   assert.ok(!JSON.stringify(result).includes('boarding-hash'));
 });
 
+test('guest lookup exposes tracking capability only before and during active trip', async () => {
+  for (const status of ['DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP']) {
+    const { service } = buildService(bookingRow({ status }));
+    const result = await service.lookup({
+      bookingNumber: 'TX202607010001',
+      phone: '+66 81 234 5678',
+    });
+    assert.equal(result.capabilities.trackingAvailable, true, status);
+  }
+
+  for (const status of ['PENDING', 'SETTLEMENT_PENDING', 'COMPLETED', 'CANCELLED', 'NO_SHOW']) {
+    const { service } = buildService(bookingRow({ status }));
+    const result = await service.lookup({
+      bookingNumber: 'TX202607010001',
+      phone: '+66 81 234 5678',
+    });
+    assert.equal(result.capabilities.trackingAvailable, false, status);
+  }
+});
+
 test('guest lookup omits vehiclePhotoUrl when driver has no application photo', async () => {
   const { service } = buildService(bookingRow({ driver_vehicle_photo_file_id: null }));
 

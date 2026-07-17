@@ -480,7 +480,8 @@ test('socket guest cannot subscribe before live location is trackable', async ()
 
   assert.equal(ack.ok, false);
   assert.equal(socket.joinedRooms.size, 0);
-  assert.equal(ack.error.code, ERROR_CODES.BOOKING_NOT_ACCESSIBLE);
+  assert.equal(ack.error.code, ERROR_CODES.BOOKING_NOT_TRACKABLE);
+  assert.equal(ack.error.bookingStatus, 'DRIVER_ASSIGNED');
 });
 
 test('socket admin room subscription requires admin role', async () => {
