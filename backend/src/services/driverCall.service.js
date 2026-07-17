@@ -41,6 +41,9 @@ class DriverCallService {
   }
 
   mapOpenCall(row) {
+    const paymentSummary = this.driverJobService.paymentSummary
+      ? this.driverJobService.paymentSummary(row)
+      : {};
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -60,6 +63,7 @@ class DriverCallService {
       passengerCount: this.passengerCount(row),
       amount: Number(row.total_amount || 0),
       currency: row.currency,
+      ...paymentSummary,
       luggage: {
         carriers20Inch: Number(row.carriers_20_inch || 0),
         carriers24InchPlus: Number(row.carriers_24_inch_plus || 0),

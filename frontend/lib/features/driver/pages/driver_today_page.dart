@@ -17,6 +17,7 @@ import '../pages/driver_chat_page.dart';
 import '../pages/driver_notifications_page.dart';
 import '../services/driver_api_service.dart';
 import '../services/driver_call_socket_service.dart';
+import '../utils/driver_money_format.dart';
 import '../widgets/driver_today_trip_cards.dart';
 
 class DriverTodayPage extends StatefulWidget {
@@ -589,9 +590,18 @@ class _OpenCallsSection extends StatelessWidget {
           else
             ...calls.map((call) {
               final claiming = claimingCalls.contains(call.bookingNumber);
-              final amount = call.amount > 0
-                  ? '${call.amount.toStringAsFixed(0)} ${call.currency}'
-                  : '-';
+              final expectedIncome = call.driverExpectedIncomeAmount == null
+                  ? null
+                  : DriverMoneyFormat.money(
+                      call.driverExpectedIncomeAmount!,
+                      call.driverExpectedIncomeCurrency ?? call.currency,
+                    );
+              final customerTotal = call.customerPaymentAmount == null
+                  ? null
+                  : DriverMoneyFormat.money(
+                      call.customerPaymentAmount!,
+                      call.customerPaymentCurrency ?? call.currency,
+                    );
               final luggage = _luggageSummary(call);
               return Padding(
                 padding: const EdgeInsets.only(top: AppTokens.spaceSm),
@@ -615,9 +625,24 @@ class _OpenCallsSection extends StatelessWidget {
                       Text('${call.origin} → ${call.destination}'),
                       const SizedBox(height: 6),
                       Text(
-                        '${call.serviceTypeName} · ${call.vehicleTypeName} · $amount',
+                        '${call.serviceTypeName} · ${call.vehicleTypeName}',
                         style: const TextStyle(color: AppTokens.textSecondary),
                       ),
+                      if (expectedIncome != null) ...[
+                        const SizedBox(height: 8),
+                        AppUi.summaryRow(
+                          label: context.l10n.t('driver_expected_income'),
+                          value: expectedIncome,
+                          emphasize: true,
+                        ),
+                      ],
+                      if (customerTotal != null) ...[
+                        const SizedBox(height: 4),
+                        AppUi.summaryRow(
+                          label: context.l10n.t('driver_customer_total_amount'),
+                          value: customerTotal,
+                        ),
+                      ],
                       if (luggage.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(

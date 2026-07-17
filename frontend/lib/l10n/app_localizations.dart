@@ -701,6 +701,45 @@ class AppLocalizations {
       'driver_payment_method_pay_driver': 'Pay driver at destination',
       'driver_payment_method_bank_transfer': 'Bank transfer',
       'driver_payment_method_card': 'Card',
+      'driver_payment_method_unknown': 'Payment method needs confirmation',
+      'driver_payment_summary_title': 'Payment and income',
+      'driver_customer_total_amount': 'Customer total',
+      'driver_company_commission': 'Company commission',
+      'driver_expected_income': 'Driver expected income',
+      'driver_income_unavailable':
+          'Income information is not available. Please contact operations.',
+      'driver_commission_unavailable': 'Commission information needs review',
+      'driver_receipt_status': 'Receipt status',
+      'driver_settlement_status_not_due_yet': 'Not due yet',
+      'driver_settlement_status_due': 'Payment due',
+      'driver_settlement_status_overdue': 'Overdue',
+      'driver_settlement_status_receipt_submitted': 'Receipt under review',
+      'driver_settlement_status_rejected': 'Receipt rejected',
+      'driver_settlement_status_completed': 'Settlement completed',
+      'driver_settlement_status_waived': 'Commission waived',
+      'driver_settlement_status_unknown': 'Status review needed',
+      'driver_receipt_status_none': 'No receipt',
+      'driver_receipt_status_submitted': 'Receipt submitted',
+      'driver_receipt_status_rejected': 'Receipt rejected',
+      'driver_receipt_status_approved': 'Receipt approved',
+      'driver_receipt_status_unknown': 'Receipt status unknown',
+      'driver_settlement_not_due_yet_message':
+          'The company commission is not due yet. You can receive new calls.',
+      'driver_settlement_due_message':
+          'Please pay the company commission and upload the receipt.',
+      'driver_settlement_due_blocked_message':
+          'Please pay the company commission and upload the receipt. You cannot receive new calls until settlement is completed.',
+      'driver_settlement_overdue_message':
+          'The commission payment is overdue. Please pay the commission and upload the receipt.',
+      'driver_settlement_receipt_review_message':
+          'Your receipt is under review. You cannot receive new calls until admin approval.',
+      'driver_settlement_rejected_message':
+          'The receipt was rejected. Check the reason and submit it again.',
+      'driver_settlement_completed_message': 'Settlement has been completed.',
+      'driver_settlement_waived_message':
+          'The company commission was waived for this trip. You can receive new calls.',
+      'driver_new_calls_blocked_by_settlement':
+          'The trip has ended, but settlement remains. Complete settlement before receiving new calls.',
       'driver_success_picked_up': 'Customer boarding confirmed',
       'driver_success_end_trip': 'Trip ended. Please review settlement.',
       'driver_trip_settlement_pending_info':
@@ -4256,6 +4295,49 @@ class AppLocalizations {
     'driver_payment_method_pay_driver': '기사에게 현장 결제\n(ชำระกับคนขับที่จุดหมาย)',
     'driver_payment_method_bank_transfer': '계좌이체\n(โอนเงินผ่านธนาคาร)',
     'driver_payment_method_card': '카드 결제\n(บัตร)',
+    'driver_payment_method_unknown': '결제 방식 확인 필요\n(ต้องตรวจสอบวิธีชำระเงิน)',
+    'driver_payment_summary_title': '결제 및 수입\n(การชำระเงินและรายได้)',
+    'driver_customer_total_amount': '고객 결제 총액\n(ยอดชำระรวมของลูกค้า)',
+    'driver_company_commission':
+        '회사에 납부할 수수료\n(ค่าคอมมิชชันที่ต้องชำระให้บริษัท)',
+    'driver_expected_income': '기사 예상 수입\n(รายได้โดยประมาณของคนขับ)',
+    'driver_income_unavailable':
+        '수입 정보를 확인할 수 없습니다. 관리자에게 문의해 주세요.\n(ไม่สามารถยืนยันข้อมูลรายได้ได้ กรุณาติดต่อผู้ดูแล)',
+    'driver_commission_unavailable':
+        '수수료 정보 확인 필요\n(ต้องตรวจสอบข้อมูลค่าคอมมิชชัน)',
+    'driver_receipt_status': '영수증 상태\n(สถานะสลิป)',
+    'driver_settlement_status_not_due_yet': '아직 납부 대상 아님\n(ยังไม่ถึงกำหนดชำระ)',
+    'driver_settlement_status_due': '납부 필요\n(ต้องชำระ)',
+    'driver_settlement_status_overdue': '납부 지연\n(เกินกำหนดชำระ)',
+    'driver_settlement_status_receipt_submitted':
+        '영수증 검토 중\n(กำลังตรวจสอบสลิป)',
+    'driver_settlement_status_rejected': '영수증 반려\n(สลิปถูกปฏิเสธ)',
+    'driver_settlement_status_completed': '정산 완료\n(ชำระเสร็จแล้ว)',
+    'driver_settlement_status_waived': '수수료 면제\n(ยกเว้นค่าคอมมิชชัน)',
+    'driver_settlement_status_unknown': '상태 확인 필요\n(ต้องตรวจสอบสถานะ)',
+    'driver_receipt_status_none': '영수증 없음\n(ยังไม่มีสลิป)',
+    'driver_receipt_status_submitted': '영수증 제출됨\n(ส่งสลิปแล้ว)',
+    'driver_receipt_status_rejected': '영수증 반려\n(สลิปถูกปฏิเสธ)',
+    'driver_receipt_status_approved': '영수증 승인됨\n(อนุมัติสลิปแล้ว)',
+    'driver_receipt_status_unknown': '영수증 상태 확인 필요\n(ต้องตรวจสอบสถานะสลิป)',
+    'driver_settlement_not_due_yet_message':
+        '아직 회사 수수료 납부 대상이 아닙니다. 신규 배차를 받을 수 있습니다.\n(ยังไม่ถึงกำหนดชำระค่าคอมมิชชัน สามารถรับงานใหม่ได้)',
+    'driver_settlement_due_message':
+        '회사 수수료를 납부하고 영수증을 제출해 주세요.\n(กรุณาชำระค่าคอมมิชชันและอัปโหลดสลิป)',
+    'driver_settlement_due_blocked_message':
+        '회사 수수료를 납부하고 영수증을 제출해 주세요. 정산 완료 전까지 신규 배차를 받을 수 없습니다.\n(กรุณาชำระค่าคอมมิชชันและอัปโหลดสลิป ก่อนชำระเสร็จจะยังรับงานใหม่ไม่ได้)',
+    'driver_settlement_overdue_message':
+        '수수료 납부 기한이 지났습니다. 수수료 납부와 영수증 제출이 필요합니다.\n(เลยกำหนดชำระค่าคอมมิชชันแล้ว กรุณาชำระและอัปโหลดสลิป)',
+    'driver_settlement_receipt_review_message':
+        '영수증 검토 중입니다. 관리자 승인 후 신규 배차를 받을 수 있습니다.\n(กำลังตรวจสอบสลิป รอผู้ดูแลอนุมัติก่อนรับงานใหม่)',
+    'driver_settlement_rejected_message':
+        '영수증이 반려되었습니다. 사유를 확인하고 다시 제출해 주세요.\n(สลิปถูกปฏิเสธ กรุณาตรวจสอบเหตุผลและส่งใหม่)',
+    'driver_settlement_completed_message':
+        '정산이 완료되었습니다.\n(ชำระค่าคอมมิชชันเสร็จแล้ว)',
+    'driver_settlement_waived_message':
+        '이번 운행의 회사 수수료가 면제되었습니다. 신규 배차를 받을 수 있습니다.\n(ยกเว้นค่าคอมมิชชันสำหรับเที่ยวนี้ สามารถรับงานใหม่ได้)',
+    'driver_new_calls_blocked_by_settlement':
+        '운행은 종료됐지만 정산이 남아 있습니다. 정산 완료 후 신규 배차를 받을 수 있습니다.\n(จบทริปแล้วแต่ยังมีงานชำระค้างอยู่ กรุณาชำระให้เสร็จก่อนรับงานใหม่)',
     'driver_success_picked_up': '고객 탑승이 확인되었습니다',
     'driver_success_end_trip': '운행이 종료되었습니다. 정산을 확인해 주세요.',
     'driver_trip_settlement_pending_info':

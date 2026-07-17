@@ -6,6 +6,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../../../utils/user_facing_error.dart';
+import '../../driver/utils/driver_money_format.dart';
 import '../services/driver_settlement_api_service.dart';
 import '../../settlement/utils/settlement_receipt.dart';
 
@@ -100,18 +101,35 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
 
   AppStatusTone _settlementTone(String status) {
     switch (status) {
+      case 'NOT_DUE_YET':
+      case 'WAIVED':
       case 'PAID':
       case 'APPROVED':
         return AppStatusTone.success;
       case 'REJECTED':
       case 'OVERDUE':
         return AppStatusTone.error;
+      case 'DUE':
       case 'PENDING':
       case 'RECEIPT_SUBMITTED':
         return AppStatusTone.warning;
       default:
         return AppStatusTone.neutral;
     }
+  }
+
+  String _amountText(
+    Map<String, dynamic> item,
+    String amountKey,
+    String currencyKey, {
+    String unavailableKey = 'driver_income_unavailable',
+  }) {
+    final amount = item[amountKey] as num?;
+    if (amount == null) return context.l10n.t(unavailableKey);
+    return DriverMoneyFormat.money(
+      amount,
+      item[currencyKey] as String? ?? item['currency'] as String?,
+    );
   }
 
   @override
@@ -182,13 +200,16 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                '${item['commissionAmount']} ${item['currency']}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppTokens.textPrimary,
+                              AppUi.summaryRow(
+                                label: l10n.t('driver_company_commission'),
+                                value: _amountText(
+                                  Map<String, dynamic>.from(item as Map),
+                                  'companyCommissionAmount',
+                                  'companyCommissionCurrency',
+                                  unavailableKey:
+                                      'driver_commission_unavailable',
                                 ),
+                                emphasize: true,
                               ),
                               if (item['dueAt'] != null)
                                 Text(
@@ -320,22 +341,115 @@ class _DriverSettlementDetailPageState
   }
 
   bool _canUpload(String status) {
-    return status == 'PENDING' || status == 'REJECTED' || status == 'OVERDUE';
+    return status == 'PENDING' ||
+        status == 'DUE' ||
+        status == 'REJECTED' ||
+        status == 'OVERDUE';
   }
 
   AppStatusTone _settlementTone(String status) {
     switch (status) {
+      case 'NOT_DUE_YET':
+      case 'WAIVED':
       case 'PAID':
       case 'APPROVED':
         return AppStatusTone.success;
       case 'REJECTED':
       case 'OVERDUE':
         return AppStatusTone.error;
+      case 'DUE':
       case 'PENDING':
       case 'RECEIPT_SUBMITTED':
         return AppStatusTone.warning;
       default:
         return AppStatusTone.neutral;
+    }
+  }
+
+  String _amountText(
+    Map<String, dynamic> item,
+    String amountKey,
+    String currencyKey, {
+    String unavailableKey = 'driver_income_unavailable',
+  }) {
+    final amount = item[amountKey] as num?;
+    if (amount == null) return context.l10n.t(unavailableKey);
+    return DriverMoneyFormat.money(
+      amount,
+      item[currencyKey] as String? ?? item['currency'] as String?,
+    );
+  }
+
+  String _settlementStatusLabel(AppLocalizations l10n, String status) {
+    switch (status) {
+      case 'NOT_DUE_YET':
+        return l10n.t('driver_settlement_status_not_due_yet');
+      case 'PENDING':
+      case 'DUE':
+        return l10n.t('driver_settlement_status_due');
+      case 'OVERDUE':
+        return l10n.t('driver_settlement_status_overdue');
+      case 'RECEIPT_SUBMITTED':
+        return l10n.t('driver_settlement_status_receipt_submitted');
+      case 'REJECTED':
+        return l10n.t('driver_settlement_status_rejected');
+      case 'PAID':
+      case 'APPROVED':
+        return l10n.t('driver_settlement_status_completed');
+      case 'WAIVED':
+        return l10n.t('driver_settlement_status_waived');
+      default:
+        return l10n.t('driver_settlement_status_unknown');
+    }
+  }
+
+  String _receiptStatusLabel(AppLocalizations l10n, String? status) {
+    switch (status) {
+      case 'RECEIPT_SUBMITTED':
+      case 'SUBMITTED':
+        return l10n.t('driver_receipt_status_submitted');
+      case 'REJECTED':
+        return l10n.t('driver_receipt_status_rejected');
+      case 'APPROVED':
+      case 'PAID':
+        return l10n.t('driver_receipt_status_approved');
+      case 'NONE':
+      case null:
+      case '':
+        return l10n.t('driver_receipt_status_none');
+      default:
+        return l10n.t('driver_receipt_status_unknown');
+    }
+  }
+
+  String _settlementStatusMessage(
+    AppLocalizations l10n,
+    String status,
+    bool blocksNewCalls,
+  ) {
+    switch (status) {
+      case 'NOT_DUE_YET':
+        return l10n.t('driver_settlement_not_due_yet_message');
+      case 'PENDING':
+      case 'DUE':
+        return blocksNewCalls
+            ? l10n.t('driver_settlement_due_blocked_message')
+            : l10n.t('driver_settlement_due_message');
+      case 'OVERDUE':
+        return l10n.t('driver_settlement_overdue_message');
+      case 'RECEIPT_SUBMITTED':
+        return l10n.t('driver_settlement_receipt_review_message');
+      case 'REJECTED':
+        return l10n.t('driver_settlement_rejected_message');
+      case 'PAID':
+      case 'APPROVED':
+        return l10n.t('driver_settlement_completed_message');
+      case 'WAIVED':
+        return l10n.t('driver_settlement_waived_message');
+      default:
+        return blocksNewCalls
+            ? l10n.t('driver_new_calls_blocked_by_settlement')
+            : l10n.t('driver_settlement_status_unknown');
     }
   }
 
@@ -411,6 +525,7 @@ class _DriverSettlementDetailPageState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final status = _detail?['commissionStatus'] as String? ?? '';
+    final blocksNewCalls = _detail?['blocksNewCalls'] == true;
     final canUpload = _canUpload(status);
     final approvalMode = _detail?['approvalMode'] as String?;
 
@@ -436,12 +551,9 @@ class _DriverSettlementDetailPageState
                         children: [
                           Expanded(
                             child: Text(
-                              '${_detail?['commissionAmount']} ${_detail?['currency']}',
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: AppTokens.primaryDark,
-                              ),
+                              l10n.t('driver_payment_summary_title'),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                           ),
                           AppUi.statusBadge(
@@ -450,15 +562,75 @@ class _DriverSettlementDetailPageState
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppTokens.spaceSm),
-                      Text(
-                        '${l10n.t('driver_settlement_status')}: $status',
-                        style: const TextStyle(fontSize: 18),
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.summaryRow(
+                        label: l10n.t('driver_settlement_status'),
+                        value: _settlementStatusLabel(l10n, status),
+                        emphasize: true,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${l10n.t('driver_settlement_due_label')}: '
-                        '${_detail?['dueAt'] ?? '-'}',
+                      const SizedBox(height: AppTokens.spaceSm),
+                      AppUi.summaryRow(
+                        label: l10n.t('driver_company_commission'),
+                        value: _amountText(
+                          _detail!,
+                          'companyCommissionAmount',
+                          'companyCommissionCurrency',
+                          unavailableKey: 'driver_commission_unavailable',
+                        ),
+                        emphasize: true,
+                      ),
+                      if (_detail?['dueAt'] != null) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        AppUi.summaryRow(
+                          label: l10n.t('driver_settlement_due_label'),
+                          value: _detail?['dueAt'] as String,
+                        ),
+                      ],
+                      const SizedBox(height: AppTokens.spaceSm),
+                      AppUi.summaryRow(
+                        label: l10n.t('driver_receipt_status'),
+                        value: _receiptStatusLabel(
+                          l10n,
+                          _detail?['receiptStatus'] as String?,
+                        ),
+                      ),
+                      if (_detail?['driverExpectedIncomeAmount'] != null) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        AppUi.summaryRow(
+                          label: l10n.t('driver_expected_income'),
+                          value: _amountText(
+                            _detail!,
+                            'driverExpectedIncomeAmount',
+                            'driverExpectedIncomeCurrency',
+                          ),
+                        ),
+                      ],
+                      if (_detail?['customerPaymentAmount'] != null ||
+                          _detail?['customerTotalAmount'] != null) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        AppUi.summaryRow(
+                          label: l10n.t('driver_customer_total_amount'),
+                          value: _detail?['customerPaymentAmount'] != null
+                              ? _amountText(
+                                  _detail!,
+                                  'customerPaymentAmount',
+                                  'customerPaymentCurrency',
+                                )
+                              : _amountText(
+                                  _detail!,
+                                  'customerTotalAmount',
+                                  'customerTotalCurrency',
+                                ),
+                        ),
+                      ],
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.actionBanner(
+                        message: _settlementStatusMessage(
+                          l10n,
+                          status,
+                          blocksNewCalls,
+                        ),
+                        icon: Icons.info_outline,
                       ),
                       if (_detail?['rejectionReason'] != null) ...[
                         const SizedBox(height: AppTokens.spaceSm),

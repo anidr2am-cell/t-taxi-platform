@@ -212,7 +212,7 @@ void main() {
 
     expect(api.endTripCalls, 0);
     expect(find.text('고객을 목적지에 내려드렸습니까?'), findsOneWidget);
-    expect(find.text('฿1300'), findsOneWidget);
+    expect(find.text('฿1,300'), findsOneWidget);
     expect(find.textContaining('기사에게 현장 결제'), findsOneWidget);
 
     await tester.tap(
@@ -502,6 +502,12 @@ DriverBooking _booking({
     customerDisplayName: 'Kim',
     customerPhone: phone,
     customerPaymentAmount: 1300,
+    customerPaymentCurrency: 'THB',
+    customerPaymentMethod: 'PAY_DRIVER_AT_DESTINATION',
+    companyCommissionAmount: 200,
+    companyCommissionCurrency: 'THB',
+    driverExpectedIncomeAmount: 1100,
+    driverExpectedIncomeCurrency: 'THB',
     currency: 'THB',
     paymentMethodLabel: 'PAY_DRIVER_AT_DESTINATION',
     allowedActions: actions,

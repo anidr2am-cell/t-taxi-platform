@@ -595,6 +595,14 @@ test('mapSettlementListItem includes trip summary fields with null-safe addresse
   assert.equal(item.destination, 'Pattaya Hotel');
   assert.equal(item.driverId, undefined);
   assert.equal(item.driverName, undefined);
+  assert.equal(item.customerPaymentAmount, 1200);
+  assert.equal(item.customerPaymentCurrency, 'THB');
+  assert.equal(item.customerTotalAmount, 1200);
+  assert.equal(item.customerTotalCurrency, 'THB');
+  assert.equal(item.companyCommissionAmount, 120);
+  assert.equal(item.companyCommissionCurrency, 'THB');
+  assert.equal(item.driverExpectedIncomeAmount, 1080);
+  assert.equal(item.driverExpectedIncomeCurrency, 'THB');
 
   const nullItem = service.mapSettlementListItem(
     settlementRow({
@@ -608,6 +616,98 @@ test('mapSettlementListItem includes trip summary fields with null-safe addresse
   );
   assert.equal(nullItem.origin, null);
   assert.equal(nullItem.destination, null);
+  assert.equal(nullItem.driverExpectedIncomeAmount, 1080);
+});
+
+test('mapSettlementListItem keeps unknown income nullable when commission is unknown', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({ commission_amount: null }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+  assert.equal(item.customerPaymentAmount, 1200);
+  assert.equal(item.companyCommissionAmount, null);
+  assert.equal(item.companyCommissionCurrency, null);
+  assert.equal(item.driverExpectedIncomeAmount, null);
+  assert.equal(item.driverExpectedIncomeCurrency, null);
+});
+
+test('mapSettlementListItem exposes public status and blocking policy consistently', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const map = (overrides) =>
+    service.mapSettlementListItem(
+      settlementRow(overrides),
+      '/api/v1/driver/settlements',
+      ROLES.DRIVER,
+    );
+
+  const notDue = map({ commission_status: COMMISSION_STATUS.NOT_DUE_YET });
+  assert.equal(notDue.commissionStatus, 'NOT_DUE_YET');
+  assert.equal(notDue.blocksNewCalls, false);
+
+  const waived = map({ commission_status: COMMISSION_STATUS.WAIVED });
+  assert.equal(waived.commissionStatus, 'WAIVED');
+  assert.equal(waived.blocksNewCalls, false);
+
+  const due = map({ commission_status: COMMISSION_STATUS.DUE });
+  assert.equal(due.commissionStatus, 'DUE');
+  assert.equal(due.blocksNewCalls, true);
+
+  const overdue = map({ commission_status: COMMISSION_STATUS.OVERDUE });
+  assert.equal(overdue.commissionStatus, 'OVERDUE');
+  assert.equal(overdue.blocksNewCalls, true);
+
+  const submitted = map({
+    commission_status: COMMISSION_STATUS.DUE,
+    commission_receipt_file_id: 42,
+    receipt_mime_type: 'image/png',
+  });
+  assert.equal(submitted.commissionStatus, 'RECEIPT_SUBMITTED');
+  assert.equal(submitted.blocksNewCalls, true);
+
+  const rejected = map({
+    commission_status: COMMISSION_STATUS.DUE,
+    metadata: { commissionRejectionReason: 'blurred' },
+  });
+  assert.equal(rejected.commissionStatus, 'REJECTED');
+  assert.equal(rejected.blocksNewCalls, true);
+
+  const approved = map({ commission_status: COMMISSION_STATUS.PAID });
+  assert.equal(approved.commissionStatus, 'APPROVED');
+  assert.equal(approved.blocksNewCalls, false);
+});
+
+test('driverExpectedIncome never returns unsafe negative income', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: 200,
+  })), 1100);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: 0,
+  })), 1300);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: null,
+    commission_amount: 200,
+  })), null);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: null,
+  })), null);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: 1500,
+  })), null);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: -1,
+    commission_amount: 0,
+  })), null);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: -1,
+  })), null);
 });
 
 test('admin settlement list item keeps driver summary fields', () => {
@@ -654,7 +754,7 @@ test('orphaned commission_receipt_file_id without files row is not submitted', (
     '/api/v1/admin/settlements',
     ROLES.ADMIN,
   );
-  assert.equal(item.commissionStatus, 'PENDING');
+  assert.equal(item.commissionStatus, 'DUE');
   assert.equal(item.receiptStatus, 'NONE');
   assert.equal(item.receiptFileId, undefined);
   assert.equal(item.canApprove, false);
@@ -742,7 +842,7 @@ test('getDriverSettlement reconciles missing obligation on access', async () => 
   service.reconcileMissingObligationForBooking = async () => { activated = true; };
   const item = await service.getDriverSettlement(44, 'TX202607010001', '/api/v1/driver/settlements');
   assert.equal(activated, true);
-  assert.equal(item.commissionStatus, 'PENDING');
+  assert.equal(item.commissionStatus, 'DUE');
 });
 
 test('extension MIME mismatch rejected', () => {
@@ -1038,7 +1138,7 @@ test('admin list reconciles missed obligation before listing', async () => {
   assert.equal(activateCalls, 1);
   assert.equal(listQueryAfterReconcile, true);
   assert.equal(result.items.length, 1);
-  assert.equal(result.items[0].commissionStatus, 'PENDING');
+  assert.equal(result.items[0].commissionStatus, 'DUE');
 });
 
 test('admin list obligation activation is idempotent', async () => {

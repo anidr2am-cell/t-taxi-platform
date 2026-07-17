@@ -19,6 +19,12 @@ class DriverBooking {
     this.flight,
     this.specialInstructions,
     this.customerPaymentAmount,
+    this.customerPaymentCurrency,
+    this.customerPaymentMethod,
+    this.companyCommissionAmount,
+    this.companyCommissionCurrency,
+    this.driverExpectedIncomeAmount,
+    this.driverExpectedIncomeCurrency,
     this.currency,
     this.paymentMethodLabel,
     this.qr,
@@ -44,6 +50,12 @@ class DriverBooking {
   final Map<String, dynamic>? flight;
   final String? specialInstructions;
   final double? customerPaymentAmount;
+  final String? customerPaymentCurrency;
+  final String? customerPaymentMethod;
+  final double? companyCommissionAmount;
+  final String? companyCommissionCurrency;
+  final double? driverExpectedIncomeAmount;
+  final String? driverExpectedIncomeCurrency;
   final String? currency;
   final String? paymentMethodLabel;
   final Map<String, dynamic>? qr;
@@ -89,6 +101,15 @@ class DriverBooking {
       specialInstructions: json['specialInstructions'] as String?,
       customerPaymentAmount: (json['customerPaymentAmount'] as num?)
           ?.toDouble(),
+      customerPaymentCurrency: json['customerPaymentCurrency'] as String?,
+      customerPaymentMethod: json['customerPaymentMethod'] as String?,
+      companyCommissionAmount: (json['companyCommissionAmount'] as num?)
+          ?.toDouble(),
+      companyCommissionCurrency: json['companyCommissionCurrency'] as String?,
+      driverExpectedIncomeAmount: (json['driverExpectedIncomeAmount'] as num?)
+          ?.toDouble(),
+      driverExpectedIncomeCurrency:
+          json['driverExpectedIncomeCurrency'] as String?,
       currency: json['currency'] as String?,
       paymentMethodLabel: json['paymentMethodLabel'] as String?,
       qr: json['qr'] == null
@@ -133,6 +154,13 @@ class DriverOpenCall {
     required this.amount,
     required this.currency,
     required this.passengerCount,
+    this.customerPaymentAmount,
+    this.customerPaymentCurrency,
+    this.customerPaymentMethod,
+    this.companyCommissionAmount,
+    this.companyCommissionCurrency,
+    this.driverExpectedIncomeAmount,
+    this.driverExpectedIncomeCurrency,
     this.luggage,
   });
 
@@ -147,6 +175,13 @@ class DriverOpenCall {
   final double amount;
   final String currency;
   final int passengerCount;
+  final double? customerPaymentAmount;
+  final String? customerPaymentCurrency;
+  final String? customerPaymentMethod;
+  final double? companyCommissionAmount;
+  final String? companyCommissionCurrency;
+  final double? driverExpectedIncomeAmount;
+  final String? driverExpectedIncomeCurrency;
   final Map<String, dynamic>? luggage;
 
   factory DriverOpenCall.fromJson(Map<String, dynamic> json) {
@@ -174,6 +209,17 @@ class DriverOpenCall {
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       currency: json['currency'] as String? ?? '',
       passengerCount: (json['passengerCount'] as num?)?.toInt() ?? 0,
+      customerPaymentAmount: (json['customerPaymentAmount'] as num?)
+          ?.toDouble(),
+      customerPaymentCurrency: json['customerPaymentCurrency'] as String?,
+      customerPaymentMethod: json['customerPaymentMethod'] as String?,
+      companyCommissionAmount: (json['companyCommissionAmount'] as num?)
+          ?.toDouble(),
+      companyCommissionCurrency: json['companyCommissionCurrency'] as String?,
+      driverExpectedIncomeAmount: (json['driverExpectedIncomeAmount'] as num?)
+          ?.toDouble(),
+      driverExpectedIncomeCurrency:
+          json['driverExpectedIncomeCurrency'] as String?,
       luggage: json['luggage'] == null
           ? null
           : Map<String, dynamic>.from(json['luggage'] as Map),

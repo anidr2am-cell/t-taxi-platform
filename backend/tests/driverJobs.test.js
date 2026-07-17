@@ -242,6 +242,9 @@ test('internal admin fields are not exposed in detail', async () => {
     async findActiveDriverBookingByNumber() {
       return row({
         total_amount: 1600,
+        currency: 'THB',
+        payment_method: 'PAY_DRIVER_AT_DESTINATION',
+        commission_amount: 200,
         commission_status: 'DUE',
         admin_note: 'VIP internal',
       });
@@ -253,4 +256,34 @@ test('internal admin fields are not exposed in detail', async () => {
   assert.equal(Object.hasOwn(detail, 'totalAmount'), false);
   assert.equal(Object.hasOwn(detail, 'commissionStatus'), false);
   assert.equal(Object.hasOwn(detail, 'adminNotes'), false);
+  assert.equal(detail.customerPaymentAmount, 1600);
+  assert.equal(detail.customerPaymentCurrency, 'THB');
+  assert.equal(detail.customerPaymentMethod, 'PAY_DRIVER_AT_DESTINATION');
+  assert.equal(detail.companyCommissionAmount, 200);
+  assert.equal(detail.companyCommissionCurrency, 'THB');
+  assert.equal(detail.driverExpectedIncomeAmount, 1400);
+  assert.equal(detail.driverExpectedIncomeCurrency, 'THB');
+});
+
+test('driver job payment summary keeps unsafe expected income nullable', () => {
+  const service = new DriverJobService({});
+
+  assert.equal(service.driverExpectedIncome(1300, 200), 1100);
+  assert.equal(service.driverExpectedIncome(1300, 0), 1300);
+  assert.equal(service.driverExpectedIncome(null, 200), null);
+  assert.equal(service.driverExpectedIncome(1300, null), null);
+  assert.equal(service.driverExpectedIncome(1300, 1500), null);
+  assert.equal(service.driverExpectedIncome(-1, 0), null);
+  assert.equal(service.driverExpectedIncome(1300, -1), null);
+
+  const summary = service.paymentSummary({
+    total_amount: 1300,
+    commission_amount: 1500,
+    currency: 'THB',
+    payment_method: 'PAY_DRIVER',
+  });
+  assert.equal(summary.customerPaymentAmount, 1300);
+  assert.equal(summary.companyCommissionAmount, 1500);
+  assert.equal(summary.driverExpectedIncomeAmount, null);
+  assert.equal(summary.driverExpectedIncomeCurrency, null);
 });
