@@ -8,7 +8,7 @@ class DriverLocationRepository {
   async findDriverByUserIdForUpdate(conn, userId) {
     const [rows] = await conn.query(
       `
-        SELECT id, user_id, name, status, is_online, is_active
+        SELECT id, user_id, name, status, is_online, is_active, location_recorded_at
         FROM drivers
         WHERE user_id = ? AND deleted_at IS NULL AND is_archived = 0
         LIMIT 1
@@ -29,7 +29,7 @@ class DriverLocationRepository {
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL
           AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-          AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP')
+          AND b.status IN ('ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP')
         LIMIT 1
       `,
       [driverId],
@@ -110,7 +110,7 @@ class DriverLocationRepository {
           AND bda.status IN ('ASSIGNED', 'ACCEPTED')
         LEFT JOIN bookings b ON b.id = bda.booking_id
           AND b.deleted_at IS NULL
-          AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP')
+          AND b.status IN ('ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP')
         WHERE ${where.join(' AND ')}
         ORDER BY d.location_updated_at DESC, d.id ASC
       `,
@@ -176,7 +176,7 @@ class DriverLocationRepository {
           AND bda.is_active = 1
           AND bda.deleted_at IS NULL
           AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-          AND b.status IN ('DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'PICKED_UP')
+          AND b.status IN ('ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP')
       `,
       [driverId],
     );

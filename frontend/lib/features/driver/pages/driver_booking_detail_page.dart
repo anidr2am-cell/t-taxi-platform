@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../driver_auth.dart';
@@ -309,6 +310,17 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                   padding: AppUi.pagePadding(context),
                   children: [
                     _StatusHeader(booking: booking),
+                    if (widget.showStatusControl)
+                      DriverLiveLocationControl(
+                        hasActiveJob: const {
+                          'DRIVER_ASSIGNED',
+                          'ON_ROUTE',
+                          'DRIVER_ARRIVED',
+                          'PICKED_UP',
+                        }.contains(booking.status),
+                        bookingNumber: booking.bookingNumber,
+                        bookingStatus: booking.status,
+                      ),
                     if (showSettlementInfo) ...[
                       const SizedBox(height: AppTokens.spaceSm),
                       AppUi.surfaceCard(

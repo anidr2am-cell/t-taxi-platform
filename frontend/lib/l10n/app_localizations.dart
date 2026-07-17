@@ -865,6 +865,26 @@ class AppLocalizations {
       'driver_qr_camera_fallback': 'Use manual entry below.',
       'driver_live_location_interval_hint':
           'Updates every {seconds}s while enabled. Turn off when not driving.',
+      'driver_location_status_title': 'Location sharing',
+      'driver_location_sharing': 'Sharing location',
+      'driver_location_starting': 'Starting location sharing',
+      'driver_location_stopped': 'Location sharing stopped',
+      'driver_location_temporarily_unavailable':
+          'Location sharing was temporarily interrupted. We will retry automatically.',
+      'driver_location_permission_required': 'Location permission is required',
+      'driver_location_permission_explanation':
+          'Location is shared only while this trip is active.',
+      'driver_location_permission_denied':
+          'Location permission was not allowed. The trip can continue, but customers may not see your live location.',
+      'driver_location_service_disabled':
+          'Device location services are turned off.',
+      'driver_location_retry': 'Try location sharing again',
+      'driver_location_open_settings': 'Open settings',
+      'driver_location_auto_start_guidance':
+          'Start driving to the pickup location and location sharing will start automatically.',
+      'driver_location_not_shared_warning':
+          'Location is not being shared. You can continue the trip.',
+      'driver_location_error': 'Location sharing failed. Please try again.',
       'driver_settlement_receipt_upload': 'Transfer slip upload',
       'driver_settlement_receipt_formats': 'JPG, PNG, or PDF up to 10 MB',
       'driver_settlement_due': 'Due: {date}',
@@ -4479,6 +4499,27 @@ class AppLocalizations {
     'driver_live_location_active_job_only':
         '진행 중인 운행에서만 사용할 수 있습니다\n(ใช้ได้เฉพาะระหว่างมีงาน)',
     'driver_live_location_last_sent': '마지막 전송 {time}\n(ส่งล่าสุด)',
+    'driver_location_status_title': '위치 공유\n(แชร์ตำแหน่ง)',
+    'driver_location_sharing': '위치 공유 중\n(กำลังแชร์ตำแหน่ง)',
+    'driver_location_starting': '위치 공유를 시작하고 있습니다\n(กำลังเริ่มแชร์ตำแหน่ง)',
+    'driver_location_stopped': '위치 공유가 종료되었습니다\n(หยุดแชร์ตำแหน่งแล้ว)',
+    'driver_location_temporarily_unavailable':
+        '위치 공유가 일시적으로 중단되었습니다. 자동으로 다시 시도합니다.\n(การแชร์ตำแหน่งหยุดชั่วคราว ระบบจะลองใหม่อัตโนมัติ)',
+    'driver_location_permission_required': '위치 권한이 필요합니다\n(ต้องอนุญาตตำแหน่ง)',
+    'driver_location_permission_explanation':
+        '현재 운행 중에만 위치를 공유합니다.\n(แชร์ตำแหน่งเฉพาะระหว่างเที่ยวนี้)',
+    'driver_location_permission_denied':
+        '위치 권한을 허용하지 않았습니다. 운행은 계속할 수 있지만 고객에게 기사 위치가 표시되지 않을 수 있습니다.\n(ไม่ได้อนุญาตตำแหน่ง ยังขับงานต่อได้ แต่ลูกค้าอาจไม่เห็นตำแหน่งคนขับ)',
+    'driver_location_service_disabled':
+        '휴대폰 위치 서비스가 꺼져 있습니다.\n(บริการตำแหน่งของอุปกรณ์ปิดอยู่)',
+    'driver_location_retry': '위치 공유 다시 시도\n(ลองแชร์ตำแหน่งอีกครั้ง)',
+    'driver_location_open_settings': '설정 열기\n(เปิดการตั้งค่า)',
+    'driver_location_auto_start_guidance':
+        '픽업 장소로 이동을 시작하면 위치 공유가 자동으로 시작됩니다.\n(เมื่อเริ่มไปยังจุดรับ ระบบจะแชร์ตำแหน่งอัตโนมัติ)',
+    'driver_location_not_shared_warning':
+        '위치가 공유되지 않고 있습니다. 운행은 계속할 수 있습니다.\n(ยังไม่ได้แชร์ตำแหน่ง แต่ยังทำงานต่อได้)',
+    'driver_location_error':
+        '위치 공유에 실패했습니다. 다시 시도해 주세요.\n(แชร์ตำแหน่งไม่สำเร็จ กรุณาลองใหม่)',
     'driver_settlement_title': '수수료 정산\n(การชำระค่าคอมมิชชัน)',
     'driver_settlement_empty': '정산 내역이 없습니다\n(ยังไม่มีรายการชำระบัญชี)',
     'driver_settlement_status': '상태\n(สถานะ)',

@@ -48,19 +48,21 @@ function registerDriverLocationHandlers(io, socket) {
         throw err;
       }
       const result = await getService().updateDriverLocation(authUser.id, payload);
-      const snapshot = await getService().listAdminLocations({ onlineOnly: false });
-      const changed = snapshot.items.find((item) => item.driverId === result.driverId) ?? null;
-      if (changed) {
-        io.to(ADMIN_DRIVER_LOCATION_ROOM).emit('driver:location:changed', changed);
-        for (const bookingId of result.bookingIds) {
-          io.to(bookingDriverLocationRoom(bookingId)).emit('booking:driver-location:changed', {
-            bookingId,
-            available: true,
-            driver: changed,
-          });
+      if (result.accepted !== false) {
+        const snapshot = await getService().listAdminLocations({ onlineOnly: false });
+        const changed = snapshot.items.find((item) => item.driverId === result.driverId) ?? null;
+        if (changed) {
+          io.to(ADMIN_DRIVER_LOCATION_ROOM).emit('driver:location:changed', changed);
+          for (const bookingId of result.bookingIds) {
+            io.to(bookingDriverLocationRoom(bookingId)).emit('booking:driver-location:changed', {
+              bookingId,
+              available: true,
+              driver: changed,
+            });
+          }
         }
       }
-      if (typeof ack === 'function') ack({ ok: true, accepted: true });
+      if (typeof ack === 'function') ack({ ok: true, accepted: result.accepted !== false });
     } catch (err) {
       const mapped = mapSocketError(err);
       socket.emit('driver-location:error', mapped);

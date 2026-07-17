@@ -9,6 +9,7 @@ import 'package:frontend/features/driver_location/services/driver_location_api_s
 import 'package:frontend/features/driver_location/services/driver_location_socket_service.dart';
 import 'package:frontend/features/driver_location/widgets/driver_live_location_control.dart';
 import 'package:frontend/features/driver_location/widgets/guest_driver_tracking_section.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -135,29 +136,63 @@ void main() {
   });
 
   testWidgets(
-    'driver location permission is not requested before enabling sharing',
+    'driver location waits in assigned status before automatic sharing',
     (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(body: DriverLiveLocationControl(hasActiveJob: true)),
+          home: Scaffold(
+            body: DriverLiveLocationControl(
+              hasActiveJob: true,
+              bookingNumber: 'TX1',
+              bookingStatus: 'DRIVER_ASSIGNED',
+            ),
+          ),
         ),
       );
 
-      expect(find.text('실시간 위치 공유\n(แชร์ตำแหน่งปัจจุบัน)'), findsOneWidget);
-      expect(find.byType(Switch), findsOneWidget);
+      expect(find.textContaining('픽업 장소로 이동'), findsOneWidget);
+      expect(find.byType(Switch), findsNothing);
     },
   );
+
+  testWidgets('driver location auto starts in on-route status', (tester) async {
+    final api = _FakeDriverLocationUpdateApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(minutes: 5),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(api.calls, 1);
+    expect(find.textContaining('위치 공유 중'), findsOneWidget);
+  });
 
   testWidgets('driver location control prompts when offline', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: DriverLiveLocationControl(hasActiveJob: true, online: false),
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: false,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+          ),
         ),
       ),
     );
 
-    await tester.tap(find.byType(Switch));
     await tester.pump();
 
     expect(
@@ -175,7 +210,7 @@ void main() {
       ),
     );
 
-    expect(find.text('실시간 위치 공유\n(แชร์ตำแหน่งปัจจุบัน)'), findsNothing);
+    expect(find.textContaining('위치 공유'), findsNothing);
   });
 
   testWidgets('admin monitor shows loading, empty, and error states', (
@@ -346,5 +381,34 @@ class _FakeGuestLocationApi extends DriverLocationApiService {
     required String guestAccessToken,
   }) async {
     return result;
+  }
+}
+
+Position _position() => Position(
+  latitude: 12.9236,
+  longitude: 100.8825,
+  timestamp: DateTime.now(),
+  accuracy: 12,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: 90,
+  headingAccuracy: 0,
+  speed: 10,
+  speedAccuracy: 0,
+);
+
+class _FakeDriverLocationUpdateApi extends DriverLocationApiService {
+  int calls = 0;
+
+  @override
+  Future<void> updateDriverLocation({
+    required double latitude,
+    required double longitude,
+    double? accuracyMeters,
+    double? heading,
+    double? speedKph,
+    DateTime? recordedAt,
+  }) async {
+    calls += 1;
   }
 }

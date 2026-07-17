@@ -19,6 +19,7 @@ const {
   bookingDriverLocationRoom,
   ADMIN_DRIVER_LOCATION_ROOM,
 } = require('../src/socket/handlers/driverLocation.handler');
+const { TRACKABLE_BOOKING_STATUSES } = require('../src/constants/driverLocation');
 
 function sign(role = 'DRIVER', id = 44) {
   return jwt.sign(
@@ -219,6 +220,110 @@ test('service-level validation also protects socket location updates', () => {
   );
 });
 
+test('driver location is trackable only during active trip statuses', () => {
+  assert.equal(TRACKABLE_BOOKING_STATUSES.has('DRIVER_ASSIGNED'), false);
+  assert.equal(TRACKABLE_BOOKING_STATUSES.has('ON_ROUTE'), true);
+  assert.equal(TRACKABLE_BOOKING_STATUSES.has('DRIVER_ARRIVED'), true);
+  assert.equal(TRACKABLE_BOOKING_STATUSES.has('PICKED_UP'), true);
+  assert.equal(TRACKABLE_BOOKING_STATUSES.has('SETTLEMENT_PENDING'), false);
+});
+
+test('service ignores duplicate or older location timestamps without updating', async () => {
+  let updated = false;
+  const recordedAt = new Date();
+  const service = new DriverLocationService(
+    {
+      async getConnection() {
+        return {
+          async beginTransaction() {},
+          async commit() {},
+          async rollback() {},
+          release() {},
+        };
+      },
+    },
+    {
+      async findDriverByUserIdForUpdate() {
+        return {
+          id: 7,
+          is_active: true,
+          is_online: true,
+          status: 'AVAILABLE',
+          location_recorded_at: recordedAt.toISOString(),
+        };
+      },
+      async hasActiveJob() {
+        return true;
+      },
+      async updateCurrentLocation() {
+        updated = true;
+      },
+      async listActiveBookingRoomsForDriver() {
+        return [99];
+      },
+    },
+  );
+
+  const result = await service.updateDriverLocation(44, {
+    latitude: 12.9,
+    longitude: 100.8,
+    recordedAt: recordedAt.toISOString(),
+  });
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.reason, 'STALE_LOCATION');
+  assert.deepEqual(result.bookingIds, []);
+  assert.equal(updated, false);
+});
+
+test('service accepts fresh location when driver has trackable active job', async () => {
+  let updated = false;
+  const service = new DriverLocationService(
+    {
+      async getConnection() {
+        return {
+          async beginTransaction() {},
+          async commit() {},
+          async rollback() {},
+          release() {},
+        };
+      },
+    },
+    {
+      async findDriverByUserIdForUpdate() {
+        return {
+          id: 7,
+          is_active: true,
+          is_online: true,
+          status: 'AVAILABLE',
+          location_recorded_at: '2026-07-01 10:29:00',
+        };
+      },
+      async hasActiveJob() {
+        return true;
+      },
+      async updateCurrentLocation(_conn, driverId, location) {
+        assert.equal(driverId, 7);
+        assert.equal(location.latitude, 12.9);
+        updated = true;
+      },
+      async listActiveBookingRoomsForDriver() {
+        return [99];
+      },
+    },
+  );
+
+  const result = await service.updateDriverLocation(44, {
+    latitude: 12.9,
+    longitude: 100.8,
+    recordedAt: new Date().toISOString(),
+  });
+
+  assert.equal(result.accepted, true);
+  assert.deepEqual(result.bookingIds, [99]);
+  assert.equal(updated, true);
+});
+
 test('socket driver location update ignores client supplied driverId and broadcasts authorized result', async () => {
   const io = buildIo();
   const socket = buildSocket({ authUser: { id: 44, role: ROLES.DRIVER } });
@@ -256,6 +361,30 @@ test('socket driver location update ignores client supplied driverId and broadca
       [bookingDriverLocationRoom(99), 'booking:driver-location:changed'],
     ],
   );
+});
+
+test('socket location update does not broadcast stale no-op result', async () => {
+  const io = buildIo();
+  const socket = buildSocket({ authUser: { id: 44, role: ROLES.DRIVER } });
+  registerDriverLocationService({
+    async updateDriverLocation() {
+      return { driverId: 7, accepted: false, bookingIds: [] };
+    },
+    async listAdminLocations() {
+      throw new Error('stale no-op should not load snapshot');
+    },
+  });
+
+  registerDriverLocationHandlers(io, socket);
+  let ack;
+  await socket.handlers['driver:location:update'](
+    { latitude: 12.9, longitude: 100.8 },
+    (value) => { ack = value; },
+  );
+
+  assert.equal(ack.ok, true);
+  assert.equal(ack.accepted, false);
+  assert.deepEqual(io.emitted, []);
 });
 
 test('socket guest cannot subscribe to another booking', async () => {

@@ -79,6 +79,13 @@ class DriverLocationService {
     return now.getTime() - time > FRESH_LOCATION_MS;
   }
 
+  isDuplicateOrOlderLocation(existingRecordedAt, recordedAt) {
+    if (!existingRecordedAt) return false;
+    const existingTime = new Date(existingRecordedAt).getTime();
+    if (Number.isNaN(existingTime)) return false;
+    return recordedAt.getTime() <= existingTime;
+  }
+
   vehicleSummary(row) {
     const parts = [row.vehicle_type_name, row.vehicle_model, row.vehicle_plate].filter(Boolean);
     return parts.length ? parts.join(' / ') : null;
@@ -133,6 +140,16 @@ class DriverLocationService {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
         });
+      }
+      if (this.isDuplicateOrOlderLocation(driver.location_recorded_at, recordedAt)) {
+        await conn.commit();
+        return {
+          driverId: driver.id,
+          accepted: false,
+          reason: 'STALE_LOCATION',
+          recordedAt: recordedAt.toISOString(),
+          bookingIds: [],
+        };
       }
       await this.driverLocationRepository.updateCurrentLocation(conn, driver.id, {
         latitude: normalized.latitude,
