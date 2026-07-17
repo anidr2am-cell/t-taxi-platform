@@ -101,12 +101,15 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
 
   AppStatusTone _settlementTone(String status) {
     switch (status) {
+      case 'NOT_DUE_YET':
+      case 'WAIVED':
       case 'PAID':
       case 'APPROVED':
         return AppStatusTone.success;
       case 'REJECTED':
       case 'OVERDUE':
         return AppStatusTone.error;
+      case 'DUE':
       case 'PENDING':
       case 'RECEIPT_SUBMITTED':
         return AppStatusTone.warning;
@@ -118,10 +121,11 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
   String _amountText(
     Map<String, dynamic> item,
     String amountKey,
-    String currencyKey,
-  ) {
+    String currencyKey, {
+    String unavailableKey = 'driver_income_unavailable',
+  }) {
     final amount = item[amountKey] as num?;
-    if (amount == null) return context.l10n.t('driver_income_unavailable');
+    if (amount == null) return context.l10n.t(unavailableKey);
     return DriverMoneyFormat.money(
       amount,
       item[currencyKey] as String? ?? item['currency'] as String?,
@@ -202,6 +206,8 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
                                   Map<String, dynamic>.from(item as Map),
                                   'companyCommissionAmount',
                                   'companyCommissionCurrency',
+                                  unavailableKey:
+                                      'driver_commission_unavailable',
                                 ),
                                 emphasize: true,
                               ),
@@ -335,17 +341,23 @@ class _DriverSettlementDetailPageState
   }
 
   bool _canUpload(String status) {
-    return status == 'PENDING' || status == 'REJECTED' || status == 'OVERDUE';
+    return status == 'PENDING' ||
+        status == 'DUE' ||
+        status == 'REJECTED' ||
+        status == 'OVERDUE';
   }
 
   AppStatusTone _settlementTone(String status) {
     switch (status) {
+      case 'NOT_DUE_YET':
+      case 'WAIVED':
       case 'PAID':
       case 'APPROVED':
         return AppStatusTone.success;
       case 'REJECTED':
       case 'OVERDUE':
         return AppStatusTone.error;
+      case 'DUE':
       case 'PENDING':
       case 'RECEIPT_SUBMITTED':
         return AppStatusTone.warning;
@@ -357,10 +369,11 @@ class _DriverSettlementDetailPageState
   String _amountText(
     Map<String, dynamic> item,
     String amountKey,
-    String currencyKey,
-  ) {
+    String currencyKey, {
+    String unavailableKey = 'driver_income_unavailable',
+  }) {
     final amount = item[amountKey] as num?;
-    if (amount == null) return context.l10n.t('driver_income_unavailable');
+    if (amount == null) return context.l10n.t(unavailableKey);
     return DriverMoneyFormat.money(
       amount,
       item[currencyKey] as String? ?? item['currency'] as String?,
@@ -369,6 +382,8 @@ class _DriverSettlementDetailPageState
 
   String _settlementStatusLabel(AppLocalizations l10n, String status) {
     switch (status) {
+      case 'NOT_DUE_YET':
+        return l10n.t('driver_settlement_status_not_due_yet');
       case 'PENDING':
       case 'DUE':
         return l10n.t('driver_settlement_status_due');
@@ -407,11 +422,19 @@ class _DriverSettlementDetailPageState
     }
   }
 
-  String _settlementStatusMessage(AppLocalizations l10n, String status) {
+  String _settlementStatusMessage(
+    AppLocalizations l10n,
+    String status,
+    bool blocksNewCalls,
+  ) {
     switch (status) {
+      case 'NOT_DUE_YET':
+        return l10n.t('driver_settlement_not_due_yet_message');
       case 'PENDING':
       case 'DUE':
-        return l10n.t('driver_settlement_due_message');
+        return blocksNewCalls
+            ? l10n.t('driver_settlement_due_blocked_message')
+            : l10n.t('driver_settlement_due_message');
       case 'OVERDUE':
         return l10n.t('driver_settlement_overdue_message');
       case 'RECEIPT_SUBMITTED':
@@ -424,7 +447,9 @@ class _DriverSettlementDetailPageState
       case 'WAIVED':
         return l10n.t('driver_settlement_waived_message');
       default:
-        return l10n.t('driver_new_calls_blocked_by_settlement');
+        return blocksNewCalls
+            ? l10n.t('driver_new_calls_blocked_by_settlement')
+            : l10n.t('driver_settlement_status_unknown');
     }
   }
 
@@ -500,6 +525,7 @@ class _DriverSettlementDetailPageState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final status = _detail?['commissionStatus'] as String? ?? '';
+    final blocksNewCalls = _detail?['blocksNewCalls'] == true;
     final canUpload = _canUpload(status);
     final approvalMode = _detail?['approvalMode'] as String?;
 
@@ -549,6 +575,7 @@ class _DriverSettlementDetailPageState
                           _detail!,
                           'companyCommissionAmount',
                           'companyCommissionCurrency',
+                          unavailableKey: 'driver_commission_unavailable',
                         ),
                         emphasize: true,
                       ),
@@ -598,7 +625,11 @@ class _DriverSettlementDetailPageState
                       ],
                       const SizedBox(height: AppTokens.spaceMd),
                       AppUi.actionBanner(
-                        message: _settlementStatusMessage(l10n, status),
+                        message: _settlementStatusMessage(
+                          l10n,
+                          status,
+                          blocksNewCalls,
+                        ),
                         icon: Icons.info_outline,
                       ),
                       if (_detail?['rejectionReason'] != null) ...[

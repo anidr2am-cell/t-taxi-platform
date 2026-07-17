@@ -708,7 +708,9 @@ class AppLocalizations {
       'driver_expected_income': 'Driver expected income',
       'driver_income_unavailable':
           'Income information is not available. Please contact operations.',
+      'driver_commission_unavailable': 'Commission information needs review',
       'driver_receipt_status': 'Receipt status',
+      'driver_settlement_status_not_due_yet': 'Not due yet',
       'driver_settlement_status_due': 'Payment due',
       'driver_settlement_status_overdue': 'Overdue',
       'driver_settlement_status_receipt_submitted': 'Receipt under review',
@@ -721,17 +723,21 @@ class AppLocalizations {
       'driver_receipt_status_rejected': 'Receipt rejected',
       'driver_receipt_status_approved': 'Receipt approved',
       'driver_receipt_status_unknown': 'Receipt status unknown',
+      'driver_settlement_not_due_yet_message':
+          'The company commission is not due yet. You can receive new calls.',
       'driver_settlement_due_message':
           'Please pay the company commission and upload the receipt.',
+      'driver_settlement_due_blocked_message':
+          'Please pay the company commission and upload the receipt. You cannot receive new calls until settlement is completed.',
       'driver_settlement_overdue_message':
-          'The commission payment is overdue. You cannot receive new calls until settlement is completed.',
+          'The commission payment is overdue. Please pay the commission and upload the receipt.',
       'driver_settlement_receipt_review_message':
           'Your receipt is under review. You cannot receive new calls until admin approval.',
       'driver_settlement_rejected_message':
           'The receipt was rejected. Check the reason and submit it again.',
       'driver_settlement_completed_message': 'Settlement has been completed.',
       'driver_settlement_waived_message':
-          'The company commission was waived for this trip.',
+          'The company commission was waived for this trip. You can receive new calls.',
       'driver_new_calls_blocked_by_settlement':
           'The trip has ended, but settlement remains. Complete settlement before receiving new calls.',
       'driver_success_picked_up': 'Customer boarding confirmed',
@@ -4297,7 +4303,10 @@ class AppLocalizations {
     'driver_expected_income': '기사 예상 수입\n(รายได้โดยประมาณของคนขับ)',
     'driver_income_unavailable':
         '수입 정보를 확인할 수 없습니다. 관리자에게 문의해 주세요.\n(ไม่สามารถยืนยันข้อมูลรายได้ได้ กรุณาติดต่อผู้ดูแล)',
+    'driver_commission_unavailable':
+        '수수료 정보 확인 필요\n(ต้องตรวจสอบข้อมูลค่าคอมมิชชัน)',
     'driver_receipt_status': '영수증 상태\n(สถานะสลิป)',
+    'driver_settlement_status_not_due_yet': '아직 납부 대상 아님\n(ยังไม่ถึงกำหนดชำระ)',
     'driver_settlement_status_due': '납부 필요\n(ต้องชำระ)',
     'driver_settlement_status_overdue': '납부 지연\n(เกินกำหนดชำระ)',
     'driver_settlement_status_receipt_submitted':
@@ -4311,10 +4320,14 @@ class AppLocalizations {
     'driver_receipt_status_rejected': '영수증 반려\n(สลิปถูกปฏิเสธ)',
     'driver_receipt_status_approved': '영수증 승인됨\n(อนุมัติสลิปแล้ว)',
     'driver_receipt_status_unknown': '영수증 상태 확인 필요\n(ต้องตรวจสอบสถานะสลิป)',
+    'driver_settlement_not_due_yet_message':
+        '아직 회사 수수료 납부 대상이 아닙니다. 신규 배차를 받을 수 있습니다.\n(ยังไม่ถึงกำหนดชำระค่าคอมมิชชัน สามารถรับงานใหม่ได้)',
     'driver_settlement_due_message':
         '회사 수수료를 납부하고 영수증을 제출해 주세요.\n(กรุณาชำระค่าคอมมิชชันและอัปโหลดสลิป)',
+    'driver_settlement_due_blocked_message':
+        '회사 수수료를 납부하고 영수증을 제출해 주세요. 정산 완료 전까지 신규 배차를 받을 수 없습니다.\n(กรุณาชำระค่าคอมมิชชันและอัปโหลดสลิป ก่อนชำระเสร็จจะยังรับงานใหม่ไม่ได้)',
     'driver_settlement_overdue_message':
-        '수수료 납부 기한이 지났습니다. 정산 완료 전까지 신규 배차를 받을 수 없습니다.\n(เลยกำหนดชำระค่าคอมมิชชันแล้ว ต้องชำระให้เสร็จก่อนรับงานใหม่)',
+        '수수료 납부 기한이 지났습니다. 수수료 납부와 영수증 제출이 필요합니다.\n(เลยกำหนดชำระค่าคอมมิชชันแล้ว กรุณาชำระและอัปโหลดสลิป)',
     'driver_settlement_receipt_review_message':
         '영수증 검토 중입니다. 관리자 승인 후 신규 배차를 받을 수 있습니다.\n(กำลังตรวจสอบสลิป รอผู้ดูแลอนุมัติก่อนรับงานใหม่)',
     'driver_settlement_rejected_message':
@@ -4322,7 +4335,7 @@ class AppLocalizations {
     'driver_settlement_completed_message':
         '정산이 완료되었습니다.\n(ชำระค่าคอมมิชชันเสร็จแล้ว)',
     'driver_settlement_waived_message':
-        '이번 운행의 회사 수수료가 면제되었습니다.\n(ยกเว้นค่าคอมมิชชันสำหรับเที่ยวนี้)',
+        '이번 운행의 회사 수수료가 면제되었습니다. 신규 배차를 받을 수 있습니다.\n(ยกเว้นค่าคอมมิชชันสำหรับเที่ยวนี้ สามารถรับงานใหม่ได้)',
     'driver_new_calls_blocked_by_settlement':
         '운행은 종료됐지만 정산이 남아 있습니다. 정산 완료 후 신규 배차를 받을 수 있습니다.\n(จบทริปแล้วแต่ยังมีงานชำระค้างอยู่ กรุณาชำระให้เสร็จก่อนรับงานใหม่)',
     'driver_success_picked_up': '고객 탑승이 확인되었습니다',

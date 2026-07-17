@@ -100,12 +100,22 @@ class DriverJobService {
     if (customerPaymentAmount == null || companyCommissionAmount == null) {
       return null;
     }
+    if (customerPaymentAmount < 0 || companyCommissionAmount < 0) {
+      return null;
+    }
+    if (companyCommissionAmount > customerPaymentAmount) {
+      return null;
+    }
     return customerPaymentAmount - companyCommissionAmount;
   }
 
   paymentSummary(row) {
     const customerPaymentAmount = this.moneyAmount(row.total_amount);
     const companyCommissionAmount = this.moneyAmount(row.commission_amount);
+    const driverExpectedIncomeAmount = this.driverExpectedIncome(
+      row.total_amount,
+      row.commission_amount,
+    );
     const currency = row.currency ?? null;
     return {
       customerPaymentAmount,
@@ -113,14 +123,8 @@ class DriverJobService {
       customerPaymentMethod: this.paymentMethodLabel(row.payment_method),
       companyCommissionAmount,
       companyCommissionCurrency: companyCommissionAmount == null ? null : currency,
-      driverExpectedIncomeAmount: this.driverExpectedIncome(
-        row.total_amount,
-        row.commission_amount,
-      ),
-      driverExpectedIncomeCurrency:
-        customerPaymentAmount == null || companyCommissionAmount == null
-          ? null
-          : currency,
+      driverExpectedIncomeAmount,
+      driverExpectedIncomeCurrency: driverExpectedIncomeAmount == null ? null : currency,
     };
   }
 

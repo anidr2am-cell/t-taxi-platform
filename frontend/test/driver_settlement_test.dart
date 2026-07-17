@@ -41,7 +41,7 @@ class _FakeSettlementApi extends DriverSettlementApiService {
     }
     return {
       'bookingNumber': bookingNumber,
-      'commissionStatus': 'PENDING',
+      'commissionStatus': 'DUE',
       'commissionAmount': 120,
       'companyCommissionAmount': 120,
       'companyCommissionCurrency': 'THB',
@@ -70,6 +70,49 @@ class _FakeSettlementApi extends DriverSettlementApiService {
       'receiptFileId': 42,
     };
   }
+}
+
+Map<String, dynamic> _settlementDetail({
+  String status = 'DUE',
+  bool blocksNewCalls = true,
+  num? companyCommissionAmount = 120,
+  num? customerPaymentAmount = 1200,
+  num? driverExpectedIncomeAmount = 1080,
+  String? receiptStatus,
+}) {
+  return {
+    'bookingNumber': 'TX202607010001',
+    'commissionStatus': status,
+    'blocksNewCalls': blocksNewCalls,
+    'receiptStatus': receiptStatus ?? 'NONE',
+    'commissionAmount': companyCommissionAmount,
+    'companyCommissionAmount': companyCommissionAmount,
+    'companyCommissionCurrency': companyCommissionAmount == null ? null : 'THB',
+    'customerPaymentAmount': customerPaymentAmount,
+    'customerPaymentCurrency': customerPaymentAmount == null ? null : 'THB',
+    'driverExpectedIncomeAmount': driverExpectedIncomeAmount,
+    'driverExpectedIncomeCurrency': driverExpectedIncomeAmount == null
+        ? null
+        : 'THB',
+    'currency': 'THB',
+    'dueAt': '2026-07-08 12:00:00',
+  };
+}
+
+Widget _settlementDetailPage(
+  Map<String, dynamic> detail, {
+  Locale locale = const Locale('ko'),
+}) {
+  return MaterialApp(
+    locale: locale,
+    home: DriverSettlementDetailPage(
+      key: ValueKey(
+        '${locale.languageCode}-${detail['commissionStatus']}-${detail['blocksNewCalls']}-${detail['companyCommissionAmount']}',
+      ),
+      bookingNumber: 'TX202607010001',
+      api: _FakeSettlementApi(detail: detail),
+    ),
+  );
 }
 
 void main() {
@@ -209,7 +252,7 @@ void main() {
     await tester.tap(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('PENDING'), findsOneWidget);
+    expect(find.textContaining('DUE'), findsOneWidget);
     expect(find.textContaining('RECEIPT_SUBMITTED'), findsNothing);
   });
 
@@ -249,6 +292,129 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('Upload'), findsNothing);
+  });
+
+  testWidgets('settlement messages align with public blocker status', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _settlementDetailPage(
+        _settlementDetail(status: 'NOT_DUE_YET', blocksNewCalls: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('아직 회사 수수료 납부 대상이 아닙니다'), findsOneWidget);
+    expect(find.textContaining('신규 배차를 받을 수 있습니다'), findsOneWidget);
+    expect(find.textContaining('신규 배차를 받을 수 없습니다'), findsNothing);
+    expect(find.textContaining('영수증을 제출'), findsNothing);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(_settlementDetail(status: 'DUE')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('회사 수수료를 납부하고 영수증을 제출'), findsOneWidget);
+    expect(find.textContaining('신규 배차를 받을 수 없습니다'), findsOneWidget);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(
+        _settlementDetail(status: 'DUE', blocksNewCalls: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('회사 수수료를 납부하고 영수증을 제출'), findsOneWidget);
+    expect(find.textContaining('신규 배차를 받을 수 없습니다'), findsNothing);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(_settlementDetail(status: 'OVERDUE')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('수수료 납부 기한이 지났습니다'), findsOneWidget);
+    expect(find.textContaining('수수료 납부와 영수증 제출'), findsOneWidget);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(
+        _settlementDetail(
+          status: 'RECEIPT_SUBMITTED',
+          receiptStatus: 'RECEIPT_SUBMITTED',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('영수증 검토 중'), findsWidgets);
+    expect(find.textContaining('관리자 승인 후'), findsOneWidget);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(_settlementDetail(status: 'REJECTED')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('영수증이 반려되었습니다'), findsOneWidget);
+    expect(find.textContaining('다시 제출'), findsOneWidget);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(
+        _settlementDetail(status: 'APPROVED', blocksNewCalls: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('정산이 완료되었습니다'), findsOneWidget);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(
+        _settlementDetail(status: 'WAIVED', blocksNewCalls: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('회사 수수료가 면제되었습니다'), findsOneWidget);
+    expect(find.textContaining('신규 배차를 받을 수 있습니다'), findsOneWidget);
+    expect(find.textContaining('신규 배차를 받을 수 없습니다'), findsNothing);
+    expect(find.textContaining('영수증을 제출'), findsNothing);
+  });
+
+  testWidgets('settlement amount fallbacks do not show unsafe income', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _settlementDetailPage(
+        _settlementDetail(
+          companyCommissionAmount: 1500,
+          customerPaymentAmount: 1300,
+          driverExpectedIncomeAmount: null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('฿1,500'), findsOneWidget);
+    expect(find.text('฿1,300'), findsOneWidget);
+    expect(find.textContaining('฿-'), findsNothing);
+    expect(find.textContaining('기사 예상 수입'), findsNothing);
+
+    await tester.pumpWidget(
+      _settlementDetailPage(
+        _settlementDetail(
+          companyCommissionAmount: null,
+          driverExpectedIncomeAmount: null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('수수료 정보 확인 필요'), findsOneWidget);
+    expect(find.textContaining('수입 정보를 확인할 수 없습니다'), findsNothing);
+  });
+
+  testWidgets('settlement messages have no raw keys for supported locales', (
+    tester,
+  ) async {
+    for (final code in ['ko', 'en', 'th', 'zh', 'ja']) {
+      await tester.pumpWidget(
+        _settlementDetailPage(
+          _settlementDetail(status: 'WAIVED', blocksNewCalls: false),
+          locale: Locale(code),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('driver_settlement'), findsNothing);
+      expect(find.textContaining('driver_commission'), findsNothing);
+    }
   });
 
   test('isAllowedReceiptFilename validates extensions', () {

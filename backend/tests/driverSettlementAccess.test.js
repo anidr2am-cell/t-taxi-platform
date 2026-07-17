@@ -92,7 +92,8 @@ test('getDriverSettlement succeeds for SETTLEMENT_PENDING + DUE without separate
   assert.equal(item.bookingNumber, 'TX202607120002');
   assert.equal(item.status, 'SETTLEMENT_PENDING');
   assert.equal(item.commissionAmount, 200);
-  assert.equal(item.commissionStatus, 'PENDING');
+  assert.equal(item.commissionStatus, 'DUE');
+  assert.equal(item.blocksNewCalls, true);
 });
 
 test('getDriverSettlement rejects another driver booking', async () => {
@@ -146,7 +147,8 @@ test('getAdminSettlement exposes SETTLEMENT_PENDING booking for admin review', a
   const detail = await service.getAdminSettlement('TX202607120002', '/api/v1/admin/settlements');
   assert.equal(detail.status, 'SETTLEMENT_PENDING');
   assert.equal(detail.commissionAmount, 200);
-  assert.equal(detail.commissionStatus, 'PENDING');
+  assert.equal(detail.commissionStatus, 'DUE');
+  assert.equal(detail.blocksNewCalls, true);
   assert.equal(detail.receiptStatus, 'NONE');
   assert.equal(detail.canApprove, false);
 });

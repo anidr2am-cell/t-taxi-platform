@@ -752,7 +752,7 @@ class _SettlementSection extends StatelessWidget {
               AppUi.summaryRow(
                 label: l10n.t('driver_company_commission'),
                 value: companyCommissionAmount == null
-                    ? l10n.t('driver_income_unavailable')
+                    ? l10n.t('driver_commission_unavailable')
                     : DriverMoneyFormat.money(
                         companyCommissionAmount,
                         companyCommissionCurrency,

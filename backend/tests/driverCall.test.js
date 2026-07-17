@@ -185,6 +185,14 @@ function createHarness(overrides = {}) {
       const customerPaymentAmount = Number(row.total_amount);
       const companyCommissionAmount =
         row.commission_amount == null ? null : Number(row.commission_amount);
+      const safeExpectedIncome =
+        Number.isFinite(customerPaymentAmount)
+        && Number.isFinite(companyCommissionAmount)
+        && customerPaymentAmount >= 0
+        && companyCommissionAmount >= 0
+        && companyCommissionAmount <= customerPaymentAmount
+          ? customerPaymentAmount - companyCommissionAmount
+          : null;
       return {
         customerPaymentAmount,
         customerPaymentCurrency: row.currency,
@@ -192,12 +200,8 @@ function createHarness(overrides = {}) {
         companyCommissionAmount,
         companyCommissionCurrency:
           companyCommissionAmount == null ? null : row.currency,
-        driverExpectedIncomeAmount:
-          companyCommissionAmount == null
-            ? null
-            : customerPaymentAmount - companyCommissionAmount,
-        driverExpectedIncomeCurrency:
-          companyCommissionAmount == null ? null : row.currency,
+        driverExpectedIncomeAmount: safeExpectedIncome,
+        driverExpectedIncomeCurrency: safeExpectedIncome == null ? null : row.currency,
       };
     },
   };
@@ -239,6 +243,18 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
   assert.equal(Object.hasOwn(result.items[0], 'customerEmail'), false);
   assert.equal(Object.hasOwn(result.items[0], 'specialInstructions'), false);
+});
+
+test('open call list keeps unsafe expected income nullable', async () => {
+  const { service } = createHarness({
+    openRows: [openCallRow({ total_amount: 1300, commission_amount: 1500 })],
+  });
+  const result = await service.listOpenCalls(42);
+
+  assert.equal(result.items[0].customerPaymentAmount, 1300);
+  assert.equal(result.items[0].companyCommissionAmount, 1500);
+  assert.equal(result.items[0].driverExpectedIncomeAmount, null);
+  assert.equal(result.items[0].driverExpectedIncomeCurrency, null);
 });
 
 test('open call list hides calls when settlement confirmation is required', async () => {
