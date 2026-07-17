@@ -29,10 +29,12 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
     final guidanceKey = DriverUx.statusGuidanceKey(booking.status);
     final navigateAddress = DriverUx.navigateTargetAddress(booking);
     final canNavigate = DriverTripContact.hasNavigableAddress(navigateAddress);
-    final phone = customerPhone ?? booking.customerPhone;
+    final canContactCustomer = DriverUx.canMessageCustomer(booking.status);
+    final phone = canContactCustomer
+        ? customerPhone ?? booking.customerPhone
+        : null;
     final canCall = DriverTripContact.hasCallablePhone(phone);
-    final canChat =
-        onOpenChat != null && DriverUx.canMessageCustomer(booking.status);
+    final canChat = onOpenChat != null && canContactCustomer;
     final luggageCount = _luggageCount(booking);
 
     return AppUi.surfaceCard(
@@ -122,10 +124,7 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
           const SizedBox(height: AppTokens.spaceSm),
           Text(
             booking.bookingNumber,
-            style: const TextStyle(
-              color: AppTokens.textMuted,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: AppTokens.textMuted, fontSize: 12),
           ),
           const SizedBox(height: AppTokens.spaceMd),
           Row(
@@ -170,10 +169,7 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
               onPressed: onOpenPrimary,
               child: Text(
                 l10n.t(
-                  DriverUx.todayPrimaryCtaKey(
-                    booking,
-                    settlement: settlement,
-                  ),
+                  DriverUx.todayPrimaryCtaKey(booking, settlement: settlement),
                 ),
               ),
             ),
@@ -217,9 +213,9 @@ class DriverTodayTripListTile extends StatelessWidget {
             children: [
               Text(
                 booking.pickupTime,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               AppUi.statusBadge(
@@ -268,16 +264,28 @@ class _RouteLine extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(origin, maxLines: 2, overflow: TextOverflow.ellipsis, style: style),
+        Text(
+          origin,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: style,
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(
             children: [
-              const Icon(Icons.arrow_downward, size: 14, color: AppTokens.textMuted),
+              const Icon(
+                Icons.arrow_downward,
+                size: 14,
+                color: AppTokens.textMuted,
+              ),
               const SizedBox(width: 4),
               Text(
                 '→',
-                style: TextStyle(color: AppTokens.textMuted, fontSize: compact ? 13 : 14),
+                style: TextStyle(
+                  color: AppTokens.textMuted,
+                  fontSize: compact ? 13 : 14,
+                ),
               ),
             ],
           ),

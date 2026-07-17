@@ -9,13 +9,24 @@ Future<bool> confirmDriverTripAction({
   required String messageKey,
   String? confirmKey,
   String? cancelKey,
+  Widget? extraContent,
 }) async {
   final l10n = context.l10n;
   final result = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(l10n.t(titleKey)),
-      content: Text(l10n.t(messageKey)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.t(messageKey)),
+          if (extraContent != null) ...[
+            const SizedBox(height: 12),
+            extraContent,
+          ],
+        ],
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),

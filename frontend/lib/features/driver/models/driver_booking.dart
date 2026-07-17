@@ -18,7 +18,9 @@ class DriverBooking {
     this.luggage,
     this.flight,
     this.specialInstructions,
-    this.paymentMethod,
+    this.customerPaymentAmount,
+    this.currency,
+    this.paymentMethodLabel,
     this.qr,
     this.allowedActions = const [],
   });
@@ -41,7 +43,9 @@ class DriverBooking {
   final Map<String, dynamic>? luggage;
   final Map<String, dynamic>? flight;
   final String? specialInstructions;
-  final String? paymentMethod;
+  final double? customerPaymentAmount;
+  final String? currency;
+  final String? paymentMethodLabel;
   final Map<String, dynamic>? qr;
   final List<String> allowedActions;
 
@@ -83,7 +87,10 @@ class DriverBooking {
           ? null
           : Map<String, dynamic>.from(json['flight'] as Map),
       specialInstructions: json['specialInstructions'] as String?,
-      paymentMethod: json['paymentMethod'] as String?,
+      customerPaymentAmount: (json['customerPaymentAmount'] as num?)
+          ?.toDouble(),
+      currency: json['currency'] as String?,
+      paymentMethodLabel: json['paymentMethodLabel'] as String?,
       qr: json['qr'] == null
           ? null
           : Map<String, dynamic>.from(json['qr'] as Map),

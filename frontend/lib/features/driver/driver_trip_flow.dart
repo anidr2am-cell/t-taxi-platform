@@ -69,4 +69,12 @@ class DriverTripFlow {
       _ => null,
     };
   }
+
+  static String? processingMessageKey(String? actionToken) {
+    return switch (actionToken) {
+      'MARK_PICKED_UP' => 'driver_confirm_customer_boarded_processing',
+      'END_TRIP' => 'driver_end_trip_processing',
+      _ => 'driver_trip_action_processing',
+    };
+  }
 }
