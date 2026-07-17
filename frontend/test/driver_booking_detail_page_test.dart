@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/driver/models/driver_booking.dart';
+import 'package:frontend/features/driver/models/driver_status.dart';
 import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
+import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 void main() {
   testWidgets('shows confirm trip and release actions when assigned', (
@@ -194,6 +197,95 @@ void main() {
       find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('detail direct entry starts location after online status loads', (
+    tester,
+  ) async {
+    final locationApi = _FakeLocationApi();
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']),
+          online: true,
+        ),
+        showStatusControl: true,
+        locationApi: locationApi,
+      ),
+    );
+
+    await tester.pump();
+    expect(locationApi.calls, 0);
+    await tester.pumpAndSettle();
+
+    expect(locationApi.calls, 1);
+  });
+
+  testWidgets('detail direct entry does not start location while offline', (
+    tester,
+  ) async {
+    final locationApi = _FakeLocationApi();
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ARRIVED',
+            actions: ['MARK_PICKED_UP'],
+          ),
+          online: false,
+        ),
+        showStatusControl: true,
+        locationApi: locationApi,
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(locationApi.calls, 0);
+  });
+
+  testWidgets(
+    'detail direct entry does not start location for assigned status',
+    (tester) async {
+      final locationApi = _FakeLocationApi();
+      await tester.pumpWidget(
+        _wrap(
+          _FakeDriverApi(
+            detail: _booking(
+              status: 'DRIVER_ASSIGNED',
+              actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+            ),
+            online: true,
+          ),
+          showStatusControl: true,
+          locationApi: locationApi,
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(locationApi.calls, 0);
+    },
+  );
+
+  testWidgets('detail direct entry does not start location after trip ends', (
+    tester,
+  ) async {
+    final locationApi = _FakeLocationApi();
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(status: 'SETTLEMENT_PENDING', actions: []),
+          online: true,
+        ),
+        showStatusControl: true,
+        locationApi: locationApi,
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(locationApi.calls, 0);
   });
 
   testWidgets('end trip dialog shows known customer payment amount', (
@@ -467,12 +559,17 @@ void main() {
 Widget _wrap(
   DriverApiService api, {
   Widget Function(String bookingNumber)? chatPageBuilder,
+  bool showStatusControl = false,
+  DriverLocationApiService? locationApi,
 }) {
   return MaterialApp(
     home: DriverBookingDetailPage(
       bookingNumber: 'TX202607010001',
       api: api,
       chatPageBuilder: chatPageBuilder,
+      showStatusControl: showStatusControl,
+      locationApi: locationApi,
+      positionProvider: () async => _position(),
     ),
   );
 }
@@ -521,6 +618,7 @@ class _FakeDriverApi extends DriverApiService {
     this.detailError,
     this.actionError,
     this.releaseError,
+    this.online = true,
   }) {
     _current = detail ?? _booking();
     if (detailFuture != null) {
@@ -533,6 +631,7 @@ class _FakeDriverApi extends DriverApiService {
   final Exception? detailError;
   final Exception? actionError;
   final Exception? releaseError;
+  bool online;
   int detailCalls = 0;
   int releaseCalls = 0;
   int markPickedUpCalls = 0;
@@ -544,6 +643,23 @@ class _FakeDriverApi extends DriverApiService {
     if (detailError != null) throw detailError!;
     if (_detailFuture != null) return _detailFuture!;
     return _current;
+  }
+
+  @override
+  Future<DriverStatus> getStatus() async {
+    await Future<void>.delayed(Duration.zero);
+    return DriverStatus(
+      driverId: 7,
+      active: true,
+      online: online,
+      status: online ? 'AVAILABLE' : 'OFFLINE',
+      hasActiveJob: const {
+        'DRIVER_ASSIGNED',
+        'ON_ROUTE',
+        'DRIVER_ARRIVED',
+        'PICKED_UP',
+      }.contains(_current.status),
+    );
   }
 
   @override
@@ -589,3 +705,32 @@ class _FakeDriverApi extends DriverApiService {
     return endTrip(bookingNumber);
   }
 }
+
+class _FakeLocationApi extends DriverLocationApiService {
+  int calls = 0;
+
+  @override
+  Future<void> updateDriverLocation({
+    required double latitude,
+    required double longitude,
+    double? accuracyMeters,
+    double? heading,
+    double? speedKph,
+    DateTime? recordedAt,
+  }) async {
+    calls += 1;
+  }
+}
+
+Position _position() => Position(
+  latitude: 12.9236,
+  longitude: 100.8825,
+  timestamp: DateTime.now(),
+  accuracy: 12,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: 90,
+  headingAccuracy: 0,
+  speed: 10,
+  speedAccuracy: 0,
+);

@@ -51,6 +51,9 @@ class DriverLiveLocationControl extends StatefulWidget {
   final DriverPositionProvider? positionProvider;
   final Duration interval;
 
+  static bool isTrackingBooking(String bookingNumber) =>
+      _DriverLiveLocationControlState.isTrackingBooking(bookingNumber);
+
   @override
   State<DriverLiveLocationControl> createState() =>
       _DriverLiveLocationControlState();
@@ -58,6 +61,7 @@ class DriverLiveLocationControl extends StatefulWidget {
 
 class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
   static _DriverLiveLocationControlState? _activeController;
+  static final Set<_DriverLiveLocationControlState> _mountedControllers = {};
 
   Timer? _timer;
   Timer? _retryTimer;
@@ -89,9 +93,21 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
       widget.bookingStatus == null ||
       _stopStatuses.contains(widget.bookingStatus);
 
+  bool get _waitingForOnlineStatus =>
+      widget.hasActiveJob && _shouldAutoStart && widget.online == null;
+
+  static bool isTrackingBooking(String bookingNumber) {
+    final active = _activeController;
+    return active != null &&
+        active.mounted &&
+        active._enabled &&
+        active._boundBookingNumber == bookingNumber;
+  }
+
   @override
   void initState() {
     super.initState();
+    _mountedControllers.add(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncLifecycle());
   }
 
@@ -111,13 +127,35 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
 
   @override
   void dispose() {
+    final handoffBookingNumber = _activeController == this
+        ? _boundBookingNumber ?? widget.bookingNumber
+        : null;
     _lifecycleGeneration += 1;
     _timer?.cancel();
     _retryTimer?.cancel();
+    _mountedControllers.remove(this);
     if (_activeController == this) {
       _activeController = null;
     }
+    if (handoffBookingNumber != null) {
+      _handoffActiveController(handoffBookingNumber);
+    }
     super.dispose();
+  }
+
+  static void _handoffActiveController(String bookingNumber) {
+    for (final candidate in _mountedControllers) {
+      if (!candidate.mounted ||
+          candidate.widget.bookingNumber != bookingNumber ||
+          !candidate._shouldAutoStart ||
+          candidate.widget.online != true) {
+        continue;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (candidate.mounted) candidate._syncLifecycle();
+      });
+      return;
+    }
   }
 
   Future<void> _syncLifecycle() async {
@@ -135,23 +173,54 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
 
   Future<void> _start({bool auto = false}) async {
     if (!widget.hasActiveJob || !_shouldAutoStart) return;
-    if (_enabled && _boundBookingNumber == widget.bookingNumber) {
-      return;
-    }
     if (widget.online != true) {
-      if (widget.online != false) return;
+      if (widget.online != false) {
+        if (_state != DriverLocationSharingState.starting || _error != null) {
+          setState(() {
+            _enabled = false;
+            _sending = false;
+            _state = DriverLocationSharingState.starting;
+            _error = null;
+          });
+        }
+        return;
+      }
+      _lifecycleGeneration += 1;
+      _timer?.cancel();
+      _retryTimer?.cancel();
+      _timer = null;
+      _retryTimer = null;
+      if (_activeController == this) _activeController = null;
       if (_state == DriverLocationSharingState.temporarilyUnavailable &&
           _error == context.l10n.t('driver_live_location_online_required')) {
         return;
       }
       setState(() {
         _enabled = false;
+        _sending = false;
         _state = DriverLocationSharingState.temporarilyUnavailable;
         _error = context.l10n.t('driver_live_location_online_required');
+        _boundBookingNumber = null;
       });
       return;
     }
-    _activeController?._stop(invalidate: true);
+    if (_enabled && _boundBookingNumber == widget.bookingNumber) {
+      return;
+    }
+    final activeController = _activeController;
+    if (activeController != null && activeController != this) {
+      if (isTrackingBooking(widget.bookingNumber ?? '')) {
+        setState(() {
+          _enabled = false;
+          _sending = false;
+          _state = DriverLocationSharingState.sharing;
+          _boundBookingNumber = widget.bookingNumber;
+          _error = null;
+        });
+        return;
+      }
+      activeController._stop(invalidate: true);
+    }
     _activeController = this;
     _lifecycleGeneration += 1;
     final generation = _lifecycleGeneration;
@@ -381,6 +450,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
   }
 
   String _titleKey() {
+    if (_waitingForOnlineStatus) return 'driver_location_checking_status';
     return switch (_state) {
       DriverLocationSharingState.starting => 'driver_location_starting',
       DriverLocationSharingState.sharing => 'driver_location_sharing',
@@ -396,6 +466,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
   }
 
   IconData _icon() {
+    if (_waitingForOnlineStatus) return Icons.manage_search;
     return switch (_state) {
       DriverLocationSharingState.sharing => Icons.my_location,
       DriverLocationSharingState.starting => Icons.location_searching,
@@ -407,6 +478,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
   }
 
   Color _toneColor() {
+    if (_waitingForOnlineStatus) return AppTokens.primary;
     return switch (_state) {
       DriverLocationSharingState.sharing => AppTokens.success,
       DriverLocationSharingState.starting => AppTokens.primary,
@@ -418,6 +490,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
   }
 
   Color _toneBackground() {
+    if (_waitingForOnlineStatus) return AppTokens.primaryLight;
     return switch (_state) {
       DriverLocationSharingState.sharing => AppTokens.successLight,
       DriverLocationSharingState.starting => AppTokens.primaryLight,
@@ -464,6 +537,8 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
                       Text(
                         _isAssignedOnly
                             ? l10n.t('driver_location_auto_start_guidance')
+                            : _waitingForOnlineStatus
+                            ? l10n.t('driver_location_checking_status_detail')
                             : _lastSentAt == null
                             ? l10n.t('driver_live_location_active_job_only')
                             : _formatLastSent(),

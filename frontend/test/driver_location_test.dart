@@ -179,6 +179,113 @@ void main() {
     expect(find.textContaining('위치 공유 중'), findsOneWidget);
   });
 
+  testWidgets('driver location waits for online status before sending', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: null,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(api.calls, 0);
+    expect(find.text('Checking driver status'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(api.calls, 1);
+  });
+
+  testWidgets('offline transition cancels timers and online resumes tracking', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(seconds: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: false,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(seconds: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(seconds: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 2);
+  });
+
   testWidgets('first successful send starts one periodic timer', (
     tester,
   ) async {
@@ -206,6 +313,59 @@ void main() {
     await tester.pump();
 
     expect(api.calls, 2);
+  });
+
+  testWidgets('same booking mounted twice keeps one periodic timer', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi();
+    Widget controls({bool first = true}) => MaterialApp(
+      home: Scaffold(
+        body: Column(
+          children: [
+            if (first)
+              DriverLiveLocationControl(
+                key: const ValueKey('owner'),
+                hasActiveJob: true,
+                online: true,
+                bookingNumber: 'TX1',
+                bookingStatus: 'ON_ROUTE',
+                api: api,
+                positionProvider: () async => _position(),
+                interval: const Duration(seconds: 1),
+              ),
+            DriverLiveLocationControl(
+              key: const ValueKey('backup'),
+              hasActiveJob: true,
+              online: true,
+              bookingNumber: 'TX1',
+              bookingStatus: 'ON_ROUTE',
+              api: api,
+              positionProvider: () async => _position(),
+              interval: const Duration(seconds: 1),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(controls());
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(api.calls, 2);
+
+    await tester.pumpWidget(controls(first: false));
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 3);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(api.calls, 4);
   });
 
   testWidgets('first send failure does not start periodic timer', (

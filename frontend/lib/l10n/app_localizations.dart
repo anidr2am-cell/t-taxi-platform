@@ -885,6 +885,13 @@ class AppLocalizations {
       'driver_location_not_shared_warning':
           'Location is not being shared. You can continue the trip.',
       'driver_location_error': 'Location sharing failed. Please try again.',
+      'driver_location_checking_status': 'Checking driver status',
+      'driver_location_checking_status_detail':
+          'We will start location sharing after confirming you are online.',
+      'driver_location_status_load_failed':
+          'Could not check driver online status',
+      'driver_location_status_load_failed_detail':
+          'The trip can continue. Try location sharing again after the status check succeeds.',
       'driver_settlement_receipt_upload': 'Transfer slip upload',
       'driver_settlement_receipt_formats': 'JPG, PNG, or PDF up to 10 MB',
       'driver_settlement_due': 'Due: {date}',
