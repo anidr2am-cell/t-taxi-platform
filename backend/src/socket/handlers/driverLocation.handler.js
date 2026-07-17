@@ -62,7 +62,13 @@ function registerDriverLocationHandlers(io, socket) {
           }
         }
       }
-      if (typeof ack === 'function') ack({ ok: true, accepted: result.accepted !== false });
+      if (typeof ack === 'function') {
+        ack({
+          ok: true,
+          accepted: result.accepted !== false,
+          reason: result.reason,
+        });
+      }
     } catch (err) {
       const mapped = mapSocketError(err);
       socket.emit('driver-location:error', mapped);

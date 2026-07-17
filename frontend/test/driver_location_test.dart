@@ -179,6 +179,183 @@ void main() {
     expect(find.textContaining('위치 공유 중'), findsOneWidget);
   });
 
+  testWidgets('first successful send starts one periodic timer', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(seconds: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+
+    expect(api.calls, 2);
+  });
+
+  testWidgets('first send failure does not start periodic timer', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi(
+      errors: [const DriverLocationApiException('temporary', statusCode: 503)],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(seconds: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump();
+
+    expect(api.calls, 1);
+  });
+
+  testWidgets('temporary error retries once and then starts periodic timer', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi(
+      errors: [const DriverLocationApiException('temporary', statusCode: 503)],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(seconds: 10),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+
+    expect(api.calls, 2);
+
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pump();
+
+    expect(api.calls, 3);
+  });
+
+  testWidgets('permission denied disables sharing and cancels timers', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi(
+      errors: [
+        const DriverLocationApiException(
+          'Location permission denied',
+          errorCode: 'LOCATION_PERMISSION_DENIED',
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+            interval: const Duration(seconds: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pump();
+
+    expect(api.calls, 1);
+    expect(find.byIcon(Icons.refresh), findsOneWidget);
+  });
+
+  testWidgets('booking change invalidates pending retry callback', (
+    tester,
+  ) async {
+    final api = _FakeDriverLocationUpdateApi(
+      errors: [const DriverLocationApiException('temporary', statusCode: 503)],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: true,
+            bookingNumber: 'TX1',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(api.calls, 1);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DriverLiveLocationControl(
+            hasActiveJob: true,
+            online: false,
+            bookingNumber: 'TX2',
+            bookingStatus: 'ON_ROUTE',
+            api: api,
+            positionProvider: () async => _position(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+
+    expect(api.calls, 1);
+  });
+
   testWidgets('driver location control prompts when offline', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -398,6 +575,10 @@ Position _position() => Position(
 );
 
 class _FakeDriverLocationUpdateApi extends DriverLocationApiService {
+  _FakeDriverLocationUpdateApi({List<DriverLocationApiException>? errors})
+    : errors = List.of(errors ?? const []);
+
+  final List<DriverLocationApiException> errors;
   int calls = 0;
 
   @override
@@ -410,5 +591,8 @@ class _FakeDriverLocationUpdateApi extends DriverLocationApiService {
     DateTime? recordedAt,
   }) async {
     calls += 1;
+    if (errors.isNotEmpty) {
+      throw errors.removeAt(0);
+    }
   }
 }

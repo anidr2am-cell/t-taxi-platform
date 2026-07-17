@@ -368,7 +368,12 @@ test('socket location update does not broadcast stale no-op result', async () =>
   const socket = buildSocket({ authUser: { id: 44, role: ROLES.DRIVER } });
   registerDriverLocationService({
     async updateDriverLocation() {
-      return { driverId: 7, accepted: false, bookingIds: [] };
+      return {
+        driverId: 7,
+        accepted: false,
+        reason: 'STALE_LOCATION',
+        bookingIds: [],
+      };
     },
     async listAdminLocations() {
       throw new Error('stale no-op should not load snapshot');
@@ -384,6 +389,7 @@ test('socket location update does not broadcast stale no-op result', async () =>
 
   assert.equal(ack.ok, true);
   assert.equal(ack.accepted, false);
+  assert.equal(ack.reason, 'STALE_LOCATION');
   assert.deepEqual(io.emitted, []);
 });
 

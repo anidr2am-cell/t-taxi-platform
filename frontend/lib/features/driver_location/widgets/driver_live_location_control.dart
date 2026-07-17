@@ -21,6 +21,16 @@ enum DriverLocationSharingState {
   stopped,
 }
 
+enum _LocationFailureKind {
+  permissionDenied,
+  serviceDisabled,
+  authError,
+  noActiveAssignment,
+  invalidTripStatus,
+  temporaryNetworkError,
+  unknown,
+}
+
 class DriverLiveLocationControl extends StatefulWidget {
   const DriverLiveLocationControl({
     super.key,
@@ -47,6 +57,8 @@ class DriverLiveLocationControl extends StatefulWidget {
 }
 
 class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
+  static _DriverLiveLocationControlState? _activeController;
+
   Timer? _timer;
   Timer? _retryTimer;
   bool _enabled = false;
@@ -56,6 +68,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
   String? _boundBookingNumber;
   DriverLocationSharingState _state = DriverLocationSharingState.idle;
   int _retryAttempt = 0;
+  int _lifecycleGeneration = 0;
 
   static const _autoStartStatuses = {'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP'};
 
@@ -86,7 +99,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
   void didUpdateWidget(covariant DriverLiveLocationControl oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.bookingNumber != widget.bookingNumber && _enabled) {
-      _stop();
+      _stop(invalidate: true);
     }
     if (oldWidget.hasActiveJob != widget.hasActiveJob ||
         oldWidget.bookingNumber != widget.bookingNumber ||
@@ -98,8 +111,12 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
 
   @override
   void dispose() {
+    _lifecycleGeneration += 1;
     _timer?.cancel();
     _retryTimer?.cancel();
+    if (_activeController == this) {
+      _activeController = null;
+    }
     super.dispose();
   }
 
@@ -107,7 +124,7 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
     if (!mounted) return;
     if (_shouldStop) {
       if (_enabled || _state != DriverLocationSharingState.idle) {
-        _stop(stoppedByLifecycle: true);
+        _stop(stoppedByLifecycle: true, invalidate: true);
       }
       return;
     }
@@ -134,7 +151,12 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
       });
       return;
     }
+    _activeController?._stop(invalidate: true);
+    _activeController = this;
+    _lifecycleGeneration += 1;
+    final generation = _lifecycleGeneration;
     _retryTimer?.cancel();
+    _timer?.cancel();
     setState(() {
       _enabled = true;
       _sending = false;
@@ -142,14 +164,21 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
       _boundBookingNumber = widget.bookingNumber;
       _error = null;
     });
-    await _sendOnce();
-    _timer?.cancel();
-    _timer = Timer.periodic(widget.interval, (_) => _sendOnce());
+    final sent = await _sendOnce(generation: generation);
+    if (!sent || !_isCurrentLifecycle(generation)) return;
+    _startPeriodic(generation);
   }
 
-  void _stop({bool stoppedByLifecycle = false}) {
+  void _stop({bool stoppedByLifecycle = false, bool invalidate = false}) {
+    if (invalidate) _lifecycleGeneration += 1;
     _timer?.cancel();
     _retryTimer?.cancel();
+    _timer = null;
+    _retryTimer = null;
+    if (_activeController == this) {
+      _activeController = null;
+    }
+    if (!mounted) return;
     setState(() {
       _enabled = false;
       _sending = false;
@@ -161,13 +190,36 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
     });
   }
 
+  void _startPeriodic(int generation) {
+    if (!_isCurrentLifecycle(generation)) return;
+    _timer?.cancel();
+    _timer = Timer.periodic(widget.interval, (_) {
+      if (_isCurrentLifecycle(generation) && !_sending) {
+        _sendOnce(generation: generation);
+      }
+    });
+  }
+
+  bool _isCurrentLifecycle(int generation) {
+    return mounted &&
+        generation == _lifecycleGeneration &&
+        _enabled &&
+        widget.hasActiveJob &&
+        widget.online == true &&
+        _boundBookingNumber == widget.bookingNumber &&
+        _autoStartStatuses.contains(widget.bookingStatus);
+  }
+
   Future<Position> _getPosition() async {
     if (widget.positionProvider != null) {
       return widget.positionProvider!();
     }
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw const DriverLocationApiException('Location services are disabled');
+      throw const DriverLocationApiException(
+        'Location services are disabled',
+        errorCode: 'LOCATION_SERVICE_DISABLED',
+      );
     }
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -175,15 +227,18 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
     }
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      throw const DriverLocationApiException('Location permission denied');
+      throw const DriverLocationApiException(
+        'Location permission denied',
+        errorCode: 'LOCATION_PERMISSION_DENIED',
+      );
     }
     return Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 
-  Future<void> _sendOnce() async {
-    if (_sending || !_enabled || !widget.hasActiveJob) return;
+  Future<bool> _sendOnce({required int generation}) async {
+    if (_sending || !_isCurrentLifecycle(generation)) return false;
     setState(() {
       _sending = true;
       _error = null;
@@ -198,59 +253,118 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
         speedKph: position.speed.isNaN ? null : position.speed * 3.6,
         recordedAt: position.timestamp,
       );
-      if (!mounted) return;
+      if (!_isCurrentLifecycle(generation)) return false;
       _retryAttempt = 0;
       setState(() {
         _lastSentAt = DateTime.now();
         _sending = false;
         _state = DriverLocationSharingState.sharing;
       });
+      return true;
     } catch (err) {
-      if (!mounted) return;
+      if (!mounted || generation != _lifecycleGeneration) return false;
       final message = userFacingError(
         err,
         fallback: context.l10n.t('driver_location_error'),
       );
+      final fatal = !_canAutoRetry(err);
       setState(() {
+        _enabled = !fatal;
         _sending = false;
-        _state = _classifyError(err);
+        _state = _stateForError(err);
         _error = message;
+        if (fatal) {
+          _boundBookingNumber = null;
+        }
       });
-      _scheduleRetry(err);
+      _timer?.cancel();
+      _timer = null;
+      if (fatal) {
+        _retryTimer?.cancel();
+        _retryTimer = null;
+        _retryAttempt = 0;
+        if (_activeController == this) _activeController = null;
+      } else {
+        _scheduleRetry(err, generation);
+      }
+      return false;
     }
   }
 
-  DriverLocationSharingState _classifyError(Object err) {
-    final text = err.toString().toLowerCase();
-    if (text.contains('permission')) {
+  DriverLocationSharingState _stateForError(Object err) {
+    final kind = _classifyError(err);
+    if (kind == _LocationFailureKind.permissionDenied) {
       return DriverLocationSharingState.permissionDenied;
     }
-    if (text.contains('disabled') || text.contains('service')) {
+    if (kind == _LocationFailureKind.serviceDisabled) {
       return DriverLocationSharingState.serviceDisabled;
+    }
+    if (kind == _LocationFailureKind.authError ||
+        kind == _LocationFailureKind.noActiveAssignment ||
+        kind == _LocationFailureKind.invalidTripStatus) {
+      return DriverLocationSharingState.stopped;
     }
     return DriverLocationSharingState.temporarilyUnavailable;
   }
 
-  bool _canAutoRetry(Object err) {
-    final state = _classifyError(err);
-    if (state == DriverLocationSharingState.permissionDenied ||
-        state == DriverLocationSharingState.serviceDisabled) {
-      return false;
+  _LocationFailureKind _classifyError(Object err) {
+    if (err is DriverLocationApiException) {
+      final code = err.errorCode ?? '';
+      if (code == 'LOCATION_PERMISSION_DENIED') {
+        return _LocationFailureKind.permissionDenied;
+      }
+      if (code == 'LOCATION_SERVICE_DISABLED') {
+        return _LocationFailureKind.serviceDisabled;
+      }
+      if (err.statusCode == 401 ||
+          code == 'UNAUTHORIZED' ||
+          code == 'AUTHENTICATION_REQUIRED') {
+        return _LocationFailureKind.authError;
+      }
+      if (code == 'NO_ACTIVE_ASSIGNMENT') {
+        return _LocationFailureKind.noActiveAssignment;
+      }
+      if (code == 'BOOKING_NOT_TRACKABLE' || code == 'INVALID_TRIP_STATUS') {
+        return _LocationFailureKind.invalidTripStatus;
+      }
+      if (err.statusCode == null || err.statusCode! >= 500) {
+        return _LocationFailureKind.temporaryNetworkError;
+      }
     }
     final text = err.toString().toLowerCase();
-    return !text.contains('log in') && !text.contains('no active job');
+    if (text.contains('permission')) {
+      return _LocationFailureKind.permissionDenied;
+    }
+    if (text.contains('disabled') || text.contains('service')) {
+      return _LocationFailureKind.serviceDisabled;
+    }
+    if (text.contains('log in') || text.contains('auth')) {
+      return _LocationFailureKind.authError;
+    }
+    if (text.contains('no active job') || text.contains('active assignment')) {
+      return _LocationFailureKind.noActiveAssignment;
+    }
+    return _LocationFailureKind.unknown;
   }
 
-  void _scheduleRetry(Object err) {
+  bool _canAutoRetry(Object err) {
+    return _classifyError(err) == _LocationFailureKind.temporaryNetworkError ||
+        _classifyError(err) == _LocationFailureKind.unknown;
+  }
+
+  void _scheduleRetry(Object err, int generation) {
     _retryTimer?.cancel();
-    if (!_enabled || !_canAutoRetry(err)) return;
+    if (!_isCurrentLifecycle(generation) || !_canAutoRetry(err)) return;
     final delays = [5, 15, 30];
     final seconds = delays[_retryAttempt.clamp(0, delays.length - 1)];
     _retryAttempt += 1;
     _retryTimer = Timer(Duration(seconds: seconds), () {
-      if (mounted && _enabled && !_sending) {
-        _sendOnce();
-      }
+      if (!_isCurrentLifecycle(generation) || _sending) return;
+      _sendOnce(generation: generation).then((sent) {
+        if (sent && _isCurrentLifecycle(generation)) {
+          _startPeriodic(generation);
+        }
+      });
     });
   }
 
