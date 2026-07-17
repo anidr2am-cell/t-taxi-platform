@@ -29,6 +29,12 @@ class _FakeSettlementApi extends DriverSettlementApiService {
         'receiptStatus': 'RECEIPT_SUBMITTED',
         'receiptFileId': 42,
         'commissionAmount': 120,
+        'companyCommissionAmount': 120,
+        'companyCommissionCurrency': 'THB',
+        'customerPaymentAmount': 1200,
+        'customerPaymentCurrency': 'THB',
+        'driverExpectedIncomeAmount': 1080,
+        'driverExpectedIncomeCurrency': 'THB',
         'currency': 'THB',
         'dueAt': '2026-07-08 12:00:00',
       };
@@ -37,6 +43,12 @@ class _FakeSettlementApi extends DriverSettlementApiService {
       'bookingNumber': bookingNumber,
       'commissionStatus': 'PENDING',
       'commissionAmount': 120,
+      'companyCommissionAmount': 120,
+      'companyCommissionCurrency': 'THB',
+      'customerPaymentAmount': 1200,
+      'customerPaymentCurrency': 'THB',
+      'driverExpectedIncomeAmount': 1080,
+      'driverExpectedIncomeCurrency': 'THB',
       'currency': 'THB',
       'dueAt': '2026-07-08 12:00:00',
     };
@@ -124,14 +136,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('송금증 선택 / เลือกสลิปโอนเงิน'));
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.upload_file));
     await tester.pumpAndSettle();
     expect(find.text('선택한 파일: receipt.pdf\n(ไฟล์ที่เลือก)'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
     expect(api.uploadCalls, 1);
-    expect(find.text('상태\n(สถานะ): RECEIPT_SUBMITTED'), findsOneWidget);
+    expect(find.textContaining('RECEIPT_SUBMITTED'), findsOneWidget);
+    expect(find.text('฿120'), findsOneWidget);
+    expect(find.text('฿1,080'), findsOneWidget);
+    expect(find.text('฿1,200'), findsOneWidget);
   });
 
   testWidgets('driver settlement detail shows upload failure and retry', (
@@ -152,7 +171,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('송금증 선택 / เลือกสลิปโอนเงิน'));
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.upload_file));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
@@ -177,13 +200,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('송금증 선택 / เลือกสลิปโอนเงิน'));
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.upload_file));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('송금증 업로드 / อัปโหลดสลิปโอนเงิน'));
     await tester.pumpAndSettle();
 
-    expect(find.text('상태\n(สถานะ): PENDING'), findsOneWidget);
-    expect(find.text('상태\n(สถานะ): RECEIPT_SUBMITTED'), findsNothing);
+    expect(find.textContaining('PENDING'), findsOneWidget);
+    expect(find.textContaining('RECEIPT_SUBMITTED'), findsNothing);
   });
 
   testWidgets('driver settlement detail shows manual approval notice', (
@@ -199,6 +226,12 @@ void main() {
               'commissionStatus': 'APPROVED',
               'approvalMode': 'MANUAL_WITHOUT_RECEIPT',
               'commissionAmount': 120,
+              'companyCommissionAmount': 120,
+              'companyCommissionCurrency': 'THB',
+              'customerPaymentAmount': 1200,
+              'customerPaymentCurrency': 'THB',
+              'driverExpectedIncomeAmount': 1080,
+              'driverExpectedIncomeCurrency': 'THB',
               'currency': 'THB',
               'dueAt': '2026-07-08 12:00:00',
             },

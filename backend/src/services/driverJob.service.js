@@ -76,6 +76,7 @@ class DriverJobService {
   paymentMethodLabel(paymentMethod) {
     switch (paymentMethod) {
       case 'PAY_DRIVER':
+      case 'PAY_DRIVER_AT_DESTINATION':
         return 'PAY_DRIVER_AT_DESTINATION';
       case 'BANK_TRANSFER':
         return 'BANK_TRANSFER';
@@ -85,6 +86,42 @@ class DriverJobService {
       default:
         return null;
     }
+  }
+
+  moneyAmount(value) {
+    if (value == null) return null;
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount : null;
+  }
+
+  driverExpectedIncome(totalAmount, commissionAmount) {
+    const customerPaymentAmount = this.moneyAmount(totalAmount);
+    const companyCommissionAmount = this.moneyAmount(commissionAmount);
+    if (customerPaymentAmount == null || companyCommissionAmount == null) {
+      return null;
+    }
+    return customerPaymentAmount - companyCommissionAmount;
+  }
+
+  paymentSummary(row) {
+    const customerPaymentAmount = this.moneyAmount(row.total_amount);
+    const companyCommissionAmount = this.moneyAmount(row.commission_amount);
+    const currency = row.currency ?? null;
+    return {
+      customerPaymentAmount,
+      customerPaymentCurrency: customerPaymentAmount == null ? null : currency,
+      customerPaymentMethod: this.paymentMethodLabel(row.payment_method),
+      companyCommissionAmount,
+      companyCommissionCurrency: companyCommissionAmount == null ? null : currency,
+      driverExpectedIncomeAmount: this.driverExpectedIncome(
+        row.total_amount,
+        row.commission_amount,
+      ),
+      driverExpectedIncomeCurrency:
+        customerPaymentAmount == null || companyCommissionAmount == null
+          ? null
+          : currency,
+    };
   }
 
   mapBase(row) {
@@ -104,7 +141,7 @@ class DriverJobService {
         code: row.vehicle_type_code,
         name: row.vehicle_type_name,
       },
-      customerPaymentAmount: row.total_amount == null ? null : Number(row.total_amount),
+      ...this.paymentSummary(row),
       currency: row.currency,
       paymentMethodLabel: this.paymentMethodLabel(row.payment_method),
       customerDisplayName: row.customer_name,

@@ -595,6 +595,14 @@ test('mapSettlementListItem includes trip summary fields with null-safe addresse
   assert.equal(item.destination, 'Pattaya Hotel');
   assert.equal(item.driverId, undefined);
   assert.equal(item.driverName, undefined);
+  assert.equal(item.customerPaymentAmount, 1200);
+  assert.equal(item.customerPaymentCurrency, 'THB');
+  assert.equal(item.customerTotalAmount, 1200);
+  assert.equal(item.customerTotalCurrency, 'THB');
+  assert.equal(item.companyCommissionAmount, 120);
+  assert.equal(item.companyCommissionCurrency, 'THB');
+  assert.equal(item.driverExpectedIncomeAmount, 1080);
+  assert.equal(item.driverExpectedIncomeCurrency, 'THB');
 
   const nullItem = service.mapSettlementListItem(
     settlementRow({
@@ -608,6 +616,21 @@ test('mapSettlementListItem includes trip summary fields with null-safe addresse
   );
   assert.equal(nullItem.origin, null);
   assert.equal(nullItem.destination, null);
+  assert.equal(nullItem.driverExpectedIncomeAmount, 1080);
+});
+
+test('mapSettlementListItem keeps unknown income nullable when commission is unknown', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({ commission_amount: null }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+  assert.equal(item.customerPaymentAmount, 1200);
+  assert.equal(item.companyCommissionAmount, null);
+  assert.equal(item.companyCommissionCurrency, null);
+  assert.equal(item.driverExpectedIncomeAmount, null);
+  assert.equal(item.driverExpectedIncomeCurrency, null);
 });
 
 test('admin settlement list item keeps driver summary fields', () => {

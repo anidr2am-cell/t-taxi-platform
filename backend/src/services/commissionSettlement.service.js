@@ -200,10 +200,28 @@ class CommissionSettlementService {
     return Number(row.commission_amount) > 0;
   }
 
+  moneyAmount(value) {
+    if (value == null) return null;
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount : null;
+  }
+
+  driverExpectedIncome(row) {
+    const customerPaymentAmount = this.moneyAmount(row.total_amount);
+    const companyCommissionAmount = this.moneyAmount(row.commission_amount);
+    if (customerPaymentAmount == null || companyCommissionAmount == null) {
+      return null;
+    }
+    return customerPaymentAmount - companyCommissionAmount;
+  }
+
   mapSettlementListItem(row, apiBasePath, role) {
     const metadata = this.parseMetadata(row.metadata);
     const commissionStatus = this.mapPublicCommissionStatus(row, metadata);
     const receiptStatus = this.mapReceiptStatus(row, metadata);
+    const customerPaymentAmount = this.moneyAmount(row.total_amount);
+    const companyCommissionAmount = this.moneyAmount(row.commission_amount);
+    const driverExpectedIncomeAmount = this.driverExpectedIncome(row);
     const item = {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -213,6 +231,14 @@ class CommissionSettlementService {
       destination: row.destination_address ?? null,
       completedAt: row.completed_at,
       commissionAmount: row.commission_amount != null ? Number(row.commission_amount) : null,
+      customerPaymentAmount,
+      customerPaymentCurrency: customerPaymentAmount == null ? null : row.currency,
+      customerTotalAmount: customerPaymentAmount,
+      customerTotalCurrency: customerPaymentAmount == null ? null : row.currency,
+      companyCommissionAmount,
+      companyCommissionCurrency: companyCommissionAmount == null ? null : row.currency,
+      driverExpectedIncomeAmount,
+      driverExpectedIncomeCurrency: driverExpectedIncomeAmount == null ? null : row.currency,
       currency: row.currency,
       commissionStatus,
       dueAt: row.commission_due_at,

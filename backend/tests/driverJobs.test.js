@@ -242,6 +242,9 @@ test('internal admin fields are not exposed in detail', async () => {
     async findActiveDriverBookingByNumber() {
       return row({
         total_amount: 1600,
+        currency: 'THB',
+        payment_method: 'PAY_DRIVER_AT_DESTINATION',
+        commission_amount: 200,
         commission_status: 'DUE',
         admin_note: 'VIP internal',
       });
@@ -253,4 +256,11 @@ test('internal admin fields are not exposed in detail', async () => {
   assert.equal(Object.hasOwn(detail, 'totalAmount'), false);
   assert.equal(Object.hasOwn(detail, 'commissionStatus'), false);
   assert.equal(Object.hasOwn(detail, 'adminNotes'), false);
+  assert.equal(detail.customerPaymentAmount, 1600);
+  assert.equal(detail.customerPaymentCurrency, 'THB');
+  assert.equal(detail.customerPaymentMethod, 'PAY_DRIVER_AT_DESTINATION');
+  assert.equal(detail.companyCommissionAmount, 200);
+  assert.equal(detail.companyCommissionCurrency, 'THB');
+  assert.equal(detail.driverExpectedIncomeAmount, 1400);
+  assert.equal(detail.driverExpectedIncomeCurrency, 'THB');
 });

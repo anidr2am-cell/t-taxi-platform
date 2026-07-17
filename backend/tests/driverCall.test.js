@@ -45,6 +45,8 @@ function openCallRow(overrides = {}) {
     destination_address: 'Pattaya Hotel',
     total_amount: 2500,
     currency: 'THB',
+    payment_method: 'PAY_DRIVER',
+    commission_amount: 300,
     service_type_code: 'AIRPORT_PICKUP',
     service_type_name: 'Airport pickup',
     vehicle_type_code: 'VAN',
@@ -179,6 +181,25 @@ function createHarness(overrides = {}) {
         customerPhone: '+66812345678',
       };
     },
+    paymentSummary(row) {
+      const customerPaymentAmount = Number(row.total_amount);
+      const companyCommissionAmount =
+        row.commission_amount == null ? null : Number(row.commission_amount);
+      return {
+        customerPaymentAmount,
+        customerPaymentCurrency: row.currency,
+        customerPaymentMethod: row.payment_method,
+        companyCommissionAmount,
+        companyCommissionCurrency:
+          companyCommissionAmount == null ? null : row.currency,
+        driverExpectedIncomeAmount:
+          companyCommissionAmount == null
+            ? null
+            : customerPaymentAmount - companyCommissionAmount,
+        driverExpectedIncomeCurrency:
+          companyCommissionAmount == null ? null : row.currency,
+      };
+    },
   };
   const commissionSettlementService = {
     async driverHasBlockingSettlement() {
@@ -207,6 +228,13 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(result.items.length, 1);
   assert.equal(result.items[0].bookingNumber, 'TX202607130001');
   assert.equal(result.items[0].amount, 2500);
+  assert.equal(result.items[0].customerPaymentAmount, 2500);
+  assert.equal(result.items[0].customerPaymentCurrency, 'THB');
+  assert.equal(result.items[0].customerPaymentMethod, 'PAY_DRIVER');
+  assert.equal(result.items[0].companyCommissionAmount, 300);
+  assert.equal(result.items[0].companyCommissionCurrency, 'THB');
+  assert.equal(result.items[0].driverExpectedIncomeAmount, 2200);
+  assert.equal(result.items[0].driverExpectedIncomeCurrency, 'THB');
   assert.equal(result.items[0].luggage.golfBags, 1);
   assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
   assert.equal(Object.hasOwn(result.items[0], 'customerEmail'), false);

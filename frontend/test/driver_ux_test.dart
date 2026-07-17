@@ -662,6 +662,10 @@ void main() {
     expect(find.textContaining('Waiting calls'), findsOneWidget);
     expect(find.textContaining('BKK Airport'), findsOneWidget);
     expect(find.textContaining('Pattaya Hotel'), findsOneWidget);
+    expect(find.textContaining('기사 예상 수입'), findsOneWidget);
+    expect(find.textContaining('฿2,200'), findsOneWidget);
+    expect(find.textContaining('고객 결제 총액'), findsOneWidget);
+    expect(find.textContaining('฿2,500'), findsOneWidget);
     expect(find.textContaining('Claim call'), findsOneWidget);
     expect(find.textContaining('+66'), findsNothing);
   });
@@ -907,6 +911,12 @@ DriverOpenCall _openCall({String number = 'TX202607130001'}) {
     vehicleTypeName: 'Van',
     amount: 2500,
     currency: 'THB',
+    customerPaymentAmount: 2500,
+    customerPaymentCurrency: 'THB',
+    companyCommissionAmount: 300,
+    companyCommissionCurrency: 'THB',
+    driverExpectedIncomeAmount: 2200,
+    driverExpectedIncomeCurrency: 'THB',
     passengerCount: 2,
     luggage: const {
       'carriers20Inch': 1,

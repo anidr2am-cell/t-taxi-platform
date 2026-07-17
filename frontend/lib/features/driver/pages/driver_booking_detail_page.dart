@@ -11,6 +11,7 @@ import '../driver_ux.dart';
 import '../driver_trip_flow.dart';
 import '../models/driver_booking.dart';
 import '../services/driver_api_service.dart';
+import '../utils/driver_money_format.dart';
 import '../widgets/driver_status_control.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
 import 'driver_chat_page.dart';
@@ -655,12 +656,15 @@ class _EndTripPaymentSummary extends StatelessWidget {
       rows.add(
         AppUi.summaryRow(
           label: l10n.t('driver_customer_payment_amount'),
-          value: _formatAmount(amount, currency),
+          value: DriverMoneyFormat.money(amount, currency),
           emphasize: true,
         ),
       );
     }
-    final paymentLabel = _paymentMethodLabel(l10n, booking.paymentMethodLabel);
+    final paymentLabel = _paymentMethodLabel(
+      l10n,
+      booking.customerPaymentMethod ?? booking.paymentMethodLabel,
+    );
     if (paymentLabel != null) {
       rows.add(
         AppUi.summaryRow(
@@ -679,18 +683,9 @@ class _EndTripPaymentSummary extends StatelessWidget {
     );
   }
 
-  String _formatAmount(double amount, String currency) {
-    final rounded = amount == amount.roundToDouble()
-        ? amount.toStringAsFixed(0)
-        : amount.toStringAsFixed(2);
-    if (currency.toUpperCase() == 'THB') {
-      return '฿$rounded';
-    }
-    return '$rounded $currency';
-  }
-
   String? _paymentMethodLabel(AppLocalizations l10n, String? value) {
     switch (value) {
+      case 'PAY_DRIVER':
       case 'PAY_DRIVER_AT_DESTINATION':
         return l10n.t('driver_payment_method_pay_driver');
       case 'BANK_TRANSFER':
@@ -733,21 +728,62 @@ class _SettlementSection extends StatelessWidget {
             return Text(l10n.t('driver_settlement_loading_failed'));
           }
           final status = detail['commissionStatus'] as String? ?? '';
+          final companyCommissionAmount =
+              (detail['companyCommissionAmount'] as num?) ??
+              (detail['commissionAmount'] as num?);
+          final companyCommissionCurrency =
+              detail['companyCommissionCurrency'] as String? ??
+              detail['currency'] as String?;
+          final driverExpectedIncomeAmount =
+              detail['driverExpectedIncomeAmount'] as num?;
+          final driverExpectedIncomeCurrency =
+              detail['driverExpectedIncomeCurrency'] as String? ??
+              detail['currency'] as String?;
+          final customerPaymentAmount =
+              detail['customerPaymentAmount'] as num? ??
+              detail['customerTotalAmount'] as num?;
+          final customerPaymentCurrency =
+              detail['customerPaymentCurrency'] as String? ??
+              detail['customerTotalCurrency'] as String? ??
+              detail['currency'] as String?;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              AppUi.summaryRow(
+                label: l10n.t('driver_company_commission'),
+                value: companyCommissionAmount == null
+                    ? l10n.t('driver_income_unavailable')
+                    : DriverMoneyFormat.money(
+                        companyCommissionAmount,
+                        companyCommissionCurrency,
+                      ),
+                emphasize: true,
+              ),
+              if (driverExpectedIncomeAmount != null) ...[
+                const SizedBox(height: AppTokens.spaceXs),
+                AppUi.summaryRow(
+                  label: l10n.t('driver_expected_income'),
+                  value: DriverMoneyFormat.money(
+                    driverExpectedIncomeAmount,
+                    driverExpectedIncomeCurrency,
+                  ),
+                ),
+              ],
+              if (customerPaymentAmount != null) ...[
+                const SizedBox(height: AppTokens.spaceXs),
+                AppUi.summaryRow(
+                  label: l10n.t('driver_customer_total_amount'),
+                  value: DriverMoneyFormat.money(
+                    customerPaymentAmount,
+                    customerPaymentCurrency,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppTokens.spaceSm),
               Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${detail['commissionAmount']} ${detail['currency']}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppTokens.textPrimary,
-                      ),
-                    ),
-                  ),
+                  Text(l10n.t('driver_settlement_status')),
+                  const Spacer(),
                   AppUi.statusBadge(status, tone: _settlementTone(status)),
                 ],
               ),
