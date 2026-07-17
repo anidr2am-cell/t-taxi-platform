@@ -38,7 +38,9 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   late Future<DriverBooking> _future;
   Future<Map<String, dynamic>>? _settlementFuture;
   bool _processing = false;
+  bool _confirmingAction = false;
   String? _actionError;
+  String? _processingKey;
 
   @override
   void initState() {
@@ -66,21 +68,28 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     Future<DriverBooking> Function() action,
     String messageKey, {
     bool endTripAction = false,
+    String? processingKey,
   }) async {
     if (_processing) return;
     setState(() {
       _processing = true;
+      _processingKey = processingKey;
       _actionError = null;
     });
     final l10n = context.l10n;
     try {
       final updated = await action();
+      final refreshed = await widget.api
+          .getBookingDetail(widget.bookingNumber)
+          .catchError((_) => updated);
       if (!mounted) return;
       setState(() {
-        _future = Future.value(updated);
+        _future = Future.value(refreshed);
         _processing = false;
+        _processingKey = null;
       });
-      if (updated.status == 'SETTLEMENT_PENDING' || updated.status == 'COMPLETED') {
+      if (refreshed.status == 'SETTLEMENT_PENDING' ||
+          refreshed.status == 'COMPLETED') {
         _loadSettlement();
       }
       ScaffoldMessenger.of(
@@ -88,7 +97,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       ).showSnackBar(SnackBar(content: Text(l10n.t(messageKey))));
     } on DriverApiException catch (err) {
       if (!mounted) return;
-      setState(() => _processing = false);
+      setState(() {
+        _processing = false;
+        _processingKey = null;
+      });
       if (driverIsAuthError(err)) {
         driverHandleApiError(context, err);
         return;
@@ -96,16 +108,19 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       if (err.isStaleStatus) {
         _loadBooking();
       }
-      setState(() => _actionError = driverApiErrorMessage(
-        message: err.message,
-        errorCode: err.errorCode,
-        languageCode: l10n.languageCode,
-        preferEndTripFailure: endTripAction,
-      ));
+      setState(
+        () => _actionError = driverApiErrorMessage(
+          message: err.message,
+          errorCode: err.errorCode,
+          languageCode: l10n.languageCode,
+          preferEndTripFailure: endTripAction,
+        ),
+      );
     } catch (err) {
       if (!mounted) return;
       setState(() {
         _processing = false;
+        _processingKey = null;
         _actionError = userFacingError(
           err,
           fallback: l10n.t('driver_action_failed'),
@@ -163,11 +178,13 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       if (err.isStaleStatus || err.statusCode == 409) {
         _loadBooking();
       }
-      setState(() => _actionError = driverApiErrorMessage(
-            message: err.message,
-            errorCode: err.errorCode,
-            languageCode: l10n.languageCode,
-          ));
+      setState(
+        () => _actionError = driverApiErrorMessage(
+          message: err.message,
+          errorCode: err.errorCode,
+          languageCode: l10n.languageCode,
+        ),
+      );
     } catch (err) {
       if (!mounted) return;
       setState(() {
@@ -266,7 +283,25 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
             children: [
               if (widget.showStatusControl)
                 DriverStatusControl(api: widget.api),
-              if (_processing) const LinearProgressIndicator(minHeight: 3),
+              if (_processing) ...[
+                const LinearProgressIndicator(minHeight: 3),
+                if (_processingKey != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTokens.spaceMd,
+                      AppTokens.spaceXs,
+                      AppTokens.spaceMd,
+                      0,
+                    ),
+                    child: Text(
+                      l10n.t(_processingKey!),
+                      style: const TextStyle(
+                        color: AppTokens.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
               Expanded(
                 child: ListView(
                   key: const Key('driverDetailScroll'),
@@ -457,10 +492,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                         onPressed: _processing
                             ? null
                             : () => _onPrimaryAction(
-                                  booking,
-                                  actionToken,
-                                  primaryKey,
-                                ),
+                                booking,
+                                actionToken,
+                                primaryKey,
+                              ),
                         icon: const Icon(Icons.touch_app_outlined),
                         label: Text(l10n.t(primaryKey)),
                       ),
@@ -495,17 +530,24 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     String? actionToken,
     String actionLabelKey,
   ) async {
-    if (_processing || actionToken == null) return;
+    if (_processing || _confirmingAction || actionToken == null) return;
     final titleKey = DriverTripFlow.confirmTitleKey(actionToken);
     final messageKey = DriverTripFlow.confirmMessageKey(actionToken);
     if (titleKey == null || messageKey == null) return;
 
+    setState(() => _confirmingAction = true);
     final confirmed = await confirmDriverTripAction(
       context: context,
       titleKey: titleKey,
       messageKey: messageKey,
       confirmKey: DriverTripFlow.confirmButtonKey(actionToken),
+      extraContent: actionToken == 'END_TRIP'
+          ? _EndTripPaymentSummary(booking: booking)
+          : null,
     );
+    if (mounted) {
+      setState(() => _confirmingAction = false);
+    }
     if (!confirmed || !mounted) return;
 
     Future<DriverBooking> Function() action;
@@ -528,7 +570,12 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
 
     final successKey =
         DriverTripFlow.successMessageKey(actionToken) ?? actionLabelKey;
-    await _runAction(action, successKey, endTripAction: actionToken == 'END_TRIP');
+    await _runAction(
+      action,
+      successKey,
+      endTripAction: actionToken == 'END_TRIP',
+      processingKey: DriverTripFlow.processingMessageKey(actionToken),
+    );
   }
 
   String _formatLuggage(Map<String, dynamic> luggage) {
@@ -587,6 +634,76 @@ class _StatusHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _EndTripPaymentSummary extends StatelessWidget {
+  const _EndTripPaymentSummary({required this.booking});
+
+  final DriverBooking booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final rows = <Widget>[];
+    final amount = booking.customerPaymentAmount;
+    final currency = booking.currency?.trim();
+    if (amount != null &&
+        amount > 0 &&
+        currency != null &&
+        currency.isNotEmpty) {
+      rows.add(
+        AppUi.summaryRow(
+          label: l10n.t('driver_customer_payment_amount'),
+          value: _formatAmount(amount, currency),
+          emphasize: true,
+        ),
+      );
+    }
+    final paymentLabel = _paymentMethodLabel(l10n, booking.paymentMethodLabel);
+    if (paymentLabel != null) {
+      rows.add(
+        AppUi.summaryRow(
+          label: l10n.t('driver_payment_method'),
+          value: paymentLabel,
+        ),
+      );
+    }
+    if (rows.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.warningLight,
+      padding: const EdgeInsets.all(AppTokens.spaceSm),
+      child: Column(children: rows),
+    );
+  }
+
+  String _formatAmount(double amount, String currency) {
+    final rounded = amount == amount.roundToDouble()
+        ? amount.toStringAsFixed(0)
+        : amount.toStringAsFixed(2);
+    if (currency.toUpperCase() == 'THB') {
+      return '฿$rounded';
+    }
+    return '$rounded $currency';
+  }
+
+  String? _paymentMethodLabel(AppLocalizations l10n, String? value) {
+    switch (value) {
+      case 'PAY_DRIVER_AT_DESTINATION':
+        return l10n.t('driver_payment_method_pay_driver');
+      case 'BANK_TRANSFER':
+        return l10n.t('driver_payment_method_bank_transfer');
+      case 'CARD':
+      case 'CREDIT_CARD':
+        return l10n.t('driver_payment_method_card');
+      case null:
+      case '':
+        return null;
+      default:
+        return null;
+    }
   }
 }
 

@@ -129,7 +129,9 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
     for (final booking in jobs.items) {
       if (booking.status != 'SETTLEMENT_PENDING') continue;
       try {
-        final detail = await _settlementApi.getSettlement(booking.bookingNumber);
+        final detail = await _settlementApi.getSettlement(
+          booking.bookingNumber,
+        );
         settlements[booking.bookingNumber] = detail;
       } catch (_) {
         // Unknown settlement state falls back to generic CTA and priority.
@@ -229,9 +231,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
   void _openNotifications() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => DriverNotificationsPage(api: _api),
-      ),
+      MaterialPageRoute(builder: (_) => DriverNotificationsPage(api: _api)),
     ).then((_) => _refresh());
   }
 
@@ -291,24 +291,26 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
             items,
             settlementsByBooking: settlements,
           );
-          final remaining = DriverUx.remainingTodayTrips(
-            items,
-            current: current,
-          )..sort((a, b) {
-            final time = a.pickupTime.compareTo(b.pickupTime);
-            if (time != 0) return time;
-            return a.bookingNumber.compareTo(b.bookingNumber);
-          });
+          final remaining =
+              DriverUx.remainingTodayTrips(items, current: current)
+                ..sort((a, b) {
+                  final time = a.pickupTime.compareTo(b.pickupTime);
+                  if (time != 0) return time;
+                  return a.bookingNumber.compareTo(b.bookingNumber);
+                });
           final completed = DriverUx.completedTodayTrips(items);
           final hasActiveJob = items.any(
             (booking) => const {
               'DRIVER_ASSIGNED',
+              'ON_ROUTE',
               'DRIVER_ARRIVED',
               'PICKED_UP',
+              'SETTLEMENT_PENDING',
             }.contains(booking.status),
           );
 
           if (current != null &&
+              DriverUx.canMessageCustomer(current.status) &&
               (current.customerPhone == null ||
                   current.customerPhone!.isEmpty) &&
               !_phoneCache.containsKey(current.bookingNumber) &&
@@ -390,7 +392,9 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                     DriverTodayCurrentTripCard(
                       booking: current,
                       settlement: settlements[current.bookingNumber],
-                      customerPhone: _phoneCache[current.bookingNumber],
+                      customerPhone: DriverUx.canMessageCustomer(current.status)
+                          ? _phoneCache[current.bookingNumber]
+                          : null,
                       onOpenPrimary: () => _openPrimary(current),
                       onOpenChat: DriverUx.canMessageCustomer(current.status)
                           ? () => _openChat(current)
@@ -407,7 +411,9 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                     ),
                     ...remaining.map(
                       (booking) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+                        padding: const EdgeInsets.only(
+                          bottom: AppTokens.spaceSm,
+                        ),
                         child: DriverTodayTripListTile(
                           booking: booking,
                           onTap: () => _openDetail(booking),

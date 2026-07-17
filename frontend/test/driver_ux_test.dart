@@ -351,7 +351,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.text('운행 확정 / ยืนยันการรับงาน'), findsNothing);
+    expect(find.text('픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ'), findsNothing);
     expect(find.text('운행 계속하기 / ดำเนินงานต่อ'), findsOneWidget);
 
     await tester.scrollUntilVisible(
@@ -829,7 +829,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('운행 확정 / ยืนยันการรับงาน'), findsNothing);
+    expect(find.text('픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ'), findsNothing);
     expect(find.text('Cancelled'), findsWidgets);
   });
 
@@ -856,15 +856,15 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับลูกค้าแล้ว'),
+      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '도착 / ถึงแล้ว'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Invalid status transition'), findsOneWidget);
+    expect(find.textContaining('current trip stage'), findsOneWidget);
     expect(
-      find.widgetWithText(FilledButton, '고객 탑승 / ลูกค้าขึ้นรถแล้ว'),
+      find.widgetWithText(FilledButton, '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว'),
       findsOneWidget,
     );
   });

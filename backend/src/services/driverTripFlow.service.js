@@ -36,6 +36,25 @@ class DriverTripFlowService {
     return row;
   }
 
+  assertExpectedStatus(row, expectedStatus, toStatus) {
+    if (!expectedStatus || row.status === expectedStatus) {
+      return;
+    }
+    throw new AppError(
+      `Invalid booking status transition from ${row.status} to ${toStatus}`,
+      {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+        errors: [{
+          fromStatus: row.status,
+          expectedStatus,
+          toStatus,
+          actorRole: ROLES.DRIVER,
+        }],
+      },
+    );
+  }
+
   async transitionInTransaction(conn, bookingNumber, status, actor, reason) {
     return this.bookingStatusService.transitionInTransaction(
       conn,
@@ -51,7 +70,7 @@ class DriverTripFlowService {
     return { ...detail, ...extra };
   }
 
-  async runTransition(driverUserId, bookingNumber, toStatus, reason) {
+  async runTransition(driverUserId, bookingNumber, toStatus, reason, options = {}) {
     const conn = await this.pool.getConnection();
     let transition;
     let normalizedBookingNumber;
@@ -60,6 +79,7 @@ class DriverTripFlowService {
       await conn.beginTransaction();
       const row = await this.loadActiveBookingForUpdate(conn, driverUserId, bookingNumber);
       normalizedBookingNumber = row.booking_number;
+      this.assertExpectedStatus(row, options.expectedFromStatus, toStatus);
       transition = await this.transitionInTransaction(
         conn,
         normalizedBookingNumber,
@@ -105,6 +125,7 @@ class DriverTripFlowService {
       bookingNumber,
       BOOKING_STATUS.ON_ROUTE,
       'DRIVER_START_ON_ROUTE',
+      { expectedFromStatus: BOOKING_STATUS.DRIVER_ASSIGNED },
     );
   }
 
@@ -114,6 +135,7 @@ class DriverTripFlowService {
       bookingNumber,
       BOOKING_STATUS.DRIVER_ARRIVED,
       'DRIVER_MARK_ARRIVED',
+      { expectedFromStatus: BOOKING_STATUS.ON_ROUTE },
     );
   }
 
@@ -123,6 +145,7 @@ class DriverTripFlowService {
       bookingNumber,
       BOOKING_STATUS.PICKED_UP,
       'DRIVER_MARK_PICKED_UP',
+      { expectedFromStatus: BOOKING_STATUS.DRIVER_ARRIVED },
     );
   }
 
@@ -132,6 +155,7 @@ class DriverTripFlowService {
       bookingNumber,
       BOOKING_STATUS.SETTLEMENT_PENDING,
       'DRIVER_END_TRIP',
+      { expectedFromStatus: BOOKING_STATUS.PICKED_UP },
     );
   }
 

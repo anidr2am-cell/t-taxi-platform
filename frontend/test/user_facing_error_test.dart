@@ -4,7 +4,9 @@ import 'package:frontend/utils/user_facing_error.dart';
 void main() {
   test('looksLikeInternalApiMessage detects mysql truncation text', () {
     expect(
-      looksLikeInternalApiMessage("Data truncated for column 'status' at row 1"),
+      looksLikeInternalApiMessage(
+        "Data truncated for column 'status' at row 1",
+      ),
       isTrue,
     );
     expect(
@@ -14,10 +16,7 @@ void main() {
   });
 
   test('driverEndTripFailedMessage supports ko en th', () {
-    expect(
-      driverEndTripFailedMessage('ko'),
-      contains('운행 종료 처리 중'),
-    );
+    expect(driverEndTripFailedMessage('ko'), contains('운행 종료 처리 중'));
     expect(
       driverEndTripFailedMessage('en'),
       contains('We could not complete the trip'),
@@ -28,7 +27,7 @@ void main() {
     );
   });
 
-  test('driverApiErrorMessage keeps validation errors specific', () {
+  test('driverApiErrorMessage maps invalid trip state safely', () {
     expect(
       driverApiErrorMessage(
         message: 'Invalid booking status transition',
@@ -36,7 +35,7 @@ void main() {
         languageCode: 'en',
         preferEndTripFailure: true,
       ),
-      'Invalid booking status transition',
+      contains('current trip stage'),
     );
   });
 

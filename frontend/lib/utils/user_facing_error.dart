@@ -190,10 +190,36 @@ String driverApiErrorMessage({
   required String languageCode,
   bool preferEndTripFailure = false,
 }) {
-  if (errorCode == 'INVALID_STATUS_TRANSITION' ||
-      errorCode == 'BOOKING_NOT_FOUND' ||
+  if (errorCode == 'INVALID_STATUS_TRANSITION') {
+    return switch (languageCode) {
+      'ko' => '현재 운행 단계에서는 이 작업을 처리할 수 없습니다. 상태를 새로고침해 주세요.',
+      'th' => 'ไม่สามารถดำเนินการในขั้นตอนปัจจุบันได้ กรุณารีเฟรชสถานะ',
+      'zh' => '当前行程阶段无法执行此操作。请刷新状态。',
+      'ja' => '現在の運行段階ではこの操作を処理できません。状態を更新してください。',
+      _ => 'This action cannot be handled at the current trip stage. Please refresh the status.',
+    };
+  }
+
+  if (errorCode == 'BOOKING_NOT_ASSIGNED_TO_DRIVER' ||
+      errorCode == 'NO_ACTIVE_ASSIGNMENT') {
+    return switch (languageCode) {
+      'ko' => '현재 기사에게 배정된 예약이 아닙니다.',
+      'th' => 'งานนี้ไม่ได้ถูกมอบหมายให้คนขับปัจจุบัน',
+      'zh' => '此预订未分配给当前司机。',
+      'ja' => 'この予約は現在のドライバーに割り当てられていません。',
+      _ => 'This booking is not assigned to the current driver.',
+    };
+  }
+
+  if (errorCode == 'BOOKING_NOT_FOUND' ||
       errorCode == 'BOOKING_NOT_ACCESSIBLE') {
-    return message;
+    return switch (languageCode) {
+      'ko' => '예약 정보를 찾을 수 없습니다. 상태를 새로고침해 주세요.',
+      'th' => 'ไม่พบข้อมูลงาน กรุณารีเฟรชสถานะ',
+      'zh' => '找不到预订信息。请刷新状态。',
+      'ja' => '予約情報が見つかりません。状態を更新してください。',
+      _ => 'Booking information could not be found. Please refresh the status.',
+    };
   }
 
   if (preferEndTripFailure &&

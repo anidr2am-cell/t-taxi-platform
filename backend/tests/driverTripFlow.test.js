@@ -169,15 +169,17 @@ test('markArrived rejects DRIVER_ASSIGNED without ON_ROUTE', async () => {
   );
 });
 
-test('repeated arrive request is idempotent', async () => {
+test('repeated arrive request is rejected as stale driver state', async () => {
   const { service, calls } = buildHarness({
     fromStatus: BOOKING_STATUS.DRIVER_ARRIVED,
     detailStatus: BOOKING_STATUS.DRIVER_ARRIVED,
   });
 
-  const result = await service.markArrived(44, 'TX202607010001');
-  assert.equal(result.idempotent, true);
-  assert.equal(calls.transitions.length, 1);
+  await assert.rejects(
+    () => service.markArrived(44, 'TX202607010001'),
+    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
+  assert.equal(calls.transitions.length, 0);
 });
 
 test('wrong role is rejected before driver trip controller', async () => {

@@ -73,6 +73,20 @@ class DriverJobService {
     return Number(row.adults || 0) + Number(row.children || 0) + Number(row.infants || 0);
   }
 
+  paymentMethodLabel(paymentMethod) {
+    switch (paymentMethod) {
+      case 'PAY_DRIVER':
+        return 'PAY_DRIVER_AT_DESTINATION';
+      case 'BANK_TRANSFER':
+        return 'BANK_TRANSFER';
+      case 'CARD':
+      case 'CREDIT_CARD':
+        return 'CARD';
+      default:
+        return null;
+    }
+  }
+
   mapBase(row) {
     return {
       bookingNumber: row.booking_number,
@@ -90,6 +104,9 @@ class DriverJobService {
         code: row.vehicle_type_code,
         name: row.vehicle_type_name,
       },
+      customerPaymentAmount: row.total_amount == null ? null : Number(row.total_amount),
+      currency: row.currency,
+      paymentMethodLabel: this.paymentMethodLabel(row.payment_method),
       customerDisplayName: row.customer_name,
       flightNumber: row.flight_number,
       flightStatus: row.delay_status,

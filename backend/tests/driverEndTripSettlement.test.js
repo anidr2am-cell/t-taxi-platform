@@ -177,24 +177,25 @@ test('endTrip moves PICKED_UP to SETTLEMENT_PENDING with 200 THB commission', as
   assert.equal(harness.outboxEvents[0].payload.bookingNumber, BOOKING_NUMBER);
 });
 
-test('repeated endTrip is idempotent and keeps single commission update', async () => {
+test('repeated endTrip is rejected and keeps single commission update', async () => {
   const harness = createEndTripHarness();
 
   await harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER);
   const firstCommissionUpdates = harness.calls.commissionUpdates;
   const firstOutbox = harness.calls.outboxInserts;
 
-  const second = await harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER);
+  await assert.rejects(
+    () => harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER),
+    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
 
-  assert.equal(second.status, BOOKING_STATUS.SETTLEMENT_PENDING);
-  assert.equal(second.idempotent, true);
   assert.equal(harness.calls.commissionUpdates, firstCommissionUpdates);
   assert.equal(harness.calls.outboxInserts, firstOutbox);
   assert.equal(harness.calls.statusLogs, 1);
   assert.equal(harness.booking.commission_amount, 200);
 });
 
-test('repeated endTrip preserves existing receipt metadata', async () => {
+test('endTrip on existing settlement status is rejected and preserves receipt metadata', async () => {
   const harness = createEndTripHarness(createBooking({
     status: BOOKING_STATUS.SETTLEMENT_PENDING,
     commission_status: 'RECEIPT_SUBMITTED',
@@ -202,9 +203,11 @@ test('repeated endTrip preserves existing receipt metadata', async () => {
     commission_receipt_file_id: 42,
   }));
 
-  const result = await harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER);
+  await assert.rejects(
+    () => harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER),
+    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
 
-  assert.equal(result.idempotent, true);
   assert.equal(harness.calls.commissionUpdates, 0);
   assert.equal(harness.booking.commission_receipt_file_id, 42);
   assert.equal(harness.booking.commission_status, 'RECEIPT_SUBMITTED');
@@ -282,8 +285,10 @@ test('trip status transitions enqueue customer notification events once', async 
   assert.equal(harness.calls.outboxInserts, beforeEnd + 1);
   assert.equal(harness.outboxEvents.at(-1).eventType, EVENTS.TRIP_ENDED);
 
-  const duplicate = await harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER);
-  assert.equal(duplicate.idempotent, true);
+  await assert.rejects(
+    () => harness.driverTripFlowService.endTrip(DRIVER_USER_ID, BOOKING_NUMBER),
+    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
   assert.equal(harness.calls.outboxInserts, beforeEnd + 1);
 });
 

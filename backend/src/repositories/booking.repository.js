@@ -473,6 +473,8 @@ class BookingRepository {
         b.customer_name,
         b.customer_phone,
         b.special_requests,
+        b.total_amount,
+        b.currency,
         b.payment_method,
         b.boarding_qr_token_hash,
         b.boarding_qr_expires_at,
