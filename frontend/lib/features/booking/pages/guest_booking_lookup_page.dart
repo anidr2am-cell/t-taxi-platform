@@ -214,9 +214,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           bookingId: result.bookingId!,
           guestAccessToken: result.guestAccessToken,
           bookingStatus: result.status,
-          bookingNumber: result.bookingNumber,
-          customerPhone: result.customerPhone,
-          lookupService: _lookupService,
         );
   }
 

@@ -2,8 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
-import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/features/driver_location/models/driver_location.dart';
 import 'package:frontend/features/driver_location/pages/admin_driver_monitor_page.dart';
@@ -625,47 +623,58 @@ void main() {
     },
   );
 
-  testWidgets('guest tracking waits in assigned status without location load', (
-    tester,
-  ) async {
-    final api = _FakeGuestLocationApi(
-      result: const GuestDriverLocationResult(available: false),
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: GuestDriverTrackingSection(
-            bookingId: 99,
-            guestAccessToken: 'guest-token',
-            bookingStatus: 'DRIVER_ASSIGNED',
-            api: api,
-            socket: _FakeLocationSocket(),
+  testWidgets(
+    'guest tracking waits in assigned status without socket subscribe',
+    (tester) async {
+      final api = _FakeGuestLocationApi(
+        result: const GuestDriverLocationResult(
+          available: false,
+          bookingStatus: 'DRIVER_ASSIGNED',
+          reason: 'BOOKING_NOT_TRACKABLE',
+        ),
+      );
+      final socket = _FakeLocationSocket();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GuestDriverTrackingSection(
+              bookingId: 99,
+              guestAccessToken: 'guest-token',
+              bookingStatus: 'DRIVER_ASSIGNED',
+              api: api,
+              socket: socket,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(api.calls, 0);
-    expect(find.text('Driver location'), findsOneWidget);
-    expect(find.textContaining('driver has been assigned'), findsOneWidget);
-  });
+      expect(api.calls, 1);
+      expect(socket.subscribedBookingId, isNull);
+      expect(find.text('Driver location'), findsOneWidget);
+      expect(find.textContaining('driver has been assigned'), findsOneWidget);
+    },
+  );
 
   testWidgets('guest tracking starts after assigned booking becomes on route', (
     tester,
   ) async {
     final api = _FakeGuestLocationApi(
-      result: GuestDriverLocationResult(
-        available: true,
-        bookingNumber: 'TX202607010001',
-        bookingStatus: 'ON_ROUTE',
-        driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
-      ),
+      results: [
+        const GuestDriverLocationResult(
+          available: false,
+          bookingStatus: 'DRIVER_ASSIGNED',
+          reason: 'BOOKING_NOT_TRACKABLE',
+        ),
+        GuestDriverLocationResult(
+          available: true,
+          bookingNumber: 'TX202607010001',
+          bookingStatus: 'ON_ROUTE',
+          driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+        ),
+      ],
     );
     final socket = _FakeLocationSocket();
-    final lookup = _FakeGuestBookingLookupService([
-      _guestLookup(status: 'ON_ROUTE', trackingAvailable: true),
-    ]);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -674,27 +683,22 @@ void main() {
             bookingId: 99,
             guestAccessToken: 'guest-token',
             bookingStatus: 'DRIVER_ASSIGNED',
-            bookingNumber: 'TX202607010001',
-            customerPhone: '+66 81 234 5678',
-            lookupService: lookup,
             api: api,
             socket: socket,
           ),
         ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(api.calls, 0);
+    expect(api.calls, 1);
     expect(socket.subscribedBookingId, isNull);
-    expect(lookup.calls, 0);
 
     await tester.pump(const Duration(seconds: 15));
     await tester.pumpAndSettle();
 
-    expect(lookup.calls, 1);
-    expect(api.calls, 1);
-    expect(socket.connectedGuestToken, 'guest-token-refreshed-1');
+    expect(api.calls, 2);
+    expect(socket.connectedGuestToken, 'guest-token');
     expect(socket.subscribedBookingId, 99);
     expect(find.text('Driver location sharing'), findsOneWidget);
     expect(find.text('Somchai'), findsOneWidget);
@@ -704,9 +708,20 @@ void main() {
     tester,
   ) async {
     final socket = _FakeLocationSocket();
-    final lookup = _FakeGuestBookingLookupService([
-      _guestLookup(status: 'SETTLEMENT_PENDING', trackingAvailable: false),
-    ]);
+    final api = _FakeGuestLocationApi(
+      results: [
+        GuestDriverLocationResult(
+          available: true,
+          bookingStatus: 'PICKED_UP',
+          driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+        ),
+        const GuestDriverLocationResult(
+          available: false,
+          bookingStatus: 'SETTLEMENT_PENDING',
+          reason: 'BOOKING_NOT_TRACKABLE',
+        ),
+      ],
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -715,17 +730,7 @@ void main() {
             bookingId: 99,
             guestAccessToken: 'guest-token',
             bookingStatus: 'PICKED_UP',
-            bookingNumber: 'TX202607010001',
-            customerPhone: '+66 81 234 5678',
-            lookupService: lookup,
-            api: _FakeGuestLocationApi(
-              result: GuestDriverLocationResult(
-                available: true,
-                driver: _guestDriver(
-                  recordedAt: DateTime.now().toIso8601String(),
-                ),
-              ),
-            ),
+            api: api,
             socket: socket,
           ),
         ),
@@ -739,7 +744,7 @@ void main() {
     await tester.pump(const Duration(seconds: 15));
     await tester.pumpAndSettle();
 
-    expect(lookup.calls, 1);
+    expect(api.calls, 2);
     expect(socket.disconnectCalls, greaterThanOrEqualTo(1));
     expect(find.text('Driver location'), findsNothing);
     expect(find.text('Somchai'), findsNothing);
@@ -885,23 +890,6 @@ class _FakeLocationSocket extends DriverLocationSocketService {
   }
 }
 
-class _FakeGuestBookingLookupService extends GuestBookingLookupService {
-  _FakeGuestBookingLookupService(this.results);
-
-  final List<GuestBookingLookupResult> results;
-  int calls = 0;
-
-  @override
-  Future<GuestBookingLookupResult> lookup({
-    required String bookingNumber,
-    required String phone,
-  }) async {
-    calls += 1;
-    final index = (calls - 1).clamp(0, results.length - 1).toInt();
-    return results[index];
-  }
-}
-
 class _FakeDispatchDriversApi extends AdminDispatchApiService {
   _FakeDispatchDriversApi({required this.drivers});
 
@@ -929,9 +917,14 @@ class _FakeAdminLocationApi extends DriverLocationApiService {
 }
 
 class _FakeGuestLocationApi extends DriverLocationApiService {
-  _FakeGuestLocationApi({required this.result});
+  _FakeGuestLocationApi({
+    GuestDriverLocationResult? result,
+    List<GuestDriverLocationResult>? results,
+  }) : results =
+           results ??
+           [result ?? const GuestDriverLocationResult(available: false)];
 
-  final GuestDriverLocationResult result;
+  final List<GuestDriverLocationResult> results;
   int calls = 0;
 
   @override
@@ -940,7 +933,8 @@ class _FakeGuestLocationApi extends DriverLocationApiService {
     required String guestAccessToken,
   }) async {
     calls += 1;
-    return result;
+    final index = (calls - 1).clamp(0, results.length - 1).toInt();
+    return results[index];
   }
 }
 
@@ -954,36 +948,6 @@ DriverLocation _guestDriver({String name = 'Somchai', String? recordedAt}) {
     recordedAt: recordedAt,
     lastSeenAt: recordedAt,
     stale: false,
-  );
-}
-
-GuestBookingLookupResult _guestLookup({
-  required String status,
-  required bool trackingAvailable,
-}) {
-  return GuestBookingLookupResult(
-    bookingId: 99,
-    bookingNumber: 'TX202607010001',
-    status: status,
-    scheduledPickupAt: '2026-07-01T09:30:00+07:00',
-    serviceTypeName: 'Airport Pickup',
-    originAddress: 'BKK Airport',
-    destinationAddress: 'Pattaya Hotel',
-    totalAmount: 1500,
-    currency: 'THB',
-    paymentMethod: 'PAY_DRIVER',
-    guestAccessToken: 'guest-token-refreshed-1',
-    guestAccessExpiresAt: '2026-07-02T00:00:00Z',
-    capabilities: GuestBookingCapabilities(
-      chatAvailable: true,
-      notificationsAvailable: true,
-      dropoffQrIssueAvailable: status == 'PICKED_UP',
-      reviewAvailable: false,
-      trackingAvailable: trackingAvailable,
-      boardingQrRecoverable: false,
-      boardingQrPreviouslyIssued: false,
-    ),
-    customerPhone: '+66 81 234 5678',
   );
 }
 

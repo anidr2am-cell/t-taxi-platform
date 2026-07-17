@@ -239,6 +239,34 @@ test('guest driver location availability follows public booking statuses', async
   }
 });
 
+test('guest driver location polling uses existing token without issuing a new one', async () => {
+  let locationLookups = 0;
+  const service = new DriverLocationService({}, {
+    async findGuestAssignedDriverLocation(_bookingId, _tokenHash) {
+      locationLookups += 1;
+      return {
+        booking_number: 'TX202607010001',
+        booking_status: 'DRIVER_ASSIGNED',
+        driver_id: 7,
+        driver_name: 'Somchai',
+        current_lat: null,
+        current_lng: null,
+      };
+    },
+    async insertGuestToken() {
+      throw new Error('driver location polling must not issue guest tokens');
+    },
+  });
+
+  const first = await service.getGuestDriverLocation(3, 'guest-token');
+  const second = await service.getGuestDriverLocation(3, 'guest-token');
+
+  assert.equal(locationLookups, 2);
+  assert.equal(first.available, false);
+  assert.equal(first.bookingStatus, 'DRIVER_ASSIGNED');
+  assert.equal(second.bookingStatus, 'DRIVER_ASSIGNED');
+});
+
 test('stale flag is true when location is older than sixty seconds', () => {
   const service = new DriverLocationService({}, {});
   const now = new Date('2026-07-01T10:01:01.000Z');
