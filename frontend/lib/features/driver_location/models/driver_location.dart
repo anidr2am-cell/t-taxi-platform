@@ -31,7 +31,9 @@ class DriverLocation {
 
   factory DriverLocation.fromJson(Map<String, dynamic> json) {
     final booking = json['activeBooking'] is Map
-        ? ActiveDriverBooking.fromJson(Map<String, dynamic>.from(json['activeBooking'] as Map))
+        ? ActiveDriverBooking.fromJson(
+            Map<String, dynamic>.from(json['activeBooking'] as Map),
+          )
         : null;
     return DriverLocation(
       driverId: json['driverId'] as int? ?? 0,
@@ -52,7 +54,10 @@ class DriverLocation {
 }
 
 class ActiveDriverBooking {
-  const ActiveDriverBooking({required this.bookingNumber, required this.status});
+  const ActiveDriverBooking({
+    required this.bookingNumber,
+    required this.status,
+  });
 
   final String bookingNumber;
   final String status;
@@ -68,20 +73,28 @@ class ActiveDriverBooking {
 class GuestDriverLocationResult {
   const GuestDriverLocationResult({
     required this.available,
+    this.bookingNumber,
+    this.bookingStatus,
     this.reason,
     this.driver,
   });
 
   final bool available;
+  final String? bookingNumber;
+  final String? bookingStatus;
   final String? reason;
   final DriverLocation? driver;
 
   factory GuestDriverLocationResult.fromJson(Map<String, dynamic> json) {
     return GuestDriverLocationResult(
       available: json['available'] == true,
+      bookingNumber: json['bookingNumber'] as String?,
+      bookingStatus: json['bookingStatus'] as String?,
       reason: json['reason'] as String?,
       driver: json['driver'] is Map
-          ? DriverLocation.fromJson(Map<String, dynamic>.from(json['driver'] as Map))
+          ? DriverLocation.fromJson(
+              Map<String, dynamic>.from(json['driver'] as Map),
+            )
           : null,
     );
   }

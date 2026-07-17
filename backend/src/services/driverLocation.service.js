@@ -115,6 +115,21 @@ class DriverLocationService {
     return mapped;
   }
 
+  mapGuestLocationRow(row) {
+    const driver = this.mapLocationRow(row);
+    if (!driver) return null;
+    return {
+      displayName: driver.displayName,
+      vehicle: driver.vehicle,
+      latitude: driver.latitude,
+      longitude: driver.longitude,
+      accuracyMeters: driver.accuracyMeters,
+      recordedAt: driver.recordedAt,
+      lastSeenAt: driver.lastSeenAt,
+      stale: driver.stale,
+    };
+  }
+
   async updateDriverLocation(driverUserId, input) {
     const normalized = this.validateLocationInput(input);
     const recordedAt = this.parseRecordedAt(input.recordedAt);
@@ -203,13 +218,30 @@ class DriverLocationService {
       });
     }
     if (TERMINAL_BOOKING_STATUSES.has(row.booking_status) || !TRACKABLE_BOOKING_STATUSES.has(row.booking_status)) {
-      return { available: false, reason: 'BOOKING_NOT_TRACKABLE', driver: null };
+      return {
+        available: false,
+        reason: 'BOOKING_NOT_TRACKABLE',
+        bookingNumber: row.booking_number,
+        bookingStatus: row.booking_status,
+        driver: null,
+      };
     }
-    const driver = this.mapLocationRow(row);
+    const driver = this.mapGuestLocationRow(row);
     if (!driver) {
-      return { available: false, reason: 'LOCATION_UNAVAILABLE', driver: null };
+      return {
+        available: false,
+        reason: 'LOCATION_UNAVAILABLE',
+        bookingNumber: row.booking_number,
+        bookingStatus: row.booking_status,
+        driver: null,
+      };
     }
-    return { available: true, driver };
+    return {
+      available: true,
+      bookingNumber: row.booking_number,
+      bookingStatus: row.booking_status,
+      driver,
+    };
   }
 
   async canGuestAccessBooking(bookingId, guestAccessToken) {

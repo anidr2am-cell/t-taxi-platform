@@ -16,6 +16,7 @@ function mapSocketError(err) {
   return {
     code: err.errorCode ?? ERROR_CODES.INTERNAL_SERVER_ERROR,
     message: err.message ?? 'Driver location request failed',
+    ...(err.bookingStatus ? { bookingStatus: err.bookingStatus } : {}),
   };
 }
 
@@ -57,7 +58,16 @@ function registerDriverLocationHandlers(io, socket) {
             io.to(bookingDriverLocationRoom(bookingId)).emit('booking:driver-location:changed', {
               bookingId,
               available: true,
-              driver: changed,
+              driver: {
+                displayName: changed.displayName,
+                vehicle: changed.vehicle,
+                latitude: changed.latitude,
+                longitude: changed.longitude,
+                accuracyMeters: changed.accuracyMeters,
+                recordedAt: changed.recordedAt,
+                lastSeenAt: changed.lastSeenAt,
+                stale: changed.stale,
+              },
             });
           }
         }
@@ -101,7 +111,13 @@ function registerDriverLocationHandlers(io, socket) {
         err.errorCode = ERROR_CODES.VALIDATION_ERROR;
         throw err;
       }
-      await getService().getGuestDriverLocation(bookingId, socket.data.guestAccessToken);
+      const result = await getService().getGuestDriverLocation(bookingId, socket.data.guestAccessToken);
+      if (result.available !== true) {
+        const err = new Error('Booking is not trackable');
+        err.errorCode = ERROR_CODES.BOOKING_NOT_TRACKABLE;
+        err.bookingStatus = result.bookingStatus;
+        throw err;
+      }
       const room = bookingDriverLocationRoom(bookingId);
       await socket.join(room);
       if (typeof ack === 'function') ack({ ok: true, room });
