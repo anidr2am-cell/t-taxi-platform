@@ -109,7 +109,7 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
           }
 
           final grouped = DriverUx.groupBookings(data.items);
-          final hasActiveJob = data.items.any(_isLocationTrackable);
+          final locationBooking = _locationBooking(data.items);
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
             child: ListView(
@@ -135,8 +135,10 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
                       });
                     }
                     return DriverLiveLocationControl(
-                      hasActiveJob: hasActiveJob,
+                      hasActiveJob: locationBooking != null,
                       online: statusSnapshot.data?.online,
+                      bookingNumber: locationBooking?.bookingNumber,
+                      bookingStatus: locationBooking?.status,
                     );
                   },
                 ),
@@ -166,12 +168,17 @@ class _DriverJobsPageState extends State<DriverJobsPage> {
     );
   }
 
-  bool _isLocationTrackable(DriverBooking booking) {
-    return const {
-      'DRIVER_ASSIGNED',
+  DriverBooking? _locationBooking(List<DriverBooking> items) {
+    const statuses = {
+      'ON_ROUTE',
       'DRIVER_ARRIVED',
       'PICKED_UP',
-    }.contains(booking.status);
+      'DRIVER_ASSIGNED',
+    };
+    for (final booking in items) {
+      if (statuses.contains(booking.status)) return booking;
+    }
+    return null;
   }
 
   List<Widget> _buildGroup(

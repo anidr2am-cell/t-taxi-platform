@@ -4,12 +4,15 @@ import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../driver_location/services/driver_location_api_service.dart';
+import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../driver_trip_flow.dart';
 import '../models/driver_booking.dart';
+import '../models/driver_status.dart';
 import '../services/driver_api_service.dart';
 import '../utils/driver_money_format.dart';
 import '../widgets/driver_status_control.dart';
@@ -23,12 +26,16 @@ class DriverBookingDetailPage extends StatefulWidget {
     DriverApiService? api,
     this.chatPageBuilder,
     this.showStatusControl = false,
+    this.locationApi,
+    this.positionProvider,
   }) : api = api ?? const DriverApiService();
 
   final String bookingNumber;
   final DriverApiService api;
   final Widget Function(String bookingNumber)? chatPageBuilder;
   final bool showStatusControl;
+  final DriverLocationApiService? locationApi;
+  final DriverPositionProvider? positionProvider;
 
   @override
   State<DriverBookingDetailPage> createState() =>
@@ -37,6 +44,7 @@ class DriverBookingDetailPage extends StatefulWidget {
 
 class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   late Future<DriverBooking> _future;
+  Future<DriverStatus>? _statusFuture;
   Future<Map<String, dynamic>>? _settlementFuture;
   bool _processing = false;
   bool _confirmingAction = false;
@@ -53,7 +61,17 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     setState(() {
       _actionError = null;
       _future = widget.api.getBookingDetail(widget.bookingNumber);
+      if (widget.showStatusControl) {
+        _statusFuture = widget.api.getStatus();
+      }
       _settlementFuture = null;
+    });
+  }
+
+  void _reloadStatus() {
+    if (!widget.showStatusControl || !mounted) return;
+    setState(() {
+      _statusFuture = widget.api.getStatus();
     });
   }
 
@@ -283,7 +301,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
           return Column(
             children: [
               if (widget.showStatusControl)
-                DriverStatusControl(api: widget.api),
+                DriverStatusControl(
+                  api: widget.api,
+                  onStatusChanged: _reloadStatus,
+                ),
               if (_processing) ...[
                 const LinearProgressIndicator(minHeight: 3),
                 if (_processingKey != null)
@@ -309,6 +330,14 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                   padding: AppUi.pagePadding(context),
                   children: [
                     _StatusHeader(booking: booking),
+                    if (widget.showStatusControl)
+                      _DriverDetailLocationSection(
+                        booking: booking,
+                        statusFuture: _statusFuture,
+                        api: widget.locationApi,
+                        positionProvider: widget.positionProvider,
+                        onRetryStatus: _reloadStatus,
+                      ),
                     if (showSettlementInfo) ...[
                       const SizedBox(height: AppTokens.spaceSm),
                       AppUi.surfaceCard(
@@ -585,6 +614,101 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
       '24"+: ${luggage['carriers24InchPlus'] ?? 0}',
       'Golf: ${luggage['golfBags'] ?? 0}',
     ].join(' · ');
+  }
+}
+
+class _DriverDetailLocationSection extends StatelessWidget {
+  const _DriverDetailLocationSection({
+    required this.booking,
+    required this.statusFuture,
+    required this.onRetryStatus,
+    this.api,
+    this.positionProvider,
+  });
+
+  final DriverBooking booking;
+  final Future<DriverStatus>? statusFuture;
+  final DriverLocationApiService? api;
+  final DriverPositionProvider? positionProvider;
+  final VoidCallback onRetryStatus;
+
+  static const _activeStatuses = {
+    'DRIVER_ASSIGNED',
+    'ON_ROUTE',
+    'DRIVER_ARRIVED',
+    'PICKED_UP',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_activeStatuses.contains(booking.status)) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<DriverStatus>(
+      future: statusFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          final err = snapshot.error!;
+          if (driverIsAuthError(err)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) driverHandleApiError(context, err);
+            });
+          }
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppTokens.spaceMd),
+            child: AppUi.surfaceCard(
+              backgroundColor: AppTokens.warningLight,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.sync_problem, color: AppTokens.warning),
+                      const SizedBox(width: AppTokens.spaceSm),
+                      Expanded(
+                        child: Text(
+                          context.l10n.t('driver_location_status_load_failed'),
+                          style: const TextStyle(
+                            color: AppTokens.warning,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppTokens.spaceSm),
+                  Text(
+                    context.l10n.t('driver_location_status_load_failed_detail'),
+                    style: const TextStyle(color: AppTokens.textSecondary),
+                  ),
+                  const SizedBox(height: AppTokens.spaceSm),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: onRetryStatus,
+                      icon: const Icon(Icons.refresh),
+                      label: Text(context.l10n.t('driver_location_retry')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return DriverLiveLocationControl(
+          hasActiveJob: true,
+          online: snapshot.data?.online,
+          bookingNumber: booking.bookingNumber,
+          bookingStatus: booking.status,
+          api: api,
+          positionProvider: positionProvider,
+        );
+      },
+    );
   }
 }
 

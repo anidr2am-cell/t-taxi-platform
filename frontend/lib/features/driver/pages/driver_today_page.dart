@@ -306,9 +306,9 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
               'ON_ROUTE',
               'DRIVER_ARRIVED',
               'PICKED_UP',
-              'SETTLEMENT_PENDING',
             }.contains(booking.status),
           );
+          final locationBooking = _locationBooking(items, current: current);
 
           if (current != null &&
               DriverUx.canMessageCustomer(current.status) &&
@@ -355,8 +355,10 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                       });
                     }
                     return DriverLiveLocationControl(
-                      hasActiveJob: hasActiveJob,
+                      hasActiveJob: locationBooking != null,
                       online: statusSnapshot.data?.online,
+                      bookingNumber: locationBooking?.bookingNumber,
+                      bookingStatus: locationBooking?.status,
                     );
                   },
                 ),
@@ -478,6 +480,25 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
       ),
     );
   }
+}
+
+DriverBooking? _locationBooking(
+  List<DriverBooking> items, {
+  DriverBooking? current,
+}) {
+  const statuses = {
+    'ON_ROUTE',
+    'DRIVER_ARRIVED',
+    'PICKED_UP',
+    'DRIVER_ASSIGNED',
+  };
+  if (current != null && statuses.contains(current.status)) {
+    return current;
+  }
+  for (final booking in items) {
+    if (statuses.contains(booking.status)) return booking;
+  }
+  return null;
 }
 
 class _TodayData {
