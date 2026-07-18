@@ -4,6 +4,7 @@ const path = require('node:path');
 const {
   ACTIVE_STATUSES,
   E2E_MARKER,
+  FixturePreparationError,
   FixtureRegistry,
   NetworkAudit,
   TERMINAL_STATUSES,
@@ -146,45 +147,61 @@ async function authenticateAndPreflight(config) {
 
 async function prepareFixture(config, runId, auth, registry, viewport) {
   const payload = buildBookingPayload(runId, config.customerPhone);
-  const partial = registry.add({
+  const fixture = registry.add({
     runId,
     viewport: `${viewport.width}x${viewport.height}`,
     bookingNumber: null,
     customerName: payload.customer.name,
     marker: payload.additionalRequests,
     adminToken: auth.adminToken,
-  });
-
-  const booking = await requestJson(config, '/api/v1/bookings', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-  const bookingNumber = booking.bookingNumber;
-  if (!bookingNumber) throw new Error('Booking creation did not return bookingNumber');
-  registry.update(runId, { bookingNumber });
-
-  const lookup = await requestJson(config, '/api/v1/public/bookings/lookup', {
-    method: 'POST',
-    body: JSON.stringify({ bookingNumber, phone: config.customerPhone }),
-  });
-
-  await requestJson(config, `/api/v1/admin/bookings/${bookingNumber}/assign-driver`, {
-    method: 'POST',
-    headers: bearer(auth.adminToken),
-    body: JSON.stringify({
-      driverId: config.driverId,
-      assignmentReason: `${E2E_MARKER} ${runId}`,
-    }),
-  });
-
-  return {
-    ...partial,
-    bookingNumber,
-    bookingId: lookup.bookingId || lookup.id || booking.bookingId || booking.id,
-    guestAccessToken: lookup.guestAccessToken,
-    customerPhone: config.customerPhone,
     driverToken: auth.driverToken,
-  };
+    customerPhone: config.customerPhone,
+  });
+
+  try {
+    const booking = await requestJson(config, '/api/v1/bookings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const bookingNumber = booking.bookingNumber;
+    if (!bookingNumber) throw new Error('Booking creation did not return bookingNumber');
+    registry.update(runId, { bookingNumber });
+
+    const lookup = await requestJson(config, '/api/v1/public/bookings/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ bookingNumber, phone: config.customerPhone }),
+    });
+    const bookingId = lookup.bookingId || lookup.id || booking.bookingId || booking.id;
+    if (!bookingId) throw new Error('Guest lookup response did not contain bookingId');
+    if (!lookup.guestAccessToken) {
+      throw new Error('Guest lookup response did not contain guestAccessToken');
+    }
+    registry.update(runId, {
+      bookingId,
+      guestAccessToken: lookup.guestAccessToken,
+    });
+
+    await requestJson(config, `/api/v1/admin/bookings/${bookingNumber}/assign-driver`, {
+      method: 'POST',
+      headers: bearer(auth.adminToken),
+      body: JSON.stringify({
+        driverId: config.driverId,
+        assignmentReason: `${E2E_MARKER} ${runId}`,
+      }),
+    });
+
+    return registry.update(runId, { preparationStatus: 'ready' });
+  } catch (err) {
+    const updated = registry.update(runId, {
+      preparationStatus: 'failed',
+      preparationError: serializeSafeError(err).message,
+    });
+    throw new FixturePreparationError(
+      `Fixture preparation failed for ${runId}`,
+      updated,
+      err,
+    );
+  }
 }
 
 async function getAdminBookingDetail(config, fixture) {
@@ -206,7 +223,7 @@ async function cleanupFixtureVerified(config, fixture, registry) {
       reason: 'TEST_DATA',
     }),
   });
-  registry.update(fixture.runId, { cleanupStatus: 'archived' });
+  registry.markArchived(fixture.runId);
 }
 
 async function transitionDriver(config, fixture, action) {
@@ -316,6 +333,17 @@ async function assertDomDoesNotExposeInternalIds(page, fixture) {
   if (leaked) throw new Error(`Internal identifier or token leaked into DOM for ${fixture.runId}`);
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function driverMarkerLocator(page, fixture) {
+  const displayName = fixture.driverDisplayName || 'Driver';
+  return page.getByRole('button', {
+    name: new RegExp(`^${escapeRegExp(displayName)}$`, 'i'),
+  });
+}
+
 async function assertAssignedWaiting(page, audit, fixture) {
   await page.getByText(/Driver location/i).first().waitFor({ timeout: 20000 });
   await page.getByText(/assigned|live location after the driver starts/i).first().waitFor({ timeout: 20000 });
@@ -333,15 +361,15 @@ async function assertAssignedWaiting(page, audit, fixture) {
 async function assertOnRouteMap(page, fixture) {
   await page.getByText(/Driver location sharing/i).first().waitFor({ timeout: 25000 });
   await page.getByText(/on the way|pickup location/i).first().waitFor({ timeout: 25000 });
-  await page.getByRole('button', { name: /driver|e2e|test/i }).first().waitFor({ timeout: 25000 });
+  await driverMarkerLocator(page, fixture).first().waitFor({ timeout: 25000 });
   await page.getByText(/Last update/i).first().waitFor({ timeout: 10000 });
   await page.getByRole('button', { name: /Open in map/i }).first().waitFor({ timeout: 10000 });
   await assertDomDoesNotExposeInternalIds(page, fixture);
   await expectNoHorizontalOverflow(page);
 }
 
-async function assertSingleMarker(page) {
-  const markers = page.getByRole('button', { name: /driver|e2e|test/i });
+async function assertSingleMarker(page, fixture) {
+  const markers = driverMarkerLocator(page, fixture);
   const count = await markers.count();
   if (count !== 1) {
     throw new Error(`Expected exactly one driver marker, found ${count}`);
@@ -354,11 +382,11 @@ async function assertStatusCopy(page, pattern, label) {
   });
 }
 
-async function assertTerminalUiRemoved(page, audit, terminalAt, pollIntervalMs) {
+async function assertTerminalUiRemoved(page, audit, fixture, terminalAt, pollIntervalMs) {
   await page.getByText(/Driver location sharing/i).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
     throw new Error('Terminal state did not remove live driver location UI');
   });
-  await page.getByRole('button', { name: /driver|e2e|test/i }).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
+  await driverMarkerLocator(page, fixture).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
     throw new Error('Terminal state did not remove driver marker');
   });
   await page.waitForTimeout(1200);
@@ -372,7 +400,12 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
   const context = await browser.newContext({ viewport, locale: 'en-US' });
   const audit = new NetworkAudit();
   try {
-    fixture = await prepareFixture(config, runId, auth, registry, viewport);
+    try {
+      fixture = await prepareFixture(config, runId, auth, registry, viewport);
+    } catch (err) {
+      fixture = err.fixture || registry.get(runId);
+      throw err;
+    }
     const page = await context.newPage();
     const consoleErrors = [];
     page.on('console', (message) => {
@@ -401,31 +434,35 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
     await page.waitForTimeout(config.pollIntervalMs + 1500);
     await sendLocation(config, fixture, 12.9241, 100.8831);
     await page.waitForTimeout(config.pollIntervalMs + 1500);
+    const locationSnapshot = await getGuestDriverLocation(config, fixture);
+    if (locationSnapshot.driver?.displayName) {
+      fixture.driverDisplayName = locationSnapshot.driver.displayName;
+    }
     audit.assertLocationPollingObserved(2);
     audit.assertGuestLocationInterval({ expectedMs: config.pollIntervalMs });
     audit.assertStableGuestTokenFingerprint();
     audit.assertNoRepeatedGuestLookup(1);
     audit.assertWebSocketConnectionLimit(1);
     await assertOnRouteMap(page, fixture);
-    await assertSingleMarker(page);
+    await assertSingleMarker(page, fixture);
 
     await transitionDriver(config, fixture, 'arrive');
     await waitForGuestStatus(config, fixture, 'DRIVER_ARRIVED');
     await assertStatusCopy(page, /arrived|pickup location/i, 'DRIVER_ARRIVED');
-    await assertSingleMarker(page);
+    await assertSingleMarker(page, fixture);
     audit.assertWebSocketConnectionLimit(1);
 
     await transitionDriver(config, fixture, 'mark-picked-up');
     await waitForGuestStatus(config, fixture, 'PICKED_UP');
     await assertStatusCopy(page, /in progress|trip/i, 'PICKED_UP');
-    await assertSingleMarker(page);
+    await assertSingleMarker(page, fixture);
     audit.assertWebSocketConnectionLimit(1);
 
     await transitionDriver(config, fixture, 'end-trip');
     await waitForGuestStatus(config, fixture, 'SETTLEMENT_PENDING');
     const terminalAt = Date.now();
     await page.waitForTimeout(config.pollIntervalMs + 1500);
-    await assertTerminalUiRemoved(page, audit, terminalAt, config.pollIntervalMs);
+    await assertTerminalUiRemoved(page, audit, fixture, terminalAt, config.pollIntervalMs);
 
     if (consoleErrors.length) {
       throw new Error(`Browser console errors at ${viewport.width}px: ${consoleErrors.join('; ')}`);
@@ -435,20 +472,51 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
     await context.close();
     if (fixture) {
       if (config.keepFixture) {
-        registry.update(fixture.runId, { cleanupStatus: 'kept' });
+        registry.markKept(fixture.runId);
       } else {
         try {
           await cleanupFixtureVerified(config, fixture, registry);
         } catch (err) {
-          registry.update(fixture.runId, {
-            cleanupStatus: 'failed',
-            cleanupError: serializeSafeError(err).message,
-          });
+          registry.markCleanupFailed(fixture.runId, err);
           throw err;
         }
       }
     }
   }
+}
+
+async function cleanupPendingFixtures(config, registry) {
+  const failures = [];
+  for (const record of registry.pendingCleanup()) {
+    try {
+      await cleanupFixtureVerified(config, record, registry);
+    } catch (err) {
+      registry.markCleanupFailed(record.runId, err);
+      failures.push({
+        runId: record.runId,
+        bookingNumber: record.bookingNumber,
+        error: serializeSafeError(err).message,
+      });
+    }
+  }
+  if (failures.length) {
+    const error = new AggregateError(
+      failures.map((failure) => new Error(`${failure.runId}: ${failure.error}`)),
+      'One or more E2E fixture cleanup attempts failed',
+    );
+    error.failures = failures;
+    throw error;
+  }
+}
+
+function buildRunFailure(primaryError, cleanupError) {
+  const error = new Error('Customer location E2E failed');
+  error.name = 'E2ERunFailure';
+  error.primaryError = primaryError ? serializeSafeError(primaryError) : null;
+  error.cleanupErrors = cleanupError?.failures ?? (
+    cleanupError ? [serializeSafeError(cleanupError)] : []
+  );
+  return error;
 }
 
 function writeManifest(config, registry, name = 'customer-location-e2e-manifest.json') {
@@ -493,9 +561,12 @@ async function main() {
   }
 
   const registry = new FixtureRegistry();
-  const auth = await authenticateAndPreflight(config);
-  const browser = await openBrowser(args);
+  let primaryError = null;
+  let cleanupError = null;
+  let browser = null;
   try {
+    const auth = await authenticateAndPreflight(config);
+    browser = await openBrowser(args);
     for (const viewport of VIEWPORTS) {
       const currentStatus = await loadDriverStatus(config, auth.driverToken);
       if (currentStatus.hasActiveJob === true) {
@@ -503,12 +574,30 @@ async function main() {
       }
       await runViewportScenario({ browser, config, viewport, auth, registry });
     }
+  } catch (err) {
+    primaryError = err;
   } finally {
-    await browser.close();
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (err) {
+        primaryError = primaryError || err;
+      }
+    }
+    if (!config.keepFixture) {
+      try {
+        await cleanupPendingFixtures(config, registry);
+      } catch (err) {
+        cleanupError = err;
+      }
+    }
     if (config.keepFixture || registry.records.length) {
       const markerPath = writeManifest(config, registry);
       console.log(`Redacted E2E manifest: ${markerPath}`);
     }
+  }
+  if (primaryError || cleanupError) {
+    throw buildRunFailure(primaryError, cleanupError);
   }
 }
 
@@ -521,7 +610,9 @@ if (require.main === module) {
 
 module.exports = {
   authenticateAndPreflight,
+  buildRunFailure,
   cleanupFixtureVerified,
+  cleanupPendingFixtures,
   fillLookupForm,
   main,
   parseArgs,

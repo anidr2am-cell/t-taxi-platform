@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   E2E_MARKER,
+  FixturePreparationError,
   FixtureRegistry,
   HARD_ALLOWED_HOSTS,
   NetworkAudit,
@@ -21,6 +22,10 @@ const {
   serializeSafeError,
   tokenFingerprint,
 } = require('./core');
+const {
+  cleanupPendingFixtures,
+  prepareFixture,
+} = require('./run');
 
 const stagingEnv = {
   TRIDE_E2E_TARGET: 'staging',
@@ -43,7 +48,7 @@ function liveEnv(overrides = {}) {
 }
 
 function cleanupFixture(overrides = {}) {
-  const runId = 'E2E-20260718T010203-abcd-360';
+  const runId = overrides.runId || 'E2E-20260718T010203-abcd-360';
   return {
     runId,
     bookingNumber: 'TX202607180001',
@@ -148,6 +153,30 @@ test('fixture registry keeps partial records available for cleanup', () => {
   assert.equal(registry.manifest()[0].bookingNumber, 'TX202607180001');
 });
 
+test('fixture registry exposes explicit pending and mark APIs', () => {
+  const registry = new FixtureRegistry();
+  registry.add({
+    runId: 'E2E-20260718T010203-abcd-360',
+    bookingNumber: 'TX202607180001',
+    customerName: '[E2E] Customer E2E-20260718T010203-abcd-360',
+    marker: `${E2E_MARKER} E2E-20260718T010203-abcd-360`,
+  });
+  registry.add({
+    runId: 'E2E-20260718T010203-abcd-390',
+    bookingNumber: null,
+    customerName: '[E2E] Customer E2E-20260718T010203-abcd-390',
+    marker: `${E2E_MARKER} E2E-20260718T010203-abcd-390`,
+  });
+  assert.equal(registry.pendingCleanup().length, 1);
+  registry.markCleanupFailed('E2E-20260718T010203-abcd-360', new Error('temporary'));
+  assert.equal(registry.pendingCleanup().length, 1);
+  registry.markArchived('E2E-20260718T010203-abcd-360');
+  assert.equal(registry.pendingCleanup().length, 0);
+  registry.markKept('E2E-20260718T010203-abcd-390');
+  assert.equal(registry.pendingCleanup().length, 0);
+  assert.equal(registry.get('E2E-20260718T010203-abcd-390').cleanupStatus, 'kept');
+});
+
 test('local cleanup candidate rejects non-E2E records', () => {
   assert.equal(assertCleanupCandidate(cleanupFixture()), true);
   assert.throws(() => assertCleanupCandidate(cleanupFixture({ runId: 'BAD' })), /run ID/);
@@ -237,4 +266,133 @@ test('websocket audit counts browser websocket connections, not Engine.IO HTTP r
   audit.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
   assert.equal(audit.socketReconnectCount(), 1);
   assert.throws(() => audit.assertWebSocketConnectionLimit(1), /WebSocket/);
+});
+
+function e2eConfig() {
+  return {
+    backendUrl: 'https://trider.taxi',
+    customerPhone: '+66000000001',
+    driverId: 12,
+  };
+}
+
+function auth() {
+  return {
+    adminToken: 'admin-token-123456789012345678901234567890',
+    driverToken: 'driver-token-123456789012345678901234567890',
+  };
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+function mockFetch(responses) {
+  const calls = [];
+  const original = global.fetch;
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    const next = responses.shift();
+    if (!next) throw new Error(`Unexpected fetch call: ${url}`);
+    if (next.error) throw next.error;
+    return jsonResponse(next.body, next.status ?? 200);
+  };
+  return {
+    calls,
+    restore() {
+      global.fetch = original;
+    },
+  };
+}
+
+test('prepare failure before booking creation leaves no cleanup candidate', async () => {
+  const registry = new FixtureRegistry();
+  const fetchMock = mockFetch([{ body: { success: false, message: 'bad' }, status: 500 }]);
+  await assert.rejects(
+    () => prepareFixture(e2eConfig(), 'E2E-20260718T010203-abcd-360', auth(), registry, { width: 360, height: 800 }),
+    FixturePreparationError,
+  );
+  fetchMock.restore();
+  assert.equal(registry.get('E2E-20260718T010203-abcd-360').bookingNumber, null);
+  assert.equal(registry.pendingCleanup().length, 0);
+});
+
+test('booking created plus lookup failure remains cleanable through final sweep', async () => {
+  const registry = new FixtureRegistry();
+  const runId = 'E2E-20260718T010203-abcd-360';
+  const fetchMock = mockFetch([
+    { body: { data: { bookingNumber: 'TX202607180001', id: 10 } } },
+    { body: { success: false, message: 'lookup failed' }, status: 500 },
+    {
+      body: {
+        data: serverBooking(cleanupFixture({
+          runId,
+          bookingNumber: 'TX202607180001',
+        })),
+      },
+    },
+    { body: { data: { archived: true } } },
+  ]);
+  await assert.rejects(
+    () => prepareFixture(e2eConfig(), runId, auth(), registry, { width: 360, height: 800 }),
+    FixturePreparationError,
+  );
+  assert.equal(registry.get(runId).bookingNumber, 'TX202607180001');
+  await cleanupPendingFixtures(e2eConfig(), registry);
+  fetchMock.restore();
+  assert.equal(registry.get(runId).cleanupStatus, 'archived');
+  assert.equal(fetchMock.calls.some((call) => call.url.includes('/archive')), true);
+});
+
+test('booking created plus assignment failure remains cleanable through final sweep', async () => {
+  const registry = new FixtureRegistry();
+  const runId = 'E2E-20260718T010203-abcd-390';
+  const fixture = cleanupFixture({ runId, bookingNumber: 'TX202607180002' });
+  const fetchMock = mockFetch([
+    { body: { data: { bookingNumber: fixture.bookingNumber, id: 11 } } },
+    { body: { data: { bookingNumber: fixture.bookingNumber, bookingId: 11, guestAccessToken: 'guest-token-123456789012345678901234567890' } } },
+    { body: { success: false, message: 'assignment conflict' }, status: 409 },
+    { body: { data: serverBooking(fixture) } },
+    { body: { data: { archived: true } } },
+  ]);
+  await assert.rejects(
+    () => prepareFixture(e2eConfig(), runId, auth(), registry, { width: 390, height: 844 }),
+    FixturePreparationError,
+  );
+  await cleanupPendingFixtures(e2eConfig(), registry);
+  fetchMock.restore();
+  assert.equal(registry.get(runId).cleanupStatus, 'archived');
+});
+
+test('lookup response without bookingId or guest token still triggers cleanup path', async () => {
+  const registry = new FixtureRegistry();
+  const runId = 'E2E-20260718T010203-abcd-430';
+  const fixture = cleanupFixture({ runId, bookingNumber: 'TX202607180003' });
+  const fetchMock = mockFetch([
+    { body: { data: { bookingNumber: fixture.bookingNumber, id: 12 } } },
+    { body: { data: { bookingNumber: fixture.bookingNumber } } },
+    { body: { data: serverBooking(fixture) } },
+    { body: { data: { archived: true } } },
+  ]);
+  await assert.rejects(
+    () => prepareFixture(e2eConfig(), runId, auth(), registry, { width: 430, height: 932 }),
+    FixturePreparationError,
+  );
+  await cleanupPendingFixtures(e2eConfig(), registry);
+  fetchMock.restore();
+  assert.equal(registry.get(runId).cleanupStatus, 'archived');
+});
+
+test('cleanup failure marks registry failed and preserves aggregate cleanup error', async () => {
+  const registry = new FixtureRegistry();
+  const fixture = cleanupFixture();
+  registry.add(fixture);
+  const fetchMock = mockFetch([{ body: { success: false, message: 'detail failed' }, status: 500 }]);
+  await assert.rejects(() => cleanupPendingFixtures(e2eConfig(), registry), /cleanup attempts failed/);
+  fetchMock.restore();
+  assert.equal(registry.get(fixture.runId).cleanupStatus, 'failed');
+  assert.match(registry.get(fixture.runId).cleanupError, /failed HTTP 500/);
 });

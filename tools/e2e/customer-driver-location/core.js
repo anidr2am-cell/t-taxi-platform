@@ -215,6 +215,11 @@ function serializeSafeError(error, { includeStack = false } = {}) {
     name: error?.name || 'Error',
     message: redactString(error?.message || String(error)),
   };
+  if (error?.fixtureRunId) safe.fixtureRunId = error.fixtureRunId;
+  if (error?.fixtureBookingNumber) safe.fixtureBookingNumber = error.fixtureBookingNumber;
+  if (error?.primaryError) safe.primaryError = redact(error.primaryError);
+  if (error?.cleanupErrors) safe.cleanupErrors = redact(error.cleanupErrors);
+  if (error?.failures) safe.cleanupErrors = redact(error.failures);
   if (includeStack && error?.stack) safe.stack = redactString(error.stack);
   return safe;
 }
@@ -411,10 +416,14 @@ class FixtureRegistry {
   add(record) {
     if (!record?.runId) throw new Error('Fixture registry requires runId');
     const index = this.records.findIndex((item) => item.runId === record.runId);
-    const next = { cleanupStatus: 'pending', ...record };
+    const next = { cleanupStatus: 'pending', preparationStatus: 'pending', ...record };
     if (index >= 0) this.records[index] = { ...this.records[index], ...next };
     else this.records.push(next);
     return this.records.find((item) => item.runId === record.runId);
+  }
+
+  get(runId) {
+    return this.records.find((item) => item.runId === runId) ?? null;
   }
 
   update(runId, patch) {
@@ -424,8 +433,31 @@ class FixtureRegistry {
     return record;
   }
 
+  pendingCleanup() {
+    return this.records.filter((record) => (
+      record.bookingNumber &&
+      record.cleanupStatus !== 'archived' &&
+      record.cleanupStatus !== 'kept'
+    ));
+  }
+
   pending() {
-    return this.records.filter((record) => record.cleanupStatus !== 'archived');
+    return this.pendingCleanup();
+  }
+
+  markArchived(runId) {
+    return this.update(runId, { cleanupStatus: 'archived', cleanupError: null });
+  }
+
+  markKept(runId) {
+    return this.update(runId, { cleanupStatus: 'kept' });
+  }
+
+  markCleanupFailed(runId, error) {
+    return this.update(runId, {
+      cleanupStatus: 'failed',
+      cleanupError: serializeSafeError(error).message,
+    });
   }
 
   manifest() {
@@ -435,15 +467,35 @@ class FixtureRegistry {
       bookingNumber: record.bookingNumber,
       customerName: record.customerName,
       marker: record.marker,
+      preparationStatus: record.preparationStatus,
+      preparationError: record.preparationError,
       cleanupStatus: record.cleanupStatus,
       cleanupError: record.cleanupError,
     }));
   }
 }
 
+class FixturePreparationError extends Error {
+  constructor(message, fixture, cause) {
+    super(message);
+    this.name = 'FixturePreparationError';
+    this.fixtureRunId = fixture?.runId ?? null;
+    this.fixtureBookingNumber = fixture?.bookingNumber ?? null;
+    Object.defineProperty(this, 'fixture', {
+      value: fixture,
+      enumerable: false,
+    });
+    Object.defineProperty(this, 'cause', {
+      value: cause,
+      enumerable: false,
+    });
+  }
+}
+
 module.exports = {
   ACTIVE_STATUSES,
   E2E_MARKER,
+  FixturePreparationError,
   FixtureRegistry,
   HARD_ALLOWED_HOSTS,
   NetworkAudit,
