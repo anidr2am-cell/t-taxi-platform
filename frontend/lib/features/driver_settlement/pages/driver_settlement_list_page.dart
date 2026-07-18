@@ -671,13 +671,23 @@ class _DriverSettlementDetailPageState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        AppUi.secondaryButton(
+                        Semantics(
+                          button: true,
+                          enabled: !_uploading,
                           label: _selectedFilename == null
                               ? l10n.t('driver_settlement_select_receipt')
                               : l10n.t('driver_settlement_replace_receipt'),
-                          icon: Icons.upload_file,
-                          onPressed: _uploading ? null : _pickFile,
-                          fullWidth: true,
+                          onTap: _uploading ? null : _pickFile,
+                          child: ExcludeSemantics(
+                            child: AppUi.secondaryButton(
+                              label: _selectedFilename == null
+                                  ? l10n.t('driver_settlement_select_receipt')
+                                  : l10n.t('driver_settlement_replace_receipt'),
+                              icon: Icons.upload_file,
+                              onPressed: _uploading ? null : _pickFile,
+                              fullWidth: true,
+                            ),
+                          ),
                         ),
                         if (_selectedFilename != null) ...[
                           const SizedBox(height: AppTokens.spaceSm),
@@ -687,15 +697,27 @@ class _DriverSettlementDetailPageState
                                 .replaceAll('{name}', _selectedFilename!),
                           ),
                           const SizedBox(height: AppTokens.spaceSm),
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: _uploading ? null : _uploadSelected,
-                              child: Text(
-                                _uploading
-                                    ? l10n.t('driver_settlement_uploading')
-                                    : l10n.t('driver_settlement_upload'),
-                                textAlign: TextAlign.center,
+                          Semantics(
+                            button: true,
+                            enabled: !_uploading,
+                            label: _uploading
+                                ? l10n.t('driver_settlement_uploading')
+                                : l10n.t('driver_settlement_upload'),
+                            onTap: _uploading ? null : _uploadSelected,
+                            child: ExcludeSemantics(
+                              child: SizedBox(
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: _uploading
+                                      ? null
+                                      : _uploadSelected,
+                                  child: Text(
+                                    _uploading
+                                        ? l10n.t('driver_settlement_uploading')
+                                        : l10n.t('driver_settlement_upload'),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
                               ),
                             ),
                           ),

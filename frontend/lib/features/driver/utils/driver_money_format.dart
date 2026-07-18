@@ -5,7 +5,7 @@ class DriverMoneyFormat {
     final normalizedCurrency = (currency ?? '').trim().toUpperCase();
     final formatted = _formatNumber(amount);
     if (normalizedCurrency.isEmpty || normalizedCurrency == 'THB') {
-      return '฿$formatted';
+      return 'THB $formatted';
     }
     return '$formatted $normalizedCurrency';
   }

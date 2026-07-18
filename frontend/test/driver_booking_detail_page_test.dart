@@ -304,7 +304,7 @@ void main() {
 
     expect(api.endTripCalls, 0);
     expect(find.text('고객을 목적지에 내려드렸습니까?'), findsOneWidget);
-    expect(find.text('฿1,300'), findsOneWidget);
+    expect(find.text('THB 1,300'), findsOneWidget);
     expect(find.textContaining('기사에게 현장 결제'), findsOneWidget);
 
     await tester.tap(
