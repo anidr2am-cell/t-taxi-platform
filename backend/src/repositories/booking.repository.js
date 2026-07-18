@@ -465,6 +465,7 @@ class BookingRepository {
         b.id,
         b.booking_number,
         b.status,
+        bda.status AS assignment_status,
         b.scheduled_pickup_at,
         DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d') AS pickup_date,
         DATE_FORMAT(b.scheduled_pickup_at, '%H:%i') AS pickup_time,

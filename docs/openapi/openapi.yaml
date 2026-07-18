@@ -5520,6 +5520,16 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/ReservationStatus'
+        assignmentStatus:
+          type: string
+          nullable: true
+          enum:
+            - ASSIGNED
+            - ACCEPTED
+            - REJECTED
+            - COMPLETED
+            - CANCELLED
+          description: Current active assignment status for the authenticated driver. DRIVER_ASSIGNED with ASSIGNED is accept-ready; ACCEPTED means already accepted.
         serviceType:
           $ref: '#/components/schemas/DriverJobServiceType'
         pickupDate:
