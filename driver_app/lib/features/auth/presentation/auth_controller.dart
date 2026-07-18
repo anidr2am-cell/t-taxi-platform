@@ -60,4 +60,12 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> expireSession() async {
+    await _repository.clearLocalSession();
+    session = null;
+    errorMessage = const ApiException(ApiFailureKind.unauthorized).userMessage;
+    status = AuthStatus.signedOut;
+    notifyListeners();
+  }
 }
