@@ -34,6 +34,30 @@ npm run e2e:staging:settlement
 
 The live command requires the same staging E2E account variables as the customer-location E2E runner and `TRIDE_E2E_ALLOW_LIVE=1`.
 
+## GitHub Actions
+
+The manual workflow file is:
+
+```text
+.github/workflows/staging-settlement-lifecycle-e2e.yml
+```
+
+Workflow properties:
+
+- Name: `Staging Settlement Lifecycle E2E`
+- Trigger: `workflow_dispatch` only
+- Environment: `staging-e2e`
+- Concurrency group: `staging-shared-driver-e2e`
+- Artifact: `staging-settlement-lifecycle-e2e-redacted`
+
+The settlement workflow shares the same staging E2E driver as the customer-location workflow, so both workflows use one common concurrency group and do not run at the same time.
+
+Run manually after the workflow exists on the selected branch:
+
+```powershell
+gh workflow run staging-settlement-lifecycle-e2e.yml --ref main
+```
+
 ## Safety
 
 - The runner hard-allows only staging/localhost hosts and blocks production-like hosts.
@@ -86,4 +110,3 @@ The booking fixture is archived through the admin API. Uploaded settlement recei
 
 - Driver settlement UI browser E2E.
 - Admin settlement approval UI browser E2E.
-- GitHub Actions manual workflow.

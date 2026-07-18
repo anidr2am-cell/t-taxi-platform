@@ -80,7 +80,7 @@ It is intentionally manual-only:
 - Environment: `staging-e2e`
 - Runner: GitHub-hosted `ubuntu-latest`
 - Timeout: 20 minutes
-- Concurrency group: `staging-customer-location-e2e`
+- Concurrency group: `staging-shared-driver-e2e`
 - `cancel-in-progress: false`
 
 `cancel-in-progress` is disabled because every live run uses the same staging E2E driver and creates temporary synthetic bookings. A newer run must wait for the active run to finish so that the runner can complete its cleanup sweep.
