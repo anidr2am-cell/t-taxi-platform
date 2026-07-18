@@ -109,6 +109,20 @@ async function loadDriverStatus(config, driverToken) {
   });
 }
 
+async function ensureDriverOnline(config, driverToken, currentStatus) {
+  if (currentStatus?.online === true && currentStatus?.status === 'AVAILABLE') {
+    return currentStatus;
+  }
+  if (currentStatus?.hasActiveJob === true) {
+    return currentStatus;
+  }
+  await requestJson(config, '/api/v1/driver/online', {
+    method: 'POST',
+    headers: bearer(driverToken),
+  });
+  return loadDriverStatus(config, driverToken);
+}
+
 async function authenticateAndPreflight(config) {
   assertE2EEmail('Admin email', config.adminEmail);
   assertE2EEmail('Driver email', config.driverEmail);
@@ -116,7 +130,7 @@ async function authenticateAndPreflight(config) {
 
   const admin = await login(config, config.adminEmail, config.adminPassword);
   const driver = await login(config, config.driverEmail, config.driverPassword);
-  const [adminMe, driverMe, driverStatus] = await Promise.all([
+  const [adminMe, driverMe, initialDriverStatus] = await Promise.all([
     loadMe(config, admin.accessToken),
     loadMe(config, driver.accessToken),
     loadDriverStatus(config, driver.accessToken),
@@ -130,14 +144,18 @@ async function authenticateAndPreflight(config) {
   if (driverRole !== 'DRIVER') {
     throw new Error('Configured driver account is not a driver role');
   }
-  if (Number(driverStatus.driverId) !== Number(config.driverId)) {
+  if (Number(initialDriverStatus.driverId) !== Number(config.driverId)) {
     throw new Error('TRIDE_E2E_DRIVER_ID does not match the logged-in driver account');
   }
-  if (driverStatus.active !== true) {
+  if (initialDriverStatus.active !== true) {
     throw new Error('Configured E2E driver is not active');
   }
-  if (driverStatus.hasActiveJob === true) {
+  if (initialDriverStatus.hasActiveJob === true) {
     throw new Error('Configured E2E driver already has an active job; no fixture will be created');
+  }
+  const driverStatus = await ensureDriverOnline(config, driver.accessToken, initialDriverStatus);
+  if (driverStatus.online !== true || driverStatus.status !== 'AVAILABLE') {
+    throw new Error('Configured E2E driver could not be prepared as online and available');
   }
 
   return {
@@ -297,11 +315,41 @@ function formatDiagnostics(label, diagnostics) {
   return `${label}: ${JSON.stringify(diagnostics)}`;
 }
 
-async function enableFlutterSemantics(page) {
+async function activateFlutterSemanticsPlaceholder(page) {
   const placeholder = page.locator('flt-semantics-placeholder');
-  if ((await placeholder.count()) > 0) {
-    await placeholder.first().click({ force: true });
-  } else {
+  if ((await placeholder.count()) === 0) return false;
+
+  try {
+    await placeholder.first().click({ force: true, timeout: 5000 });
+    return true;
+  } catch (_) {
+    const clicked = await page.evaluate(() => {
+      const element = document.querySelector('flt-semantics-placeholder');
+      if (!element) return false;
+      if (typeof element.click === 'function') {
+        element.click();
+        return true;
+      }
+      element.dispatchEvent(new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      }));
+      return true;
+    }).catch(() => false);
+
+    if (clicked) return true;
+
+    throw new Error(formatDiagnostics(
+      'Flutter semantics placeholder could not be activated',
+      await collectFlutterDiagnostics(page),
+    ));
+  }
+}
+
+async function enableFlutterSemantics(page) {
+  const clickedPlaceholder = await activateFlutterSemanticsPlaceholder(page);
+  if (!clickedPlaceholder) {
     const accessibilityButton = page.getByRole('button', { name: /enable accessibility/i });
     if ((await accessibilityButton.count()) > 0) {
       await accessibilityButton.first().click();
@@ -309,11 +357,10 @@ async function enableFlutterSemantics(page) {
   }
 
   await page.waitForFunction(() => {
-    const placeholders = document.querySelectorAll('flt-semantics-placeholder').length;
     const textboxes = document.querySelectorAll(
       '[role="textbox"], input, textarea, flt-semantics input',
     ).length;
-    return placeholders === 0 || textboxes > 0;
+    return textboxes > 0;
   }, null, { timeout: 15000 }).catch(async () => {
     throw new Error(formatDiagnostics(
       'Flutter semantics did not become ready',
@@ -363,11 +410,29 @@ async function uniqueLocator(locator, label, page) {
   return locator;
 }
 
-async function fillAndVerify(locator, value, label) {
-  await locator.fill(value);
+function normalizePhoneForComparison(value) {
+  return String(value || '').replace(/[^\d]/g, '');
+}
+
+async function fillAndVerify(locator, value, label, options = {}) {
+  if (typeof locator.pressSequentially === 'function') {
+    if (typeof locator.click === 'function') {
+      await locator.click();
+    }
+    if (typeof locator.press === 'function') {
+      await locator.press('Control+A').catch(() => {});
+      await locator.press('Backspace').catch(() => {});
+    }
+    await locator.pressSequentially(value, { delay: 80 });
+  } else {
+    await locator.fill(value);
+  }
   if (typeof locator.inputValue === 'function') {
     const actual = await locator.inputValue().catch(() => null);
-    if (actual != null && actual !== value) {
+    const matches = options.phone
+      ? normalizePhoneForComparison(actual) === normalizePhoneForComparison(value)
+      : actual === value;
+    if (actual != null && !matches) {
       throw new Error(`${label} field did not retain the expected value`);
     }
   }
@@ -376,22 +441,28 @@ async function fillAndVerify(locator, value, label) {
 async function fillLookupForm(page, fixture) {
   await waitForFlutterAppReady(page);
   const bookingInput = await uniqueLocator(
-    page.getByRole('textbox', { name: /booking number/i }),
+    page.getByRole('textbox', {
+      name: /booking number|예약번호|หมายเลขจอง|预订号|予約番号/i,
+    }),
     'booking number',
     page,
   );
   const phoneInput = await uniqueLocator(
-    page.getByRole('textbox', { name: /phone/i }),
+    page.getByRole('textbox', {
+      name: /phone|전화번호|เบอร์โทรศัพท์|电话号码|電話番号/i,
+    }),
     'phone',
     page,
   );
   await fillAndVerify(bookingInput, fixture.bookingNumber, 'booking number');
-  await fillAndVerify(phoneInput, fixture.customerPhone, 'phone');
+  await fillAndVerify(phoneInput, fixture.customerPhone, 'phone', { phone: true });
 }
 
 async function submitLookup(page, fixture) {
   const lookupButton = await uniqueLocator(
-    page.getByRole('button', { name: /find booking|find|lookup|search/i }),
+    page.getByRole('button', {
+      name: /find booking|find|lookup|search|예약 조회|ค้นหาการจอง|查找预订|查询预约|予約を検索/i,
+    }),
     'lookup button',
     page,
   );
@@ -458,10 +529,27 @@ function driverMarkerLocator(page, fixture) {
   });
 }
 
+const CUSTOMER_DRIVER_LOCATION_TITLE_RE =
+  /Driver location|기사 위치|ตำแหน่งคนขับ|司机位置|ドライバー位置/i;
+const CUSTOMER_DRIVER_LOCATION_WAITING_RE =
+  /assigned|live location after the driver starts|배정|기사가 픽업지로 이동을 시작하면|司机已分配|คนขับได้รับงานแล้ว|ドライバーが割り当てられました/i;
+const CUSTOMER_DRIVER_LOCATION_LIVE_RE =
+  /Driver location sharing|기사 위치 공유 중|กำลังแชร์ตำแหน่งคนขับ|正在共享司机位置|ドライバー位置を共有中/i;
+const CUSTOMER_DRIVER_LOCATION_ON_ROUTE_RE =
+  /on the way|pickup location|픽업 장소로 이동 중|司机正在前往|กำลังไปยังจุดรับ|向かっています/i;
+const CUSTOMER_DRIVER_LOCATION_UPDATED_RE =
+  /Last update|마지막 업데이트|อัปเดตล่าสุด|最后更新|最終更新/i;
+const CUSTOMER_DRIVER_LOCATION_OPEN_MAP_RE =
+  /Open in map|지도에서 보기|เปิดในแผนที่|在地图中打开|地図で開く/i;
+const CUSTOMER_DRIVER_LOCATION_ARRIVED_RE =
+  /arrived|pickup location|픽업 장소에 도착|司机已到达|มาถึงจุดรับ|到着/i;
+const CUSTOMER_TRIP_IN_PROGRESS_RE =
+  /in progress|trip|운행 중|行程|ทริป|移動中/i;
+
 async function assertAssignedWaiting(page, audit, fixture) {
-  await page.getByText(/Driver location/i).first().waitFor({ timeout: 20000 });
-  await page.getByText(/assigned|live location after the driver starts/i).first().waitFor({ timeout: 20000 });
-  await page.getByText(/Driver location sharing/i).waitFor({ state: 'detached', timeout: 5000 }).catch(() => {
+  await page.getByText(CUSTOMER_DRIVER_LOCATION_TITLE_RE).first().waitFor({ timeout: 20000 });
+  await page.getByText(CUSTOMER_DRIVER_LOCATION_WAITING_RE).first().waitFor({ timeout: 20000 });
+  await page.getByText(CUSTOMER_DRIVER_LOCATION_LIVE_RE).waitFor({ state: 'detached', timeout: 5000 }).catch(() => {
     throw new Error('DRIVER_ASSIGNED displayed live sharing before ON_ROUTE');
   });
   audit.assertLocationPollingObserved(1);
@@ -473,11 +561,11 @@ async function assertAssignedWaiting(page, audit, fixture) {
 }
 
 async function assertOnRouteMap(page, fixture) {
-  await page.getByText(/Driver location sharing/i).first().waitFor({ timeout: 25000 });
-  await page.getByText(/on the way|pickup location/i).first().waitFor({ timeout: 25000 });
+  await page.getByText(CUSTOMER_DRIVER_LOCATION_LIVE_RE).first().waitFor({ timeout: 25000 });
+  await page.getByText(CUSTOMER_DRIVER_LOCATION_ON_ROUTE_RE).first().waitFor({ timeout: 25000 });
   await driverMarkerLocator(page, fixture).first().waitFor({ timeout: 25000 });
-  await page.getByText(/Last update/i).first().waitFor({ timeout: 10000 });
-  await page.getByRole('button', { name: /Open in map/i }).first().waitFor({ timeout: 10000 });
+  await page.getByText(CUSTOMER_DRIVER_LOCATION_UPDATED_RE).first().waitFor({ timeout: 10000 });
+  await page.getByRole('button', { name: CUSTOMER_DRIVER_LOCATION_OPEN_MAP_RE }).first().waitFor({ timeout: 10000 });
   await assertDomDoesNotExposeInternalIds(page, fixture);
   await expectNoHorizontalOverflow(page);
 }
@@ -497,7 +585,7 @@ async function assertStatusCopy(page, pattern, label) {
 }
 
 async function assertTerminalUiRemoved(page, audit, fixture, terminalAt, pollIntervalMs) {
-  await page.getByText(/Driver location sharing/i).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
+  await page.getByText(CUSTOMER_DRIVER_LOCATION_LIVE_RE).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
     throw new Error('Terminal state did not remove live driver location UI');
   });
   await driverMarkerLocator(page, fixture).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
@@ -562,13 +650,13 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
 
     await transitionDriver(config, fixture, 'arrive');
     await waitForGuestStatus(config, fixture, 'DRIVER_ARRIVED');
-    await assertStatusCopy(page, /arrived|pickup location/i, 'DRIVER_ARRIVED');
+    await assertStatusCopy(page, CUSTOMER_DRIVER_LOCATION_ARRIVED_RE, 'DRIVER_ARRIVED');
     await assertSingleMarker(page, fixture);
     audit.assertWebSocketConnectionLimit(1);
 
     await transitionDriver(config, fixture, 'mark-picked-up');
     await waitForGuestStatus(config, fixture, 'PICKED_UP');
-    await assertStatusCopy(page, /in progress|trip/i, 'PICKED_UP');
+    await assertStatusCopy(page, CUSTOMER_TRIP_IN_PROGRESS_RE, 'PICKED_UP');
     await assertSingleMarker(page, fixture);
     audit.assertWebSocketConnectionLimit(1);
 
@@ -723,6 +811,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  activateFlutterSemanticsPlaceholder,
   authenticateAndPreflight,
   buildRunFailure,
   collectFlutterDiagnostics,

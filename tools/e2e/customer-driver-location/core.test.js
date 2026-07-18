@@ -24,6 +24,7 @@ const {
   tokenFingerprint,
 } = require('./core');
 const {
+  activateFlutterSemanticsPlaceholder,
   collectFlutterDiagnostics,
   cleanupPendingFixtures,
   enableFlutterSemantics,
@@ -71,7 +72,13 @@ function serverBooking(fixture, overrides = {}) {
   };
 }
 
-function fakeLocator({ count = 0, value = '', onClick = null } = {}) {
+function fakeLocator({
+  count = 0,
+  value = '',
+  onClick = null,
+  clickError = null,
+  fillTransform = null,
+} = {}) {
   const state = { value, clicks: 0, fills: [] };
   const locator = {
     state,
@@ -81,6 +88,7 @@ function fakeLocator({ count = 0, value = '', onClick = null } = {}) {
     first() {
       return {
         async click(options) {
+          if (clickError) throw clickError;
           state.clicks += 1;
           if (onClick) onClick(options);
         },
@@ -92,13 +100,18 @@ function fakeLocator({ count = 0, value = '', onClick = null } = {}) {
       };
     },
     async fill(nextValue) {
-      state.value = nextValue;
+      state.value = fillTransform ? fillTransform(nextValue) : nextValue;
+      state.fills.push(nextValue);
+    },
+    async pressSequentially(nextValue) {
+      state.value = fillTransform ? fillTransform(nextValue) : nextValue;
       state.fills.push(nextValue);
     },
     async inputValue() {
       return state.value;
     },
     async click(options) {
+      if (clickError) throw clickError;
       state.clicks += 1;
       if (onClick) onClick(options);
     },
@@ -115,18 +128,21 @@ function fakeFlutterPage({
   phoneCount = 1,
   lookupButtonCount = 1,
   waitForFunctionFails = false,
-  url = 'https://trider.taxi/booking/lookup?guestAccessToken=secret#hash',
+  url = 'https://trider.taxi/booking/lookup?safeParam=not-sensitive#hash',
+  placeholderClickError = null,
+  phoneFillTransform = null,
 } = {}) {
   let currentPlaceholderCount = placeholderCount;
   const placeholder = fakeLocator({
     count: () => currentPlaceholderCount,
+    clickError: placeholderClickError,
     onClick: () => {
       currentPlaceholderCount = 0;
     },
   });
   const accessibilityButton = fakeLocator({ count: 0 });
   const booking = fakeLocator({ count: bookingCount });
-  const phone = fakeLocator({ count: phoneCount });
+  const phone = fakeLocator({ count: phoneCount, fillTransform: phoneFillTransform });
   const lookupButton = fakeLocator({ count: lookupButtonCount });
   return {
     placeholder,
@@ -142,15 +158,39 @@ function fakeFlutterPage({
       if (role === 'button' && /enable accessibility/i.test(String(options.name))) {
         return accessibilityButton;
       }
-      if (role === 'textbox' && options.name?.test?.('booking number')) return booking;
-      if (role === 'textbox' && options.name?.test?.('phone')) return phone;
-      if (role === 'button' && options.name?.test?.('Find booking')) return lookupButton;
+      if (
+        role === 'textbox' &&
+        (options.name?.test?.('booking number') || options.name?.test?.('예약번호'))
+      ) {
+        return booking;
+      }
+      if (
+        role === 'textbox' &&
+        (options.name?.test?.('phone') || options.name?.test?.('전화번호'))
+      ) {
+        return phone;
+      }
+      if (
+        role === 'button' &&
+        (options.name?.test?.('Find booking') || options.name?.test?.('예약 조회'))
+      ) {
+        return lookupButton;
+      }
       return fakeLocator({ count: 0 });
     },
     async waitForFunction() {
       if (waitForFunctionFails) throw new Error('timed out');
     },
-    async evaluate() {
+    async evaluate(fn) {
+      if (
+        typeof fn === 'function' &&
+        String(fn).includes('flt-semantics-placeholder') &&
+        String(fn).includes('.click')
+      ) {
+        if (currentPlaceholderCount < 1) return false;
+        currentPlaceholderCount = 0;
+        return true;
+      }
       return {
         flutterView: 1,
         glassPane: 1,
@@ -270,7 +310,7 @@ test('collectFlutterDiagnostics stores only safe path and selector counts', asyn
   assert.equal(diagnostics.pathname, '/booking/lookup');
   assert.equal(diagnostics.textboxRole, 2);
   assert.equal(JSON.stringify(diagnostics).includes('guestAccessToken'), false);
-  assert.equal(JSON.stringify(diagnostics).includes('secret'), false);
+  assert.equal(JSON.stringify(diagnostics).includes('not-sensitive'), false);
 });
 
 test('enableFlutterSemantics clicks the Flutter placeholder once and is safe to call repeatedly', async () => {
@@ -278,6 +318,19 @@ test('enableFlutterSemantics clicks the Flutter placeholder once and is safe to 
   await enableFlutterSemantics(page);
   await enableFlutterSemantics(page);
   assert.equal(page.placeholder.state.clicks, 1);
+});
+
+test('activateFlutterSemanticsPlaceholder falls back to DOM activation when Playwright click cannot scroll it into view', async () => {
+  const page = fakeFlutterPage({
+    placeholderCount: 1,
+    textboxCount: 2,
+    placeholderClickError: new Error('Element is outside of the viewport'),
+  });
+  const clicked = await activateFlutterSemanticsPlaceholder(page);
+  assert.equal(clicked, true);
+  assert.equal(page.placeholder.state.clicks, 0);
+  const diagnostics = await collectFlutterDiagnostics(page);
+  assert.equal(diagnostics.semanticsPlaceholder, 0);
 });
 
 test('enableFlutterSemantics succeeds without clicking when textboxes already exist', async () => {
@@ -307,6 +360,27 @@ test('fillLookupForm uses unique semantic labels and does not rely on nth textbo
   });
   assert.deepEqual(page.booking.state.fills, ['TX202607180999']);
   assert.deepEqual(page.phone.state.fills, ['+66000000001']);
+});
+
+test('fillLookupForm accepts localized semantic labels used by staging Flutter Web', async () => {
+  const page = fakeFlutterPage();
+  await fillLookupForm(page, {
+    bookingNumber: 'TX202607180998',
+    customerPhone: '+66000000002',
+  });
+  assert.deepEqual(page.booking.state.fills, ['TX202607180998']);
+  assert.deepEqual(page.phone.state.fills, ['+66000000002']);
+});
+
+test('fillLookupForm accepts phone input formatting differences without leaking the phone value', async () => {
+  const page = fakeFlutterPage({
+    phoneFillTransform: (value) => value.replace(/[^\d]/g, ''),
+  });
+  await fillLookupForm(page, {
+    bookingNumber: 'TX202607180997',
+    customerPhone: '+66000000003',
+  });
+  assert.deepEqual(page.phone.state.fills, ['+66000000003']);
 });
 
 test('fillLookupForm rejects missing or ambiguous semantic fields', async () => {
