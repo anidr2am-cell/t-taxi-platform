@@ -1483,7 +1483,8 @@ class BookingRepository {
           bda.driver_vehicle_id,
           bda.status,
           bda.is_active,
-          bda.assignment_reason
+          bda.assignment_reason,
+          bda.accepted_at
         FROM booking_driver_assignments bda
         WHERE bda.booking_id = ?
           AND bda.is_active = 1
@@ -1492,6 +1493,38 @@ class BookingRepository {
         FOR UPDATE
       `,
       [bookingId],
+    );
+    return rows[0] || null;
+  }
+
+  async acceptDriverAssignment(conn, assignmentId) {
+    const [result] = await conn.query(
+      `
+        UPDATE booking_driver_assignments
+        SET
+          status = 'ACCEPTED',
+          accepted_at = COALESCE(accepted_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND status = 'ASSIGNED'
+          AND is_active = 1
+          AND deleted_at IS NULL
+      `,
+      [assignmentId],
+    );
+    if (result.affectedRows !== 1) return null;
+
+    const [rows] = await conn.query(
+      `
+        SELECT id, driver_id, status, accepted_at
+        FROM booking_driver_assignments
+        WHERE id = ?
+          AND is_active = 1
+          AND deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [assignmentId],
     );
     return rows[0] || null;
   }

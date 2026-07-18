@@ -414,6 +414,19 @@ test('releaseAssignment rejects wrong driver and started trip', async () => {
   );
 });
 
+test('releaseAssignment keeps existing compatibility for ACCEPTED assignment', async () => {
+  const { service, conn, calls } = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ACCEPTED', is_active: 1 },
+  });
+
+  const result = await service.releaseAssignment(42, 'TX202607130001');
+
+  assert.equal(result.released, true);
+  assert.equal(conn.committed, true);
+  assert.equal(calls.deactivatedAssignments.length, 1);
+});
+
 test('releaseAssignment duplicate request returns conflict without reopening again', async () => {
   const { service, conn, calls } = createHarness({
     booking: { status: BOOKING_STATUS.OPEN },
