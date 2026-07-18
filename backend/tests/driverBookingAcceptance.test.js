@@ -18,7 +18,9 @@ const container = require('../src/helpers/container');
 const app = require('../src/app');
 
 const BOOKING_NUMBER = 'TX202607180001';
-const ACCEPTED_AT = new Date('2026-07-18T15:30:00.000Z');
+// mysql2 parses the Bangkok DATETIME digits using the connection's +00:00
+// timezone, so 22:30 is represented as a Date whose UTC digits are 22:30.
+const ACCEPTED_AT = new Date('2026-07-18T22:30:00.000Z');
 
 function sign(role = 'DRIVER', id = 44) {
   return jwt.sign(
@@ -117,7 +119,7 @@ test('accepts own ASSIGNED assignment and keeps booking DRIVER_ASSIGNED', async 
 });
 
 test('repeated acceptance is idempotent and preserves accepted_at', async () => {
-  const acceptedAt = new Date('2026-07-18T14:00:00.000Z');
+  const acceptedAt = '2026-07-18 21:00:00';
   const { service, calls } = createHarness({
     assignment: { id: 77, driver_id: 7, status: 'ACCEPTED', accepted_at: acceptedAt },
   });
@@ -125,9 +127,55 @@ test('repeated acceptance is idempotent and preserves accepted_at', async () => 
   const result = await service.acceptBooking(44, BOOKING_NUMBER);
 
   assert.equal(result.idempotent, true);
-  assert.equal(result.acceptedAt, acceptedAt.toISOString());
+  assert.equal(result.acceptedAt, '2026-07-18T14:00:00.000Z');
   assert.equal(calls.accepted.length, 0);
   assert.equal(calls.activities.length, 0);
+});
+
+test('converts mysql2 Date accepted_at from Bangkok wall clock to UTC ISO', () => {
+  const { service } = createHarness();
+
+  assert.equal(
+    service.acceptedAtIso(new Date('2026-07-18T22:30:00.000Z')),
+    '2026-07-18T15:30:00.000Z',
+  );
+});
+
+test('converts timezone-less MySQL accepted_at from Bangkok wall clock to UTC ISO', () => {
+  const { service } = createHarness();
+
+  assert.equal(
+    service.acceptedAtIso('2026-07-18 22:30:00'),
+    '2026-07-18T15:30:00.000Z',
+  );
+  assert.equal(
+    service.acceptedAtIso('2026-07-18T22:30:00'),
+    '2026-07-18T15:30:00.000Z',
+  );
+});
+
+test('does not shift accepted_at strings that already declare UTC or an offset', () => {
+  const { service } = createHarness();
+
+  assert.equal(
+    service.acceptedAtIso('2026-07-18T15:30:00.000Z'),
+    '2026-07-18T15:30:00.000Z',
+  );
+  assert.equal(
+    service.acceptedAtIso('2026-07-18T22:30:00+07:00'),
+    '2026-07-18T15:30:00.000Z',
+  );
+});
+
+test('rejects missing or invalid accepted_at values', () => {
+  const { service } = createHarness();
+
+  for (const value of [null, '', 'not-a-date', new Date('invalid')]) {
+    assert.throws(
+      () => service.acceptedAtIso(value),
+      /Accepted assignment is missing accepted_at/,
+    );
+  }
 });
 
 test('hides another driver assignment as BOOKING_NOT_FOUND', async () => {
@@ -211,7 +259,7 @@ test('conditional update race resolves to idempotent accepted state', async () =
   const result = await harness.service.acceptBooking(44, BOOKING_NUMBER);
 
   assert.equal(result.idempotent, true);
-  assert.equal(result.acceptedAt, ACCEPTED_AT.toISOString());
+  assert.equal(result.acceptedAt, '2026-07-18T15:30:00.000Z');
   assert.equal(harness.calls.activities.length, 0);
 });
 

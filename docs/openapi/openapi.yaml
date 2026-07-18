@@ -5661,7 +5661,7 @@ components:
         acceptedAt:
           type: string
           format: date-time
-          description: UTC timestamp recorded by the database on first acceptance.
+          description: UTC ISO-8601 timestamp converted from the Asia/Bangkok database DATETIME recorded on first acceptance.
         idempotent:
           type: boolean
           description: True when the assignment had already been accepted.

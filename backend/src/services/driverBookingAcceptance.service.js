@@ -3,6 +3,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const ROLES = require('../constants/roles');
+const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
 
 class DriverBookingAcceptanceService {
   constructor(pool, bookingRepository, driverRepository, driverJobService) {
@@ -36,14 +37,8 @@ class DriverBookingAcceptanceService {
   }
 
   acceptedAtIso(value) {
-    if (value instanceof Date) return value.toISOString();
-    if (typeof value === 'string' && value.trim()) {
-      const normalized = value.includes('T')
-        ? value
-        : `${value.replace(' ', 'T')}Z`;
-      const parsed = new Date(normalized);
-      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
-    }
+    const parsedMs = parseServiceDateTimeToMs(value);
+    if (parsedMs != null) return new Date(parsedMs).toISOString();
     throw new Error('Accepted assignment is missing accepted_at');
   }
 
