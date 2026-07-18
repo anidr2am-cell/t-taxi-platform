@@ -1,4 +1,4 @@
-name: Staging Customer Location E2E
+name: Staging Settlement Lifecycle E2E
 
 "on":
   workflow_dispatch:
@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  customer-location-e2e:
-    name: Run staging customer driver location E2E
+  settlement-lifecycle-e2e:
+    name: Run staging settlement lifecycle E2E
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging-e2e
@@ -47,10 +47,6 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Install Playwright Chromium
-        working-directory: backend
-        run: npx playwright install --with-deps chromium
-
       - name: Verify required staging E2E secrets
         shell: bash
         run: |
@@ -70,16 +66,16 @@ jobs:
           done
           exit "$missing"
 
-      - name: Run E2E tool tests
+      - name: Run settlement E2E tool tests
         working-directory: backend
-        run: npm run test:e2e-tools
+        run: npm run test:settlement-e2e-tools
 
-      - name: Run staging E2E dry-run without logging secrets
+      - name: Run staging settlement E2E dry-run without logging secrets
         working-directory: backend
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/tride-e2e"
-          npm run e2e:staging:customer-location:dry-run > "$RUNNER_TEMP/tride-e2e/dry-run.json"
+          npm run e2e:staging:settlement:dry-run > "$RUNNER_TEMP/tride-e2e/dry-run.json"
           node <<'NODE'
           const fs = require('node:fs');
           const text = fs.readFileSync(`${process.env.RUNNER_TEMP}/tride-e2e/dry-run.json`, 'utf8');
@@ -90,9 +86,9 @@ jobs:
             target: dryRun.target,
             frontendHost: dryRun.frontendHost,
             backendHost: dryRun.backendHost,
-            viewportCount: Array.isArray(dryRun.viewports) ? dryRun.viewports.length : 0,
-            activeStatusCount: Array.isArray(dryRun.activeStatuses) ? dryRun.activeStatuses.length : 0,
-            terminalStatusCount: Array.isArray(dryRun.terminalStatuses) ? dryRun.terminalStatuses.length : 0,
+            marker: dryRun.marker,
+            expectedCommissionAmount: dryRun.expectedCommissionAmount,
+            expectedCurrency: dryRun.expectedCurrency,
           }));
           NODE
           rm -f "$RUNNER_TEMP/tride-e2e/dry-run.json"
@@ -103,25 +99,25 @@ jobs:
           curl --fail --silent --show-error --output /dev/null https://trider.taxi/api/v1/health
           curl --fail --silent --show-error --output /dev/null https://trider.taxi/
 
-      - name: Run live staging customer location E2E
+      - name: Run live staging settlement lifecycle E2E
         working-directory: backend
-        run: npm run e2e:staging:customer-location
+        run: npm run e2e:staging:settlement
 
-      - name: Verify redacted E2E manifest exists
+      - name: Verify redacted settlement E2E manifest exists
         if: always()
         shell: bash
         run: |
-          manifest="$TRIDE_E2E_ARTIFACT_DIR/customer-location-e2e-manifest.json"
+          manifest="$TRIDE_E2E_ARTIFACT_DIR/settlement-lifecycle-e2e-manifest.json"
           if [ ! -f "$manifest" ]; then
-            echo "::error::Expected redacted E2E manifest was not created"
+            echo "::error::Expected redacted settlement E2E manifest was not created"
             exit 1
           fi
           if [ ! -s "$manifest" ]; then
-            echo "::error::Expected redacted E2E manifest is empty"
+            echo "::error::Expected redacted settlement E2E manifest is empty"
             exit 1
           fi
 
-      - name: Validate redacted E2E manifest schema
+      - name: Validate redacted settlement E2E manifest schema
         if: always()
         shell: bash
         run: |
@@ -130,14 +126,16 @@ jobs:
           const path = require('node:path');
           const manifestPath = path.join(
             process.env.TRIDE_E2E_ARTIFACT_DIR,
-            'customer-location-e2e-manifest.json',
+            'settlement-lifecycle-e2e-manifest.json',
           );
           const allowed = new Set([
             'runId',
-            'viewport',
             'bookingNumber',
-            'customerName',
-            'marker',
+            'settlementStatus',
+            'receiptStatus',
+            'approvalStatus',
+            'approvalCandidateVerified',
+            'bookingFinalStatus',
             'preparationStatus',
             'preparationError',
             'cleanupStatus',
@@ -148,15 +146,18 @@ jobs:
             'adminToken',
             'driverToken',
             'password',
+            'customerPhone',
+            'receiptUrl',
+            'receiptURL',
+            'storagePath',
             'authori' + 'zation',
             'cookie',
             'headers',
-            'localStorage',
-            'sessionStorage',
+            'rawReceiptBytes',
           ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           if (!Array.isArray(manifest)) {
-            console.error('::error::Redacted E2E manifest must be an array');
+            console.error('::error::Redacted settlement E2E manifest must be an array');
             process.exit(1);
           }
           const findings = [];
@@ -166,17 +167,29 @@ jobs:
                 findings.push(`entry ${index} field ${key}`);
               }
             }
+            if (entry.approvalCandidateVerified !== true) {
+              findings.push(`entry ${index} approval candidate was not verified`);
+            }
+            if (entry.bookingFinalStatus !== 'COMPLETED') {
+              findings.push(`entry ${index} booking was not completed`);
+            }
+            if (entry.settlementStatus !== 'APPROVED') {
+              findings.push(`entry ${index} settlement was not approved`);
+            }
+            if (entry.cleanupStatus !== 'archived') {
+              findings.push(`entry ${index} fixture was not archived`);
+            }
           });
           if (findings.length) {
             for (const finding of findings) {
-              console.error(`::error::Unexpected redacted manifest field: ${finding}`);
+              console.error(`::error::Unexpected redacted settlement manifest state: ${finding}`);
             }
             process.exit(1);
           }
-          console.log('Redacted E2E manifest schema validation passed');
+          console.log('Redacted settlement E2E manifest schema validation passed');
           NODE
 
-      - name: Scan redacted E2E artifacts for secret-like values
+      - name: Scan redacted settlement E2E artifacts for secret-like values
         if: always()
         shell: bash
         run: |
@@ -189,6 +202,10 @@ jobs:
             ['guest-access-token-assignment', new RegExp('guestAccess' + 'Token\\s*[=:]\\s*[A-Za-z0-9._-]+')],
             ['e2e-admin-password-name', /TRIDE_E2E_ADMIN_PASSWORD/],
             ['e2e-driver-password-name', /TRIDE_E2E_DRIVER_PASSWORD/],
+            ['customer-phone-field', /customerPhone/],
+            ['receipt-url-field', /receiptUrl|receiptURL|signedUrl|signedURL/],
+            ['storage-path-field', /storagePath|\/srv\/tride\/uploads|\\\\uploads\\\\/],
+            ['raw-receipt-bytes-field', /rawReceiptBytes|E2E TEST RECEIPT/],
             ['private-key', /BEGIN .*PRIVATE KEY/],
             ['google-api-key', /AIza[0-9A-Za-z_-]{20,}/],
           ];
@@ -216,10 +233,10 @@ jobs:
             }
             process.exit(1);
           }
-          console.log('E2E artifact secret scan passed');
+          console.log('Settlement E2E artifact secret scan passed');
           NODE
 
-      - name: Write safe E2E summary
+      - name: Write safe settlement E2E summary
         if: always()
         shell: bash
         run: |
@@ -228,18 +245,23 @@ jobs:
           const path = require('node:path');
           const manifestPath = path.join(
             process.env.TRIDE_E2E_ARTIFACT_DIR,
-            'customer-location-e2e-manifest.json',
+            'settlement-lifecycle-e2e-manifest.json',
           );
           const summary = process.env.GITHUB_STEP_SUMMARY;
-          const lines = ['## Staging customer location E2E', ''];
+          const lines = ['## Staging settlement lifecycle E2E', ''];
           if (fs.existsSync(manifestPath)) {
             const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            const completed = manifest.filter((item) => item.bookingFinalStatus === 'COMPLETED').length;
+            const approved = manifest.filter((item) => item.settlementStatus === 'APPROVED').length;
+            const verified = manifest.filter((item) => item.approvalCandidateVerified === true).length;
             const archived = manifest.filter((item) => item.cleanupStatus === 'archived').length;
             const cleanupFailures = manifest.filter((item) => item.cleanupStatus === 'failed' || item.cleanupError).length;
             lines.push(`- Fixtures: ${manifest.length}`);
+            lines.push(`- Approval candidates verified: ${verified}`);
+            lines.push(`- Completed bookings: ${completed}`);
+            lines.push(`- Approved settlements: ${approved}`);
             lines.push(`- Archived fixtures: ${archived}`);
             lines.push(`- Cleanup failures: ${cleanupFailures}`);
-            lines.push(`- Viewports: ${manifest.map((item) => item.viewport).filter(Boolean).join(', ') || 'none'}`);
           } else {
             lines.push('- No redacted manifest was created.');
           }
@@ -247,11 +269,11 @@ jobs:
           fs.appendFileSync(summary, `${lines.join('\n')}\n`);
           NODE
 
-      - name: Upload redacted E2E artifacts
+      - name: Upload redacted settlement E2E artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: staging-customer-location-e2e-redacted
-          path: ${{ github.workspace }}/e2e-artifacts/customer-location-e2e-manifest.json
+          name: staging-settlement-lifecycle-e2e-redacted
+          path: ${{ github.workspace }}/e2e-artifacts/settlement-lifecycle-e2e-manifest.json
           if-no-files-found: error
           retention-days: 7
