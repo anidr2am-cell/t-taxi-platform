@@ -27,6 +27,7 @@ function row(overrides = {}) {
   return {
     booking_number: 'TX202607010001',
     status: 'DRIVER_ASSIGNED',
+    assignment_status: 'ASSIGNED',
     pickup_date: '2026-07-01',
     pickup_time: '09:30',
     origin_address: 'BKK Airport',
@@ -58,7 +59,16 @@ test('DRIVER can access today endpoint', async () => {
   container.register('driverJobService', () => ({
     async listToday(driverUserId) {
       assert.equal(driverUserId, 44);
-      return { date: '2026-07-01', items: [] };
+      return {
+        date: '2026-07-01',
+        items: [
+          {
+            bookingNumber: 'TX209901010001',
+            status: 'DRIVER_ASSIGNED',
+            assignmentStatus: 'ASSIGNED',
+          },
+        ],
+      };
     },
   }));
 
@@ -67,7 +77,32 @@ test('DRIVER can access today endpoint', async () => {
     .set('Authorization', `Bearer ${sign('DRIVER', 44)}`);
 
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body.data, { date: '2026-07-01', items: [] });
+  assert.equal(res.body.data.items[0].bookingNumber, 'TX209901010001');
+  assert.equal(res.body.data.items[0].status, 'DRIVER_ASSIGNED');
+  assert.equal(res.body.data.items[0].assignmentStatus, 'ASSIGNED');
+});
+
+test('DRIVER detail endpoint returns accepted assignment status', async () => {
+  container.register('driverJobService', () => ({
+    async getDetail(driverUserId, bookingNumber) {
+      assert.equal(driverUserId, 44);
+      assert.equal(bookingNumber, 'TX209901010001');
+      return {
+        bookingNumber,
+        status: 'DRIVER_ASSIGNED',
+        assignmentStatus: 'ACCEPTED',
+      };
+    },
+  }));
+
+  const res = await request(app)
+    .get('/api/v1/driver/bookings/TX209901010001')
+    .set('Authorization', `Bearer ${sign('DRIVER', 44)}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.bookingNumber, 'TX209901010001');
+  assert.equal(res.body.data.status, 'DRIVER_ASSIGNED');
+  assert.equal(res.body.data.assignmentStatus, 'ACCEPTED');
 });
 
 test('non-DRIVER is rejected', async () => {
@@ -95,6 +130,7 @@ test('repository filters only active assigned bookings for this driver and exclu
 
   const { sql, params } = calls[0];
   assert.match(sql, /d\.user_id = \?/);
+  assert.match(sql, /bda\.status AS assignment_status/);
   assert.match(sql, /bda\.is_active = 1/);
   assert.match(sql, /bda\.status IN \('ASSIGNED', 'ACCEPTED'\)/);
   assert.match(sql, /b\.status <> 'CANCELLED'/);
@@ -117,6 +153,7 @@ test('repository detail uses active assignment so reassigned bookings are hidden
 
   const { sql, params } = calls[0];
   assert.match(sql, /d\.user_id = \?/);
+  assert.match(sql, /bda\.status AS assignment_status/);
   assert.match(sql, /bda\.is_active = 1/);
   assert.match(sql, /bda\.deleted_at IS NULL/);
   assert.match(sql, /bda\.status IN \('ASSIGNED', 'ACCEPTED'\)/);
@@ -151,6 +188,7 @@ test('today list sorting is requested from repository and mapped concisely', asy
   const result = await service.listToday(44, new Date('2026-07-01T01:00:00.000Z'));
 
   assert.equal(result.items[0].bookingNumber, 'TX202607010001');
+  assert.equal(result.items[0].assignmentStatus, 'ASSIGNED');
   assert.equal(result.items[0].pickupDate, '2026-07-01');
   assert.equal(result.items[0].pickupTime, '09:30');
   assert.equal(result.items[0].passengerCount, 3);
@@ -170,6 +208,7 @@ test('driver can access assigned booking detail', async () => {
   const detail = await service.getDetail(44, 'TX202607010001');
 
   assert.equal(detail.bookingNumber, 'TX202607010001');
+  assert.equal(detail.assignmentStatus, 'ASSIGNED');
   assert.equal(detail.customerPhone, '+66123456789');
   assert.equal(detail.passengers.adults, 2);
   assert.equal(detail.luggage.carriers24InchPlus, 2);
@@ -200,13 +239,14 @@ test('driver can read completed booking detail after assignment closes', async (
     async findDriverTerminalBookingByNumber(driverUserId, bookingNumber) {
       assert.equal(driverUserId, 44);
       assert.equal(bookingNumber, 'TX202607010001');
-      return row({ status: 'COMPLETED' });
+      return row({ status: 'COMPLETED', assignment_status: 'COMPLETED' });
     },
   });
 
   const detail = await service.getDetail(44, 'TX202607010001');
 
   assert.equal(detail.status, 'COMPLETED');
+  assert.equal(detail.assignmentStatus, 'COMPLETED');
   assert.deepEqual(detail.allowedActions, []);
 });
 
@@ -223,6 +263,7 @@ test('repository terminal detail uses completed assignment for this driver only'
 
   const { sql, params } = calls[0];
   assert.match(sql, /d\.user_id = \?/);
+  assert.match(sql, /bda\.status AS assignment_status/);
   assert.match(sql, /bda\.status = 'COMPLETED'/);
   assert.match(sql, /b\.status IN \('COMPLETED', 'CANCELLED', 'NO_SHOW'\)/);
   assert.deepEqual(params, [44, 'TX202607010001']);
@@ -286,4 +327,17 @@ test('driver job payment summary keeps unsafe expected income nullable', () => {
   assert.equal(summary.companyCommissionAmount, 1500);
   assert.equal(summary.driverExpectedIncomeAmount, null);
   assert.equal(summary.driverExpectedIncomeCurrency, null);
+});
+
+test('driver job mapping preserves assignment status without guessing', () => {
+  const service = new DriverJobService({});
+
+  const statuses = ['ASSIGNED', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELLED'];
+  for (const status of statuses) {
+    const result = service.mapBase(row({ assignment_status: status }));
+    assert.equal(result.assignmentStatus, status);
+  }
+  assert.equal(service.mapBase(row({ assignment_status: null })).assignmentStatus, null);
+  const unknown = service.mapBase(row({ assignment_status: 'FUTURE_STATUS' }));
+  assert.equal(unknown.assignmentStatus, 'FUTURE_STATUS');
 });

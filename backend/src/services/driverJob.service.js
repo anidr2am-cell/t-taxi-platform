@@ -132,6 +132,7 @@ class DriverJobService {
     return {
       bookingNumber: row.booking_number,
       status: row.status,
+      assignmentStatus: row.assignment_status ?? null,
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,
