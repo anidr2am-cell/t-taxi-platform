@@ -79,6 +79,7 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.frontend
       args:
+        APP_ENV: production
         API_BASE_URL: ${TRIDE_API_BASE_URL:-http://localhost:3100}
         SOCKET_URL: ${TRIDE_SOCKET_URL:-}
     container_name: tride-frontend
