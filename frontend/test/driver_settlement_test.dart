@@ -191,9 +191,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.uploadCalls, 1);
     expect(find.textContaining('RECEIPT_SUBMITTED'), findsOneWidget);
-    expect(find.text('฿120'), findsOneWidget);
-    expect(find.text('฿1,080'), findsOneWidget);
-    expect(find.text('฿1,200'), findsOneWidget);
+    expect(find.text('THB 120'), findsOneWidget);
+    expect(find.text('THB 1,080'), findsOneWidget);
+    expect(find.text('THB 1,200'), findsOneWidget);
   });
 
   testWidgets('driver settlement detail shows upload failure and retry', (
@@ -383,9 +383,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('฿1,500'), findsOneWidget);
-    expect(find.text('฿1,300'), findsOneWidget);
-    expect(find.textContaining('฿-'), findsNothing);
+    expect(find.text('THB 1,500'), findsOneWidget);
+    expect(find.text('THB 1,300'), findsOneWidget);
+    expect(find.textContaining('THB -'), findsNothing);
     expect(find.textContaining('기사 예상 수입'), findsNothing);
 
     await tester.pumpWidget(

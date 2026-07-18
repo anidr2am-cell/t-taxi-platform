@@ -663,9 +663,9 @@ void main() {
     expect(find.textContaining('BKK Airport'), findsOneWidget);
     expect(find.textContaining('Pattaya Hotel'), findsOneWidget);
     expect(find.textContaining('기사 예상 수입'), findsOneWidget);
-    expect(find.textContaining('฿2,200'), findsOneWidget);
+    expect(find.textContaining('THB 2,200'), findsOneWidget);
     expect(find.textContaining('고객 결제 총액'), findsOneWidget);
-    expect(find.textContaining('฿2,500'), findsOneWidget);
+    expect(find.textContaining('THB 2,500'), findsOneWidget);
     expect(find.textContaining('Claim call'), findsOneWidget);
     expect(find.textContaining('+66'), findsNothing);
   });
