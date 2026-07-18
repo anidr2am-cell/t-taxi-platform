@@ -12,10 +12,12 @@ const {
   EXPECTED_COMMISSION_AMOUNT,
   EXPECTED_CURRENCY,
   assertMoneyFields,
+  assertSettlementApprovalCandidate,
   assertSettlementCleanupCandidate,
   buildRunFailure,
   createSyntheticReceiptPng,
   parseArgs,
+  runLifecycle,
   writeManifest,
 } = require('./run');
 
@@ -55,6 +57,19 @@ function serverBooking(fixture, overrides = {}) {
     bookingNumber: fixture.bookingNumber,
     customer: { name: fixture.customerName },
     specialRequests: fixture.marker,
+    status: 'SETTLEMENT_PENDING',
+    assignedDriver: { id: 12 },
+    ...overrides,
+  };
+}
+
+function adminSettlement(fixture, overrides = {}) {
+  return {
+    bookingNumber: fixture.bookingNumber,
+    commissionStatus: 'RECEIPT_SUBMITTED',
+    receiptStatus: 'RECEIPT_SUBMITTED',
+    canApprove: true,
+    receiptMetadata: { fileName: 'settlement-e2e-receipt.png', mimeType: 'image/png' },
     ...overrides,
   };
 }
@@ -145,6 +160,225 @@ test('cleanup candidate requires matching booking, customer, marker, and run ID'
   );
 });
 
+test('approval candidate requires current E2E booking, receipt, and assigned staging driver', () => {
+  const fixture = cleanupFixture();
+  assert.equal(
+    assertSettlementApprovalCandidate(fixture, serverBooking(fixture), adminSettlement(fixture), 12),
+    true,
+  );
+});
+
+test('approval candidate blocks booking number mismatch before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { bookingNumber: 'TX202607189999' }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /booking number mismatch/,
+  );
+});
+
+test('approval candidate blocks non-E2E customer before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { customer: { name: 'Real Customer' } }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /non-E2E customer/,
+  );
+});
+
+test('approval candidate blocks customer run ID mismatch before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { customer: { name: '[E2E] Settlement Customer E2E-OTHER' } }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /customer run ID mismatch/,
+  );
+});
+
+test('approval candidate blocks missing marker before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { specialRequests: 'E2E-SETTLEMENT-20260718T010203-abcd' }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /missing E2E marker/,
+  );
+});
+
+test('approval candidate blocks marker run ID mismatch before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { specialRequests: `${E2E_MARKER} E2E-OTHER` }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /marker run ID mismatch/,
+  );
+});
+
+test('approval candidate blocks non-settlement-pending booking before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { status: 'PICKED_UP' }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /booking status PICKED_UP/,
+  );
+});
+
+test('approval candidate blocks non-submitted commission status before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture),
+      adminSettlement(fixture, { commissionStatus: 'DUE' }),
+      12,
+    ),
+    /commissionStatus DUE/,
+  );
+});
+
+test('approval candidate blocks non-submitted receipt status before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture),
+      adminSettlement(fixture, { receiptStatus: 'MISSING' }),
+      12,
+    ),
+    /receiptStatus MISSING/,
+  );
+});
+
+test('approval candidate blocks settlement booking mismatch before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture),
+      adminSettlement(fixture, { bookingNumber: 'TX202607189999' }),
+      12,
+    ),
+    /settlement booking number mismatch/,
+  );
+});
+
+test('approval candidate blocks missing receipt metadata before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture),
+      adminSettlement(fixture, { receiptMetadata: null }),
+      12,
+    ),
+    /missing receipt metadata/,
+  );
+});
+
+test('approval candidate blocks canApprove=false before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture),
+      adminSettlement(fixture, { canApprove: false }),
+      12,
+    ),
+    /canApprove=false/,
+  );
+});
+
+test('approval candidate blocks assigned driver mismatch before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { assignedDriver: { id: 99 } }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /assigned driver mismatch/,
+  );
+});
+
+test('approval candidate blocks missing assigned driver before approval', () => {
+  const fixture = cleanupFixture();
+  assert.throws(
+    () => assertSettlementApprovalCandidate(
+      fixture,
+      serverBooking(fixture, { assignedDriver: null }),
+      adminSettlement(fixture),
+      12,
+    ),
+    /missing assigned driver ID/,
+  );
+});
+
+test('approval orchestration does not call approve when server identity fails', async () => {
+  const registry = new FixtureRegistry();
+  const config = { driverId: 12 };
+  let approveCalls = 0;
+  await assert.rejects(
+    () => runLifecycle(config, {}, registry, {
+      prepareFixture: async (_config, runId, _auth, fixtureRegistry) => {
+        const fixture = cleanupFixture({ runId, adminToken: 'admin-token', driverToken: 'driver-token' });
+        fixtureRegistry.add({ ...fixture, preparationStatus: 'ready' });
+        return fixture;
+      },
+      transitionDriver: async () => ({}),
+      waitForBookingStatus: async () => ({}),
+      loadDriverSettlement: async () => ({
+        commissionStatus: 'DUE',
+        customerTotalAmount: 1300,
+        companyCommissionAmount: 200,
+        driverExpectedIncomeAmount: 1100,
+        currency: 'THB',
+        customerTotalCurrency: 'THB',
+        companyCommissionCurrency: 'THB',
+        driverExpectedIncomeCurrency: 'THB',
+      }),
+      uploadReceipt: async () => ({
+        commissionStatus: 'RECEIPT_SUBMITTED',
+        receiptStatus: 'RECEIPT_SUBMITTED',
+        receiptFileId: 123,
+      }),
+      getAdminBookingDetail: async (_config, fixture) => serverBooking(fixture, { assignedDriver: { id: 99 } }),
+      loadAdminSettlement: async (_config, fixture) => adminSettlement(fixture),
+      approveSettlement: async () => {
+        approveCalls += 1;
+        return {};
+      },
+      loadDriverStatus: async () => ({ hasActiveJob: false }),
+    }),
+    /assigned driver mismatch/,
+  );
+  assert.equal(approveCalls, 0);
+  assert.equal(registry.pendingCleanup().length, 1);
+});
+
 test('manifest allowlist excludes credentials and payment artifacts', () => {
   const registry = new FixtureRegistry();
   registry.add({
@@ -156,6 +390,7 @@ test('manifest allowlist excludes credentials and payment artifacts', () => {
     settlementStatus: 'APPROVED',
     receiptStatus: 'RECEIPT_SUBMITTED',
     approvalStatus: 'approved',
+    approvalCandidateVerified: true,
     bookingFinalStatus: 'COMPLETED',
   });
   const tempDir = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'tride-manifest-'));
@@ -164,6 +399,7 @@ test('manifest allowlist excludes credentials and payment artifacts', () => {
     const manifest = JSON.parse(require('node:fs').readFileSync(manifestPath, 'utf8'));
     assert.deepEqual(Object.keys(manifest[0]).sort(), [
       'approvalStatus',
+      'approvalCandidateVerified',
       'bookingFinalStatus',
       'bookingNumber',
       'cleanupStatus',

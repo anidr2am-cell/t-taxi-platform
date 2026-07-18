@@ -224,6 +224,100 @@ function assertSettlementCleanupCandidate(record, serverBooking) {
   return true;
 }
 
+function bookingNumberFrom(record) {
+  return String(record?.bookingNumber || record?.booking_number || record?.booking?.bookingNumber || '');
+}
+
+function customerNameFrom(serverBooking) {
+  return String(serverBooking?.customer?.name || serverBooking?.customerName || '');
+}
+
+function markerFrom(serverBooking) {
+  return [
+    serverBooking?.specialRequests,
+    serverBooking?.additionalRequests,
+    serverBooking?.luggage?.specialItems,
+    serverBooking?.requestMarker,
+  ].filter(Boolean).join(' ');
+}
+
+function assignedDriverIdFrom(serverBooking) {
+  const candidates = [
+    serverBooking?.assignedDriver?.id,
+    serverBooking?.driver?.id,
+    serverBooking?.driverId,
+    serverBooking?.driver_id,
+    serverBooking?.assignment?.driverId,
+    serverBooking?.assignment?.driver_id,
+    serverBooking?.assignment?.driver?.id,
+    serverBooking?.activeAssignment?.driverId,
+    serverBooking?.activeAssignment?.driver_id,
+    serverBooking?.activeAssignment?.driver?.id,
+  ];
+  const value = candidates.find((candidate) => candidate !== undefined && candidate !== null && candidate !== '');
+  return value === undefined ? null : Number(value);
+}
+
+function assertServerE2EBookingIdentity(fixture, serverBooking) {
+  assertCleanupCandidate(fixture);
+  if (!serverBooking || typeof serverBooking !== 'object') {
+    throw new Error(`Approval refused because server booking detail is missing for ${fixture.runId}`);
+  }
+  if (bookingNumberFrom(serverBooking) !== fixture.bookingNumber) {
+    throw new Error(`Approval refused booking number mismatch for ${fixture.runId}`);
+  }
+  const serverCustomerName = customerNameFrom(serverBooking);
+  if (!serverCustomerName.startsWith('[E2E]')) {
+    throw new Error(`Approval refused non-E2E customer for ${fixture.runId}`);
+  }
+  if (!serverCustomerName.includes(fixture.runId)) {
+    throw new Error(`Approval refused customer run ID mismatch for ${fixture.runId}`);
+  }
+  const marker = markerFrom(serverBooking);
+  if (!marker.includes(E2E_MARKER)) {
+    throw new Error(`Approval refused missing E2E marker for ${fixture.runId}`);
+  }
+  if (!marker.includes(fixture.runId)) {
+    throw new Error(`Approval refused marker run ID mismatch for ${fixture.runId}`);
+  }
+  return true;
+}
+
+function assertSettlementApprovalCandidate(fixture, serverBooking, adminSettlement, expectedDriverId) {
+  assertServerE2EBookingIdentity(fixture, serverBooking);
+  const settlementBookingNumber = bookingNumberFrom(adminSettlement);
+  if (settlementBookingNumber && settlementBookingNumber !== fixture.bookingNumber) {
+    throw new Error(`Approval refused settlement booking number mismatch for ${fixture.runId}`);
+  }
+  if (serverBooking.status !== 'SETTLEMENT_PENDING') {
+    throw new Error(`Approval refused booking status ${serverBooking.status}, expected SETTLEMENT_PENDING for ${fixture.runId}`);
+  }
+  if (adminSettlement?.canApprove !== true) {
+    throw new Error(`Approval refused canApprove=false for ${fixture.runId}`);
+  }
+  if (adminSettlement?.commissionStatus !== 'RECEIPT_SUBMITTED') {
+    throw new Error(
+      `Approval refused commissionStatus ${adminSettlement?.commissionStatus}, expected RECEIPT_SUBMITTED for ${fixture.runId}`,
+    );
+  }
+  if (adminSettlement?.receiptStatus !== 'RECEIPT_SUBMITTED') {
+    throw new Error(
+      `Approval refused receiptStatus ${adminSettlement?.receiptStatus}, expected RECEIPT_SUBMITTED for ${fixture.runId}`,
+    );
+  }
+  if (!adminSettlement?.receiptMetadata) {
+    throw new Error(`Approval refused missing receipt metadata for ${fixture.runId}`);
+  }
+  const assignedDriverId = assignedDriverIdFrom(serverBooking);
+  if (!Number.isFinite(assignedDriverId)) {
+    throw new Error(`Approval refused missing assigned driver ID for ${fixture.runId}`);
+  }
+  if (Number(assignedDriverId) !== Number(expectedDriverId)) {
+    throw new Error(`Approval refused assigned driver mismatch for ${fixture.runId}`);
+  }
+  return true;
+}
+
 async function cleanupFixtureVerified(config, fixture, registry) {
   if (!fixture?.bookingNumber) return;
   const serverBooking = await getAdminBookingDetail(config, fixture);
@@ -368,23 +462,35 @@ function assertSettlementStatus(settlement, expected, label) {
   }
 }
 
-async function runLifecycle(config, auth, registry) {
+async function runLifecycle(config, auth, registry, overrides = {}) {
+  const api = {
+    prepareFixture,
+    transitionDriver,
+    waitForBookingStatus,
+    loadDriverSettlement,
+    uploadReceipt,
+    getAdminBookingDetail,
+    loadAdminSettlement,
+    approveSettlement,
+    loadDriverStatus,
+    ...overrides,
+  };
   const runId = createRunId();
-  const fixture = await prepareFixture(config, runId, auth, registry);
+  const fixture = await api.prepareFixture(config, runId, auth, registry);
 
-  await transitionDriver(config, fixture, 'start-route');
-  await waitForBookingStatus(config, fixture, 'ON_ROUTE');
-  await transitionDriver(config, fixture, 'arrive');
-  await waitForBookingStatus(config, fixture, 'DRIVER_ARRIVED');
-  await transitionDriver(config, fixture, 'mark-picked-up');
-  await waitForBookingStatus(config, fixture, 'PICKED_UP');
+  await api.transitionDriver(config, fixture, 'start-route');
+  await api.waitForBookingStatus(config, fixture, 'ON_ROUTE');
+  await api.transitionDriver(config, fixture, 'arrive');
+  await api.waitForBookingStatus(config, fixture, 'DRIVER_ARRIVED');
+  await api.transitionDriver(config, fixture, 'mark-picked-up');
+  await api.waitForBookingStatus(config, fixture, 'PICKED_UP');
   registry.update(runId, { pickedUp: true });
 
-  await transitionDriver(config, fixture, 'end-trip');
-  await waitForBookingStatus(config, fixture, 'SETTLEMENT_PENDING');
+  await api.transitionDriver(config, fixture, 'end-trip');
+  await api.waitForBookingStatus(config, fixture, 'SETTLEMENT_PENDING');
   registry.update(runId, { bookingFinalStatus: 'SETTLEMENT_PENDING' });
 
-  const due = await loadDriverSettlement(config, fixture);
+  const due = await api.loadDriverSettlement(config, fixture);
   assertSettlementStatus(due, 'DUE', 'Driver due settlement');
   const money = assertMoneyFields(due);
   registry.update(runId, {
@@ -395,7 +501,7 @@ async function runLifecycle(config, auth, registry) {
     driverExpectedIncome: money.expectedIncome,
   });
 
-  const uploaded = await uploadReceipt(config, fixture);
+  const uploaded = await api.uploadReceipt(config, fixture);
   assertSettlementStatus(uploaded, 'RECEIPT_SUBMITTED', 'Uploaded driver settlement');
   if (uploaded.receiptStatus !== 'RECEIPT_SUBMITTED' || !uploaded.receiptFileId) {
     throw new Error('Receipt upload did not return submitted receipt metadata');
@@ -406,19 +512,19 @@ async function runLifecycle(config, auth, registry) {
     receiptUploadStatus: 'submitted',
   });
 
-  const adminDetail = await loadAdminSettlement(config, fixture);
-  assertSettlementStatus(adminDetail, 'RECEIPT_SUBMITTED', 'Admin settlement detail');
-  if (adminDetail.canApprove !== true || !adminDetail.receiptMetadata) {
-    throw new Error('Admin settlement detail did not expose approvable receipt metadata');
-  }
+  const approvalBooking = await api.getAdminBookingDetail(config, fixture);
+  const approvalSettlement = await api.loadAdminSettlement(config, fixture);
+  assertSettlementApprovalCandidate(fixture, approvalBooking, approvalSettlement, config.driverId);
+  registry.update(runId, { approvalCandidateVerified: true });
+  console.log(`Approval candidate verified for ${fixture.bookingNumber}`);
 
-  const approved = await approveSettlement(config, fixture);
+  const approved = await api.approveSettlement(config, fixture);
   assertSettlementStatus(approved, 'APPROVED', 'Admin approved settlement');
   if (approved.status !== 'COMPLETED') {
     throw new Error(`Approved booking status was ${approved.status}, expected COMPLETED`);
   }
-  await waitForBookingStatus(config, fixture, 'COMPLETED');
-  const finalDriverStatus = await loadDriverStatus(config, fixture.driverToken);
+  await api.waitForBookingStatus(config, fixture, 'COMPLETED');
+  const finalDriverStatus = await api.loadDriverStatus(config, fixture.driverToken);
   if (finalDriverStatus.hasActiveJob === true) {
     throw new Error('Driver still has an active job after settlement approval');
   }
@@ -463,6 +569,7 @@ function writeManifest(config, registry, name = 'settlement-lifecycle-e2e-manife
     settlementStatus: record.settlementStatus,
     receiptStatus: record.receiptStatus,
     approvalStatus: record.approvalStatus,
+    approvalCandidateVerified: record.approvalCandidateVerified,
     bookingFinalStatus: record.bookingFinalStatus,
     preparationStatus: record.preparationStatus,
     preparationError: record.preparationError,
@@ -546,6 +653,8 @@ module.exports = {
   EXPECTED_COMMISSION_AMOUNT,
   EXPECTED_CURRENCY,
   assertMoneyFields,
+  assertServerE2EBookingIdentity,
+  assertSettlementApprovalCandidate,
   assertSettlementCleanupCandidate,
   buildRunFailure,
   createSyntheticReceiptPng,
