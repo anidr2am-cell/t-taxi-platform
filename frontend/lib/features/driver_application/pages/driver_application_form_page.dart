@@ -9,6 +9,12 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/driver_application_models.dart';
 import '../services/driver_application_api_service.dart';
+import '../widgets/driver_registration_photo_upload_card.dart';
+
+typedef DriverApplicationSingleFilePicker =
+    Future<DriverApplicationUploadFile?> Function(bool imageOnly);
+typedef DriverApplicationVehiclePhotosPicker =
+    Future<List<DriverApplicationUploadFile>?> Function();
 
 class DriverApplicationFormPage extends StatefulWidget {
   const DriverApplicationFormPage({
@@ -17,12 +23,16 @@ class DriverApplicationFormPage extends StatefulWidget {
     this.resubmitApplicationNumber,
     this.resubmitToken,
     @visibleForTesting this.debugSubmitDraft,
+    @visibleForTesting this.debugPickOne,
+    @visibleForTesting this.debugPickVehiclePhotos,
   });
 
   final DriverApplicationApiService? api;
   final String? resubmitApplicationNumber;
   final String? resubmitToken;
   final DriverApplicationDraft? debugSubmitDraft;
+  final DriverApplicationSingleFilePicker? debugPickOne;
+  final DriverApplicationVehiclePhotosPicker? debugPickVehiclePhotos;
 
   @override
   State<DriverApplicationFormPage> createState() =>
@@ -63,12 +73,18 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     'serviceAreas': GlobalKey(),
     'personalDataConsent': GlobalKey(),
     'driverTermsConsent': GlobalKey(),
+    'lineQr': GlobalKey(),
+    'vehiclePhotos': GlobalKey(),
+    'insuranceCertificate': GlobalKey(),
+    'vehicleRegistration': GlobalKey(),
+    'taxCertificate': GlobalKey(),
   };
 
   bool _loadingVehicles = true;
   bool _submitting = false;
   String? _error;
   Map<String, String> _fieldErrors = const {};
+  Map<String, String> _fileErrors = const {};
   List<DriverApplicationVehicleType> _vehicleTypes = [];
   String? _vehicleTypeCode;
   String _locale = 'ko';
@@ -77,12 +93,14 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
   bool _personalConsent = false;
   bool _termsConsent = false;
   bool _showDocumentErrors = false;
+  bool _lastDraftFailureWasDocument = false;
   bool _submitted = false;
   DriverApplicationUploadFile? _lineQr;
   final List<DriverApplicationUploadFile> _vehiclePhotos = [];
   DriverApplicationUploadFile? _insuranceCertificate;
   DriverApplicationUploadFile? _vehicleRegistration;
   DriverApplicationUploadFile? _taxCertificate;
+  String? _pickingFileKey;
 
   bool get _isResubmit =>
       widget.resubmitApplicationNumber != null && widget.resubmitToken != null;
@@ -132,6 +150,9 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
   Future<DriverApplicationUploadFile?> _pickOne({
     required bool imageOnly,
   }) async {
+    final debugPicker = widget.debugPickOne;
+    if (debugPicker != null) return debugPicker(imageOnly);
+    final invalidTypeMessage = context.l10n.t('driver_apply_invalid_file_type');
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: imageOnly
@@ -142,39 +163,186 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     final file = result?.files.single;
     if (file == null || file.bytes == null) return null;
     if (!_isAllowedFileName(file.name, imageOnly: imageOnly)) {
-      setState(() => _error = context.l10n.t('driver_apply_invalid_file_type'));
-      return null;
+      throw _DriverApplicationFilePickException(invalidTypeMessage);
     }
     return DriverApplicationUploadFile(name: file.name, bytes: file.bytes!);
   }
 
-  Future<void> _pickVehiclePhotos() async {
+  Future<void> _selectSingleFile({
+    required String fieldKey,
+    required bool imageOnly,
+    required void Function(DriverApplicationUploadFile file) onSelected,
+  }) async {
+    if (_pickingFileKey != null) return;
+    setState(() {
+      _pickingFileKey = fieldKey;
+      _error = null;
+      _fileErrors = {..._fileErrors}..remove(fieldKey);
+    });
+    try {
+      final file = await _pickOne(imageOnly: imageOnly);
+      if (!mounted || file == null) return;
+      setState(() => onSelected(file));
+    } on _DriverApplicationFilePickException catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _fileErrors = {..._fileErrors, fieldKey: err.message};
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _fileErrors = {
+          ..._fileErrors,
+          fieldKey: context.l10n.t('driver_apply_file_pick_failed'),
+        };
+      });
+    } finally {
+      if (mounted) setState(() => _pickingFileKey = null);
+    }
+  }
+
+  Future<void> _selectVehiclePhotos() async {
+    if (_pickingFileKey != null) return;
+    setState(() {
+      _pickingFileKey = 'vehiclePhotos';
+      _error = null;
+      _fileErrors = {..._fileErrors}..remove('vehiclePhotos');
+    });
+    try {
+      final selected = await _pickVehiclePhotos();
+      if (!mounted || selected == null) return;
+      setState(() {
+        _vehiclePhotos
+          ..clear()
+          ..addAll(selected.take(6));
+      });
+    } on _DriverApplicationFilePickException catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _fileErrors = {..._fileErrors, 'vehiclePhotos': err.message};
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _fileErrors = {
+          ..._fileErrors,
+          'vehiclePhotos': context.l10n.t('driver_apply_file_pick_failed'),
+        };
+      });
+    } finally {
+      if (mounted) setState(() => _pickingFileKey = null);
+    }
+  }
+
+  Future<List<DriverApplicationUploadFile>?> _pickVehiclePhotos() async {
+    final debugPicker = widget.debugPickVehiclePhotos;
+    if (debugPicker != null) return debugPicker();
+    final invalidTypeMessage = context.l10n.t('driver_apply_invalid_file_type');
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
       allowMultiple: true,
       withData: true,
     );
-    if (result == null) return;
+    if (result == null) return null;
     final invalid = result.files.any(
       (file) => !_isAllowedFileName(file.name, imageOnly: true),
     );
     if (invalid) {
-      setState(() => _error = context.l10n.t('driver_apply_invalid_file_type'));
-      return;
+      throw _DriverApplicationFilePickException(invalidTypeMessage);
     }
-    final selected = result.files
+    return result.files
         .where((file) => file.bytes != null)
         .map(
           (file) =>
               DriverApplicationUploadFile(name: file.name, bytes: file.bytes!),
         )
         .toList();
+  }
+
+  void _removeFile(String fieldKey) {
     setState(() {
-      _vehiclePhotos
-        ..clear()
-        ..addAll(selected.take(6));
+      _fileErrors = {..._fileErrors}..remove(fieldKey);
+      switch (fieldKey) {
+        case 'lineQr':
+          _lineQr = null;
+          break;
+        case 'vehiclePhotos':
+          _vehiclePhotos.clear();
+          break;
+        case 'insuranceCertificate':
+          _insuranceCertificate = null;
+          break;
+        case 'vehicleRegistration':
+          _vehicleRegistration = null;
+          break;
+        case 'taxCertificate':
+          _taxCertificate = null;
+          break;
+      }
     });
+  }
+
+  Future<void> _scrollToFirstDocumentError() async {
+    final firstKey = _firstDocumentErrorKey();
+    if (firstKey == null) return;
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    final fieldContext = _fieldKeys[firstKey]?.currentContext;
+    if (fieldContext == null || !fieldContext.mounted) return;
+    await Scrollable.ensureVisible(
+      fieldContext,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+      alignment: 0.15,
+    );
+  }
+
+  String? _firstDocumentErrorKey() {
+    if (_lineQr == null) return 'lineQr';
+    if (_vehiclePhotos.length < 3 || _vehiclePhotos.length > 6) {
+      return 'vehiclePhotos';
+    }
+    if (_insuranceCertificate == null) return 'insuranceCertificate';
+    if (_vehicleRegistration == null) return 'vehicleRegistration';
+    if (_taxCertificate == null) return 'taxCertificate';
+    return null;
+  }
+
+  List<DriverApplicationUploadFile> _singleFileList(
+    DriverApplicationUploadFile? file,
+  ) {
+    return file == null ? const [] : [file];
+  }
+
+  Widget _uploadCard({
+    required String fieldKey,
+    required String titleKey,
+    required String descriptionKey,
+    required List<DriverApplicationUploadFile> files,
+    required bool missing,
+    required bool imageOnly,
+    required VoidCallback onSelect,
+    required VoidCallback onRemove,
+    String missingKey = 'driver_apply_file_required',
+  }) {
+    return KeyedSubtree(
+      key: _fieldKeys[fieldKey],
+      child: DriverRegistrationPhotoUploadCard(
+        fieldKey: fieldKey,
+        title: context.l10n.t(titleKey),
+        description: context.l10n.t(descriptionKey),
+        files: files,
+        isRequired: true,
+        showMissing: _showDocumentErrors && missing,
+        processing: _pickingFileKey == fieldKey,
+        imageOnly: imageOnly,
+        errorText: _fileErrors[fieldKey],
+        missingText: context.l10n.t(missingKey),
+        onSelect: onSelect,
+        onRemove: onRemove,
+      ),
+    );
   }
 
   String _extension(String filename) {
@@ -301,7 +469,10 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
 
   DriverApplicationDraft? _buildDraft() {
     if (widget.debugSubmitDraft != null) return widget.debugSubmitDraft;
-    setState(() => _showDocumentErrors = true);
+    setState(() {
+      _showDocumentErrors = true;
+      _lastDraftFailureWasDocument = false;
+    });
     if (!_formKey.currentState!.validate()) return null;
     if (_vehicleTypeCode == null || _vehicleTypeCode!.isEmpty) {
       setState(() => _error = context.l10n.t('driver_apply_vehicle_required'));
@@ -316,16 +487,20 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
       return null;
     }
     if (_vehiclePhotos.length < 3 || _vehiclePhotos.length > 6) {
-      setState(
-        () => _error = context.l10n.t('driver_apply_vehicle_photo_count_error'),
-      );
+      setState(() {
+        _lastDraftFailureWasDocument = true;
+        _error = context.l10n.t('driver_apply_vehicle_photo_count_error');
+      });
       return null;
     }
     if (_lineQr == null ||
         _insuranceCertificate == null ||
         _vehicleRegistration == null ||
         _taxCertificate == null) {
-      setState(() => _error = context.l10n.t('driver_apply_file_required'));
+      setState(() {
+        _lastDraftFailureWasDocument = true;
+        _error = context.l10n.t('driver_apply_file_required');
+      });
       return null;
     }
     final areas = _serviceAreas.text
@@ -393,7 +568,12 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
       _fieldErrors = const {};
     });
     final draft = _buildDraft();
-    if (draft == null) return;
+    if (draft == null) {
+      if (_lastDraftFailureWasDocument) {
+        await _scrollToFirstDocumentError();
+      }
+      return;
+    }
     setState(() => _submitting = true);
     try {
       if (_isResubmit) {
@@ -593,52 +773,73 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
               _section(
                 title: l10n.t('driver_apply_section_documents'),
                 children: [
-                  _fileButton('driver_apply_line_qr', _lineQr?.name, () async {
-                    final file = await _pickOne(imageOnly: true);
-                    if (file != null) {
-                      setState(() => _lineQr = file);
-                    }
-                  }, missing: _lineQr == null),
-                  _fileButton(
-                    'driver_apply_vehicle_photos',
-                    '${_vehiclePhotos.length}/6',
-                    _pickVehiclePhotos,
+                  _uploadCard(
+                    fieldKey: 'lineQr',
+                    titleKey: 'driver_apply_line_qr',
+                    descriptionKey: 'driver_apply_upload_image_help',
+                    files: _singleFileList(_lineQr),
+                    missing: _lineQr == null,
+                    imageOnly: true,
+                    onSelect: () => _selectSingleFile(
+                      fieldKey: 'lineQr',
+                      imageOnly: true,
+                      onSelected: (file) => _lineQr = file,
+                    ),
+                    onRemove: () => _removeFile('lineQr'),
+                  ),
+                  _uploadCard(
+                    fieldKey: 'vehiclePhotos',
+                    titleKey: 'driver_apply_vehicle_photos',
+                    descriptionKey: 'driver_apply_vehicle_photo_help',
+                    files: _vehiclePhotos,
                     missing:
                         _vehiclePhotos.length < 3 || _vehiclePhotos.length > 6,
-                    errorKey: 'driver_apply_vehicle_photo_count_error',
+                    imageOnly: true,
+                    onSelect: _selectVehiclePhotos,
+                    onRemove: () => _removeFile('vehiclePhotos'),
+                    missingKey: 'driver_apply_vehicle_photo_count_error',
                   ),
-                  _fileButton(
-                    'driver_apply_insurance_certificate',
-                    _insuranceCertificate?.name,
-                    () async {
-                      final file = await _pickOne(imageOnly: false);
-                      if (file != null) {
-                        setState(() => _insuranceCertificate = file);
-                      }
-                    },
+                  _uploadCard(
+                    fieldKey: 'insuranceCertificate',
+                    titleKey: 'driver_apply_insurance_certificate',
+                    descriptionKey: 'driver_apply_upload_document_help',
+                    files: _singleFileList(_insuranceCertificate),
                     missing: _insuranceCertificate == null,
+                    imageOnly: false,
+                    onSelect: () => _selectSingleFile(
+                      fieldKey: 'insuranceCertificate',
+                      imageOnly: false,
+                      onSelected: (file) => _insuranceCertificate = file,
+                    ),
+                    onRemove: () => _removeFile('insuranceCertificate'),
                   ),
-                  _fileButton(
-                    'driver_apply_vehicle_registration',
-                    _vehicleRegistration?.name,
-                    () async {
-                      final file = await _pickOne(imageOnly: false);
-                      if (file != null) {
-                        setState(() => _vehicleRegistration = file);
-                      }
-                    },
+                  _uploadCard(
+                    fieldKey: 'vehicleRegistration',
+                    titleKey: 'driver_apply_vehicle_registration',
+                    descriptionKey: 'driver_apply_upload_document_help',
+                    files: _singleFileList(_vehicleRegistration),
                     missing: _vehicleRegistration == null,
+                    imageOnly: false,
+                    onSelect: () => _selectSingleFile(
+                      fieldKey: 'vehicleRegistration',
+                      imageOnly: false,
+                      onSelected: (file) => _vehicleRegistration = file,
+                    ),
+                    onRemove: () => _removeFile('vehicleRegistration'),
                   ),
-                  _fileButton(
-                    'driver_apply_tax_certificate',
-                    _taxCertificate?.name,
-                    () async {
-                      final file = await _pickOne(imageOnly: false);
-                      if (file != null) {
-                        setState(() => _taxCertificate = file);
-                      }
-                    },
+                  _uploadCard(
+                    fieldKey: 'taxCertificate',
+                    titleKey: 'driver_apply_tax_certificate',
+                    descriptionKey: 'driver_apply_upload_document_help',
+                    files: _singleFileList(_taxCertificate),
                     missing: _taxCertificate == null,
+                    imageOnly: false,
+                    onSelect: () => _selectSingleFile(
+                      fieldKey: 'taxCertificate',
+                      imageOnly: false,
+                      onSelected: (file) => _taxCertificate = file,
+                    ),
+                    onRemove: () => _removeFile('taxCertificate'),
                   ),
                   CheckboxListTile(
                     key: _fieldKeys['personalDataConsent'],
@@ -829,37 +1030,10 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
       validator: validator ?? (requiredField ? _required : null),
     );
   }
+}
 
-  Widget _fileButton(
-    String labelKey,
-    String? value,
-    Future<void> Function() onPressed, {
-    required bool missing,
-    String errorKey = 'driver_apply_file_required',
-  }) {
-    final showError = _showDocumentErrors && missing;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        OutlinedButton.icon(
-          onPressed: onPressed,
-          icon: const Icon(Icons.attach_file),
-          label: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${context.l10n.t(labelKey)} *: ${value == null || value.isEmpty ? context.l10n.t('driver_apply_no_file') : value}',
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-        if (showError) ...[
-          const SizedBox(height: AppTokens.spaceXs),
-          Text(
-            context.l10n.t(errorKey),
-            style: const TextStyle(color: AppTokens.error),
-          ),
-        ],
-      ],
-    );
-  }
+class _DriverApplicationFilePickException implements Exception {
+  const _DriverApplicationFilePickException(this.message);
+
+  final String message;
 }

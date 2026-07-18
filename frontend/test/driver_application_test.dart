@@ -10,6 +10,7 @@ import 'package:frontend/features/driver_application/models/driver_application_m
 import 'package:frontend/features/driver_application/pages/driver_application_form_page.dart';
 import 'package:frontend/features/driver_application/services/driver_application_api_service.dart';
 import 'package:frontend/features/driver_application/services/driver_application_storage.dart';
+import 'package:frontend/features/driver_application/widgets/driver_registration_photo_upload_card.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -568,10 +569,172 @@ void main() {
     expect(find.textContaining('Select', skipOffstage: false), findsNothing);
   });
 
+  testWidgets('driver apply renders unified upload cards for required files', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(DriverApplicationFormPage(api: _FakeDriverApplicationApi())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('driver_application_file_card_lineQr')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DriverRegistrationPhotoUploadCard), findsNWidgets(5));
+    expect(
+      find.byKey(const ValueKey('driver_application_file_card_lineQr')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('driver_application_file_card_vehiclePhotos')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('driver_application_file_card_insuranceCertificate'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('driver_application_file_card_vehicleRegistration'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('driver_application_file_card_taxCertificate')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'driver apply upload cards show selected replace and remove states',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      var singlePickCount = 0;
+      await tester.pumpWidget(
+        _app(
+          DriverApplicationFormPage(
+            api: _FakeDriverApplicationApi(),
+            debugPickOne: (imageOnly) async {
+              singlePickCount += 1;
+              return DriverApplicationUploadFile(
+                name: singlePickCount == 1 ? 'line.png' : 'line-new.png',
+                bytes: const [1, 2, 3],
+              );
+            },
+            debugPickVehiclePhotos: () async => const [
+              DriverApplicationUploadFile(name: 'car1.jpg', bytes: [1]),
+              DriverApplicationUploadFile(name: 'car2.jpg', bytes: [2]),
+              DriverApplicationUploadFile(name: 'car3.jpg', bytes: [3]),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final lineSelect = find.byKey(
+        const ValueKey('driver_application_file_select_lineQr'),
+      );
+      await tester.scrollUntilVisible(
+        lineSelect,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(lineSelect);
+      await tester.pumpAndSettle();
+
+      expect(find.text('line.png'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('driver_application_file_remove_lineQr')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('완료', skipOffstage: false), findsWidgets);
+
+      await tester.tap(lineSelect);
+      await tester.pumpAndSettle();
+      expect(find.text('line-new.png'), findsOneWidget);
+      expect(find.text('line.png'), findsNothing);
+
+      await tester.tap(
+        find.byKey(const ValueKey('driver_application_file_remove_lineQr')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('line-new.png'), findsNothing);
+
+      final vehicleSelect = find.byKey(
+        const ValueKey('driver_application_file_select_vehiclePhotos'),
+      );
+      await tester.tap(vehicleSelect);
+      await tester.pumpAndSettle();
+      expect(find.text('car1.jpg'), findsOneWidget);
+      expect(find.text('car2.jpg'), findsOneWidget);
+      expect(find.text('car3.jpg'), findsOneWidget);
+    },
+  );
+
+  testWidgets('driver apply upload card errors are scoped to the failed file', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _FakeDriverApplicationApi(),
+          debugPickOne: (imageOnly) async {
+            throw Exception('picker unavailable');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final lineSelect = find.byKey(
+      const ValueKey('driver_application_file_select_lineQr'),
+    );
+    await tester.scrollUntilVisible(
+      lineSelect,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(lineSelect);
+    await tester.pumpAndSettle();
+
+    final lineCard = find.byKey(
+      const ValueKey('driver_application_file_card_lineQr'),
+    );
+    final insuranceCard = find.byKey(
+      const ValueKey('driver_application_file_card_insuranceCertificate'),
+    );
+    expect(
+      find.descendant(
+        of: lineCard,
+        matching: find.textContaining('다시 시도', skipOffstage: false),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: insuranceCard,
+        matching: find.textContaining('다시 시도', skipOffstage: false),
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('driver apply shows backend vehicle year field error', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(1000, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       _app(
         DriverApplicationFormPage(
@@ -583,12 +746,6 @@ void main() {
     await tester.pumpAndSettle();
 
     final submit = find.byIcon(Icons.send_outlined);
-    await tester.scrollUntilVisible(
-      submit,
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
     await tester.tap(submit);
     await tester.pumpAndSettle();
 
@@ -650,6 +807,8 @@ void main() {
 
   testWidgets('driver apply license expiry rejects past dates', (tester) async {
     SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(1000, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       _app(DriverApplicationFormPage(api: _FakeDriverApplicationApi())),
     );
@@ -660,14 +819,8 @@ void main() {
     await tester.pump();
 
     final submit = find.byIcon(Icons.send_outlined);
-    await tester.scrollUntilVisible(
-      submit,
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
     await tester.tap(submit);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.textContaining('2000-01-01'), findsWidgets);
     expect(find.textContaining('6', skipOffstage: false), findsWidgets);
@@ -687,7 +840,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(submit);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(api.submitCalls, 0);
     expect(find.textContaining('3', skipOffstage: false), findsWidgets);
