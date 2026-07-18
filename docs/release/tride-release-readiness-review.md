@@ -1,6 +1,6 @@
 # T-Ride release readiness review
 
-Date: 2026-07-18  
+Date: 2026-07-18
 Baseline `main`: `55333b45fff30327d32716cca6625f6a90453e4e`
 
 This review summarizes the remaining E2E, settlement, and operational
