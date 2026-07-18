@@ -5,10 +5,16 @@ flutter/.dart_tool/
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 !**/.env.example
 !**/.env.production.example
 
 logs/
+
+.env.e2e.local
+playwright-report/
+test-results/
+e2e-artifacts/
 
 .vscode/
 .idea/
