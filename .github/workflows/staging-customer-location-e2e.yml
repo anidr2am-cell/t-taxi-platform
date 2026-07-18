@@ -1,0 +1,186 @@
+name: Staging Customer Location E2E
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-customer-location-e2e
+  cancel-in-progress: false
+
+jobs:
+  customer-location-e2e:
+    name: Run staging customer driver location E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging-e2e
+    env:
+      NODE_PATH: ${{ github.workspace }}/backend/node_modules
+      TRIDE_E2E_TARGET: staging
+      TRIDE_E2E_FRONTEND_URL: https://trider.taxi
+      TRIDE_E2E_BACKEND_URL: https://trider.taxi
+      TRIDE_E2E_ALLOW_SPLIT_HOSTS: "0"
+      TRIDE_E2E_ALLOW_LIVE: "1"
+      TRIDE_E2E_KEEP_FIXTURE: "0"
+      TRIDE_E2E_ADMIN_EMAIL: ${{ secrets.TRIDE_E2E_ADMIN_EMAIL }}
+      TRIDE_E2E_ADMIN_PASSWORD: ${{ secrets.TRIDE_E2E_ADMIN_PASSWORD }}
+      TRIDE_E2E_DRIVER_EMAIL: ${{ secrets.TRIDE_E2E_DRIVER_EMAIL }}
+      TRIDE_E2E_DRIVER_PASSWORD: ${{ secrets.TRIDE_E2E_DRIVER_PASSWORD }}
+      TRIDE_E2E_DRIVER_ID: ${{ secrets.TRIDE_E2E_DRIVER_ID }}
+      TRIDE_E2E_CUSTOMER_PHONE: ${{ secrets.TRIDE_E2E_CUSTOMER_PHONE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: backend
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify required staging E2E secrets
+        shell: bash
+        run: |
+          missing=0
+          for name in \
+            TRIDE_E2E_ADMIN_EMAIL \
+            TRIDE_E2E_ADMIN_PASSWORD \
+            TRIDE_E2E_DRIVER_EMAIL \
+            TRIDE_E2E_DRIVER_PASSWORD \
+            TRIDE_E2E_DRIVER_ID \
+            TRIDE_E2E_CUSTOMER_PHONE
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name is not configured"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Run E2E tool tests
+        working-directory: backend
+        run: npm run test:e2e-tools
+
+      - name: Run staging E2E dry-run without logging secrets
+        working-directory: backend
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/tride-e2e"
+          npm run e2e:staging:customer-location:dry-run > "$RUNNER_TEMP/tride-e2e/dry-run.json"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const text = fs.readFileSync(`${process.env.RUNNER_TEMP}/tride-e2e/dry-run.json`, 'utf8');
+          const start = text.indexOf('{');
+          const dryRun = JSON.parse(text.slice(start));
+          console.log(JSON.stringify({
+            dryRun: dryRun.dryRun === true,
+            target: dryRun.target,
+            frontendHost: dryRun.frontendHost,
+            backendHost: dryRun.backendHost,
+            viewportCount: Array.isArray(dryRun.viewports) ? dryRun.viewports.length : 0,
+            activeStatusCount: Array.isArray(dryRun.activeStatuses) ? dryRun.activeStatuses.length : 0,
+            terminalStatusCount: Array.isArray(dryRun.terminalStatuses) ? dryRun.terminalStatuses.length : 0,
+          }));
+          NODE
+          rm -f "$RUNNER_TEMP/tride-e2e/dry-run.json"
+
+      - name: Check staging health
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --output /dev/null https://trider.taxi/api/v1/health
+          curl --fail --silent --show-error --output /dev/null https://trider.taxi/
+
+      - name: Run live staging customer location E2E
+        working-directory: backend
+        run: npm run e2e:staging:customer-location
+
+      - name: Scan redacted E2E artifacts for secret-like values
+        if: always()
+        working-directory: backend
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = path.join(process.cwd(), 'e2e-artifacts');
+          const patterns = [
+            ['authorization-bearer', /Authorization: Bearer [A-Za-z0-9._-]+/],
+            ['guest-access-token-assignment', /guestAccessToken\s*[=:]\s*[A-Za-z0-9._-]+/],
+            ['e2e-admin-password-name', /TRIDE_E2E_ADMIN_PASSWORD/],
+            ['e2e-driver-password-name', /TRIDE_E2E_DRIVER_PASSWORD/],
+            ['private-key', /BEGIN .*PRIVATE KEY/],
+            ['google-api-key', /AIza[0-9A-Za-z_-]{20,}/],
+          ];
+          const findings = [];
+          const walk = (dir) => {
+            if (!fs.existsSync(dir)) return;
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                walk(full);
+              } else if (entry.isFile()) {
+                const text = fs.readFileSync(full, 'utf8');
+                for (const [name, pattern] of patterns) {
+                  if (pattern.test(text)) {
+                    findings.push({ file: path.relative(root, full), pattern: name });
+                  }
+                }
+              }
+            }
+          };
+          walk(root);
+          if (findings.length > 0) {
+            for (const finding of findings) {
+              console.error(`::error::Secret-like artifact content detected in ${finding.file} (${finding.pattern})`);
+            }
+            process.exit(1);
+          }
+          console.log('E2E artifact secret scan passed');
+          NODE
+
+      - name: Write safe E2E summary
+        if: always()
+        working-directory: backend
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const manifestPath = path.join(process.cwd(), 'e2e-artifacts', 'customer-location-e2e-manifest.json');
+          const summary = process.env.GITHUB_STEP_SUMMARY;
+          const lines = ['## Staging customer location E2E', ''];
+          if (fs.existsSync(manifestPath)) {
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            const archived = manifest.filter((item) => item.cleanupStatus === 'archived').length;
+            const cleanupFailures = manifest.filter((item) => item.cleanupStatus === 'failed' || item.cleanupError).length;
+            lines.push(`- Fixtures: ${manifest.length}`);
+            lines.push(`- Archived fixtures: ${archived}`);
+            lines.push(`- Cleanup failures: ${cleanupFailures}`);
+            lines.push(`- Viewports: ${manifest.map((item) => item.viewport).filter(Boolean).join(', ') || 'none'}`);
+          } else {
+            lines.push('- No redacted manifest was created.');
+          }
+          lines.push('- Artifact type: redacted fixture manifest only');
+          fs.appendFileSync(summary, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload redacted E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-customer-location-e2e-redacted
+          path: backend/e2e-artifacts/customer-location-e2e-manifest.json
+          if-no-files-found: ignore
+          retention-days: 7

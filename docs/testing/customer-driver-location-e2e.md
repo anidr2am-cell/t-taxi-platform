@@ -63,6 +63,122 @@ Live staging run:
 npm run e2e:staging:customer-location
 ```
 
+## Manual GitHub Actions run
+
+The workflow file is:
+
+```text
+.github/workflows/staging-customer-location-e2e.yml
+```
+
+It is intentionally manual-only:
+
+- Trigger: `workflow_dispatch`
+- No `push` trigger
+- No `pull_request` trigger
+- No `schedule` trigger
+- Environment: `staging-e2e`
+- Runner: GitHub-hosted `ubuntu-latest`
+- Timeout: 20 minutes
+- Concurrency group: `staging-customer-location-e2e`
+- `cancel-in-progress: false`
+
+`cancel-in-progress` is disabled because every live run uses the same staging E2E driver and creates temporary synthetic bookings. A newer run must wait for the active run to finish so that the runner can complete its cleanup sweep.
+
+Run it manually after the workflow exists on the selected branch:
+
+```powershell
+gh workflow run staging-customer-location-e2e.yml --ref main
+```
+
+For a PR branch, GitHub may not expose a newly added workflow in the Actions UI until the workflow file exists on the default branch. If GitHub does not allow running it by branch ref, merge the workflow first and then run it manually from `main`.
+
+Do not run this workflow against production. The workflow pins:
+
+```text
+TRIDE_E2E_TARGET=staging
+TRIDE_E2E_FRONTEND_URL=https://trider.taxi
+TRIDE_E2E_BACKEND_URL=https://trider.taxi
+TRIDE_E2E_ALLOW_SPLIT_HOSTS=0
+TRIDE_E2E_ALLOW_LIVE=1
+TRIDE_E2E_KEEP_FIXTURE=0
+```
+
+The CI workflow does not pass `--keep-fixture`. Cleanup is always expected to run.
+
+## GitHub environment secrets
+
+Configure these as `staging-e2e` environment secrets, not production secrets:
+
+```text
+TRIDE_E2E_ADMIN_EMAIL
+TRIDE_E2E_ADMIN_PASSWORD
+TRIDE_E2E_DRIVER_EMAIL
+TRIDE_E2E_DRIVER_PASSWORD
+TRIDE_E2E_DRIVER_ID
+TRIDE_E2E_CUSTOMER_PHONE
+```
+
+Do not write secret values into this document, the workflow file, commit messages, PR comments, command-line arguments, or artifacts. If setting secrets with `gh`, pass values through stdin or the interactive prompt.
+
+Example command shape only:
+
+```powershell
+gh secret set TRIDE_E2E_ADMIN_EMAIL --env staging-e2e
+gh secret set TRIDE_E2E_ADMIN_PASSWORD --env staging-e2e
+gh secret set TRIDE_E2E_DRIVER_EMAIL --env staging-e2e
+gh secret set TRIDE_E2E_DRIVER_PASSWORD --env staging-e2e
+gh secret set TRIDE_E2E_DRIVER_ID --env staging-e2e
+gh secret set TRIDE_E2E_CUSTOMER_PHONE --env staging-e2e
+```
+
+The workflow checks only whether required secrets are present. It must not print secret values or lengths.
+
+## GitHub Actions artifact policy
+
+The workflow uploads only:
+
+```text
+backend/e2e-artifacts/customer-location-e2e-manifest.json
+```
+
+The manifest is redacted by the runner and retained for 7 days. The workflow also scans the artifact folder for token-like values before upload.
+
+Do not upload:
+
+- `.env.e2e.local`
+- raw Playwright traces
+- HAR/network dumps
+- cookies
+- localStorage/sessionStorage dumps
+- raw request headers
+- raw response bodies
+- screenshots that expose real customer data
+- access tokens, guest tokens, passwords, API keys, or private keys
+
+## Cleanup and manual cancellation
+
+The runner archives synthetic fixtures through the existing admin archive API after server-side E2E marker validation. It does not directly update or delete DB rows.
+
+Manual cancellation can still kill the process before the final cleanup sweep completes. If a workflow is manually cancelled or times out, inspect the redacted manifest if it exists, then check staging for unarchived synthetic bookings whose:
+
+- booking number belongs to a staging E2E run,
+- customer name starts with `[E2E]`,
+- marker contains the customer location E2E marker,
+- payment is not completed,
+- settlement is not in progress,
+- active operational assignment count is zero.
+
+Only then archive with the existing admin archive API. Do not directly update/delete DB rows.
+
+An assignment history row with `is_active=1` is not by itself an operational active job if the parent booking is archived. Operational active-job checks require:
+
+```text
+booking is not archived
+assignment is_active=1
+assignment deleted_at is null
+```
+
 Headed debugging:
 
 ```powershell
