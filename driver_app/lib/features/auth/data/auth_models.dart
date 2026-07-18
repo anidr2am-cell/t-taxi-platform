@@ -15,11 +15,11 @@ class DriverUser {
     final id = json['id'];
     final role = json['role'];
     final isActive = json['isActive'];
-    if (id is! num || role is! String || isActive is! bool) {
+    if (id is! int || role is! String || isActive is! bool) {
       throw const ApiException(ApiFailureKind.invalidResponse);
     }
     return DriverUser(
-      id: id.toInt(),
+      id: id,
       role: role,
       isActive: isActive,
       name: json['name'] as String?,

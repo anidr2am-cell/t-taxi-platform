@@ -42,7 +42,7 @@ android {
             dimension = "environment"
             applicationId = "com.tride.driver.staging"
             resValue("string", "app_name", "TRide Driver STG")
-            manifestPlaceholders["usesCleartextTraffic"] = "true"
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
         create("prod") {
             dimension = "environment"
@@ -54,10 +54,17 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Production signing is intentionally not configured in this PR.
+            // Never fall back to the debug key for a release artifact.
         }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name.contains("ProdRelease", ignoreCase = true) }) {
+        throw GradleException(
+            "Production release signing is not configured. Configure it through the approved secure release process."
+        )
     }
 }
 
