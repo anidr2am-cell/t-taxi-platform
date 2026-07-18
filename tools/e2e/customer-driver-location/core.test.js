@@ -2,18 +2,24 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   E2E_MARKER,
+  FixtureRegistry,
+  HARD_ALLOWED_HOSTS,
   NetworkAudit,
   TEST_NAME_PREFIX,
   assertCleanupCandidate,
   assertNoTokenInUrl,
+  assertServerCleanupCandidate,
   assertUrlAllowed,
   buildBookingPayload,
   buildConfig,
   classifyNetworkUrl,
   createRunId,
+  createViewportRunId,
   redact,
   redactString,
   sanitizeUrl,
+  serializeSafeError,
+  tokenFingerprint,
 } = require('./core');
 
 const stagingEnv = {
@@ -22,75 +28,153 @@ const stagingEnv = {
   TRIDE_E2E_BACKEND_URL: 'https://trider.taxi',
 };
 
-test('production and unknown URLs are blocked', () => {
-  assert.throws(
-    () => assertUrlAllowed('url', 'https://88taxi.net', stagingEnv),
-    /blocked host/,
-  );
-  assert.throws(
-    () => assertUrlAllowed('url', 'https://example.com', stagingEnv),
-    /not whitelisted/,
-  );
+function liveEnv(overrides = {}) {
+  return {
+    ...stagingEnv,
+    TRIDE_E2E_ADMIN_EMAIL: 'tride.e2e.admin@example.com',
+    TRIDE_E2E_ADMIN_PASSWORD: 'local-only',
+    TRIDE_E2E_DRIVER_EMAIL: 'tride.e2e.driver@example.com',
+    TRIDE_E2E_DRIVER_PASSWORD: 'local-only',
+    TRIDE_E2E_DRIVER_ID: '12',
+    TRIDE_E2E_CUSTOMER_PHONE: '+66000000001',
+    TRIDE_E2E_ALLOW_LIVE: '1',
+    ...overrides,
+  };
+}
+
+function cleanupFixture(overrides = {}) {
+  const runId = 'E2E-20260718T010203-abcd-360';
+  return {
+    runId,
+    bookingNumber: 'TX202607180001',
+    customerName: `[E2E] Customer ${runId}`,
+    marker: `${E2E_MARKER} ${runId}`,
+    ...overrides,
+  };
+}
+
+function serverBooking(fixture, overrides = {}) {
+  return {
+    bookingNumber: fixture.bookingNumber,
+    customer: { name: fixture.customerName },
+    specialRequests: fixture.marker,
+    ...overrides,
+  };
+}
+
+test('hard allowed hosts accept only staging and localhost defaults', () => {
+  assert.deepEqual([...HARD_ALLOWED_HOSTS].sort(), ['127.0.0.1', 'localhost', 'trider.taxi']);
+  assert.equal(assertUrlAllowed('url', 'https://trider.taxi/'), 'https://trider.taxi');
+  assert.equal(assertUrlAllowed('url', 'http://127.0.0.1:3101'), 'http://127.0.0.1:3101');
+  assert.equal(assertUrlAllowed('url', 'http://localhost:3101'), 'http://localhost:3101');
 });
 
-test('staging whitelist accepts configured staging and localhost hosts', () => {
-  assert.equal(assertUrlAllowed('url', 'https://trider.taxi/', stagingEnv), 'https://trider.taxi');
-  assert.equal(assertUrlAllowed('url', 'http://127.0.0.1:3101', stagingEnv), 'http://127.0.0.1:3101');
+test('production, unknown, protocol, credential, and env whitelist bypasses are blocked', () => {
+  assert.throws(() => assertUrlAllowed('url', 'https://88taxi.net'), /blocked host/);
+  assert.throws(() => assertUrlAllowed('url', 'https://ktaxi.example'), /blocked host/);
+  assert.throws(() => assertUrlAllowed('url', 'https://trider-production.example'), /blocked host/);
+  assert.throws(() => assertUrlAllowed('url', 'https://example.com'), /hard-allowed/);
+  assert.throws(() => assertUrlAllowed('url', 'ftp://trider.taxi'), /http or https/);
+  assert.throws(() => assertUrlAllowed('url', 'https://user:pass@trider.taxi'), /credentials/);
+  assert.throws(() => buildConfig({
+    ...stagingEnv,
+    TRIDE_E2E_BACKEND_URL: 'https://example.com',
+    TRIDE_E2E_ALLOWED_HOSTS: 'example.com',
+  }), /hard-allowed/);
 });
 
-test('config requires staging target and live secrets only for live mode', () => {
+test('config requires staging target, split host opt-in, and live variables only for live mode', () => {
   const dry = buildConfig(stagingEnv);
   assert.equal(dry.frontendUrl, 'https://trider.taxi');
   assert.throws(() => buildConfig({ ...stagingEnv, TRIDE_E2E_TARGET: 'production' }), /TARGET=staging/);
+  assert.throws(() => buildConfig({
+    ...stagingEnv,
+    TRIDE_E2E_FRONTEND_URL: 'https://trider.taxi',
+    TRIDE_E2E_BACKEND_URL: 'http://localhost:3101',
+  }), /hosts must match/);
+  assert.equal(buildConfig({
+    ...stagingEnv,
+    TRIDE_E2E_FRONTEND_URL: 'https://trider.taxi',
+    TRIDE_E2E_BACKEND_URL: 'http://localhost:3101',
+    TRIDE_E2E_ALLOW_SPLIT_HOSTS: '1',
+  }).backendHost, 'localhost');
   assert.throws(() => buildConfig(stagingEnv, { requireSecrets: true }), /Missing live E2E variables/);
-  assert.throws(
-    () => buildConfig({
-      ...stagingEnv,
-      TRIDE_E2E_ADMIN_EMAIL: 'tride.e2e.admin@example.com',
-      TRIDE_E2E_ADMIN_PASSWORD: 'local-only',
-      TRIDE_E2E_DRIVER_EMAIL: 'tride.e2e.driver@example.com',
-      TRIDE_E2E_DRIVER_PASSWORD: 'local-only',
-      TRIDE_E2E_DRIVER_ID: 'abc',
-      TRIDE_E2E_CUSTOMER_PHONE: '+66000000001',
-      TRIDE_E2E_ALLOW_LIVE: '1',
-    }, { requireSecrets: true }),
-    /DRIVER_ID/,
-  );
+  assert.throws(() => buildConfig(liveEnv({ TRIDE_E2E_DRIVER_ID: 'abc' }), { requireSecrets: true }), /DRIVER_ID/);
+  assert.throws(() => buildConfig(liveEnv({ TRIDE_E2E_ALLOW_LIVE: '0' }), { requireSecrets: true }), /ALLOW_LIVE/);
 });
 
-test('token redaction removes secrets recursively', () => {
+test('token redaction removes nested secrets and serializes errors safely', () => {
   const sampleToken = 'abc123456789012345678901234567890xyz';
   const redacted = redact({
     guestAccessToken: sampleToken,
     nested: { Authorization: `Bearer ${sampleToken}` },
+    response: { body: { token: sampleToken } },
     safe: 'hello',
   });
   assert.equal(redacted.guestAccessToken, '[REDACTED]');
   assert.equal(redacted.nested.Authorization, '[REDACTED]');
+  assert.equal(redacted.response.body.token, '[REDACTED]');
   assert.equal(redacted.safe, 'hello');
   assert.equal(redactString(`Bearer ${sampleToken}`), 'Bearer [REDACTED]');
+  const safeError = serializeSafeError(new Error(`failed with ${sampleToken}`));
+  assert.equal(safeError.message, 'failed with [REDACTED]');
+  assert.equal(safeError.stack, undefined);
 });
 
-test('run ID and fixture naming are E2E-scoped', () => {
-  const runId = createRunId(new Date('2026-07-18T01:02:03Z'), Buffer.from('abcd', 'hex'));
-  assert.equal(runId, 'E2E-20260718T010203-abcd');
-  const payload = buildBookingPayload(runId, '+66000000001', new Date('2026-07-18T01:02:03Z'));
+test('run ID and viewport fixture naming are E2E-scoped and unique', () => {
+  const base = createRunId(new Date('2026-07-18T01:02:03Z'), Buffer.from('abcd', 'hex'));
+  assert.equal(base, 'E2E-20260718T010203-abcd');
+  assert.equal(createViewportRunId(base, { width: 360 }), 'E2E-20260718T010203-abcd-360');
+  assert.notEqual(createViewportRunId(base, { width: 360 }), createViewportRunId(base, { width: 390 }));
+  const payload = buildBookingPayload(`${base}-360`, '+66000000001', new Date('2026-07-18T01:02:03Z'));
   assert.ok(payload.customer.name.startsWith(TEST_NAME_PREFIX));
   assert.ok(payload.additionalRequests.includes(E2E_MARKER));
-  assert.ok(payload.specialRequests.includes(runId));
+  assert.ok(payload.specialRequests.includes(`${base}-360`));
 });
 
-test('cleanup is limited to E2E marked synthetic bookings', () => {
-  assert.equal(
-    assertCleanupCandidate({
-      runId: 'E2E-20260718T010203-abcd',
-      customerName: '[E2E] Customer E2E-20260718T010203-abcd',
-      marker: `${E2E_MARKER} E2E-20260718T010203-abcd`,
-    }),
-    true,
+test('fixture registry keeps partial records available for cleanup', () => {
+  const registry = new FixtureRegistry();
+  registry.add({
+    runId: 'E2E-20260718T010203-abcd-360',
+    viewport: '360x800',
+    bookingNumber: null,
+    customerName: '[E2E] Customer E2E-20260718T010203-abcd-360',
+    marker: `${E2E_MARKER} E2E-20260718T010203-abcd-360`,
+    adminToken: 'secret-token',
+  });
+  registry.update('E2E-20260718T010203-abcd-360', { bookingNumber: 'TX202607180001' });
+  assert.equal(registry.pending().length, 1);
+  assert.equal(registry.manifest()[0].adminToken, undefined);
+  assert.equal(registry.manifest()[0].bookingNumber, 'TX202607180001');
+});
+
+test('local cleanup candidate rejects non-E2E records', () => {
+  assert.equal(assertCleanupCandidate(cleanupFixture()), true);
+  assert.throws(() => assertCleanupCandidate(cleanupFixture({ runId: 'BAD' })), /run ID/);
+  assert.throws(() => assertCleanupCandidate(cleanupFixture({ bookingNumber: null })), /booking number/);
+  assert.throws(() => assertCleanupCandidate(cleanupFixture({ customerName: 'Real Customer' })), /non-E2E/);
+  assert.throws(() => assertCleanupCandidate(cleanupFixture({ marker: 'missing marker' })), /E2E marker/);
+});
+
+test('server-side cleanup verification rejects mismatches before archive', () => {
+  const fixture = cleanupFixture();
+  assert.equal(assertServerCleanupCandidate(fixture, serverBooking(fixture)), true);
+  assert.throws(
+    () => assertServerCleanupCandidate(fixture, serverBooking(fixture, { specialRequests: `${E2E_MARKER} other-run` })),
+    /server marker run ID/,
   );
-  assert.throws(() => assertCleanupCandidate({ runId: 'BAD', customerName: '[E2E] A', marker: E2E_MARKER }), /run ID/);
-  assert.throws(() => assertCleanupCandidate({ runId: 'E2E-1', customerName: 'Real Customer', marker: E2E_MARKER }), /non-E2E/);
+  assert.throws(
+    () => assertServerCleanupCandidate(fixture, serverBooking(fixture, { customer: { name: 'Real Customer' } })),
+    /customer name/,
+  );
+  assert.throws(
+    () => assertServerCleanupCandidate(fixture, serverBooking(fixture, { customer: { name: '[E2E] Customer other' } })),
+    /customer run ID/,
+  );
+  assert.throws(
+    () => assertServerCleanupCandidate(fixture, serverBooking(fixture, { bookingNumber: 'TX202607180999' })),
+    /booking number/,
+  );
 });
 
 test('network request classification and URL sanitization are stable', () => {
@@ -99,28 +183,58 @@ test('network request classification and URL sanitization are stable', () => {
     'guestLocation',
   );
   assert.equal(classifyNetworkUrl('https://trider.taxi/api/v1/public/bookings/lookup'), 'guestLookup');
-  assert.equal(classifyNetworkUrl('https://trider.taxi/socket.io/?EIO=4'), 'socket');
+  assert.equal(classifyNetworkUrl('https://trider.taxi/socket.io/?EIO=4'), 'socketTransport');
   assert.equal(sanitizeUrl('https://trider.taxi/path?guestAccessToken=secret#hash'), 'https://trider.taxi/path');
 });
 
-test('token-like query values are rejected', () => {
+test('token-like query values are rejected while token fingerprints stay stable', () => {
   assert.throws(
     () => assertNoTokenInUrl('https://trider.taxi/booking/lookup?guestAccessToken=abcdefghijklmnopqrstuvwxyz123456'),
     /Secret-like query/,
   );
+  assert.equal(tokenFingerprint('secret-token-value'), tokenFingerprint('secret-token-value'));
+  assert.notEqual(tokenFingerprint('secret-token-value'), tokenFingerprint('another-secret-token-value'));
 });
 
-test('network audit detects guest lookup polling and duplicate socket reconnects', () => {
+test('network audit detects guest lookup polling, interval drift, token rotation, and terminal leaks', () => {
   const audit = new NetworkAudit();
+  const first = Date.now();
   audit.recordRequest('https://trider.taxi/api/v1/public/bookings/lookup', 'POST');
-  audit.recordRequest('https://trider.taxi/api/v1/public/bookings/99/driver-location', 'GET');
-  audit.assertLocationPollingObserved();
+  audit.recordRequest('https://trider.taxi/api/v1/public/bookings/99/driver-location', 'GET', {
+    'x-guest-access-token': 'token-one-123456789012345678901234567890',
+  });
+  audit.events[audit.events.length - 1].at = first;
+  audit.recordRequest('https://trider.taxi/api/v1/public/bookings/99/driver-location', 'GET', {
+    'x-guest-access-token': 'token-one-123456789012345678901234567890',
+  });
+  audit.events[audit.events.length - 1].at = first + 15000;
+  audit.assertLocationPollingObserved(2);
+  audit.assertGuestLocationInterval({ expectedMs: 15000, toleranceMs: 10 });
+  audit.assertStableGuestTokenFingerprint();
   audit.assertNoRepeatedGuestLookup(1);
+  audit.assertNoGuestLocationAfter(first + 15000, 10);
+
   audit.recordRequest('https://trider.taxi/api/v1/public/bookings/lookup', 'POST');
   assert.throws(() => audit.assertNoRepeatedGuestLookup(1), /Guest lookup endpoint/);
 
-  const socketAudit = new NetworkAudit();
-  socketAudit.recordRequest('https://trider.taxi/socket.io/?EIO=4', 'GET');
-  socketAudit.recordRequest('https://trider.taxi/socket.io/?EIO=4', 'GET');
-  assert.throws(() => socketAudit.assertSocketSubscribeLimit(1), /Socket/);
+  const tokenAudit = new NetworkAudit();
+  tokenAudit.recordRequest('https://trider.taxi/api/v1/public/bookings/99/driver-location', 'GET', {
+    'x-guest-access-token': 'token-one-123456789012345678901234567890',
+  });
+  tokenAudit.recordRequest('https://trider.taxi/api/v1/public/bookings/99/driver-location', 'GET', {
+    'x-guest-access-token': 'token-two-123456789012345678901234567890',
+  });
+  assert.throws(() => tokenAudit.assertStableGuestTokenFingerprint(), /multiple/);
+});
+
+test('websocket audit counts browser websocket connections, not Engine.IO HTTP requests', () => {
+  const audit = new NetworkAudit();
+  audit.recordRequest('https://trider.taxi/socket.io/?EIO=4', 'GET');
+  audit.recordRequest('https://trider.taxi/socket.io/?EIO=4&transport=polling', 'POST');
+  audit.assertWebSocketConnectionLimit(0);
+  audit.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
+  audit.assertWebSocketConnectionLimit(1);
+  audit.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
+  assert.equal(audit.socketReconnectCount(), 1);
+  assert.throws(() => audit.assertWebSocketConnectionLimit(1), /WebSocket/);
 });

@@ -4,16 +4,26 @@ const path = require('node:path');
 const {
   ACTIVE_STATUSES,
   E2E_MARKER,
+  FixtureRegistry,
   NetworkAudit,
   TERMINAL_STATUSES,
-  assertCleanupCandidate,
+  assertServerCleanupCandidate,
   buildBookingPayload,
   buildConfig,
   createRunId,
+  createViewportRunId,
   loadEnvFile,
   mergeEnv,
   redact,
+  serializeSafeError,
 } = require('./core');
+
+const VIEWPORTS = [
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 430, height: 932 },
+  { width: 1280, height: 800 },
+];
 
 function parseArgs(argv = process.argv.slice(2)) {
   return {
@@ -21,7 +31,6 @@ function parseArgs(argv = process.argv.slice(2)) {
     headed: argv.includes('--headed'),
     keepFixture: argv.includes('--keep-fixture'),
     project: valueAfter(argv, '--project') || 'chromium',
-    grep: valueAfter(argv, '--grep') || '',
   };
 }
 
@@ -34,6 +43,27 @@ function valueAfter(argv, name) {
 
 function apiUrl(config, pathName) {
   return `${config.backendUrl}${pathName}`;
+}
+
+function bearer(token) {
+  return { authorization: `Bearer ${token}` };
+}
+
+function guestAccess(token) {
+  return { 'X-Guest-Access-Token': token };
+}
+
+function assertE2EEmail(label, email) {
+  const local = String(email || '').split('@')[0].toLowerCase();
+  if (!local.includes('e2e') && !local.includes('test')) {
+    throw new Error(`${label} must be a staging E2E/test account`);
+  }
+}
+
+function assertFakeCustomerPhone(phone) {
+  if (!/^\+?660{6,}\d+$/.test(String(phone || ''))) {
+    throw new Error('TRIDE_E2E_CUSTOMER_PHONE must be a clearly fake Thai staging number');
+  }
 }
 
 async function requestJson(config, pathName, options = {}) {
@@ -63,14 +93,67 @@ async function login(config, email, password) {
   return data;
 }
 
-function bearer(token) {
-  return { authorization: `Bearer ${token}` };
+async function loadMe(config, accessToken) {
+  return requestJson(config, '/api/v1/auth/me', {
+    method: 'GET',
+    headers: bearer(accessToken),
+  });
 }
 
-async function prepareFixture(config, runId) {
+async function loadDriverStatus(config, driverToken) {
+  return requestJson(config, '/api/v1/driver/status', {
+    method: 'GET',
+    headers: bearer(driverToken),
+  });
+}
+
+async function authenticateAndPreflight(config) {
+  assertE2EEmail('Admin email', config.adminEmail);
+  assertE2EEmail('Driver email', config.driverEmail);
+  assertFakeCustomerPhone(config.customerPhone);
+
   const admin = await login(config, config.adminEmail, config.adminPassword);
   const driver = await login(config, config.driverEmail, config.driverPassword);
+  const [adminMe, driverMe, driverStatus] = await Promise.all([
+    loadMe(config, admin.accessToken),
+    loadMe(config, driver.accessToken),
+    loadDriverStatus(config, driver.accessToken),
+  ]);
+
+  const adminRole = String(adminMe?.role || adminMe?.user?.role || '').toUpperCase();
+  if (!adminRole.includes('ADMIN')) {
+    throw new Error('Configured admin account is not an admin role');
+  }
+  const driverRole = String(driverMe?.role || driverMe?.user?.role || '').toUpperCase();
+  if (driverRole !== 'DRIVER') {
+    throw new Error('Configured driver account is not a driver role');
+  }
+  if (Number(driverStatus.driverId) !== Number(config.driverId)) {
+    throw new Error('TRIDE_E2E_DRIVER_ID does not match the logged-in driver account');
+  }
+  if (driverStatus.active !== true) {
+    throw new Error('Configured E2E driver is not active');
+  }
+  if (driverStatus.hasActiveJob === true) {
+    throw new Error('Configured E2E driver already has an active job; no fixture will be created');
+  }
+
+  return {
+    adminToken: admin.accessToken,
+    driverToken: driver.accessToken,
+  };
+}
+
+async function prepareFixture(config, runId, auth, registry, viewport) {
   const payload = buildBookingPayload(runId, config.customerPhone);
+  const partial = registry.add({
+    runId,
+    viewport: `${viewport.width}x${viewport.height}`,
+    bookingNumber: null,
+    customerName: payload.customer.name,
+    marker: payload.additionalRequests,
+    adminToken: auth.adminToken,
+  });
 
   const booking = await requestJson(config, '/api/v1/bookings', {
     method: 'POST',
@@ -78,6 +161,7 @@ async function prepareFixture(config, runId) {
   });
   const bookingNumber = booking.bookingNumber;
   if (!bookingNumber) throw new Error('Booking creation did not return bookingNumber');
+  registry.update(runId, { bookingNumber });
 
   const lookup = await requestJson(config, '/api/v1/public/bookings/lookup', {
     method: 'POST',
@@ -86,7 +170,7 @@ async function prepareFixture(config, runId) {
 
   await requestJson(config, `/api/v1/admin/bookings/${bookingNumber}/assign-driver`, {
     method: 'POST',
-    headers: bearer(admin.accessToken),
+    headers: bearer(auth.adminToken),
     body: JSON.stringify({
       driverId: config.driverId,
       assignmentReason: `${E2E_MARKER} ${runId}`,
@@ -94,21 +178,26 @@ async function prepareFixture(config, runId) {
   });
 
   return {
-    runId,
+    ...partial,
     bookingNumber,
     bookingId: lookup.bookingId || lookup.id || booking.bookingId || booking.id,
     guestAccessToken: lookup.guestAccessToken,
     customerPhone: config.customerPhone,
-    customerName: payload.customer.name,
-    marker: payload.additionalRequests,
-    adminToken: admin.accessToken,
-    driverToken: driver.accessToken,
+    driverToken: auth.driverToken,
   };
 }
 
-async function cleanupFixture(config, fixture) {
-  if (!fixture) return;
-  assertCleanupCandidate(fixture);
+async function getAdminBookingDetail(config, fixture) {
+  return requestJson(config, `/api/v1/admin/bookings/${fixture.bookingNumber}`, {
+    method: 'GET',
+    headers: bearer(fixture.adminToken),
+  });
+}
+
+async function cleanupFixtureVerified(config, fixture, registry) {
+  if (!fixture?.bookingNumber) return;
+  const serverBooking = await getAdminBookingDetail(config, fixture);
+  assertServerCleanupCandidate(fixture, serverBooking);
   await requestJson(config, '/api/v1/admin/bookings/archive', {
     method: 'POST',
     headers: bearer(fixture.adminToken),
@@ -117,18 +206,20 @@ async function cleanupFixture(config, fixture) {
       reason: 'TEST_DATA',
     }),
   });
+  registry.update(fixture.runId, { cleanupStatus: 'archived' });
 }
 
 async function transitionDriver(config, fixture, action) {
-  await requestJson(config, `/api/v1/driver/bookings/${fixture.bookingNumber}/${action}`, {
+  const result = await requestJson(config, `/api/v1/driver/bookings/${fixture.bookingNumber}/${action}`, {
     method: 'POST',
     headers: bearer(fixture.driverToken),
     body: JSON.stringify({ reason: `${E2E_MARKER} ${fixture.runId}` }),
   });
+  return result;
 }
 
 async function sendLocation(config, fixture, latitude, longitude, recordedAt = new Date()) {
-  await requestJson(config, '/api/v1/driver/location', {
+  return requestJson(config, '/api/v1/driver/location', {
     method: 'POST',
     headers: bearer(fixture.driverToken),
     body: JSON.stringify({
@@ -142,72 +233,235 @@ async function sendLocation(config, fixture, latitude, longitude, recordedAt = n
   });
 }
 
-async function openLookupPage(config, fixture, args) {
+async function getGuestDriverLocation(config, fixture) {
+  return requestJson(config, `/api/v1/public/bookings/${fixture.bookingId}/driver-location`, {
+    method: 'GET',
+    headers: guestAccess(fixture.guestAccessToken),
+  });
+}
+
+async function waitForGuestStatus(config, fixture, expectedStatus, timeoutMs = 20000) {
+  const started = Date.now();
+  let lastStatus = null;
+  while (Date.now() - started < timeoutMs) {
+    const result = await getGuestDriverLocation(config, fixture);
+    lastStatus = result.bookingStatus || lastStatus;
+    if (lastStatus === expectedStatus) return result;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Timed out waiting for ${expectedStatus}; last status was ${lastStatus}`);
+}
+
+async function fillLookupForm(page, fixture) {
+  const bookingInput = page.getByLabel(/booking number/i);
+  const phoneInput = page.getByLabel(/phone/i);
+  if ((await bookingInput.count()) > 0 && (await phoneInput.count()) > 0) {
+    await bookingInput.fill(fixture.bookingNumber);
+    await phoneInput.fill(fixture.customerPhone);
+    return;
+  }
+  const fields = page.getByRole('textbox');
+  await fields.nth(0).fill(fixture.bookingNumber);
+  await fields.nth(1).fill(fixture.customerPhone);
+}
+
+async function submitLookup(page, fixture) {
+  const lookupWait = page.waitForResponse(
+    (response) => response.url().includes('/api/v1/public/bookings/lookup'),
+    { timeout: 20000 },
+  );
+  await page.getByRole('button', { name: /find booking|find|lookup|search/i }).click();
+  const response = await lookupWait;
+  if (response.status() !== 200) {
+    throw new Error(`Guest lookup returned HTTP ${response.status()}`);
+  }
+  const body = await response.json();
+  const data = body?.data ?? body;
+  if (data?.bookingNumber !== fixture.bookingNumber) {
+    throw new Error(`Guest lookup booking mismatch for ${fixture.runId}`);
+  }
+  if (response.url().includes('guestAccessToken')) {
+    throw new Error('Guest lookup leaked token in URL');
+  }
+}
+
+async function expectNoHorizontalOverflow(page) {
+  const overflow = await page.evaluate(() => ({
+    html: document.documentElement.scrollWidth,
+    body: document.body.scrollWidth,
+    width: window.innerWidth,
+  }));
+  if (overflow.html > overflow.width || overflow.body > overflow.width) {
+    throw new Error(`Horizontal overflow detected: ${JSON.stringify(overflow)}`);
+  }
+}
+
+async function assertNoRawKeys(page) {
+  const text = await page.locator('body').innerText();
+  if (/customer_driver_location_|track_driver_|guest_lookup_/.test(text)) {
+    throw new Error('Raw localization key is visible in the customer UI');
+  }
+}
+
+async function assertDomDoesNotExposeInternalIds(page, fixture) {
+  const text = await page.locator('body').innerText();
+  const forbidden = [
+    String(fixture.driverToken || ''),
+    String(fixture.guestAccessToken || ''),
+    'driverId',
+    'userId',
+    'assignmentId',
+  ].filter((value) => value && value.length > 2);
+  const leaked = forbidden.find((value) => text.includes(value));
+  if (leaked) throw new Error(`Internal identifier or token leaked into DOM for ${fixture.runId}`);
+}
+
+async function assertAssignedWaiting(page, audit, fixture) {
+  await page.getByText(/Driver location/i).first().waitFor({ timeout: 20000 });
+  await page.getByText(/assigned|live location after the driver starts/i).first().waitFor({ timeout: 20000 });
+  await page.getByText(/Driver location sharing/i).waitFor({ state: 'detached', timeout: 5000 }).catch(() => {
+    throw new Error('DRIVER_ASSIGNED displayed live sharing before ON_ROUTE');
+  });
+  audit.assertLocationPollingObserved(1);
+  audit.assertNoRepeatedGuestLookup(1);
+  audit.assertWebSocketConnectionLimit(0);
+  await assertNoRawKeys(page);
+  await assertDomDoesNotExposeInternalIds(page, fixture);
+  await expectNoHorizontalOverflow(page);
+}
+
+async function assertOnRouteMap(page, fixture) {
+  await page.getByText(/Driver location sharing/i).first().waitFor({ timeout: 25000 });
+  await page.getByText(/on the way|pickup location/i).first().waitFor({ timeout: 25000 });
+  await page.getByRole('button', { name: /driver|e2e|test/i }).first().waitFor({ timeout: 25000 });
+  await page.getByText(/Last update/i).first().waitFor({ timeout: 10000 });
+  await page.getByRole('button', { name: /Open in map/i }).first().waitFor({ timeout: 10000 });
+  await assertDomDoesNotExposeInternalIds(page, fixture);
+  await expectNoHorizontalOverflow(page);
+}
+
+async function assertSingleMarker(page) {
+  const markers = page.getByRole('button', { name: /driver|e2e|test/i });
+  const count = await markers.count();
+  if (count !== 1) {
+    throw new Error(`Expected exactly one driver marker, found ${count}`);
+  }
+}
+
+async function assertStatusCopy(page, pattern, label) {
+  await page.getByText(pattern).first().waitFor({ timeout: 25000 }).catch(() => {
+    throw new Error(`${label} status copy was not visible`);
+  });
+}
+
+async function assertTerminalUiRemoved(page, audit, terminalAt, pollIntervalMs) {
+  await page.getByText(/Driver location sharing/i).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
+    throw new Error('Terminal state did not remove live driver location UI');
+  });
+  await page.getByRole('button', { name: /driver|e2e|test/i }).waitFor({ state: 'detached', timeout: 25000 }).catch(() => {
+    throw new Error('Terminal state did not remove driver marker');
+  });
+  await page.waitForTimeout(1200);
+  audit.assertNoGuestLocationAfter(terminalAt, pollIntervalMs + 3000);
+  await expectNoHorizontalOverflow(page);
+}
+
+async function runViewportScenario({ browser, config, viewport, auth, registry }) {
+  const runId = createViewportRunId(createRunId(), viewport);
+  let fixture;
+  const context = await browser.newContext({ viewport, locale: 'en-US' });
+  const audit = new NetworkAudit();
+  try {
+    fixture = await prepareFixture(config, runId, auth, registry, viewport);
+    const page = await context.newPage();
+    const consoleErrors = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text());
+    });
+    page.on('pageerror', (err) => consoleErrors.push(err.message));
+    page.on('request', (request) => {
+      const url = request.url();
+      if (url.includes('/api/v1/') || url.includes('/socket.io')) {
+        audit.recordRequest(url, request.method(), request.headers());
+      }
+    });
+    page.on('websocket', (socket) => {
+      audit.recordWebSocket(socket.url());
+      socket.on('close', () => audit.recordWebSocketClosed(socket.url()));
+    });
+
+    await page.goto(`${config.frontendUrl}/booking/lookup`, { waitUntil: 'networkidle' });
+    await fillLookupForm(page, fixture);
+    await submitLookup(page, fixture);
+    await assertAssignedWaiting(page, audit, fixture);
+
+    await transitionDriver(config, fixture, 'start-route');
+    await waitForGuestStatus(config, fixture, 'ON_ROUTE');
+    await sendLocation(config, fixture, 12.9236, 100.8825);
+    await page.waitForTimeout(config.pollIntervalMs + 1500);
+    await sendLocation(config, fixture, 12.9241, 100.8831);
+    await page.waitForTimeout(config.pollIntervalMs + 1500);
+    audit.assertLocationPollingObserved(2);
+    audit.assertGuestLocationInterval({ expectedMs: config.pollIntervalMs });
+    audit.assertStableGuestTokenFingerprint();
+    audit.assertNoRepeatedGuestLookup(1);
+    audit.assertWebSocketConnectionLimit(1);
+    await assertOnRouteMap(page, fixture);
+    await assertSingleMarker(page);
+
+    await transitionDriver(config, fixture, 'arrive');
+    await waitForGuestStatus(config, fixture, 'DRIVER_ARRIVED');
+    await assertStatusCopy(page, /arrived|pickup location/i, 'DRIVER_ARRIVED');
+    await assertSingleMarker(page);
+    audit.assertWebSocketConnectionLimit(1);
+
+    await transitionDriver(config, fixture, 'mark-picked-up');
+    await waitForGuestStatus(config, fixture, 'PICKED_UP');
+    await assertStatusCopy(page, /in progress|trip/i, 'PICKED_UP');
+    await assertSingleMarker(page);
+    audit.assertWebSocketConnectionLimit(1);
+
+    await transitionDriver(config, fixture, 'end-trip');
+    await waitForGuestStatus(config, fixture, 'SETTLEMENT_PENDING');
+    const terminalAt = Date.now();
+    await page.waitForTimeout(config.pollIntervalMs + 1500);
+    await assertTerminalUiRemoved(page, audit, terminalAt, config.pollIntervalMs);
+
+    if (consoleErrors.length) {
+      throw new Error(`Browser console errors at ${viewport.width}px: ${consoleErrors.join('; ')}`);
+    }
+    console.log(`PASS viewport ${viewport.width}x${viewport.height}; socket reconnects=${audit.socketReconnectCount()}`);
+  } finally {
+    await context.close();
+    if (fixture) {
+      if (config.keepFixture) {
+        registry.update(fixture.runId, { cleanupStatus: 'kept' });
+      } else {
+        try {
+          await cleanupFixtureVerified(config, fixture, registry);
+        } catch (err) {
+          registry.update(fixture.runId, {
+            cleanupStatus: 'failed',
+            cleanupError: serializeSafeError(err).message,
+          });
+          throw err;
+        }
+      }
+    }
+  }
+}
+
+function writeManifest(config, registry, name = 'customer-location-e2e-manifest.json') {
+  fs.mkdirSync(config.artifactDir, { recursive: true });
+  const markerPath = path.join(config.artifactDir, name);
+  fs.writeFileSync(markerPath, `${JSON.stringify(registry.manifest(), null, 2)}\n`);
+  return markerPath;
+}
+
+async function openBrowser(args) {
   const { chromium, firefox, webkit } = require('@playwright/test');
   const browserType = { chromium, firefox, webkit }[args.project] || chromium;
-  const browser = await browserType.launch({ headless: !args.headed });
-  const contexts = [];
-  try {
-    for (const viewport of [
-      { width: 360, height: 800 },
-      { width: 390, height: 844 },
-      { width: 430, height: 932 },
-      { width: 1280, height: 800 },
-    ]) {
-      const context = await browser.newContext({
-        viewport,
-        locale: 'en-US',
-      });
-      contexts.push(context);
-      const audit = new NetworkAudit();
-      const page = await context.newPage();
-      const consoleErrors = [];
-      page.on('console', (message) => {
-        if (['error'].includes(message.type())) {
-          consoleErrors.push(message.text());
-        }
-      });
-      page.on('pageerror', (err) => consoleErrors.push(err.message));
-      page.on('request', (request) => {
-        const url = request.url();
-        if (url.includes('/api/v1/') || url.includes('/socket.io')) {
-          audit.recordRequest(url, request.method());
-        }
-      });
-
-      await page.goto(`${config.frontendUrl}/booking/lookup`, { waitUntil: 'networkidle' });
-      const fields = page.getByRole('textbox');
-      await fields.nth(0).fill(fixture.bookingNumber);
-      await fields.nth(1).fill(fixture.customerPhone);
-      await page.getByRole('button', { name: /find booking|find|lookup|search/i }).click();
-      await page.waitForResponse((response) => response.url().includes('/api/v1/public/bookings/lookup'));
-      await page.waitForTimeout(1200);
-      audit.assertLocationPollingObserved();
-      audit.assertNoRepeatedGuestLookup(1);
-
-      await transitionDriver(config, fixture, 'start-route');
-      await sendLocation(config, fixture, 12.9236, 100.8825);
-      await page.waitForTimeout(config.pollIntervalMs + 1500);
-      await sendLocation(config, fixture, 12.9241, 100.8831);
-      await page.waitForTimeout(1500);
-      audit.assertNoRepeatedGuestLookup(1);
-
-      await transitionDriver(config, fixture, 'arrive');
-      await page.waitForTimeout(1000);
-      await transitionDriver(config, fixture, 'mark-picked-up');
-      await page.waitForTimeout(1000);
-      await transitionDriver(config, fixture, 'end-trip');
-      await page.waitForTimeout(config.pollIntervalMs + 1500);
-
-      if (consoleErrors.length) {
-        throw new Error(`Browser console errors at ${viewport.width}px: ${consoleErrors.join('; ')}`);
-      }
-      console.log(`PASS browser viewport ${viewport.width}x${viewport.height}`);
-    }
-  } finally {
-    await Promise.allSettled(contexts.map((context) => context.close()));
-    await browser.close();
-  }
+  return browserType.launch({ headless: !args.headed });
 }
 
 async function main() {
@@ -216,54 +470,65 @@ async function main() {
   if (args.headed) env.TRIDE_E2E_HEADED = '1';
   if (args.keepFixture) env.TRIDE_E2E_KEEP_FIXTURE = '1';
   const config = buildConfig(env, { requireSecrets: !args.dryRun });
-  const runId = createRunId();
+  const baseRunId = createRunId();
   const dryRunSummary = redact({
-    runId,
+    dryRun: true,
+    baseRunId,
     target: config.target,
-    frontendUrl: config.frontendUrl,
-    backendUrl: config.backendUrl,
+    frontendHost: config.frontendHost,
+    backendHost: config.backendHost,
+    hardAllowedHosts: config.allowedHosts,
     adminEmail: config.adminEmail,
     driverEmail: config.driverEmail,
     driverId: config.driverId,
     customerPhone: config.customerPhone,
+    viewports: VIEWPORTS.map((viewport) => `${viewport.width}x${viewport.height}`),
     activeStatuses: [...ACTIVE_STATUSES],
     terminalStatuses: [...TERMINAL_STATUSES],
   });
 
   if (args.dryRun) {
-    console.log(JSON.stringify({ dryRun: true, ...dryRunSummary }, null, 2));
+    console.log(JSON.stringify(dryRunSummary, null, 2));
     return;
   }
 
-  fs.mkdirSync(config.artifactDir, { recursive: true });
-  let fixture;
+  const registry = new FixtureRegistry();
+  const auth = await authenticateAndPreflight(config);
+  const browser = await openBrowser(args);
   try {
-    fixture = await prepareFixture(config, runId);
-    await openLookupPage(config, fixture, args);
+    for (const viewport of VIEWPORTS) {
+      const currentStatus = await loadDriverStatus(config, auth.driverToken);
+      if (currentStatus.hasActiveJob === true) {
+        throw new Error(`E2E driver has an active job before viewport ${viewport.width}x${viewport.height}`);
+      }
+      await runViewportScenario({ browser, config, viewport, auth, registry });
+    }
   } finally {
-    if (fixture && !args.keepFixture) {
-      await cleanupFixture(config, fixture);
-      console.log(`Cleanup archived test fixture for ${fixture.runId}`);
-    } else if (fixture) {
-      const markerPath = path.join(config.artifactDir, `${fixture.runId}-fixture.json`);
-      fs.writeFileSync(markerPath, `${JSON.stringify(redact(fixture), null, 2)}\n`);
-      console.log(`Fixture kept for debugging. Redacted marker: ${markerPath}`);
+    await browser.close();
+    if (config.keepFixture || registry.records.length) {
+      const markerPath = writeManifest(config, registry);
+      console.log(`Redacted E2E manifest: ${markerPath}`);
     }
   }
 }
 
 if (require.main === module) {
   main().catch((err) => {
-    console.error(redact(err.message));
+    console.error(JSON.stringify(serializeSafeError(err), null, 2));
     process.exit(1);
   });
 }
 
 module.exports = {
-  cleanupFixture,
+  authenticateAndPreflight,
+  cleanupFixtureVerified,
+  fillLookupForm,
   main,
   parseArgs,
   prepareFixture,
+  runViewportScenario,
   sendLocation,
+  submitLookup,
   transitionDriver,
+  waitForGuestStatus,
 };

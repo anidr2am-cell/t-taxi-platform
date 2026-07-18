@@ -5,11 +5,13 @@ This tool verifies the PR #43 customer-facing driver live location lifecycle in 
 ## Safety rules
 
 - Staging only: `TRIDE_E2E_TARGET=staging` is mandatory.
-- Production-like hosts are blocked by the runner. The default whitelist is `trider.taxi`, `localhost`, and `127.0.0.1`.
+- Production-like hosts are blocked by the runner. Allowed hosts are hardcoded to `trider.taxi`, `localhost`, and `127.0.0.1`.
+- The allowed host list cannot be expanded with an environment variable. A new staging host must be reviewed as a code change.
 - No production route, migration, Docker, nginx, KTaxi, pricing, settlement, QR, or background-location behavior is added.
 - Secrets are loaded only from `.env.e2e.local`, which is ignored by git.
 - Guest tokens are sent by header and redacted from logs, reports, and fixture markers.
 - Cleanup archives only records whose run ID starts with `E2E-`, whose customer name starts with `[E2E]`, and whose marker contains `CUSTOMER_DRIVER_LOCATION_E2E`.
+- Cleanup also reloads the booking from the existing admin booking detail API and verifies booking number, customer name, run ID, and server-side marker before archive.
 
 ## Required staging accounts
 
@@ -35,6 +37,7 @@ Set:
 TRIDE_E2E_TARGET=staging
 TRIDE_E2E_FRONTEND_URL=https://trider.taxi
 TRIDE_E2E_BACKEND_URL=https://trider.taxi
+TRIDE_E2E_ALLOW_SPLIT_HOSTS=0
 TRIDE_E2E_ADMIN_EMAIL=tride.e2e.admin@example.com
 TRIDE_E2E_ADMIN_PASSWORD=<staging-only admin password>
 TRIDE_E2E_DRIVER_EMAIL=tride.e2e.driver@example.com
@@ -78,15 +81,17 @@ If `--keep-fixture` is used, archive the test booking manually from the admin UI
 
 The runner:
 
-1. Creates a synthetic booking with an `E2E-...` run ID.
+1. Creates a separate synthetic booking for each viewport with an `E2E-...-<width>` run ID.
 2. Looks up the booking from the customer lookup page.
 3. Confirms `DRIVER_ASSIGNED` waits without a live marker.
 4. Moves the trip to `ON_ROUTE`.
 5. Sends driver location updates.
 6. Verifies guest location polling is used instead of repeated guest lookup polling.
-7. Checks browser console/page errors.
-8. Advances to `DRIVER_ARRIVED`, `PICKED_UP`, and `SETTLEMENT_PENDING`.
-9. Confirms cleanup by archiving the synthetic booking.
+7. Verifies the browser WebSocket connection count separately from Engine.IO HTTP transport requests.
+8. Checks customer-visible UI copy, marker semantics, raw localization keys, internal ID/token DOM leaks, and horizontal overflow.
+9. Advances to `DRIVER_ARRIVED`, `PICKED_UP`, and `SETTLEMENT_PENDING`.
+10. Verifies terminal UI cleanup and stops treating live tracking as active.
+11. Reloads the booking through admin detail and archives only after server-side E2E marker validation.
 
 The browser matrix is:
 
@@ -102,7 +107,9 @@ The request observer verifies:
 - No guest token in URL query strings.
 - Guest driver location endpoint is called.
 - Guest booking lookup endpoint is not used as a 15-second polling loop.
-- Socket connection does not repeatedly reconnect for the same active state.
+- Guest location requests keep the same token fingerprint without writing the token to console or artifacts.
+- Socket HTTP transport requests are not treated as WebSocket connections.
+- Browser WebSocket connections do not repeatedly reconnect for the same active state.
 
 The backend/frontend unit tests remain the stronger proof for:
 
@@ -119,7 +126,9 @@ Default artifact folder:
 e2e-artifacts/
 ```
 
-The runner writes only redacted fixture markers when `--keep-fixture` is used. Do not attach raw browser traces that contain headers unless they have been manually checked for secrets.
+The runner writes a redacted fixture manifest after a live run. It does not write raw traces by default because request headers may contain tokens. Do not attach browser traces that contain headers unless they have been manually checked for secrets.
+
+Each manifest entry contains only run ID, viewport, booking number, customer marker, cleanup status, and redacted cleanup errors. Tokens and passwords are never written.
 
 ## Manual QA checklist
 
@@ -133,3 +142,34 @@ Use this when a live E2E account is not available:
 - `SETTLEMENT_PENDING` hides/removes the live marker.
 - No guest token appears in the URL.
 - Mobile widths 360, 390, and 430 px have no horizontal overflow.
+
+## Live run prerequisites
+
+Before the first booking is created, the runner verifies:
+
+- Admin login succeeds and the account has an admin role.
+- Driver login succeeds and the account has the driver role.
+- `TRIDE_E2E_DRIVER_ID` matches the logged-in driver account.
+- The driver is active.
+- The driver has no active job.
+- The configured customer phone is a clearly fake staging number.
+
+If any prerequisite fails, the runner stops before creating a booking.
+
+## Cleanup behavior
+
+The runner registers a partial fixture immediately after booking creation, before lookup and assignment. If lookup, assignment, browser setup, or a lifecycle assertion fails, the `finally` block still attempts cleanup for that fixture.
+
+Cleanup is considered successful only after the archive API succeeds. A failed cleanup fails the E2E run and is reported in the redacted manifest. `--keep-fixture` is the only mode that intentionally skips archive; in that case, manually archive the booking from the admin UI after debugging.
+
+## Live result wording
+
+If local staging credentials are not available, report the result as:
+
+```text
+dry-run passed
+unit tool tests passed
+live E2E not run: local staging credentials were not provided
+```
+
+Do not report waiting UI, map rendering, marker movement, terminal cleanup, or responsive behavior as actually verified until the live command has run successfully.

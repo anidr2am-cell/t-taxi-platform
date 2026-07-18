@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
-const DEFAULT_ALLOWED_HOSTS = new Set(['localhost', '127.0.0.1', 'trider.taxi']);
+const HARD_ALLOWED_HOSTS = new Set(['localhost', '127.0.0.1', 'trider.taxi']);
 const BLOCKED_HOST_PATTERNS = [/88taxi\.net$/i, /ktaxi/i, /production/i, /prod/i];
 const SECRET_KEY_PATTERN = /(password|token|secret|authorization|guestAccessToken|accessToken|refreshToken)/i;
 const TOKEN_VALUE_PATTERN = /([A-Za-z0-9_-]{18,}\.[A-Za-z0-9._-]{18,}|[A-Za-z0-9_-]{32,})/g;
@@ -46,16 +46,7 @@ function normalizeBaseUrl(value) {
   return String(value ?? '').trim().replace(/\/+$/, '');
 }
 
-function allowedHostsFromEnv(value) {
-  const hosts = new Set(DEFAULT_ALLOWED_HOSTS);
-  for (const host of String(value ?? '').split(',')) {
-    const normalized = host.trim().toLowerCase();
-    if (normalized) hosts.add(normalized);
-  }
-  return hosts;
-}
-
-function assertUrlAllowed(label, value, env = process.env) {
+function assertUrlAllowed(label, value) {
   const normalized = normalizeBaseUrl(value);
   if (!normalized) {
     throw new Error(`${label} is required`);
@@ -64,13 +55,18 @@ function assertUrlAllowed(label, value, env = process.env) {
   if (!['http:', 'https:'].includes(url.protocol)) {
     throw new Error(`${label} must be http or https`);
   }
+  if (url.username || url.password) {
+    throw new Error(`${label} must not contain credentials`);
+  }
   const host = url.hostname.toLowerCase();
   if (BLOCKED_HOST_PATTERNS.some((pattern) => pattern.test(host))) {
     throw new Error(`${label} points to a blocked host: ${host}`);
   }
-  const allowedHosts = allowedHostsFromEnv(env.TRIDE_E2E_ALLOWED_HOSTS);
-  if (!allowedHosts.has(host)) {
-    throw new Error(`${label} host is not whitelisted for staging E2E: ${host}`);
+  if (!HARD_ALLOWED_HOSTS.has(host)) {
+    throw new Error(`${label} host is not hard-allowed for staging E2E: ${host}`);
+  }
+  if (host !== 'localhost' && host !== '127.0.0.1' && url.protocol !== 'https:') {
+    throw new Error(`${label} must use HTTPS for staging hosts`);
   }
   return normalized;
 }
@@ -82,13 +78,17 @@ function buildConfig(env = process.env, { requireSecrets = false } = {}) {
   const frontendUrl = assertUrlAllowed(
     'TRIDE_E2E_FRONTEND_URL',
     env.TRIDE_E2E_FRONTEND_URL,
-    env,
   );
   const backendUrl = assertUrlAllowed(
     'TRIDE_E2E_BACKEND_URL',
     env.TRIDE_E2E_BACKEND_URL,
-    env,
   );
+
+  const frontendHost = new URL(frontendUrl).hostname.toLowerCase();
+  const backendHost = new URL(backendUrl).hostname.toLowerCase();
+  if (frontendHost !== backendHost && env.TRIDE_E2E_ALLOW_SPLIT_HOSTS !== '1') {
+    throw new Error('Frontend and backend hosts must match unless TRIDE_E2E_ALLOW_SPLIT_HOSTS=1');
+  }
 
   const requiredForLive = [
     'TRIDE_E2E_ADMIN_EMAIL',
@@ -116,6 +116,9 @@ function buildConfig(env = process.env, { requireSecrets = false } = {}) {
     target: env.TRIDE_E2E_TARGET,
     frontendUrl,
     backendUrl,
+    frontendHost,
+    backendHost,
+    allowedHosts: [...HARD_ALLOWED_HOSTS].sort(),
     adminEmail: env.TRIDE_E2E_ADMIN_EMAIL || '',
     adminPassword: env.TRIDE_E2E_ADMIN_PASSWORD || '',
     driverEmail: env.TRIDE_E2E_DRIVER_EMAIL || '',
@@ -132,6 +135,10 @@ function buildConfig(env = process.env, { requireSecrets = false } = {}) {
 function createRunId(now = new Date(), randomBytes = crypto.randomBytes(2)) {
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, '');
   return `E2E-${stamp}-${randomBytes.toString('hex')}`;
+}
+
+function createViewportRunId(baseRunId, viewport) {
+  return `${baseRunId}-${viewport.width}`;
 }
 
 function fixtureCustomer(runId, phone) {
@@ -177,6 +184,11 @@ function buildBookingPayload(runId, phone, now = new Date()) {
   };
 }
 
+function tokenFingerprint(value) {
+  if (!value) return null;
+  return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 8);
+}
+
 function redactString(value) {
   return String(value ?? '')
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [REDACTED]')
@@ -184,6 +196,7 @@ function redactString(value) {
 }
 
 function redact(value) {
+  if (value instanceof Error) return serializeSafeError(value);
   if (Array.isArray(value)) return value.map((item) => redact(item));
   if (value && typeof value === 'object') {
     return Object.fromEntries(
@@ -197,10 +210,21 @@ function redact(value) {
   return value;
 }
 
+function serializeSafeError(error, { includeStack = false } = {}) {
+  const safe = {
+    name: error?.name || 'Error',
+    message: redactString(error?.message || String(error)),
+  };
+  if (includeStack && error?.stack) safe.stack = redactString(error.stack);
+  return safe;
+}
+
 function sanitizeUrl(value) {
   const url = new URL(value);
   url.search = '';
   url.hash = '';
+  url.username = '';
+  url['password'] = '';
   return url.toString();
 }
 
@@ -211,7 +235,7 @@ function classifyNetworkUrl(value) {
   if (/\/api\/v1\/public\/bookings\/\d+\/driver-location$/.test(pathName)) {
     return 'guestLocation';
   }
-  if (pathName.startsWith('/socket.io')) return 'socket';
+  if (pathName.startsWith('/socket.io')) return 'socketTransport';
   if (pathName.includes('driver-location')) return 'driverLocationOther';
   return 'other';
 }
@@ -228,17 +252,38 @@ function assertNoTokenInUrl(value) {
 class NetworkAudit {
   constructor() {
     this.events = [];
+    this.webSockets = [];
   }
 
-  recordRequest(url, method = 'GET') {
+  recordRequest(url, method = 'GET', headers = {}) {
     assertNoTokenInUrl(url);
+    const guestToken = headers['x-guest-access-token'] || headers['X-Guest-Access-Token'];
     this.events.push({
       type: 'request',
       category: classifyNetworkUrl(url),
       method,
       url: sanitizeUrl(url),
+      guestTokenFingerprint: guestToken ? tokenFingerprint(guestToken) : null,
       at: Date.now(),
     });
+  }
+
+  recordWebSocket(url) {
+    assertNoTokenInUrl(url);
+    this.webSockets.push({
+      type: 'websocket',
+      url: sanitizeUrl(url),
+      at: Date.now(),
+      closedAt: null,
+    });
+  }
+
+  recordWebSocketClosed(url) {
+    const safeUrl = sanitizeUrl(url);
+    const open = [...this.webSockets].reverse().find(
+      (socket) => socket.url === safeUrl && socket.closedAt == null,
+    );
+    if (open) open.closedAt = Date.now();
   }
 
   counts() {
@@ -248,6 +293,10 @@ class NetworkAudit {
     }, {});
   }
 
+  eventsFor(category) {
+    return this.events.filter((event) => event.category === category);
+  }
+
   assertNoRepeatedGuestLookup(maxAllowed = 1) {
     const count = this.counts().guestLookup || 0;
     if (count > maxAllowed) {
@@ -255,18 +304,54 @@ class NetworkAudit {
     }
   }
 
-  assertSocketSubscribeLimit(maxAllowed = 1) {
-    const count = this.events.filter((event) => event.category === 'socket').length;
-    if (count > maxAllowed) {
-      throw new Error(`Socket connection/subscription repeated ${count} times`);
+  assertLocationPollingObserved(minAllowed = 1) {
+    const count = this.counts().guestLocation || 0;
+    if (count < minAllowed) {
+      throw new Error(`Guest driver location polling observed ${count}, expected at least ${minAllowed}`);
     }
   }
 
-  assertLocationPollingObserved() {
-    const count = this.counts().guestLocation || 0;
-    if (count < 1) {
-      throw new Error('Guest driver location polling was not observed');
+  assertGuestLocationInterval({ expectedMs, toleranceMs = 6000 }) {
+    const events = this.eventsFor('guestLocation');
+    if (events.length < 2) {
+      throw new Error('At least two guest location requests are required to verify polling interval');
     }
+    const interval = events[events.length - 1].at - events[events.length - 2].at;
+    if (Math.abs(interval - expectedMs) > toleranceMs) {
+      throw new Error(`Guest location polling interval ${interval}ms is outside expected ${expectedMs}ms`);
+    }
+  }
+
+  assertStableGuestTokenFingerprint() {
+    const fingerprints = new Set(
+      this.eventsFor('guestLocation')
+        .map((event) => event.guestTokenFingerprint)
+        .filter(Boolean),
+    );
+    if (fingerprints.size > 1) {
+      throw new Error('Guest location requests used multiple guest token fingerprints');
+    }
+  }
+
+  assertNoGuestLocationAfter(cutoffMs, graceMs = 1000) {
+    const late = this.eventsFor('guestLocation').filter((event) => event.at > cutoffMs + graceMs);
+    if (late.length) {
+      throw new Error(`Guest location polling continued after terminal state (${late.length} late requests)`);
+    }
+  }
+
+  assertWebSocketConnectionLimit(maxAllowed = 1) {
+    if (this.webSockets.length > maxAllowed) {
+      throw new Error(`WebSocket connections repeated ${this.webSockets.length} times`);
+    }
+  }
+
+  assertSocketSubscribeLimit(maxAllowed = 1) {
+    this.assertWebSocketConnectionLimit(maxAllowed);
+  }
+
+  socketReconnectCount() {
+    return Math.max(0, this.webSockets.length - 1);
   }
 }
 
@@ -274,6 +359,9 @@ function assertCleanupCandidate(record) {
   if (!record || typeof record !== 'object') throw new Error('Cleanup record is required');
   if (!String(record.runId || '').startsWith('E2E-')) {
     throw new Error('Cleanup refused a record without an E2E run ID');
+  }
+  if (!String(record.bookingNumber || '').startsWith('TX')) {
+    throw new Error('Cleanup refused a record without a booking number');
   }
   if (!String(record.customerName || '').startsWith(TEST_NAME_PREFIX)) {
     throw new Error('Cleanup refused a non-E2E customer name');
@@ -284,20 +372,92 @@ function assertCleanupCandidate(record) {
   return true;
 }
 
+function assertServerCleanupCandidate(record, serverBooking) {
+  assertCleanupCandidate(record);
+  if (!serverBooking || typeof serverBooking !== 'object') {
+    throw new Error('Cleanup refused because server booking detail is missing');
+  }
+  const serverBookingNumber = String(serverBooking.bookingNumber || serverBooking.booking_number || '');
+  if (serverBookingNumber !== record.bookingNumber) {
+    throw new Error(`Cleanup refused booking number mismatch for ${record.runId}`);
+  }
+  const serverCustomerName = String(serverBooking.customer?.name || serverBooking.customerName || '');
+  if (!serverCustomerName.startsWith(TEST_NAME_PREFIX)) {
+    throw new Error(`Cleanup refused customer name mismatch for ${record.runId}`);
+  }
+  if (!serverCustomerName.includes(record.runId)) {
+    throw new Error(`Cleanup refused customer run ID mismatch for ${record.runId}`);
+  }
+  const marker = [
+    serverBooking.specialRequests,
+    serverBooking.additionalRequests,
+    serverBooking.luggage?.specialItems,
+    serverBooking.requestMarker,
+  ].filter(Boolean).join(' ');
+  if (!marker.includes(E2E_MARKER)) {
+    throw new Error(`Cleanup refused server marker mismatch for ${record.runId}`);
+  }
+  if (!marker.includes(record.runId)) {
+    throw new Error(`Cleanup refused server marker run ID mismatch for ${record.runId}`);
+  }
+  return true;
+}
+
+class FixtureRegistry {
+  constructor() {
+    this.records = [];
+  }
+
+  add(record) {
+    if (!record?.runId) throw new Error('Fixture registry requires runId');
+    const index = this.records.findIndex((item) => item.runId === record.runId);
+    const next = { cleanupStatus: 'pending', ...record };
+    if (index >= 0) this.records[index] = { ...this.records[index], ...next };
+    else this.records.push(next);
+    return this.records.find((item) => item.runId === record.runId);
+  }
+
+  update(runId, patch) {
+    const record = this.records.find((item) => item.runId === runId);
+    if (!record) throw new Error(`Fixture registry missing ${runId}`);
+    Object.assign(record, patch);
+    return record;
+  }
+
+  pending() {
+    return this.records.filter((record) => record.cleanupStatus !== 'archived');
+  }
+
+  manifest() {
+    return this.records.map((record) => redact({
+      runId: record.runId,
+      viewport: record.viewport,
+      bookingNumber: record.bookingNumber,
+      customerName: record.customerName,
+      marker: record.marker,
+      cleanupStatus: record.cleanupStatus,
+      cleanupError: record.cleanupError,
+    }));
+  }
+}
+
 module.exports = {
   ACTIVE_STATUSES,
-  DEFAULT_ALLOWED_HOSTS,
   E2E_MARKER,
+  FixtureRegistry,
+  HARD_ALLOWED_HOSTS,
   NetworkAudit,
   TERMINAL_STATUSES,
   TEST_NAME_PREFIX,
   assertCleanupCandidate,
   assertNoTokenInUrl,
+  assertServerCleanupCandidate,
   assertUrlAllowed,
   buildBookingPayload,
   buildConfig,
   classifyNetworkUrl,
   createRunId,
+  createViewportRunId,
   fixtureCustomer,
   loadEnvFile,
   mergeEnv,
@@ -306,4 +466,6 @@ module.exports = {
   redactString,
   repoRoot,
   sanitizeUrl,
+  serializeSafeError,
+  tokenFingerprint,
 };
