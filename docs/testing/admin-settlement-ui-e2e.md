@@ -59,7 +59,10 @@ That build flag exposes only a test-only direct route:
 ```
 
 The route is disabled by default and is not required for normal staging or
-production builds.
+production builds. Even when the flag is enabled, the route requires a saved
+admin session through the existing `AdminAuthGate`, validates that
+`bookingNumber` is non-empty and shaped like a T-Ride booking number, and still
+uses the normal admin settlement API authorization checks.
 
 ## Commands
 

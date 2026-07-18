@@ -18,6 +18,8 @@ import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 import 'screens/admin/admin_screen.dart';
 
+const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
+
 void main() {
   if (kIsWeb) {
     usePathUrlStrategy();
@@ -39,7 +41,6 @@ class TTaxiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleState>();
-    const enableE2eRoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
 
     return MaterialApp(
       title: 'T-Ride',
@@ -71,25 +72,80 @@ class TTaxiApp extends StatelessWidget {
             const DriverPwaInstallPromptHost(child: DriverShellPage()),
         '/support': (_) => const CustomerSupportPage(),
       },
-      onGenerateRoute: enableE2eRoutes
-          ? (settings) {
-              final uri = Uri.parse(settings.name ?? '');
-              if (uri.path == '/admin/e2e/settlement-detail') {
-                final bookingNumber = uri.queryParameters['bookingNumber'] ?? '';
-                return MaterialPageRoute<void>(
-                  builder: (_) => AdminAuthGate(
-                    child: AdminSettlementDetailPage(
-                      bookingNumber: bookingNumber,
-                      api: const AdminSettlementApiService(),
-                      onChanged: () {},
-                    ),
-                  ),
-                );
-              }
-              return null;
-            }
-          : null,
+      onGenerateRoute: (settings) {
+        final uri = Uri.tryParse(settings.name ?? '');
+        if (uri?.path == '/admin/e2e/settlement-detail') {
+          return MaterialPageRoute<void>(
+            settings: settings,
+            builder: (_) => AdminE2ESettlementDetailRoute(uri: uri!),
+          );
+        }
+        return null;
+      },
       home: const HomeScreen(),
+    );
+  }
+}
+
+@visibleForTesting
+bool adminE2ERoutesEnabled({bool enabled = _enableE2ERoutes}) {
+  return enabled;
+}
+
+@visibleForTesting
+String? adminE2ESettlementBookingNumber(Uri uri) {
+  final bookingNumber = uri.queryParameters['bookingNumber']?.trim();
+  if (bookingNumber == null || bookingNumber.isEmpty) return null;
+  if (!RegExp(r'^TX[0-9A-Za-z_-]+$').hasMatch(bookingNumber)) return null;
+  return bookingNumber;
+}
+
+@visibleForTesting
+class AdminE2ESettlementDetailRoute extends StatelessWidget {
+  const AdminE2ESettlementDetailRoute({
+    super.key,
+    required this.uri,
+    this.routesEnabled = _enableE2ERoutes,
+  });
+
+  final Uri uri;
+  final bool routesEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final bookingNumber = adminE2ESettlementBookingNumber(uri);
+    if (!adminE2ERoutesEnabled(enabled: routesEnabled)) {
+      return const _AdminE2ERouteBlockedPage(
+        message: 'Admin E2E routes are disabled',
+      );
+    }
+    if (bookingNumber == null) {
+      return const _AdminE2ERouteBlockedPage(
+        message: 'Admin E2E settlement booking number is required',
+      );
+    }
+    return Material(
+      child: AdminAuthGate(
+        child: AdminSettlementDetailPage(
+          bookingNumber: bookingNumber,
+          api: const AdminSettlementApiService(),
+          onChanged: () {},
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminE2ERouteBlockedPage extends StatelessWidget {
+  const _AdminE2ERouteBlockedPage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('T-Ride')),
+      body: Center(child: Text(message, textAlign: TextAlign.center)),
     );
   }
 }

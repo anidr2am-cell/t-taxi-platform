@@ -7,6 +7,7 @@ const test = require('node:test');
 const {
   MANIFEST_NAME,
   VIEWPORT,
+  adminSettlementE2EDetailUrl,
   parseArgs,
   writeManifest,
 } = require('./run');
@@ -32,6 +33,22 @@ test('parseArgs supports dry-run, headed, keep-fixture, and project', () => {
 test('viewport remains desktop-sized for admin approval review', () => {
   assert.equal(VIEWPORT.width, 960);
   assert.equal(VIEWPORT.height, 800);
+});
+
+test('admin settlement detail E2E URL requires a valid booking number', () => {
+  const config = { frontendUrl: 'https://trider.taxi' };
+  assert.equal(
+    adminSettlementE2EDetailUrl(config, 'TX202607180199'),
+    'https://trider.taxi/admin/e2e/settlement-detail?bookingNumber=TX202607180199',
+  );
+  assert.throws(
+    () => adminSettlementE2EDetailUrl(config, ''),
+    /valid booking number/,
+  );
+  assert.throws(
+    () => adminSettlementE2EDetailUrl(config, '../driver'),
+    /valid booking number/,
+  );
 });
 
 test('writeManifest keeps only redacted admin UI run metadata', () => {

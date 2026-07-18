@@ -297,6 +297,21 @@ async function seedAdminToken(page, token) {
   }, token);
 }
 
+function adminSettlementE2EDetailUrl(config, bookingNumber) {
+  const value = String(bookingNumber || '').trim();
+  if (!/^TX[0-9A-Za-z_-]+$/.test(value)) {
+    throw new Error('Admin settlement UI E2E requires a valid booking number');
+  }
+  return `${config.frontendUrl}/admin/e2e/settlement-detail?bookingNumber=${encodeURIComponent(value)}`;
+}
+
+async function clickUnique(locator, label) {
+  await locator.first().waitFor({ timeout: 25000 });
+  const count = await locator.count();
+  if (count !== 1) throw new Error(`${label} matched ${count} elements`);
+  await locator.click();
+}
+
 async function clickApproveWithConfirmation(page, config, fixture) {
   const approveResponsePromise = page.waitForResponse(
     (response) => response.url().includes(`/api/v1/admin/settlements/${fixture.bookingNumber}/approve`)
@@ -304,15 +319,9 @@ async function clickApproveWithConfirmation(page, config, fixture) {
     { timeout: 30000 },
   );
   await screenshot(config, page, `${fixture.runId}-admin-settlement-detail-before-approve.png`);
-  for (const [x, y] of [[480, 362], [480, 360], [500, 362], [460, 362]]) {
-    await page.mouse.click(x, y).catch(() => {});
-    await waitMs(400);
-  }
+  await clickUnique(page.getByRole('button', { name: /^Approve$/ }), 'admin approve button');
   await screenshot(config, page, `${fixture.runId}-admin-settlement-confirm-dialog.png`);
-  for (const [x, y] of [[652, 446], [650, 446], [675, 446], [625, 446]]) {
-    await page.mouse.click(x, y).catch(() => {});
-    await waitMs(400);
-  }
+  await clickUnique(page.getByRole('dialog').getByRole('button', { name: /^Approve$/ }), 'admin approve confirmation button');
   const response = await approveResponsePromise;
   if (!response.ok()) {
     throw new Error(`Admin UI approve failed HTTP ${response.status()}`);
@@ -347,7 +356,7 @@ async function runAdminSettlementUi(config, auth, registry, browser) {
   page.on('pageerror', (err) => consoleErrors.push(err.message));
   try {
     await seedAdminToken(page, auth.adminToken);
-    await page.goto(`${config.frontendUrl}/admin/e2e/settlement-detail?bookingNumber=${fixture.bookingNumber}`, {
+    await page.goto(adminSettlementE2EDetailUrl(config, fixture.bookingNumber), {
       waitUntil: 'domcontentloaded',
     });
     await waitForFlutterApp(page);
@@ -463,6 +472,7 @@ if (require.main === module) {
 module.exports = {
   MANIFEST_NAME,
   VIEWPORT,
+  adminSettlementE2EDetailUrl,
   parseArgs,
   writeManifest,
 };
