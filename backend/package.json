@@ -32,7 +32,10 @@
     "e2e:staging:settlement-rejection:dry-run": "node ../tools/e2e/settlement-rejection-resubmission/run.js --dry-run",
     "test:full-trip-settlement-e2e-tools": "node --test ../tools/e2e/full-trip-settlement/*.test.js",
     "e2e:staging:full-trip-settlement": "node ../tools/e2e/full-trip-settlement/run.js",
-    "e2e:staging:full-trip-settlement:dry-run": "node ../tools/e2e/full-trip-settlement/run.js --dry-run"
+    "e2e:staging:full-trip-settlement:dry-run": "node ../tools/e2e/full-trip-settlement/run.js --dry-run",
+    "test:driver-settlement-ui-e2e-tools": "node --test ../tools/e2e/driver-settlement-ui/*.test.js",
+    "e2e:staging:driver-settlement-ui": "node ../tools/e2e/driver-settlement-ui/run.js",
+    "e2e:staging:driver-settlement-ui:dry-run": "node ../tools/e2e/driver-settlement-ui/run.js --dry-run"
   },
   "dependencies": {
     "axios": "^1.7.9",
