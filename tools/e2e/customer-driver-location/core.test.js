@@ -24,7 +24,10 @@ const {
   tokenFingerprint,
 } = require('./core');
 const {
+  collectFlutterDiagnostics,
   cleanupPendingFixtures,
+  enableFlutterSemantics,
+  fillLookupForm,
   prepareFixture,
 } = require('./run');
 
@@ -65,6 +68,100 @@ function serverBooking(fixture, overrides = {}) {
     customer: { name: fixture.customerName },
     specialRequests: fixture.marker,
     ...overrides,
+  };
+}
+
+function fakeLocator({ count = 0, value = '', onClick = null } = {}) {
+  const state = { value, clicks: 0, fills: [] };
+  const locator = {
+    state,
+    async count() {
+      return typeof count === 'function' ? count() : count;
+    },
+    first() {
+      return {
+        async click(options) {
+          state.clicks += 1;
+          if (onClick) onClick(options);
+        },
+        async waitFor() {
+          if ((typeof count === 'function' ? count() : count) < 1) {
+            throw new Error('not found');
+          }
+        },
+      };
+    },
+    async fill(nextValue) {
+      state.value = nextValue;
+      state.fills.push(nextValue);
+    },
+    async inputValue() {
+      return state.value;
+    },
+    async click(options) {
+      state.clicks += 1;
+      if (onClick) onClick(options);
+    },
+  };
+  return locator;
+}
+
+function fakeFlutterPage({
+  placeholderCount = 0,
+  textboxCount = 2,
+  inputCount = 0,
+  buttonCount = 1,
+  bookingCount = 1,
+  phoneCount = 1,
+  lookupButtonCount = 1,
+  waitForFunctionFails = false,
+  url = 'https://trider.taxi/booking/lookup?guestAccessToken=secret#hash',
+} = {}) {
+  let currentPlaceholderCount = placeholderCount;
+  const placeholder = fakeLocator({
+    count: () => currentPlaceholderCount,
+    onClick: () => {
+      currentPlaceholderCount = 0;
+    },
+  });
+  const accessibilityButton = fakeLocator({ count: 0 });
+  const booking = fakeLocator({ count: bookingCount });
+  const phone = fakeLocator({ count: phoneCount });
+  const lookupButton = fakeLocator({ count: lookupButtonCount });
+  return {
+    placeholder,
+    booking,
+    phone,
+    lookupButton,
+    url: () => url,
+    locator(selector) {
+      if (selector === 'flt-semantics-placeholder') return placeholder;
+      return fakeLocator({ count: 0 });
+    },
+    getByRole(role, options = {}) {
+      if (role === 'button' && /enable accessibility/i.test(String(options.name))) {
+        return accessibilityButton;
+      }
+      if (role === 'textbox' && options.name?.test?.('booking number')) return booking;
+      if (role === 'textbox' && options.name?.test?.('phone')) return phone;
+      if (role === 'button' && options.name?.test?.('Find booking')) return lookupButton;
+      return fakeLocator({ count: 0 });
+    },
+    async waitForFunction() {
+      if (waitForFunctionFails) throw new Error('timed out');
+    },
+    async evaluate() {
+      return {
+        flutterView: 1,
+        glassPane: 1,
+        semanticsPlaceholder: currentPlaceholderCount,
+        applicationRole: 0,
+        textboxRole: textboxCount,
+        input: inputCount,
+        textarea: 0,
+        buttonRole: buttonCount,
+      };
+    },
   };
 }
 
@@ -166,6 +263,67 @@ test('extractGuestAccess rejects missing nested token without leaking values', (
       },
     );
   }
+});
+
+test('collectFlutterDiagnostics stores only safe path and selector counts', async () => {
+  const diagnostics = await collectFlutterDiagnostics(fakeFlutterPage());
+  assert.equal(diagnostics.pathname, '/booking/lookup');
+  assert.equal(diagnostics.textboxRole, 2);
+  assert.equal(JSON.stringify(diagnostics).includes('guestAccessToken'), false);
+  assert.equal(JSON.stringify(diagnostics).includes('secret'), false);
+});
+
+test('enableFlutterSemantics clicks the Flutter placeholder once and is safe to call repeatedly', async () => {
+  const page = fakeFlutterPage({ placeholderCount: 1, textboxCount: 2 });
+  await enableFlutterSemantics(page);
+  await enableFlutterSemantics(page);
+  assert.equal(page.placeholder.state.clicks, 1);
+});
+
+test('enableFlutterSemantics succeeds without clicking when textboxes already exist', async () => {
+  const page = fakeFlutterPage({ placeholderCount: 0, textboxCount: 2 });
+  const diagnostics = await enableFlutterSemantics(page);
+  assert.equal(page.placeholder.state.clicks, 0);
+  assert.equal(diagnostics.textboxRole, 2);
+});
+
+test('enableFlutterSemantics fails clearly when no accessible editable fields appear', async () => {
+  const page = fakeFlutterPage({ placeholderCount: 0, textboxCount: 0, inputCount: 0 });
+  await assert.rejects(
+    () => enableFlutterSemantics(page),
+    (err) => {
+      assert.match(err.message, /exposed no editable fields/);
+      assert.equal(err.message.includes('guestAccessToken'), false);
+      return true;
+    },
+  );
+});
+
+test('fillLookupForm uses unique semantic labels and does not rely on nth textbox fallback', async () => {
+  const page = fakeFlutterPage();
+  await fillLookupForm(page, {
+    bookingNumber: 'TX202607180999',
+    customerPhone: '+66000000001',
+  });
+  assert.deepEqual(page.booking.state.fills, ['TX202607180999']);
+  assert.deepEqual(page.phone.state.fills, ['+66000000001']);
+});
+
+test('fillLookupForm rejects missing or ambiguous semantic fields', async () => {
+  await assert.rejects(
+    () => fillLookupForm(fakeFlutterPage({ bookingCount: 0 }), {
+      bookingNumber: 'TX202607180999',
+      customerPhone: '+66000000001',
+    }),
+    /booking number locator was not found/,
+  );
+  await assert.rejects(
+    () => fillLookupForm(fakeFlutterPage({ bookingCount: 2 }), {
+      bookingNumber: 'TX202607180999',
+      customerPhone: '+66000000001',
+    }),
+    /booking number locator matched 2 elements/,
+  );
 });
 
 test('run ID and viewport fixture naming are E2E-scoped and unique', () => {

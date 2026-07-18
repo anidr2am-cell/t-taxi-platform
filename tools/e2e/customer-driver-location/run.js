@@ -269,26 +269,140 @@ async function waitForGuestStatus(config, fixture, expectedStatus, timeoutMs = 2
   throw new Error(`Timed out waiting for ${expectedStatus}; last status was ${lastStatus}`);
 }
 
-async function fillLookupForm(page, fixture) {
-  const bookingInput = page.getByLabel(/booking number/i);
-  const phoneInput = page.getByLabel(/phone/i);
-  if ((await bookingInput.count()) > 0 && (await phoneInput.count()) > 0) {
-    await bookingInput.fill(fixture.bookingNumber);
-    await phoneInput.fill(fixture.customerPhone);
-    return;
+function safePathname(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    return url.pathname;
+  } catch (_) {
+    return '';
   }
-  const fields = page.getByRole('textbox');
-  await fields.nth(0).fill(fixture.bookingNumber);
-  await fields.nth(1).fill(fixture.customerPhone);
+}
+
+async function collectFlutterDiagnostics(page) {
+  const pathname = typeof page.url === 'function' ? safePathname(page.url()) : '';
+  const counts = await page.evaluate(() => ({
+    flutterView: document.querySelectorAll('flutter-view').length,
+    glassPane: document.querySelectorAll('flt-glass-pane').length,
+    semanticsPlaceholder: document.querySelectorAll('flt-semantics-placeholder').length,
+    applicationRole: document.querySelectorAll('[role="application"]').length,
+    textboxRole: document.querySelectorAll('[role="textbox"]').length,
+    input: document.querySelectorAll('input').length,
+    textarea: document.querySelectorAll('textarea').length,
+    buttonRole: document.querySelectorAll('[role="button"]').length,
+  })).catch((err) => ({ error: serializeSafeError(err).message }));
+  return { pathname, ...counts };
+}
+
+function formatDiagnostics(label, diagnostics) {
+  return `${label}: ${JSON.stringify(diagnostics)}`;
+}
+
+async function enableFlutterSemantics(page) {
+  const placeholder = page.locator('flt-semantics-placeholder');
+  if ((await placeholder.count()) > 0) {
+    await placeholder.first().click({ force: true });
+  } else {
+    const accessibilityButton = page.getByRole('button', { name: /enable accessibility/i });
+    if ((await accessibilityButton.count()) > 0) {
+      await accessibilityButton.first().click();
+    }
+  }
+
+  await page.waitForFunction(() => {
+    const placeholders = document.querySelectorAll('flt-semantics-placeholder').length;
+    const textboxes = document.querySelectorAll(
+      '[role="textbox"], input, textarea, flt-semantics input',
+    ).length;
+    return placeholders === 0 || textboxes > 0;
+  }, null, { timeout: 15000 }).catch(async () => {
+    throw new Error(formatDiagnostics(
+      'Flutter semantics did not become ready',
+      await collectFlutterDiagnostics(page),
+    ));
+  });
+
+  const diagnostics = await collectFlutterDiagnostics(page);
+  const inputCount = Number(diagnostics.textboxRole || 0) +
+    Number(diagnostics.input || 0) +
+    Number(diagnostics.textarea || 0);
+  if (inputCount === 0) {
+    throw new Error(formatDiagnostics('Flutter semantics exposed no editable fields', diagnostics));
+  }
+  return diagnostics;
+}
+
+async function waitForFlutterAppReady(page) {
+  await page.waitForFunction(() => Boolean(
+    document.querySelector('flt-glass-pane') ||
+    document.querySelector('flutter-view') ||
+    document.querySelector('flt-semantics-placeholder') ||
+    document.querySelector('[role="application"]'),
+  ), null, { timeout: 30000 }).catch(async () => {
+    throw new Error(formatDiagnostics(
+      'Flutter app root was not detected',
+      await collectFlutterDiagnostics(page),
+    ));
+  });
+  return enableFlutterSemantics(page);
+}
+
+async function uniqueLocator(locator, label, page) {
+  await locator.first().waitFor({ timeout: 20000 }).catch(async () => {
+    throw new Error(formatDiagnostics(
+      `${label} locator was not found`,
+      await collectFlutterDiagnostics(page),
+    ));
+  });
+  const count = await locator.count();
+  if (count !== 1) {
+    throw new Error(formatDiagnostics(
+      `${label} locator matched ${count} elements`,
+      await collectFlutterDiagnostics(page),
+    ));
+  }
+  return locator;
+}
+
+async function fillAndVerify(locator, value, label) {
+  await locator.fill(value);
+  if (typeof locator.inputValue === 'function') {
+    const actual = await locator.inputValue().catch(() => null);
+    if (actual != null && actual !== value) {
+      throw new Error(`${label} field did not retain the expected value`);
+    }
+  }
+}
+
+async function fillLookupForm(page, fixture) {
+  await waitForFlutterAppReady(page);
+  const bookingInput = await uniqueLocator(
+    page.getByRole('textbox', { name: /booking number/i }),
+    'booking number',
+    page,
+  );
+  const phoneInput = await uniqueLocator(
+    page.getByRole('textbox', { name: /phone/i }),
+    'phone',
+    page,
+  );
+  await fillAndVerify(bookingInput, fixture.bookingNumber, 'booking number');
+  await fillAndVerify(phoneInput, fixture.customerPhone, 'phone');
 }
 
 async function submitLookup(page, fixture) {
-  const lookupWait = page.waitForResponse(
-    (response) => response.url().includes('/api/v1/public/bookings/lookup'),
-    { timeout: 20000 },
+  const lookupButton = await uniqueLocator(
+    page.getByRole('button', { name: /find booking|find|lookup|search/i }),
+    'lookup button',
+    page,
   );
-  await page.getByRole('button', { name: /find booking|find|lookup|search/i }).click();
-  const response = await lookupWait;
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (res) => res.url().includes('/api/v1/public/bookings/lookup') &&
+        res.request().method() === 'POST',
+      { timeout: 20000 },
+    ),
+    lookupButton.click(),
+  ]);
   if (response.status() !== 200) {
     throw new Error(`Guest lookup returned HTTP ${response.status()}`);
   }
@@ -423,7 +537,7 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
       socket.on('close', () => audit.recordWebSocketClosed(socket.url()));
     });
 
-    await page.goto(`${config.frontendUrl}/booking/lookup`, { waitUntil: 'networkidle' });
+    await page.goto(`${config.frontendUrl}/booking/lookup`, { waitUntil: 'domcontentloaded' });
     await fillLookupForm(page, fixture);
     await submitLookup(page, fixture);
     await assertAssignedWaiting(page, audit, fixture);
@@ -611,8 +725,10 @@ if (require.main === module) {
 module.exports = {
   authenticateAndPreflight,
   buildRunFailure,
+  collectFlutterDiagnostics,
   cleanupFixtureVerified,
   cleanupPendingFixtures,
+  enableFlutterSemantics,
   fillLookupForm,
   main,
   parseArgs,
@@ -621,5 +737,6 @@ module.exports = {
   sendLocation,
   submitLookup,
   transitionDriver,
+  waitForFlutterAppReady,
   waitForGuestStatus,
 };
