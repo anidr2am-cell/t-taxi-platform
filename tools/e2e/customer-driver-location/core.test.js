@@ -16,6 +16,7 @@ const {
   classifyNetworkUrl,
   createRunId,
   createViewportRunId,
+  extractGuestAccess,
   redact,
   redactString,
   sanitizeUrl,
@@ -112,11 +113,13 @@ test('token redaction removes nested secrets and serializes errors safely', () =
   const sampleToken = 'abc123456789012345678901234567890xyz';
   const redacted = redact({
     guestAccessToken: sampleToken,
+    guestAccess: { token: sampleToken },
     nested: { Authorization: `Bearer ${sampleToken}` },
     response: { body: { token: sampleToken } },
     safe: 'hello',
   });
   assert.equal(redacted.guestAccessToken, '[REDACTED]');
+  assert.equal(redacted.guestAccess.token, '[REDACTED]');
   assert.equal(redacted.nested.Authorization, '[REDACTED]');
   assert.equal(redacted.response.body.token, '[REDACTED]');
   assert.equal(redacted.safe, 'hello');
@@ -124,6 +127,45 @@ test('token redaction removes nested secrets and serializes errors safely', () =
   const safeError = serializeSafeError(new Error(`failed with ${sampleToken}`));
   assert.equal(safeError.message, 'failed with [REDACTED]');
   assert.equal(safeError.stack, undefined);
+});
+
+test('extractGuestAccess reads the nested guest lookup contract only', () => {
+  const access = extractGuestAccess({
+    guestAccess: {
+      token: 'valid-test-token-value',
+      expiresAt: '2026-07-19T00:00:00Z',
+    },
+  });
+  assert.deepEqual(access, {
+    token: 'valid-test-token-value',
+    expiresAt: '2026-07-19T00:00:00Z',
+  });
+  assert.deepEqual(extractGuestAccess({
+    guestAccess: { token: 'valid-test-token-value' },
+  }), {
+    token: 'valid-test-token-value',
+    expiresAt: null,
+  });
+});
+
+test('extractGuestAccess rejects missing nested token without leaking values', () => {
+  for (const value of [
+    {},
+    { guestAccess: null },
+    { guestAccess: {} },
+    { guestAccess: { token: '' } },
+    { guestAccess: { token: '   ' } },
+    { guestAccessToken: 'legacy-token-that-must-not-be-accepted' },
+  ]) {
+    assert.throws(
+      () => extractGuestAccess(value),
+      (err) => {
+        assert.equal(err.message, 'Guest lookup response did not contain guestAccess.token');
+        assert.equal(err.message.includes('legacy-token-that-must-not-be-accepted'), false);
+        return true;
+      },
+    );
+  }
 });
 
 test('run ID and viewport fixture naming are E2E-scoped and unique', () => {
@@ -353,7 +395,18 @@ test('booking created plus assignment failure remains cleanable through final sw
   const fixture = cleanupFixture({ runId, bookingNumber: 'TX202607180002' });
   const fetchMock = mockFetch([
     { body: { data: { bookingNumber: fixture.bookingNumber, id: 11 } } },
-    { body: { data: { bookingNumber: fixture.bookingNumber, bookingId: 11, guestAccessToken: 'guest-token-123456789012345678901234567890' } } },
+    {
+      body: {
+        data: {
+          bookingNumber: fixture.bookingNumber,
+          bookingId: 11,
+          guestAccess: {
+            token: 'guest-token-123456789012345678901234567890',
+            expiresAt: '2026-07-19T00:00:00Z',
+          },
+        },
+      },
+    },
     { body: { success: false, message: 'assignment conflict' }, status: 409 },
     { body: { data: serverBooking(fixture) } },
     { body: { data: { archived: true } } },
@@ -365,6 +418,43 @@ test('booking created plus assignment failure remains cleanable through final sw
   await cleanupPendingFixtures(e2eConfig(), registry);
   fetchMock.restore();
   assert.equal(registry.get(runId).cleanupStatus, 'archived');
+});
+
+test('prepare fixture stores nested guest access at runtime without exposing it in manifest', async () => {
+  const registry = new FixtureRegistry();
+  const runId = 'E2E-20260718T010203-abcd-410';
+  const fixture = cleanupFixture({ runId, bookingNumber: 'TX202607180004' });
+  const token = 'guest-token-123456789012345678901234567891';
+  const fetchMock = mockFetch([
+    { body: { data: { bookingNumber: fixture.bookingNumber, id: 13 } } },
+    {
+      body: {
+        data: {
+          bookingNumber: fixture.bookingNumber,
+          bookingId: 13,
+          guestAccess: {
+            token,
+            expiresAt: '2026-07-19T00:00:00Z',
+          },
+        },
+      },
+    },
+    { body: { data: { assigned: true } } },
+  ]);
+  const prepared = await prepareFixture(
+    e2eConfig(),
+    runId,
+    auth(),
+    registry,
+    { width: 410, height: 900 },
+  );
+  fetchMock.restore();
+  assert.equal(prepared.guestAccessToken, token);
+  assert.equal(prepared.guestAccessExpiresAt, '2026-07-19T00:00:00Z');
+  const manifest = registry.manifest();
+  assert.equal(JSON.stringify(manifest).includes(token), false);
+  assert.equal(manifest[0].guestAccessToken, undefined);
+  assert.equal(manifest[0].guestAccessExpiresAt, undefined);
 });
 
 test('lookup response without bookingId or guest token still triggers cleanup path', async () => {

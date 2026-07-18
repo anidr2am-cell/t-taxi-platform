@@ -13,6 +13,7 @@ const {
   buildConfig,
   createRunId,
   createViewportRunId,
+  extractGuestAccess,
   loadEnvFile,
   mergeEnv,
   redact,
@@ -173,12 +174,11 @@ async function prepareFixture(config, runId, auth, registry, viewport) {
     });
     const bookingId = lookup.bookingId || lookup.id || booking.bookingId || booking.id;
     if (!bookingId) throw new Error('Guest lookup response did not contain bookingId');
-    if (!lookup.guestAccessToken) {
-      throw new Error('Guest lookup response did not contain guestAccessToken');
-    }
+    const guestAccessResult = extractGuestAccess(lookup);
     registry.update(runId, {
       bookingId,
-      guestAccessToken: lookup.guestAccessToken,
+      guestAccessToken: guestAccessResult.token,
+      guestAccessExpiresAt: guestAccessResult.expiresAt,
     });
 
     await requestJson(config, `/api/v1/admin/bookings/${bookingNumber}/assign-driver`, {

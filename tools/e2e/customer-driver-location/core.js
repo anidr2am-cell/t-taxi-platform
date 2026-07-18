@@ -189,6 +189,18 @@ function tokenFingerprint(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 8);
 }
 
+function extractGuestAccess(lookup) {
+  const token = lookup?.guestAccess?.token;
+  const expiresAt = lookup?.guestAccess?.expiresAt ?? null;
+  if (typeof token !== 'string' || token.trim() === '') {
+    throw new Error('Guest lookup response did not contain guestAccess.token');
+  }
+  return {
+    token,
+    expiresAt,
+  };
+}
+
 function redactString(value) {
   return String(value ?? '')
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [REDACTED]')
@@ -510,6 +522,7 @@ module.exports = {
   classifyNetworkUrl,
   createRunId,
   createViewportRunId,
+  extractGuestAccess,
   fixtureCustomer,
   loadEnvFile,
   mergeEnv,
