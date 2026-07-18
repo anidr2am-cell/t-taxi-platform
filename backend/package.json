@@ -23,7 +23,10 @@
     "rehearsal:mvp-e2e": "node scripts/mvp-e2e-rehearsal.js",
     "e2e:staging:customer-location": "node ../tools/e2e/customer-driver-location/run.js",
     "e2e:staging:customer-location:dry-run": "node ../tools/e2e/customer-driver-location/run.js --dry-run",
-    "test:e2e-tools": "node --test ../tools/e2e/customer-driver-location/*.test.js"
+    "test:e2e-tools": "node --test ../tools/e2e/customer-driver-location/*.test.js",
+    "test:settlement-e2e-tools": "node --test ../tools/e2e/settlement-lifecycle/*.test.js",
+    "e2e:staging:settlement": "node ../tools/e2e/settlement-lifecycle/run.js",
+    "e2e:staging:settlement:dry-run": "node ../tools/e2e/settlement-lifecycle/run.js --dry-run"
   },
   "dependencies": {
     "axios": "^1.7.9",
