@@ -1,7 +1,7 @@
 # T-Ride release readiness review
 
 Date: 2026-07-18
-Baseline `main`: `55333b45fff30327d32716cca6625f6a90453e4e`
+Baseline `main`: `c08d57b305d220e81525a073fe3b0c436f03d2dd`
 
 This review summarizes the remaining E2E, settlement, and operational
 stabilization work prepared for T-Ride release readiness.
@@ -18,58 +18,83 @@ resubmission, and cleanup safety.
 
 Release candidate promotion should still wait until:
 
-1. PRs #49 through #54 are reviewed and merged in the intended order;
-2. manual GitHub Actions workflows are available on the default branch after
-   merge;
-3. the shared staging E2E driver is idle;
-4. a final post-merge staging run confirms:
+1. PR #50 and PR #51 are either merged after review or explicitly deferred from
+   the release gate;
+2. the shared staging E2E driver is idle;
+3. a final post-merge staging run confirms:
    - customer driver location E2E;
    - settlement lifecycle E2E;
    - full trip + settlement E2E;
    - no active synthetic fixtures left unarchived;
-5. operators accept the documented staging synthetic receipt retention policy.
+4. operators accept the documented staging synthetic receipt retention policy.
+
+Completed during the PR cleanup:
+
+1. PR #49, #52, #53, and #54 were merged in order.
+2. The manual staging settlement workflow became available on `main` and was
+   dispatched successfully.
 
 ## Prepared PRs
 
 | Area | PR | Branch | Head SHA | Status |
 | --- | --- | --- | --- | --- |
-| Manual staging settlement workflow | [#49](https://github.com/anidr2am-cell/t-taxi-platform/pull/49) | `ci/manual-staging-settlement-e2e` | `07ec22e3e8811885e2adae3946d8698c00b24eb0` | Draft |
-| Driver settlement UI E2E | [#50](https://github.com/anidr2am-cell/t-taxi-platform/pull/50) | `test/driver-settlement-ui-e2e` | `75b80a43e1e0c61abf64afcf61c149d2104a3ea8` | Draft |
-| Admin settlement UI E2E | [#51](https://github.com/anidr2am-cell/t-taxi-platform/pull/51) | `test/admin-settlement-ui-e2e` | `ff10f01bec5ba9504f2e891a2c7bcd33ca7fd9e9` | Draft |
-| Receipt rejection/resubmission E2E | [#52](https://github.com/anidr2am-cell/t-taxi-platform/pull/52) | `test/settlement-rejection-resubmission-e2e` | `240ba298769506cbad76b77cc8240cfa43befa32` | Draft |
-| Full trip + settlement E2E | [#53](https://github.com/anidr2am-cell/t-taxi-platform/pull/53) | `test/full-trip-settlement-e2e` | `995c188804f070cc6a4fca64aa4f8d095f318d17` | Draft |
-| Synthetic receipt retention | [#54](https://github.com/anidr2am-cell/t-taxi-platform/pull/54) | `chore/e2e-receipt-retention` | `a78f65773298c4d6aaf40eaa13038ad5876639fe` | Draft |
+| Manual staging settlement workflow | [#49](https://github.com/anidr2am-cell/t-taxi-platform/pull/49) | `ci/manual-staging-settlement-e2e` | `b4323eb3697ac47810f784d2174835ceb3b384b2` | Merged |
+| Driver settlement UI E2E | [#50](https://github.com/anidr2am-cell/t-taxi-platform/pull/50) | `test/driver-settlement-ui-e2e` | `a672666afc56d6b889977fd0cbc6b0d8ae20680c` | Draft, open |
+| Admin settlement UI E2E | [#51](https://github.com/anidr2am-cell/t-taxi-platform/pull/51) | `test/admin-settlement-ui-e2e` | `0f3300cbcda58fcba675d2a9cfe94db77f9ab468` | Draft, open |
+| Receipt rejection/resubmission E2E | [#52](https://github.com/anidr2am-cell/t-taxi-platform/pull/52) | `test/settlement-rejection-resubmission-e2e` | `7307f155f52e7f256d2daf3251960a38876445c1` | Merged |
+| Full trip + settlement E2E | [#53](https://github.com/anidr2am-cell/t-taxi-platform/pull/53) | `test/full-trip-settlement-e2e` | `8869aca3fe36f5d0cf4feb9b297a6d2018cf3889` | Merged |
+| Synthetic receipt retention | [#54](https://github.com/anidr2am-cell/t-taxi-platform/pull/54) | `chore/e2e-receipt-retention` | `c08d57b305d220e81525a073fe3b0c436f03d2dd` | Merged |
 
 ## Evidence collected
 
 ### Settlement lifecycle
 
-- API-based staging lifecycle completed on synthetic fixture `TX202607180031`.
+- API-based staging lifecycle completed through GitHub Actions run
+  [29639533969](https://github.com/anidr2am-cell/t-taxi-platform/actions/runs/29639533969)
+  on merged `main` SHA `b4323eb3697ac47810f784d2174835ceb3b384b2`.
+- Latest verified synthetic fixture: `TX202607180052`.
 - Final state: booking `COMPLETED`, settlement `APPROVED`, fixture archived.
 - Backend test suite: 696 passed.
 - Frontend test suite during the series: 531 passed where applicable.
-- Manual GitHub workflow cannot be dispatched until the workflow file exists on
-  the default branch after merge.
+- Redacted artifact `staging-settlement-lifecycle-e2e-redacted` was created.
 
 ### Driver settlement UI
 
-- Browser E2E used a local PR Flutter build with staging backend through a
+- PR #50 remains draft and was updated after the main merges.
+- Browser E2E uses a local PR Flutter build with staging backend through a
   local same-origin proxy.
-- Flutter Web release semantics were not reliable enough for direct semantic
-  locators; the final runner uses fixed mobile viewport interaction,
-  screenshots, and API assertions.
+- The runner now opens a test-only driver settlement detail route gated by
+  `TRIDE_ENABLE_E2E_ROUTES=true`, seeds the existing driver session, uses
+  semantic receipt selection/upload buttons, and records one file chooser click
+  and one upload click in the manifest.
 - Live fixture `TX202607180041` completed with receipt submitted, settlement
   approved, and cleanup archived.
+- Focused revalidation after hardening:
+  - `npm run test:driver-settlement-ui-e2e-tools`: 8 passed;
+  - `npm run e2e:staging:driver-settlement-ui:dry-run`: passed;
+  - `flutter test test/driver_settlement_test.dart test/driver_booking_detail_page_test.dart test/driver_ux_test.dart`: 77 passed;
+  - changed-file Dart analyze: no issues.
 
 ### Admin settlement UI
 
+- PR #51 remains draft and was updated after the main merges.
 - Added a test-only admin settlement detail route gated behind
   `TRIDE_ENABLE_E2E_ROUTES=true`.
+- The route now validates `bookingNumber`, keeps `AdminAuthGate`, blocks missing
+  admin sessions before rendering settlement detail, and uses semantic approve
+  buttons instead of coordinate loops.
 - Approval confirmation was exercised through the local PR Flutter build.
 - Final live fixture `TX202607180046` passed and cleanup archived.
+- Focused revalidation after hardening:
+  - `npm run test:admin-settlement-ui-e2e-tools`: 5 passed;
+  - `npm run e2e:staging:admin-settlement-ui:dry-run`: passed;
+  - `flutter test test/admin_settlement_test.dart`: 6 passed;
+  - changed-file Dart analyze: no issues.
 
 ### Receipt rejection/resubmission
 
+- PR #52 was merged into `main` at
+  `7307f155f52e7f256d2daf3251960a38876445c1`.
 - Live fixture `TX202607180047` covered:
   - V1 synthetic receipt upload;
   - admin rejection with synthetic reason;
@@ -83,7 +108,9 @@ Release candidate promotion should still wait until:
 
 ### Full trip + settlement
 
-- Live fixture `TX202607180051` covered:
+- PR #53 was merged into `main` at
+  `8869aca3fe36f5d0cf4feb9b297a6d2018cf3889`.
+- Latest live fixture `TX202607180053` covered:
   - customer lookup browser flow at `390x844`;
   - Socket.IO connection count guard;
   - `socketIoReconnects=0`;
@@ -104,8 +131,9 @@ Release candidate promotion should still wait until:
 
 1. PRs are intentionally separate and based on current `main`; they are not
    stacked. Some combined capabilities require post-merge verification.
-2. GitHub Actions workflow dispatch for new workflow files is unavailable until
-   the workflow reaches the default branch.
+2. PR #50 and PR #51 require local or staging Flutter Web builds with
+   `TRIDE_ENABLE_E2E_ROUTES=true`; normal production builds must keep that flag
+   disabled.
 3. The full trip E2E uses browser verification for customer location and API
    verification for settlement receipt/approval. It does not depend on the
    separate unmerged driver/admin settlement UI E2E PRs.
@@ -124,17 +152,14 @@ Release candidate promotion should still wait until:
 
 Recommended sequence:
 
-1. Review and merge PR #49 to make manual workflow infrastructure available.
-2. Review and merge PR #50 and PR #51 for settlement UI E2E coverage.
-3. Review and merge PR #52 for rejection/resubmission coverage.
-4. Review and merge PR #53 for full trip + settlement integration coverage.
-5. Review and merge PR #54 so operators understand staging synthetic receipt
-   retention.
-6. Run the manual staging workflows one at a time. Do not run workflows sharing
+1. Keep PR #50 and PR #51 in draft until the team is ready to run the local
+   Flutter Web E2E builds with `TRIDE_ENABLE_E2E_ROUTES=true`, then mark ready
+   or explicitly defer them.
+2. Run the manual staging workflows one at a time. Do not run workflows sharing
    the staging E2E driver concurrently.
-7. Perform a final read-only staging check for active E2E bookings,
+3. Perform a final read-only staging check for active E2E bookings,
    assignments, and driver active job state.
-8. If clean, mark staging as release-candidate-ready for business smoke
+4. If clean, mark staging as release-candidate-ready for business smoke
    testing.
 
 ## Safety boundaries maintained
