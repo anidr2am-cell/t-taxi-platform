@@ -16,9 +16,8 @@ one synthetic booking and one synthetic receipt image.
   - driver expected income
   - `THB` currency text
 - Uploads a runtime-generated PNG receipt through the driver UI.
-- Captures redacted browser screenshots for the home, account, settlement list,
-  settlement detail, upload section, selected receipt, and submitted receipt
-  states.
+- Captures redacted browser screenshots for the settlement detail, upload
+  section, selected receipt, and submitted receipt states.
 - Uses the admin API only after UI upload to approve the settlement and release the
   E2E driver.
 - Archives the synthetic booking as `TEST_DATA` during cleanup.
@@ -39,10 +38,15 @@ one synthetic booking and one synthetic receipt image.
 - This runner shares the staging E2E driver with other live E2E workflows, so it
   must not run concurrently with customer-location or settlement-lifecycle live
   E2E.
-- Flutter Web currently exposes little usable DOM semantics in release builds.
-  The runner therefore uses a fixed `390x844` mobile viewport and deterministic
-  touch coordinates for the driver UI, while server-side API checks verify the
-  sensitive money, status, and cleanup assertions.
+- The runner opens a staging-only Flutter route,
+  `/driver/e2e/settlement-detail?bookingNumber=...`, after seeding the existing
+  driver session token into Flutter Web storage. The route is disabled unless the
+  frontend is built with `TRIDE_ENABLE_E2E_ROUTES=true`.
+- The hidden route still uses the existing driver settlement API and driver auth
+  token; it does not bypass booking ownership or server-side authorization.
+- Receipt selection and upload use semantic button locators. The manifest records
+  one file chooser click and one upload click so repeated coordinate-click
+  regressions are visible.
 
 ## Commands
 
@@ -69,7 +73,8 @@ cd C:\TTaxi\frontend
 flutter build web `
   --dart-define=APP_ENV=staging `
   --dart-define=API_BASE_URL=http://127.0.0.1:58002 `
-  --dart-define=SOCKET_URL=http://127.0.0.1:58002
+  --dart-define=SOCKET_URL=http://127.0.0.1:58002 `
+  --dart-define=TRIDE_ENABLE_E2E_ROUTES=true
 
 # Start a local SPA server with /api and /socket.io proxy to staging.
 # Then, from C:\TTaxi\backend:
@@ -99,5 +104,7 @@ commit them.
 
 The test tool itself is non-runtime. The associated THB money display fix
 requires a frontend rebuild after merge if staging should run the exact same UI
-validated by this E2E. Backend runtime, DB, Docker, nginx, and KTaxi are not
-changed by this tool.
+validated by this E2E. To run this UI E2E against staging, build the staging
+frontend with `TRIDE_ENABLE_E2E_ROUTES=true`; production builds must leave that
+flag disabled. Backend runtime, DB, Docker, nginx, and KTaxi are not changed by
+this tool.

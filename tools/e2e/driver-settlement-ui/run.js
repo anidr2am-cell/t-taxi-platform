@@ -272,57 +272,6 @@ async function screenshot(config, page, name) {
   }).catch(() => {});
 }
 
-async function dismissDriverPwaPrompt(page) {
-  for (const [x, y] of [[286, 522], [284, 520], [280, 521], [298, 520]]) {
-    await page.mouse.click(x, y).catch(() => {});
-    await waitMs(250);
-  }
-}
-
-async function typeAt(page, x, y, value) {
-  await page.mouse.click(x, y);
-  await page.keyboard.press('Control+A').catch(() => {});
-  await page.keyboard.press('Backspace').catch(() => {});
-  await page.keyboard.type(value, { delay: 20 });
-}
-
-async function chooseFileByCandidateClicks(page, receiptPath) {
-  const candidates = [
-    [100, 785],
-    [195, 785],
-    [300, 785],
-    [100, 805],
-    [195, 805],
-    [300, 805],
-    [195, 760],
-    [195, 820],
-  ];
-  const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 15000 });
-  for (const [x, y] of candidates) {
-    await page.mouse.click(x, y).catch(() => {});
-    await waitMs(350);
-  }
-  const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(receiptPath);
-  return { x: 'candidate', y: 'upload' };
-}
-
-async function clickUploadByCandidateClicks(page) {
-  const candidates = [
-    [195, 610],
-    [195, 650],
-    [195, 690],
-    [195, 730],
-    [195, 760],
-    [195, 788],
-    [195, 805],
-  ];
-  for (const [x, y] of candidates) {
-    await page.mouse.click(x, y).catch(() => {});
-    await waitMs(800);
-  }
-}
-
 async function clickUnique(locator, label) {
   await locator.first().waitFor({ timeout: 25000 });
   const count = await locator.count();
@@ -330,25 +279,56 @@ async function clickUnique(locator, label) {
   await locator.click();
 }
 
-async function loginDriverUi(page, config) {
-  await page.goto(`${config.frontendUrl}/driver/login`, {
-    waitUntil: 'domcontentloaded',
+function driverSettlementE2EDetailUrl(config, bookingNumber) {
+  const value = String(bookingNumber || '').trim();
+  if (!/^TX[0-9A-Za-z_-]+$/.test(value)) {
+    throw new Error('Driver settlement UI E2E requires a valid booking number');
+  }
+  return `${config.frontendUrl}/driver/e2e/settlement-detail?bookingNumber=${encodeURIComponent(value)}`;
+}
+
+async function seedDriverSession(context, driverToken) {
+  if (!driverToken) throw new Error('Driver settlement UI E2E requires a driver token');
+  await context.addInitScript((token) => {
+    window.localStorage.setItem('flutter.driver_access_token', JSON.stringify(token));
+    window.localStorage.setItem('driver_access_token', token);
+  }, driverToken);
+}
+
+function receiptSelectButton(page) {
+  return page.getByRole('button', {
+    name: /select receipt|replace receipt|choose file|송금증 선택|파일 변경|เลือกสลิปโอนเงิน|เปลี่ยนไฟล์/i,
   });
-  await waitForFlutterApp(page);
-  await waitMs(1200);
-  await dismissDriverPwaPrompt(page);
-  await typeAt(page, 195, 216, config.driverEmail);
-  await typeAt(page, 195, 276, config.driverPassword);
-  await page.mouse.click(195, 347);
-  await page.waitForURL(/\/driver\/home/, { timeout: 30000 });
-  await waitMs(1500);
-  await dismissDriverPwaPrompt(page);
+}
+
+function receiptUploadButton(page) {
+  return page.getByRole('button', {
+    name: /transfer slip upload|upload receipt|송금증 업로드|อัปโหลดสลิปโอนเงิน/i,
+  });
+}
+
+async function chooseReceiptFile(page, receiptPath) {
+  const button = receiptSelectButton(page);
+  await button.first().scrollIntoViewIfNeeded({ timeout: 15000 });
+  const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 15000 });
+  await clickUnique(button, 'receipt select button');
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(receiptPath);
+  return { method: 'semantic-filechooser', clicks: 1 };
+}
+
+async function uploadSelectedReceipt(page) {
+  const button = receiptUploadButton(page);
+  await button.first().scrollIntoViewIfNeeded({ timeout: 15000 });
+  await clickUnique(button, 'receipt upload button');
+  return { method: 'semantic-button', clicks: 1 };
 }
 
 async function runDriverSettlementUi(config, auth, registry, browser) {
   const runId = createRunId();
   const fixture = await prepareSettlementPendingFixture(config, runId, auth, registry);
   const context = await browser.newContext({ viewport: VIEWPORT, locale: 'en-US' });
+  await seedDriverSession(context, fixture.driverToken);
   const page = await context.newPage();
   const consoleErrors = [];
   page.on('console', (message) => {
@@ -356,16 +336,11 @@ async function runDriverSettlementUi(config, auth, registry, browser) {
   });
   page.on('pageerror', (err) => consoleErrors.push(err.message));
   try {
-    await loginDriverUi(page, config);
-    await screenshot(config, page, `${runId}-driver-home.png`);
-    await page.mouse.click(342, 792);
-    await waitMs(2000);
-    await screenshot(config, page, `${runId}-driver-account.png`);
-    await page.mouse.click(195, 464);
-    await waitMs(3000);
-    await screenshot(config, page, `${runId}-driver-settlement-list.png`);
-    await page.mouse.click(195, 142);
-    await waitMs(3000);
+    await page.goto(driverSettlementE2EDetailUrl(config, fixture.bookingNumber), {
+      waitUntil: 'domcontentloaded',
+    });
+    await waitForFlutterApp(page);
+    await page.getByText(fixture.bookingNumber).first().waitFor({ timeout: 30000 });
     await screenshot(config, page, `${runId}-driver-settlement-detail-due.png`);
 
     const dueDetail = await loadDriverSettlement(config, fixture);
@@ -389,17 +364,21 @@ async function runDriverSettlementUi(config, auth, registry, browser) {
       await page.mouse.wheel(0, 900);
       await waitMs(1000);
       await screenshot(config, page, `${runId}-driver-settlement-upload-section.png`);
-      const clicked = await chooseFileByCandidateClicks(page, receiptPath);
+      const fileSelection = await chooseReceiptFile(page, receiptPath);
       await waitMs(1000);
       await screenshot(
         config,
         page,
-        `${runId}-driver-settlement-receipt-selected-${clicked.x}-${clicked.y}.png`,
+        `${runId}-driver-settlement-receipt-selected.png`,
       );
-      await page.mouse.wheel(0, 420);
-      await waitMs(700);
       await screenshot(config, page, `${runId}-driver-settlement-upload-button.png`);
-      await clickUploadByCandidateClicks(page);
+      const uploadClick = await uploadSelectedReceipt(page);
+      registry.update(runId, {
+        uiFileChooserMethod: fileSelection.method,
+        uiFileChooserClicks: fileSelection.clicks,
+        uiUploadClickMethod: uploadClick.method,
+        uiUploadClicks: uploadClick.clicks,
+      });
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
@@ -451,6 +430,10 @@ function writeManifest(config, registry) {
     receiptStatus: record.receiptStatus,
     uiDisplayedMoneyVerified: record.uiDisplayedMoneyVerified,
     uiCurrency: record.uiCurrency,
+    uiFileChooserMethod: record.uiFileChooserMethod,
+    uiFileChooserClicks: record.uiFileChooserClicks,
+    uiUploadClickMethod: record.uiUploadClickMethod,
+    uiUploadClicks: record.uiUploadClicks,
     approvalCandidateVerified: record.approvalCandidateVerified,
     bookingFinalStatus: record.bookingFinalStatus,
     preparationStatus: record.preparationStatus,
@@ -511,7 +494,9 @@ if (require.main === module) {
 module.exports = {
   MANIFEST_NAME,
   VIEWPORT,
+  driverSettlementE2EDetailUrl,
   formatAmount,
   parseArgs,
+  seedDriverSession,
   writeManifest,
 };

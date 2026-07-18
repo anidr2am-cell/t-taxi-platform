@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/driver_settlement/pages/driver_settlement_list_page.dart';
 import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
+import 'package:frontend/main.dart' as app;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeSettlementApi extends DriverSettlementApiService {
   _FakeSettlementApi({this.error, this.uploadError, this.detail});
@@ -116,6 +118,78 @@ Widget _settlementDetailPage(
 }
 
 void main() {
+  test('driver settlement E2E route is disabled by default', () {
+    expect(app.driverE2ESettlementRouteEnabled(), isFalse);
+  });
+
+  test('driver settlement E2E route can be enabled by build flag', () {
+    expect(app.driverE2ESettlementRouteEnabled(enabled: true), isTrue);
+  });
+
+  test('driver settlement E2E route requires a valid booking number', () {
+    expect(
+      app.driverE2ESettlementBookingNumber(
+        Uri.parse('/driver/e2e/settlement-detail?bookingNumber=TX202607180001'),
+      ),
+      'TX202607180001',
+    );
+    expect(
+      app.driverE2ESettlementBookingNumber(
+        Uri.parse('/driver/e2e/settlement-detail?bookingNumber='),
+      ),
+      isNull,
+    );
+    expect(
+      app.driverE2ESettlementBookingNumber(
+        Uri.parse('/driver/e2e/settlement-detail?bookingNumber=../admin'),
+      ),
+      isNull,
+    );
+  });
+
+  testWidgets('driver settlement E2E route blocks missing driver auth', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      MaterialApp(
+        home: app.DriverE2ESettlementDetailRoute(
+          uri: Uri.parse(
+            '/driver/e2e/settlement-detail?bookingNumber=TX202607180001',
+          ),
+          routesEnabled: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DriverSettlementDetailPage), findsNothing);
+    expect(find.textContaining('로그인'), findsWidgets);
+  });
+
+  testWidgets('driver settlement E2E route blocks empty booking number', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'driver_access_token': 'driver-token',
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: app.DriverE2ESettlementDetailRoute(
+          uri: Uri.parse('/driver/e2e/settlement-detail?bookingNumber='),
+          routesEnabled: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DriverSettlementDetailPage), findsNothing);
+    expect(
+      find.text('Driver E2E settlement booking number is required'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('driver settlement shows empty state', (tester) async {
     await tester.pumpWidget(
       MaterialApp(home: DriverSettlementListPage(api: _FakeSettlementApi())),
