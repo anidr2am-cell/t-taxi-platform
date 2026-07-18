@@ -9,6 +9,7 @@ import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/auth/data/auth_repository.dart';
 import 'package:tride_driver/features/auth/presentation/auth_controller.dart';
+import 'package:tride_driver/features/bookings/presentation/booking_detail_screen.dart';
 import 'package:tride_driver/features/bookings/presentation/booking_list_screen.dart';
 
 import 'test_fakes.dart';
@@ -68,6 +69,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
     expect(reader.listCount, 2);
+  });
+
+  testWidgets('refresh failure replaces stale list and retry recovers', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader();
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+    expect(find.text('TX202607180001'), findsOneWidget);
+
+    reader.listError = const ApiException(ApiFailureKind.unavailable);
+    await tester.tap(find.byKey(const Key('refreshButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('bookingListError')), findsOneWidget);
+    expect(find.byKey(const Key('bookingListSuccess')), findsNothing);
+    expect(find.text('TX202607180001'), findsNothing);
+
+    reader.listError = null;
+    await tester.tap(find.byKey(const Key('bookingListRetryButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+    expect(find.text('TX202607180001'), findsOneWidget);
+    expect(reader.listCount, 3);
   });
 
   testWidgets('refresh button reloads the list', (tester) async {
@@ -146,6 +173,51 @@ void main() {
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
   });
 
+  testWidgets('detail error replaces stale success after repository update', (
+    tester,
+  ) async {
+    final successReader = FakeBookingReader();
+    const screenKey = Key('detailScreen');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BookingDetailScreen(
+          key: screenKey,
+          bookingNumber: 'TX202607180001',
+          repository: successReader,
+          onUnauthorized: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
+    expect(find.text('TX202607180001'), findsOneWidget);
+
+    final missingReader = FakeBookingReader()
+      ..detailError = const ApiException(
+        ApiFailureKind.unknown,
+        statusCode: 404,
+        errorCode: 'BOOKING_NOT_FOUND',
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BookingDetailScreen(
+          key: screenKey,
+          bookingNumber: 'TX202607180001',
+          repository: missingReader,
+          onUnauthorized: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('detailError')), findsOneWidget);
+    expect(find.byKey(const Key('detailSuccess')), findsNothing);
+    expect(find.text('TX202607180001'), findsNothing);
+    expect(find.byKey(const Key('detailBackButton')), findsOneWidget);
+    expect(missingReader.detailCount, 1);
+  });
+
   testWidgets('booking 401 clears local token and returns to login', (
     tester,
   ) async {
@@ -167,6 +239,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('기사 로그인'), findsOneWidget);
     expect(find.text('로그인이 만료되었습니다. 다시 로그인해 주세요.'), findsOneWidget);
+    expect(storage.tokens, isNull);
+    expect(storage.clearCount, 1);
+  });
+
+  testWidgets('detail 401 expires auth and safely pops to login', (
+    tester,
+  ) async {
+    final storage = FakeTokenStorage(
+      const AuthTokens(accessToken: 'saved', refreshToken: 'refresh'),
+    );
+    final authController = AuthController(
+      AuthRepository(api: FakeAuthApi(), storage: storage),
+    );
+    final reader = FakeBookingReader()
+      ..detailError = const ApiException(ApiFailureKind.unauthorized);
+    await tester.pumpWidget(
+      DriverApp(
+        config: AppConfig.forEnvironment(AppEnvironment.stg),
+        authController: authController,
+        bookingRepository: reader,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('booking-TX202607180001')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('기사 로그인'), findsOneWidget);
+    expect(find.text('로그인이 만료되었습니다. 다시 로그인해 주세요.'), findsOneWidget);
+    expect(find.byKey(const Key('detailLoading')), findsNothing);
     expect(storage.tokens, isNull);
     expect(storage.clearCount, 1);
   });

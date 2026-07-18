@@ -32,6 +32,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant BookingDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bookingNumber != widget.bookingNumber ||
+        oldWidget.repository != widget.repository) {
+      _load();
+    }
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -55,12 +64,14 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       if (!mounted) return;
       setState(() {
         _error = error;
+        _detail = null;
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = const ApiException(ApiFailureKind.unknown);
+        _detail = null;
         _loading = false;
       });
     }
@@ -75,8 +86,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           key: Key('detailLoading'),
           child: CircularProgressIndicator(),
         ),
-        (false, final detail?, _) => _DetailBody(detail: detail),
         (false, _, final error?) => _DetailError(error: error, onRetry: _load),
+        (false, final detail?, _) => _DetailBody(detail: detail),
         _ => const SizedBox.shrink(),
       },
     );

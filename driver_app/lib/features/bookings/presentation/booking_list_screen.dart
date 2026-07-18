@@ -53,12 +53,14 @@ class _BookingListScreenState extends State<BookingListScreen> {
       if (!mounted) return;
       setState(() {
         _error = error;
+        _bookings = null;
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = const ApiException(ApiFailureKind.unknown);
+        _bookings = null;
         _loading = false;
       });
     }
@@ -87,6 +89,26 @@ class _BookingListScreenState extends State<BookingListScreen> {
         (true, _, _) => const Center(
           key: Key('bookingListLoading'),
           child: CircularProgressIndicator(),
+        ),
+        (false, _, final error?) => Center(
+          key: const Key('bookingListError'),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off_outlined, size: 48),
+                const SizedBox(height: 12),
+                Text(error.userMessage, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton(
+                  key: const Key('bookingListRetryButton'),
+                  onPressed: _load,
+                  child: const Text('다시 시도'),
+                ),
+              ],
+            ),
+          ),
         ),
         (false, final bookings?, _) when bookings.items.isEmpty =>
           RefreshIndicator(
@@ -123,26 +145,6 @@ class _BookingListScreenState extends State<BookingListScreen> {
                 ),
               );
             },
-          ),
-        ),
-        (false, _, final error?) => Center(
-          key: const Key('bookingListError'),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.cloud_off_outlined, size: 48),
-                const SizedBox(height: 12),
-                Text(error.userMessage, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                FilledButton(
-                  key: const Key('bookingListRetryButton'),
-                  onPressed: _load,
-                  child: const Text('다시 시도'),
-                ),
-              ],
-            ),
           ),
         ),
         _ => const SizedBox.shrink(),
