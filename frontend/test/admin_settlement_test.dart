@@ -55,10 +55,25 @@ Widget _wrap(Widget child) {
 void main() {
   test('admin settlement E2E route is disabled by default', () {
     expect(app.adminE2ERoutesEnabled(), isFalse);
+    expect(
+      app.buildAdminE2ERoute(
+        const RouteSettings(
+          name: '/admin/e2e/settlement-detail?bookingNumber=TX202607180199',
+        ),
+      ),
+      isNull,
+    );
   });
 
   test('admin settlement E2E route can be enabled by build flag', () {
     expect(app.adminE2ERoutesEnabled(enabled: true), isTrue);
+    final route = app.buildAdminE2ERoute(
+      const RouteSettings(
+        name: '/admin/e2e/settlement-detail?bookingNumber=TX202607180199',
+      ),
+      enabled: true,
+    );
+    expect(route, isNotNull);
   });
 
   test('admin settlement E2E route requires a valid booking number', () {

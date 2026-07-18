@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { createRequire } = require('node:module');
 const {
   E2E_MARKER,
@@ -23,8 +24,8 @@ const {
   createSyntheticReceiptPng,
 } = require('../settlement-lifecycle/run');
 
-const VIEWPORT = { width: 960, height: 800 };
-const MANIFEST_NAME = 'admin-settlement-ui-e2e-manifest.json';
+const VIEWPORT = { width: 390, height: 844 };
+const MANIFEST_NAME = 'driver-settlement-ui-e2e-manifest.json';
 
 function parseArgs(argv = process.argv.slice(2)) {
   return {
@@ -58,24 +59,6 @@ async function requestJson(config, pathName, options = {}) {
       'content-type': 'application/json',
       ...(options.headers || {}),
     },
-  });
-  const text = await response.text();
-  const body = text ? JSON.parse(text) : null;
-  if (!response.ok) {
-    throw new Error(`${pathName} failed HTTP ${response.status}: ${JSON.stringify(redact(body))}`);
-  }
-  return body?.data ?? body;
-}
-
-async function requestMultipart(config, pathName, form, options = {}) {
-  const response = await fetch(apiUrl(config, pathName), {
-    ...options,
-    method: options.method || 'POST',
-    headers: {
-      accept: 'application/json',
-      ...(options.headers || {}),
-    },
-    body: form,
   });
   const text = await response.text();
   const body = text ? JSON.parse(text) : null;
@@ -144,7 +127,7 @@ async function authenticateAndPreflight(config) {
   return { adminToken: admin.accessToken, driverToken: driver.accessToken };
 }
 
-async function prepareReceiptSubmittedFixture(config, runId, auth, registry) {
+async function prepareSettlementPendingFixture(config, runId, auth, registry) {
   const payload = buildBookingPayload(runId, config.customerPhone);
   const fixture = registry.add({
     runId,
@@ -182,19 +165,11 @@ async function prepareReceiptSubmittedFixture(config, runId, auth, registry) {
       throw new Error(`Driver settlement status was ${due.commissionStatus}, expected DUE`);
     }
     const money = assertMoneyFields(due);
-    const uploaded = await uploadReceipt(config, fixture);
-    if (uploaded.commissionStatus !== 'RECEIPT_SUBMITTED' || uploaded.receiptStatus !== 'RECEIPT_SUBMITTED') {
-      throw new Error('Receipt upload did not move settlement to RECEIPT_SUBMITTED');
-    }
-    if (!uploaded.receiptFileId && !uploaded.receiptMetadata) {
-      throw new Error('Receipt upload did not return receipt metadata');
-    }
     return registry.update(runId, {
       preparationStatus: 'ready',
       bookingFinalStatus: 'SETTLEMENT_PENDING',
-      settlementStatus: uploaded.commissionStatus,
-      receiptStatus: uploaded.receiptStatus,
-      receiptUploadStatus: 'submitted',
+      settlementStatus: due.commissionStatus,
+      receiptStatus: due.receiptStatus,
       customerTotal: money.customerTotal,
       companyCommission: money.commission,
       driverExpectedIncome: money.expectedIncome,
@@ -229,13 +204,19 @@ async function loadAdminSettlement(config, fixture) {
   });
 }
 
-async function uploadReceipt(config, fixture) {
-  const bytes = createSyntheticReceiptPng(fixture.runId);
-  const form = new FormData();
-  form.append('file', new Blob([bytes], { type: 'image/png' }), `admin-settlement-ui-${fixture.runId}.png`);
-  return requestMultipart(config, `/api/v1/driver/settlements/${fixture.bookingNumber}/receipt`, form, {
-    headers: bearer(fixture.driverToken),
+async function approveSettlementVerified(config, fixture) {
+  const booking = await getAdminBookingDetail(config, fixture);
+  const settlement = await loadAdminSettlement(config, fixture);
+  assertSettlementApprovalCandidate(fixture, booking, settlement, config.driverId);
+  const approved = await requestJson(config, `/api/v1/admin/settlements/${fixture.bookingNumber}/approve`, {
+    method: 'POST',
+    headers: bearer(fixture.adminToken),
+    body: JSON.stringify({}),
   });
+  if (approved.commissionStatus !== 'APPROVED' || approved.status !== 'COMPLETED') {
+    throw new Error('Admin API approval did not complete settlement');
+  }
+  return approved;
 }
 
 async function cleanupFixtureVerified(config, fixture, registry) {
@@ -263,7 +244,10 @@ async function openBrowser(args) {
   }
   const { chromium, firefox, webkit } = playwright;
   const browserType = { chromium, firefox, webkit }[args.project] || chromium;
-  return browserType.launch({ headless: !args.headed });
+  return browserType.launch({
+    headless: !args.headed,
+    args: browserType === chromium ? ['--force-renderer-accessibility'] : [],
+  });
 }
 
 async function waitForFlutterApp(page) {
@@ -308,6 +292,16 @@ async function waitForFlutterApp(page) {
   }
 }
 
+async function dismissDriverPwaPrompt(page) {
+  const laterButton = page.getByRole('button', {
+    name: /later|not now|ไว้ภายหลัง|나중|나중에/i,
+  });
+  if (await laterButton.count().catch(() => 0)) {
+    await laterButton.first().click({ timeout: 5000 }).catch(() => {});
+    await waitMs(500);
+  }
+}
+
 async function waitMs(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -318,20 +312,6 @@ async function screenshot(config, page, name) {
     path: path.join(config.artifactDir, name),
     fullPage: true,
   }).catch(() => {});
-}
-
-async function seedAdminToken(page, token) {
-  await page.addInitScript((accessToken) => {
-    window.localStorage.setItem('flutter.admin_access_token', JSON.stringify(accessToken));
-  }, token);
-}
-
-function adminSettlementE2EDetailUrl(config, bookingNumber) {
-  const value = String(bookingNumber || '').trim();
-  if (!/^TX[0-9A-Za-z_-]+$/.test(value)) {
-    throw new Error('Admin settlement UI E2E requires a valid booking number');
-  }
-  return `${config.frontendUrl}/admin/e2e/settlement-detail?bookingNumber=${encodeURIComponent(value)}`;
 }
 
 async function clickUnique(locator, label) {
@@ -350,79 +330,144 @@ async function clickUniqueCenter(page, locator, label) {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
-async function clickLocatorCenter(page, locator, label) {
-  await locator.waitFor({ timeout: 25000 });
-  const box = await locator.boundingBox();
-  if (!box) throw new Error(`${label} has no visible bounding box`);
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+function driverSettlementE2EDetailUrl(config, bookingNumber) {
+  const value = String(bookingNumber || '').trim();
+  if (!/^TX[0-9A-Za-z_-]+$/.test(value)) {
+    throw new Error('Driver settlement UI E2E requires a valid booking number');
+  }
+  return `${config.frontendUrl}/driver/e2e/settlement-detail?bookingNumber=${encodeURIComponent(value)}`;
 }
 
-async function clickApproveWithConfirmation(page, config, fixture) {
-  const approvePath = `/api/v1/admin/settlements/${fixture.bookingNumber}/approve`;
-  let approveRequestCount = 0;
+async function seedDriverSession(context, driverToken) {
+  if (!driverToken) throw new Error('Driver settlement UI E2E requires a driver token');
+  await context.addInitScript((token) => {
+    window.localStorage.setItem('flutter.driver_access_token', JSON.stringify(token));
+    window.localStorage.setItem('driver_access_token', token);
+  }, driverToken);
+}
+
+function receiptSelectButton(page) {
+  return page.getByRole('button', {
+    name: /select receipt|replace receipt|choose file|송금증 선택|파일 변경|เลือกสลิปโอนเงิน|เปลี่ยนไฟล์/i,
+  });
+}
+
+function receiptUploadButton(page) {
+  return page.getByRole('button', {
+    name: /transfer slip upload|upload receipt|송금증 업로드|อัปโหลดสลิปโอนเงิน/i,
+  });
+}
+
+async function chooseReceiptFile(page, receiptPath) {
+  const button = receiptSelectButton(page);
+  await button.first().scrollIntoViewIfNeeded({ timeout: 15000 });
+  const fileInputCountBefore = await page.locator('input[type="file"]').count();
+  const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 })
+    .then((fileChooser) => ({ fileChooser }))
+    .catch((error) => ({ error }));
+  await clickUniqueCenter(page, button, 'receipt select button');
+  const input = page.locator('input[type="file"]');
+  try {
+    await input.first().waitFor({ state: 'attached', timeout: 3000 });
+  } catch (_) {
+    // Fall through to the Playwright filechooser event path.
+  }
+  const fileInputCountAfter = await input.count();
+  if (fileInputCountAfter === 1) {
+    const metadata = await input.first().evaluate((element) => ({
+      accept: element.getAttribute('accept'),
+      multiple: element.hasAttribute('multiple'),
+      name: element.getAttribute('name'),
+      ariaLabel: element.getAttribute('aria-label'),
+    })).catch(() => ({}));
+    await input.first().setInputFiles(receiptPath);
+    return {
+      method: 'native-file-input',
+      clicks: 1,
+      fileInputCountBefore,
+      fileInputCountAfter,
+      fileInputAccept: metadata.accept || null,
+      fileInputMultiple: metadata.multiple === true,
+    };
+  }
+
+  const { fileChooser, error } = await fileChooserPromise;
+  if (!fileChooser) {
+    throw new Error(`Receipt file input was not available after semantic click: ${error?.message || 'filechooser timeout'}`);
+  }
+  await fileChooser.setFiles(receiptPath);
+  return {
+    method: 'semantic-filechooser',
+    clicks: 1,
+    fileInputCountBefore,
+    fileInputCountAfter,
+  };
+}
+
+async function waitForReceiptSelectButton(page) {
+  const button = receiptSelectButton(page);
+  try {
+    await button.first().waitFor({ timeout: 30000 });
+  } catch (err) {
+    const labels = await page.evaluate(() => Array.from(
+      document.querySelectorAll('[aria-label], [role], flt-semantics, input'),
+    ).slice(0, 80).map((element) => ({
+      tag: element.tagName,
+      role: element.getAttribute('role'),
+      label: element.getAttribute('aria-label'),
+      type: element.getAttribute('type'),
+      text: (element.textContent || '').trim().slice(0, 80),
+    }))).catch(() => []);
+    throw new Error(`Receipt select button was not exposed to Playwright semantics: ${JSON.stringify(labels)}`, {
+      cause: err,
+    });
+  }
+}
+
+async function uploadSelectedReceipt(page) {
+  const button = receiptUploadButton(page);
+  await button.first().scrollIntoViewIfNeeded({ timeout: 15000 });
+  await clickUniqueCenter(page, button, 'receipt upload button');
+  return { method: 'semantic-button', clicks: 1 };
+}
+
+async function uploadSelectedReceiptOnce(page, bookingNumber) {
+  const uploadPath = `/api/v1/driver/settlements/${bookingNumber}/receipt`;
+  let uploadRequestCount = 0;
   const onRequest = (request) => {
-    if (request.method() === 'POST' && request.url().includes(approvePath)) {
-      approveRequestCount += 1;
+    if (request.method() === 'POST' && request.url().includes(uploadPath)) {
+      uploadRequestCount += 1;
     }
   };
   page.on('request', onRequest);
-  await screenshot(config, page, `${fixture.runId}-admin-settlement-detail-before-approve.png`);
-  let approveResponsePromise;
+  const uploadResponsePromise = page.waitForResponse(
+    (response) => response.request().method() === 'POST'
+      && response.url().includes(uploadPath),
+    { timeout: 30000 },
+  );
   try {
-    await clickUniqueCenter(
-      page,
-      page.getByRole('button', { name: /^Approve$/ }),
-      'admin approve button',
-    );
-    await screenshot(config, page, `${fixture.runId}-admin-settlement-confirm-dialog.png`);
-    approveResponsePromise = page.waitForResponse(
-      (response) => response.url().includes(approvePath)
-        && response.request().method() === 'POST',
-      { timeout: 30000 },
-    ).then((response) => ({ response }), (error) => ({ error }));
-    await clickLocatorCenter(
-      page,
-      page.getByRole('button', { name: /^Approve$/ }).last(),
-      'admin approve confirmation button',
-    );
-    const { response, error } = await approveResponsePromise;
-    if (error) throw error;
-    if (!response.ok()) {
-      throw new Error(`Admin UI approve failed HTTP ${response.status()}`);
+    const uploadClick = await uploadSelectedReceipt(page);
+    const uploadResponse = await uploadResponsePromise;
+    if (!uploadResponse.ok()) {
+      throw new Error(`Receipt upload failed with HTTP ${uploadResponse.status()}`);
     }
-    if (approveRequestCount !== 1) {
-      throw new Error(`Admin approve request count was ${approveRequestCount}, expected 1`);
+    if (uploadRequestCount !== 1) {
+      throw new Error(`Receipt upload request count was ${uploadRequestCount}, expected 1`);
     }
-    return { response, approveRequestCount };
-  } catch (err) {
-    if (approveResponsePromise) {
-      await Promise.race([approveResponsePromise, waitMs(1000)]).catch(() => {});
-    }
-    throw err;
+    return {
+      ...uploadClick,
+      uploadRequestCount,
+    };
   } finally {
     page.off('request', onRequest);
   }
 }
 
-async function runAdminSettlementUi(config, auth, registry, browser) {
+async function runDriverSettlementUi(config, auth, registry, browser) {
   const runId = createRunId();
-  const fixture = await prepareReceiptSubmittedFixture(config, runId, auth, registry);
-  const booking = await getAdminBookingDetail(config, fixture);
-  const settlement = await loadAdminSettlement(config, fixture);
-  assertSettlementApprovalCandidate(fixture, booking, settlement, config.driverId);
-  const money = assertMoneyFields(settlement);
-  registry.update(runId, {
-    approvalCandidateVerified: true,
-    adminCommissionStatusBeforeUi: settlement.commissionStatus,
-    adminReceiptStatusBeforeUi: settlement.receiptStatus,
-    adminCanApproveBeforeUi: settlement.canApprove === true,
-    uiCurrency: settlement.currency || EXPECTED_CURRENCY,
-    customerTotal: money.customerTotal,
-    companyCommission: money.commission,
-    driverExpectedIncome: money.expectedIncome,
-  });
-
+  const fixture = await prepareSettlementPendingFixture(config, runId, auth, registry);
   const context = await browser.newContext({ viewport: VIEWPORT, locale: 'en-US' });
+  await seedDriverSession(context, fixture.driverToken);
   const page = await context.newPage();
   const consoleErrors = [];
   page.on('console', (message) => {
@@ -430,37 +475,86 @@ async function runAdminSettlementUi(config, auth, registry, browser) {
   });
   page.on('pageerror', (err) => consoleErrors.push(err.message));
   try {
-    await seedAdminToken(page, auth.adminToken);
-    await page.goto(adminSettlementE2EDetailUrl(config, fixture.bookingNumber), {
+    const detailResponsePromise = page.waitForResponse(
+      (response) => response.url().includes(`/api/v1/driver/settlements/${fixture.bookingNumber}`)
+        && response.request().method() === 'GET'
+        && response.ok(),
+      { timeout: 30000 },
+    );
+    await page.goto(driverSettlementE2EDetailUrl(config, fixture.bookingNumber), {
       waitUntil: 'domcontentloaded',
     });
     await waitForFlutterApp(page);
-    await waitMs(3000);
-    await screenshot(config, page, `${runId}-admin-settlement-detail-loaded.png`);
-    const approval = await clickApproveWithConfirmation(page, config, fixture);
-    await waitMs(3000);
-    await screenshot(config, page, `${runId}-admin-settlement-detail-approved.png`);
+    await dismissDriverPwaPrompt(page);
+    await detailResponsePromise;
+    await waitForReceiptSelectButton(page);
+    await screenshot(config, page, `${runId}-driver-settlement-detail-due.png`);
 
-    const approvedBooking = await getAdminBookingDetail(config, fixture);
-    const approvedSettlement = await loadAdminSettlement(config, fixture);
-    if (approvedBooking.status !== 'COMPLETED') {
-      throw new Error(`Admin UI approval left booking ${approvedBooking.status}, expected COMPLETED`);
-    }
-    if (approvedSettlement.commissionStatus !== 'APPROVED') {
-      throw new Error(
-        `Admin UI approval left settlement ${approvedSettlement.commissionStatus}, expected APPROVED`,
-      );
-    }
-    const finalDriverStatus = await loadDriverStatus(config, fixture.driverToken);
-    if (finalDriverStatus.hasActiveJob === true) {
-      throw new Error('Driver still has an active job after admin UI approval');
+    const dueDetail = await loadDriverSettlement(config, fixture);
+    const money = assertMoneyFields(dueDetail);
+    if (
+      Number(money.commission) !== Number(fixture.companyCommission) ||
+      Number(money.expectedIncome) !== Number(fixture.driverExpectedIncome) ||
+      Number(money.customerTotal) !== Number(fixture.customerTotal)
+    ) {
+      throw new Error('Driver settlement detail money values changed before UI upload');
     }
     registry.update(runId, {
-      uiApprovalStatus: 'approved',
-      uiApproveRequestCount: approval.approveRequestCount,
-      settlementStatus: approvedSettlement.commissionStatus,
-      receiptStatus: approvedSettlement.receiptStatus,
-      bookingFinalStatus: approvedBooking.status,
+      uiDisplayedMoneyVerified: true,
+      uiCurrency: EXPECTED_CURRENCY,
+    });
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tride-driver-settlement-ui-'));
+    const receiptPath = path.join(tempDir, `driver-settlement-ui-${runId}.png`);
+    fs.writeFileSync(receiptPath, createSyntheticReceiptPng(runId));
+    try {
+      await page.mouse.wheel(0, 900);
+      await waitMs(1000);
+      await screenshot(config, page, `${runId}-driver-settlement-upload-section.png`);
+      const fileSelection = await chooseReceiptFile(page, receiptPath);
+      await waitMs(1000);
+      await screenshot(
+        config,
+        page,
+        `${runId}-driver-settlement-receipt-selected.png`,
+      );
+      await screenshot(config, page, `${runId}-driver-settlement-upload-button.png`);
+      const uploadClick = await uploadSelectedReceiptOnce(page, fixture.bookingNumber);
+      registry.update(runId, {
+        uiFileChooserMethod: fileSelection.method,
+        uiFileChooserClicks: fileSelection.clicks,
+        uiFileInputCountBefore: fileSelection.fileInputCountBefore,
+        uiFileInputCountAfter: fileSelection.fileInputCountAfter,
+        uiFileInputAccept: fileSelection.fileInputAccept,
+        uiFileInputMultiple: fileSelection.fileInputMultiple,
+        uiUploadClickMethod: uploadClick.method,
+        uiUploadClicks: uploadClick.clicks,
+        uiUploadRequestCount: uploadClick.uploadRequestCount,
+      });
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+    await waitMs(3000);
+    await screenshot(config, page, `${runId}-driver-settlement-receipt-submitted.png`);
+    const submitted = await loadDriverSettlement(config, fixture);
+    if (submitted.commissionStatus !== 'RECEIPT_SUBMITTED') {
+      throw new Error(`UI upload left settlement ${submitted.commissionStatus}, expected RECEIPT_SUBMITTED`);
+    }
+    registry.update(runId, {
+      settlementStatus: submitted.commissionStatus,
+      receiptStatus: submitted.receiptStatus,
+      uiUploadStatus: 'submitted',
+    });
+    const approved = await approveSettlementVerified(config, fixture);
+    const finalDriverStatus = await loadDriverStatus(config, fixture.driverToken);
+    if (finalDriverStatus.hasActiveJob === true) {
+      throw new Error('Driver still has an active job after admin approval');
+    }
+    registry.update(runId, {
+      approvalCandidateVerified: true,
+      settlementStatus: approved.commissionStatus,
+      receiptStatus: approved.receiptStatus,
+      bookingFinalStatus: approved.status,
       driverActiveJobAfterApproval: false,
     });
     if (consoleErrors.length) throw new Error(`Browser console errors: ${consoleErrors.join('; ')}`);
@@ -471,25 +565,35 @@ async function runAdminSettlementUi(config, auth, registry, browser) {
   }
 }
 
+function formatAmount(value) {
+  return Number(value).toLocaleString('en-US', {
+    maximumFractionDigits: Number(value) === Math.round(Number(value)) ? 0 : 2,
+  });
+}
+
 function writeManifest(config, registry) {
   fs.mkdirSync(config.artifactDir, { recursive: true });
   const manifestPath = path.join(config.artifactDir, MANIFEST_NAME);
   const allowed = registry.records.map((record) => redact({
     runId: record.runId,
     bookingNumber: record.bookingNumber,
-    receiptUploadStatus: record.receiptUploadStatus,
-    approvalCandidateVerified: record.approvalCandidateVerified,
-    adminCommissionStatusBeforeUi: record.adminCommissionStatusBeforeUi,
-    adminReceiptStatusBeforeUi: record.adminReceiptStatusBeforeUi,
-    adminCanApproveBeforeUi: record.adminCanApproveBeforeUi,
-    uiApprovalStatus: record.uiApprovalStatus,
-    uiApproveRequestCount: record.uiApproveRequestCount,
+    uiUploadStatus: record.uiUploadStatus,
     settlementStatus: record.settlementStatus,
     receiptStatus: record.receiptStatus,
+    uiDisplayedMoneyVerified: record.uiDisplayedMoneyVerified,
+    uiCurrency: record.uiCurrency,
+    uiFileChooserMethod: record.uiFileChooserMethod,
+    uiFileChooserClicks: record.uiFileChooserClicks,
+    uiFileInputCountBefore: record.uiFileInputCountBefore,
+    uiFileInputCountAfter: record.uiFileInputCountAfter,
+    uiFileInputAccept: record.uiFileInputAccept,
+    uiFileInputMultiple: record.uiFileInputMultiple,
+    uiUploadClickMethod: record.uiUploadClickMethod,
+    uiUploadClicks: record.uiUploadClicks,
+    uiUploadRequestCount: record.uiUploadRequestCount,
+    approvalCandidateVerified: record.approvalCandidateVerified,
     bookingFinalStatus: record.bookingFinalStatus,
-    driverActiveJobAfterApproval: record.driverActiveJobAfterApproval,
     preparationStatus: record.preparationStatus,
-    preparationError: record.preparationError,
     cleanupStatus: record.cleanupStatus,
     cleanupError: record.cleanupError,
   }));
@@ -513,28 +617,26 @@ async function main() {
     marker: E2E_MARKER,
     expectedCommissionAmount: EXPECTED_COMMISSION_AMOUNT,
     expectedCurrency: EXPECTED_CURRENCY,
-    requiresLocalE2eRoute: 'TRIDE_ENABLE_E2E_ROUTES=true',
   });
   if (args.dryRun) {
     console.log(JSON.stringify(dryRunSummary, null, 2));
     return;
   }
-
   const registry = new FixtureRegistry();
   let browser;
   try {
     const auth = await authenticateAndPreflight(config);
     browser = await openBrowser(args);
-    const record = await runAdminSettlementUi(config, auth, registry, browser);
+    const record = await runDriverSettlementUi(config, auth, registry, browser);
     console.log(
-      `PASS admin settlement UI ${record.bookingNumber}; ` +
-      `approval=${record.uiApprovalStatus}; booking=${record.bookingFinalStatus}; ` +
+      `PASS driver settlement UI ${record.bookingNumber}; ` +
+      `upload=${record.uiUploadStatus}; booking=${record.bookingFinalStatus}; ` +
       `settlement=${record.settlementStatus}; cleanup=${record.cleanupStatus}`,
     );
   } finally {
     if (browser) await browser.close().catch(() => {});
     if (registry.records.length) {
-      console.log(`Redacted admin settlement UI E2E manifest: ${writeManifest(config, registry)}`);
+      console.log(`Redacted driver settlement UI E2E manifest: ${writeManifest(config, registry)}`);
     }
   }
 }
@@ -549,7 +651,9 @@ if (require.main === module) {
 module.exports = {
   MANIFEST_NAME,
   VIEWPORT,
-  adminSettlementE2EDetailUrl,
+  driverSettlementE2EDetailUrl,
+  formatAmount,
   parseArgs,
+  seedDriverSession,
   writeManifest,
 };

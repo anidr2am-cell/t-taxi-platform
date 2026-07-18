@@ -65,6 +65,7 @@ test('writeManifest keeps only redacted admin UI run metadata', () => {
           adminReceiptStatusBeforeUi: 'RECEIPT_SUBMITTED',
           adminCanApproveBeforeUi: true,
           uiApprovalStatus: 'approved',
+          uiApproveRequestCount: 1,
           settlementStatus: 'APPROVED',
           receiptStatus: 'APPROVED',
           bookingFinalStatus: 'COMPLETED',
@@ -84,6 +85,7 @@ test('writeManifest keeps only redacted admin UI run metadata', () => {
     const text = fs.readFileSync(manifest, 'utf8');
     assert.match(text, /TX202607180199/);
     assert.match(text, /approvalCandidateVerified/);
+    assert.match(text, /uiApproveRequestCount/);
     assert.doesNotMatch(text, /should-not-appear/);
     assert.doesNotMatch(text, /\+66000000000/);
     assert.doesNotMatch(text, /receipt\.png/);
