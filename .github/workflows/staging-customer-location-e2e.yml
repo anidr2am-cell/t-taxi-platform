@@ -24,6 +24,7 @@ jobs:
       TRIDE_E2E_ALLOW_SPLIT_HOSTS: "0"
       TRIDE_E2E_ALLOW_LIVE: "1"
       TRIDE_E2E_KEEP_FIXTURE: "0"
+      TRIDE_E2E_ARTIFACT_DIR: ${{ github.workspace }}/e2e-artifacts
       TRIDE_E2E_ADMIN_EMAIL: ${{ secrets.TRIDE_E2E_ADMIN_EMAIL }}
       TRIDE_E2E_ADMIN_PASSWORD: ${{ secrets.TRIDE_E2E_ADMIN_PASSWORD }}
       TRIDE_E2E_DRIVER_EMAIL: ${{ secrets.TRIDE_E2E_DRIVER_EMAIL }}
@@ -106,18 +107,86 @@ jobs:
         working-directory: backend
         run: npm run e2e:staging:customer-location
 
-      - name: Scan redacted E2E artifacts for secret-like values
+      - name: Verify redacted E2E manifest exists
         if: always()
-        working-directory: backend
+        shell: bash
+        run: |
+          manifest="$TRIDE_E2E_ARTIFACT_DIR/customer-location-e2e-manifest.json"
+          if [ ! -f "$manifest" ]; then
+            echo "::error::Expected redacted E2E manifest was not created"
+            exit 1
+          fi
+          if [ ! -s "$manifest" ]; then
+            echo "::error::Expected redacted E2E manifest is empty"
+            exit 1
+          fi
+
+      - name: Validate redacted E2E manifest schema
+        if: always()
         shell: bash
         run: |
           node <<'NODE'
           const fs = require('node:fs');
           const path = require('node:path');
-          const root = path.join(process.cwd(), 'e2e-artifacts');
+          const manifestPath = path.join(
+            process.env.TRIDE_E2E_ARTIFACT_DIR,
+            'customer-location-e2e-manifest.json',
+          );
+          const allowed = new Set([
+            'runId',
+            'viewport',
+            'bookingNumber',
+            'customerName',
+            'marker',
+            'preparationStatus',
+            'preparationError',
+            'cleanupStatus',
+            'cleanupError',
+          ]);
+          const forbidden = new Set([
+            'guestAccess' + 'Token',
+            'adminToken',
+            'driverToken',
+            'password',
+            'authori' + 'zation',
+            'cookie',
+            'headers',
+            'localStorage',
+            'sessionStorage',
+          ]);
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          if (!Array.isArray(manifest)) {
+            console.error('::error::Redacted E2E manifest must be an array');
+            process.exit(1);
+          }
+          const findings = [];
+          manifest.forEach((entry, index) => {
+            for (const key of Object.keys(entry || {})) {
+              if (!allowed.has(key) || forbidden.has(key)) {
+                findings.push(`entry ${index} field ${key}`);
+              }
+            }
+          });
+          if (findings.length) {
+            for (const finding of findings) {
+              console.error(`::error::Unexpected redacted manifest field: ${finding}`);
+            }
+            process.exit(1);
+          }
+          console.log('Redacted E2E manifest schema validation passed');
+          NODE
+
+      - name: Scan redacted E2E artifacts for secret-like values
+        if: always()
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.env.TRIDE_E2E_ARTIFACT_DIR;
           const patterns = [
-            ['authorization-bearer', /Authorization: Bearer [A-Za-z0-9._-]+/],
-            ['guest-access-token-assignment', /guestAccessToken\s*[=:]\s*[A-Za-z0-9._-]+/],
+            ['authori' + 'zation-bearer', new RegExp('Authori' + 'zation: ' + 'Bearer ' + '[A-Za-z0-9._-]+')],
+            ['guest-access-token-assignment', new RegExp('guestAccess' + 'Token\\s*[=:]\\s*[A-Za-z0-9._-]+')],
             ['e2e-admin-password-name', /TRIDE_E2E_ADMIN_PASSWORD/],
             ['e2e-driver-password-name', /TRIDE_E2E_DRIVER_PASSWORD/],
             ['private-key', /BEGIN .*PRIVATE KEY/],
@@ -152,13 +221,15 @@ jobs:
 
       - name: Write safe E2E summary
         if: always()
-        working-directory: backend
         shell: bash
         run: |
           node <<'NODE'
           const fs = require('node:fs');
           const path = require('node:path');
-          const manifestPath = path.join(process.cwd(), 'e2e-artifacts', 'customer-location-e2e-manifest.json');
+          const manifestPath = path.join(
+            process.env.TRIDE_E2E_ARTIFACT_DIR,
+            'customer-location-e2e-manifest.json',
+          );
           const summary = process.env.GITHUB_STEP_SUMMARY;
           const lines = ['## Staging customer location E2E', ''];
           if (fs.existsSync(manifestPath)) {
@@ -181,6 +252,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: staging-customer-location-e2e-redacted
-          path: backend/e2e-artifacts/customer-location-e2e-manifest.json
-          if-no-files-found: ignore
+          path: ${{ github.workspace }}/e2e-artifacts/customer-location-e2e-manifest.json
+          if-no-files-found: error
           retention-days: 7

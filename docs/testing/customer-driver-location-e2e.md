@@ -139,10 +139,16 @@ The workflow checks only whether required secrets are present. It must not print
 The workflow uploads only:
 
 ```text
-backend/e2e-artifacts/customer-location-e2e-manifest.json
+e2e-artifacts/customer-location-e2e-manifest.json
 ```
 
-The manifest is redacted by the runner and retained for 7 days. The workflow also scans the artifact folder for token-like values before upload.
+The manifest is redacted by the runner and retained for 7 days. The workflow writes, scans, validates, summarizes, and uploads the same repository-root artifact path through:
+
+```text
+TRIDE_E2E_ARTIFACT_DIR=${{ github.workspace }}/e2e-artifacts
+```
+
+If the live E2E step reaches fixture creation, the manifest is required. A missing or empty manifest fails the workflow, and upload uses `if-no-files-found: error` so artifact path mistakes are visible.
 
 Do not upload:
 
@@ -185,6 +191,19 @@ Headed debugging:
 npm run e2e:staging:customer-location -- --headed
 ```
 
+Run one supported viewport for repeatable diagnostics:
+
+```powershell
+npm run e2e:staging:customer-location -- --viewport=1280x800
+```
+
+Supported viewport values are:
+
+- `360x800`
+- `390x844`
+- `430x932`
+- `1280x800`
+
 Keep fixture for manual debugging:
 
 ```powershell
@@ -203,7 +222,7 @@ The runner:
 4. Moves the trip to `ON_ROUTE`.
 5. Sends driver location updates.
 6. Verifies guest location polling is used instead of repeated guest lookup polling.
-7. Verifies the browser WebSocket connection count separately from Engine.IO HTTP transport requests.
+7. Verifies the browser Socket.IO WebSocket lifecycle separately from Engine.IO HTTP transport requests and unrelated browser WebSockets.
 8. Checks customer-visible UI copy, marker semantics, raw localization keys, internal ID/token DOM leaks, and horizontal overflow.
 9. Advances to `DRIVER_ARRIVED`, `PICKED_UP`, and `SETTLEMENT_PENDING`.
 10. Verifies terminal UI cleanup and stops treating live tracking as active.
@@ -225,7 +244,11 @@ The request observer verifies:
 - Guest booking lookup endpoint is not used as a 15-second polling loop.
 - Guest location requests keep the same token fingerprint without writing the token to console or artifacts.
 - Socket HTTP transport requests are not treated as WebSocket connections.
-- Browser WebSocket connections do not repeatedly reconnect for the same active state.
+- Socket.IO browser WebSocket connections do not overlap or reconnect silently for the same active scenario.
+- Other browser WebSockets are recorded separately and excluded from the customer Socket.IO assertion.
+- Socket lifecycle records store only category, sanitized origin/path, sequence, lifecycle stage, and open/close timestamps. Query strings, Socket.IO `sid`, headers, frames, and payloads are never recorded.
+- Overlapping duplicate Socket.IO connections fail immediately.
+- Sequential Socket.IO reconnects fail with lifecycle context, for example the stage that opened, closed, and reopened the connection.
 
 The backend/frontend unit tests remain the stronger proof for:
 

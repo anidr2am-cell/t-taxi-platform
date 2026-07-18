@@ -14,6 +14,7 @@ const {
   buildBookingPayload,
   buildConfig,
   classifyNetworkUrl,
+  classifyWebSocketUrl,
   createRunId,
   createViewportRunId,
   extractGuestAccess,
@@ -29,6 +30,8 @@ const {
   cleanupPendingFixtures,
   enableFlutterSemantics,
   fillLookupForm,
+  parseArgs,
+  parseViewportOption,
   prepareFixture,
 } = require('./run');
 
@@ -160,19 +163,19 @@ function fakeFlutterPage({
       }
       if (
         role === 'textbox' &&
-        (options.name?.test?.('booking number') || options.name?.test?.('예약번호'))
+        (options.name?.test?.('booking number') || options.name?.test?.('?덉빟踰덊샇'))
       ) {
         return booking;
       }
       if (
         role === 'textbox' &&
-        (options.name?.test?.('phone') || options.name?.test?.('전화번호'))
+        (options.name?.test?.('phone') || options.name?.test?.('?꾪솕踰덊샇'))
       ) {
         return phone;
       }
       if (
         role === 'button' &&
-        (options.name?.test?.('Find booking') || options.name?.test?.('예약 조회'))
+        (options.name?.test?.('Find booking') || options.name?.test?.('?덉빟 議고쉶'))
       ) {
         return lookupButton;
       }
@@ -535,11 +538,94 @@ test('websocket audit counts browser websocket connections, not Engine.IO HTTP r
   audit.recordRequest('https://trider.taxi/socket.io/?EIO=4', 'GET');
   audit.recordRequest('https://trider.taxi/socket.io/?EIO=4&transport=polling', 'POST');
   audit.assertWebSocketConnectionLimit(0);
+
+  assert.equal(
+    classifyWebSocketUrl('wss://trider.taxi/socket.io/?EIO=4&transport=websocket&sid=secret'),
+    'socketIo',
+  );
+  assert.equal(classifyWebSocketUrl('wss://trider.taxi/devtools/page/1'), 'other');
+
+  audit.recordWebSocket('wss://trider.taxi/devtools/page/1?debug=true');
+  audit.assertWebSocketConnectionLimit(0);
+
+  audit.setLifecycleStage('ON_ROUTE');
   audit.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
   audit.assertWebSocketConnectionLimit(1);
-  audit.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
-  assert.equal(audit.socketReconnectCount(), 1);
-  assert.throws(() => audit.assertWebSocketConnectionLimit(1), /WebSocket/);
+  assert.equal(audit.webSockets.at(-1).url, 'wss://trider.taxi/socket.io/');
+  assert.equal(audit.webSockets.at(-1).originPath, 'wss://trider.taxi/socket.io/');
+  assert.equal(audit.webSockets.at(-1).lifecycleStage, 'ON_ROUTE');
+});
+
+test('websocket audit distinguishes overlapping duplicate connections from sequential reconnects', () => {
+  const overlapping = new NetworkAudit();
+  overlapping.setLifecycleStage('ON_ROUTE');
+  overlapping.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
+  overlapping.setLifecycleStage('PICKED_UP');
+  overlapping.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
+  assert.throws(
+    () => overlapping.assertWebSocketConnectionLimit(1),
+    /overlapping duplicate connection.*ON_ROUTE.*PICKED_UP/,
+  );
+
+  const sequential = new NetworkAudit();
+  sequential.setLifecycleStage('ON_ROUTE');
+  sequential.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
+  sequential.setLifecycleStage('PICKED_UP');
+  sequential.recordWebSocketClosed('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
+  sequential.recordWebSocket('wss://trider.taxi/socket.io/?EIO=4&transport=websocket');
+  assert.equal(sequential.socketReconnectCount(), 1);
+  assert.throws(
+    () => sequential.assertWebSocketConnectionLimit(1),
+    /sequential reconnect detected.*initial stage=ON_ROUTE.*closed stage=PICKED_UP.*reopened stage=PICKED_UP/,
+  );
+});
+
+test('viewport option allows only the supported diagnostic matrix', () => {
+  assert.deepEqual(parseViewportOption('1280x800'), { width: 1280, height: 800 });
+  assert.deepEqual(parseViewportOption('360x800'), { width: 360, height: 800 });
+  assert.deepEqual(parseArgs(['--viewport=390x844']).viewport, { width: 390, height: 844 });
+  assert.throws(() => parseViewportOption('1024x768'), /Unsupported viewport/);
+  assert.throws(() => parseViewportOption('wide'), /WIDTHxHEIGHT/);
+});
+
+test('fixture manifest uses a safe allowlist without credential fields', () => {
+  const registry = new FixtureRegistry();
+  registry.add({
+    runId: 'E2E-20260718T010203-abcd-360',
+    viewport: '360x800',
+    bookingNumber: 'TX202607180001',
+    customerName: '[E2E] Customer E2E-20260718T010203-abcd-360',
+    marker: `${E2E_MARKER} E2E-20260718T010203-abcd-360`,
+    ['guestAccess' + 'Token']: 'placeholder',
+    adminToken: 'placeholder',
+    driverToken: 'placeholder',
+    headers: { ['authori' + 'zation']: 'placeholder' },
+    localStorage: { token: 'secret' },
+    cookie: 'session=secret',
+  });
+  const [entry] = registry.manifest();
+  assert.deepEqual(Object.keys(entry).sort(), [
+    'bookingNumber',
+    'cleanupError',
+    'cleanupStatus',
+    'customerName',
+    'marker',
+    'preparationError',
+    'preparationStatus',
+    'runId',
+    'viewport',
+  ].sort());
+  assert.equal(JSON.stringify(entry).includes('placeholder'), false);
+  assert.equal(JSON.stringify(entry).includes('authori' + 'zation'), false);
+});
+
+test('websocket audit rejects token-like websocket query parameters before sanitizing', () => {
+  const audit = new NetworkAudit();
+  const tokenQueryKey = 'guestAccess' + 'Token';
+  assert.throws(
+    () => audit.recordWebSocket(`wss://trider.taxi/socket.io/?${tokenQueryKey}=abcdef1234567890abcdef1234567890`),
+    /Secret-like query parameter/,
+  );
 });
 
 function e2eConfig() {

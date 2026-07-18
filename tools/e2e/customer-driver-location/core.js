@@ -257,6 +257,16 @@ function classifyNetworkUrl(value) {
   return 'other';
 }
 
+function classifyWebSocketUrl(value) {
+  const url = new URL(value);
+  return url.pathname.startsWith('/socket.io') ? 'socketIo' : 'other';
+}
+
+function sanitizedOriginPath(value) {
+  const url = new URL(value);
+  return `${url.origin}${url.pathname}`;
+}
+
 function assertNoTokenInUrl(value) {
   const url = new URL(value);
   for (const [key, val] of url.searchParams.entries()) {
@@ -270,6 +280,7 @@ class NetworkAudit {
   constructor() {
     this.events = [];
     this.webSockets = [];
+    this.lifecycleStage = 'init';
   }
 
   recordRequest(url, method = 'GET', headers = {}) {
@@ -285,22 +296,44 @@ class NetworkAudit {
     });
   }
 
+  setLifecycleStage(stage) {
+    this.lifecycleStage = String(stage || 'unknown');
+  }
+
   recordWebSocket(url) {
     assertNoTokenInUrl(url);
+    const category = classifyWebSocketUrl(url);
+    const originPath = sanitizedOriginPath(url);
     this.webSockets.push({
       type: 'websocket',
+      category,
       url: sanitizeUrl(url),
+      originPath,
+      sequence: this.webSockets.length + 1,
+      lifecycleStage: this.lifecycleStage,
+      openedAt: Date.now(),
       at: Date.now(),
       closedAt: null,
+      closeObserved: false,
+      closeLifecycleStage: null,
     });
   }
 
   recordWebSocketClosed(url) {
-    const safeUrl = sanitizeUrl(url);
+    const originPath = sanitizedOriginPath(url);
+    const category = classifyWebSocketUrl(url);
     const open = [...this.webSockets].reverse().find(
-      (socket) => socket.url === safeUrl && socket.closedAt == null,
+      (socket) => (
+        socket.category === category &&
+        socket.originPath === originPath &&
+        socket.closedAt == null
+      ),
     );
-    if (open) open.closedAt = Date.now();
+    if (open) {
+      open.closedAt = Date.now();
+      open.closeObserved = true;
+      open.closeLifecycleStage = this.lifecycleStage;
+    }
   }
 
   counts() {
@@ -357,9 +390,44 @@ class NetworkAudit {
     }
   }
 
+  socketIoWebSockets() {
+    return this.webSockets.filter((socket) => socket.category === 'socketIo');
+  }
+
   assertWebSocketConnectionLimit(maxAllowed = 1) {
-    if (this.webSockets.length > maxAllowed) {
-      throw new Error(`WebSocket connections repeated ${this.webSockets.length} times`);
+    const sockets = this.socketIoWebSockets();
+    const grouped = new Map();
+    for (const socket of sockets) {
+      const key = `${socket.category}:${socket.originPath}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(socket);
+    }
+
+    for (const group of grouped.values()) {
+      const open = group.filter((socket) => socket.closedAt == null);
+      if (open.length > 1) {
+        const first = open[0];
+        const duplicate = open[1];
+        throw new Error(
+          `Socket.IO overlapping duplicate connection detected: ` +
+          `path=${first.originPath}, initial stage=${first.lifecycleStage}, ` +
+          `duplicate stage=${duplicate.lifecycleStage}`,
+        );
+      }
+    }
+
+    if (sockets.length > maxAllowed) {
+      const reopened = sockets[maxAllowed];
+      const previous = sockets[maxAllowed - 1];
+      const previousCloseStage = previous?.closeObserved
+        ? previous.closeLifecycleStage
+        : 'not-observed';
+      throw new Error(
+        `Socket.IO sequential reconnect detected: ` +
+        `initial stage=${previous?.lifecycleStage || 'unknown'}, ` +
+        `closed stage=${previousCloseStage}, ` +
+        `reopened stage=${reopened?.lifecycleStage || 'unknown'}`,
+      );
     }
   }
 
@@ -368,7 +436,7 @@ class NetworkAudit {
   }
 
   socketReconnectCount() {
-    return Math.max(0, this.webSockets.length - 1);
+    return Math.max(0, this.socketIoWebSockets().length - 1);
   }
 }
 
@@ -519,6 +587,7 @@ module.exports = {
   assertUrlAllowed,
   buildBookingPayload,
   buildConfig,
+  classifyWebSocketUrl,
   classifyNetworkUrl,
   createRunId,
   createViewportRunId,
