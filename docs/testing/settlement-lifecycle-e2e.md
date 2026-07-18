@@ -106,6 +106,10 @@ Never store tokens, passwords, customer phone, bank data, signed URLs, headers, 
 
 The booking fixture is archived through the admin API. Uploaded settlement receipt files follow the existing application storage policy; the runner does not directly delete DB rows or filesystem objects.
 
+See [Synthetic settlement receipt retention](e2e-receipt-retention.md) for the
+current storage behavior, access controls, and manual staging retention
+guidance.
+
 ## Follow-up coverage
 
 - Driver settlement UI browser E2E.
