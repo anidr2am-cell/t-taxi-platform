@@ -613,10 +613,11 @@ void main() {
   });
 
   testWidgets(
-    'driver apply upload cards show selected replace and remove states',
+    'driver apply vehicle photos can be added incrementally and removed individually',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       var singlePickCount = 0;
+      var vehiclePickCount = 0;
       await tester.pumpWidget(
         _app(
           DriverApplicationFormPage(
@@ -628,11 +629,28 @@ void main() {
                 bytes: const [1, 2, 3],
               );
             },
-            debugPickVehiclePhotos: () async => const [
-              DriverApplicationUploadFile(name: 'car1.jpg', bytes: [1]),
-              DriverApplicationUploadFile(name: 'car2.jpg', bytes: [2]),
-              DriverApplicationUploadFile(name: 'car3.jpg', bytes: [3]),
-            ],
+            debugPickVehiclePhotos: () async {
+              vehiclePickCount += 1;
+              return switch (vehiclePickCount) {
+                1 => const [
+                  DriverApplicationUploadFile(name: 'car1.jpg', bytes: [1]),
+                ],
+                2 => const [
+                  DriverApplicationUploadFile(name: 'car2.jpg', bytes: [2]),
+                ],
+                3 => const [
+                  DriverApplicationUploadFile(name: 'car3.jpg', bytes: [3]),
+                ],
+                4 => const [
+                  DriverApplicationUploadFile(name: 'car4.jpg', bytes: [4]),
+                  DriverApplicationUploadFile(name: 'car5.jpg', bytes: [5]),
+                ],
+                _ => const [
+                  DriverApplicationUploadFile(name: 'car6.jpg', bytes: [6]),
+                  DriverApplicationUploadFile(name: 'car7.jpg', bytes: [7]),
+                ],
+              };
+            },
           ),
         ),
       );
@@ -651,22 +669,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('line.png'), findsOneWidget);
+      expect(lineSelect, findsNothing);
       expect(
         find.byKey(const ValueKey('driver_application_file_remove_lineQr')),
         findsOneWidget,
       );
       expect(find.textContaining('완료', skipOffstage: false), findsWidgets);
-
-      await tester.tap(lineSelect);
-      await tester.pumpAndSettle();
-      expect(find.text('line-new.png'), findsOneWidget);
-      expect(find.text('line.png'), findsNothing);
+      expect(find.textContaining('교체', skipOffstage: false), findsNothing);
 
       await tester.tap(
         find.byKey(const ValueKey('driver_application_file_remove_lineQr')),
       );
       await tester.pumpAndSettle();
-      expect(find.text('line-new.png'), findsNothing);
+      expect(find.text('line.png'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('driver_application_file_select_lineQr')),
+        findsOneWidget,
+      );
 
       final vehicleSelect = find.byKey(
         const ValueKey('driver_application_file_select_vehiclePhotos'),
@@ -674,10 +693,101 @@ void main() {
       await tester.tap(vehicleSelect);
       await tester.pumpAndSettle();
       expect(find.text('car1.jpg'), findsOneWidget);
+      expect(find.textContaining('1/6', skipOffstage: false), findsWidgets);
+
+      await tester.tap(vehicleSelect);
+      await tester.pumpAndSettle();
       expect(find.text('car2.jpg'), findsOneWidget);
+      expect(find.textContaining('2/6', skipOffstage: false), findsWidgets);
+
+      await tester.tap(vehicleSelect);
+      await tester.pumpAndSettle();
       expect(find.text('car3.jpg'), findsOneWidget);
+      expect(find.textContaining('3/6', skipOffstage: false), findsWidgets);
+
+      await tester.tap(vehicleSelect);
+      await tester.pumpAndSettle();
+      expect(find.text('car4.jpg'), findsOneWidget);
+      expect(find.text('car5.jpg'), findsOneWidget);
+      expect(find.textContaining('5/6', skipOffstage: false), findsWidgets);
+
+      await tester.tap(vehicleSelect);
+      await tester.pumpAndSettle();
+      expect(find.text('car6.jpg'), findsOneWidget);
+      expect(find.text('car7.jpg'), findsNothing);
+      expect(find.textContaining('6/6', skipOffstage: false), findsWidgets);
+      expect(vehicleSelect, findsNothing);
+      expect(
+        find.byKey(
+          const ValueKey(
+            'driver_application_file_select_disabled_vehiclePhotos',
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('driver_application_file_remove_car2.jpg')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('car1.jpg'), findsOneWidget);
+      expect(find.text('car2.jpg'), findsNothing);
+      expect(find.text('car3.jpg'), findsOneWidget);
+      expect(find.textContaining('5/6', skipOffstage: false), findsWidgets);
+      expect(vehicleSelect, findsOneWidget);
+
+      await tester.tap(vehicleSelect);
+      await tester.pumpAndSettle();
+      expect(find.text('car6.jpg'), findsOneWidget);
+      expect(find.text('car7.jpg'), findsOneWidget);
+      expect(find.textContaining('6/6', skipOffstage: false), findsWidgets);
     },
   );
+
+  testWidgets('driver apply vehicle photos skip duplicate selections', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    var vehiclePickCount = 0;
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _FakeDriverApplicationApi(),
+          debugPickVehiclePhotos: () async {
+            vehiclePickCount += 1;
+            return vehiclePickCount == 1
+                ? const [
+                    DriverApplicationUploadFile(name: 'car1.jpg', bytes: [1]),
+                  ]
+                : const [
+                    DriverApplicationUploadFile(name: 'car1.jpg', bytes: [9]),
+                    DriverApplicationUploadFile(name: 'car2.jpg', bytes: [2]),
+                  ];
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final vehicleSelect = find.byKey(
+      const ValueKey('driver_application_file_select_vehiclePhotos'),
+    );
+    await tester.scrollUntilVisible(
+      vehicleSelect,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(vehicleSelect);
+    await tester.pumpAndSettle();
+    await tester.tap(vehicleSelect);
+    await tester.pumpAndSettle();
+
+    expect(find.text('car1.jpg'), findsOneWidget);
+    expect(find.text('car2.jpg'), findsOneWidget);
+    expect(find.textContaining('중복', skipOffstage: false), findsWidgets);
+    expect(find.textContaining('2/6', skipOffstage: false), findsWidgets);
+  });
 
   testWidgets('driver apply upload card errors are scoped to the failed file', (
     tester,
@@ -746,6 +856,12 @@ void main() {
     await tester.pumpAndSettle();
 
     final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(submit);
     await tester.pumpAndSettle();
 

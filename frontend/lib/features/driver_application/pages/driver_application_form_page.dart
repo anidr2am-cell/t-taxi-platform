@@ -203,6 +203,17 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
 
   Future<void> _selectVehiclePhotos() async {
     if (_pickingFileKey != null) return;
+    if (_vehiclePhotos.length >= 6) {
+      setState(() {
+        _fileErrors = {
+          ..._fileErrors,
+          'vehiclePhotos': context.l10n.t(
+            'driver_apply_vehicle_photo_limit_reached',
+          ),
+        };
+      });
+      return;
+    }
     setState(() {
       _pickingFileKey = 'vehiclePhotos';
       _error = null;
@@ -211,10 +222,37 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     try {
       final selected = await _pickVehiclePhotos();
       if (!mounted || selected == null) return;
+      final remainingSlots = 6 - _vehiclePhotos.length;
+      var duplicateSkipped = false;
+      var limitSkipped = false;
+      final filesToAdd = <DriverApplicationUploadFile>[];
+      for (final file in selected) {
+        final duplicate =
+            _vehiclePhotos.any(
+              (existing) => _sameFileIdentity(existing, file),
+            ) ||
+            filesToAdd.any((existing) => _sameFileIdentity(existing, file));
+        if (duplicate) {
+          duplicateSkipped = true;
+          continue;
+        }
+        if (filesToAdd.length >= remainingSlots) {
+          limitSkipped = true;
+          continue;
+        }
+        filesToAdd.add(file);
+      }
       setState(() {
-        _vehiclePhotos
-          ..clear()
-          ..addAll(selected.take(6));
+        if (filesToAdd.isNotEmpty) {
+          _vehiclePhotos.addAll(filesToAdd);
+        }
+        final nextErrors = {..._fileErrors}..remove('vehiclePhotos');
+        if (duplicateSkipped || limitSkipped) {
+          nextErrors['vehiclePhotos'] = duplicateSkipped
+              ? context.l10n.t('driver_apply_duplicate_file')
+              : context.l10n.t('driver_apply_vehicle_photo_limit_reached');
+        }
+        _fileErrors = nextErrors;
       });
     } on _DriverApplicationFilePickException catch (err) {
       if (!mounted) return;
@@ -283,6 +321,21 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     });
   }
 
+  void _removeVehiclePhotoAt(int index) {
+    if (index < 0 || index >= _vehiclePhotos.length) return;
+    setState(() {
+      _vehiclePhotos.removeAt(index);
+      _fileErrors = {..._fileErrors}..remove('vehiclePhotos');
+    });
+  }
+
+  bool _sameFileIdentity(
+    DriverApplicationUploadFile left,
+    DriverApplicationUploadFile right,
+  ) {
+    return left.name == right.name && left.bytes.length == right.bytes.length;
+  }
+
   Future<void> _scrollToFirstDocumentError() async {
     final firstKey = _firstDocumentErrorKey();
     if (firstKey == null) return;
@@ -321,11 +374,18 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     required String descriptionKey,
     required List<DriverApplicationUploadFile> files,
     required bool missing,
-    required bool imageOnly,
     required VoidCallback onSelect,
-    required VoidCallback onRemove,
+    VoidCallback? onRemoveAll,
+    void Function(int index)? onRemoveFile,
     String missingKey = 'driver_apply_file_required',
+    String? selectLabelKey,
+    bool? showSelectButton,
+    String? disabledSelectLabelKey,
+    String? countText,
+    int maxPreviewFiles = 3,
   }) {
+    final hasFiles = files.isNotEmpty;
+    final canSelect = showSelectButton ?? !hasFiles;
     return KeyedSubtree(
       key: _fieldKeys[fieldKey],
       child: DriverRegistrationPhotoUploadCard(
@@ -336,11 +396,20 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
         isRequired: true,
         showMissing: _showDocumentErrors && missing,
         processing: _pickingFileKey == fieldKey,
-        imageOnly: imageOnly,
+        selectLabel: context.l10n.t(
+          selectLabelKey ?? 'driver_apply_upload_select',
+        ),
+        showSelectButton: canSelect,
+        disabledSelectLabel: disabledSelectLabelKey == null
+            ? null
+            : context.l10n.t(disabledSelectLabelKey),
         errorText: _fileErrors[fieldKey],
         missingText: context.l10n.t(missingKey),
+        countText: countText,
+        maxPreviewFiles: maxPreviewFiles,
         onSelect: onSelect,
-        onRemove: onRemove,
+        onRemoveAll: onRemoveAll,
+        onRemoveFile: onRemoveFile,
       ),
     );
   }
@@ -779,13 +848,12 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                     descriptionKey: 'driver_apply_upload_image_help',
                     files: _singleFileList(_lineQr),
                     missing: _lineQr == null,
-                    imageOnly: true,
                     onSelect: () => _selectSingleFile(
                       fieldKey: 'lineQr',
                       imageOnly: true,
                       onSelected: (file) => _lineQr = file,
                     ),
-                    onRemove: () => _removeFile('lineQr'),
+                    onRemoveAll: () => _removeFile('lineQr'),
                   ),
                   _uploadCard(
                     fieldKey: 'vehiclePhotos',
@@ -794,10 +862,17 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                     files: _vehiclePhotos,
                     missing:
                         _vehiclePhotos.length < 3 || _vehiclePhotos.length > 6,
-                    imageOnly: true,
                     onSelect: _selectVehiclePhotos,
-                    onRemove: () => _removeFile('vehiclePhotos'),
+                    onRemoveFile: _removeVehiclePhotoAt,
                     missingKey: 'driver_apply_vehicle_photo_count_error',
+                    selectLabelKey: 'driver_apply_upload_add_photo',
+                    showSelectButton: _vehiclePhotos.length < 6,
+                    disabledSelectLabelKey:
+                        'driver_apply_vehicle_photo_limit_reached',
+                    countText: context.l10n
+                        .t('driver_apply_vehicle_photo_count')
+                        .replaceAll('{count}', '${_vehiclePhotos.length}'),
+                    maxPreviewFiles: 6,
                   ),
                   _uploadCard(
                     fieldKey: 'insuranceCertificate',
@@ -805,13 +880,12 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                     descriptionKey: 'driver_apply_upload_document_help',
                     files: _singleFileList(_insuranceCertificate),
                     missing: _insuranceCertificate == null,
-                    imageOnly: false,
                     onSelect: () => _selectSingleFile(
                       fieldKey: 'insuranceCertificate',
                       imageOnly: false,
                       onSelected: (file) => _insuranceCertificate = file,
                     ),
-                    onRemove: () => _removeFile('insuranceCertificate'),
+                    onRemoveAll: () => _removeFile('insuranceCertificate'),
                   ),
                   _uploadCard(
                     fieldKey: 'vehicleRegistration',
@@ -819,13 +893,12 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                     descriptionKey: 'driver_apply_upload_document_help',
                     files: _singleFileList(_vehicleRegistration),
                     missing: _vehicleRegistration == null,
-                    imageOnly: false,
                     onSelect: () => _selectSingleFile(
                       fieldKey: 'vehicleRegistration',
                       imageOnly: false,
                       onSelected: (file) => _vehicleRegistration = file,
                     ),
-                    onRemove: () => _removeFile('vehicleRegistration'),
+                    onRemoveAll: () => _removeFile('vehicleRegistration'),
                   ),
                   _uploadCard(
                     fieldKey: 'taxCertificate',
@@ -833,13 +906,12 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                     descriptionKey: 'driver_apply_upload_document_help',
                     files: _singleFileList(_taxCertificate),
                     missing: _taxCertificate == null,
-                    imageOnly: false,
                     onSelect: () => _selectSingleFile(
                       fieldKey: 'taxCertificate',
                       imageOnly: false,
                       onSelected: (file) => _taxCertificate = file,
                     ),
-                    onRemove: () => _removeFile('taxCertificate'),
+                    onRemoveAll: () => _removeFile('taxCertificate'),
                   ),
                   CheckboxListTile(
                     key: _fieldKeys['personalDataConsent'],
