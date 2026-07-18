@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const { createRequire } = require('node:module');
 const {
   ACTIVE_STATUSES,
   E2E_MARKER,
@@ -28,12 +29,36 @@ const VIEWPORTS = [
 ];
 
 function parseArgs(argv = process.argv.slice(2)) {
+  const viewport = valueAfter(argv, '--viewport');
   return {
     dryRun: argv.includes('--dry-run'),
     headed: argv.includes('--headed'),
     keepFixture: argv.includes('--keep-fixture'),
     project: valueAfter(argv, '--project') || 'chromium',
+    viewport: viewport ? parseViewportOption(viewport) : null,
   };
+}
+
+function parseViewportOption(value) {
+  const match = /^(\d+)x(\d+)$/.exec(String(value || '').trim());
+  if (!match) {
+    throw new Error('--viewport must use WIDTHxHEIGHT, for example --viewport=1280x800');
+  }
+  const viewport = { width: Number(match[1]), height: Number(match[2]) };
+  const allowed = VIEWPORTS.some((item) => (
+    item.width === viewport.width && item.height === viewport.height
+  ));
+  if (!allowed) {
+    throw new Error(
+      `Unsupported viewport ${viewport.width}x${viewport.height}; ` +
+      `allowed: ${VIEWPORTS.map((item) => `${item.width}x${item.height}`).join(', ')}`,
+    );
+  }
+  return viewport;
+}
+
+function selectedViewports(args) {
+  return args.viewport ? [args.viewport] : VIEWPORTS;
 }
 
 function valueAfter(argv, name) {
@@ -547,6 +572,7 @@ const CUSTOMER_TRIP_IN_PROGRESS_RE =
   /in progress|trip|운행 중|行程|ทริป|移動中/i;
 
 async function assertAssignedWaiting(page, audit, fixture) {
+  audit.setLifecycleStage('DRIVER_ASSIGNED');
   await page.getByText(CUSTOMER_DRIVER_LOCATION_TITLE_RE).first().waitFor({ timeout: 20000 });
   await page.getByText(CUSTOMER_DRIVER_LOCATION_WAITING_RE).first().waitFor({ timeout: 20000 });
   await page.getByText(CUSTOMER_DRIVER_LOCATION_LIVE_RE).waitFor({ state: 'detached', timeout: 5000 }).catch(() => {
@@ -625,13 +651,16 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
       socket.on('close', () => audit.recordWebSocketClosed(socket.url()));
     });
 
+    audit.setLifecycleStage('DRIVER_ASSIGNED');
     await page.goto(`${config.frontendUrl}/booking/lookup`, { waitUntil: 'domcontentloaded' });
     await fillLookupForm(page, fixture);
     await submitLookup(page, fixture);
     await assertAssignedWaiting(page, audit, fixture);
 
+    audit.setLifecycleStage('TRANSITION_ON_ROUTE');
     await transitionDriver(config, fixture, 'start-route');
     await waitForGuestStatus(config, fixture, 'ON_ROUTE');
+    audit.setLifecycleStage('ON_ROUTE');
     await sendLocation(config, fixture, 12.9236, 100.8825);
     await page.waitForTimeout(config.pollIntervalMs + 1500);
     await sendLocation(config, fixture, 12.9241, 100.8831);
@@ -648,20 +677,26 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
     await assertOnRouteMap(page, fixture);
     await assertSingleMarker(page, fixture);
 
+    audit.setLifecycleStage('TRANSITION_DRIVER_ARRIVED');
     await transitionDriver(config, fixture, 'arrive');
     await waitForGuestStatus(config, fixture, 'DRIVER_ARRIVED');
+    audit.setLifecycleStage('DRIVER_ARRIVED');
     await assertStatusCopy(page, CUSTOMER_DRIVER_LOCATION_ARRIVED_RE, 'DRIVER_ARRIVED');
     await assertSingleMarker(page, fixture);
     audit.assertWebSocketConnectionLimit(1);
 
+    audit.setLifecycleStage('TRANSITION_PICKED_UP');
     await transitionDriver(config, fixture, 'mark-picked-up');
     await waitForGuestStatus(config, fixture, 'PICKED_UP');
+    audit.setLifecycleStage('PICKED_UP');
     await assertStatusCopy(page, CUSTOMER_TRIP_IN_PROGRESS_RE, 'PICKED_UP');
     await assertSingleMarker(page, fixture);
     audit.assertWebSocketConnectionLimit(1);
 
+    audit.setLifecycleStage('TRANSITION_SETTLEMENT_PENDING');
     await transitionDriver(config, fixture, 'end-trip');
     await waitForGuestStatus(config, fixture, 'SETTLEMENT_PENDING');
+    audit.setLifecycleStage('SETTLEMENT_PENDING');
     const terminalAt = Date.now();
     await page.waitForTimeout(config.pollIntervalMs + 1500);
     await assertTerminalUiRemoved(page, audit, fixture, terminalAt, config.pollIntervalMs);
@@ -669,8 +704,13 @@ async function runViewportScenario({ browser, config, viewport, auth, registry }
     if (consoleErrors.length) {
       throw new Error(`Browser console errors at ${viewport.width}px: ${consoleErrors.join('; ')}`);
     }
-    console.log(`PASS viewport ${viewport.width}x${viewport.height}; socket reconnects=${audit.socketReconnectCount()}`);
+    console.log(
+      `PASS viewport ${viewport.width}x${viewport.height}; ` +
+      `socketIoConnections=${audit.socketIoWebSockets().length}; ` +
+      `socketIoReconnects=${audit.socketReconnectCount()}`,
+    );
   } finally {
+    audit.setLifecycleStage('CONTEXT_CLOSING');
     await context.close();
     if (fixture) {
       if (config.keepFixture) {
@@ -729,7 +769,14 @@ function writeManifest(config, registry, name = 'customer-location-e2e-manifest.
 }
 
 async function openBrowser(args) {
-  const { chromium, firefox, webkit } = require('@playwright/test');
+  let playwright;
+  try {
+    playwright = require('@playwright/test');
+  } catch (err) {
+    const backendRequire = createRequire(path.join(__dirname, '..', '..', '..', 'backend', 'package.json'));
+    playwright = backendRequire('@playwright/test');
+  }
+  const { chromium, firefox, webkit } = playwright;
   const browserType = { chromium, firefox, webkit }[args.project] || chromium;
   return browserType.launch({ headless: !args.headed });
 }
@@ -752,7 +799,7 @@ async function main() {
     driverEmail: config.driverEmail,
     driverId: config.driverId,
     customerPhone: config.customerPhone,
-    viewports: VIEWPORTS.map((viewport) => `${viewport.width}x${viewport.height}`),
+    viewports: selectedViewports(args).map((viewport) => `${viewport.width}x${viewport.height}`),
     activeStatuses: [...ACTIVE_STATUSES],
     terminalStatuses: [...TERMINAL_STATUSES],
   });
@@ -769,7 +816,7 @@ async function main() {
   try {
     const auth = await authenticateAndPreflight(config);
     browser = await openBrowser(args);
-    for (const viewport of VIEWPORTS) {
+    for (const viewport of selectedViewports(args)) {
       const currentStatus = await loadDriverStatus(config, auth.driverToken);
       if (currentStatus.hasActiveJob === true) {
         throw new Error(`E2E driver has an active job before viewport ${viewport.width}x${viewport.height}`);
@@ -820,6 +867,7 @@ module.exports = {
   enableFlutterSemantics,
   fillLookupForm,
   main,
+  parseViewportOption,
   parseArgs,
   prepareFixture,
   runViewportScenario,
