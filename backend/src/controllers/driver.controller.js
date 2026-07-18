@@ -7,6 +7,8 @@ const getDriverTripFlowService = () => container.get('driverTripFlowService');
 const getDriverQrService = () => container.get('driverQrService');
 const getDriverStatusService = () => container.get('driverStatusService');
 const getDriverCallService = () => container.get('driverCallService');
+const getDriverBookingAcceptanceService = () =>
+  container.get('driverBookingAcceptanceService');
 
 const listTodayBookings = asyncHandler(async (req, res) => {
   const data = await getDriverJobService().listToday(req.user.id);
@@ -32,6 +34,14 @@ const releaseAssignment = asyncHandler(async (req, res) => {
     req.params.bookingNumber,
   );
   return success(res, data, 'OK');
+});
+
+const acceptBooking = asyncHandler(async (req, res) => {
+  const data = await getDriverBookingAcceptanceService().acceptBooking(
+    req.user.id,
+    req.params.bookingNumber,
+  );
+  return success(res, data, 'Booking accepted');
 });
 
 const getBookingDetail = asyncHandler(async (req, res) => {
@@ -120,6 +130,7 @@ module.exports = {
   listOpenCalls,
   claimOpenCall,
   releaseAssignment,
+  acceptBooking,
   getBookingDetail,
   startOnRoute,
   markArrived,

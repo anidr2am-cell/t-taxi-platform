@@ -1008,19 +1008,70 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /driver/assignments/{assignmentId}/accept:
+  /driver/bookings/{bookingNumber}/accept:
     post:
       tags: [Driver]
-      summary: Accept assignment
-      operationId: acceptAssignment
+      summary: Accept an assigned booking
+      description: |
+        Accepts the authenticated driver's active assignment when the booking is
+        DRIVER_ASSIGNED and the assignment is ASSIGNED. Repeating the request for
+        the same already ACCEPTED assignment is an idempotent success and does not
+        change acceptedAt. The booking status remains DRIVER_ASSIGNED.
+      operationId: driverAcceptAssignedBooking
+      security:
+        - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentId'
+        - $ref: '#/components/parameters/BookingNumber'
       responses:
         '200':
+          description: Booking assignment accepted or already accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseDriverAssignment'
+                $ref: '#/components/schemas/ApiResponseDriverBookingAcceptance'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: DRIVER role required and driver account must be active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    success: false
+                    error_code: FORBIDDEN
+                    message: Insufficient permissions
+                driverInactive:
+                  value:
+                    success: false
+                    error_code: DRIVER_INACTIVE
+                    message: Driver is inactive
+        '404':
+          description: Booking does not exist or is not assigned to this driver
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                bookingNotFound:
+                  value:
+                    success: false
+                    error_code: BOOKING_NOT_FOUND
+                    message: Booking not found
+        '409':
+          description: Booking or assignment state is not acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notAcceptable:
+                  value:
+                    success: false
+                    error_code: BOOKING_NOT_ACCEPTABLE
+                    message: Booking is not acceptable
 
   /driver/assignments/{assignmentId}/reject:
     post:
@@ -3879,6 +3930,9 @@ components:
         - VEHICLE_NOT_SELECTABLE
         - DRIVER_NOT_AVAILABLE
         - BOOKING_NOT_ACCESSIBLE
+        - BOOKING_NOT_FOUND
+        - BOOKING_NOT_ACCEPTABLE
+        - DRIVER_INACTIVE
         - RATE_LIMIT
         - EXTERNAL_API_ERROR
         - INVALID_FLIGHT_NUMBER
@@ -3924,6 +3978,7 @@ components:
         - DRIVER_ASSIGNED
         - DRIVER_UNASSIGNED
         - DRIVER_CHANGED
+        - DRIVER_BOOKING_ACCEPTED
         - CHARGE_ADDED
         - CHARGE_REMOVED
         - CHAT_STARTED
@@ -5584,6 +5639,39 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/DriverBookingDetail'
+
+    DriverBookingAcceptance:
+      type: object
+      required:
+        - bookingNumber
+        - bookingStatus
+        - assignmentStatus
+        - acceptedAt
+        - idempotent
+      properties:
+        bookingNumber:
+          type: string
+          pattern: '^TX[0-9]{12}$'
+        bookingStatus:
+          type: string
+          const: DRIVER_ASSIGNED
+        assignmentStatus:
+          type: string
+          const: ACCEPTED
+        acceptedAt:
+          type: string
+          format: date-time
+          description: UTC timestamp recorded by the database on first acceptance.
+        idempotent:
+          type: boolean
+          description: True when the assignment had already been accepted.
+    ApiResponseDriverBookingAcceptance:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/DriverBookingAcceptance'
 
     Driver:
       type: object
