@@ -12,6 +12,8 @@ import 'features/driver/pages/driver_login_page.dart';
 import 'features/driver/pages/driver_shell_page.dart';
 import 'features/driver_settlement/pages/driver_settlement_list_page.dart';
 import 'features/driver_settlement/services/driver_settlement_api_service.dart';
+import 'features/driver_settlement/utils/e2e_receipt_file_picker.dart'
+    if (dart.library.html) 'features/driver_settlement/utils/e2e_receipt_file_picker_web.dart';
 import 'features/support/pages/customer_support_page.dart';
 import 'providers/booking_provider.dart';
 import 'screens/home_screen.dart';
@@ -21,6 +23,7 @@ import 'screens/admin/admin_screen.dart';
 const bool _enableDriverE2ERoutes = bool.fromEnvironment(
   'TRIDE_ENABLE_E2E_ROUTES',
 );
+final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   if (kIsWeb) {
@@ -45,6 +48,7 @@ class TTaxiApp extends StatelessWidget {
     final locale = context.watch<LocaleState>();
 
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'T-Ride',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
@@ -59,6 +63,7 @@ class TTaxiApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routes: {
+        '/': (_) => const HomeScreen(),
         '/admin': (_) => const AdminScreen(initialTab: 1),
         '/booking/lookup': (_) =>
             const GuestBookingLookupPage(enableCustomerTools: true),
@@ -73,20 +78,30 @@ class TTaxiApp extends StatelessWidget {
         '/driver/jobs': (_) =>
             const DriverPwaInstallPromptHost(child: DriverShellPage()),
         '/support': (_) => const CustomerSupportPage(),
+        if (_enableDriverE2ERoutes)
+          '/driver/e2e/settlement-detail': (_) => DriverPwaInstallPromptHost(
+            child: DriverE2ESettlementDetailRoute(uri: Uri.base),
+          ),
       },
-      onGenerateRoute: (settings) {
-        final uri = Uri.tryParse(settings.name ?? '');
-        if (uri?.path == '/driver/e2e/settlement-detail') {
-          return MaterialPageRoute<void>(
-            settings: settings,
-            builder: (_) => DriverPwaInstallPromptHost(
-              child: DriverE2ESettlementDetailRoute(uri: uri!),
-            ),
+      onGenerateRoute: buildDriverE2ERoute,
+      onGenerateInitialRoutes: (initialRoute) {
+        final e2eRoute = buildDriverE2ERoute(RouteSettings(name: initialRoute));
+        if (e2eRoute != null) return [e2eRoute];
+
+        final navigator = _navigatorKey.currentState;
+        if (navigator != null) {
+          return Navigator.defaultGenerateInitialRoutes(
+            navigator,
+            initialRoute,
           );
         }
-        return null;
+        return [
+          MaterialPageRoute<void>(
+            settings: RouteSettings(name: initialRoute),
+            builder: (_) => const HomeScreen(),
+          ),
+        ];
       },
-      home: const HomeScreen(),
     );
   }
 }
@@ -94,6 +109,25 @@ class TTaxiApp extends StatelessWidget {
 @visibleForTesting
 bool driverE2ESettlementRouteEnabled({bool enabled = _enableDriverE2ERoutes}) {
   return enabled;
+}
+
+@visibleForTesting
+Route<dynamic>? buildDriverE2ERoute(
+  RouteSettings settings, {
+  bool enabled = _enableDriverE2ERoutes,
+}) {
+  if (!driverE2ESettlementRouteEnabled(enabled: enabled)) return null;
+
+  final uri = Uri.tryParse(settings.name ?? '');
+  if (uri?.path == '/driver/e2e/settlement-detail') {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => DriverPwaInstallPromptHost(
+        child: DriverE2ESettlementDetailRoute(uri: uri!),
+      ),
+    );
+  }
+  return null;
 }
 
 @visibleForTesting
@@ -150,6 +184,7 @@ class DriverE2ESettlementDetailRoute extends StatelessWidget {
         return DriverSettlementDetailPage(
           bookingNumber: bookingNumber,
           api: const DriverSettlementApiService(),
+          receiptPicker: kIsWeb ? e2eWebReceiptFilePicker() : null,
         );
       },
     );

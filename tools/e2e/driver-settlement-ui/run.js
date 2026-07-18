@@ -244,7 +244,10 @@ async function openBrowser(args) {
   }
   const { chromium, firefox, webkit } = playwright;
   const browserType = { chromium, firefox, webkit }[args.project] || chromium;
-  return browserType.launch({ headless: !args.headed });
+  return browserType.launch({
+    headless: !args.headed,
+    args: browserType === chromium ? ['--force-renderer-accessibility'] : [],
+  });
 }
 
 async function waitForFlutterApp(page) {
@@ -256,7 +259,46 @@ async function waitForFlutterApp(page) {
   ), null, { timeout: 30000 });
   const placeholder = page.locator('flt-semantics-placeholder');
   if (await placeholder.count()) {
-    await placeholder.first().click({ force: true }).catch(() => {});
+    await page.evaluate(() => {
+      const element = document.querySelector('flt-semantics-placeholder');
+      element?.dispatchEvent(new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      }));
+    }).catch(() => {});
+    await page.getByRole('button', { name: /enable accessibility/i })
+      .click({ force: true, timeout: 5000 })
+      .catch(async () => {
+        await placeholder.first().click({ force: true }).catch(() => {});
+      });
+    if (await placeholder.count()) {
+      await page.getByRole('button', { name: /enable accessibility/i })
+        .focus({ timeout: 5000 })
+        .catch(() => {});
+      await page.keyboard.press('Enter').catch(() => {});
+      await waitMs(250);
+      await page.keyboard.press('Space').catch(() => {});
+    }
+    if (await placeholder.count()) {
+      const box = await placeholder.first().boundingBox().catch(() => null);
+      if (box) {
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2).catch(() => {});
+      }
+    }
+    await page.waitForFunction(() => !document.querySelector('flt-semantics-placeholder'), null, {
+      timeout: 10000,
+    }).catch(() => {});
+  }
+}
+
+async function dismissDriverPwaPrompt(page) {
+  const laterButton = page.getByRole('button', {
+    name: /later|not now|ไว้ภายหลัง|나중|나중에/i,
+  });
+  if (await laterButton.count().catch(() => 0)) {
+    await laterButton.first().click({ timeout: 5000 }).catch(() => {});
+    await waitMs(500);
   }
 }
 
@@ -277,6 +319,15 @@ async function clickUnique(locator, label) {
   const count = await locator.count();
   if (count !== 1) throw new Error(`${label} matched ${count} elements`);
   await locator.click();
+}
+
+async function clickUniqueCenter(page, locator, label) {
+  await locator.first().waitFor({ timeout: 25000 });
+  const count = await locator.count();
+  if (count !== 1) throw new Error(`${label} matched ${count} elements`);
+  const box = await locator.first().boundingBox();
+  if (!box) throw new Error(`${label} has no visible bounding box`);
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
 function driverSettlementE2EDetailUrl(config, bookingNumber) {
@@ -310,18 +361,106 @@ function receiptUploadButton(page) {
 async function chooseReceiptFile(page, receiptPath) {
   const button = receiptSelectButton(page);
   await button.first().scrollIntoViewIfNeeded({ timeout: 15000 });
-  const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 15000 });
-  await clickUnique(button, 'receipt select button');
-  const fileChooser = await fileChooserPromise;
+  const fileInputCountBefore = await page.locator('input[type="file"]').count();
+  const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 })
+    .then((fileChooser) => ({ fileChooser }))
+    .catch((error) => ({ error }));
+  await clickUniqueCenter(page, button, 'receipt select button');
+  const input = page.locator('input[type="file"]');
+  try {
+    await input.first().waitFor({ state: 'attached', timeout: 3000 });
+  } catch (_) {
+    // Fall through to the Playwright filechooser event path.
+  }
+  const fileInputCountAfter = await input.count();
+  if (fileInputCountAfter === 1) {
+    const metadata = await input.first().evaluate((element) => ({
+      accept: element.getAttribute('accept'),
+      multiple: element.hasAttribute('multiple'),
+      name: element.getAttribute('name'),
+      ariaLabel: element.getAttribute('aria-label'),
+    })).catch(() => ({}));
+    await input.first().setInputFiles(receiptPath);
+    return {
+      method: 'native-file-input',
+      clicks: 1,
+      fileInputCountBefore,
+      fileInputCountAfter,
+      fileInputAccept: metadata.accept || null,
+      fileInputMultiple: metadata.multiple === true,
+    };
+  }
+
+  const { fileChooser, error } = await fileChooserPromise;
+  if (!fileChooser) {
+    throw new Error(`Receipt file input was not available after semantic click: ${error?.message || 'filechooser timeout'}`);
+  }
   await fileChooser.setFiles(receiptPath);
-  return { method: 'semantic-filechooser', clicks: 1 };
+  return {
+    method: 'semantic-filechooser',
+    clicks: 1,
+    fileInputCountBefore,
+    fileInputCountAfter,
+  };
+}
+
+async function waitForReceiptSelectButton(page) {
+  const button = receiptSelectButton(page);
+  try {
+    await button.first().waitFor({ timeout: 30000 });
+  } catch (err) {
+    const labels = await page.evaluate(() => Array.from(
+      document.querySelectorAll('[aria-label], [role], flt-semantics, input'),
+    ).slice(0, 80).map((element) => ({
+      tag: element.tagName,
+      role: element.getAttribute('role'),
+      label: element.getAttribute('aria-label'),
+      type: element.getAttribute('type'),
+      text: (element.textContent || '').trim().slice(0, 80),
+    }))).catch(() => []);
+    throw new Error(`Receipt select button was not exposed to Playwright semantics: ${JSON.stringify(labels)}`, {
+      cause: err,
+    });
+  }
 }
 
 async function uploadSelectedReceipt(page) {
   const button = receiptUploadButton(page);
   await button.first().scrollIntoViewIfNeeded({ timeout: 15000 });
-  await clickUnique(button, 'receipt upload button');
+  await clickUniqueCenter(page, button, 'receipt upload button');
   return { method: 'semantic-button', clicks: 1 };
+}
+
+async function uploadSelectedReceiptOnce(page, bookingNumber) {
+  const uploadPath = `/api/v1/driver/settlements/${bookingNumber}/receipt`;
+  let uploadRequestCount = 0;
+  const onRequest = (request) => {
+    if (request.method() === 'POST' && request.url().includes(uploadPath)) {
+      uploadRequestCount += 1;
+    }
+  };
+  page.on('request', onRequest);
+  const uploadResponsePromise = page.waitForResponse(
+    (response) => response.request().method() === 'POST'
+      && response.url().includes(uploadPath),
+    { timeout: 30000 },
+  );
+  try {
+    const uploadClick = await uploadSelectedReceipt(page);
+    const uploadResponse = await uploadResponsePromise;
+    if (!uploadResponse.ok()) {
+      throw new Error(`Receipt upload failed with HTTP ${uploadResponse.status()}`);
+    }
+    if (uploadRequestCount !== 1) {
+      throw new Error(`Receipt upload request count was ${uploadRequestCount}, expected 1`);
+    }
+    return {
+      ...uploadClick,
+      uploadRequestCount,
+    };
+  } finally {
+    page.off('request', onRequest);
+  }
 }
 
 async function runDriverSettlementUi(config, auth, registry, browser) {
@@ -336,11 +475,19 @@ async function runDriverSettlementUi(config, auth, registry, browser) {
   });
   page.on('pageerror', (err) => consoleErrors.push(err.message));
   try {
+    const detailResponsePromise = page.waitForResponse(
+      (response) => response.url().includes(`/api/v1/driver/settlements/${fixture.bookingNumber}`)
+        && response.request().method() === 'GET'
+        && response.ok(),
+      { timeout: 30000 },
+    );
     await page.goto(driverSettlementE2EDetailUrl(config, fixture.bookingNumber), {
       waitUntil: 'domcontentloaded',
     });
     await waitForFlutterApp(page);
-    await page.getByText(fixture.bookingNumber).first().waitFor({ timeout: 30000 });
+    await dismissDriverPwaPrompt(page);
+    await detailResponsePromise;
+    await waitForReceiptSelectButton(page);
     await screenshot(config, page, `${runId}-driver-settlement-detail-due.png`);
 
     const dueDetail = await loadDriverSettlement(config, fixture);
@@ -372,12 +519,17 @@ async function runDriverSettlementUi(config, auth, registry, browser) {
         `${runId}-driver-settlement-receipt-selected.png`,
       );
       await screenshot(config, page, `${runId}-driver-settlement-upload-button.png`);
-      const uploadClick = await uploadSelectedReceipt(page);
+      const uploadClick = await uploadSelectedReceiptOnce(page, fixture.bookingNumber);
       registry.update(runId, {
         uiFileChooserMethod: fileSelection.method,
         uiFileChooserClicks: fileSelection.clicks,
+        uiFileInputCountBefore: fileSelection.fileInputCountBefore,
+        uiFileInputCountAfter: fileSelection.fileInputCountAfter,
+        uiFileInputAccept: fileSelection.fileInputAccept,
+        uiFileInputMultiple: fileSelection.fileInputMultiple,
         uiUploadClickMethod: uploadClick.method,
         uiUploadClicks: uploadClick.clicks,
+        uiUploadRequestCount: uploadClick.uploadRequestCount,
       });
     } finally {
       fs.rmSync(tempDir, { recursive: true, force: true });
@@ -432,8 +584,13 @@ function writeManifest(config, registry) {
     uiCurrency: record.uiCurrency,
     uiFileChooserMethod: record.uiFileChooserMethod,
     uiFileChooserClicks: record.uiFileChooserClicks,
+    uiFileInputCountBefore: record.uiFileInputCountBefore,
+    uiFileInputCountAfter: record.uiFileInputCountAfter,
+    uiFileInputAccept: record.uiFileInputAccept,
+    uiFileInputMultiple: record.uiFileInputMultiple,
     uiUploadClickMethod: record.uiUploadClickMethod,
     uiUploadClicks: record.uiUploadClicks,
+    uiUploadRequestCount: record.uiUploadRequestCount,
     approvalCandidateVerified: record.approvalCandidateVerified,
     bookingFinalStatus: record.bookingFinalStatus,
     preparationStatus: record.preparationStatus,

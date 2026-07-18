@@ -120,10 +120,25 @@ Widget _settlementDetailPage(
 void main() {
   test('driver settlement E2E route is disabled by default', () {
     expect(app.driverE2ESettlementRouteEnabled(), isFalse);
+    expect(
+      app.buildDriverE2ERoute(
+        const RouteSettings(
+          name: '/driver/e2e/settlement-detail?bookingNumber=TX202607180001',
+        ),
+      ),
+      isNull,
+    );
   });
 
   test('driver settlement E2E route can be enabled by build flag', () {
     expect(app.driverE2ESettlementRouteEnabled(enabled: true), isTrue);
+    final route = app.buildDriverE2ERoute(
+      const RouteSettings(
+        name: '/driver/e2e/settlement-detail?bookingNumber=TX202607180001',
+      ),
+      enabled: true,
+    );
+    expect(route, isNotNull);
   });
 
   test('driver settlement E2E route requires a valid booking number', () {
