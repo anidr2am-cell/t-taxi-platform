@@ -264,6 +264,26 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
 
   Future<void> _approve() async {
     if (_submitting) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Approve settlement'),
+        content: Text(
+          'Approve settlement for ${widget.bookingNumber} and complete this booking?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     setState(() => _submitting = true);
     try {
       await widget.api.approve(widget.bookingNumber);

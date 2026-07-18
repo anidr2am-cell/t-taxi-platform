@@ -10,6 +10,9 @@ import 'features/driver_application/pages/driver_application_form_page.dart';
 import 'features/driver/pages/driver_login_page.dart';
 import 'features/driver/pages/driver_shell_page.dart';
 import 'features/support/pages/customer_support_page.dart';
+import 'features/admin/widgets/admin_auth_gate.dart';
+import 'features/admin_settlement/pages/admin_settlement_queue_page.dart';
+import 'features/admin_settlement/services/admin_settlement_api_service.dart';
 import 'providers/booking_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -36,6 +39,7 @@ class TTaxiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleState>();
+    const enableE2eRoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
 
     return MaterialApp(
       title: 'T-Ride',
@@ -67,6 +71,24 @@ class TTaxiApp extends StatelessWidget {
             const DriverPwaInstallPromptHost(child: DriverShellPage()),
         '/support': (_) => const CustomerSupportPage(),
       },
+      onGenerateRoute: enableE2eRoutes
+          ? (settings) {
+              final uri = Uri.parse(settings.name ?? '');
+              if (uri.path == '/admin/e2e/settlement-detail') {
+                final bookingNumber = uri.queryParameters['bookingNumber'] ?? '';
+                return MaterialPageRoute<void>(
+                  builder: (_) => AdminAuthGate(
+                    child: AdminSettlementDetailPage(
+                      bookingNumber: bookingNumber,
+                      api: const AdminSettlementApiService(),
+                      onChanged: () {},
+                    ),
+                  ),
+                );
+              }
+              return null;
+            }
+          : null,
       home: const HomeScreen(),
     );
   }
