@@ -4,25 +4,27 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'core/pwa/driver_pwa_install_prompt.dart';
-import 'l10n/app_localizations.dart';
+import 'features/admin/widgets/admin_auth_gate.dart';
+import 'features/admin_settlement/pages/admin_settlement_queue_page.dart';
+import 'features/admin_settlement/services/admin_settlement_api_service.dart';
 import 'features/booking/pages/guest_booking_lookup_page.dart';
-import 'features/driver_application/pages/driver_application_form_page.dart';
 import 'features/driver/pages/driver_login_page.dart';
 import 'features/driver/pages/driver_shell_page.dart';
+import 'features/driver_application/pages/driver_application_form_page.dart';
 import 'features/driver_settlement/pages/driver_settlement_list_page.dart';
 import 'features/driver_settlement/services/driver_settlement_api_service.dart';
 import 'features/driver_settlement/utils/e2e_receipt_file_picker.dart'
     if (dart.library.html) 'features/driver_settlement/utils/e2e_receipt_file_picker_web.dart';
 import 'features/support/pages/customer_support_page.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/booking_provider.dart';
+import 'screens/admin/admin_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
-import 'screens/admin/admin_screen.dart';
 
-const bool _enableDriverE2ERoutes = bool.fromEnvironment(
-  'TRIDE_ENABLE_E2E_ROUTES',
-);
+const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
@@ -78,14 +80,17 @@ class TTaxiApp extends StatelessWidget {
         '/driver/jobs': (_) =>
             const DriverPwaInstallPromptHost(child: DriverShellPage()),
         '/support': (_) => const CustomerSupportPage(),
-        if (_enableDriverE2ERoutes)
+        if (_enableE2ERoutes) ...{
+          '/admin/e2e/settlement-detail': (_) =>
+              AdminE2ESettlementDetailRoute(uri: Uri.base),
           '/driver/e2e/settlement-detail': (_) => DriverPwaInstallPromptHost(
             child: DriverE2ESettlementDetailRoute(uri: Uri.base),
           ),
+        },
       },
-      onGenerateRoute: buildDriverE2ERoute,
+      onGenerateRoute: buildE2ERoute,
       onGenerateInitialRoutes: (initialRoute) {
-        final e2eRoute = buildDriverE2ERoute(RouteSettings(name: initialRoute));
+        final e2eRoute = buildE2ERoute(RouteSettings(name: initialRoute));
         if (e2eRoute != null) return [e2eRoute];
 
         final navigator = _navigatorKey.currentState;
@@ -107,26 +112,59 @@ class TTaxiApp extends StatelessWidget {
 }
 
 @visibleForTesting
-bool driverE2ESettlementRouteEnabled({bool enabled = _enableDriverE2ERoutes}) {
+bool driverE2ESettlementRouteEnabled({bool enabled = _enableE2ERoutes}) {
   return enabled;
 }
 
 @visibleForTesting
 Route<dynamic>? buildDriverE2ERoute(
   RouteSettings settings, {
-  bool enabled = _enableDriverE2ERoutes,
+  bool enabled = _enableE2ERoutes,
 }) {
-  if (!driverE2ESettlementRouteEnabled(enabled: enabled)) return null;
+  return buildE2ERoute(settings, enabled: enabled, includeAdmin: false);
+}
+
+@visibleForTesting
+bool adminE2ERoutesEnabled({bool enabled = _enableE2ERoutes}) {
+  return enabled;
+}
+
+@visibleForTesting
+Route<dynamic>? buildAdminE2ERoute(
+  RouteSettings settings, {
+  bool enabled = _enableE2ERoutes,
+}) {
+  return buildE2ERoute(settings, enabled: enabled, includeDriver: false);
+}
+
+@visibleForTesting
+Route<dynamic>? buildE2ERoute(
+  RouteSettings settings, {
+  bool enabled = _enableE2ERoutes,
+  bool includeAdmin = true,
+  bool includeDriver = true,
+}) {
+  if (!enabled) return null;
 
   final uri = Uri.tryParse(settings.name ?? '');
-  if (uri?.path == '/driver/e2e/settlement-detail') {
+  if (uri == null) return null;
+
+  if (includeDriver && uri.path == '/driver/e2e/settlement-detail') {
     return MaterialPageRoute<void>(
       settings: settings,
       builder: (_) => DriverPwaInstallPromptHost(
-        child: DriverE2ESettlementDetailRoute(uri: uri!),
+        child: DriverE2ESettlementDetailRoute(uri: uri),
       ),
     );
   }
+
+  if (includeAdmin && uri.path == '/admin/e2e/settlement-detail') {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => AdminE2ESettlementDetailRoute(uri: uri),
+    );
+  }
+
   return null;
 }
 
@@ -143,7 +181,7 @@ class DriverE2ESettlementDetailRoute extends StatelessWidget {
   const DriverE2ESettlementDetailRoute({
     super.key,
     required this.uri,
-    this.routesEnabled = _enableDriverE2ERoutes,
+    this.routesEnabled = _enableE2ERoutes,
   });
 
   final Uri uri;
@@ -161,12 +199,12 @@ class DriverE2ESettlementDetailRoute extends StatelessWidget {
   Widget build(BuildContext context) {
     final bookingNumber = driverE2ESettlementBookingNumber(uri);
     if (!driverE2ESettlementRouteEnabled(enabled: routesEnabled)) {
-      return const _DriverE2ERouteBlockedPage(
+      return const _E2ERouteBlockedPage(
         message: 'Driver E2E routes are disabled',
       );
     }
     if (bookingNumber == null) {
-      return const _DriverE2ERouteBlockedPage(
+      return const _E2ERouteBlockedPage(
         message: 'Driver E2E settlement booking number is required',
       );
     }
@@ -191,8 +229,52 @@ class DriverE2ESettlementDetailRoute extends StatelessWidget {
   }
 }
 
-class _DriverE2ERouteBlockedPage extends StatelessWidget {
-  const _DriverE2ERouteBlockedPage({required this.message});
+@visibleForTesting
+String? adminE2ESettlementBookingNumber(Uri uri) {
+  final bookingNumber = uri.queryParameters['bookingNumber']?.trim();
+  if (bookingNumber == null || bookingNumber.isEmpty) return null;
+  if (!RegExp(r'^TX[0-9A-Za-z_-]+$').hasMatch(bookingNumber)) return null;
+  return bookingNumber;
+}
+
+@visibleForTesting
+class AdminE2ESettlementDetailRoute extends StatelessWidget {
+  const AdminE2ESettlementDetailRoute({
+    super.key,
+    required this.uri,
+    this.routesEnabled = _enableE2ERoutes,
+  });
+
+  final Uri uri;
+  final bool routesEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final bookingNumber = adminE2ESettlementBookingNumber(uri);
+    if (!adminE2ERoutesEnabled(enabled: routesEnabled)) {
+      return const _E2ERouteBlockedPage(
+        message: 'Admin E2E routes are disabled',
+      );
+    }
+    if (bookingNumber == null) {
+      return const _E2ERouteBlockedPage(
+        message: 'Admin E2E settlement booking number is required',
+      );
+    }
+    return Material(
+      child: AdminAuthGate(
+        child: AdminSettlementDetailPage(
+          bookingNumber: bookingNumber,
+          api: const AdminSettlementApiService(),
+          onChanged: () {},
+        ),
+      ),
+    );
+  }
+}
+
+class _E2ERouteBlockedPage extends StatelessWidget {
+  const _E2ERouteBlockedPage({required this.message});
 
   final String message;
 
