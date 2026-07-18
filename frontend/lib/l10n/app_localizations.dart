@@ -3776,6 +3776,28 @@ class AppLocalizations {
       'driver_apply_signup_submit': 'ส่งคำขอสมัคร (가입 요청)',
       'driver_apply_resubmit': 'ส่งคำขออีกครั้ง (다시 신청)',
       'driver_apply_no_file': 'ยังไม่ได้แนบไฟล์ (첨부된 파일 없음)',
+      'driver_apply_upload_required': 'จำเป็น (필수)',
+      'driver_apply_upload_empty': 'ยังไม่ได้เลือกไฟล์ (파일 선택 전)',
+      'driver_apply_upload_selected': 'เลือกไฟล์แล้ว (파일 선택 완료)',
+      'driver_apply_upload_error': 'ต้องตรวจสอบไฟล์นี้ (확인이 필요합니다)',
+      'driver_apply_upload_processing': 'กำลังเตรียมไฟล์... (파일 준비 중...)',
+      'driver_apply_upload_select': 'เลือกไฟล์ (파일 선택)',
+      'driver_apply_upload_add_photo': 'เพิ่มรูปภาพ (사진 추가)',
+      'driver_apply_upload_change': 'เปลี่ยนไฟล์ (파일 교체)',
+      'driver_apply_upload_remove': 'ลบไฟล์ (제거)',
+      'driver_apply_upload_image_help':
+          'แนบไฟล์รูปภาพ JPG, PNG หรือ WEBP เท่านั้น (JPG, PNG, WEBP 이미지만 첨부해 주세요.)',
+      'driver_apply_vehicle_photo_help':
+          'แนบรูปรถ 3-6 รูป เห็นรถและป้ายทะเบียนชัดเจน (차량과 번호판이 보이는 사진 3-6장을 첨부해 주세요.)',
+      'driver_apply_upload_document_help':
+          'แนบไฟล์ JPG, PNG, WEBP หรือ PDF (JPG, PNG, WEBP 또는 PDF 파일을 첨부해 주세요.)',
+      'driver_apply_file_pick_failed':
+          'ไม่สามารถเลือกไฟล์ได้ กรุณาลองอีกครั้ง (파일을 선택하지 못했습니다. 다시 시도해 주세요.)',
+      'driver_apply_vehicle_photo_count': 'รูปรถ {count}/6 (차량 사진 {count}/6)',
+      'driver_apply_vehicle_photo_limit_reached':
+          'แนบรูปรถครบ 6 รูปแล้ว (차량 사진을 최대 6장까지 등록했습니다.)',
+      'driver_apply_duplicate_file':
+          'ไฟล์นี้ถูกเพิ่มแล้ว จึงไม่เพิ่มซ้ำ (이미 추가한 파일은 중복 등록하지 않았습니다.)',
       'driver_apply_vehicle_photo_count_error':
           'แนบรูปรถอย่างน้อย 3 รูป และไม่เกิน 6 รูป (차량 사진은 최소 3장, 최대 6장 첨부해야 합니다.)',
       'driver_apply_file_required': 'กรุณาแนบไฟล์นี้ (필수 파일을 첨부해 주세요.)',
