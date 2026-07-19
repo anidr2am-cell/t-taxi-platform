@@ -663,16 +663,32 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
           : const <String, String>{};
       setState(() {
         _fieldErrors = fieldErrors;
-        _error = userFacingError(
-          err,
-          fallback: context.l10n.t('driver_apply_submit_failed'),
-        );
+        _error = _submitErrorMessage(err);
       });
       _formKey.currentState?.validate();
       await _scrollToFirstFieldError();
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  String _submitErrorMessage(Object err) {
+    final l10n = context.l10n;
+    if (err is DriverApplicationApiException) {
+      if (err.statusCode == 413 || err.errorCode == 'FILE_TOO_LARGE') {
+        return l10n.t('driver_apply_upload_too_large');
+      }
+      if (err.statusCode == 502 ||
+          err.statusCode == 503 ||
+          err.statusCode == 504 ||
+          err.errorCode == 'SERVER_UNAVAILABLE') {
+        return l10n.t('driver_apply_server_unavailable');
+      }
+      if (err.errorCode == 'REQUEST_FAILED') {
+        return l10n.t('driver_apply_request_failed');
+      }
+    }
+    return userFacingError(err, fallback: l10n.t('driver_apply_submit_failed'));
   }
 
   Future<void> _openLineGroup() async {

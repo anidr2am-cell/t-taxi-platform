@@ -583,6 +583,26 @@ describe('Driver application public routes', () => {
     assert.equal(res.body.errors[0].fileName, 'line.exe');
   });
 
+  test('multipart unexpected file field returns JSON validation error', async () => {
+    const res = await request(app)
+      .post('/api/v1/driver-applications')
+      .field('applicantName', 'Driver Kim')
+      .field('phone', '+66123456789')
+      .field('password', 'strongpass123')
+      .field('passwordConfirmation', 'strongpass123')
+      .attach('unexpectedDocument', Buffer.from('pdf'), {
+        filename: 'document.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(400);
+
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+    assert.equal(res.body.errors[0].field, 'unexpectedDocument');
+    assert.equal(res.body.errors[0].type, 'file.unexpected');
+    assert.equal(JSON.stringify(res.body).includes('<html>'), false);
+  });
+
   test('multipart application accepts phone and password without email', async () => {
     const res = await request(app)
       .post('/api/v1/driver-applications')

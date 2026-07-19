@@ -3811,6 +3811,12 @@ class AppLocalizations {
           'หากส่งข้อมูลเท็จ การอนุมัติอาจถูกยกเลิก (허위 정보 제출 시 승인이 취소될 수 있습니다.)',
       'driver_apply_submit_failed':
           'ไม่สามารถส่งคำขอสมัครได้ (신청을 제출하지 못했습니다.)',
+      'driver_apply_upload_too_large':
+          'The attached files are too large. Please reduce the photo size or choose smaller files.',
+      'driver_apply_server_unavailable':
+          'The server connection is not available. Please try again in a moment.',
+      'driver_apply_request_failed':
+          'Could not process the application request. Please try again in a moment.',
       'driver_apply_vehicle_load_error':
           'ไม่สามารถโหลดประเภทรถได้ (차량 유형을 불러오지 못했습니다.)',
       'driver_apply_vehicle_required': 'กรุณาเลือกประเภทรถ (차량 유형을 선택해 주세요.)',
@@ -3980,6 +3986,10 @@ class AppLocalizations {
       'driver_application_resubmit': '다시 신청',
       'driver_application_resubmit_cta': '정보 수정 후 다시 신청',
       'driver_application_submit_failed': '신청을 제출하지 못했습니다.',
+      'driver_apply_upload_too_large':
+          '첨부 파일 용량이 너무 큽니다. 사진 크기를 줄이거나 다시 선택해 주세요.',
+      'driver_apply_server_unavailable': '서버 연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요.',
+      'driver_apply_request_failed': '가입 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',
       'driver_application_vehicle_load_error': '차량 유형을 불러오지 못했습니다.',
       'driver_application_vehicle_required': '차량 유형을 선택해 주세요.',
       'driver_application_consent_required': '필수 동의가 필요합니다.',
@@ -4072,6 +4082,12 @@ class AppLocalizations {
       'driver_application_resubmit': 'ส่งอีกครั้ง',
       'driver_application_resubmit_cta': 'แก้ไขและส่งอีกครั้ง',
       'driver_application_submit_failed': 'ไม่สามารถส่งใบสมัครได้',
+      'driver_apply_upload_too_large':
+          'ไฟล์แนบมีขนาดใหญ่เกินไป กรุณาลดขนาดรูปภาพหรือเลือกไฟล์ใหม่',
+      'driver_apply_server_unavailable':
+          'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้งในภายหลัง',
+      'driver_apply_request_failed':
+          'ไม่สามารถดำเนินการสมัครได้ กรุณาลองใหม่อีกครั้งในภายหลัง',
       'driver_application_vehicle_load_error': 'ไม่สามารถโหลดประเภทรถได้',
       'driver_application_vehicle_required': 'กรุณาเลือกประเภทรถ',
       'driver_application_consent_required': 'ต้องยินยอมรายการที่จำเป็น',
@@ -4164,6 +4180,10 @@ class AppLocalizations {
       'driver_application_resubmit': '再申請',
       'driver_application_resubmit_cta': '修正して再申請',
       'driver_application_submit_failed': '申請を送信できませんでした。',
+      'driver_apply_upload_too_large':
+          '添付ファイルの容量が大きすぎます。写真サイズを小さくするか、別のファイルを選択してください。',
+      'driver_apply_server_unavailable': 'サーバーに接続できません。しばらくしてからもう一度お試しください。',
+      'driver_apply_request_failed': '申請を処理できませんでした。しばらくしてからもう一度お試しください。',
       'driver_application_vehicle_load_error': '車両タイプを読み込めませんでした。',
       'driver_application_vehicle_required': '車両タイプを選択してください。',
       'driver_application_consent_required': '必須同意が必要です。',
@@ -4253,6 +4273,9 @@ class AppLocalizations {
       'driver_application_resubmit': '重新申请',
       'driver_application_resubmit_cta': '修改后重新申请',
       'driver_application_submit_failed': '无法提交申请。',
+      'driver_apply_upload_too_large': '附件文件过大。请缩小照片尺寸或选择较小的文件。',
+      'driver_apply_server_unavailable': '无法连接服务器。请稍后再试。',
+      'driver_apply_request_failed': '无法处理申请请求。请稍后再试。',
       'driver_application_vehicle_load_error': '无法加载车辆类型。',
       'driver_application_vehicle_required': '请选择车辆类型。',
       'driver_application_consent_required': '请同意必填项目。',
