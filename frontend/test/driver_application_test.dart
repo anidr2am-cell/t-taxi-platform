@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/admin_driver_application/pages/admin_driver_application_detail_page.dart';
 import 'package:frontend/features/admin_driver_application/pages/admin_driver_application_list_page.dart';
@@ -76,11 +77,16 @@ Map<String, dynamic> _envelope(Object data) => {
   'data': data,
 };
 
-Widget _app(Widget child) {
+Widget _app(Widget child, {String locale = 'en'}) {
   return MaterialApp(
-    locale: const Locale('en'),
+    locale: Locale(locale),
     supportedLocales: AppLocalizations.supportedLanguages.map(Locale.new),
-    localizationsDelegates: [AppLocalizationsDelegate('en')],
+    localizationsDelegates: [
+      AppLocalizationsDelegate(locale),
+      GlobalMaterialLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+    ],
     routes: {
       '/driver': (_) => const Scaffold(body: Text('Driver login route')),
       '/driver/apply': (_) => const Scaffold(body: Text('Apply route')),
@@ -285,6 +291,19 @@ class _UploadTooLargeDriverApplicationApi extends _FakeDriverApplicationApi {
       errorCode: 'FILE_TOO_LARGE',
       statusCode: 413,
     );
+  }
+}
+
+class _FailingSubmitDriverApplicationApi extends _FakeDriverApplicationApi {
+  _FailingSubmitDriverApplicationApi(this.exception);
+
+  final DriverApplicationApiException exception;
+
+  @override
+  Future<DriverApplicationReceipt> submitApplication(
+    DriverApplicationDraft draft,
+  ) async {
+    throw exception;
   }
 }
 
@@ -928,7 +947,73 @@ void main() {
     );
   });
 
-  testWidgets('driver apply shows localized upload size error', (tester) async {
+  testWidgets('driver apply shows Korean upload size error', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _UploadTooLargeDriverApplicationApi(),
+          debugSubmitDraft: _draft(),
+        ),
+        locale: 'ko',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('첨부 파일', skipOffstage: false), findsOneWidget);
+    expect(
+      find.textContaining('SyntaxError', skipOffstage: false),
+      findsNothing,
+    );
+    expect(find.textContaining('<html>', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('driver apply shows Thai upload size error', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _UploadTooLargeDriverApplicationApi(),
+          debugSubmitDraft: _draft(),
+        ),
+        locale: 'th',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('ไฟล์แนบ', skipOffstage: false), findsOneWidget);
+    expect(
+      find.textContaining('driver_apply_upload_too_large', skipOffstage: false),
+      findsNothing,
+    );
+    expect(
+      find.textContaining('SyntaxError', skipOffstage: false),
+      findsNothing,
+    );
+    expect(find.textContaining('<html>', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('driver apply English 413 shows localized upload size error', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(
       _app(
@@ -949,7 +1034,131 @@ void main() {
     await tester.tap(submit);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('첨부 파일', skipOffstage: false), findsOneWidget);
+    expect(
+      find.textContaining(
+        'The attached files are too large',
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('driver_apply_upload_too_large', skipOffstage: false),
+      findsNothing,
+    );
+    expect(
+      find.textContaining(
+        'driver_application_upload_too_large',
+        skipOffstage: false,
+      ),
+      findsNothing,
+    );
+    expect(
+      find.textContaining('SyntaxError', skipOffstage: false),
+      findsNothing,
+    );
+    expect(find.textContaining('<html>', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('driver apply English 502 shows server unavailable message', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _FailingSubmitDriverApplicationApi(
+            const DriverApplicationApiException(
+              'Bad gateway',
+              errorCode: 'SERVER_UNAVAILABLE',
+              statusCode: 502,
+            ),
+          ),
+          debugSubmitDraft: _draft(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'The server connection is not available',
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'driver_apply_server_unavailable',
+        skipOffstage: false,
+      ),
+      findsNothing,
+    );
+    expect(
+      find.textContaining(
+        'driver_application_server_unavailable',
+        skipOffstage: false,
+      ),
+      findsNothing,
+    );
+    expect(find.textContaining('<html>', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('driver apply English malformed response shows generic failure', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _FailingSubmitDriverApplicationApi(
+            const DriverApplicationApiException(
+              '<html>not json</html>',
+              errorCode: 'REQUEST_FAILED',
+              statusCode: 500,
+            ),
+          ),
+          debugSubmitDraft: _draft(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'Could not process the application request',
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('driver_apply_request_failed', skipOffstage: false),
+      findsNothing,
+    );
+    expect(
+      find.textContaining(
+        'driver_application_request_failed',
+        skipOffstage: false,
+      ),
+      findsNothing,
+    );
     expect(
       find.textContaining('SyntaxError', skipOffstage: false),
       findsNothing,
