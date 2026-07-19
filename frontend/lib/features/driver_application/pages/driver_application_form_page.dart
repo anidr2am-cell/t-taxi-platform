@@ -688,7 +688,21 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
         return l10n.t('driver_apply_request_failed');
       }
     }
+    if (_looksLikeJsonParseFailure(err)) {
+      return l10n.t('driver_apply_request_failed');
+    }
     return userFacingError(err, fallback: l10n.t('driver_apply_submit_failed'));
+  }
+
+  bool _looksLikeJsonParseFailure(Object err) {
+    final text = err.toString().toLowerCase();
+    return text.contains('syntaxerror') ||
+        text.contains('json parse error') ||
+        text.contains('unexpected token') ||
+        text.contains('formatException'.toLowerCase()) ||
+        text.contains('unexpected character') ||
+        text.contains('unexpected end of input') ||
+        text.contains('invalid json');
   }
 
   Future<void> _openLineGroup() async {

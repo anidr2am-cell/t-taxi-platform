@@ -307,6 +307,19 @@ class _FailingSubmitDriverApplicationApi extends _FakeDriverApplicationApi {
   }
 }
 
+class _ThrowingSubmitDriverApplicationApi extends _FakeDriverApplicationApi {
+  _ThrowingSubmitDriverApplicationApi(this.exception);
+
+  final Object exception;
+
+  @override
+  Future<DriverApplicationReceipt> submitApplication(
+    DriverApplicationDraft draft,
+  ) async {
+    throw exception;
+  }
+}
+
 void main() {
   test(
     'submit application uses exact public path and request payload',
@@ -1164,6 +1177,49 @@ void main() {
       findsNothing,
     );
     expect(find.textContaining('<html>', skipOffstage: false), findsNothing);
+  });
+
+  testWidgets('driver apply hides stale Safari JSON parse SyntaxError', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _ThrowingSubmitDriverApplicationApi(
+            Exception("SyntaxError: JSON Parse error: Unrecognized token '<'"),
+          ),
+          debugSubmitDraft: _draft(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'Could not process the application request',
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('SyntaxError', skipOffstage: false),
+      findsNothing,
+    );
+    expect(
+      find.textContaining('JSON Parse error', skipOffstage: false),
+      findsNothing,
+    );
+    expect(find.textContaining('<', skipOffstage: false), findsNothing);
   });
 
   testWidgets('driver apply shows backend vehicle year field error', (

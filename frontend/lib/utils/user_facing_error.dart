@@ -29,6 +29,10 @@ String userFacingError(
       text.contains('ClientException') ||
       text.contains('Connection refused') ||
       text.contains('NetworkError') ||
+      text.contains('SyntaxError') ||
+      text.contains('JSON Parse error') ||
+      text.contains('Unexpected token') ||
+      text.contains('FormatException') ||
       text.contains('XMLHttpRequest')) {
     return fallback ?? 'ui_generic_error';
   }
@@ -196,7 +200,8 @@ String driverApiErrorMessage({
       'th' => 'ไม่สามารถดำเนินการในขั้นตอนปัจจุบันได้ กรุณารีเฟรชสถานะ',
       'zh' => '当前行程阶段无法执行此操作。请刷新状态。',
       'ja' => '現在の運行段階ではこの操作を処理できません。状態を更新してください。',
-      _ => 'This action cannot be handled at the current trip stage. Please refresh the status.',
+      _ =>
+        'This action cannot be handled at the current trip stage. Please refresh the status.',
     };
   }
 

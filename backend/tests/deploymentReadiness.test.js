@@ -240,6 +240,27 @@ test('frontend Dockerfile requires explicit production API and socket build args
   assert.match(dockerfile, /EFFECTIVE_API_BASE_URL="\$\{API_BASE_URL:-http:\/\/localhost:3100\}"/);
 });
 
+test('frontend nginx does not immutable-cache Flutter app shell entry files', () => {
+  const nginxConfig = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'nginx.frontend.conf'),
+    'utf8',
+  );
+
+  assert.match(nginxConfig, /client_max_body_size 50m/);
+  assert.match(nginxConfig, /error_page 413 = \/upload-too-large\.json/);
+  assert.match(nginxConfig, /location = \/index\.html \{\s+add_header Cache-Control "no-store"/);
+  assert.match(nginxConfig, /main\\\.dart\\\.js/);
+  assert.match(nginxConfig, /flutter_service_worker\\\.js/);
+  assert.match(nginxConfig, /flutter_bootstrap\\\.js/);
+  assert.match(nginxConfig, /version\\\.json/);
+
+  const appShellCacheRule = nginxConfig.match(
+    /location ~\* \^\S+\s+\{([\s\S]*?)\n    \}/,
+  )?.[1] || '';
+  assert.match(appShellCacheRule, /Cache-Control "no-store"/);
+  assert.doesNotMatch(appShellCacheRule, /immutable/);
+});
+
 test('backend Dockerfile separates staging and production runtime images', () => {
   const dockerfile = fs.readFileSync(
     path.join(repoRoot, 'deploy', 'docker', 'Dockerfile.backend'),
