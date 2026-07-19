@@ -365,7 +365,7 @@ class _FilePreview extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: file.wasCompressed
+                      color: file.wasCompressed || file.metadataStripped
                           ? AppTokens.success
                           : AppTokens.textSecondary,
                     ),
@@ -402,6 +402,11 @@ class _FilePreview extends StatelessWidget {
           .t('driver_apply_upload_optimized_size')
           .replaceAll('{original}', original)
           .replaceAll('{upload}', upload);
+    }
+    if (file.metadataStripped || file.wasReencoded) {
+      return l10n
+          .t('driver_apply_upload_privacy_processed_size')
+          .replaceAll('{size}', upload);
     }
     return l10n
         .t('driver_apply_upload_ready_size')
