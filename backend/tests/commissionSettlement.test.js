@@ -855,12 +855,16 @@ test('getDriverSettlement reconciles missing obligation on access', async () => 
   const item = await service.getDriverSettlement(44, 'TX202607010001', '/api/v1/driver/settlements');
   assert.equal(activated, true);
   assert.equal(item.commissionStatus, 'DUE');
+  assert.match(
+    item.paymentInstructions.promptPayQrImageUrl,
+    /^\/api\/v1\/settings\/assets\/promptPayQr\?v=[a-f0-9]{12}$/,
+  );
   assert.deepEqual(item.paymentInstructions, {
     bankName: 'SCB',
     accountName: 'T-Ride Ops',
     accountNumber: '1234567890',
     promptPayNumber: '0999999999',
-    promptPayQrImageUrl: '/api/v1/settings/assets/promptPayQr',
+    promptPayQrImageUrl: item.paymentInstructions.promptPayQrImageUrl,
   });
 });
 

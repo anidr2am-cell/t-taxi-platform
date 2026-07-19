@@ -9,6 +9,7 @@ const { uploadDir } = require('../config/multer');
 const logger = require('../utils/logger');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
+const { settingsAssetUrl } = require('../utils/settingsAssetUrl');
 
 const ADMIN_RECONCILE_BATCH_LIMIT = 100;
 const APPROVAL_MODES = {
@@ -497,9 +498,7 @@ class CommissionSettlementService {
         accountName: values.accountName || '',
         accountNumber: values.accountNumber || '',
         promptPayNumber: values.promptPayNumber || '',
-        promptPayQrImageUrl: values.promptPayQrImagePath
-          ? '/api/v1/settings/assets/promptPayQr'
-          : null,
+        promptPayQrImageUrl: settingsAssetUrl('promptPayQr', values.promptPayQrImagePath),
       },
     };
   }
