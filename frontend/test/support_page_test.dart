@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/platform_settings/services/platform_settings_api_service.dart';
 import 'package:frontend/features/support/pages/customer_support_page.dart';
 import 'package:frontend/features/support/services/support_inquiry_api_service.dart';
 import 'package:frontend/l10n/app_localizations.dart';
@@ -13,6 +14,7 @@ Widget _wrapSupport({
   double width = 360,
   double height = 900,
   SupportInquiryApiService? api,
+  PlatformSettingsApiService? settingsApi,
 }) {
   return MaterialApp(
     locale: locale,
@@ -27,7 +29,10 @@ Widget _wrapSupport({
     ],
     home: MediaQuery(
       data: MediaQueryData(size: Size(width, height)),
-      child: CustomerSupportPage(api: api),
+      child: CustomerSupportPage(
+        api: api,
+        settingsApi: settingsApi ?? _FakePlatformSettingsApi(),
+      ),
     ),
   );
 }
@@ -264,7 +269,71 @@ void main() {
         await tester.pumpAndSettle();
       }
     });
+
+    testWidgets(
+      'renders public LINE description without settlement account data',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrapSupport(
+            settingsApi: _FakePlatformSettingsApi(
+              publicSettings: {
+                'lineQrDescription': 'LINE 상담 안내\n운영팀이 확인합니다.',
+                'lineQrImageUrl': '/api/v1/settings/assets/lineQr',
+                'bankName': 'SCB',
+                'accountName': 'T-Ride Ops',
+                'accountNumber': '1234567890',
+                'promptPayNumber': '0999999999',
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.drag(find.byType(ListView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+
+        expect(find.text('LINE 상담 안내\n운영팀이 확인합니다.'), findsOneWidget);
+        expect(find.textContaining('1234567890'), findsNothing);
+        expect(find.textContaining('SCB'), findsNothing);
+        final image = tester.widget<Image>(find.byType(Image).last);
+        expect(image.errorBuilder, isNotNull);
+      },
+    );
+
+    testWidgets('shows LINE QR fallback when public URL is missing', (
+      tester,
+    ) async {
+      final l10n = AppLocalizations('ko');
+
+      await tester.pumpWidget(
+        _wrapSupport(
+          settingsApi: _FakePlatformSettingsApi(
+            publicSettings: {'lineQrDescription': 'LINE 안내'},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+
+      expect(find.text('LINE 안내'), findsOneWidget);
+      expect(find.text(l10n.t('support_line_qr_missing')), findsOneWidget);
+    });
   });
+}
+
+class _FakePlatformSettingsApi extends PlatformSettingsApiService {
+  _FakePlatformSettingsApi({Map<String, dynamic>? publicSettings})
+    : publicSettings = publicSettings ?? const {'lineQrImageUrl': null};
+
+  final Map<String, dynamic> publicSettings;
+
+  @override
+  Future<Map<String, dynamic>> getPublic() async => publicSettings;
+
+  @override
+  Uri assetUri(String path) => Uri.parse('https://example.test$path');
 }
 
 class _FakeSupportApi extends SupportInquiryApiService {
