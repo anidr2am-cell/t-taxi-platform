@@ -15,6 +15,10 @@ class PlatformSettingsService {
   }
 
   async get() {
+    return this.getAdmin();
+  }
+
+  async getAdmin() {
     const rows = await this.settingsRepository.findByGroup(GROUP);
     const values = Object.fromEntries(rows.map((row) => [row.key_name, row.value]));
     return {
@@ -28,24 +32,39 @@ class PlatformSettingsService {
     };
   }
 
+  async getPublic() {
+    const rows = await this.settingsRepository.findByGroup(GROUP);
+    const values = Object.fromEntries(rows.map((row) => [row.key_name, row.value]));
+    return {
+      lineQrDescription: values.lineQrDescription || '',
+      lineQrImageUrl: values.lineQrImagePath ? '/api/v1/settings/assets/lineQr' : null,
+    };
+  }
+
   async update(input, userId) {
     await Promise.all(TEXT_KEYS.map((key) => this.settingsRepository.upsert(
       GROUP, key, String(input[key] ?? '').trim(), userId,
     )));
-    return this.get();
+    return this.getAdmin();
   }
 
   async saveImage(kind, file, userId) {
     const key = IMAGE_KEYS[kind];
     if (!key || !file || !String(file.mimetype || '').startsWith('image/')) {
+      await this.cleanupUploadedFile(file);
       throw new AppError('Invalid settings image', {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.INVALID_FILE_TYPE,
       });
     }
     const relativePath = path.relative(uploadDir, file.path).replace(/\\/g, '/');
-    await this.settingsRepository.upsert(GROUP, key, relativePath, userId);
-    return this.get();
+    try {
+      await this.settingsRepository.upsert(GROUP, key, relativePath, userId);
+      return this.getAdmin();
+    } catch (err) {
+      await this.cleanupUploadedFile(file);
+      throw err;
+    }
   }
 
   async getImage(kind) {
@@ -62,6 +81,15 @@ class PlatformSettingsService {
       throw this.notFound();
     }
     return absolutePath;
+  }
+
+  async cleanupUploadedFile(file) {
+    if (!file?.path) return;
+    try {
+      await fs.rm(file.path, { force: true });
+    } catch (_) {
+      // Best-effort cleanup only. The original validation or DB error is more important.
+    }
   }
 
   notFound() {

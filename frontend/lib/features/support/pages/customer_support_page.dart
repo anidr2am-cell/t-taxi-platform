@@ -12,9 +12,10 @@ import '../services/support_inquiry_api_service.dart';
 import '../../platform_settings/services/platform_settings_api_service.dart';
 
 class CustomerSupportPage extends StatelessWidget {
-  const CustomerSupportPage({super.key, this.api});
+  const CustomerSupportPage({super.key, this.api, this.settingsApi});
 
   final SupportInquiryApiService? api;
+  final PlatformSettingsApiService? settingsApi;
 
   Future<void> _openInquiry(BuildContext context) async {
     final width = MediaQuery.sizeOf(context).width;
@@ -95,7 +96,9 @@ class CustomerSupportPage extends StatelessWidget {
                   child: const _FaqSection(),
                 ),
                 const SizedBox(height: AppTokens.spaceMd),
-                const _LineInquirySection(),
+                _LineInquirySection(
+                  api: settingsApi ?? const PlatformSettingsApiService(),
+                ),
               ],
             ),
           ),
@@ -106,11 +109,12 @@ class CustomerSupportPage extends StatelessWidget {
 }
 
 class _LineInquirySection extends StatelessWidget {
-  const _LineInquirySection();
+  const _LineInquirySection({required this.api});
+
+  final PlatformSettingsApiService api;
 
   @override
   Widget build(BuildContext context) {
-    const api = PlatformSettingsApiService();
     final l10n = context.l10n;
     return AppUi.surfaceCard(
       padding: const EdgeInsets.all(AppTokens.spaceLg),
@@ -118,6 +122,8 @@ class _LineInquirySection extends StatelessWidget {
         future: api.getPublic(),
         builder: (context, snapshot) {
           final path = snapshot.data?['lineQrImageUrl'] as String?;
+          final description = (snapshot.data?['lineQrDescription'] as String?)
+              ?.trim();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -126,6 +132,16 @@ class _LineInquirySection extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: AppTokens.spaceSm),
+              if (description != null && description.isNotEmpty) ...[
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTokens.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceSm),
+              ],
               if (path == null || path.isEmpty)
                 Text(l10n.t('support_line_qr_missing'))
               else
@@ -133,6 +149,8 @@ class _LineInquirySection extends StatelessWidget {
                   api.assetUri(path).toString(),
                   height: 240,
                   fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Text(l10n.t('support_line_qr_missing')),
                 ),
             ],
           );
