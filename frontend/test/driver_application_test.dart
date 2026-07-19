@@ -275,6 +275,19 @@ class _FieldErrorDriverApplicationApi extends _FakeDriverApplicationApi {
   }
 }
 
+class _UploadTooLargeDriverApplicationApi extends _FakeDriverApplicationApi {
+  @override
+  Future<DriverApplicationReceipt> submitApplication(
+    DriverApplicationDraft draft,
+  ) async {
+    throw const DriverApplicationApiException(
+      'Uploaded files are too large',
+      errorCode: 'FILE_TOO_LARGE',
+      statusCode: 413,
+    );
+  }
+}
+
 void main() {
   test(
     'submit application uses exact public path and request payload',
@@ -352,6 +365,82 @@ void main() {
               'vehicleYear',
               contains('2020'),
             ),
+      ),
+    );
+  });
+
+  test(
+    'submit application maps HTML 413 without leaking SyntaxError',
+    () async {
+      final api = DriverApplicationApiService(
+        baseUrl: 'http://localhost:3000',
+        client: _CaptureClient((request, bodyText) async {
+          return http.Response(
+            '<html><body>Request Entity Too Large</body></html>',
+            413,
+            headers: {'content-type': 'text/html; charset=utf-8'},
+          );
+        }),
+      );
+
+      await expectLater(
+        api.submitApplication(_draft()),
+        throwsA(
+          isA<DriverApplicationApiException>()
+              .having((err) => err.statusCode, 'statusCode', 413)
+              .having((err) => err.errorCode, 'errorCode', 'FILE_TOO_LARGE')
+              .having((err) => err.message, 'message', isNot(contains('<html')))
+              .having(
+                (err) => err.message,
+                'message',
+                isNot(contains('SyntaxError')),
+              ),
+        ),
+      );
+    },
+  );
+
+  test('submit application maps HTML 502 without leaking body', () async {
+    final api = DriverApplicationApiService(
+      baseUrl: 'http://localhost:3000',
+      client: _CaptureClient((request, bodyText) async {
+        return http.Response(
+          '<html><body>Bad Gateway</body></html>',
+          502,
+          headers: {'content-type': 'text/html'},
+        );
+      }),
+    );
+
+    await expectLater(
+      api.submitApplication(_draft()),
+      throwsA(
+        isA<DriverApplicationApiException>()
+            .having((err) => err.statusCode, 'statusCode', 502)
+            .having((err) => err.errorCode, 'errorCode', 'SERVER_UNAVAILABLE')
+            .having((err) => err.message, 'message', isNot(contains('<html'))),
+      ),
+    );
+  });
+
+  test('submit application handles malformed JSON safely', () async {
+    final api = DriverApplicationApiService(
+      baseUrl: 'http://localhost:3000',
+      client: _CaptureClient((request, bodyText) async {
+        return http.Response(
+          '{"success":true',
+          201,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await expectLater(
+      api.submitApplication(_draft()),
+      throwsA(
+        isA<DriverApplicationApiException>()
+            .having((err) => err.errorCode, 'errorCode', 'REQUEST_FAILED')
+            .having((err) => err.message, 'message', isNot(contains('{'))),
       ),
     );
   });
@@ -837,6 +926,35 @@ void main() {
       ),
       findsNothing,
     );
+  });
+
+  testWidgets('driver apply shows localized upload size error', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      _app(
+        DriverApplicationFormPage(
+          api: _UploadTooLargeDriverApplicationApi(),
+          debugSubmitDraft: _draft(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('첨부 파일', skipOffstage: false), findsOneWidget);
+    expect(
+      find.textContaining('SyntaxError', skipOffstage: false),
+      findsNothing,
+    );
+    expect(find.textContaining('<html>', skipOffstage: false), findsNothing);
   });
 
   testWidgets('driver apply shows backend vehicle year field error', (

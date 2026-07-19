@@ -42,6 +42,56 @@ class DriverApplicationApiService {
   static const _imageExtensions = {'jpg', 'jpeg', 'png', 'webp'};
   static const _documentExtensions = {'jpg', 'jpeg', 'png', 'webp', 'pdf'};
 
+  dynamic _decodeResponseBody(http.Response response) {
+    if (response.body.isEmpty) return null;
+    final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+    final trimmed = response.body.trimLeft();
+    final looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
+    if (!contentType.contains('application/json') && !looksLikeJson) {
+      return null;
+    }
+    try {
+      return jsonDecode(response.body);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  DriverApplicationApiException _exceptionForResponse(
+    http.Response response,
+    dynamic decoded,
+  ) {
+    final statusCode = response.statusCode;
+    final errorCode = decoded is Map
+        ? (decoded['error_code'] ?? decoded['code']) as String?
+        : null;
+    final message = decoded is Map
+        ? decoded['message'] as String? ?? _fallbackMessage(statusCode)
+        : _fallbackMessage(statusCode);
+    return DriverApplicationApiException(
+      message,
+      errorCode: errorCode ?? _fallbackErrorCode(statusCode),
+      statusCode: statusCode,
+      fieldErrors: _fieldErrors(decoded),
+    );
+  }
+
+  String _fallbackErrorCode(int statusCode) {
+    if (statusCode == 413) return 'FILE_TOO_LARGE';
+    if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+      return 'SERVER_UNAVAILABLE';
+    }
+    return 'REQUEST_FAILED';
+  }
+
+  String _fallbackMessage(int statusCode) {
+    if (statusCode == 413) return 'Uploaded files are too large';
+    if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+      return 'Server connection failed';
+    }
+    return 'Request failed';
+  }
+
   String _extension(String filename) {
     final safeName = filename
         .split(RegExp(r'[?#]'))
@@ -121,17 +171,12 @@ class DriverApplicationApiService {
             body: jsonEncode(body ?? {}),
           );
 
-    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    final decoded = _decodeResponseBody(response);
     if (response.statusCode >= 400) {
-      final message = decoded is Map
-          ? decoded['message'] as String? ?? 'Request failed'
-          : 'Request failed';
-      throw DriverApplicationApiException(
-        message,
-        errorCode: decoded is Map ? decoded['error_code'] as String? : null,
-        statusCode: response.statusCode,
-        fieldErrors: _fieldErrors(decoded),
-      );
+      throw _exceptionForResponse(response, decoded);
+    }
+    if (response.body.isNotEmpty && decoded == null) {
+      throw _exceptionForResponse(response, decoded);
     }
 
     if (decoded is Map && decoded.containsKey('data')) return decoded['data'];
@@ -194,17 +239,12 @@ class DriverApplicationApiService {
 
     final streamed = await _client.send(request);
     final response = await http.Response.fromStream(streamed);
-    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    final decoded = _decodeResponseBody(response);
     if (response.statusCode >= 400) {
-      final message = decoded is Map
-          ? decoded['message'] as String? ?? 'Request failed'
-          : 'Request failed';
-      throw DriverApplicationApiException(
-        message,
-        errorCode: decoded is Map ? decoded['error_code'] as String? : null,
-        statusCode: response.statusCode,
-        fieldErrors: _fieldErrors(decoded),
-      );
+      throw _exceptionForResponse(response, decoded);
+    }
+    if (response.body.isNotEmpty && decoded == null) {
+      throw _exceptionForResponse(response, decoded);
     }
     if (decoded is Map && decoded.containsKey('data')) return decoded['data'];
     return decoded;

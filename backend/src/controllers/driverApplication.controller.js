@@ -57,6 +57,28 @@ const handleUploadError = (err, req, res, next) => {
       errorCode: ERROR_CODES.FILE_TOO_LARGE,
     }));
   }
+  if (err?.code === 'LIMIT_FILE_COUNT') {
+    return next(new AppError('Too many files', {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      errorCode: ERROR_CODES.VALIDATION_ERROR,
+      errors: [{
+        field: 'files',
+        type: 'file.count',
+        message: 'too_many_files',
+      }],
+    }));
+  }
+  if (err?.code === 'LIMIT_UNEXPECTED_FILE') {
+    return next(new AppError('Unexpected file field', {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      errorCode: ERROR_CODES.VALIDATION_ERROR,
+      errors: [{
+        field: err.field || 'file',
+        type: 'file.unexpected',
+        message: 'unexpected_file_field',
+      }],
+    }));
+  }
   if (err?.message === 'INVALID_FILE_TYPE') {
     return next(new AppError('Invalid file type', {
       statusCode: HTTP_STATUS.BAD_REQUEST,
