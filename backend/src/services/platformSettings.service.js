@@ -4,6 +4,7 @@ const { uploadDir } = require('../config/multer');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const { settingsAssetUrl } = require('../utils/settingsAssetUrl');
 
 const GROUP = 'operations';
 const TEXT_KEYS = ['lineQrDescription', 'bankName', 'accountName', 'accountNumber', 'promptPayNumber'];
@@ -27,8 +28,8 @@ class PlatformSettingsService {
       accountName: values.accountName || '',
       accountNumber: values.accountNumber || '',
       promptPayNumber: values.promptPayNumber || '',
-      lineQrImageUrl: values.lineQrImagePath ? '/api/v1/settings/assets/lineQr' : null,
-      promptPayQrImageUrl: values.promptPayQrImagePath ? '/api/v1/settings/assets/promptPayQr' : null,
+      lineQrImageUrl: settingsAssetUrl('lineQr', values.lineQrImagePath),
+      promptPayQrImageUrl: settingsAssetUrl('promptPayQr', values.promptPayQrImagePath),
     };
   }
 
@@ -37,7 +38,7 @@ class PlatformSettingsService {
     const values = Object.fromEntries(rows.map((row) => [row.key_name, row.value]));
     return {
       lineQrDescription: values.lineQrDescription || '',
-      lineQrImageUrl: values.lineQrImagePath ? '/api/v1/settings/assets/lineQr' : null,
+      lineQrImageUrl: settingsAssetUrl('lineQr', values.lineQrImagePath),
     };
   }
 

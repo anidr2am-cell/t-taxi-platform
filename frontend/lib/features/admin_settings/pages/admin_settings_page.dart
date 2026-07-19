@@ -11,8 +11,10 @@ class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({
     super.key,
     this.api = const PlatformSettingsApiService(),
+    this.pickImageFile,
   });
   final PlatformSettingsApiService api;
+  final Future<PlatformFile?> Function()? pickImageFile;
 
   @override
   State<AdminSettingsPage> createState() => _AdminSettingsPageState();
@@ -33,6 +35,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   bool _loading = true;
   bool _saving = false;
   String? _error;
+  final _localImagePreviews = <String, Uint8List>{};
 
   @override
   void initState() {
@@ -59,6 +62,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           _settings = data;
           _loading = false;
           _error = null;
+          _localImagePreviews.clear();
         });
       }
     } catch (err) {
@@ -95,21 +99,55 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   }
 
   Future<void> _upload(String kind) async {
-    final picked = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
-    );
-    final file = picked?.files.single;
+    final file = await _pickImageFile();
     final Uint8List? bytes = file?.bytes;
     if (file == null || bytes == null) return;
-    setState(() => _saving = true);
+    final imageKey = _imageKeyForKind(kind);
+    setState(() {
+      _saving = true;
+      if (imageKey != null) {
+        _localImagePreviews[imageKey] = bytes;
+      }
+    });
     try {
       final data = await widget.api.uploadImage(kind, bytes, file.name);
-      if (mounted) setState(() => _settings = data);
+      if (mounted) {
+        setState(() {
+          _settings = data;
+          if (imageKey != null) _localImagePreviews.remove(imageKey);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.t('admin_settings_saved'))),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        setState(() {
+          if (imageKey != null) _localImagePreviews.remove(imageKey);
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$err')));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
+
+  Future<PlatformFile?> _pickImageFile() async {
+    if (widget.pickImageFile != null) return widget.pickImageFile!();
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    return picked?.files.single;
+  }
+
+  String? _imageKeyForKind(String kind) => switch (kind) {
+    'lineQr' => 'lineQrImageUrl',
+    'promptPayQr' => 'promptPayQrImageUrl',
+    _ => null,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -128,11 +166,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             children: [
               _field('lineQrDescription', l10n.t('admin_settings_description')),
               _image('lineQrImageUrl'),
-              AppUi.secondaryButton(
-                label: l10n.t('admin_settings_upload_line_qr'),
-                icon: Icons.qr_code,
-                onPressed: _saving ? null : () => _upload('lineQr'),
-                fullWidth: true,
+              KeyedSubtree(
+                key: const Key('admin_settings_upload_line_qr'),
+                child: AppUi.secondaryButton(
+                  label: l10n.t('admin_settings_upload_line_qr'),
+                  icon: Icons.qr_code,
+                  onPressed: _saving ? null : () => _upload('lineQr'),
+                  fullWidth: true,
+                ),
               ),
             ],
           ),
@@ -148,11 +189,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               _field('accountNumber', l10n.t('admin_settings_account_number')),
               _field('promptPayNumber', 'PromptPay'),
               _image('promptPayQrImageUrl'),
-              AppUi.secondaryButton(
-                label: l10n.t('admin_settings_upload_promptpay'),
-                icon: Icons.qr_code_2,
-                onPressed: _saving ? null : () => _upload('promptPayQr'),
-                fullWidth: true,
+              KeyedSubtree(
+                key: const Key('admin_settings_upload_promptpay_qr'),
+                child: AppUi.secondaryButton(
+                  label: l10n.t('admin_settings_upload_promptpay'),
+                  icon: Icons.qr_code_2,
+                  onPressed: _saving ? null : () => _upload('promptPayQr'),
+                  fullWidth: true,
+                ),
               ),
             ],
           ),
@@ -175,14 +219,37 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     ),
   );
   Widget _image(String key) {
+    final previewBytes = _localImagePreviews[key];
+    if (previewBytes != null) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Image.memory(
+          previewBytes,
+          key: Key('admin_settings_memory_preview_$key'),
+          height: 180,
+          fit: BoxFit.contain,
+        ),
+      );
+    }
     final path = _settings?[key] as String?;
     if (path == null || path.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Image.network(
+        key: Key('admin_settings_network_preview_$key'),
         widget.api.assetUri(path).toString(),
         height: 180,
         fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Container(
+          key: Key('admin_settings_image_fallback_$key'),
+          height: 180,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).dividerColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.broken_image_outlined),
+        ),
       ),
     );
   }

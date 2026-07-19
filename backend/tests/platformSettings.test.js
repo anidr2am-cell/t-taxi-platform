@@ -55,6 +55,10 @@ function serviceWith(initial = {}) {
   return new PlatformSettingsService(new MemorySettingsRepository(initial));
 }
 
+function expectVersionedAssetUrl(url, kind) {
+  assert.match(url, new RegExp(`^/api/v1/settings/assets/${kind}\\?v=[a-f0-9]{12}$`));
+}
+
 describe('PlatformSettingsService', () => {
   test('public settings include only customer-safe LINE fields', async () => {
     const settings = await serviceWith({
@@ -69,7 +73,7 @@ describe('PlatformSettingsService', () => {
 
     assert.deepEqual(Object.keys(settings).sort(), ['lineQrDescription', 'lineQrImageUrl']);
     assert.equal(settings.lineQrDescription, 'LINE 문의 안내');
-    assert.equal(settings.lineQrImageUrl, '/api/v1/settings/assets/lineQr');
+    expectVersionedAssetUrl(settings.lineQrImageUrl, 'lineQr');
     assert.equal(settings.bankName, undefined);
     assert.equal(settings.accountNumber, undefined);
     assert.equal(settings.promptPayQrImageUrl, undefined);
@@ -90,8 +94,8 @@ describe('PlatformSettingsService', () => {
     assert.equal(settings.accountName, 'T-Ride Ops');
     assert.equal(settings.accountNumber, '1234567890');
     assert.equal(settings.promptPayNumber, '0999999999');
-    assert.equal(settings.lineQrImageUrl, '/api/v1/settings/assets/lineQr');
-    assert.equal(settings.promptPayQrImageUrl, '/api/v1/settings/assets/promptPayQr');
+    expectVersionedAssetUrl(settings.lineQrImageUrl, 'lineQr');
+    expectVersionedAssetUrl(settings.promptPayQrImageUrl, 'promptPayQr');
   });
 
   test('line QR upload stores DB path and returns admin/public image URL', async () => {
@@ -108,8 +112,8 @@ describe('PlatformSettingsService', () => {
     const publicSettings = await service.getPublic();
 
     assert.equal(repository.values.get('lineQrImagePath'), 'test-line-qr.png');
-    assert.equal(adminSettings.lineQrImageUrl, '/api/v1/settings/assets/lineQr');
-    assert.equal(publicSettings.lineQrImageUrl, '/api/v1/settings/assets/lineQr');
+    expectVersionedAssetUrl(adminSettings.lineQrImageUrl, 'lineQr');
+    expectVersionedAssetUrl(publicSettings.lineQrImageUrl, 'lineQr');
     assert.equal(adminSettings.promptPayQrImageUrl, null);
     fs.rmSync(filePath, { force: true });
   });
@@ -127,8 +131,19 @@ describe('PlatformSettingsService', () => {
     }, 7);
 
     assert.equal(repository.values.get('promptPayQrImagePath'), 'test-promptpay-qr.jpg');
-    assert.equal(adminSettings.promptPayQrImageUrl, '/api/v1/settings/assets/promptPayQr');
+    expectVersionedAssetUrl(adminSettings.promptPayQrImageUrl, 'promptPayQr');
     fs.rmSync(filePath, { force: true });
+  });
+
+  test('image URLs change when a new persisted path is saved without exposing the path', async () => {
+    const first = await serviceWith({ lineQrImagePath: 'settings/first-secret.png' }).getAdmin();
+    const second = await serviceWith({ lineQrImagePath: 'settings/second-secret.png' }).getAdmin();
+
+    expectVersionedAssetUrl(first.lineQrImageUrl, 'lineQr');
+    expectVersionedAssetUrl(second.lineQrImageUrl, 'lineQr');
+    assert.notEqual(first.lineQrImageUrl, second.lineQrImageUrl);
+    assert.equal(first.lineQrImageUrl.includes('first-secret'), false);
+    assert.equal(second.lineQrImageUrl.includes('second-secret'), false);
   });
 
   test('invalid image kind or type does not update DB and removes partial file', async () => {
@@ -180,24 +195,35 @@ describe('platform settings routes', () => {
   beforeEach(() => {
     container.register('platformSettingsService', () => ({
       async getPublic() {
-        return { lineQrDescription: 'Public LINE', lineQrImageUrl: '/api/v1/settings/assets/lineQr' };
+        return { lineQrDescription: 'Public LINE', lineQrImageUrl: '/api/v1/settings/assets/lineQr?v=abc123def456' };
       },
       async getAdmin() {
         return {
           lineQrDescription: 'Public LINE',
-          lineQrImageUrl: '/api/v1/settings/assets/lineQr',
+          lineQrImageUrl: '/api/v1/settings/assets/lineQr?v=abc123def456',
           bankName: 'SCB',
           accountName: 'T-Ride Ops',
           accountNumber: '1234567890',
           promptPayNumber: '0999999999',
-          promptPayQrImageUrl: '/api/v1/settings/assets/promptPayQr',
+          promptPayQrImageUrl: '/api/v1/settings/assets/promptPayQr?v=def456abc123',
         };
       },
       async update() {
         throw new Error('not used');
       },
       async saveImage(kind, file) {
-        return { kind, field: file?.fieldname, lineQrImageUrl: '/api/v1/settings/assets/lineQr' };
+        return { kind, field: file?.fieldname, lineQrImageUrl: '/api/v1/settings/assets/lineQr?v=abc123def456' };
+      },
+      async getImage(kind) {
+        if (!['lineQr', 'promptPayQr'].includes(kind)) {
+          const error = new Error('Settings image not found');
+          error.statusCode = 404;
+          throw error;
+        }
+        fs.mkdirSync(uploadDir, { recursive: true });
+        const filePath = path.join(uploadDir, `${kind}-route-test.png`);
+        fs.writeFileSync(filePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        return filePath;
       },
     }));
   });
@@ -217,7 +243,7 @@ describe('platform settings routes', () => {
 
     assert.equal(res.body.data.bankName, 'SCB');
     assert.equal(res.body.data.accountNumber, '1234567890');
-    assert.equal(res.body.data.promptPayQrImageUrl, '/api/v1/settings/assets/promptPayQr');
+    assert.equal(res.body.data.promptPayQrImageUrl, '/api/v1/settings/assets/promptPayQr?v=def456abc123');
   });
 
   test('settings image upload requires admin auth and file field', async () => {
@@ -234,5 +260,20 @@ describe('platform settings routes', () => {
 
     assert.equal(res.body.data.kind, 'lineQr');
     assert.equal(res.body.data.field, 'file');
+  });
+
+  test('settings asset endpoint serves image content without path stripping', async () => {
+    const res = await request(app)
+      .get('/api/v1/settings/assets/lineQr?v=abc123def456')
+      .expect(200);
+
+    assert.match(res.headers['content-type'], /^image\/png/);
+    assert.equal(res.headers['cache-control'], 'no-store');
+  });
+
+  test('settings asset endpoint rejects invalid kind', async () => {
+    await request(app)
+      .get('/api/v1/settings/assets/unknown')
+      .expect(404);
   });
 });
