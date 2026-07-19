@@ -3792,6 +3792,8 @@ class AppLocalizations {
       'driver_apply_upload_processing': 'กำลังเตรียมไฟล์... (파일 준비 중...)',
       'driver_apply_upload_optimized_size':
           '{original} → {upload} optimized (최적화됨)',
+      'driver_apply_upload_privacy_processed_size':
+          'Privacy protected, upload size {size} (개인정보 보호 처리 완료, 업로드 용량 {size})',
       'driver_apply_upload_ready_size': 'Upload size {size} (업로드 용량 {size})',
       'driver_apply_upload_select': 'เลือกไฟล์ (파일 선택)',
       'driver_apply_upload_add_photo': 'เพิ่มรูปภาพ (사진 추가)',

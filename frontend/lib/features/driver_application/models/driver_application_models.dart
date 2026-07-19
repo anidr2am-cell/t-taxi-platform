@@ -113,6 +113,10 @@ class DriverApplicationUploadFile {
     this.outputWidth,
     this.outputHeight,
     this.wasCompressed = false,
+    this.wasReencoded = false,
+    this.wasResized = false,
+    this.metadataStripped = false,
+    this.orientationApplied = false,
   });
 
   final String name;
@@ -123,6 +127,10 @@ class DriverApplicationUploadFile {
   final int? outputWidth;
   final int? outputHeight;
   final bool wasCompressed;
+  final bool wasReencoded;
+  final bool wasResized;
+  final bool metadataStripped;
+  final bool orientationApplied;
 
   int get uploadByteLength => bytes.length;
 
