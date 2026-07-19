@@ -5,6 +5,10 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const { settingsAssetUrl } = require('../utils/settingsAssetUrl');
+const {
+  detectImageFileSignature,
+  isSupportedSettingsImageMetadata,
+} = require('../utils/imageSignature');
 
 const GROUP = 'operations';
 const TEXT_KEYS = ['lineQrDescription', 'bankName', 'accountName', 'accountNumber', 'promptPayNumber'];
@@ -51,12 +55,20 @@ class PlatformSettingsService {
 
   async saveImage(kind, file, userId) {
     const key = IMAGE_KEYS[kind];
-    if (!key || !file || !String(file.mimetype || '').startsWith('image/')) {
+    if (!key || !file) {
       await this.cleanupUploadedFile(file);
-      throw new AppError('Invalid settings image', {
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        errorCode: ERROR_CODES.INVALID_FILE_TYPE,
-      });
+      throw this.invalidImage();
+    }
+    let detectedType = null;
+    try {
+      detectedType = await detectImageFileSignature(file.path);
+    } catch (_) {
+      await this.cleanupUploadedFile(file);
+      throw this.invalidImage();
+    }
+    if (!isSupportedSettingsImageMetadata(file, detectedType)) {
+      await this.cleanupUploadedFile(file);
+      throw this.invalidImage();
     }
     const relativePath = path.relative(uploadDir, file.path).replace(/\\/g, '/');
     try {
@@ -97,6 +109,13 @@ class PlatformSettingsService {
     return new AppError('Settings image not found', {
       statusCode: HTTP_STATUS.NOT_FOUND,
       errorCode: ERROR_CODES.FILE_NOT_FOUND,
+    });
+  }
+
+  invalidImage() {
+    return new AppError('Only PNG and JPEG images are supported', {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      errorCode: ERROR_CODES.INVALID_SETTINGS_IMAGE,
     });
   }
 }

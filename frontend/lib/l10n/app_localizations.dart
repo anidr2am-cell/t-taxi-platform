@@ -308,6 +308,11 @@ class AppLocalizations {
       'admin_settings_upload_promptpay': 'Upload PromptPay QR',
       'admin_settings_save': 'Save settings',
       'admin_settings_saved': 'Settings saved',
+      'admin_settings_image_invalid': 'Please choose a PNG or JPG image file.',
+      'admin_settings_image_too_large':
+          'The image file is too large. Please choose a smaller file.',
+      'admin_settings_image_upload_failed':
+          'Could not upload the image. Please try again.',
       'admin_settlement_confirm_200': 'Confirm 200 THB received',
       'admin_settlement_confirm_question':
           'Confirm that 200 THB has been received from the driver?',
@@ -1736,6 +1741,10 @@ class AppLocalizations {
       'admin_settings_upload_promptpay': 'PromptPay QR 업로드',
       'admin_settings_save': '설정 저장',
       'admin_settings_saved': '설정을 저장했습니다.',
+      'admin_settings_image_invalid': 'PNG 또는 JPG 이미지 파일을 선택해 주세요.',
+      'admin_settings_image_too_large': '이미지 용량이 너무 큽니다. 더 작은 파일을 선택해 주세요.',
+      'admin_settings_image_upload_failed':
+          '이미지를 업로드하지 못했습니다. 잠시 후 다시 시도해 주세요.',
       'admin_settlement_confirm_200': '200바트 입금 확인',
       'admin_settlement_confirm_question': '기사 송금 200바트를 확인 처리하시겠습니까?',
       'admin_settlement_section': '정산 확인',
