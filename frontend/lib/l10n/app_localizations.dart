@@ -3790,18 +3790,31 @@ class AppLocalizations {
       'driver_apply_upload_selected': 'เลือกไฟล์แล้ว (파일 선택 완료)',
       'driver_apply_upload_error': 'ต้องตรวจสอบไฟล์นี้ (확인이 필요합니다)',
       'driver_apply_upload_processing': 'กำลังเตรียมไฟล์... (파일 준비 중...)',
+      'driver_apply_upload_optimized_size':
+          '{original} → {upload} optimized (최적화됨)',
+      'driver_apply_upload_ready_size': 'Upload size {size} (업로드 용량 {size})',
       'driver_apply_upload_select': 'เลือกไฟล์ (파일 선택)',
       'driver_apply_upload_add_photo': 'เพิ่มรูปภาพ (사진 추가)',
       'driver_apply_upload_change': 'เปลี่ยนไฟล์ (파일 교체)',
       'driver_apply_upload_remove': 'ลบไฟล์ (제거)',
       'driver_apply_upload_image_help':
-          'แนบไฟล์รูปภาพ JPG, PNG หรือ WEBP เท่านั้น (JPG, PNG, WEBP 이미지만 첨부해 주세요.)',
+          'แนบไฟล์รูปภาพ JPG หรือ PNG เท่านั้น (JPG, PNG 이미지만 첨부해 주세요.)',
       'driver_apply_vehicle_photo_help':
           'แนบรูปรถ 3-6 รูป เห็นรถและป้ายทะเบียนชัดเจน (차량과 번호판이 보이는 사진 3-6장을 첨부해 주세요.)',
       'driver_apply_upload_document_help':
-          'แนบไฟล์ JPG, PNG, WEBP หรือ PDF (JPG, PNG, WEBP 또는 PDF 파일을 첨부해 주세요.)',
+          'แนบไฟล์ JPG, PNG หรือ PDF (JPG, PNG 또는 PDF 파일을 첨부해 주세요.)',
       'driver_apply_file_pick_failed':
           'ไม่สามารถเลือกไฟล์ได้ กรุณาลองอีกครั้ง (파일을 선택하지 못했습니다. 다시 시도해 주세요.)',
+      'driver_apply_image_processing_failed':
+          'Could not process this image. Please choose a JPG or PNG file again. (이미지를 처리하지 못했습니다. JPG 또는 PNG 파일을 다시 선택해 주세요.)',
+      'driver_apply_file_too_large_after_compression':
+          'This file is still larger than 10MB after optimization. Please choose a smaller image. (최적화 후에도 10MB를 초과합니다. 더 작은 파일을 선택해 주세요.)',
+      'driver_apply_total_upload_size':
+          'Total upload size: {size} / {limit} (총 업로드 용량: {size} / {limit})',
+      'driver_apply_total_upload_warning':
+          'The upload is large. It may take longer on mobile networks. (업로드 용량이 큽니다. 모바일 네트워크에서는 시간이 더 걸릴 수 있습니다.)',
+      'driver_apply_total_upload_too_large':
+          'The selected files are too large to submit. Please remove some photos or choose smaller files. (선택한 파일이 너무 큽니다. 일부 사진을 삭제하거나 더 작은 파일을 선택해 주세요.)',
       'driver_apply_vehicle_photo_count': 'รูปรถ {count}/6 (차량 사진 {count}/6)',
       'driver_apply_vehicle_photo_limit_reached':
           'แนบรูปรถครบ 6 รูปแล้ว (차량 사진을 최대 6장까지 등록했습니다.)',
@@ -3811,7 +3824,7 @@ class AppLocalizations {
           'แนบรูปรถอย่างน้อย 3 รูป และไม่เกิน 6 รูป (차량 사진은 최소 3장, 최대 6장 첨부해야 합니다.)',
       'driver_apply_file_required': 'กรุณาแนบไฟล์นี้ (필수 파일을 첨부해 주세요.)',
       'driver_apply_invalid_file_type':
-          'ประเภทไฟล์ไม่ถูกต้อง กรุณาแนบไฟล์ JPG, PNG, WEBP หรือ PDF ตามช่องที่กำหนด (파일 형식이 올바르지 않습니다. 항목에 맞는 JPG, PNG, WEBP 또는 PDF 파일을 첨부해 주세요.)',
+          'ประเภทไฟล์ไม่ถูกต้อง กรุณาแนบไฟล์ JPG, PNG หรือ PDF ตามช่องที่กำหนด (파일 형식이 올바르지 않습니다. 항목에 맞는 JPG, PNG 또는 PDF 파일을 첨부해 주세요.)',
       'driver_apply_personal_consent':
           'ยินยอมให้เก็บและตรวจสอบข้อมูลส่วนบุคคล (개인정보 수집 및 검토에 동의합니다.)',
       'driver_apply_terms_consent':

@@ -7,8 +7,10 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../config/driver_application_upload_limits.dart';
 import '../models/driver_application_models.dart';
 import '../services/driver_application_api_service.dart';
+import '../services/driver_application_image_compression_service.dart';
 import '../widgets/driver_registration_photo_upload_card.dart';
 
 typedef DriverApplicationSingleFilePicker =
@@ -25,6 +27,7 @@ class DriverApplicationFormPage extends StatefulWidget {
     @visibleForTesting this.debugSubmitDraft,
     @visibleForTesting this.debugPickOne,
     @visibleForTesting this.debugPickVehiclePhotos,
+    @visibleForTesting this.debugCompressionService,
   });
 
   final DriverApplicationApiService? api;
@@ -33,6 +36,7 @@ class DriverApplicationFormPage extends StatefulWidget {
   final DriverApplicationDraft? debugSubmitDraft;
   final DriverApplicationSingleFilePicker? debugPickOne;
   final DriverApplicationVehiclePhotosPicker? debugPickVehiclePhotos;
+  final DriverApplicationImageCompressionService? debugCompressionService;
 
   @override
   State<DriverApplicationFormPage> createState() =>
@@ -40,12 +44,15 @@ class DriverApplicationFormPage extends StatefulWidget {
 }
 
 class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
-  static const _imageExtensions = {'jpg', 'jpeg', 'png', 'webp'};
-  static const _documentExtensions = {'jpg', 'jpeg', 'png', 'webp', 'pdf'};
+  static const _imageExtensions = {'jpg', 'jpeg', 'png'};
+  static const _documentExtensions = {'jpg', 'jpeg', 'png', 'pdf'};
 
   final _formKey = GlobalKey<FormState>();
   late final DriverApplicationApiService _api =
       widget.api ?? DriverApplicationApiService();
+  late final DriverApplicationImageCompressionService _compressionService =
+      widget.debugCompressionService ??
+      const DriverApplicationImageCompressionService();
 
   final _fullName = TextEditingController();
   final _password = TextEditingController();
@@ -156,8 +163,8 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: imageOnly
-          ? const ['jpg', 'jpeg', 'png', 'webp']
-          : const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+          ? const ['jpg', 'jpeg', 'png']
+          : const ['jpg', 'jpeg', 'png', 'pdf'],
       withData: true,
     );
     final file = result?.files.single;
@@ -182,7 +189,16 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     try {
       final file = await _pickOne(imageOnly: imageOnly);
       if (!mounted || file == null) return;
-      setState(() => onSelected(file));
+      final prepared = widget.debugPickOne == null
+          ? await _prepareSelectedFile(
+              file,
+              category: fieldKey == 'lineQr'
+                  ? DriverApplicationImageCategory.lineQr
+                  : DriverApplicationImageCategory.document,
+            )
+          : file;
+      if (!mounted) return;
+      setState(() => onSelected(prepared));
     } on _DriverApplicationFilePickException catch (err) {
       if (!mounted) return;
       setState(() {
@@ -222,11 +238,15 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     try {
       final selected = await _pickVehiclePhotos();
       if (!mounted || selected == null) return;
+      final preparedSelected = widget.debugPickVehiclePhotos == null
+          ? await _prepareVehiclePhotos(selected)
+          : selected;
+      if (!mounted) return;
       final remainingSlots = 6 - _vehiclePhotos.length;
       var duplicateSkipped = false;
       var limitSkipped = false;
       final filesToAdd = <DriverApplicationUploadFile>[];
-      for (final file in selected) {
+      for (final file in preparedSelected) {
         final duplicate =
             _vehiclePhotos.any(
               (existing) => _sameFileIdentity(existing, file),
@@ -278,7 +298,7 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     final invalidTypeMessage = context.l10n.t('driver_apply_invalid_file_type');
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      allowedExtensions: const ['jpg', 'jpeg', 'png'],
       allowMultiple: true,
       withData: true,
     );
@@ -334,6 +354,133 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     DriverApplicationUploadFile right,
   ) {
     return left.name == right.name && left.bytes.length == right.bytes.length;
+  }
+
+  Future<DriverApplicationUploadFile> _prepareSelectedFile(
+    DriverApplicationUploadFile file, {
+    required DriverApplicationImageCategory category,
+  }) async {
+    final processingFailedMessage = context.l10n.t(
+      'driver_apply_image_processing_failed',
+    );
+    final tooLargeMessage = context.l10n.t(
+      'driver_apply_file_too_large_after_compression',
+    );
+    try {
+      final prepared = await _compressionService.prepare(
+        file,
+        category: category,
+      );
+      _validatePreparedFile(prepared, tooLargeMessage);
+      return prepared;
+    } on _DriverApplicationFilePickException {
+      rethrow;
+    } catch (_) {
+      throw _DriverApplicationFilePickException(processingFailedMessage);
+    }
+  }
+
+  Future<List<DriverApplicationUploadFile>> _prepareVehiclePhotos(
+    List<DriverApplicationUploadFile> files,
+  ) async {
+    final prepared = <DriverApplicationUploadFile>[];
+    for (final file in files) {
+      prepared.add(
+        await _prepareSelectedFile(
+          file,
+          category: DriverApplicationImageCategory.vehicle,
+        ),
+      );
+      if (!mounted) break;
+      await Future<void>.delayed(Duration.zero);
+    }
+    return prepared;
+  }
+
+  void _validatePreparedFile(
+    DriverApplicationUploadFile file,
+    String tooLargeMessage,
+  ) {
+    if (file.bytes.length >
+        DriverApplicationUploadLimits.perFileHardLimitBytes) {
+      throw _DriverApplicationFilePickException(tooLargeMessage);
+    }
+  }
+
+  List<DriverApplicationUploadFile> _allSelectedFiles() {
+    return _allFilesInBundle(
+      DriverApplicationFileBundle(
+        lineQr: _lineQr,
+        vehiclePhotos: _vehiclePhotos,
+        insuranceCertificate: _insuranceCertificate,
+        vehicleRegistration: _vehicleRegistration,
+        taxCertificate: _taxCertificate,
+      ),
+    );
+  }
+
+  List<DriverApplicationUploadFile> _allFilesInBundle(
+    DriverApplicationFileBundle bundle,
+  ) {
+    return [
+      if (bundle.lineQr != null) bundle.lineQr!,
+      ...bundle.vehiclePhotos,
+      if (bundle.insuranceCertificate != null) bundle.insuranceCertificate!,
+      if (bundle.vehicleRegistration != null) bundle.vehicleRegistration!,
+      if (bundle.taxCertificate != null) bundle.taxCertificate!,
+    ];
+  }
+
+  int _totalUploadBytesFor(List<DriverApplicationUploadFile> files) =>
+      files.fold(0, (sum, file) => sum + file.bytes.length);
+
+  int _totalUploadBytes() => _totalUploadBytesFor(_allSelectedFiles());
+
+  bool _hasBlockingFileError() {
+    return _fileErrors.isNotEmpty || _hasBlockingFileSize(_allSelectedFiles());
+  }
+
+  bool _hasBlockingFileSize(List<DriverApplicationUploadFile> files) {
+    return files.any(
+          (file) =>
+              file.bytes.length >
+              DriverApplicationUploadLimits.perFileHardLimitBytes,
+        ) ||
+        _totalUploadBytesFor(files) >
+            DriverApplicationUploadLimits.totalHardLimitBytes;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '${bytes}B';
+    final mb = bytes / DriverApplicationUploadLimits.bytesPerMb;
+    if (mb >= 0.1) return '${mb.toStringAsFixed(1)}MB';
+    final kb = bytes / 1024;
+    return '${kb.toStringAsFixed(0)}KB';
+  }
+
+  String _totalUploadSizeText() {
+    return context.l10n
+        .t('driver_apply_total_upload_size')
+        .replaceAll('{size}', _formatBytes(_totalUploadBytes()))
+        .replaceAll(
+          '{limit}',
+          _formatBytes(DriverApplicationUploadLimits.totalHardLimitBytes),
+        );
+  }
+
+  String? _totalUploadWarningText() {
+    return _totalUploadWarningTextFor(_allSelectedFiles());
+  }
+
+  String? _totalUploadWarningTextFor(List<DriverApplicationUploadFile> files) {
+    final total = _totalUploadBytesFor(files);
+    if (total > DriverApplicationUploadLimits.totalHardLimitBytes) {
+      return context.l10n.t('driver_apply_total_upload_too_large');
+    }
+    if (total > DriverApplicationUploadLimits.totalWarningBytes) {
+      return context.l10n.t('driver_apply_total_upload_warning');
+    }
+    return null;
   }
 
   Future<void> _scrollToFirstDocumentError() async {
@@ -537,7 +684,20 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
   }
 
   DriverApplicationDraft? _buildDraft() {
-    if (widget.debugSubmitDraft != null) return widget.debugSubmitDraft;
+    if (widget.debugSubmitDraft != null) {
+      final draft = widget.debugSubmitDraft!;
+      final files = _allFilesInBundle(draft.files);
+      if (_hasBlockingFileSize(files)) {
+        setState(() {
+          _lastDraftFailureWasDocument = true;
+          _error =
+              _totalUploadWarningTextFor(files) ??
+              context.l10n.t('driver_apply_file_too_large_after_compression');
+        });
+        return null;
+      }
+      return draft;
+    }
     setState(() {
       _showDocumentErrors = true;
       _lastDraftFailureWasDocument = false;
@@ -569,6 +729,15 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
       setState(() {
         _lastDraftFailureWasDocument = true;
         _error = context.l10n.t('driver_apply_file_required');
+      });
+      return null;
+    }
+    if (_hasBlockingFileError()) {
+      setState(() {
+        _lastDraftFailureWasDocument = true;
+        _error =
+            _totalUploadWarningText() ??
+            context.l10n.t('driver_apply_file_too_large_after_compression');
       });
       return null;
     }
@@ -709,6 +878,47 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     final uri = Uri.tryParse(_lineGroupUrl);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Widget _uploadSizeSummary() {
+    final warning = _totalUploadWarningText();
+    final color = warning == null
+        ? AppTokens.textSecondary
+        : _totalUploadBytes() >
+              DriverApplicationUploadLimits.totalHardLimitBytes
+        ? AppTokens.error
+        : AppTokens.warning;
+    return Container(
+      key: const ValueKey('driver_application_upload_size_summary'),
+      padding: const EdgeInsets.all(AppTokens.spaceMd),
+      decoration: BoxDecoration(
+        color: warning == null
+            ? AppTokens.surfaceMuted
+            : AppTokens.warningLight,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _totalUploadSizeText(),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: color),
+          ),
+          if (warning != null) ...[
+            const SizedBox(height: AppTokens.spaceXs),
+            Text(
+              warning,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: color),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -943,6 +1153,7 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                     ),
                     onRemoveAll: () => _removeFile('taxCertificate'),
                   ),
+                  _uploadSizeSummary(),
                   CheckboxListTile(
                     key: _fieldKeys['personalDataConsent'],
                     value: _personalConsent,
@@ -994,7 +1205,10 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
                 ),
                 icon: Icons.send_outlined,
                 loading: _submitting,
-                onPressed: _submitting || _loadingVehicles ? null : _submit,
+                onPressed:
+                    _submitting || _loadingVehicles || _pickingFileKey != null
+                    ? null
+                    : _submit,
               ),
             ],
           ),

@@ -9,6 +9,7 @@ import 'package:frontend/features/driver/pages/driver_login_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver_application/models/driver_application_models.dart';
 import 'package:frontend/features/driver_application/pages/driver_application_form_page.dart';
+import 'package:frontend/features/driver_application/config/driver_application_upload_limits.dart';
 import 'package:frontend/features/driver_application/services/driver_application_api_service.dart';
 import 'package:frontend/features/driver_application/services/driver_application_storage.dart';
 import 'package:frontend/features/driver_application/widgets/driver_registration_photo_upload_card.dart';
@@ -151,6 +152,7 @@ class _FakeDriverApplicationApi extends DriverApplicationApiService {
   int approveCalls = 0;
   int rejectCalls = 0;
   int submitCalls = 0;
+  DriverApplicationDraft? submittedDraft;
 
   @override
   Future<List<DriverApplicationVehicleType>> listVehicleTypes() async {
@@ -164,6 +166,7 @@ class _FakeDriverApplicationApi extends DriverApplicationApiService {
     DriverApplicationDraft draft,
   ) async {
     submitCalls += 1;
+    submittedDraft = draft;
     return const DriverApplicationReceipt(
       applicationNumber: 'DA260704B1B2C3D4',
       status: 'PENDING',
@@ -361,6 +364,61 @@ void main() {
       expect(result.statusToken, 'raw-token');
     },
   );
+
+  test('submit application sends prepared upload bytes', () async {
+    final preparedDraft = _draft(
+      files: const DriverApplicationFileBundle(
+        lineQr: DriverApplicationUploadFile(
+          name: 'line.png',
+          bytes: [76, 73, 78, 69],
+        ),
+        vehiclePhotos: [
+          DriverApplicationUploadFile(
+            name: 'car1.jpg',
+            bytes: [67, 79, 77, 80, 82, 69, 83, 83, 69, 68],
+            originalByteLength: 5000000,
+            wasCompressed: true,
+          ),
+          DriverApplicationUploadFile(name: 'car2.jpg', bytes: [67, 65, 82]),
+          DriverApplicationUploadFile(name: 'car3.jpg', bytes: [67, 65, 82]),
+        ],
+        insuranceCertificate: DriverApplicationUploadFile(
+          name: 'insurance.pdf',
+          bytes: [80, 68, 70],
+        ),
+        vehicleRegistration: DriverApplicationUploadFile(
+          name: 'registration.pdf',
+          bytes: [80, 68, 70],
+        ),
+        taxCertificate: DriverApplicationUploadFile(
+          name: 'tax.pdf',
+          bytes: [80, 68, 70],
+        ),
+      ),
+    );
+    final api = DriverApplicationApiService(
+      baseUrl: 'http://localhost:3000',
+      client: _CaptureClient((request, bodyText) async {
+        expect(bodyText, contains('filename="car1.jpg"'));
+        expect(bodyText, contains('COMPRESSED'));
+        return http.Response(
+          jsonEncode(
+            _envelope({
+              'applicationNumber': 'DA260703A1B2C3D4',
+              'status': 'PENDING',
+              'statusToken': 'raw-token',
+              'submittedAt': '2026-07-03 10:00:00',
+            }),
+          ),
+          201,
+        );
+      }),
+    );
+
+    final result = await api.submitApplication(preparedDraft);
+
+    expect(result.applicationNumber, 'DA260703A1B2C3D4');
+  });
 
   test('submit application exposes backend field validation errors', () async {
     final api = DriverApplicationApiService(
@@ -636,6 +694,53 @@ void main() {
       expect(prefs.getString('driver_application_submitted_at'), isNull);
     },
   );
+
+  testWidgets('driver apply blocks submit when prepared files exceed 42MB', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(1000, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _FakeDriverApplicationApi();
+    DriverApplicationUploadFile bigFile(String name) =>
+        DriverApplicationUploadFile(
+          name: name,
+          bytes: List<int>.filled(
+            7 * DriverApplicationUploadLimits.bytesPerMb,
+            1,
+          ),
+        );
+    final draft = _draft(
+      files: DriverApplicationFileBundle(
+        lineQr: bigFile('line.png'),
+        vehiclePhotos: [
+          bigFile('car1.jpg'),
+          bigFile('car2.jpg'),
+          bigFile('car3.jpg'),
+        ],
+        insuranceCertificate: bigFile('insurance.pdf'),
+        vehicleRegistration: bigFile('registration.pdf'),
+        taxCertificate: bigFile('tax.pdf'),
+      ),
+    );
+    await tester.pumpWidget(
+      _app(DriverApplicationFormPage(api: api, debugSubmitDraft: draft)),
+    );
+    await tester.pumpAndSettle();
+
+    final submit = find.byIcon(Icons.send_outlined);
+    await tester.scrollUntilVisible(
+      submit,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+
+    expect(api.submitCalls, 0);
+    expect(find.textContaining('too large', skipOffstage: false), findsWidgets);
+  });
 
   testWidgets('driver login shows only application CTA', (tester) async {
     SharedPreferences.setMockInitialValues({});

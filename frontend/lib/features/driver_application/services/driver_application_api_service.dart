@@ -39,8 +39,8 @@ class DriverApplicationApiService {
 
   String get _base => '$_baseUrl/api/v1';
 
-  static const _imageExtensions = {'jpg', 'jpeg', 'png', 'webp'};
-  static const _documentExtensions = {'jpg', 'jpeg', 'png', 'webp', 'pdf'};
+  static const _imageExtensions = {'jpg', 'jpeg', 'png'};
+  static const _documentExtensions = {'jpg', 'jpeg', 'png', 'pdf'};
 
   dynamic _decodeResponseBody(http.Response response) {
     if (response.body.isEmpty) return null;
@@ -110,7 +110,6 @@ class DriverApplicationApiService {
     final mimeType = switch (ext) {
       'jpg' || 'jpeg' => 'image/jpeg',
       'png' => 'image/png',
-      'webp' => 'image/webp',
       'pdf' => 'application/pdf',
       _ => 'application/octet-stream',
     };

@@ -30,6 +30,7 @@ dependencies:
   latlong2: ^0.9.1
   geolocator: ^14.0.2
   geolocator_web: ^4.1.4
+  image: ^4.8.0
 
 dev_dependencies:
   flutter_test:
