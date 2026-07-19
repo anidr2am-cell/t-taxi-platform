@@ -104,10 +104,29 @@ class DriverApplicationDraft {
 }
 
 class DriverApplicationUploadFile {
-  const DriverApplicationUploadFile({required this.name, required this.bytes});
+  const DriverApplicationUploadFile({
+    required this.name,
+    required this.bytes,
+    this.originalByteLength,
+    this.originalWidth,
+    this.originalHeight,
+    this.outputWidth,
+    this.outputHeight,
+    this.wasCompressed = false,
+  });
 
   final String name;
   final List<int> bytes;
+  final int? originalByteLength;
+  final int? originalWidth;
+  final int? originalHeight;
+  final int? outputWidth;
+  final int? outputHeight;
+  final bool wasCompressed;
+
+  int get uploadByteLength => bytes.length;
+
+  int get displayOriginalByteLength => originalByteLength ?? bytes.length;
 }
 
 class DriverApplicationFileBundle {

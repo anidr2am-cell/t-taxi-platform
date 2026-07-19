@@ -350,11 +350,27 @@ class _FilePreview extends StatelessWidget {
             ),
             const SizedBox(width: AppTokens.spaceXs),
             Flexible(
-              child: Text(
-                file.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    file.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _fileSizeText(context, file),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: file.wasCompressed
+                          ? AppTokens.success
+                          : AppTokens.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -375,5 +391,29 @@ class _FilePreview extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  String _fileSizeText(BuildContext context, DriverApplicationUploadFile file) {
+    final l10n = context.l10n;
+    final original = _formatBytes(file.displayOriginalByteLength);
+    final upload = _formatBytes(file.uploadByteLength);
+    if (file.wasCompressed) {
+      return l10n
+          .t('driver_apply_upload_optimized_size')
+          .replaceAll('{original}', original)
+          .replaceAll('{upload}', upload);
+    }
+    return l10n
+        .t('driver_apply_upload_ready_size')
+        .replaceAll('{size}', upload);
+  }
+
+  String _formatBytes(int bytes) {
+    const mb = 1024 * 1024;
+    if (bytes < 1024) return '${bytes}B';
+    if (bytes >= mb ~/ 10) {
+      return '${(bytes / mb).toStringAsFixed(1)}MB';
+    }
+    return '${(bytes / 1024).toStringAsFixed(0)}KB';
   }
 }
