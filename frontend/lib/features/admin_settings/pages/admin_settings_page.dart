@@ -127,11 +127,25 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('$err')));
+        ).showSnackBar(SnackBar(content: Text(_uploadErrorMessage(err))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  String _uploadErrorMessage(Object error) {
+    final l10n = context.l10n;
+    if (error is PlatformSettingsApiException) {
+      if (error.errorCode == 'FILE_TOO_LARGE') {
+        return l10n.t('admin_settings_image_too_large');
+      }
+      if (error.errorCode == 'INVALID_SETTINGS_IMAGE' ||
+          error.errorCode == 'INVALID_FILE_TYPE') {
+        return l10n.t('admin_settings_image_invalid');
+      }
+    }
+    return l10n.t('admin_settings_image_upload_failed');
   }
 
   Future<PlatformFile?> _pickImageFile() async {

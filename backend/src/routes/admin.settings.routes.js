@@ -10,6 +10,12 @@ const adminOnly = [authMiddleware, roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMI
 
 router.get('/settings', adminOnly, controller.getAdmin);
 router.put('/settings', adminOnly, controller.updateAdmin);
-router.post('/settings/images/:kind', adminOnly, upload.single('file'), controller.uploadImage);
+router.post(
+  '/settings/images/:kind',
+  adminOnly,
+  upload.single('file'),
+  controller.handleUploadError,
+  controller.uploadImage,
+);
 
 module.exports = router;

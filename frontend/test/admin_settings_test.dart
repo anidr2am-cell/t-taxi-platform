@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -79,6 +80,23 @@ const _transparentPng = <int>[
   0x82,
 ];
 
+final _jpegBytes = base64Decode(
+  '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoH'
+  'BwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQME'
+  'BAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU'
+  'FBQUFBQUFBQUFBQUFBT/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQ'
+  'EAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQR'
+  'BRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY'
+  '3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJ'
+  'WWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5'
+  'ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQ'
+  'oL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKR'
+  'obHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVld'
+  'YWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsr'
+  'O0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oA'
+  'DAMBAAIRAxEAPwD9U6KKKAP/2Q==',
+);
+
 Widget _wrap({
   required PlatformSettingsApiService api,
   Future<PlatformFile?> Function()? pickImageFile,
@@ -105,13 +123,16 @@ Widget _wrap({
   );
 }
 
-PlatformFile _file({String path = r'C:\not-for-preview\line.png'}) =>
-    PlatformFile(
-      name: 'qr.png',
-      size: _transparentPng.length,
-      bytes: Uint8List.fromList(_transparentPng),
-      path: path,
-    );
+PlatformFile _file({
+  String name = 'qr.png',
+  List<int> bytes = _transparentPng,
+  String path = r'C:\not-for-preview\line.png',
+}) => PlatformFile(
+  name: name,
+  size: bytes.length,
+  bytes: Uint8List.fromList(bytes),
+  path: path,
+);
 
 Future<void> _tapUpload(WidgetTester tester, String key) async {
   await tester.ensureVisible(find.byKey(Key(key)));
@@ -126,6 +147,73 @@ Future<void> _tapUpload(WidgetTester tester, String key) async {
 }
 
 void main() {
+  test('settings image content type is inferred from safe PNG/JPEG bytes', () {
+    expect(
+      settingsImageContentTypeFor(
+        'line.png',
+        Uint8List.fromList(_transparentPng),
+      ).toString(),
+      'image/png',
+    );
+    expect(
+      settingsImageContentTypeFor(
+        'promptpay.jpg',
+        Uint8List.fromList(_jpegBytes),
+      ).toString(),
+      'image/jpeg',
+    );
+  });
+
+  test(
+    'settings image content type rejects HEIC, PDF, SVG, and fake images',
+    () {
+      for (final entry in [
+        MapEntry('phone.heic', [
+          0x00,
+          0x00,
+          0x00,
+          0x18,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
+        ]),
+        MapEntry('document.pdf', '%PDF-1.7'.codeUnits),
+        MapEntry('vector.svg', '<svg></svg>'.codeUnits),
+        MapEntry('fake.png', 'not an image'.codeUnits),
+        MapEntry('wrong.jpg', _transparentPng),
+      ]) {
+        expect(
+          settingsImageContentTypeFor(
+            entry.key,
+            Uint8List.fromList(entry.value),
+          ),
+          isNull,
+        );
+      }
+    },
+  );
+
+  test(
+    'settings upload pre-validates unsupported files before token lookup',
+    () async {
+      await expectLater(
+        const PlatformSettingsApiService().uploadImage(
+          'lineQr',
+          Uint8List.fromList('%PDF-1.7'.codeUnits),
+          'qr.pdf',
+        ),
+        throwsA(
+          isA<PlatformSettingsApiException>().having(
+            (error) => error.errorCode,
+            'errorCode',
+            'INVALID_SETTINGS_IMAGE',
+          ),
+        ),
+      );
+    },
+  );
+
   testWidgets(
     'file select shows immediate Image.memory preview without path URL',
     (tester) async {
@@ -156,6 +244,34 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  testWidgets('JPEG file select shows immediate Image.memory preview', (
+    tester,
+  ) async {
+    final completer = Completer<Map<String, dynamic>>();
+    final api = _FakePlatformSettingsApi(uploadCompleter: completer);
+
+    await tester.pumpWidget(
+      _wrap(
+        api: api,
+        pickImageFile: () async => _file(name: 'qr.jpg', bytes: _jpegBytes),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _tapUpload(tester, 'admin_settings_upload_line_qr');
+
+    expect(
+      find.byKey(const Key('admin_settings_memory_preview_lineQrImageUrl')),
+      findsOneWidget,
+    );
+
+    completer.complete({
+      'lineQrImageUrl': '/api/v1/settings/assets/lineQr?v=jpeg123abc45',
+      'promptPayQrImageUrl': null,
+    });
+    await tester.pumpAndSettle();
+  });
 
   testWidgets(
     'LINE QR upload success swaps preview to persisted server image',
@@ -234,7 +350,13 @@ void main() {
   ) async {
     await tester.pumpWidget(
       _wrap(
-        api: _FakePlatformSettingsApi(uploadError: Exception('Upload failed')),
+        api: _FakePlatformSettingsApi(
+          uploadError: const PlatformSettingsApiException(
+            'Only PNG and JPEG images are supported',
+            errorCode: 'INVALID_SETTINGS_IMAGE',
+            statusCode: 400,
+          ),
+        ),
         pickImageFile: () async => _file(),
       ),
     );
@@ -248,7 +370,8 @@ void main() {
       findsNothing,
     );
     expect(find.text('Settings saved'), findsNothing);
-    expect(find.textContaining('Upload failed'), findsOneWidget);
+    expect(find.text('Please choose a PNG or JPG image file.'), findsOneWidget);
+    expect(find.textContaining('Exception:'), findsNothing);
   });
 
   testWidgets('network image has a broken-image fallback', (tester) async {

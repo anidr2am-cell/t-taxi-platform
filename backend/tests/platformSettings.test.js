@@ -17,6 +17,14 @@ const { uploadDir } = require('../src/config/multer');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const PlatformSettingsService = require('../src/services/platformSettings.service');
 
+const PNG_BYTES = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  0x00, 0x00, 0x00, 0x0d,
+]);
+const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const PDF_BYTES = Buffer.from('%PDF-1.7');
+const SVG_BYTES = Buffer.from('<svg><script>alert(1)</script></svg>');
+
 function sign(role = 'ADMIN', id = 1) {
   return jwt.sign(
     { sub: id, email: `${role.toLowerCase()}@example.com`, role, type: 'access' },
@@ -103,10 +111,11 @@ describe('PlatformSettingsService', () => {
     const repository = new MemorySettingsRepository({ lineQrDescription: 'LINE 안내' });
     const service = new PlatformSettingsService(repository);
     const filePath = path.join(uploadDir, 'test-line-qr.png');
-    fs.writeFileSync(filePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    fs.writeFileSync(filePath, PNG_BYTES);
 
     const adminSettings = await service.saveImage('lineQr', {
       path: filePath,
+      originalname: 'test-line-qr.png',
       mimetype: 'image/png',
     }, 7);
     const publicSettings = await service.getPublic();
@@ -123,10 +132,11 @@ describe('PlatformSettingsService', () => {
     const repository = new MemorySettingsRepository({ bankName: 'SCB' });
     const service = new PlatformSettingsService(repository);
     const filePath = path.join(uploadDir, 'test-promptpay-qr.jpg');
-    fs.writeFileSync(filePath, Buffer.from([0xff, 0xd8, 0xff]));
+    fs.writeFileSync(filePath, JPEG_BYTES);
 
     const adminSettings = await service.saveImage('promptPayQr', {
       path: filePath,
+      originalname: 'test-promptpay-qr.jpg',
       mimetype: 'image/jpeg',
     }, 7);
 
@@ -146,6 +156,55 @@ describe('PlatformSettingsService', () => {
     assert.equal(second.lineQrImageUrl.includes('second-secret'), false);
   });
 
+  test('settings image upload accepts valid PNG or JPEG even with generic browser MIME', async () => {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const repository = new MemorySettingsRepository();
+    const service = new PlatformSettingsService(repository);
+    const pngPath = path.join(uploadDir, 'generic-png.png');
+    const jpegPath = path.join(uploadDir, 'generic-jpeg.jpeg');
+    fs.writeFileSync(pngPath, PNG_BYTES);
+    fs.writeFileSync(jpegPath, JPEG_BYTES);
+
+    await service.saveImage('lineQr', {
+      path: pngPath,
+      originalname: 'generic-png.png',
+      mimetype: 'application/octet-stream',
+    }, 7);
+    await service.saveImage('promptPayQr', {
+      path: jpegPath,
+      originalname: 'generic-jpeg.jpeg',
+      mimetype: '',
+    }, 7);
+
+    assert.equal(repository.values.get('lineQrImagePath'), 'generic-png.png');
+    assert.equal(repository.values.get('promptPayQrImagePath'), 'generic-jpeg.jpeg');
+    fs.rmSync(pngPath, { force: true });
+    fs.rmSync(jpegPath, { force: true });
+  });
+
+  test('settings image upload rejects fake extension, PDF, SVG, and HEIC bytes with cleanup', async () => {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const repository = new MemorySettingsRepository({ lineQrImagePath: 'existing.png' });
+    const service = new PlatformSettingsService(repository);
+
+    for (const [filename, mimetype, bytes] of [
+      ['fake.png', 'image/png', Buffer.from('not an image')],
+      ['pdf.jpg', 'image/jpeg', PDF_BYTES],
+      ['vector.png', 'image/png', SVG_BYTES],
+      ['phone.heic', 'image/heic', Buffer.from('00000018ftypheic')],
+    ]) {
+      const filePath = path.join(uploadDir, `invalid-${filename}`);
+      fs.writeFileSync(filePath, bytes);
+      await assert.rejects(
+        () => service.saveImage('lineQr', { path: filePath, originalname: filename, mimetype }, 7),
+        (err) => err.errorCode === ERROR_CODES.INVALID_SETTINGS_IMAGE,
+      );
+      assert.equal(fs.existsSync(filePath), false);
+    }
+
+    assert.equal(repository.values.get('lineQrImagePath'), 'existing.png');
+  });
+
   test('invalid image kind or type does not update DB and removes partial file', async () => {
     fs.mkdirSync(uploadDir, { recursive: true });
     const repository = new MemorySettingsRepository({ lineQrImagePath: 'existing.png' });
@@ -154,18 +213,18 @@ describe('PlatformSettingsService', () => {
     fs.writeFileSync(filePath, 'not an image');
 
     await assert.rejects(
-      () => service.saveImage('lineQr', { path: filePath, mimetype: 'text/plain' }, 7),
-      (err) => err.errorCode === ERROR_CODES.INVALID_FILE_TYPE,
+      () => service.saveImage('lineQr', { path: filePath, originalname: 'invalid-settings-upload.txt', mimetype: 'text/plain' }, 7),
+      (err) => err.errorCode === ERROR_CODES.INVALID_SETTINGS_IMAGE,
     );
 
     assert.equal(repository.values.get('lineQrImagePath'), 'existing.png');
     assert.equal(fs.existsSync(filePath), false);
 
     const secondPath = path.join(uploadDir, 'invalid-kind.png');
-    fs.writeFileSync(secondPath, Buffer.from([0x89, 0x50]));
+    fs.writeFileSync(secondPath, PNG_BYTES);
     await assert.rejects(
-      () => service.saveImage('unknown', { path: secondPath, mimetype: 'image/png' }, 7),
-      (err) => err.errorCode === ERROR_CODES.INVALID_FILE_TYPE,
+      () => service.saveImage('unknown', { path: secondPath, originalname: 'invalid-kind.png', mimetype: 'image/png' }, 7),
+      (err) => err.errorCode === ERROR_CODES.INVALID_SETTINGS_IMAGE,
     );
     assert.equal(repository.values.get('lineQrImagePath'), 'existing.png');
     assert.equal(fs.existsSync(secondPath), false);
@@ -179,10 +238,10 @@ describe('PlatformSettingsService', () => {
     };
     const service = new PlatformSettingsService(repository);
     const filePath = path.join(uploadDir, 'db-fail-settings-upload.png');
-    fs.writeFileSync(filePath, Buffer.from([0x89, 0x50]));
+    fs.writeFileSync(filePath, PNG_BYTES);
 
     await assert.rejects(
-      () => service.saveImage('promptPayQr', { path: filePath, mimetype: 'image/png' }, 7),
+      () => service.saveImage('promptPayQr', { path: filePath, originalname: 'db-fail-settings-upload.png', mimetype: 'image/png' }, 7),
       /DB unavailable/,
     );
 
@@ -222,7 +281,7 @@ describe('platform settings routes', () => {
         }
         fs.mkdirSync(uploadDir, { recursive: true });
         const filePath = path.join(uploadDir, `${kind}-route-test.png`);
-        fs.writeFileSync(filePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+        fs.writeFileSync(filePath, PNG_BYTES);
         return filePath;
       },
     }));
@@ -249,17 +308,29 @@ describe('platform settings routes', () => {
   test('settings image upload requires admin auth and file field', async () => {
     await request(app)
       .post('/api/v1/admin/settings/images/lineQr')
-      .attach('file', Buffer.from([0x89, 0x50]), { filename: 'line.png', contentType: 'image/png' })
+      .attach('file', PNG_BYTES, { filename: 'line.png', contentType: 'image/png' })
       .expect(401);
 
     const res = await request(app)
       .post('/api/v1/admin/settings/images/lineQr')
       .set('Authorization', `Bearer ${sign('ADMIN', 1)}`)
-      .attach('file', Buffer.from([0x89, 0x50]), { filename: 'line.png', contentType: 'image/png' })
+      .attach('file', PNG_BYTES, { filename: 'line.png', contentType: 'image/png' })
       .expect(200);
 
     assert.equal(res.body.data.kind, 'lineQr');
     assert.equal(res.body.data.field, 'file');
+  });
+
+  test('settings image upload returns controlled JSON for blocked image formats', async () => {
+    const res = await request(app)
+      .post('/api/v1/admin/settings/images/lineQr')
+      .set('Authorization', `Bearer ${sign('ADMIN', 1)}`)
+      .attach('file', SVG_BYTES, { filename: 'line.svg', contentType: 'image/svg+xml' })
+      .expect(400);
+
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.error_code, ERROR_CODES.INVALID_SETTINGS_IMAGE);
+    assert.equal(res.body.message, 'Only PNG and JPEG images are supported');
   });
 
   test('settings asset endpoint serves image content without path stripping', async () => {
