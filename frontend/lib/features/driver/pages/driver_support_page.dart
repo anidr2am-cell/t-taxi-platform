@@ -47,18 +47,32 @@ class DriverSupportPage extends StatelessWidget {
 
   Widget _lineContent(AppLocalizations l10n, Map<String, dynamic>? settings) {
     final path = settings?['lineQrImageUrl'] as String?;
-    if (path == null || path.isEmpty) {
-      return Text(l10n.t('support_line_qr_missing'));
-    }
+    final description = (settings?['lineQrDescription'] as String?)?.trim();
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(l10n.t('driver_support_line_help')),
         const SizedBox(height: AppTokens.spaceSm),
-        Image.network(
-          api.assetUri(path).toString(),
-          height: 240,
-          fit: BoxFit.contain,
-        ),
+        if (description != null && description.isNotEmpty) ...[
+          Text(
+            description,
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+        ],
+        if (path == null || path.isEmpty)
+          Text(l10n.t('support_line_qr_missing'))
+        else
+          Image.network(
+            api.assetUri(path).toString(),
+            height: 240,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) =>
+                Text(l10n.t('support_line_qr_missing')),
+          ),
       ],
     );
   }

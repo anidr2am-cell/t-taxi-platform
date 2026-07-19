@@ -838,11 +838,30 @@ test('getDriverSettlement reconciles missing obligation on access', async () => 
       });
     },
   };
-  const service = new CommissionSettlementService({}, bookingRepo, driverRepo, {}, {});
+  const settingsRepository = {
+    async findByGroup(groupName) {
+      assert.equal(groupName, 'operations');
+      return [
+        { key_name: 'bankName', value: 'SCB' },
+        { key_name: 'accountName', value: 'T-Ride Ops' },
+        { key_name: 'accountNumber', value: '1234567890' },
+        { key_name: 'promptPayNumber', value: '0999999999' },
+        { key_name: 'promptPayQrImagePath', value: 'settings/promptpay.png' },
+      ];
+    },
+  };
+  const service = new CommissionSettlementService({}, bookingRepo, driverRepo, {}, settingsRepository);
   service.reconcileMissingObligationForBooking = async () => { activated = true; };
   const item = await service.getDriverSettlement(44, 'TX202607010001', '/api/v1/driver/settlements');
   assert.equal(activated, true);
   assert.equal(item.commissionStatus, 'DUE');
+  assert.deepEqual(item.paymentInstructions, {
+    bankName: 'SCB',
+    accountName: 'T-Ride Ops',
+    accountNumber: '1234567890',
+    promptPayNumber: '0999999999',
+    promptPayQrImageUrl: '/api/v1/settings/assets/promptPayQr',
+  });
 });
 
 test('extension MIME mismatch rejected', () => {
