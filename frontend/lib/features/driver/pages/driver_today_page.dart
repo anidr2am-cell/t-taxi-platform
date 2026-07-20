@@ -218,10 +218,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
               });
             }
             return AppUi.errorState(
-              message: userFacingError(
-                err,
-                fallback: l10n.t('driver_load_failed'),
-              ),
+              message: l10n.t('driver_load_failed'),
               onRetry: _refresh,
               retryLabel: l10n.t('driver_retry'),
             );
@@ -506,9 +503,9 @@ class _NewCallsPrompt extends StatelessWidget {
         children: [
           Text(
             l10n.t('driver_home_new_calls_title'),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppTokens.spaceSm),
           Text(
