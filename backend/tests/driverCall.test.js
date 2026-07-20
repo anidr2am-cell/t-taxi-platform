@@ -206,7 +206,10 @@ function createHarness(overrides = {}) {
     },
   };
   const commissionSettlementService = {
-    async driverHasBlockingSettlement() {
+    async driverHasBlockingSettlement(driverId) {
+      if (overrides.blockedDriverIds) {
+        return overrides.blockedDriverIds.includes(Number(driverId));
+      }
       return overrides.commissionBlocked ?? false;
     },
   };
@@ -262,7 +265,11 @@ test('open call list hides calls when settlement confirmation is required', asyn
 
   const result = await service.listOpenCalls(42);
 
-  assert.deepEqual(result, { items: [] });
+  assert.deepEqual(result, {
+    items: [],
+    blockedReason: 'UNPAID_SETTLEMENT',
+    message: 'ยังไม่สามารถรับงานใหม่ได้ กรุณาชำระค่าคอมมิชชั่นและรอการตรวจสอบจากแอดมิน',
+  });
 });
 
 test('claimOpenCall atomically creates assignment and moves booking to DRIVER_ASSIGNED', async () => {
@@ -391,6 +398,24 @@ test('releaseAssignment reopens booking, clears active assignment, and notifies 
     2,
   );
   setRealtimeIo(null);
+});
+
+test('releaseAssignment excludes settlement-blocked drivers from reopened call notifications', async () => {
+  const { service, calls } = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+    eligibleDrivers: [
+      { id: 8, user_id: 43 },
+      { id: 9, user_id: 44 },
+    ],
+    blockedDriverIds: [9],
+  });
+
+  const result = await service.releaseAssignment(42, 'TX202607130001');
+
+  assert.equal(result.released, true);
+  assert.equal(calls.notifications.length, 1);
+  assert.equal(calls.notifications[0].recipientDriverId, 8);
 });
 
 test('releaseAssignment rejects wrong driver and started trip', async () => {
@@ -528,6 +553,55 @@ test('booking creation helper stores notifications for eligible online drivers',
   assert.equal(inserted[0].notificationType, NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE);
   assert.equal(inserted[0].recipientDriverId, 7);
   assert.equal(inserted[0].userId, 42);
+});
+
+test('booking creation helper excludes settlement-blocked drivers from open call notifications', async () => {
+  const inserted = [];
+  const service = new BookingService(
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    {
+      async listEligibleForOpenBooking() {
+        return [
+          { id: 7, user_id: 42 },
+          { id: 8, user_id: 43 },
+        ];
+      },
+    },
+    {
+      async insert(_conn, row) {
+        inserted.push(row);
+      },
+    },
+    {
+      async driverHasBlockingSettlement(driverId) {
+        return Number(driverId) === 8;
+      },
+    },
+  );
+
+  const targets = await service.notifyEligibleDriversForOpenBooking({}, {
+    bookingId: 10,
+    bookingNumber: 'TX202607130001',
+    vehicleTypeId: 3,
+    openCallPayload: {
+      bookingNumber: 'TX202607130001',
+      origin: 'BKK',
+      destination: 'Pattaya',
+    },
+  });
+
+  assert.deepEqual(targets, [{ driverId: 7, userId: 42 }]);
+  assert.equal(inserted.length, 1);
+  assert.equal(inserted[0].recipientDriverId, 7);
 });
 
 test('driver call socket handler joins driver rooms and rejects non-drivers', async () => {

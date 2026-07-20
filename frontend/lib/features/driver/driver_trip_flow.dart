@@ -6,6 +6,7 @@ class DriverTripFlow {
   DriverTripFlow._();
 
   static const actionOrder = [
+    'ACCEPT_BOOKING',
     'START_ON_ROUTE',
     'MARK_ARRIVED',
     'MARK_PICKED_UP',
@@ -23,6 +24,7 @@ class DriverTripFlow {
   static String? primaryActionLabelKey(DriverBooking booking) {
     return switch (primaryActionToken(booking)) {
       'START_ON_ROUTE' => 'driver_action_start_on_route',
+      'ACCEPT_BOOKING' => 'driver_action_accept_booking',
       'MARK_ARRIVED' => 'driver_action_mark_arrived',
       'MARK_PICKED_UP' => 'driver_action_mark_picked_up',
       'END_TRIP' => 'driver_action_end_trip',
@@ -33,6 +35,7 @@ class DriverTripFlow {
   static String? confirmTitleKey(String? actionToken) {
     return switch (actionToken) {
       'START_ON_ROUTE' => 'driver_confirm_start_on_route_title',
+      'ACCEPT_BOOKING' => 'driver_confirm_accept_booking_title',
       'MARK_ARRIVED' => 'driver_confirm_mark_arrived_title',
       'MARK_PICKED_UP' => 'driver_confirm_mark_picked_up_title',
       'END_TRIP' => 'driver_confirm_end_trip_title',
@@ -43,6 +46,7 @@ class DriverTripFlow {
   static String? confirmMessageKey(String? actionToken) {
     return switch (actionToken) {
       'START_ON_ROUTE' => 'driver_confirm_start_on_route_message',
+      'ACCEPT_BOOKING' => 'driver_confirm_accept_booking_message',
       'MARK_ARRIVED' => 'driver_confirm_mark_arrived_message',
       'MARK_PICKED_UP' => 'driver_confirm_mark_picked_up_message',
       'END_TRIP' => 'driver_confirm_end_trip_message',
@@ -53,6 +57,7 @@ class DriverTripFlow {
   static String? confirmButtonKey(String? actionToken) {
     return switch (actionToken) {
       'START_ON_ROUTE' => 'driver_confirm_start_on_route_yes',
+      'ACCEPT_BOOKING' => 'driver_confirm_accept_booking_yes',
       'MARK_ARRIVED' => 'driver_confirm_mark_arrived_yes',
       'MARK_PICKED_UP' => 'driver_confirm_mark_picked_up_yes',
       'END_TRIP' => 'driver_confirm_end_trip_yes',
@@ -63,6 +68,7 @@ class DriverTripFlow {
   static String? successMessageKey(String? actionToken) {
     return switch (actionToken) {
       'START_ON_ROUTE' => 'driver_success_on_route',
+      'ACCEPT_BOOKING' => 'driver_success_accept_booking',
       'MARK_ARRIVED' => 'driver_success_arrived',
       'MARK_PICKED_UP' => 'driver_success_picked_up',
       'END_TRIP' => 'driver_success_end_trip',
@@ -73,6 +79,7 @@ class DriverTripFlow {
   static String? processingMessageKey(String? actionToken) {
     return switch (actionToken) {
       'MARK_PICKED_UP' => 'driver_confirm_customer_boarded_processing',
+      'ACCEPT_BOOKING' => 'driver_accept_booking_processing',
       'END_TRIP' => 'driver_end_trip_processing',
       _ => 'driver_trip_action_processing',
     };

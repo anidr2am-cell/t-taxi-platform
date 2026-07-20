@@ -45,6 +45,7 @@ class BookingService {
     flightService = null,
     driverRepository = null,
     notificationRepository = null,
+    commissionSettlementService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -58,6 +59,7 @@ class BookingService {
     this.flightService = flightService;
     this.driverRepository = driverRepository;
     this.notificationRepository = notificationRepository;
+    this.commissionSettlementService = commissionSettlementService;
   }
 
   buildOpenCallPayload({
@@ -105,10 +107,17 @@ class BookingService {
       return [];
     }
 
-    const drivers = await this.driverRepository.listEligibleForOpenBooking(
+    const candidates = await this.driverRepository.listEligibleForOpenBooking(
       conn,
       vehicleTypeId,
     );
+    const drivers = [];
+    for (const driver of candidates) {
+      const blocked = this.commissionSettlementService
+        ? await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)
+        : false;
+      if (!blocked) drivers.push(driver);
+    }
     const eventId = randomUUID();
     for (const driver of drivers) {
       await this.notificationRepository.insert(conn, {

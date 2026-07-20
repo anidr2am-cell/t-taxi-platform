@@ -1,8 +1,11 @@
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const SERVICE_TYPES = require('../constants/serviceTypes');
+const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
 
 const THAILAND_TIME_ZONE = 'Asia/Bangkok';
+const STANDBY_WINDOW_MS = 60 * 60 * 1000;
 
 class DriverJobService {
   constructor(bookingRepository) {
@@ -53,8 +56,11 @@ class DriverJobService {
     return value;
   }
 
-  allowedActions(status) {
+  allowedActions(status, assignmentStatus = null) {
     if (status === 'DRIVER_ASSIGNED') {
+      if (assignmentStatus !== 'ACCEPTED') {
+        return ['VIEW_DETAILS', 'ACCEPT_BOOKING'];
+      }
       return ['VIEW_DETAILS', 'START_ON_ROUTE'];
     }
     if (status === 'ON_ROUTE') {
@@ -128,11 +134,49 @@ class DriverJobService {
     };
   }
 
+  location(value) {
+    if (value == null) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  standbyReference(row) {
+    if (row.service_type_code === SERVICE_TYPES.AIRPORT_PICKUP) {
+      const arrival =
+        row.flight_scheduled_arrival_at
+        ?? row.flight_scheduled_arrival_at_text
+        ?? row.flight_estimated_arrival_at
+        ?? row.flight_estimated_arrival_at_text;
+      if (arrival) {
+        return {
+          referenceTimeType: 'AIRPORT_ARRIVAL',
+          referenceTime: arrival,
+        };
+      }
+    }
+    return {
+      referenceTimeType: 'VEHICLE_DEPARTURE',
+      referenceTime: row.scheduled_pickup_at ?? null,
+    };
+  }
+
+  standbyAllowedAt(row) {
+    const reference = this.standbyReference(row);
+    const referenceMs = parseServiceDateTimeToMs(reference.referenceTime);
+    if (referenceMs == null) return null;
+    return new Date(referenceMs - STANDBY_WINDOW_MS).toISOString();
+  }
+
   mapBase(row) {
     return {
       bookingNumber: row.booking_number,
       status: row.status,
       assignmentStatus: row.assignment_status ?? null,
+      acceptedAt: row.accepted_at ?? null,
+      scheduledPickupAt: row.scheduled_pickup_at ?? null,
+      standbyReferenceTimeType: this.standbyReference(row).referenceTimeType,
+      standbyReferenceTime: this.standbyReference(row).referenceTime,
+      standbyAllowedAt: this.standbyAllowedAt(row),
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,
@@ -141,6 +185,10 @@ class DriverJobService {
       pickupTime: row.pickup_time,
       origin: row.origin_address,
       destination: row.destination_address,
+      originLatitude: this.location(row.origin_lat),
+      originLongitude: this.location(row.origin_lng),
+      destinationLatitude: this.location(row.destination_lat),
+      destinationLongitude: this.location(row.destination_lng),
       passengerCount: this.passengerCount(row),
       vehicleType: {
         code: row.vehicle_type_code,
@@ -153,12 +201,12 @@ class DriverJobService {
       flightNumber: row.flight_number,
       flightStatus: row.delay_status,
       latestEstimatedArrival: row.flight_estimated_arrival_at_text,
-      allowedActions: this.allowedActions(row.status),
+      allowedActions: this.allowedActions(row.status, row.assignment_status),
     };
   }
 
   mapDetail(row) {
-    return {
+    const detail = {
       ...this.mapBase(row),
       customerPhone: row.customer_phone,
       passengers: {
@@ -175,11 +223,13 @@ class DriverJobService {
       flight: {
         flightNumber: row.flight_number,
         flightStatus: row.delay_status,
+        scheduledArrival: row.flight_scheduled_arrival_at_text,
         latestEstimatedArrival: row.flight_estimated_arrival_at_text,
         delayMinutes: row.delay_minutes,
       },
       specialInstructions: row.special_requests,
       paymentMethod: row.payment_method,
+      nameSignRequested: Boolean(row.name_sign_requested),
       qr: {
         boarding: {
           available: Boolean(row.boarding_qr_token_hash),
@@ -191,6 +241,11 @@ class DriverJobService {
         },
       },
     };
+    delete detail.companyCommissionAmount;
+    delete detail.companyCommissionCurrency;
+    delete detail.driverExpectedIncomeAmount;
+    delete detail.driverExpectedIncomeCurrency;
+    return detail;
   }
 
   async listToday(driverUserId, now = new Date()) {

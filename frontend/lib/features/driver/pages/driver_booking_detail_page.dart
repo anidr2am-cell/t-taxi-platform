@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../booking/config/map_provider_config.dart';
 import '../../driver_location/services/driver_location_api_service.dart';
 import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
+import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../driver_trip_flow.dart';
@@ -28,6 +32,7 @@ class DriverBookingDetailPage extends StatefulWidget {
     this.showStatusControl = false,
     this.locationApi,
     this.positionProvider,
+    this.settlementApi,
   }) : api = api ?? const DriverApiService();
 
   final String bookingNumber;
@@ -36,6 +41,7 @@ class DriverBookingDetailPage extends StatefulWidget {
   final bool showStatusControl;
   final DriverLocationApiService? locationApi;
   final DriverPositionProvider? positionProvider;
+  final DriverSettlementApiService? settlementApi;
 
   @override
   State<DriverBookingDetailPage> createState() =>
@@ -50,6 +56,9 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   bool _confirmingAction = false;
   String? _actionError;
   String? _processingKey;
+
+  DriverSettlementApiService get _settlementApi =>
+      widget.settlementApi ?? const DriverSettlementApiService();
 
   @override
   void initState() {
@@ -77,10 +86,30 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
 
   void _loadSettlement() {
     setState(() {
-      _settlementFuture = const DriverSettlementApiService()
+      _settlementFuture = _settlementApi
           .getSettlement(widget.bookingNumber)
           .catchError((_) => <String, dynamic>{});
     });
+  }
+
+  Future<void> _showSettlementPrompt() async {
+    Map<String, dynamic> detail = {};
+    try {
+      detail = await _settlementApi.getSettlement(widget.bookingNumber);
+    } catch (_) {
+      // The detail page can still retry with the authenticated driver endpoint.
+    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => _SettlementPromptDialog(
+        detail: detail,
+        onOpenDetail: () {
+          Navigator.of(dialogContext).pop();
+          _openSettlementDetail();
+        },
+      ),
+    );
   }
 
   Future<void> _runAction(
@@ -111,6 +140,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
           refreshed.status == 'COMPLETED') {
         _loadSettlement();
       }
+      if (endTripAction && refreshed.status == 'SETTLEMENT_PENDING') {
+        await _showSettlementPrompt();
+      }
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.t(messageKey))));
@@ -236,7 +269,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
           MaterialPageRoute(
             builder: (_) => DriverSettlementDetailPage(
               bookingNumber: widget.bookingNumber,
-              api: const DriverSettlementApiService(),
+              api: _settlementApi,
             ),
           ),
         )
@@ -393,6 +426,33 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                       title: l10n.t('driver_section_trip'),
                       child: Column(
                         children: [
+                          if (booking.assignmentStatus == 'ACCEPTED' ||
+                              booking.acceptedAt?.isNotEmpty == true) ...[
+                            AppUi.summaryRow(
+                              label: l10n.t('driver_standby_status'),
+                              value: l10n.t('driver_standby_confirmed'),
+                              emphasize: true,
+                            ),
+                          ] else if (booking.standbyAllowedAt?.isNotEmpty ==
+                              true) ...[
+                            AppUi.summaryRow(
+                              label:
+                                  booking.standbyReferenceTimeType ==
+                                      'AIRPORT_ARRIVAL'
+                                  ? l10n.t('driver_standby_airport_reference')
+                                  : l10n.t(
+                                      'driver_standby_departure_reference',
+                                    ),
+                              value:
+                                  booking.standbyReferenceTime ??
+                                  booking.scheduledPickupAt ??
+                                  '${booking.pickupDate} ${booking.pickupTime}',
+                            ),
+                            AppUi.summaryRow(
+                              label: l10n.t('driver_standby_available_from'),
+                              value: booking.standbyAllowedAt!,
+                            ),
+                          ],
                           AppUi.summaryRow(
                             label: l10n.t('driver_pickup_time'),
                             value:
@@ -407,6 +467,29 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                             label: l10n.t('driver_detail_destination'),
                             value: booking.destination,
                           ),
+                          if (booking.customerPaymentAmount != null) ...[
+                            const SizedBox(height: AppTokens.spaceXs),
+                            AppUi.summaryRow(
+                              label: l10n.t('driver_customer_total_amount'),
+                              value: DriverMoneyFormat.money(
+                                booking.customerPaymentAmount!,
+                                booking.customerPaymentCurrency ??
+                                    booking.currency,
+                              ),
+                              emphasize: true,
+                            ),
+                          ],
+                          if (booking.nameSignRequested) ...[
+                            const SizedBox(height: AppTokens.spaceSm),
+                            AppUi.actionBanner(
+                              message: l10n.t('driver_name_sign_required'),
+                              icon: Icons.badge_outlined,
+                            ),
+                          ],
+                          if (booking.hasRouteCoordinates) ...[
+                            const SizedBox(height: AppTokens.spaceMd),
+                            _DriverRouteMap(booking: booking),
+                          ],
                         ],
                       ),
                     ),
@@ -492,7 +575,8 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                         ),
                       ),
                     ],
-                    if (booking.status == 'COMPLETED') ...[
+                    if (booking.status == 'SETTLEMENT_PENDING' ||
+                        booking.status == 'COMPLETED') ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       _SettlementSection(
                         future: _settlementFuture,
@@ -584,6 +668,9 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     switch (actionToken) {
       case 'START_ON_ROUTE':
         action = () => widget.api.startOnRoute(widget.bookingNumber);
+        break;
+      case 'ACCEPT_BOOKING':
+        action = () => widget.api.confirmStandby(widget.bookingNumber);
         break;
       case 'MARK_ARRIVED':
         action = () => widget.api.markArrived(widget.bookingNumber);
@@ -826,6 +913,178 @@ class _EndTripPaymentSummary extends StatelessWidget {
   }
 }
 
+class _DriverRouteMap extends StatelessWidget {
+  const _DriverRouteMap({required this.booking});
+
+  final DriverBooking booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final origin = LatLng(booking.originLatitude!, booking.originLongitude!);
+    final destination = LatLng(
+      booking.destinationLatitude!,
+      booking.destinationLongitude!,
+    );
+    final center = LatLng(
+      (origin.latitude + destination.latitude) / 2,
+      (origin.longitude + destination.longitude) / 2,
+    );
+    return ClipRRect(
+      borderRadius: AppTokens.borderRadiusSm,
+      child: SizedBox(
+        key: const Key('driverRouteMap'),
+        height: 220,
+        child: FlutterMap(
+          options: MapOptions(initialCenter: center, initialZoom: 9),
+          children: [
+            TileLayer(
+              urlTemplate: MapProviderConfig.tileUrlTemplate,
+              userAgentPackageName: 'dev.ttaxi.frontend',
+            ),
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: [origin, destination],
+                  strokeWidth: 4,
+                  color: AppTokens.primary,
+                ),
+              ],
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: origin,
+                  width: 44,
+                  height: 44,
+                  child: const Icon(
+                    Icons.trip_origin,
+                    color: AppTokens.primary,
+                    size: 32,
+                  ),
+                ),
+                Marker(
+                  point: destination,
+                  width: 44,
+                  height: 44,
+                  child: const Icon(
+                    Icons.location_on,
+                    color: AppTokens.error,
+                    size: 36,
+                  ),
+                ),
+              ],
+            ),
+            RichAttributionWidget(
+              attributions: [
+                TextSourceAttribution(
+                  'OpenStreetMap contributors',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettlementPromptDialog extends StatelessWidget {
+  const _SettlementPromptDialog({
+    required this.detail,
+    required this.onOpenDetail,
+  });
+
+  final Map<String, dynamic> detail;
+  final VoidCallback onOpenDetail;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final payment = detail['paymentInstructions'] is Map
+        ? Map<String, dynamic>.from(detail['paymentInstructions'] as Map)
+        : <String, dynamic>{};
+    final commissionAmount =
+        (detail['companyCommissionAmount'] as num?) ??
+        (detail['commissionAmount'] as num?);
+    final currency =
+        detail['companyCommissionCurrency'] as String? ??
+        detail['currency'] as String?;
+    final promptPayQrImageUrl = payment['promptPayQrImageUrl'] as String?;
+    return AlertDialog(
+      title: Text(l10n.t('driver_settlement_popup_title')),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.t('driver_settlement_popup_message')),
+            if (commissionAmount != null) ...[
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.summaryRow(
+                label: l10n.t('driver_company_commission'),
+                value: DriverMoneyFormat.money(commissionAmount, currency),
+                emphasize: true,
+              ),
+            ],
+            if (payment.isNotEmpty) ...[
+              const SizedBox(height: AppTokens.spaceSm),
+              if ((payment['bankName'] as String? ?? '').isNotEmpty)
+                AppUi.summaryRow(
+                  label: l10n.t('admin_settings_bank_name'),
+                  value: payment['bankName'] as String,
+                ),
+              if ((payment['accountName'] as String? ?? '').isNotEmpty)
+                AppUi.summaryRow(
+                  label: l10n.t('admin_settings_account_name'),
+                  value: payment['accountName'] as String,
+                ),
+              if ((payment['accountNumber'] as String? ?? '').isNotEmpty)
+                AppUi.summaryRow(
+                  label: l10n.t('admin_settings_account_number'),
+                  value: payment['accountNumber'] as String,
+                ),
+              if ((payment['promptPayNumber'] as String? ?? '').isNotEmpty)
+                AppUi.summaryRow(
+                  label: 'PromptPay',
+                  value: payment['promptPayNumber'] as String,
+                ),
+              if (promptPayQrImageUrl != null &&
+                  promptPayQrImageUrl.isNotEmpty) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                Image.network(
+                  const PlatformSettingsApiService()
+                      .assetUri(promptPayQrImageUrl)
+                      .toString(),
+                  height: 180,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ],
+            ],
+            const SizedBox(height: AppTokens.spaceMd),
+            Text(
+              l10n.t('driver_settlement_next_job_notice'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.t('support_close_button')),
+        ),
+        FilledButton.icon(
+          onPressed: onOpenDetail,
+          icon: const Icon(Icons.receipt_long_outlined),
+          label: Text(l10n.t('driver_settlement_upload')),
+        ),
+      ],
+    );
+  }
+}
+
 class _SettlementSection extends StatelessWidget {
   const _SettlementSection({required this.future, required this.onOpenDetail});
 
@@ -852,58 +1111,9 @@ class _SettlementSection extends StatelessWidget {
             return Text(l10n.t('driver_settlement_loading_failed'));
           }
           final status = detail['commissionStatus'] as String? ?? '';
-          final companyCommissionAmount =
-              (detail['companyCommissionAmount'] as num?) ??
-              (detail['commissionAmount'] as num?);
-          final companyCommissionCurrency =
-              detail['companyCommissionCurrency'] as String? ??
-              detail['currency'] as String?;
-          final driverExpectedIncomeAmount =
-              detail['driverExpectedIncomeAmount'] as num?;
-          final driverExpectedIncomeCurrency =
-              detail['driverExpectedIncomeCurrency'] as String? ??
-              detail['currency'] as String?;
-          final customerPaymentAmount =
-              detail['customerPaymentAmount'] as num? ??
-              detail['customerTotalAmount'] as num?;
-          final customerPaymentCurrency =
-              detail['customerPaymentCurrency'] as String? ??
-              detail['customerTotalCurrency'] as String? ??
-              detail['currency'] as String?;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AppUi.summaryRow(
-                label: l10n.t('driver_company_commission'),
-                value: companyCommissionAmount == null
-                    ? l10n.t('driver_commission_unavailable')
-                    : DriverMoneyFormat.money(
-                        companyCommissionAmount,
-                        companyCommissionCurrency,
-                      ),
-                emphasize: true,
-              ),
-              if (driverExpectedIncomeAmount != null) ...[
-                const SizedBox(height: AppTokens.spaceXs),
-                AppUi.summaryRow(
-                  label: l10n.t('driver_expected_income'),
-                  value: DriverMoneyFormat.money(
-                    driverExpectedIncomeAmount,
-                    driverExpectedIncomeCurrency,
-                  ),
-                ),
-              ],
-              if (customerPaymentAmount != null) ...[
-                const SizedBox(height: AppTokens.spaceXs),
-                AppUi.summaryRow(
-                  label: l10n.t('driver_customer_total_amount'),
-                  value: DriverMoneyFormat.money(
-                    customerPaymentAmount,
-                    customerPaymentCurrency,
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppTokens.spaceSm),
               Row(
                 children: [
                   Text(l10n.t('driver_settlement_status')),

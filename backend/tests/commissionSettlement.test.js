@@ -563,6 +563,51 @@ test('overdue with receipt still blocks assignment', async () => {
   assert.equal(blocked, true);
 });
 
+test('rejected settlement blocks assignment until a new slip is accepted', async () => {
+  const bookingRepo = {
+    async findUnpaidSettlementsForDriver() {
+      return [{
+        commission_status: COMMISSION_STATUS.DUE,
+        commission_due_at: null,
+        commission_receipt_file_id: null,
+        metadata: { commissionRejectionReason: 'Unreadable transfer slip' },
+      }];
+    },
+  };
+  const service = new CommissionSettlementService({}, bookingRepo, {}, {}, {});
+  const blocked = await service.driverHasBlockingSettlement(5);
+  assert.equal(blocked, true);
+});
+
+test('settled or absent settlement does not block assignment', async () => {
+  const noSettlement = new CommissionSettlementService(
+    {},
+    { async findUnpaidSettlementsForDriver() { return []; } },
+    {},
+    {},
+    {},
+  );
+  assert.equal(await noSettlement.driverHasBlockingSettlement(5), false);
+
+  const settled = new CommissionSettlementService(
+    {},
+    {
+      async findUnpaidSettlementsForDriver() {
+        return [{
+          commission_status: COMMISSION_STATUS.PAID,
+          commission_due_at: null,
+          commission_receipt_file_id: 42,
+          metadata: null,
+        }];
+      },
+    },
+    {},
+    {},
+    {},
+  );
+  assert.equal(await settled.driverHasBlockingSettlement(5), false);
+});
+
 test('reconciliation creates obligation for completed booking without event', async () => {
   let activateCalls = 0;
   const bookingRepo = {

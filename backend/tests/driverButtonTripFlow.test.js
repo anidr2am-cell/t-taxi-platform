@@ -24,6 +24,10 @@ test('driver allowed actions expose button flow without QR actions', () => {
   const service = new DriverJobService({});
   assert.deepEqual(service.allowedActions(BOOKING_STATUS.DRIVER_ASSIGNED), [
     'VIEW_DETAILS',
+    'ACCEPT_BOOKING',
+  ]);
+  assert.deepEqual(service.allowedActions(BOOKING_STATUS.DRIVER_ASSIGNED, 'ACCEPTED'), [
+    'VIEW_DETAILS',
     'START_ON_ROUTE',
   ]);
   assert.deepEqual(service.allowedActions(BOOKING_STATUS.ON_ROUTE), [

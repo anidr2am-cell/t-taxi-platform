@@ -5,6 +5,8 @@ const BOOKING_STATUS = require('../constants/reservationStatus');
 const ROLES = require('../constants/roles');
 const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
 
+const STANDBY_WINDOW_MS = 60 * 60 * 1000;
+
 class DriverBookingAcceptanceService {
   constructor(pool, bookingRepository, driverRepository, driverJobService) {
     this.pool = pool;
@@ -42,6 +44,20 @@ class DriverBookingAcceptanceService {
     throw new Error('Accepted assignment is missing accepted_at');
   }
 
+  assertWithinStandbyWindow(booking, now = new Date()) {
+    const reference = this.driverJobService.standbyReference
+      ? this.driverJobService.standbyReference(booking)
+      : { referenceTime: booking.scheduled_pickup_at };
+    const referenceMs = parseServiceDateTimeToMs(reference.referenceTime);
+    const nowMs = now instanceof Date ? now.getTime() : Number(now);
+    if (referenceMs == null || !Number.isFinite(nowMs)) {
+      throw this.notAcceptable();
+    }
+    if (nowMs < referenceMs - STANDBY_WINDOW_MS) {
+      throw this.notAcceptable();
+    }
+  }
+
   response(booking, assignment, idempotent) {
     return {
       bookingNumber: booking.booking_number,
@@ -52,7 +68,7 @@ class DriverBookingAcceptanceService {
     };
   }
 
-  async acceptBooking(driverUserId, bookingNumber) {
+  async acceptBooking(driverUserId, bookingNumber, now = new Date()) {
     const normalizedBookingNumber = this.driverJobService.validateBookingNumber(
       bookingNumber,
     );
@@ -91,6 +107,8 @@ class DriverBookingAcceptanceService {
         return result;
       }
       if (assignment.status !== 'ASSIGNED') throw this.notAcceptable();
+
+      this.assertWithinStandbyWindow(booking, now);
 
       assignment = await this.bookingRepository.acceptDriverAssignment(
         conn,

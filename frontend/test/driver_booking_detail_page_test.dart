@@ -7,10 +7,11 @@ import 'package:frontend/features/driver/models/driver_status.dart';
 import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
+import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
 import 'package:geolocator/geolocator.dart';
 
 void main() {
-  testWidgets('shows confirm trip and release actions when assigned', (
+  testWidgets('shows standby confirmation and release actions when assigned', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -18,7 +19,7 @@ void main() {
         _FakeDriverApi(
           detail: _booking(
             status: 'DRIVER_ASSIGNED',
-            actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
           ),
         ),
       ),
@@ -26,10 +27,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(
-        FilledButton,
-        '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
-      ),
+      find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
       findsOneWidget,
     );
     expect(
@@ -41,6 +39,41 @@ void main() {
       findsNothing,
     );
   });
+
+  testWidgets(
+    'standby confirmation calls accept endpoint and unlocks start route',
+    (tester) async {
+      final api = _FakeDriverApi(
+        detail: _booking(
+          status: 'DRIVER_ASSIGNED',
+          actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+        ),
+      );
+      await tester.pumpWidget(_wrap(api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, '운행 확정 / ยืนยัน'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(api.acceptCalls, 1);
+      expect(
+        find.widgetWithText(
+          FilledButton,
+          '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('shows loading state', (tester) async {
     final completer = Completer<DriverBooking>();
@@ -288,36 +321,51 @@ void main() {
     expect(locationApi.calls, 0);
   });
 
-  testWidgets('end trip dialog shows known customer payment amount', (
-    tester,
-  ) async {
-    final api = _FakeDriverApi(
-      detail: _booking(status: 'PICKED_UP', actions: ['END_TRIP']),
-    );
-    await tester.pumpWidget(_wrap(api));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'end trip dialog shows known customer payment amount and settlement popup',
+    (tester) async {
+      final api = _FakeDriverApi(
+        detail: _booking(status: 'PICKED_UP', actions: ['END_TRIP']),
+      );
+      final settlementApi = _FakeSettlementApi();
+      await tester.pumpWidget(_wrap(api, settlementApi: settlementApi));
+      await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
-    );
-    await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(
+          FilledButton,
+          '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน',
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(api.endTripCalls, 0);
-    expect(find.text('고객을 목적지에 내려드렸습니까?'), findsOneWidget);
-    expect(find.text('THB 1,300'), findsOneWidget);
-    expect(find.textContaining('기사에게 현장 결제'), findsOneWidget);
+      expect(api.endTripCalls, 0);
+      expect(find.text('고객을 목적지에 내려드렸습니까?'), findsOneWidget);
+      expect(find.text('THB 1,300'), findsWidgets);
+      expect(find.textContaining('기사에게 현장 결제'), findsOneWidget);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง'),
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, '운행 종료 / จบการเดินทาง'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(api.endTripCalls, 1);
-    expect(api.detailCalls, greaterThan(1));
-  });
+      expect(api.endTripCalls, 1);
+      expect(api.detailCalls, greaterThan(1));
+      expect(settlementApi.detailCalls, greaterThanOrEqualTo(1));
+      expect(find.text('정산이 필요합니다'), findsOneWidget);
+      expect(find.text('THB 200'), findsOneWidget);
+      expect(find.text('SCB'), findsOneWidget);
+      expect(find.text('T-Ride'), findsOneWidget);
+      expect(find.text('1234567890'), findsOneWidget);
+      expect(find.text('0999999999'), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.textContaining('송금증 업로드'), findsOneWidget);
+      expect(find.textContaining('신규 배차'), findsOneWidget);
+    },
+  );
 
   testWidgets('hides primary action for completed booking', (tester) async {
     await tester.pumpWidget(
@@ -345,6 +393,76 @@ void main() {
       find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
       findsNothing,
     );
+  });
+
+  testWidgets(
+    'detail shows route map, name board, and total fare without commission',
+    (tester) async {
+      _useTallViewport(tester);
+      await tester.pumpWidget(
+        _wrap(
+          _FakeDriverApi(
+            detail: _booking(
+              status: 'DRIVER_ASSIGNED',
+              actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+              nameSignRequested: true,
+              withCoordinates: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('driverRouteMap')), findsOneWidget);
+      expect(find.text('THB 1,300'), findsWidgets);
+      expect(find.textContaining('네임보드 서비스'), findsOneWidget);
+      expect(find.textContaining('회사에 납부할 수수료'), findsNothing);
+      expect(find.textContaining('기사 예상 수입'), findsNothing);
+    },
+  );
+
+  testWidgets('airport booking shows airport arrival standby reference', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+            standbyReferenceTimeType: 'AIRPORT_ARRIVAL',
+            standbyReferenceTime: '2026-07-01 10:15:00',
+            standbyAllowedAt: '2026-07-01T02:15:00.000Z',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('항공편 도착 기준 시각'), findsOneWidget);
+    expect(find.text('2026-07-01 10:15:00'), findsOneWidget);
+    expect(find.text('2026-07-01T02:15:00.000Z'), findsOneWidget);
+  });
+
+  testWidgets('general booking shows vehicle departure standby reference', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+            standbyReferenceTimeType: 'VEHICLE_DEPARTURE',
+            standbyReferenceTime: '2026-07-01 09:30:00',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('차량 출발 기준 시각'), findsOneWidget);
+    expect(find.text('2026-07-01 09:30:00'), findsWidgets);
   });
 
   testWidgets('hides primary action for no-show booking', (tester) async {
@@ -512,9 +630,12 @@ void main() {
     expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
     expect(find.byIcon(Icons.phone), findsNothing);
 
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+    final messageButton = find.widgetWithText(
+      OutlinedButton,
+      '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
     );
+    await tester.ensureVisible(messageButton);
+    tester.widget<OutlinedButton>(messageButton).onPressed?.call();
     await tester.pumpAndSettle();
 
     expect(find.text('chat:TX202607010001'), findsOneWidget);
@@ -561,6 +682,7 @@ Widget _wrap(
   Widget Function(String bookingNumber)? chatPageBuilder,
   bool showStatusControl = false,
   DriverLocationApiService? locationApi,
+  DriverSettlementApiService? settlementApi,
 }) {
   return MaterialApp(
     home: DriverBookingDetailPage(
@@ -569,6 +691,7 @@ Widget _wrap(
       chatPageBuilder: chatPageBuilder,
       showStatusControl: showStatusControl,
       locationApi: locationApi,
+      settlementApi: settlementApi,
       positionProvider: () async => _position(),
     ),
   );
@@ -585,19 +708,35 @@ DriverBooking _booking({
   String status = 'DRIVER_ASSIGNED',
   List<String> actions = const ['VIEW_DETAILS'],
   String? phone = '+66123456789',
+  String assignmentStatus = 'ASSIGNED',
+  String? standbyReferenceTimeType,
+  String? standbyReferenceTime,
+  String? standbyAllowedAt,
+  bool nameSignRequested = false,
+  bool withCoordinates = false,
 }) {
   return DriverBooking(
     bookingNumber: 'TX202607010001',
     status: status,
+    assignmentStatus: assignmentStatus,
+    scheduledPickupAt: '2026-07-01 09:30:00',
+    standbyReferenceTimeType: standbyReferenceTimeType ?? 'VEHICLE_DEPARTURE',
+    standbyReferenceTime: standbyReferenceTime ?? '2026-07-01 09:30:00',
+    standbyAllowedAt: standbyAllowedAt ?? '2026-07-01T01:30:00.000Z',
     serviceTypeName: 'Airport Pickup',
     pickupDate: '2026-07-01',
     pickupTime: '09:30',
     origin: 'BKK Airport',
     destination: 'Pattaya Hotel',
+    originLatitude: withCoordinates ? 13.69 : null,
+    originLongitude: withCoordinates ? 100.7501 : null,
+    destinationLatitude: withCoordinates ? 12.9236 : null,
+    destinationLongitude: withCoordinates ? 100.8825 : null,
     passengerCount: 2,
     vehicleTypeName: 'SUV',
     customerDisplayName: 'Kim',
     customerPhone: phone,
+    nameSignRequested: nameSignRequested,
     customerPaymentAmount: 1300,
     customerPaymentCurrency: 'THB',
     customerPaymentMethod: 'PAY_DRIVER_AT_DESTINATION',
@@ -634,6 +773,7 @@ class _FakeDriverApi extends DriverApiService {
   bool online;
   int detailCalls = 0;
   int releaseCalls = 0;
+  int acceptCalls = 0;
   int markPickedUpCalls = 0;
   int endTripCalls = 0;
 
@@ -671,6 +811,18 @@ class _FakeDriverApi extends DriverApiService {
   }
 
   @override
+  Future<DriverBooking> confirmStandby(String bookingNumber) async {
+    acceptCalls += 1;
+    if (actionError != null) throw actionError!;
+    _current = _booking(
+      status: 'DRIVER_ASSIGNED',
+      actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+      assignmentStatus: 'ACCEPTED',
+    );
+    return _current;
+  }
+
+  @override
   Future<DriverBooking> startOnRoute(String bookingNumber) async {
     if (actionError != null) throw actionError!;
     _current = _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']);
@@ -703,6 +855,28 @@ class _FakeDriverApi extends DriverApiService {
   @override
   Future<DriverBooking> completeTrip(String bookingNumber) async {
     return endTrip(bookingNumber);
+  }
+}
+
+class _FakeSettlementApi extends DriverSettlementApiService {
+  int detailCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> getSettlement(String bookingNumber) async {
+    detailCalls += 1;
+    return {
+      'bookingNumber': bookingNumber,
+      'commissionStatus': 'PENDING',
+      'companyCommissionAmount': 200,
+      'companyCommissionCurrency': 'THB',
+      'paymentInstructions': {
+        'bankName': 'SCB',
+        'accountName': 'T-Ride',
+        'accountNumber': '1234567890',
+        'promptPayNumber': '0999999999',
+        'promptPayQrImageUrl': '/api/v1/settings/assets/promptPayQr?v=test',
+      },
+    };
   }
 }
 

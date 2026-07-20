@@ -212,6 +212,7 @@ container.register(
       c.get("flightService"),
       c.get("driverRepository"),
       c.get("notificationRepository"),
+      c.get("commissionSettlementService"),
     ),
 );
 container.register(

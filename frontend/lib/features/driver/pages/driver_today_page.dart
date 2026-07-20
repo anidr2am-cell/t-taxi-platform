@@ -141,6 +141,8 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
     return _TodayData(
       jobs: jobs,
       openCalls: openCalls.items,
+      openCallBlockedReason: openCalls.blockedReason,
+      openCallBlockedMessage: openCalls.message,
       settlements: settlements,
     );
   }
@@ -368,6 +370,8 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                   builder: (context, statusSnapshot) {
                     return _OpenCallsSection(
                       calls: openCalls,
+                      blockedReason: data?.openCallBlockedReason,
+                      blockedMessage: data?.openCallBlockedMessage,
                       online: statusSnapshot.data?.online ?? false,
                       hasActiveJob: hasActiveJob,
                       claimingCalls: _claimingCalls,
@@ -505,11 +509,15 @@ class _TodayData {
   const _TodayData({
     required this.jobs,
     required this.openCalls,
+    this.openCallBlockedReason,
+    this.openCallBlockedMessage,
     required this.settlements,
   });
 
   final DriverJobsToday jobs;
   final List<DriverOpenCall> openCalls;
+  final String? openCallBlockedReason;
+  final String? openCallBlockedMessage;
   final Map<String, Map<String, dynamic>> settlements;
 }
 
@@ -524,6 +532,8 @@ String _driverCallText(BuildContext context, String key) {
       'confirmed': 'Assignment confirmed.',
       'empty': 'No available calls.',
       'online_required': 'You can receive calls only when you are online.',
+      'settlement_blocked':
+          'You cannot receive new jobs yet. Please pay the commission and wait for admin review.',
     },
     'ko': {
       'new_arrived': '새 예약이 도착했습니다',
@@ -533,6 +543,7 @@ String _driverCallText(BuildContext context, String key) {
       'confirmed': '배차가 확정되었습니다',
       'empty': '배차 가능한 콜이 없습니다',
       'online_required': '온라인 상태에서만 콜을 받을 수 있습니다',
+      'settlement_blocked': '아직 신규 업무를 받을 수 없습니다. 커미션을 송금하고 관리자 확인을 기다려 주세요.',
     },
     'th': {
       'new_arrived': 'มีการจองใหม่เข้ามา',
@@ -542,6 +553,8 @@ String _driverCallText(BuildContext context, String key) {
       'confirmed': 'ยืนยันการรับงานแล้ว',
       'empty': 'ไม่มีงานที่พร้อมให้รับ',
       'online_required': 'รับงานได้เฉพาะเมื่อออนไลน์เท่านั้น',
+      'settlement_blocked':
+          'ยังไม่สามารถรับงานใหม่ได้ กรุณาชำระค่าคอมมิชชั่นและรอการตรวจสอบจากแอดมิน',
     },
   };
   return values[language]?[key] ?? values['en']![key] ?? key;
@@ -550,6 +563,8 @@ String _driverCallText(BuildContext context, String key) {
 class _OpenCallsSection extends StatelessWidget {
   const _OpenCallsSection({
     required this.calls,
+    this.blockedReason,
+    this.blockedMessage,
     required this.online,
     required this.hasActiveJob,
     required this.claimingCalls,
@@ -557,6 +572,8 @@ class _OpenCallsSection extends StatelessWidget {
   });
 
   final List<DriverOpenCall> calls;
+  final String? blockedReason;
+  final String? blockedMessage;
   final bool online;
   final bool hasActiveJob;
   final Set<String> claimingCalls;
@@ -602,6 +619,16 @@ class _OpenCallsSection extends StatelessWidget {
             Text(
               _driverCallText(context, 'online_required'),
               style: const TextStyle(color: AppTokens.warning),
+            )
+          else if (blockedReason == 'UNPAID_SETTLEMENT')
+            Text(
+              blockedMessage?.trim().isNotEmpty == true
+                  ? blockedMessage!
+                  : _driverCallText(context, 'settlement_blocked'),
+              style: const TextStyle(
+                color: AppTokens.warning,
+                fontWeight: FontWeight.w700,
+              ),
             )
           else if (calls.isEmpty)
             Text(

@@ -665,6 +665,7 @@ class AppLocalizations {
       'driver_logout_confirm_title': 'Log out?',
       'driver_logout_confirm_message': 'You will need to sign in again.',
       'driver_action_start_on_route': 'Start heading to pickup',
+      'driver_action_accept_booking': 'Confirm standby',
       'driver_view_booking_detail': 'View booking',
       'driver_action_mark_arrived': 'Arrived at pickup',
       'driver_action_mark_picked_up': 'Confirm customer boarded',
@@ -676,6 +677,12 @@ class AppLocalizations {
       'driver_confirm_start_on_route_message':
           'Start driving to the pickup location now.',
       'driver_confirm_start_on_route_yes': 'Start heading to pickup',
+      'driver_confirm_accept_booking_title': 'Confirm this trip?',
+      'driver_confirm_accept_booking_message':
+          'You can confirm standby from one hour before pickup. After confirmation, start heading to pickup when ready.',
+      'driver_confirm_accept_booking_yes': 'Confirm standby',
+      'driver_accept_booking_processing': 'Confirming standby',
+      'driver_success_accept_booking': 'Standby confirmed',
       'driver_release_assignment': 'Release trip',
       'driver_release_assignment_title': 'Release trip',
       'driver_release_assignment_message': 'Do you want to release this trip?',
@@ -751,6 +758,16 @@ class AppLocalizations {
           'The trip has ended. You cannot receive new calls until settlement is confirmed.',
       'driver_trip_completed_info':
           'Settlement confirmed. This trip is complete.',
+      'driver_standby_status': 'Standby',
+      'driver_standby_confirmed': 'Confirmed',
+      'driver_standby_airport_reference': 'Airport arrival reference',
+      'driver_standby_departure_reference': 'Vehicle departure reference',
+      'driver_standby_available_from': 'Standby available from',
+      'driver_name_sign_required':
+          'Name-board service requested. Prepare the placard before meeting the customer.',
+      'driver_settlement_popup_title': 'Settlement required',
+      'driver_settlement_popup_message':
+          'The trip is ended. Pay the company commission, then upload the transfer slip from settlement detail.',
       'driver_action_scan_boarding': 'Scan boarding QR',
       'driver_action_scan_dropoff': 'Scan dropoff QR',
       'driver_job_assigned_hint': 'Head to pickup when ready',
@@ -4453,6 +4470,7 @@ class AppLocalizations {
     'driver_logout_confirm_message':
         '다시 로그인해야 합니다.\n(ต้องเข้าสู่ระบบใหม่อีกครั้ง)',
     'driver_action_start_on_route': '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+    'driver_action_accept_booking': '운행 확정 / ยืนยันการรับงาน',
     'driver_view_booking_detail': '예약 상세 보기 / ดูรายละเอียดการจอง',
     'driver_action_mark_arrived': '픽업 장소 도착 / ถึงจุดรับแล้ว',
     'driver_action_mark_picked_up': '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว',
@@ -4463,6 +4481,12 @@ class AppLocalizations {
     'driver_confirm_start_on_route_title': '픽업 장소로 이동을 시작할까요?',
     'driver_confirm_start_on_route_message': '지금 픽업 장소로 이동을 시작합니다.',
     'driver_confirm_start_on_route_yes': '이동 시작 / เริ่มเดินทาง',
+    'driver_confirm_accept_booking_title': '운행을 확정할까요?',
+    'driver_confirm_accept_booking_message':
+        '픽업 기준 1시간 전부터 운행 확정이 가능합니다. 확정 후 준비되면 픽업 장소로 이동하세요.',
+    'driver_confirm_accept_booking_yes': '운행 확정 / ยืนยัน',
+    'driver_accept_booking_processing': '운행을 확정하고 있습니다\n(กำลังยืนยันงาน)',
+    'driver_success_accept_booking': '운행이 확정되었습니다\n(ยืนยันงานแล้ว)',
     'driver_release_assignment': '운행 포기 / ยกเลิกการรับงาน',
     'driver_release_assignment_title': '운행 포기',
     'driver_release_assignment_message': '운행을 포기하시겠습니까?',
@@ -4536,6 +4560,18 @@ class AppLocalizations {
     'driver_trip_settlement_pending_info':
         '운행이 종료되었습니다. 정산 처리가 완료될 때까지 신규 배차를 받을 수 없습니다.',
     'driver_trip_completed_info': '정산이 확인되어 운행이 완료되었습니다.',
+    'driver_standby_status': '운행 확정\n(ยืนยันงาน)',
+    'driver_standby_confirmed': '확정됨\n(ยืนยันแล้ว)',
+    'driver_standby_airport_reference':
+        '항공편 도착 기준 시각\n(เวลาอ้างอิงเที่ยวบินถึง)',
+    'driver_standby_departure_reference':
+        '차량 출발 기준 시각\n(เวลาอ้างอิงออกเดินทาง)',
+    'driver_standby_available_from': '운행 확정 가능 시간\n(ยืนยันได้ตั้งแต่)',
+    'driver_name_sign_required':
+        '네임보드 서비스가 신청되었습니다. 고객 미팅 전 피켓을 준비하세요.\n(ลูกค้าเลือกบริการป้ายชื่อ กรุณาเตรียมป้ายก่อนพบลูกค้า)',
+    'driver_settlement_popup_title': '정산이 필요합니다',
+    'driver_settlement_popup_message':
+        '운행이 종료되었습니다. 회사 수수료를 송금한 뒤 정산 상세에서 송금증을 업로드하세요.',
     'driver_action_scan_boarding': '탑승 QR 스캔 / สแกน QR ขึ้นรถ',
     'driver_action_scan_dropoff': '하차 QR 스캔 / สแกน QR ลงรถ',
     'driver_job_assigned_hint':
