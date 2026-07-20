@@ -134,15 +134,25 @@ class _BookingListScreenState extends State<BookingListScreen> {
               final booking = bookings.items[index];
               return BookingListItem(
                 booking: booking,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => BookingDetailScreen(
-                      bookingNumber: booking.bookingNumber,
-                      repository: widget.repository,
-                      onUnauthorized: widget.onUnauthorized,
+                onTap: () async {
+                  final shouldRefresh = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => BookingDetailScreen(
+                        bookingNumber: booking.bookingNumber,
+                        repository: widget.repository,
+                        onUnauthorized: widget.onUnauthorized,
+                        onAccepted: () {
+                          if (mounted) {
+                            _load();
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                  if (shouldRefresh == true && mounted) {
+                    await _load();
+                  }
+                },
               );
             },
           ),

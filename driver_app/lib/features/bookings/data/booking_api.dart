@@ -5,6 +5,7 @@ import '../../../core/storage/secure_token_storage.dart';
 abstract interface class BookingDataSource {
   Future<Map<String, dynamic>> getTodayBookings();
   Future<Map<String, dynamic>> getBookingDetail(String bookingNumber);
+  Future<Map<String, dynamic>> acceptBooking(String bookingNumber);
 }
 
 class BookingApi implements BookingDataSource {
@@ -25,13 +26,27 @@ class BookingApi implements BookingDataSource {
 
   @override
   Future<Map<String, dynamic>> getBookingDetail(String bookingNumber) async {
+    final safeNumber = _validatedBookingNumber(bookingNumber);
+    return _client.getJson(
+      '/api/v1/driver/bookings/${Uri.encodeComponent(safeNumber)}',
+      bearerToken: await _accessToken(),
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> acceptBooking(String bookingNumber) async {
+    final safeNumber = _validatedBookingNumber(bookingNumber);
+    return _client.postJson(
+      '/api/v1/driver/bookings/${Uri.encodeComponent(safeNumber)}/accept',
+      bearerToken: await _accessToken(),
+    );
+  }
+
+  String _validatedBookingNumber(String bookingNumber) {
     if (!RegExp(r'^TX\d{12}$').hasMatch(bookingNumber)) {
       throw const ApiException(ApiFailureKind.invalidResponse);
     }
-    return _client.getJson(
-      '/api/v1/driver/bookings/$bookingNumber',
-      bearerToken: await _accessToken(),
-    );
+    return bookingNumber;
   }
 
   Future<String> _accessToken() async {

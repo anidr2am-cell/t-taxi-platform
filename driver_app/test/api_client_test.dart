@@ -31,6 +31,84 @@ void main() {
     );
   });
 
+  test('converts 403 into forbidden', () async {
+    final client = ApiClient(
+      config: config,
+      httpClient: MockClient(
+        (_) async =>
+            http.Response('{"success":false,"error_code":"FORBIDDEN"}', 403),
+      ),
+    );
+    await expectLater(
+      client.getJson('/api/v1/auth/me', bearerToken: 'token'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.kind,
+          'kind',
+          ApiFailureKind.forbidden,
+        ),
+      ),
+    );
+  });
+
+  test('converts 404 into notFound', () async {
+    final client = ApiClient(
+      config: config,
+      httpClient: MockClient(
+        (_) async => http.Response(
+          '{"success":false,"error_code":"BOOKING_NOT_FOUND"}',
+          404,
+        ),
+      ),
+    );
+    await expectLater(
+      client.postJson('/api/v1/driver/bookings/TX209912319999/accept'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.kind,
+          'kind',
+          ApiFailureKind.notFound,
+        ),
+      ),
+    );
+  });
+
+  test('converts 409 into conflict', () async {
+    final client = ApiClient(
+      config: config,
+      httpClient: MockClient(
+        (_) async => http.Response(
+          '{"success":false,"error_code":"BOOKING_NOT_ACCEPTABLE"}',
+          409,
+        ),
+      ),
+    );
+    await expectLater(
+      client.postJson('/api/v1/driver/bookings/TX209912319999/accept'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.kind,
+          'kind',
+          ApiFailureKind.conflict,
+        ),
+      ),
+    );
+  });
+
+  test('allows POST without a JSON body', () async {
+    late http.Request request;
+    final client = ApiClient(
+      config: config,
+      httpClient: MockClient((incoming) async {
+        request = incoming;
+        return http.Response('{"success":true,"data":{}}', 200);
+      }),
+    );
+    await client.postJson('/api/v1/driver/bookings/TX209912319999/accept');
+    expect(request.method, 'POST');
+    expect(request.body, isEmpty);
+  });
+
   test('converts malformed JSON into invalidResponse', () async {
     final client = ApiClient(
       config: config,

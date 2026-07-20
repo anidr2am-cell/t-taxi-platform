@@ -20,14 +20,14 @@ class ApiClient {
 
   Future<Map<String, dynamic>> postJson(
     String path, {
-    required Map<String, dynamic> body,
+    Map<String, dynamic>? body,
     String? bearerToken,
   }) async {
     return _request(
       () => _httpClient.post(
         _endpoint(path),
         headers: _headers(bearerToken),
-        body: jsonEncode(body),
+        body: body == null ? null : jsonEncode(body),
       ),
     );
   }
@@ -68,9 +68,30 @@ class ApiClient {
         return decoded;
       }
       final errorCode = decoded['error_code'] as String?;
-      if (response.statusCode == 401 || response.statusCode == 403) {
+      if (response.statusCode == 401) {
         throw ApiException(
           ApiFailureKind.unauthorized,
+          statusCode: response.statusCode,
+          errorCode: errorCode,
+        );
+      }
+      if (response.statusCode == 403) {
+        throw ApiException(
+          ApiFailureKind.forbidden,
+          statusCode: response.statusCode,
+          errorCode: errorCode,
+        );
+      }
+      if (response.statusCode == 404) {
+        throw ApiException(
+          ApiFailureKind.notFound,
+          statusCode: response.statusCode,
+          errorCode: errorCode,
+        );
+      }
+      if (response.statusCode == 409) {
+        throw ApiException(
+          ApiFailureKind.conflict,
           statusCode: response.statusCode,
           errorCode: errorCode,
         );

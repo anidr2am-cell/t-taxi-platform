@@ -9,6 +9,8 @@ import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/auth/data/auth_repository.dart';
 import 'package:tride_driver/features/auth/presentation/auth_controller.dart';
+import 'package:tride_driver/features/bookings/data/booking_models.dart';
+import 'package:tride_driver/features/bookings/presentation/booking_accept_controller.dart';
 import 'package:tride_driver/features/bookings/presentation/booking_detail_screen.dart';
 import 'package:tride_driver/features/bookings/presentation/booking_list_screen.dart';
 
@@ -31,6 +33,27 @@ Future<void> pumpBookingList(
   );
 }
 
+Future<void> pumpDetail(
+  WidgetTester tester,
+  FakeBookingReader reader, {
+  BookingAcceptController? acceptController,
+  Future<void> Function()? onUnauthorized,
+  VoidCallback? onAccepted,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: BookingDetailScreen(
+        bookingNumber: 'TX209912319999',
+        repository: reader,
+        onUnauthorized: onUnauthorized ?? () async {},
+        onAccepted: onAccepted,
+        acceptController: acceptController,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('shows list loading state', (tester) async {
     final reader = FakeBookingReader()..listCompleter = Completer();
@@ -43,7 +66,7 @@ void main() {
     await pumpBookingList(tester, FakeBookingReader());
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
-    expect(find.text('TX202607180001'), findsOneWidget);
+    expect(find.text('TX209912319999'), findsOneWidget);
     expect(find.text('기사 배정'), findsOneWidget);
     expect(find.text('예상 수입 THB 900'), findsOneWidget);
   });
@@ -78,7 +101,7 @@ void main() {
     await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
-    expect(find.text('TX202607180001'), findsOneWidget);
+    expect(find.text('TX209912319999'), findsOneWidget);
 
     reader.listError = const ApiException(ApiFailureKind.unavailable);
     await tester.tap(find.byKey(const Key('refreshButton')));
@@ -86,14 +109,14 @@ void main() {
 
     expect(find.byKey(const Key('bookingListError')), findsOneWidget);
     expect(find.byKey(const Key('bookingListSuccess')), findsNothing);
-    expect(find.text('TX202607180001'), findsNothing);
+    expect(find.text('TX209912319999'), findsNothing);
 
     reader.listError = null;
     await tester.tap(find.byKey(const Key('bookingListRetryButton')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
-    expect(find.text('TX202607180001'), findsOneWidget);
+    expect(find.text('TX209912319999'), findsOneWidget);
     expect(reader.listCount, 3);
   });
 
@@ -112,11 +135,11 @@ void main() {
     final reader = FakeBookingReader()..detailCompleter = Completer();
     await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('booking-TX202607180001')));
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const Key('detailLoading')), findsOneWidget);
-    expect(reader.requestedBookingNumber, 'TX202607180001');
+    expect(reader.requestedBookingNumber, 'TX209912319999');
   });
 
   testWidgets('detail success displays read-only operational fields', (
@@ -124,7 +147,7 @@ void main() {
   ) async {
     await pumpBookingList(tester, FakeBookingReader());
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('booking-TX202607180001')));
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
     expect(find.text('운행 정보'), findsOneWidget);
@@ -143,7 +166,7 @@ void main() {
       ..detailError = const ApiException(ApiFailureKind.server);
     await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('booking-TX202607180001')));
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('detailError')), findsOneWidget);
 
@@ -159,13 +182,13 @@ void main() {
   ) async {
     final reader = FakeBookingReader()
       ..detailError = const ApiException(
-        ApiFailureKind.unknown,
+        ApiFailureKind.notFound,
         statusCode: 404,
         errorCode: 'BOOKING_NOT_FOUND',
       );
     await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('booking-TX202607180001')));
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
     expect(find.text('이 예약은 더 이상 배정 내역에서 확인할 수 없습니다.'), findsOneWidget);
     await tester.tap(find.byKey(const Key('detailBackButton')));
@@ -183,7 +206,7 @@ void main() {
       MaterialApp(
         home: BookingDetailScreen(
           key: screenKey,
-          bookingNumber: 'TX202607180001',
+          bookingNumber: 'TX209912319999',
           repository: successReader,
           onUnauthorized: () async {},
         ),
@@ -191,11 +214,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
-    expect(find.text('TX202607180001'), findsOneWidget);
+    expect(find.text('TX209912319999'), findsOneWidget);
 
     final missingReader = FakeBookingReader()
       ..detailError = const ApiException(
-        ApiFailureKind.unknown,
+        ApiFailureKind.notFound,
         statusCode: 404,
         errorCode: 'BOOKING_NOT_FOUND',
       );
@@ -203,7 +226,7 @@ void main() {
       MaterialApp(
         home: BookingDetailScreen(
           key: screenKey,
-          bookingNumber: 'TX202607180001',
+          bookingNumber: 'TX209912319999',
           repository: missingReader,
           onUnauthorized: () async {},
         ),
@@ -213,7 +236,7 @@ void main() {
 
     expect(find.byKey(const Key('detailError')), findsOneWidget);
     expect(find.byKey(const Key('detailSuccess')), findsNothing);
-    expect(find.text('TX202607180001'), findsNothing);
+    expect(find.text('TX209912319999'), findsNothing);
     expect(find.byKey(const Key('detailBackButton')), findsOneWidget);
     expect(missingReader.detailCount, 1);
   });
@@ -262,7 +285,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('booking-TX202607180001')));
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
 
     expect(find.text('기사 로그인'), findsOneWidget);
@@ -283,5 +306,172 @@ void main() {
     await tester.tap(find.byKey(const Key('logoutButton')));
     await tester.pump();
     expect(logoutCount, 1);
+  });
+
+  testWidgets('shows accept button only for DRIVER_ASSIGNED + ASSIGNED', (
+    tester,
+  ) async {
+    await pumpDetail(tester, FakeBookingReader());
+    expect(find.byKey(const Key('acceptBookingButton')), findsOneWidget);
+
+    await pumpDetail(
+      tester,
+      FakeBookingReader()
+        ..detailResult = bookingDetail(assignmentStatus: 'ACCEPTED'),
+    );
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+
+    await pumpDetail(
+      tester,
+      FakeBookingReader()..detailResult = bookingDetail(assignmentStatus: null),
+    );
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+
+    await pumpDetail(
+      tester,
+      FakeBookingReader()
+        ..detailResult = bookingDetail(assignmentStatus: 'FUTURE_STATUS'),
+    );
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+
+    await pumpDetail(
+      tester,
+      FakeBookingReader()
+        ..detailResult = bookingDetail(
+          status: 'COMPLETED',
+          assignmentStatus: 'ASSIGNED',
+        ),
+    );
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+  });
+
+  testWidgets('accept button opens confirm dialog without API call', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader();
+    await pumpDetail(tester, reader);
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('acceptConfirmDialog')), findsOneWidget);
+    expect(reader.acceptCount, 0);
+  });
+
+  testWidgets('dialog cancel does not call accept API', (tester) async {
+    final reader = FakeBookingReader();
+    await pumpDetail(tester, reader);
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptCancelButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('acceptConfirmDialog')), findsNothing);
+    expect(reader.acceptCount, 0);
+  });
+
+  testWidgets('dialog confirm calls accept once and removes button', (
+    tester,
+  ) async {
+    var refreshCount = 0;
+    final reader = FakeBookingReader()
+      ..acceptResult = BookingAcceptance.fromEnvelope(acceptanceEnvelope())
+      ..detailResult = bookingDetail();
+    await pumpDetail(tester, reader, onAccepted: () => refreshCount++);
+    reader.detailResult = bookingDetail(assignmentStatus: 'ACCEPTED');
+
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(reader.acceptCount, 1);
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+    expect(find.text('예약을 수락했습니다.'), findsOneWidget);
+    expect(refreshCount, 1);
+  });
+
+  testWidgets('rapid taps still result in a single accept call', (
+    tester,
+  ) async {
+    final completer = Completer<BookingAcceptance>();
+    final reader = FakeBookingReader()
+      ..acceptCompleter = completer
+      ..detailResult = bookingDetail();
+    final controller = BookingAcceptController(reader);
+    await pumpDetail(tester, reader, acceptController: controller);
+
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
+    await tester.pump();
+    expect(find.byKey(const Key('acceptBookingLoading')), findsOneWidget);
+    expect(reader.acceptCount, 1);
+
+    completer.complete(BookingAcceptance.fromEnvelope(acceptanceEnvelope()));
+    reader.detailResult = bookingDetail(assignmentStatus: 'ACCEPTED');
+    await tester.pumpAndSettle();
+    expect(reader.acceptCount, 1);
+  });
+
+  testWidgets('403 keeps detail open and shows admin guidance', (tester) async {
+    final reader = FakeBookingReader()
+      ..acceptError = const ApiException(ApiFailureKind.forbidden);
+    await pumpDetail(tester, reader);
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
+    expect(find.byKey(const Key('acceptBookingButton')), findsOneWidget);
+    expect(find.textContaining('관리자에게 문의해 주세요'), findsOneWidget);
+  });
+
+  testWidgets('404 closes detail and refreshes list', (tester) async {
+    final reader = FakeBookingReader()
+      ..acceptError = const ApiException(ApiFailureKind.notFound);
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    final listLoadsBefore = reader.listCount;
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+    expect(reader.listCount, greaterThan(listLoadsBefore));
+  });
+
+  testWidgets('timeout then ACCEPTED detail becomes success with one POST', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..acceptError = const ApiException(ApiFailureKind.timeout)
+      ..detailResult = bookingDetail();
+    await pumpDetail(tester, reader);
+    reader.detailResult = bookingDetail(assignmentStatus: 'ACCEPTED');
+
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(reader.acceptCount, 1);
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+    expect(find.text('예약을 수락했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('dispose during accept does not throw', (tester) async {
+    final completer = Completer<BookingAcceptance>();
+    final reader = FakeBookingReader()..acceptCompleter = completer;
+    await pumpDetail(tester, reader);
+    await tester.tap(find.byKey(const Key('acceptBookingButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
+    await tester.pump();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    completer.complete(BookingAcceptance.fromEnvelope(acceptanceEnvelope()));
+    await tester.pump();
   });
 }

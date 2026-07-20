@@ -72,7 +72,6 @@ void main() {
             MockClient((incoming) async {
               request = incoming;
               return http.Response.bytes(
-                // This fixture is generated locally and contains no live data.
                 utf8.encode(responseBody),
                 200,
                 headers: {'content-type': 'application/json; charset=utf-8'},
@@ -83,13 +82,96 @@ void main() {
         ),
       );
 
-      final result = await repository.getBookingDetail('TX202607180001');
+      final result = await repository.getBookingDetail('TX209912319999');
 
       expect(request.method, 'GET');
-      expect(request.url.path, '/api/v1/driver/bookings/TX202607180001');
-      expect(result.summary.bookingNumber, 'TX202607180001');
+      expect(request.url.path, '/api/v1/driver/bookings/TX209912319999');
+      expect(result.summary.bookingNumber, 'TX209912319999');
+      expect(result.summary.assignmentStatus.isAssigned, isTrue);
     },
   );
+
+  test('accept API posts without body and parses success', () async {
+    final requests = <http.Request>[];
+    final repository = BookingRepository(
+      BookingApi(
+        client: client(
+          MockClient((incoming) async {
+            requests.add(incoming);
+            return http.Response(jsonEncode(acceptanceEnvelope()), 200);
+          }),
+        ),
+        storage: storage(),
+      ),
+    );
+
+    final result = await repository.acceptBooking('TX209912319999');
+
+    expect(requests, hasLength(1));
+    expect(requests.single.method, 'POST');
+    expect(
+      requests.single.url.path,
+      '/api/v1/driver/bookings/TX209912319999/accept',
+    );
+    expect(requests.single.headers['authorization'], 'Bearer fixture-token');
+    expect(requests.single.body, isEmpty);
+    expect(result.assignmentStatus.isAccepted, isTrue);
+    expect(result.idempotent, isFalse);
+  });
+
+  test('accept API parses idempotent success without retry', () async {
+    var requestCount = 0;
+    final repository = BookingRepository(
+      BookingApi(
+        client: client(
+          MockClient((_) async {
+            requestCount++;
+            return http.Response(
+              jsonEncode(acceptanceEnvelope(idempotent: true)),
+              200,
+            );
+          }),
+        ),
+        storage: storage(),
+      ),
+    );
+
+    final result = await repository.acceptBooking('TX209912319999');
+    expect(result.idempotent, isTrue);
+    expect(requestCount, 1);
+  });
+
+  for (final entry in {
+    401: ApiFailureKind.unauthorized,
+    403: ApiFailureKind.forbidden,
+    404: ApiFailureKind.notFound,
+    409: ApiFailureKind.conflict,
+    500: ApiFailureKind.server,
+  }.entries) {
+    test('accept maps HTTP ${entry.key} to ${entry.value}', () async {
+      final api = BookingApi(
+        client: client(
+          MockClient(
+            (_) async => http.Response(
+              '{"success":false,"error_code":"TEST"}',
+              entry.key,
+            ),
+          ),
+        ),
+        storage: storage(),
+      );
+      await expectLater(
+        api.acceptBooking('TX209912319999'),
+        throwsA(
+          isA<ApiException>().having(
+            (error) => error.kind,
+            'kind',
+            entry.value,
+          ),
+        ),
+      );
+    });
+  }
 
   test('401 remains unauthorized for auth-expiry handling', () async {
     final api = BookingApi(
@@ -143,7 +225,7 @@ void main() {
       storage: tokenStorage,
     );
     await expectLater(
-      api.getTodayBookings(),
+      api.acceptBooking('TX209912319999'),
       throwsA(
         isA<ApiException>().having(
           (error) => error.kind,
@@ -154,6 +236,30 @@ void main() {
     );
     expect(tokenStorage.clearCount, 0);
     expect(tokenStorage.tokens, isNotNull);
+  });
+
+  test('connection lost maps to unavailable without retry', () async {
+    var requestCount = 0;
+    final api = BookingApi(
+      client: client(
+        MockClient((_) async {
+          requestCount++;
+          throw http.ClientException('socket closed');
+        }),
+      ),
+      storage: storage(),
+    );
+    await expectLater(
+      api.acceptBooking('TX209912319999'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.kind,
+          'kind',
+          ApiFailureKind.unavailable,
+        ),
+      ),
+    );
+    expect(requestCount, 1);
   });
 
   test('malformed API response is rejected', () async {
