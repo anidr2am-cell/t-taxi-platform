@@ -670,6 +670,54 @@ void main() {
     expect(find.textContaining('+66'), findsNothing);
   });
 
+  testWidgets('today page shows settlement blocked new-call guidance', (
+    tester,
+  ) async {
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      openCallBlockedReason: 'UNPAID_SETTLEMENT',
+      openCallBlockedMessage:
+          'ยังไม่สามารถรับงานใหม่ได้ กรุณาชำระค่าคอมมิชชั่นและรอการตรวจสอบจากแอดมิน',
+    );
+    await tester.pumpWidget(
+      const MaterialApp(locale: Locale('th'), home: SizedBox.shrink()),
+    );
+    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('ยังไม่สามารถรับงานใหม่ได้'), findsOneWidget);
+    expect(find.textContaining('Claim call'), findsNothing);
+  });
+
+  testWidgets('today settlement blocked guidance has no overflow at 360px', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('th'),
+        home: DriverTodayPage(
+          api: _FakeJobsApi(
+            initialToken: 'tok',
+            online: true,
+            openCallBlockedReason: 'UNPAID_SETTLEMENT',
+            openCallBlockedMessage:
+                'ยังไม่สามารถรับงานใหม่ได้ กรุณาชำระค่าคอมมิชชั่นและรอการตรวจสอบจากแอดมิน',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('ยังไม่สามารถรับงานใหม่ได้'), findsOneWidget);
+  });
+
   testWidgets('today page claim open call success refreshes jobs', (
     tester,
   ) async {
@@ -979,6 +1027,8 @@ class _FakeJobsApi extends DriverApiService {
   _FakeJobsApi({
     this.jobs,
     this.openCalls = const [],
+    this.openCallBlockedReason,
+    this.openCallBlockedMessage,
     this.error,
     this.claimError,
     this.hasActiveJob = false,
@@ -988,6 +1038,8 @@ class _FakeJobsApi extends DriverApiService {
 
   DriverJobsToday? jobs;
   final List<DriverOpenCall> openCalls;
+  final String? openCallBlockedReason;
+  final String? openCallBlockedMessage;
   final Object? error;
   final Object? claimError;
   final bool hasActiveJob;
@@ -1024,7 +1076,11 @@ class _FakeJobsApi extends DriverApiService {
 
   @override
   Future<DriverOpenCalls> getOpenCalls() async {
-    return DriverOpenCalls(items: openCalls);
+    return DriverOpenCalls(
+      items: openCalls,
+      blockedReason: openCallBlockedReason,
+      message: openCallBlockedMessage,
+    );
   }
 
   @override

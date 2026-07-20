@@ -11,6 +11,7 @@ import '../../driver_location/services/driver_location_api_service.dart';
 import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
+import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../driver_trip_flow.dart';
@@ -434,6 +435,19 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                             ),
                           ] else if (booking.standbyAllowedAt?.isNotEmpty ==
                               true) ...[
+                            AppUi.summaryRow(
+                              label:
+                                  booking.standbyReferenceTimeType ==
+                                      'AIRPORT_ARRIVAL'
+                                  ? l10n.t('driver_standby_airport_reference')
+                                  : l10n.t(
+                                      'driver_standby_departure_reference',
+                                    ),
+                              value:
+                                  booking.standbyReferenceTime ??
+                                  booking.scheduledPickupAt ??
+                                  '${booking.pickupDate} ${booking.pickupTime}',
+                            ),
                             AppUi.summaryRow(
                               label: l10n.t('driver_standby_available_from'),
                               value: booking.standbyAllowedAt!,
@@ -996,6 +1010,7 @@ class _SettlementPromptDialog extends StatelessWidget {
     final currency =
         detail['companyCommissionCurrency'] as String? ??
         detail['currency'] as String?;
+    final promptPayQrImageUrl = payment['promptPayQrImageUrl'] as String?;
     return AlertDialog(
       title: Text(l10n.t('driver_settlement_popup_title')),
       content: SingleChildScrollView(
@@ -1019,6 +1034,11 @@ class _SettlementPromptDialog extends StatelessWidget {
                   label: l10n.t('admin_settings_bank_name'),
                   value: payment['bankName'] as String,
                 ),
+              if ((payment['accountName'] as String? ?? '').isNotEmpty)
+                AppUi.summaryRow(
+                  label: l10n.t('admin_settings_account_name'),
+                  value: payment['accountName'] as String,
+                ),
               if ((payment['accountNumber'] as String? ?? '').isNotEmpty)
                 AppUi.summaryRow(
                   label: l10n.t('admin_settings_account_number'),
@@ -1029,7 +1049,24 @@ class _SettlementPromptDialog extends StatelessWidget {
                   label: 'PromptPay',
                   value: payment['promptPayNumber'] as String,
                 ),
+              if (promptPayQrImageUrl != null &&
+                  promptPayQrImageUrl.isNotEmpty) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                Image.network(
+                  const PlatformSettingsApiService()
+                      .assetUri(promptPayQrImageUrl)
+                      .toString(),
+                  height: 180,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ],
             ],
+            const SizedBox(height: AppTokens.spaceMd),
+            Text(
+              l10n.t('driver_settlement_next_job_notice'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ],
         ),
       ),
@@ -1041,7 +1078,7 @@ class _SettlementPromptDialog extends StatelessWidget {
         FilledButton.icon(
           onPressed: onOpenDetail,
           icon: const Icon(Icons.receipt_long_outlined),
-          label: Text(l10n.t('driver_view_settlement')),
+          label: Text(l10n.t('driver_settlement_upload')),
         ),
       ],
     );

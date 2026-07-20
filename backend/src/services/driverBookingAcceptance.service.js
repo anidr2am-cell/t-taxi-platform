@@ -45,12 +45,15 @@ class DriverBookingAcceptanceService {
   }
 
   assertWithinStandbyWindow(booking, now = new Date()) {
-    const pickupMs = parseServiceDateTimeToMs(booking.scheduled_pickup_at);
+    const reference = this.driverJobService.standbyReference
+      ? this.driverJobService.standbyReference(booking)
+      : { referenceTime: booking.scheduled_pickup_at };
+    const referenceMs = parseServiceDateTimeToMs(reference.referenceTime);
     const nowMs = now instanceof Date ? now.getTime() : Number(now);
-    if (pickupMs == null || !Number.isFinite(nowMs)) {
+    if (referenceMs == null || !Number.isFinite(nowMs)) {
       throw this.notAcceptable();
     }
-    if (nowMs < pickupMs - STANDBY_WINDOW_MS) {
+    if (nowMs < referenceMs - STANDBY_WINDOW_MS) {
       throw this.notAcceptable();
     }
   }

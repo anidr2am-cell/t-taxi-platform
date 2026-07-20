@@ -778,6 +778,7 @@ class _DriverSettlementDetailPageState
                 const PlatformSettingsApiService().assetUri(qrPath).toString(),
                 height: 220,
                 fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
           const SizedBox(height: AppTokens.spaceSm),

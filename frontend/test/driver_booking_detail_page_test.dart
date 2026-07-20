@@ -358,6 +358,12 @@ void main() {
       expect(find.text('정산이 필요합니다'), findsOneWidget);
       expect(find.text('THB 200'), findsOneWidget);
       expect(find.text('SCB'), findsOneWidget);
+      expect(find.text('T-Ride'), findsOneWidget);
+      expect(find.text('1234567890'), findsOneWidget);
+      expect(find.text('0999999999'), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.textContaining('송금증 업로드'), findsOneWidget);
+      expect(find.textContaining('신규 배차'), findsOneWidget);
     },
   );
 
@@ -414,6 +420,50 @@ void main() {
       expect(find.textContaining('기사 예상 수입'), findsNothing);
     },
   );
+
+  testWidgets('airport booking shows airport arrival standby reference', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+            standbyReferenceTimeType: 'AIRPORT_ARRIVAL',
+            standbyReferenceTime: '2026-07-01 10:15:00',
+            standbyAllowedAt: '2026-07-01T02:15:00.000Z',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('항공편 도착 기준 시각'), findsOneWidget);
+    expect(find.text('2026-07-01 10:15:00'), findsOneWidget);
+    expect(find.text('2026-07-01T02:15:00.000Z'), findsOneWidget);
+  });
+
+  testWidgets('general booking shows vehicle departure standby reference', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+            standbyReferenceTimeType: 'VEHICLE_DEPARTURE',
+            standbyReferenceTime: '2026-07-01 09:30:00',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('차량 출발 기준 시각'), findsOneWidget);
+    expect(find.text('2026-07-01 09:30:00'), findsWidgets);
+  });
 
   testWidgets('hides primary action for no-show booking', (tester) async {
     await tester.pumpWidget(
@@ -580,9 +630,12 @@ void main() {
     expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
     expect(find.byIcon(Icons.phone), findsNothing);
 
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
+    final messageButton = find.widgetWithText(
+      OutlinedButton,
+      '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
     );
+    await tester.ensureVisible(messageButton);
+    tester.widget<OutlinedButton>(messageButton).onPressed?.call();
     await tester.pumpAndSettle();
 
     expect(find.text('chat:TX202607010001'), findsOneWidget);
@@ -656,6 +709,9 @@ DriverBooking _booking({
   List<String> actions = const ['VIEW_DETAILS'],
   String? phone = '+66123456789',
   String assignmentStatus = 'ASSIGNED',
+  String? standbyReferenceTimeType,
+  String? standbyReferenceTime,
+  String? standbyAllowedAt,
   bool nameSignRequested = false,
   bool withCoordinates = false,
 }) {
@@ -664,7 +720,9 @@ DriverBooking _booking({
     status: status,
     assignmentStatus: assignmentStatus,
     scheduledPickupAt: '2026-07-01 09:30:00',
-    standbyAllowedAt: '2026-07-01T01:30:00.000Z',
+    standbyReferenceTimeType: standbyReferenceTimeType ?? 'VEHICLE_DEPARTURE',
+    standbyReferenceTime: standbyReferenceTime ?? '2026-07-01 09:30:00',
+    standbyAllowedAt: standbyAllowedAt ?? '2026-07-01T01:30:00.000Z',
     serviceTypeName: 'Airport Pickup',
     pickupDate: '2026-07-01',
     pickupTime: '09:30',
@@ -816,6 +874,7 @@ class _FakeSettlementApi extends DriverSettlementApiService {
         'accountName': 'T-Ride',
         'accountNumber': '1234567890',
         'promptPayNumber': '0999999999',
+        'promptPayQrImageUrl': '/api/v1/settings/assets/promptPayQr?v=test',
       },
     };
   }

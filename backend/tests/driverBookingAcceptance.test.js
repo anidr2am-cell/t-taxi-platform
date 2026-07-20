@@ -91,6 +91,21 @@ function createHarness(overrides = {}) {
       }
       return normalized;
     },
+    standbyReference(row) {
+      if (row.service_type_code === 'AIRPORT_PICKUP') {
+        return {
+          referenceTimeType: 'AIRPORT_ARRIVAL',
+          referenceTime:
+            row.flight_scheduled_arrival_at
+            ?? row.flight_estimated_arrival_at
+            ?? row.scheduled_pickup_at,
+        };
+      }
+      return {
+        referenceTimeType: 'VEHICLE_DEPARTURE',
+        referenceTime: row.scheduled_pickup_at,
+      };
+    },
   };
   const pool = { async getConnection() { return conn; } };
   return {
@@ -232,6 +247,132 @@ test('rejects standby confirmation before the one-hour service window', async ()
   assert.equal(conn.rolledBack, true);
   assert.equal(calls.accepted.length, 0);
   assert.equal(calls.activities.length, 0);
+});
+
+test('accepts general booking at one hour before vehicle departure', async () => {
+  const { service } = createHarness({
+    booking: {
+      id: 10,
+      booking_number: BOOKING_NUMBER,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      service_type_code: 'CITY_TRANSFER',
+      scheduled_pickup_at: '2026-07-18 23:00:00',
+    },
+  });
+
+  const result = await service.acceptBooking(
+    44,
+    BOOKING_NUMBER,
+    new Date('2026-07-18T15:00:00.000Z'),
+  );
+
+  assert.equal(result.assignmentStatus, 'ACCEPTED');
+});
+
+test('rejects general booking one hour and one second before vehicle departure', async () => {
+  const { service } = createHarness({
+    booking: {
+      id: 10,
+      booking_number: BOOKING_NUMBER,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      service_type_code: 'CITY_TRANSFER',
+      scheduled_pickup_at: '2026-07-18 23:00:00',
+    },
+  });
+
+  await assert.rejects(
+    () => service.acceptBooking(
+      44,
+      BOOKING_NUMBER,
+      new Date('2026-07-18T14:59:59.000Z'),
+    ),
+    (error) => error.statusCode === 409
+      && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+  );
+});
+
+test('accepts airport pickup at one hour before airport arrival reference', async () => {
+  const { service } = createHarness({
+    booking: {
+      id: 10,
+      booking_number: BOOKING_NUMBER,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      service_type_code: 'AIRPORT_PICKUP',
+      scheduled_pickup_at: '2026-07-18 05:00:00',
+      flight_scheduled_arrival_at: '2026-07-18 23:00:00',
+    },
+  });
+
+  const result = await service.acceptBooking(
+    44,
+    BOOKING_NUMBER,
+    new Date('2026-07-18T15:00:00.000Z'),
+  );
+
+  assert.equal(result.assignmentStatus, 'ACCEPTED');
+});
+
+test('rejects airport pickup one hour and one second before airport arrival reference', async () => {
+  const { service, calls } = createHarness({
+    booking: {
+      id: 10,
+      booking_number: BOOKING_NUMBER,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      service_type_code: 'AIRPORT_PICKUP',
+      scheduled_pickup_at: '2026-07-18 23:00:00',
+      flight_scheduled_arrival_at: '2026-07-19 00:30:00',
+    },
+  });
+
+  await assert.rejects(
+    () => service.acceptBooking(
+      44,
+      BOOKING_NUMBER,
+      new Date('2026-07-18T16:29:59.000Z'),
+    ),
+    (error) => error.statusCode === 409
+      && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+  );
+  assert.equal(calls.accepted.length, 0);
+});
+
+test('rejects null or invalid standby reference with controlled error', async () => {
+  for (const scheduled_pickup_at of [null, 'not-a-date']) {
+    const { service } = createHarness({
+      booking: {
+        id: 10,
+        booking_number: BOOKING_NUMBER,
+        status: BOOKING_STATUS.DRIVER_ASSIGNED,
+        service_type_code: 'CITY_TRANSFER',
+        scheduled_pickup_at,
+      },
+    });
+    await assert.rejects(
+      () => service.acceptBooking(44, BOOKING_NUMBER, ACCEPT_NOW),
+      (error) => error.statusCode === 409
+        && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+    );
+  }
+});
+
+test('standby validation respects Thailand midnight boundary', async () => {
+  const { service } = createHarness({
+    booking: {
+      id: 10,
+      booking_number: BOOKING_NUMBER,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      service_type_code: 'CITY_TRANSFER',
+      scheduled_pickup_at: '2026-07-19 00:30:00',
+    },
+  });
+
+  const result = await service.acceptBooking(
+    44,
+    BOOKING_NUMBER,
+    new Date('2026-07-18T16:30:00.000Z'),
+  );
+
+  assert.equal(result.assignmentStatus, 'ACCEPTED');
 });
 
 test('idempotent accepted assignment is allowed outside standby window', async () => {

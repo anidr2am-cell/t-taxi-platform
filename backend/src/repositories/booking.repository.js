@@ -380,11 +380,18 @@ class BookingRepository {
       `
         SELECT
           b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
+          b.scheduled_pickup_at,
           b.payment_status, b.payment_method, b.customer_user_id,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           b.dropoff_qr_token_hash, b.dropoff_qr_expires_at, b.dropoff_qr_used_at,
-          d.user_id AS driver_user_id
+          d.user_id AS driver_user_id,
+          st.code AS service_type_code,
+          btd.flight_scheduled_arrival_at,
+          DATE_FORMAT(btd.flight_scheduled_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_scheduled_arrival_at_text,
+          btd.flight_estimated_arrival_at,
+          DATE_FORMAT(btd.flight_estimated_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_estimated_arrival_at_text
         FROM bookings b
+        INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
         LEFT JOIN booking_driver_assignments bda ON bda.id = (
           SELECT bda2.id
           FROM booking_driver_assignments bda2
@@ -398,6 +405,7 @@ class BookingRepository {
           LIMIT 1
         )
         LEFT JOIN drivers d ON d.id = COALESCE(b.driver_id, bda.driver_id) AND d.deleted_at IS NULL
+        LEFT JOIN booking_transfer_details btd ON btd.booking_id = b.id AND btd.deleted_at IS NULL
         WHERE b.booking_number = ? AND b.deleted_at IS NULL AND b.is_archived = 0
         LIMIT 1
         FOR UPDATE
@@ -501,6 +509,8 @@ class BookingRepository {
         bl.golf_bags,
         bl.special_items,
         btd.flight_number,
+        btd.flight_scheduled_arrival_at,
+        DATE_FORMAT(btd.flight_scheduled_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_scheduled_arrival_at_text,
         btd.flight_estimated_arrival_at,
         DATE_FORMAT(btd.flight_estimated_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_estimated_arrival_at_text,
         btd.delay_status,

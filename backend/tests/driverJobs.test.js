@@ -54,6 +54,8 @@ function row(overrides = {}) {
     golf_bags: 0,
     special_items: null,
     flight_number: 'TG409',
+    flight_scheduled_arrival_at: '2026-07-01 09:30:00',
+    flight_scheduled_arrival_at_text: '2026-07-01 09:30:00',
     flight_estimated_arrival_at_text: '2026-07-01 08:55:00',
     delay_status: 'Delayed 10 min',
     delay_minutes: 10,
@@ -223,6 +225,8 @@ test('driver can access assigned booking detail', async () => {
   assert.equal(detail.destinationLatitude, 12.9236);
   assert.equal(detail.destinationLongitude, 100.8825);
   assert.equal(detail.nameSignRequested, true);
+  assert.equal(detail.standbyReferenceTimeType, 'AIRPORT_ARRIVAL');
+  assert.equal(detail.standbyReferenceTime, '2026-07-01 09:30:00');
   assert.equal(detail.standbyAllowedAt, '2026-07-01T01:30:00.000Z');
   assert.equal(detail.passengers.adults, 2);
   assert.equal(detail.luggage.carriers24InchPlus, 2);
@@ -331,6 +335,61 @@ test('driver assigned booking requires acceptance before start route action', ()
     service.mapBase(row({ assignment_status: 'ACCEPTED' })).allowedActions,
     ['VIEW_DETAILS', 'START_ON_ROUTE'],
   );
+});
+
+test('standby reference uses vehicle departure for non-airport pickups', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapBase(row({
+    service_type_code: 'CITY_TRANSFER',
+    flight_scheduled_arrival_at: '2026-07-01 12:30:00',
+    flight_scheduled_arrival_at_text: '2026-07-01 12:30:00',
+    scheduled_pickup_at: '2026-07-01 09:30:00',
+  }));
+
+  assert.equal(mapped.standbyReferenceTimeType, 'VEHICLE_DEPARTURE');
+  assert.equal(mapped.standbyReferenceTime, '2026-07-01 09:30:00');
+  assert.equal(mapped.standbyAllowedAt, '2026-07-01T01:30:00.000Z');
+});
+
+test('standby reference uses airport arrival instead of pickup field', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapBase(row({
+    service_type_code: 'AIRPORT_PICKUP',
+    scheduled_pickup_at: '2026-07-01 05:00:00',
+    flight_scheduled_arrival_at: '2026-07-01 09:30:00',
+    flight_scheduled_arrival_at_text: '2026-07-01 09:30:00',
+  }));
+
+  assert.equal(mapped.standbyReferenceTimeType, 'AIRPORT_ARRIVAL');
+  assert.equal(mapped.standbyReferenceTime, '2026-07-01 09:30:00');
+  assert.equal(mapped.standbyAllowedAt, '2026-07-01T01:30:00.000Z');
+});
+
+test('standby reference falls back to estimated arrival when scheduled arrival is missing', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapBase(row({
+    service_type_code: 'AIRPORT_PICKUP',
+    scheduled_pickup_at: '2026-07-01 05:00:00',
+    flight_scheduled_arrival_at: null,
+    flight_scheduled_arrival_at_text: null,
+    flight_estimated_arrival_at: '2026-07-01 09:45:00',
+    flight_estimated_arrival_at_text: '2026-07-01 09:45:00',
+  }));
+
+  assert.equal(mapped.standbyReferenceTimeType, 'AIRPORT_ARRIVAL');
+  assert.equal(mapped.standbyReferenceTime, '2026-07-01 09:45:00');
+  assert.equal(mapped.standbyAllowedAt, '2026-07-01T01:45:00.000Z');
+});
+
+test('invalid standby reference maps to null allowed time', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapBase(row({
+    service_type_code: 'CITY_TRANSFER',
+    scheduled_pickup_at: 'not-a-date',
+  }));
+
+  assert.equal(mapped.standbyReferenceTimeType, 'VEHICLE_DEPARTURE');
+  assert.equal(mapped.standbyAllowedAt, null);
 });
 
 test('driver job payment summary keeps unsafe expected income nullable', () => {

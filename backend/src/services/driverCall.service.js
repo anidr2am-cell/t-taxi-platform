@@ -83,7 +83,11 @@ class DriverCallService {
         });
       }
       if (await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)) {
-        return { items: [] };
+        return {
+          items: [],
+          blockedReason: 'UNPAID_SETTLEMENT',
+          message: 'ยังไม่สามารถรับงานใหม่ได้ กรุณาชำระค่าคอมมิชชั่นและรอการตรวจสอบจากแอดมิน',
+        };
       }
     }
     const rows = await this.bookingRepository.findOpenDriverCallsForDriver(driverUserId);
@@ -261,11 +265,18 @@ class DriverCallService {
     openCallPayload,
     releasedAssignmentId,
   }) {
-    const drivers = await this.driverRepository.listEligibleForOpenBooking(
+    const candidates = await this.driverRepository.listEligibleForOpenBooking(
       conn,
       booking.vehicle_type_id,
       { excludeReleasedBookingId: booking.id },
     );
+    const drivers = [];
+    for (const driver of candidates) {
+      const blocked = this.commissionSettlementService
+        ? await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)
+        : false;
+      if (!blocked) drivers.push(driver);
+    }
 
     const eventId = randomUUID();
     if (this.notificationRepository) {

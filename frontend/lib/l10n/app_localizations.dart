@@ -760,6 +760,8 @@ class AppLocalizations {
           'Settlement confirmed. This trip is complete.',
       'driver_standby_status': 'Standby',
       'driver_standby_confirmed': 'Confirmed',
+      'driver_standby_airport_reference': 'Airport arrival reference',
+      'driver_standby_departure_reference': 'Vehicle departure reference',
       'driver_standby_available_from': 'Standby available from',
       'driver_name_sign_required':
           'Name-board service requested. Prepare the placard before meeting the customer.',
@@ -4560,6 +4562,10 @@ class AppLocalizations {
     'driver_trip_completed_info': '정산이 확인되어 운행이 완료되었습니다.',
     'driver_standby_status': '운행 확정\n(ยืนยันงาน)',
     'driver_standby_confirmed': '확정됨\n(ยืนยันแล้ว)',
+    'driver_standby_airport_reference':
+        '항공편 도착 기준 시각\n(เวลาอ้างอิงเที่ยวบินถึง)',
+    'driver_standby_departure_reference':
+        '차량 출발 기준 시각\n(เวลาอ้างอิงออกเดินทาง)',
     'driver_standby_available_from': '운행 확정 가능 시간\n(ยืนยันได้ตั้งแต่)',
     'driver_name_sign_required':
         '네임보드 서비스가 신청되었습니다. 고객 미팅 전 피켓을 준비하세요.\n(ลูกค้าเลือกบริการป้ายชื่อ กรุณาเตรียมป้ายก่อนพบลูกค้า)',

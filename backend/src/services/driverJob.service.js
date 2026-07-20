@@ -1,6 +1,7 @@
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const SERVICE_TYPES = require('../constants/serviceTypes');
 const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
 
 const THAILAND_TIME_ZONE = 'Asia/Bangkok';
@@ -139,11 +140,31 @@ class DriverJobService {
     return Number.isFinite(parsed) ? parsed : null;
   }
 
+  standbyReference(row) {
+    if (row.service_type_code === SERVICE_TYPES.AIRPORT_PICKUP) {
+      const arrival =
+        row.flight_scheduled_arrival_at
+        ?? row.flight_scheduled_arrival_at_text
+        ?? row.flight_estimated_arrival_at
+        ?? row.flight_estimated_arrival_at_text;
+      if (arrival) {
+        return {
+          referenceTimeType: 'AIRPORT_ARRIVAL',
+          referenceTime: arrival,
+        };
+      }
+    }
+    return {
+      referenceTimeType: 'VEHICLE_DEPARTURE',
+      referenceTime: row.scheduled_pickup_at ?? null,
+    };
+  }
+
   standbyAllowedAt(row) {
-    if (!row.scheduled_pickup_at) return null;
-    const pickupMs = parseServiceDateTimeToMs(row.scheduled_pickup_at);
-    if (pickupMs == null) return null;
-    return new Date(pickupMs - STANDBY_WINDOW_MS).toISOString();
+    const reference = this.standbyReference(row);
+    const referenceMs = parseServiceDateTimeToMs(reference.referenceTime);
+    if (referenceMs == null) return null;
+    return new Date(referenceMs - STANDBY_WINDOW_MS).toISOString();
   }
 
   mapBase(row) {
@@ -153,6 +174,8 @@ class DriverJobService {
       assignmentStatus: row.assignment_status ?? null,
       acceptedAt: row.accepted_at ?? null,
       scheduledPickupAt: row.scheduled_pickup_at ?? null,
+      standbyReferenceTimeType: this.standbyReference(row).referenceTimeType,
+      standbyReferenceTime: this.standbyReference(row).referenceTime,
       standbyAllowedAt: this.standbyAllowedAt(row),
       serviceType: {
         code: row.service_type_code,
@@ -200,6 +223,7 @@ class DriverJobService {
       flight: {
         flightNumber: row.flight_number,
         flightStatus: row.delay_status,
+        scheduledArrival: row.flight_scheduled_arrival_at_text,
         latestEstimatedArrival: row.flight_estimated_arrival_at_text,
         delayMinutes: row.delay_minutes,
       },

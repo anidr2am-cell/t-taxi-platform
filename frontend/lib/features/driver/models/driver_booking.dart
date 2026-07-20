@@ -5,6 +5,8 @@ class DriverBooking {
     this.assignmentStatus,
     this.acceptedAt,
     this.scheduledPickupAt,
+    this.standbyReferenceTimeType,
+    this.standbyReferenceTime,
     this.standbyAllowedAt,
     required this.serviceTypeName,
     required this.pickupDate,
@@ -45,6 +47,8 @@ class DriverBooking {
   final String? assignmentStatus;
   final String? acceptedAt;
   final String? scheduledPickupAt;
+  final String? standbyReferenceTimeType;
+  final String? standbyReferenceTime;
   final String? standbyAllowedAt;
   final String serviceTypeName;
   final String pickupDate;
@@ -98,6 +102,8 @@ class DriverBooking {
       assignmentStatus: json['assignmentStatus'] as String?,
       acceptedAt: json['acceptedAt'] as String?,
       scheduledPickupAt: json['scheduledPickupAt'] as String?,
+      standbyReferenceTimeType: json['standbyReferenceTimeType'] as String?,
+      standbyReferenceTime: json['standbyReferenceTime'] as String?,
       standbyAllowedAt: json['standbyAllowedAt'] as String?,
       serviceTypeName:
           serviceType['name'] as String? ??
@@ -261,9 +267,15 @@ class DriverOpenCall {
 }
 
 class DriverOpenCalls {
-  const DriverOpenCalls({required this.items});
+  const DriverOpenCalls({
+    required this.items,
+    this.blockedReason,
+    this.message,
+  });
 
   final List<DriverOpenCall> items;
+  final String? blockedReason;
+  final String? message;
 
   factory DriverOpenCalls.fromJson(Map<String, dynamic> json) {
     return DriverOpenCalls(
@@ -273,6 +285,8 @@ class DriverOpenCalls {
                 DriverOpenCall.fromJson(Map<String, dynamic>.from(item as Map)),
           )
           .toList(),
+      blockedReason: json['blockedReason'] as String?,
+      message: json['message'] as String?,
     );
   }
 }
