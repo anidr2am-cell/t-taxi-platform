@@ -523,7 +523,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                               icon: Icons.badge_outlined,
                             ),
                           ],
-                          if (booking.hasRouteCoordinates) ...[
+                          if (booking.hasAnyRouteCoordinate) ...[
                             const SizedBox(height: AppTokens.spaceMd),
                             _DriverRouteMap(booking: booking),
                           ],
@@ -1069,25 +1069,32 @@ class _DriverRouteMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final origin = LatLng(booking.originLatitude!, booking.originLongitude!);
-    final destination = LatLng(
-      booking.destinationLatitude!,
-      booking.destinationLongitude!,
-    );
-    final bounds = LatLngBounds.fromPoints([origin, destination]);
+    final origin =
+        booking.originLatitude != null && booking.originLongitude != null
+        ? LatLng(booking.originLatitude!, booking.originLongitude!)
+        : null;
+    final destination =
+        booking.destinationLatitude != null &&
+            booking.destinationLongitude != null
+        ? LatLng(booking.destinationLatitude!, booking.destinationLongitude!)
+        : null;
+    final points = [origin, destination].nonNulls.toList();
+    if (points.isEmpty) return const SizedBox.shrink();
     return ClipRRect(
       borderRadius: AppTokens.borderRadiusSm,
       child: SizedBox(
         key: const Key('driverRouteMap'),
         height: 220,
         child: FlutterMap(
-          options: MapOptions(
-            initialCameraFit: CameraFit.bounds(
-              bounds: bounds,
-              padding: const EdgeInsets.all(36),
-              maxZoom: 15,
-            ),
-          ),
+          options: points.length == 1
+              ? MapOptions(initialCenter: points.first, initialZoom: 15)
+              : MapOptions(
+                  initialCameraFit: CameraFit.bounds(
+                    bounds: LatLngBounds.fromPoints(points),
+                    padding: const EdgeInsets.all(36),
+                    maxZoom: 15,
+                  ),
+                ),
           children: [
             TileLayer(
               urlTemplate: MapProviderConfig.tileUrlTemplate,
@@ -1095,26 +1102,28 @@ class _DriverRouteMap extends StatelessWidget {
             ),
             MarkerLayer(
               markers: [
-                Marker(
-                  point: origin,
-                  width: 44,
-                  height: 44,
-                  child: const Icon(
-                    Icons.trip_origin,
-                    color: AppTokens.primary,
-                    size: 32,
+                if (origin != null)
+                  Marker(
+                    point: origin,
+                    width: 44,
+                    height: 44,
+                    child: const Icon(
+                      Icons.trip_origin,
+                      color: AppTokens.primary,
+                      size: 32,
+                    ),
                   ),
-                ),
-                Marker(
-                  point: destination,
-                  width: 44,
-                  height: 44,
-                  child: const Icon(
-                    Icons.location_on,
-                    color: AppTokens.error,
-                    size: 36,
+                if (destination != null)
+                  Marker(
+                    point: destination,
+                    width: 44,
+                    height: 44,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: AppTokens.error,
+                      size: 36,
+                    ),
                   ),
-                ),
               ],
             ),
             RichAttributionWidget(

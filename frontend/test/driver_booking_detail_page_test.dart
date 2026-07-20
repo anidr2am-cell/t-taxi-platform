@@ -465,6 +465,28 @@ void main() {
     expect(find.textContaining('Google Maps'), findsWidgets);
   });
 
+  testWidgets(
+    'detail map still renders when only one endpoint has coordinates',
+    (tester) async {
+      _useTallViewport(tester);
+      await tester.pumpWidget(
+        _wrap(
+          _FakeDriverApi(
+            detail: _booking(
+              status: 'DRIVER_ASSIGNED',
+              actions: ['VIEW_DETAILS'],
+              originLatitude: 13.69,
+              originLongitude: 100.7501,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('driverRouteMap')), findsOneWidget);
+    },
+  );
+
   testWidgets('detail avoids duplicate location name and address text', (
     tester,
   ) async {
@@ -833,6 +855,10 @@ DriverBooking _booking({
   bool withCoordinates = false,
   DriverBookingLocation? pickupLocation,
   DriverBookingLocation? destinationLocation,
+  double? originLatitude,
+  double? originLongitude,
+  double? destinationLatitude,
+  double? destinationLongitude,
 }) {
   return DriverBooking(
     bookingNumber: 'TX202607010001',
@@ -849,10 +875,12 @@ DriverBooking _booking({
     destination: 'Pattaya Hotel',
     pickupLocation: pickupLocation,
     destinationLocation: destinationLocation,
-    originLatitude: withCoordinates ? 13.69 : null,
-    originLongitude: withCoordinates ? 100.7501 : null,
-    destinationLatitude: withCoordinates ? 12.9236 : null,
-    destinationLongitude: withCoordinates ? 100.8825 : null,
+    originLatitude: originLatitude ?? (withCoordinates ? 13.69 : null),
+    originLongitude: originLongitude ?? (withCoordinates ? 100.7501 : null),
+    destinationLatitude:
+        destinationLatitude ?? (withCoordinates ? 12.9236 : null),
+    destinationLongitude:
+        destinationLongitude ?? (withCoordinates ? 100.8825 : null),
     passengerCount: 2,
     vehicleTypeName: 'SUV',
     customerDisplayName: 'Kim',

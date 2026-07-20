@@ -99,6 +99,10 @@ class DriverBooking {
       destinationLatitude != null &&
       destinationLongitude != null;
 
+  bool get hasAnyRouteCoordinate =>
+      (originLatitude != null && originLongitude != null) ||
+      (destinationLatitude != null && destinationLongitude != null);
+
   factory DriverBooking.fromJson(Map<String, dynamic> json) {
     final serviceType = Map<String, dynamic>.from(
       json['serviceType'] as Map? ?? {},
