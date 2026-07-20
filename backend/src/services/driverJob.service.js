@@ -56,12 +56,29 @@ class DriverJobService {
     return value;
   }
 
-  allowedActions(status, assignmentStatus = null) {
+  canConfirmStandby(row, now = new Date()) {
+    if (row.status !== 'DRIVER_ASSIGNED') return false;
+    if (row.assignment_status !== 'ASSIGNED') return false;
+    const allowedAt = this.standbyAllowedAt(row);
+    const allowedAtMs = parseServiceDateTimeToMs(allowedAt);
+    const nowMs = now instanceof Date ? now.getTime() : Number(now);
+    return allowedAtMs != null && Number.isFinite(nowMs) && nowMs >= allowedAtMs;
+  }
+
+  allowedActions(row, now = new Date()) {
+    const status = row.status;
+    const assignmentStatus = row.assignment_status ?? null;
     if (status === 'DRIVER_ASSIGNED') {
-      if (assignmentStatus !== 'ACCEPTED') {
+      if (assignmentStatus === 'ASSIGNED') {
+        if (!this.canConfirmStandby(row, now)) {
+          return ['VIEW_DETAILS'];
+        }
         return ['VIEW_DETAILS', 'ACCEPT_BOOKING'];
       }
-      return ['VIEW_DETAILS', 'START_ON_ROUTE'];
+      if (assignmentStatus === 'ACCEPTED') {
+        return ['VIEW_DETAILS', 'START_ON_ROUTE'];
+      }
+      return ['VIEW_DETAILS'];
     }
     if (status === 'ON_ROUTE') {
       return ['VIEW_DETAILS', 'MARK_ARRIVED'];
@@ -140,6 +157,17 @@ class DriverJobService {
     return Number.isFinite(parsed) ? parsed : null;
   }
 
+  metadata(row) {
+    if (!row.metadata) return {};
+    if (typeof row.metadata === 'object') return row.metadata;
+    try {
+      const parsed = JSON.parse(row.metadata);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
   standbyReference(row) {
     if (row.service_type_code === SERVICE_TYPES.AIRPORT_PICKUP) {
       const arrival =
@@ -168,15 +196,24 @@ class DriverJobService {
   }
 
   mapBase(row) {
+    const standbyReference = this.standbyReference(row);
+    const standbyAllowedAt = this.standbyAllowedAt(row);
+    const standbyConfirmed = row.assignment_status === 'ACCEPTED';
+    const metadata = this.metadata(row);
+    const originLocation = metadata.originLocation ?? {};
+    const destinationLocation = metadata.destinationLocation ?? {};
     return {
       bookingNumber: row.booking_number,
       status: row.status,
       assignmentStatus: row.assignment_status ?? null,
       acceptedAt: row.accepted_at ?? null,
       scheduledPickupAt: row.scheduled_pickup_at ?? null,
-      standbyReferenceTimeType: this.standbyReference(row).referenceTimeType,
-      standbyReferenceTime: this.standbyReference(row).referenceTime,
-      standbyAllowedAt: this.standbyAllowedAt(row),
+      standbyReferenceTimeType: standbyReference.referenceTimeType,
+      standbyReferenceTime: standbyReference.referenceTime,
+      standbyAllowedAt,
+      standbyConfirmed,
+      standbyConfirmedAt: standbyConfirmed ? row.accepted_at ?? null : null,
+      canConfirmStandby: this.canConfirmStandby(row),
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,
@@ -185,6 +222,20 @@ class DriverJobService {
       pickupTime: row.pickup_time,
       origin: row.origin_address,
       destination: row.destination_address,
+      pickupLocation: this.locationDetails({
+        name: originLocation.name,
+        address: row.origin_address,
+        placeId: row.origin_place_id,
+        latitude: row.origin_lat,
+        longitude: row.origin_lng,
+      }),
+      destinationLocation: this.locationDetails({
+        name: destinationLocation.name,
+        address: row.destination_address,
+        placeId: row.destination_place_id,
+        latitude: row.destination_lat,
+        longitude: row.destination_lng,
+      }),
       originLatitude: this.location(row.origin_lat),
       originLongitude: this.location(row.origin_lng),
       destinationLatitude: this.location(row.destination_lat),
@@ -201,7 +252,22 @@ class DriverJobService {
       flightNumber: row.flight_number,
       flightStatus: row.delay_status,
       latestEstimatedArrival: row.flight_estimated_arrival_at_text,
-      allowedActions: this.allowedActions(row.status, row.assignment_status),
+      allowedActions: this.allowedActions(row),
+    };
+  }
+
+  locationDetails({ name, address, placeId, latitude, longitude }) {
+    const normalizedName = typeof name === 'string' && name.trim() ? name.trim() : null;
+    const normalizedAddress =
+      typeof address === 'string' && address.trim() ? address.trim() : null;
+    const displayName =
+      normalizedName && normalizedName !== normalizedAddress ? normalizedName : null;
+    return {
+      name: displayName,
+      address: normalizedAddress,
+      latitude: this.location(latitude),
+      longitude: this.location(longitude),
+      placeId: typeof placeId === 'string' && placeId.trim() ? placeId.trim() : null,
     };
   }
 

@@ -32,12 +32,18 @@ function row(overrides = {}) {
     scheduled_pickup_at: '2026-07-01 09:30:00',
     pickup_date: '2026-07-01',
     pickup_time: '09:30',
-    origin_address: 'BKK Airport',
+    origin_address: '999 Nong Prue, Bang Phli District, Samut Prakan 10540',
+    origin_place_id: 'google-bkk',
     origin_lat: 13.6900,
     origin_lng: 100.7501,
-    destination_address: 'Pattaya Hotel',
+    destination_address: '333/101 Moo 9, Pattaya Beach Road, Chonburi',
+    destination_place_id: 'google-hilton-pattaya',
     destination_lat: 12.9236,
     destination_lng: 100.8825,
+    metadata: JSON.stringify({
+      originLocation: { name: 'Suvarnabhumi Airport' },
+      destinationLocation: { name: 'Hilton Pattaya' },
+    }),
     customer_name: 'Kim',
     customer_phone: '+66123456789',
     special_requests: 'Meet at gate',
@@ -335,6 +341,63 @@ test('driver assigned booking requires acceptance before start route action', ()
     service.mapBase(row({ assignment_status: 'ACCEPTED' })).allowedActions,
     ['VIEW_DETAILS', 'START_ON_ROUTE'],
   );
+});
+
+test('standby action is hidden before allowed time and exposed when eligible', () => {
+  const service = new DriverJobService({});
+  const future = service.allowedActions(
+    row({
+      assignment_status: 'ASSIGNED',
+      service_type_code: 'CITY_TRANSFER',
+      scheduled_pickup_at: '2026-07-18 23:00:00',
+    }),
+    new Date('2026-07-18T14:59:59.000Z'),
+  );
+  const eligible = service.allowedActions(
+    row({
+      assignment_status: 'ASSIGNED',
+      service_type_code: 'CITY_TRANSFER',
+      scheduled_pickup_at: '2026-07-18 23:00:00',
+    }),
+    new Date('2026-07-18T15:00:00.000Z'),
+  );
+
+  assert.deepEqual(future, ['VIEW_DETAILS']);
+  assert.deepEqual(eligible, ['VIEW_DETAILS', 'ACCEPT_BOOKING']);
+});
+
+test('driver detail maps structured pickup and destination locations', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapDetail(row());
+
+  assert.deepEqual(mapped.pickupLocation, {
+    name: 'Suvarnabhumi Airport',
+    address: '999 Nong Prue, Bang Phli District, Samut Prakan 10540',
+    latitude: 13.69,
+    longitude: 100.7501,
+    placeId: 'google-bkk',
+  });
+  assert.deepEqual(mapped.destinationLocation, {
+    name: 'Hilton Pattaya',
+    address: '333/101 Moo 9, Pattaya Beach Road, Chonburi',
+    latitude: 12.9236,
+    longitude: 100.8825,
+    placeId: 'google-hilton-pattaya',
+  });
+});
+
+test('driver detail location falls back to address without duplicate name', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapDetail(row({
+    metadata: null,
+    origin_address: 'Address only pickup',
+    destination_address: 'Address only destination',
+  }));
+
+  assert.equal(mapped.pickupLocation.name, null);
+  assert.equal(mapped.pickupLocation.address, 'Address only pickup');
+  assert.equal(mapped.destinationLocation.name, null);
+  assert.equal(mapped.destinationLocation.address, 'Address only destination');
 });
 
 test('standby reference uses vehicle departure for non-airport pickups', () => {

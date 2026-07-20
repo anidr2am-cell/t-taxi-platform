@@ -300,6 +300,15 @@ class BookingService {
 
       const origin = input.origin ?? {};
       const destination = input.destination ?? {};
+      const originName = typeof origin.name === 'string' ? origin.name.trim() : '';
+      const destinationName =
+        typeof destination.name === 'string' ? destination.name.trim() : '';
+      if (originName) {
+        metadata.originLocation = { name: originName };
+      }
+      if (destinationName) {
+        metadata.destinationLocation = { name: destinationName };
+      }
 
       const originAddress = this.resolvePlaceAddress(origin);
       const destinationAddress = this.resolvePlaceAddress(destination);

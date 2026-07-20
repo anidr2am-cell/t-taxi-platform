@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/driver/driver_trip_contact.dart';
 import 'package:frontend/features/driver/models/driver_booking.dart';
 import 'package:frontend/features/driver/models/driver_status.dart';
 import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
@@ -421,6 +422,122 @@ void main() {
     },
   );
 
+  testWidgets('detail shows pickup and destination names with full addresses', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS'],
+            pickupLocation: const DriverBookingLocation(
+              name: 'Suvarnabhumi Airport',
+              address: '999 Moo 1 Nong Prue, Bang Phli, Samut Prakan 10540',
+              latitude: 13.69,
+              longitude: 100.7501,
+              placeId: 'google-bkk',
+            ),
+            destinationLocation: const DriverBookingLocation(
+              name: 'Hilton Pattaya',
+              address: '333/101 Beach Road, Pattaya City, Chon Buri 20260',
+              latitude: 12.934,
+              longitude: 100.883,
+              placeId: 'google-hilton-pattaya',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Suvarnabhumi Airport'), findsOneWidget);
+    expect(
+      find.text('999 Moo 1 Nong Prue, Bang Phli, Samut Prakan 10540'),
+      findsOneWidget,
+    );
+    expect(find.text('Hilton Pattaya'), findsOneWidget);
+    expect(
+      find.text('333/101 Beach Road, Pattaya City, Chon Buri 20260'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Google Maps'), findsWidgets);
+  });
+
+  testWidgets('detail avoids duplicate location name and address text', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS'],
+            pickupLocation: const DriverBookingLocation(
+              name: 'BKK Airport',
+              address: 'BKK Airport',
+            ),
+            destinationLocation: const DriverBookingLocation(
+              address: 'Pattaya Hotel',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('BKK Airport'), findsOneWidget);
+    expect(find.text('Pattaya Hotel'), findsOneWidget);
+  });
+
+  test('driver maps URL uses coordinates when available', () {
+    final uri = DriverTripContact.googleMapsUriForLocation(
+      const DriverBookingLocation(
+        name: 'Suvarnabhumi Airport',
+        address: '999 Moo 1 Nong Prue',
+        latitude: 13.69,
+        longitude: 100.7501,
+        placeId: 'ignored-when-coordinates-exist',
+      ),
+    );
+
+    expect(uri, isNotNull);
+    expect(uri!.scheme, 'https');
+    expect(uri.host, 'www.google.com');
+    expect(uri.queryParameters['api'], '1');
+    expect(uri.queryParameters['query'], '13.69,100.7501');
+    expect(uri.queryParameters.containsKey('query_place_id'), false);
+  });
+
+  test('driver maps URL falls back to place query and place id', () {
+    final uri = DriverTripContact.googleMapsUriForLocation(
+      const DriverBookingLocation(
+        name: 'Hilton Pattaya',
+        address: '333/101 Beach Road',
+        placeId: 'google-hilton-pattaya',
+      ),
+    );
+
+    expect(uri, isNotNull);
+    expect(uri!.queryParameters['query'], 'Hilton Pattaya 333/101 Beach Road');
+    expect(uri.queryParameters['query_place_id'], 'google-hilton-pattaya');
+  });
+
+  test('driver maps URL rejects empty or invalid locations', () {
+    expect(
+      DriverTripContact.googleMapsUriForLocation(
+        const DriverBookingLocation(latitude: 120, longitude: 200),
+      ),
+      isNull,
+    );
+    expect(
+      DriverTripContact.googleMapsUriForLocation(const DriverBookingLocation()),
+      isNull,
+    );
+  });
+
   testWidgets('airport booking shows airport arrival standby reference', (
     tester,
   ) async {
@@ -714,6 +831,8 @@ DriverBooking _booking({
   String? standbyAllowedAt,
   bool nameSignRequested = false,
   bool withCoordinates = false,
+  DriverBookingLocation? pickupLocation,
+  DriverBookingLocation? destinationLocation,
 }) {
   return DriverBooking(
     bookingNumber: 'TX202607010001',
@@ -728,6 +847,8 @@ DriverBooking _booking({
     pickupTime: '09:30',
     origin: 'BKK Airport',
     destination: 'Pattaya Hotel',
+    pickupLocation: pickupLocation,
+    destinationLocation: destinationLocation,
     originLatitude: withCoordinates ? 13.69 : null,
     originLongitude: withCoordinates ? 100.7501 : null,
     destinationLatitude: withCoordinates ? 12.9236 : null,

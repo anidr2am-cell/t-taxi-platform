@@ -8,11 +8,16 @@ class DriverBooking {
     this.standbyReferenceTimeType,
     this.standbyReferenceTime,
     this.standbyAllowedAt,
+    this.standbyConfirmed = false,
+    this.standbyConfirmedAt,
+    this.canConfirmStandby = false,
     required this.serviceTypeName,
     required this.pickupDate,
     required this.pickupTime,
     required this.origin,
     required this.destination,
+    this.pickupLocation,
+    this.destinationLocation,
     this.originLatitude,
     this.originLongitude,
     this.destinationLatitude,
@@ -50,11 +55,16 @@ class DriverBooking {
   final String? standbyReferenceTimeType;
   final String? standbyReferenceTime;
   final String? standbyAllowedAt;
+  final bool standbyConfirmed;
+  final String? standbyConfirmedAt;
+  final bool canConfirmStandby;
   final String serviceTypeName;
   final String pickupDate;
   final String pickupTime;
   final String origin;
   final String destination;
+  final DriverBookingLocation? pickupLocation;
+  final DriverBookingLocation? destinationLocation;
   final double? originLatitude;
   final double? originLongitude;
   final double? destinationLatitude;
@@ -105,6 +115,9 @@ class DriverBooking {
       standbyReferenceTimeType: json['standbyReferenceTimeType'] as String?,
       standbyReferenceTime: json['standbyReferenceTime'] as String?,
       standbyAllowedAt: json['standbyAllowedAt'] as String?,
+      standbyConfirmed: json['standbyConfirmed'] == true,
+      standbyConfirmedAt: json['standbyConfirmedAt'] as String?,
+      canConfirmStandby: json['canConfirmStandby'] == true,
       serviceTypeName:
           serviceType['name'] as String? ??
           serviceType['code'] as String? ??
@@ -113,6 +126,12 @@ class DriverBooking {
       pickupTime: json['pickupTime'] as String? ?? '',
       origin: json['origin'] as String? ?? '',
       destination: json['destination'] as String? ?? '',
+      pickupLocation: DriverBookingLocation.fromJsonOrNull(
+        json['pickupLocation'],
+      ),
+      destinationLocation: DriverBookingLocation.fromJsonOrNull(
+        json['destinationLocation'],
+      ),
       originLatitude: (json['originLatitude'] as num?)?.toDouble(),
       originLongitude: (json['originLongitude'] as num?)?.toDouble(),
       destinationLatitude: (json['destinationLatitude'] as num?)?.toDouble(),
@@ -157,6 +176,57 @@ class DriverBooking {
       allowedActions: (json['allowedActions'] as List? ?? [])
           .map((item) => item.toString())
           .toList(),
+    );
+  }
+}
+
+class DriverBookingLocation {
+  const DriverBookingLocation({
+    this.name,
+    this.address,
+    this.latitude,
+    this.longitude,
+    this.placeId,
+  });
+
+  final String? name;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
+  final String? placeId;
+
+  bool get hasCoordinates => latitude != null && longitude != null;
+
+  String get displayName {
+    final trimmedName = name?.trim();
+    if (trimmedName != null && trimmedName.isNotEmpty) return trimmedName;
+    final trimmedAddress = address?.trim();
+    if (trimmedAddress != null && trimmedAddress.isNotEmpty) {
+      return trimmedAddress;
+    }
+    return '';
+  }
+
+  String? get secondaryAddress {
+    final trimmedName = name?.trim();
+    final trimmedAddress = address?.trim();
+    if (trimmedAddress == null || trimmedAddress.isEmpty) return null;
+    if (trimmedName != null && trimmedName.isNotEmpty) {
+      if (trimmedName == trimmedAddress) return null;
+      return trimmedAddress;
+    }
+    return null;
+  }
+
+  static DriverBookingLocation? fromJsonOrNull(Object? raw) {
+    if (raw is! Map) return null;
+    final json = Map<String, dynamic>.from(raw);
+    return DriverBookingLocation(
+      name: json['name'] as String?,
+      address: json['address'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      placeId: json['placeId'] as String?,
     );
   }
 }

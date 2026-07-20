@@ -22,10 +22,10 @@ class DriverBookingAcceptanceService {
     });
   }
 
-  notAcceptable() {
-    return new AppError('Booking is not acceptable', {
+  notAcceptable(errorCode = ERROR_CODES.BOOKING_NOT_ACCEPTABLE, message = 'Booking is not acceptable') {
+    return new AppError(message, {
       statusCode: HTTP_STATUS.CONFLICT,
-      errorCode: ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+      errorCode,
     });
   }
 
@@ -51,10 +51,16 @@ class DriverBookingAcceptanceService {
     const referenceMs = parseServiceDateTimeToMs(reference.referenceTime);
     const nowMs = now instanceof Date ? now.getTime() : Number(now);
     if (referenceMs == null || !Number.isFinite(nowMs)) {
-      throw this.notAcceptable();
+      throw this.notAcceptable(
+        ERROR_CODES.DRIVER_STANDBY_REFERENCE_TIME_MISSING,
+        'Standby reference time is missing',
+      );
     }
     if (nowMs < referenceMs - STANDBY_WINDOW_MS) {
-      throw this.notAcceptable();
+      throw this.notAcceptable(
+        ERROR_CODES.DRIVER_STANDBY_TOO_EARLY,
+        'Standby confirmation is too early',
+      );
     }
   }
 
@@ -98,7 +104,10 @@ class DriverBookingAcceptanceService {
       }
 
       if (booking.status !== BOOKING_STATUS.DRIVER_ASSIGNED) {
-        throw this.notAcceptable();
+        throw this.notAcceptable(
+          ERROR_CODES.DRIVER_BOOKING_STATUS_NOT_ALLOWED,
+          'Booking status does not allow standby confirmation',
+        );
       }
 
       if (assignment.status === 'ACCEPTED') {
@@ -106,7 +115,12 @@ class DriverBookingAcceptanceService {
         await conn.commit();
         return result;
       }
-      if (assignment.status !== 'ASSIGNED') throw this.notAcceptable();
+      if (assignment.status !== 'ASSIGNED') {
+        throw this.notAcceptable(
+          ERROR_CODES.DRIVER_ASSIGNMENT_NOT_ACTIVE,
+          'Driver assignment cannot be confirmed',
+        );
+      }
 
       this.assertWithinStandbyWindow(booking, now);
 
@@ -128,7 +142,10 @@ class DriverBookingAcceptanceService {
           await conn.commit();
           return result;
         }
-        throw this.notAcceptable();
+        throw this.notAcceptable(
+          ERROR_CODES.DRIVER_ASSIGNMENT_NOT_ACTIVE,
+          'Driver assignment cannot be confirmed',
+        );
       }
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {

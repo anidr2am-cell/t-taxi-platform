@@ -13,6 +13,7 @@ import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../driver_auth.dart';
+import '../driver_trip_contact.dart';
 import '../driver_ux.dart';
 import '../driver_trip_flow.dart';
 import '../models/driver_booking.dart';
@@ -279,6 +280,32 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
         });
   }
 
+  DriverBookingLocation _pickupLocation(DriverBooking booking) {
+    return booking.pickupLocation ??
+        DriverBookingLocation(
+          address: booking.origin,
+          latitude: booking.originLatitude,
+          longitude: booking.originLongitude,
+        );
+  }
+
+  DriverBookingLocation _destinationLocation(DriverBooking booking) {
+    return booking.destinationLocation ??
+        DriverBookingLocation(
+          address: booking.destination,
+          latitude: booking.destinationLatitude,
+          longitude: booking.destinationLongitude,
+        );
+  }
+
+  Future<void> _openMapsLocation(DriverBookingLocation location) async {
+    final opened = await DriverTripContact.openMapsForLocation(location);
+    if (!mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.t('driver_google_maps_failed'))),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -426,11 +453,15 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                       title: l10n.t('driver_section_trip'),
                       child: Column(
                         children: [
-                          if (booking.assignmentStatus == 'ACCEPTED' ||
+                          if (booking.standbyConfirmed ||
+                              booking.assignmentStatus == 'ACCEPTED' ||
                               booking.acceptedAt?.isNotEmpty == true) ...[
                             AppUi.summaryRow(
                               label: l10n.t('driver_standby_status'),
-                              value: l10n.t('driver_standby_confirmed'),
+                              value:
+                                  booking.standbyConfirmedAt ??
+                                  booking.acceptedAt ??
+                                  l10n.t('driver_standby_confirmed'),
                               emphasize: true,
                             ),
                           ] else if (booking.standbyAllowedAt?.isNotEmpty ==
@@ -459,13 +490,19 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                                 '${booking.pickupDate} ${booking.pickupTime}',
                             emphasize: true,
                           ),
-                          AppUi.summaryRow(
-                            label: l10n.t('driver_detail_origin'),
-                            value: booking.origin,
+                          const SizedBox(height: AppTokens.spaceSm),
+                          _DriverLocationCard(
+                            key: const Key('driverPickupLocationCard'),
+                            title: l10n.t('driver_detail_origin'),
+                            location: _pickupLocation(booking),
+                            onOpen: _openMapsLocation,
                           ),
-                          AppUi.summaryRow(
-                            label: l10n.t('driver_detail_destination'),
-                            value: booking.destination,
+                          const SizedBox(height: AppTokens.spaceSm),
+                          _DriverLocationCard(
+                            key: const Key('driverDestinationLocationCard'),
+                            title: l10n.t('driver_detail_destination'),
+                            location: _destinationLocation(booking),
+                            onOpen: _openMapsLocation,
                           ),
                           if (booking.customerPaymentAmount != null) ...[
                             const SizedBox(height: AppTokens.spaceXs),
@@ -913,6 +950,118 @@ class _EndTripPaymentSummary extends StatelessWidget {
   }
 }
 
+class _DriverLocationCard extends StatelessWidget {
+  const _DriverLocationCard({
+    super.key,
+    required this.title,
+    required this.location,
+    required this.onOpen,
+  });
+
+  final String title;
+  final DriverBookingLocation location;
+  final Future<void> Function(DriverBookingLocation location) onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final displayName = location.displayName.isNotEmpty
+        ? location.displayName
+        : l10n.t('driver_location_unavailable');
+    final address = location.secondaryAddress;
+    final canOpen =
+        DriverTripContact.googleMapsUriForLocation(location) != null;
+
+    final content = AppUi.surfaceCard(
+      backgroundColor: AppTokens.surfaceMuted,
+      padding: const EdgeInsets.all(AppTokens.spaceMd),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            title == l10n.t('driver_detail_origin')
+                ? Icons.trip_origin
+                : Icons.location_on_outlined,
+            color: AppTokens.primary,
+          ),
+          const SizedBox(width: AppTokens.spaceSm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppTokens.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceXs),
+                Text(
+                  displayName,
+                  style: const TextStyle(
+                    color: AppTokens.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    height: 1.35,
+                  ),
+                ),
+                if (address != null) ...[
+                  const SizedBox(height: AppTokens.spaceXs),
+                  Text(
+                    address,
+                    style: const TextStyle(
+                      color: AppTokens.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+                if (canOpen) ...[
+                  const SizedBox(height: AppTokens.spaceSm),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.map_outlined,
+                        size: 18,
+                        color: AppTokens.primary,
+                      ),
+                      const SizedBox(width: AppTokens.spaceXs),
+                      Flexible(
+                        child: Text(
+                          l10n.t('driver_open_google_maps'),
+                          style: const TextStyle(
+                            color: AppTokens.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (canOpen)
+            const Padding(
+              padding: EdgeInsets.only(left: AppTokens.spaceXs),
+              child: Icon(Icons.open_in_new, color: AppTokens.primary),
+            ),
+        ],
+      ),
+    );
+
+    if (!canOpen) return content;
+    return Semantics(
+      button: true,
+      label: '${l10n.t('driver_open_google_maps')}: $displayName',
+      child: InkWell(
+        borderRadius: AppTokens.borderRadiusSm,
+        onTap: () => onOpen(location),
+        child: content,
+      ),
+    );
+  }
+}
+
 class _DriverRouteMap extends StatelessWidget {
   const _DriverRouteMap({required this.booking});
 
@@ -925,30 +1074,24 @@ class _DriverRouteMap extends StatelessWidget {
       booking.destinationLatitude!,
       booking.destinationLongitude!,
     );
-    final center = LatLng(
-      (origin.latitude + destination.latitude) / 2,
-      (origin.longitude + destination.longitude) / 2,
-    );
+    final bounds = LatLngBounds.fromPoints([origin, destination]);
     return ClipRRect(
       borderRadius: AppTokens.borderRadiusSm,
       child: SizedBox(
         key: const Key('driverRouteMap'),
         height: 220,
         child: FlutterMap(
-          options: MapOptions(initialCenter: center, initialZoom: 9),
+          options: MapOptions(
+            initialCameraFit: CameraFit.bounds(
+              bounds: bounds,
+              padding: const EdgeInsets.all(36),
+              maxZoom: 15,
+            ),
+          ),
           children: [
             TileLayer(
               urlTemplate: MapProviderConfig.tileUrlTemplate,
               userAgentPackageName: 'dev.ttaxi.frontend',
-            ),
-            PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: [origin, destination],
-                  strokeWidth: 4,
-                  color: AppTokens.primary,
-                ),
-              ],
             ),
             MarkerLayer(
               markers: [
