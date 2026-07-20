@@ -466,11 +466,16 @@ class BookingRepository {
         b.booking_number,
         b.status,
         bda.status AS assignment_status,
+        bda.accepted_at,
         b.scheduled_pickup_at,
         DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d') AS pickup_date,
         DATE_FORMAT(b.scheduled_pickup_at, '%H:%i') AS pickup_time,
         b.origin_address,
+        b.origin_lat,
+        b.origin_lng,
         b.destination_address,
+        b.destination_lat,
+        b.destination_lng,
         b.customer_name,
         b.customer_phone,
         b.special_requests,
@@ -499,7 +504,15 @@ class BookingRepository {
         btd.flight_estimated_arrival_at,
         DATE_FORMAT(btd.flight_estimated_arrival_at, '%Y-%m-%d %H:%i:%s') AS flight_estimated_arrival_at_text,
         btd.delay_status,
-        btd.delay_minutes
+        btd.delay_minutes,
+        EXISTS (
+          SELECT 1
+          FROM booking_charge_items bci
+          WHERE bci.booking_id = b.id
+            AND bci.charge_type = 'NAME_SIGN'
+            AND bci.deleted_at IS NULL
+          LIMIT 1
+        ) AS name_sign_requested
       FROM booking_driver_assignments bda
       INNER JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
       INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0

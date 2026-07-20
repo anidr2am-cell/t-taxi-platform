@@ -28,10 +28,16 @@ function row(overrides = {}) {
     booking_number: 'TX202607010001',
     status: 'DRIVER_ASSIGNED',
     assignment_status: 'ASSIGNED',
+    accepted_at: null,
+    scheduled_pickup_at: '2026-07-01 09:30:00',
     pickup_date: '2026-07-01',
     pickup_time: '09:30',
     origin_address: 'BKK Airport',
+    origin_lat: 13.6900,
+    origin_lng: 100.7501,
     destination_address: 'Pattaya Hotel',
+    destination_lat: 12.9236,
+    destination_lng: 100.8825,
     customer_name: 'Kim',
     customer_phone: '+66123456789',
     special_requests: 'Meet at gate',
@@ -51,6 +57,7 @@ function row(overrides = {}) {
     flight_estimated_arrival_at_text: '2026-07-01 08:55:00',
     delay_status: 'Delayed 10 min',
     delay_minutes: 10,
+    name_sign_requested: 1,
     ...overrides,
   };
 }
@@ -131,6 +138,7 @@ test('repository filters only active assigned bookings for this driver and exclu
   const { sql, params } = calls[0];
   assert.match(sql, /d\.user_id = \?/);
   assert.match(sql, /bda\.status AS assignment_status/);
+  assert.match(sql, /bda\.accepted_at/);
   assert.match(sql, /bda\.is_active = 1/);
   assert.match(sql, /bda\.status IN \('ASSIGNED', 'ACCEPTED'\)/);
   assert.match(sql, /b\.status <> 'CANCELLED'/);
@@ -193,7 +201,7 @@ test('today list sorting is requested from repository and mapped concisely', asy
   assert.equal(result.items[0].pickupTime, '09:30');
   assert.equal(result.items[0].passengerCount, 3);
   assert.equal(result.items[0].customerDisplayName, 'Kim');
-  assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS', 'START_ON_ROUTE']);
+  assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS', 'ACCEPT_BOOKING']);
 });
 
 test('driver can access assigned booking detail', async () => {
@@ -210,6 +218,12 @@ test('driver can access assigned booking detail', async () => {
   assert.equal(detail.bookingNumber, 'TX202607010001');
   assert.equal(detail.assignmentStatus, 'ASSIGNED');
   assert.equal(detail.customerPhone, '+66123456789');
+  assert.equal(detail.originLatitude, 13.69);
+  assert.equal(detail.originLongitude, 100.7501);
+  assert.equal(detail.destinationLatitude, 12.9236);
+  assert.equal(detail.destinationLongitude, 100.8825);
+  assert.equal(detail.nameSignRequested, true);
+  assert.equal(detail.standbyAllowedAt, '2026-07-01T01:30:00.000Z');
   assert.equal(detail.passengers.adults, 2);
   assert.equal(detail.luggage.carriers24InchPlus, 2);
   assert.equal(detail.paymentMethod, 'PAY_DRIVER');
@@ -296,14 +310,27 @@ test('internal admin fields are not exposed in detail', async () => {
 
   assert.equal(Object.hasOwn(detail, 'totalAmount'), false);
   assert.equal(Object.hasOwn(detail, 'commissionStatus'), false);
+  assert.equal(Object.hasOwn(detail, 'companyCommissionAmount'), false);
+  assert.equal(Object.hasOwn(detail, 'companyCommissionCurrency'), false);
+  assert.equal(Object.hasOwn(detail, 'driverExpectedIncomeAmount'), false);
+  assert.equal(Object.hasOwn(detail, 'driverExpectedIncomeCurrency'), false);
   assert.equal(Object.hasOwn(detail, 'adminNotes'), false);
   assert.equal(detail.customerPaymentAmount, 1600);
   assert.equal(detail.customerPaymentCurrency, 'THB');
   assert.equal(detail.customerPaymentMethod, 'PAY_DRIVER_AT_DESTINATION');
-  assert.equal(detail.companyCommissionAmount, 200);
-  assert.equal(detail.companyCommissionCurrency, 'THB');
-  assert.equal(detail.driverExpectedIncomeAmount, 1400);
-  assert.equal(detail.driverExpectedIncomeCurrency, 'THB');
+});
+
+test('driver assigned booking requires acceptance before start route action', () => {
+  const service = new DriverJobService({});
+
+  assert.deepEqual(
+    service.mapBase(row({ assignment_status: 'ASSIGNED' })).allowedActions,
+    ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+  );
+  assert.deepEqual(
+    service.mapBase(row({ assignment_status: 'ACCEPTED' })).allowedActions,
+    ['VIEW_DETAILS', 'START_ON_ROUTE'],
+  );
 });
 
 test('driver job payment summary keeps unsafe expected income nullable', () => {

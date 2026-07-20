@@ -21,6 +21,8 @@ const BOOKING_NUMBER = 'TX202607180001';
 // mysql2 parses the Bangkok DATETIME digits using the connection's +00:00
 // timezone, so 22:30 is represented as a Date whose UTC digits are 22:30.
 const ACCEPTED_AT = new Date('2026-07-18T22:30:00.000Z');
+const PICKUP_AT = '2026-07-18 23:00:00';
+const ACCEPT_NOW = new Date('2026-07-18T15:30:00.000Z');
 
 function sign(role = 'DRIVER', id = 44) {
   return jwt.sign(
@@ -50,7 +52,12 @@ function createHarness(overrides = {}) {
     ? { id: 7, user_id: 44, is_active: 1, user_is_active: 1 }
     : overrides.driver;
   const booking = overrides.booking === undefined
-    ? { id: 10, booking_number: BOOKING_NUMBER, status: BOOKING_STATUS.DRIVER_ASSIGNED }
+    ? {
+      id: 10,
+      booking_number: BOOKING_NUMBER,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      scheduled_pickup_at: PICKUP_AT,
+    }
     : overrides.booking;
   let assignment = overrides.assignment === undefined
     ? { id: 77, driver_id: 7, status: 'ASSIGNED', accepted_at: null }
@@ -101,7 +108,7 @@ function createHarness(overrides = {}) {
 test('accepts own ASSIGNED assignment and keeps booking DRIVER_ASSIGNED', async () => {
   const { service, conn, calls } = createHarness();
 
-  const result = await service.acceptBooking(44, BOOKING_NUMBER);
+  const result = await service.acceptBooking(44, BOOKING_NUMBER, ACCEPT_NOW);
 
   assert.deepEqual(result, {
     bookingNumber: BOOKING_NUMBER,
@@ -124,7 +131,7 @@ test('repeated acceptance is idempotent and preserves accepted_at', async () => 
     assignment: { id: 77, driver_id: 7, status: 'ACCEPTED', accepted_at: acceptedAt },
   });
 
-  const result = await service.acceptBooking(44, BOOKING_NUMBER);
+  const result = await service.acceptBooking(44, BOOKING_NUMBER, ACCEPT_NOW);
 
   assert.equal(result.idempotent, true);
   assert.equal(result.acceptedAt, '2026-07-18T14:00:00.000Z');
@@ -202,7 +209,7 @@ test('rejects missing booking or active assignment as not found', async () => {
 test('rejects cancelled or started booking as BOOKING_NOT_ACCEPTABLE', async () => {
   for (const status of [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.ON_ROUTE]) {
     const { service } = createHarness({
-      booking: { id: 10, booking_number: BOOKING_NUMBER, status },
+      booking: { id: 10, booking_number: BOOKING_NUMBER, status, scheduled_pickup_at: PICKUP_AT },
     });
     await assert.rejects(
       () => service.acceptBooking(44, BOOKING_NUMBER),
@@ -210,6 +217,37 @@ test('rejects cancelled or started booking as BOOKING_NOT_ACCEPTABLE', async () 
         && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
     );
   }
+});
+
+test('rejects standby confirmation before the one-hour service window', async () => {
+  const { service, conn, calls } = createHarness();
+
+  await assert.rejects(
+    () => service.acceptBooking(44, BOOKING_NUMBER, new Date('2026-07-18T14:59:59.000Z')),
+    (error) => error.statusCode === 409
+      && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+  );
+
+  assert.equal(conn.committed, false);
+  assert.equal(conn.rolledBack, true);
+  assert.equal(calls.accepted.length, 0);
+  assert.equal(calls.activities.length, 0);
+});
+
+test('idempotent accepted assignment is allowed outside standby window', async () => {
+  const acceptedAt = '2026-07-18 21:00:00';
+  const { service, calls } = createHarness({
+    assignment: { id: 77, driver_id: 7, status: 'ACCEPTED', accepted_at: acceptedAt },
+  });
+
+  const result = await service.acceptBooking(
+    44,
+    BOOKING_NUMBER,
+    new Date('2026-07-18T13:00:00.000Z'),
+  );
+
+  assert.equal(result.idempotent, true);
+  assert.equal(calls.accepted.length, 0);
 });
 
 test('rejects inactive assignment state', async () => {
@@ -268,7 +306,12 @@ test('concurrent accept requests produce one transition and one idempotent succe
   let updateCount = 0;
   const repository = {
     async findByBookingNumberForUpdate() {
-      return { id: 10, booking_number: BOOKING_NUMBER, status: BOOKING_STATUS.DRIVER_ASSIGNED };
+      return {
+        id: 10,
+        booking_number: BOOKING_NUMBER,
+        status: BOOKING_STATUS.DRIVER_ASSIGNED,
+        scheduled_pickup_at: PICKUP_AT,
+      };
     },
     async findActiveAssignmentForUpdate() { return { ...assignment }; },
     async acceptDriverAssignment() {
@@ -296,8 +339,8 @@ test('concurrent accept requests produce one transition and one idempotent succe
   );
 
   const results = await Promise.all([
-    service.acceptBooking(44, BOOKING_NUMBER),
-    service.acceptBooking(44, BOOKING_NUMBER),
+    service.acceptBooking(44, BOOKING_NUMBER, ACCEPT_NOW),
+    service.acceptBooking(44, BOOKING_NUMBER, ACCEPT_NOW),
   ]);
 
   assert.equal(updateCount, 1);
@@ -313,7 +356,12 @@ test('accept loses safely when release or start-route wins the lock', async () =
   );
 
   const started = createHarness({
-    booking: { id: 10, booking_number: BOOKING_NUMBER, status: BOOKING_STATUS.ON_ROUTE },
+    booking: {
+      id: 10,
+      booking_number: BOOKING_NUMBER,
+      status: BOOKING_STATUS.ON_ROUTE,
+      scheduled_pickup_at: PICKUP_AT,
+    },
     assignment: { id: 77, driver_id: 7, status: 'ACCEPTED', accepted_at: ACCEPTED_AT },
   });
   await assert.rejects(

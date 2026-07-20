@@ -2,11 +2,19 @@ class DriverBooking {
   const DriverBooking({
     required this.bookingNumber,
     required this.status,
+    this.assignmentStatus,
+    this.acceptedAt,
+    this.scheduledPickupAt,
+    this.standbyAllowedAt,
     required this.serviceTypeName,
     required this.pickupDate,
     required this.pickupTime,
     required this.origin,
     required this.destination,
+    this.originLatitude,
+    this.originLongitude,
+    this.destinationLatitude,
+    this.destinationLongitude,
     required this.passengerCount,
     required this.vehicleTypeName,
     this.customerDisplayName,
@@ -18,6 +26,7 @@ class DriverBooking {
     this.luggage,
     this.flight,
     this.specialInstructions,
+    this.nameSignRequested = false,
     this.customerPaymentAmount,
     this.customerPaymentCurrency,
     this.customerPaymentMethod,
@@ -33,11 +42,19 @@ class DriverBooking {
 
   final String bookingNumber;
   final String status;
+  final String? assignmentStatus;
+  final String? acceptedAt;
+  final String? scheduledPickupAt;
+  final String? standbyAllowedAt;
   final String serviceTypeName;
   final String pickupDate;
   final String pickupTime;
   final String origin;
   final String destination;
+  final double? originLatitude;
+  final double? originLongitude;
+  final double? destinationLatitude;
+  final double? destinationLongitude;
   final int passengerCount;
   final String vehicleTypeName;
   final String? customerDisplayName;
@@ -49,6 +66,7 @@ class DriverBooking {
   final Map<String, dynamic>? luggage;
   final Map<String, dynamic>? flight;
   final String? specialInstructions;
+  final bool nameSignRequested;
   final double? customerPaymentAmount;
   final String? customerPaymentCurrency;
   final String? customerPaymentMethod;
@@ -61,6 +79,12 @@ class DriverBooking {
   final Map<String, dynamic>? qr;
   final List<String> allowedActions;
 
+  bool get hasRouteCoordinates =>
+      originLatitude != null &&
+      originLongitude != null &&
+      destinationLatitude != null &&
+      destinationLongitude != null;
+
   factory DriverBooking.fromJson(Map<String, dynamic> json) {
     final serviceType = Map<String, dynamic>.from(
       json['serviceType'] as Map? ?? {},
@@ -71,6 +95,10 @@ class DriverBooking {
     return DriverBooking(
       bookingNumber: json['bookingNumber'] as String? ?? '',
       status: json['status'] as String? ?? '',
+      assignmentStatus: json['assignmentStatus'] as String?,
+      acceptedAt: json['acceptedAt'] as String?,
+      scheduledPickupAt: json['scheduledPickupAt'] as String?,
+      standbyAllowedAt: json['standbyAllowedAt'] as String?,
       serviceTypeName:
           serviceType['name'] as String? ??
           serviceType['code'] as String? ??
@@ -79,6 +107,10 @@ class DriverBooking {
       pickupTime: json['pickupTime'] as String? ?? '',
       origin: json['origin'] as String? ?? '',
       destination: json['destination'] as String? ?? '',
+      originLatitude: (json['originLatitude'] as num?)?.toDouble(),
+      originLongitude: (json['originLongitude'] as num?)?.toDouble(),
+      destinationLatitude: (json['destinationLatitude'] as num?)?.toDouble(),
+      destinationLongitude: (json['destinationLongitude'] as num?)?.toDouble(),
       passengerCount: (json['passengerCount'] as num?)?.toInt() ?? 0,
       vehicleTypeName:
           vehicleType['name'] as String? ??
@@ -99,6 +131,7 @@ class DriverBooking {
           ? null
           : Map<String, dynamic>.from(json['flight'] as Map),
       specialInstructions: json['specialInstructions'] as String?,
+      nameSignRequested: json['nameSignRequested'] == true,
       customerPaymentAmount: (json['customerPaymentAmount'] as num?)
           ?.toDouble(),
       customerPaymentCurrency: json['customerPaymentCurrency'] as String?,
