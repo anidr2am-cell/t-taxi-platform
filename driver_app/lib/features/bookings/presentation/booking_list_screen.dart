@@ -141,11 +141,6 @@ class _BookingListScreenState extends State<BookingListScreen> {
                         bookingNumber: booking.bookingNumber,
                         repository: widget.repository,
                         onUnauthorized: widget.onUnauthorized,
-                        onAccepted: () {
-                          if (mounted) {
-                            _load();
-                          }
-                        },
                       ),
                     ),
                   );

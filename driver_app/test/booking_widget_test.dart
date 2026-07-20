@@ -38,7 +38,6 @@ Future<void> pumpDetail(
   FakeBookingReader reader, {
   BookingAcceptController? acceptController,
   Future<void> Function()? onUnauthorized,
-  VoidCallback? onAccepted,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -46,11 +45,17 @@ Future<void> pumpDetail(
         bookingNumber: 'TX209912319999',
         repository: reader,
         onUnauthorized: onUnauthorized ?? () async {},
-        onAccepted: onAccepted,
         acceptController: acceptController,
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> confirmAccept(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('acceptBookingButton')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('acceptConfirmButton')));
   await tester.pumpAndSettle();
 }
 
@@ -370,22 +375,43 @@ void main() {
   testWidgets('dialog confirm calls accept once and removes button', (
     tester,
   ) async {
-    var refreshCount = 0;
     final reader = FakeBookingReader()
       ..acceptResult = BookingAcceptance.fromEnvelope(acceptanceEnvelope())
       ..detailResult = bookingDetail();
-    await pumpDetail(tester, reader, onAccepted: () => refreshCount++);
+    await pumpDetail(tester, reader);
     reader.detailResult = bookingDetail(assignmentStatus: 'ACCEPTED');
 
-    await tester.tap(find.byKey(const Key('acceptBookingButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
-    await tester.pumpAndSettle();
+    await confirmAccept(tester);
 
     expect(reader.acceptCount, 1);
     expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
     expect(find.text('예약을 수락했습니다.'), findsOneWidget);
-    expect(refreshCount, 1);
+  });
+
+  testWidgets('accept success refreshes list once only after leaving detail', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..acceptResult = BookingAcceptance.fromEnvelope(acceptanceEnvelope())
+      ..detailResult = bookingDetail();
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    final listLoadsBeforeDetail = reader.listCount;
+
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+    reader.detailResult = bookingDetail(assignmentStatus: 'ACCEPTED');
+    await confirmAccept(tester);
+
+    expect(reader.acceptCount, 1);
+    expect(reader.listCount, listLoadsBeforeDetail);
+    expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+    expect(reader.listCount, listLoadsBeforeDetail + 1);
   });
 
   testWidgets('rapid taps still result in a single accept call', (
@@ -415,17 +441,14 @@ void main() {
     final reader = FakeBookingReader()
       ..acceptError = const ApiException(ApiFailureKind.forbidden);
     await pumpDetail(tester, reader);
-    await tester.tap(find.byKey(const Key('acceptBookingButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
-    await tester.pumpAndSettle();
+    await confirmAccept(tester);
 
     expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
     expect(find.byKey(const Key('acceptBookingButton')), findsOneWidget);
     expect(find.textContaining('관리자에게 문의해 주세요'), findsOneWidget);
   });
 
-  testWidgets('404 closes detail and refreshes list', (tester) async {
+  testWidgets('404 closes detail and refreshes list once', (tester) async {
     final reader = FakeBookingReader()
       ..acceptError = const ApiException(ApiFailureKind.notFound);
     await pumpBookingList(tester, reader);
@@ -433,13 +456,10 @@ void main() {
     final listLoadsBefore = reader.listCount;
     await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('acceptBookingButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
-    await tester.pumpAndSettle();
+    await confirmAccept(tester);
 
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
-    expect(reader.listCount, greaterThan(listLoadsBefore));
+    expect(reader.listCount, listLoadsBefore + 1);
   });
 
   testWidgets('timeout then ACCEPTED detail becomes success with one POST', (
@@ -451,14 +471,41 @@ void main() {
     await pumpDetail(tester, reader);
     reader.detailResult = bookingDetail(assignmentStatus: 'ACCEPTED');
 
-    await tester.tap(find.byKey(const Key('acceptBookingButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('acceptConfirmButton')));
-    await tester.pumpAndSettle();
+    await confirmAccept(tester);
 
     expect(reader.acceptCount, 1);
     expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
     expect(find.text('예약을 수락했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('AppBar back pops without refresh when unchanged', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader();
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    final listLoadsBefore = reader.listCount;
+
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+    expect(reader.listCount, listLoadsBefore);
+  });
+
+  testWidgets('system back pops detail without exception', (tester) async {
+    final reader = FakeBookingReader();
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+
+    final popped = await tester.binding.handlePopRoute();
+    expect(popped, isTrue);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
   });
 
   testWidgets('dispose during accept does not throw', (tester) async {

@@ -180,4 +180,59 @@ void main() {
       expect(reader.detailCount, 1);
     },
   );
+
+  test('mismatched bookingNumber in 200 is not treated as success', () async {
+    final reader = FakeBookingReader()
+      ..acceptResult = BookingAcceptance.fromEnvelope(
+        acceptanceEnvelope(bookingNumber: 'TX209912310000'),
+      )
+      ..detailResult = bookingDetail(assignmentStatus: 'ASSIGNED');
+    final controller = BookingAcceptController(reader);
+
+    final outcome = await controller.accept(
+      bookingNumber: 'TX209912319999',
+      currentDetail: bookingDetail(),
+    );
+
+    expect(outcome.kind, isNot(BookingAcceptOutcomeKind.success));
+    expect(outcome.message.contains('예약을 수락했습니다.'), isFalse);
+    expect(reader.acceptCount, 1);
+    expect(reader.detailCount, 1);
+  });
+
+  test('ASSIGNED status in 200 is not treated as success', () async {
+    final reader = FakeBookingReader()
+      ..acceptResult = BookingAcceptance.fromEnvelope(
+        acceptanceEnvelope(assignmentStatus: 'ASSIGNED'),
+      )
+      ..detailResult = bookingDetail(assignmentStatus: 'ASSIGNED');
+    final controller = BookingAcceptController(reader);
+
+    final outcome = await controller.accept(
+      bookingNumber: 'TX209912319999',
+      currentDetail: bookingDetail(),
+    );
+
+    expect(outcome.kind, BookingAcceptOutcomeKind.stillAssigned);
+    expect(reader.acceptCount, 1);
+    expect(reader.detailCount, 1);
+  });
+
+  test('invalid 200 can still resolve via detail GET ACCEPTED', () async {
+    final reader = FakeBookingReader()
+      ..acceptResult = BookingAcceptance.fromEnvelope(
+        acceptanceEnvelope(bookingNumber: 'TX209912310000'),
+      )
+      ..detailResult = bookingDetail(assignmentStatus: 'ACCEPTED');
+    final controller = BookingAcceptController(reader);
+
+    final outcome = await controller.accept(
+      bookingNumber: 'TX209912319999',
+      currentDetail: bookingDetail(),
+    );
+
+    expect(outcome.kind, BookingAcceptOutcomeKind.success);
+    expect(reader.acceptCount, 1);
+    expect(reader.detailCount, 1);
+  });
 }

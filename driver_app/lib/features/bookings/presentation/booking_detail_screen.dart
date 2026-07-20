@@ -12,14 +12,12 @@ class BookingDetailScreen extends StatefulWidget {
     required this.bookingNumber,
     required this.repository,
     required this.onUnauthorized,
-    this.onAccepted,
     this.acceptController,
   });
 
   final String bookingNumber;
   final BookingReader repository;
   final Future<void> Function() onUnauthorized;
-  final VoidCallback? onAccepted;
   final BookingAcceptController? acceptController;
 
   @override
@@ -130,7 +128,6 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
     if (outcome.refreshList) {
       _listRefreshRequested = true;
-      widget.onAccepted?.call();
     }
 
     if (outcome.expireAuth) {

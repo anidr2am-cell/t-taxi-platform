@@ -83,6 +83,13 @@ class BookingAcceptController {
     required BookingDetail currentDetail,
     required BookingAcceptance acceptance,
   }) async {
+    if (!_isValidAcceptance(bookingNumber, acceptance)) {
+      return _recoverAfterUncertainPost(
+        bookingNumber: bookingNumber,
+        currentDetail: currentDetail,
+      );
+    }
+
     final optimistic = currentDetail.copyWithSummary(
       currentDetail.summary.copyWith(
         status: acceptance.bookingStatus,
@@ -120,6 +127,12 @@ class BookingAcceptController {
         refreshList: true,
       );
     }
+  }
+
+  bool _isValidAcceptance(String bookingNumber, BookingAcceptance acceptance) {
+    return acceptance.bookingNumber == bookingNumber &&
+        acceptance.assignmentStatus.isAccepted &&
+        acceptance.bookingStatus.code == BookingStatusCode.driverAssigned;
   }
 
   Future<BookingAcceptOutcome> _mapApiException(
