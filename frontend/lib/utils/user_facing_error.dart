@@ -227,6 +227,42 @@ String driverApiErrorMessage({
     };
   }
 
+  if (errorCode == 'DRIVER_STANDBY_TOO_EARLY') {
+    return switch (languageCode) {
+      'ko' => '아직 Stand by를 확정할 수 없습니다. 예약 기준 1시간 전부터 가능합니다.',
+      'th' =>
+        'ยังไม่ถึงเวลายืนยัน Stand by สามารถยืนยันได้ก่อนเวลานัดหมาย 1 ชั่วโมง',
+      'zh' => '尚未到 Stand by 确认时间。可在预约时间前 1 小时确认。',
+      'ja' => 'まだ Stand by を確認できません。予約時刻の1時間前から確認できます。',
+      _ =>
+        'Standby is not available yet. You can confirm from one hour before the appointment time.',
+    };
+  }
+
+  if (errorCode == 'DRIVER_STANDBY_REFERENCE_TIME_MISSING') {
+    return switch (languageCode) {
+      'ko' => '예약 기준 시간을 찾을 수 없습니다. 관리자에게 문의해 주세요.',
+      'th' => 'ไม่พบเวลานัดหมายของงานนี้ กรุณาติดต่อแอดมิน',
+      'zh' => '找不到此行程的预约时间。请联系管理员。',
+      'ja' => 'この仕事の予約時刻が見つかりません。管理者に連絡してください。',
+      _ => 'Appointment time was not found. Please contact admin.',
+    };
+  }
+
+  if (errorCode == 'DRIVER_ASSIGNMENT_NOT_ACTIVE' ||
+      errorCode == 'DRIVER_BOOKING_STATUS_NOT_ALLOWED' ||
+      errorCode == 'BOOKING_NOT_ACCEPTABLE') {
+    return switch (languageCode) {
+      'ko' => '이 예약은 현재 운행 확정을 할 수 없습니다. 관리자에게 상태 확인을 요청해 주세요.',
+      'th' =>
+        'ไม่สามารถยืนยันงานนี้ได้ กรุณาติดต่อแอดมินเพื่อตรวจสอบสถานะการจอง',
+      'zh' => '当前无法确认此订单。请联系管理员检查订单状态。',
+      'ja' => '現在この予約は確認できません。管理者に予約状態の確認を依頼してください。',
+      _ =>
+        'This booking cannot be confirmed now. Please contact admin to check the booking status.',
+    };
+  }
+
   if (preferEndTripFailure &&
       (errorCode == 'INTERNAL_SERVER_ERROR' ||
           looksLikeInternalApiMessage(message))) {

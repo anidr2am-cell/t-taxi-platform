@@ -763,6 +763,15 @@ class AppLocalizations {
       'driver_standby_airport_reference': 'Airport arrival reference',
       'driver_standby_departure_reference': 'Vehicle departure reference',
       'driver_standby_available_from': 'Standby available from',
+      'driver_standby_too_early':
+          'Standby is not available yet. You can confirm from one hour before the appointment time.',
+      'driver_standby_reference_missing':
+          'Appointment time was not found. Please contact admin.',
+      'driver_standby_status_not_allowed':
+          'This booking cannot be confirmed now. Please contact admin to check the booking status.',
+      'driver_open_google_maps': 'Open in Google Maps',
+      'driver_google_maps_failed': 'Could not open Google Maps.',
+      'driver_location_unavailable': 'Location information unavailable',
       'driver_name_sign_required':
           'Name-board service requested. Prepare the placard before meeting the customer.',
       'driver_settlement_popup_title': 'Settlement required',
@@ -4567,6 +4576,16 @@ class AppLocalizations {
     'driver_standby_departure_reference':
         '차량 출발 기준 시각\n(เวลาอ้างอิงออกเดินทาง)',
     'driver_standby_available_from': '운행 확정 가능 시간\n(ยืนยันได้ตั้งแต่)',
+    'driver_standby_too_early':
+        '아직 Stand by를 확정할 수 없습니다. 예약 기준 1시간 전부터 가능합니다.\n(ยังไม่ถึงเวลายืนยัน Stand by สามารถยืนยันได้ก่อนเวลานัดหมาย 1 ชั่วโมง)',
+    'driver_standby_reference_missing':
+        '예약 기준 시간을 찾을 수 없습니다. 관리자에게 문의해 주세요.\n(ไม่พบเวลานัดหมายของงานนี้ กรุณาติดต่อแอดมิน)',
+    'driver_standby_status_not_allowed':
+        '이 예약은 현재 운행 확정을 할 수 없습니다. 관리자에게 상태 확인을 요청해 주세요.\n(ไม่สามารถยืนยันงานนี้ได้ กรุณาติดต่อแอดมินเพื่อตรวจสอบสถานะการจอง)',
+    'driver_open_google_maps': 'Google Maps에서 보기\n(เปิดใน Google Maps)',
+    'driver_google_maps_failed':
+        'Google Maps를 열 수 없습니다.\n(ไม่สามารถเปิด Google Maps ได้)',
+    'driver_location_unavailable': '위치 정보 없음\n(ไม่มีข้อมูลตำแหน่ง)',
     'driver_name_sign_required':
         '네임보드 서비스가 신청되었습니다. 고객 미팅 전 피켓을 준비하세요.\n(ลูกค้าเลือกบริการป้ายชื่อ กรุณาเตรียมป้ายก่อนพบลูกค้า)',
     'driver_settlement_popup_title': '정산이 필요합니다',

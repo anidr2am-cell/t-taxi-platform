@@ -221,7 +221,7 @@ test('rejects missing booking or active assignment as not found', async () => {
   }
 });
 
-test('rejects cancelled or started booking as BOOKING_NOT_ACCEPTABLE', async () => {
+test('rejects cancelled or started booking with status-specific error', async () => {
   for (const status of [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.ON_ROUTE]) {
     const { service } = createHarness({
       booking: { id: 10, booking_number: BOOKING_NUMBER, status, scheduled_pickup_at: PICKUP_AT },
@@ -229,7 +229,7 @@ test('rejects cancelled or started booking as BOOKING_NOT_ACCEPTABLE', async () 
     await assert.rejects(
       () => service.acceptBooking(44, BOOKING_NUMBER),
       (error) => error.statusCode === 409
-        && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+        && error.errorCode === ERROR_CODES.DRIVER_BOOKING_STATUS_NOT_ALLOWED,
     );
   }
 });
@@ -240,7 +240,7 @@ test('rejects standby confirmation before the one-hour service window', async ()
   await assert.rejects(
     () => service.acceptBooking(44, BOOKING_NUMBER, new Date('2026-07-18T14:59:59.000Z')),
     (error) => error.statusCode === 409
-      && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+      && error.errorCode === ERROR_CODES.DRIVER_STANDBY_TOO_EARLY,
   );
 
   assert.equal(conn.committed, false);
@@ -287,7 +287,7 @@ test('rejects general booking one hour and one second before vehicle departure',
       new Date('2026-07-18T14:59:59.000Z'),
     ),
     (error) => error.statusCode === 409
-      && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+      && error.errorCode === ERROR_CODES.DRIVER_STANDBY_TOO_EARLY,
   );
 });
 
@@ -331,7 +331,7 @@ test('rejects airport pickup one hour and one second before airport arrival refe
       new Date('2026-07-18T16:29:59.000Z'),
     ),
     (error) => error.statusCode === 409
-      && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+      && error.errorCode === ERROR_CODES.DRIVER_STANDBY_TOO_EARLY,
   );
   assert.equal(calls.accepted.length, 0);
 });
@@ -350,7 +350,7 @@ test('rejects null or invalid standby reference with controlled error', async ()
     await assert.rejects(
       () => service.acceptBooking(44, BOOKING_NUMBER, ACCEPT_NOW),
       (error) => error.statusCode === 409
-        && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+        && error.errorCode === ERROR_CODES.DRIVER_STANDBY_REFERENCE_TIME_MISSING,
     );
   }
 });
@@ -398,7 +398,7 @@ test('rejects inactive assignment state', async () => {
   await assert.rejects(
     () => service.acceptBooking(44, BOOKING_NUMBER),
     (error) => error.statusCode === 409
-      && error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+      && error.errorCode === ERROR_CODES.DRIVER_ASSIGNMENT_NOT_ACTIVE,
   );
 });
 
@@ -507,7 +507,7 @@ test('accept loses safely when release or start-route wins the lock', async () =
   });
   await assert.rejects(
     () => started.service.acceptBooking(44, BOOKING_NUMBER),
-    (error) => error.errorCode === ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+    (error) => error.errorCode === ERROR_CODES.DRIVER_BOOKING_STATUS_NOT_ALLOWED,
   );
 });
 

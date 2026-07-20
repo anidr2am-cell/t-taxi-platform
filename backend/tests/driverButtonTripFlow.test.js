@@ -22,27 +22,41 @@ function sign(role = 'DRIVER', id = 44) {
 
 test('driver allowed actions expose button flow without QR actions', () => {
   const service = new DriverJobService({});
-  assert.deepEqual(service.allowedActions(BOOKING_STATUS.DRIVER_ASSIGNED), [
+  assert.deepEqual(service.allowedActions({
+    status: BOOKING_STATUS.DRIVER_ASSIGNED,
+    assignment_status: 'ASSIGNED',
+    scheduled_pickup_at: '2026-07-18 22:00:00',
+  }, new Date('2026-07-18T13:59:59.000Z')), [
+    'VIEW_DETAILS',
+  ]);
+  assert.deepEqual(service.allowedActions({
+    status: BOOKING_STATUS.DRIVER_ASSIGNED,
+    assignment_status: 'ASSIGNED',
+    scheduled_pickup_at: '2026-07-18 22:00:00',
+  }, new Date('2026-07-18T15:00:00.000Z')), [
     'VIEW_DETAILS',
     'ACCEPT_BOOKING',
   ]);
-  assert.deepEqual(service.allowedActions(BOOKING_STATUS.DRIVER_ASSIGNED, 'ACCEPTED'), [
+  assert.deepEqual(service.allowedActions({
+    status: BOOKING_STATUS.DRIVER_ASSIGNED,
+    assignment_status: 'ACCEPTED',
+  }), [
     'VIEW_DETAILS',
     'START_ON_ROUTE',
   ]);
-  assert.deepEqual(service.allowedActions(BOOKING_STATUS.ON_ROUTE), [
+  assert.deepEqual(service.allowedActions({ status: BOOKING_STATUS.ON_ROUTE }), [
     'VIEW_DETAILS',
     'MARK_ARRIVED',
   ]);
-  assert.deepEqual(service.allowedActions(BOOKING_STATUS.DRIVER_ARRIVED), [
+  assert.deepEqual(service.allowedActions({ status: BOOKING_STATUS.DRIVER_ARRIVED }), [
     'VIEW_DETAILS',
     'MARK_PICKED_UP',
   ]);
-  assert.deepEqual(service.allowedActions(BOOKING_STATUS.PICKED_UP), [
+  assert.deepEqual(service.allowedActions({ status: BOOKING_STATUS.PICKED_UP }), [
     'VIEW_DETAILS',
     'END_TRIP',
   ]);
-  assert.deepEqual(service.allowedActions(BOOKING_STATUS.SETTLEMENT_PENDING), []);
+  assert.deepEqual(service.allowedActions({ status: BOOKING_STATUS.SETTLEMENT_PENDING }), []);
 });
 
 test('mark-picked-up route requires driver role', async () => {
