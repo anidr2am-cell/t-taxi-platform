@@ -201,6 +201,21 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
             ).then((_) => _load()),
           ),
           _AccountMenuTile(
+            icon: Icons.notifications_outlined,
+            title: l10n.t('driver_account_notifications'),
+            badgeFuture: _unreadNotificationsFuture,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverNotificationsPage(
+                  api: _api,
+                  deviceRegistrationService: _deviceRegistration,
+                  showAppBar: true,
+                ),
+              ),
+            ).then((_) => _load()),
+          ),
+          _AccountMenuTile(
             icon: Icons.receipt_long_outlined,
             title: l10n.t('driver_account_settlement'),
             badgeFuture: _pendingSettlementFuture,
