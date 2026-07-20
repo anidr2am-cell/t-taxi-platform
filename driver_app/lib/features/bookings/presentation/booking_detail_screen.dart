@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/network/api_exception.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
+import 'booking_accept_controller.dart';
 import 'booking_status_label.dart';
 
 class BookingDetailScreen extends StatefulWidget {
@@ -11,24 +12,31 @@ class BookingDetailScreen extends StatefulWidget {
     required this.bookingNumber,
     required this.repository,
     required this.onUnauthorized,
+    this.acceptController,
   });
 
   final String bookingNumber;
   final BookingReader repository;
   final Future<void> Function() onUnauthorized;
+  final BookingAcceptController? acceptController;
 
   @override
   State<BookingDetailScreen> createState() => _BookingDetailScreenState();
 }
 
 class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  late final BookingAcceptController _acceptController;
   BookingDetail? _detail;
   ApiException? _error;
   bool _loading = true;
+  bool _accepting = false;
+  bool _listRefreshRequested = false;
 
   @override
   void initState() {
     super.initState();
+    _acceptController =
+        widget.acceptController ?? BookingAcceptController(widget.repository);
     _load();
   }
 
@@ -77,19 +85,119 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     }
   }
 
+  Future<void> _confirmAccept() async {
+    final detail = _detail;
+    if (detail == null || !detail.canAccept || _accepting) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !_accepting,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('acceptConfirmDialog'),
+        title: const Text('예약 수락'),
+        content: const Text('이 예약을 수락하시겠습니까?'),
+        actions: [
+          TextButton(
+            key: const Key('acceptCancelButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const Key('acceptConfirmButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('예약 수락'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    await _runAccept(detail);
+  }
+
+  Future<void> _runAccept(BookingDetail detail) async {
+    if (_accepting) return;
+    setState(() => _accepting = true);
+
+    final outcome = await _acceptController.accept(
+      bookingNumber: widget.bookingNumber,
+      currentDetail: detail,
+    );
+
+    if (!mounted) return;
+
+    if (outcome.refreshList) {
+      _listRefreshRequested = true;
+    }
+
+    if (outcome.expireAuth) {
+      await widget.onUnauthorized();
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
+
+    if (outcome.closeDetail) {
+      _showMessage(outcome.message);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+      return;
+    }
+
+    setState(() {
+      _accepting = false;
+      if (outcome.detail != null) {
+        _detail = outcome.detail;
+        _error = null;
+        _loading = false;
+      }
+    });
+
+    _showMessage(outcome.message);
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _popWithRefreshFlag() {
+    Navigator.of(context).pop(_listRefreshRequested);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('예약 상세')),
-      body: switch ((_loading, _detail, _error)) {
-        (true, _, _) => const Center(
-          key: Key('detailLoading'),
-          child: CircularProgressIndicator(),
-        ),
-        (false, _, final error?) => _DetailError(error: error, onRetry: _load),
-        (false, final detail?, _) => _DetailBody(detail: detail),
-        _ => const SizedBox.shrink(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _popWithRefreshFlag();
       },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('예약 상세'),
+          leading: BackButton(onPressed: _popWithRefreshFlag),
+        ),
+        body: switch ((_loading, _detail, _error)) {
+          (true, _, _) => const Center(
+            key: Key('detailLoading'),
+            child: CircularProgressIndicator(),
+          ),
+          (false, _, final error?) => _DetailError(
+            error: error,
+            onRetry: _load,
+          ),
+          (false, final detail?, _) => _DetailBody(
+            detail: detail,
+            accepting: _accepting,
+            onAcceptPressed: _confirmAccept,
+          ),
+          _ => const SizedBox.shrink(),
+        },
+      ),
     );
   }
 }
@@ -102,7 +210,9 @@ class _DetailError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unavailable = error.errorCode == 'BOOKING_NOT_FOUND';
+    final unavailable =
+        error.kind == ApiFailureKind.notFound ||
+        error.errorCode == 'BOOKING_NOT_FOUND';
     return Center(
       key: const Key('detailError'),
       child: Padding(
@@ -144,9 +254,15 @@ class _DetailError extends StatelessWidget {
 }
 
 class _DetailBody extends StatelessWidget {
-  const _DetailBody({required this.detail});
+  const _DetailBody({
+    required this.detail,
+    required this.accepting,
+    required this.onAcceptPressed,
+  });
 
   final BookingDetail detail;
+  final bool accepting;
+  final VoidCallback onAcceptPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +286,21 @@ class _DetailBody extends StatelessWidget {
             BookingStatusLabel(status: booking.status),
           ],
         ),
+        if (detail.canAccept) ...[
+          const SizedBox(height: 16),
+          FilledButton(
+            key: const Key('acceptBookingButton'),
+            onPressed: accepting ? null : onAcceptPressed,
+            child: accepting
+                ? const SizedBox(
+                    key: Key('acceptBookingLoading'),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('예약 수락'),
+          ),
+        ],
         const SizedBox(height: 16),
         _Section(
           title: '운행 정보',

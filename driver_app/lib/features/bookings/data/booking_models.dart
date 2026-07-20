@@ -55,6 +55,47 @@ class BookingStatus {
   };
 }
 
+enum AssignmentStatusCode {
+  assigned,
+  accepted,
+  rejected,
+  completed,
+  cancelled,
+  unknown,
+}
+
+class AssignmentStatus {
+  const AssignmentStatus(this.raw, this.code);
+
+  factory AssignmentStatus.parse(Object? value) {
+    if (value == null) {
+      return const AssignmentStatus(null, AssignmentStatusCode.unknown);
+    }
+    if (value is! String) {
+      return const AssignmentStatus(null, AssignmentStatusCode.unknown);
+    }
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return const AssignmentStatus(null, AssignmentStatusCode.unknown);
+    }
+    final code = switch (trimmed) {
+      'ASSIGNED' => AssignmentStatusCode.assigned,
+      'ACCEPTED' => AssignmentStatusCode.accepted,
+      'REJECTED' => AssignmentStatusCode.rejected,
+      'COMPLETED' => AssignmentStatusCode.completed,
+      'CANCELLED' => AssignmentStatusCode.cancelled,
+      _ => AssignmentStatusCode.unknown,
+    };
+    return AssignmentStatus(trimmed, code);
+  }
+
+  final String? raw;
+  final AssignmentStatusCode code;
+
+  bool get isAssigned => code == AssignmentStatusCode.assigned;
+  bool get isAccepted => code == AssignmentStatusCode.accepted;
+}
+
 class BookingType {
   const BookingType({required this.code, required this.name});
 
@@ -94,6 +135,7 @@ class BookingSummary {
   const BookingSummary({
     required this.bookingNumber,
     required this.status,
+    required this.assignmentStatus,
     required this.pickupDate,
     required this.pickupTime,
     required this.origin,
@@ -130,6 +172,7 @@ class BookingSummary {
     return BookingSummary(
       bookingNumber: bookingNumber,
       status: BookingStatus.parse(rawStatus),
+      assignmentStatus: AssignmentStatus.parse(json['assignmentStatus']),
       pickupDate: pickupDate,
       pickupTime: pickupTime,
       origin: origin,
@@ -147,6 +190,7 @@ class BookingSummary {
 
   final String bookingNumber;
   final BookingStatus status;
+  final AssignmentStatus assignmentStatus;
   final String pickupDate;
   final String pickupTime;
   final String origin;
@@ -156,6 +200,28 @@ class BookingSummary {
   final String? customerDisplayName;
   final String? flightNumber;
   final BookingMoney driverExpectedIncome;
+
+  bool get canAccept =>
+      status.code == BookingStatusCode.driverAssigned &&
+      assignmentStatus.isAssigned;
+
+  BookingSummary copyWith({
+    BookingStatus? status,
+    AssignmentStatus? assignmentStatus,
+  }) => BookingSummary(
+    bookingNumber: bookingNumber,
+    status: status ?? this.status,
+    assignmentStatus: assignmentStatus ?? this.assignmentStatus,
+    pickupDate: pickupDate,
+    pickupTime: pickupTime,
+    origin: origin,
+    destination: destination,
+    passengerCount: passengerCount,
+    vehicleType: vehicleType,
+    customerDisplayName: customerDisplayName,
+    flightNumber: flightNumber,
+    driverExpectedIncome: driverExpectedIncome,
+  );
 }
 
 class BookingList {
@@ -312,6 +378,63 @@ class BookingDetail {
   final String? specialInstructions;
   final BookingMoney customerPayment;
   final BookingMoney companyCommission;
+
+  bool get canAccept => summary.canAccept;
+
+  BookingDetail copyWithSummary(BookingSummary summary) => BookingDetail(
+    summary: summary,
+    passengers: passengers,
+    luggage: luggage,
+    flight: flight,
+    specialInstructions: specialInstructions,
+    customerPayment: customerPayment,
+    companyCommission: companyCommission,
+  );
+}
+
+class BookingAcceptance {
+  const BookingAcceptance({
+    required this.bookingNumber,
+    required this.bookingStatus,
+    required this.assignmentStatus,
+    required this.acceptedAt,
+    required this.idempotent,
+  });
+
+  factory BookingAcceptance.fromEnvelope(Map<String, dynamic> envelope) {
+    final data = envelope['data'];
+    if (envelope['success'] != true || data is! Map<String, dynamic>) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    final bookingNumber = data['bookingNumber'];
+    final bookingStatus = data['bookingStatus'];
+    final assignmentStatus = data['assignmentStatus'];
+    final idempotent = data['idempotent'];
+    if (bookingNumber is! String ||
+        !RegExp(r'^TX\d{12}$').hasMatch(bookingNumber) ||
+        bookingStatus is! String ||
+        assignmentStatus is! String ||
+        idempotent is! bool) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    final acceptedAt = data['acceptedAt'];
+    if (acceptedAt != null && acceptedAt is! String) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    return BookingAcceptance(
+      bookingNumber: bookingNumber,
+      bookingStatus: BookingStatus.parse(bookingStatus),
+      assignmentStatus: AssignmentStatus.parse(assignmentStatus),
+      acceptedAt: _optionalString(acceptedAt),
+      idempotent: idempotent,
+    );
+  }
+
+  final String bookingNumber;
+  final BookingStatus bookingStatus;
+  final AssignmentStatus assignmentStatus;
+  final String? acceptedAt;
+  final bool idempotent;
 }
 
 String formatMoney(BookingMoney money) {

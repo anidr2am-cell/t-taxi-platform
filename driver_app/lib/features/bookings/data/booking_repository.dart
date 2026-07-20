@@ -4,6 +4,7 @@ import 'booking_models.dart';
 abstract interface class BookingReader {
   Future<BookingList> getTodayBookings();
   Future<BookingDetail> getBookingDetail(String bookingNumber);
+  Future<BookingAcceptance> acceptBooking(String bookingNumber);
 }
 
 class BookingRepository implements BookingReader {
@@ -18,4 +19,8 @@ class BookingRepository implements BookingReader {
   @override
   Future<BookingDetail> getBookingDetail(String bookingNumber) async =>
       BookingDetail.fromEnvelope(await _api.getBookingDetail(bookingNumber));
+
+  @override
+  Future<BookingAcceptance> acceptBooking(String bookingNumber) async =>
+      BookingAcceptance.fromEnvelope(await _api.acceptBooking(bookingNumber));
 }
