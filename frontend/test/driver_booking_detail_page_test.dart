@@ -28,7 +28,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
+      find.widgetWithText(FilledButton, '운행 준비 확인 / ยืนยันว่าพร้อมปฏิบัติงาน'),
       findsOneWidget,
     );
     expect(
@@ -36,7 +36,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
       findsNothing,
     );
   });
@@ -54,13 +54,16 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(
-        find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
+        find.widgetWithText(FilledButton, '운행 준비 확인 / ยืนยันว่าพร้อมปฏิบัติงาน'),
       );
       await tester.pumpAndSettle();
       await tester.tap(
         find.descendant(
           of: find.byType(AlertDialog),
-          matching: find.widgetWithText(FilledButton, '운행 확정 / ยืนยัน'),
+          matching: find.widgetWithText(
+            FilledButton,
+            '운행 확정 / ยืนยัน',
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -69,7 +72,7 @@ void main() {
       expect(
         find.widgetWithText(
           FilledButton,
-          '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+          '픽업지로 출발 / ออกเดินทางไปรับลูกค้า',
         ),
         findsOneWidget,
       );
@@ -103,7 +106,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '도착 / ถึงแล้ว'));
@@ -129,7 +132,7 @@ void main() {
 
     await tester.tap(
       find
-          .widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน')
+          .widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน')
           .first,
     );
     await tester.pumpAndSettle();
@@ -161,7 +164,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
       findsOneWidget,
     );
   });
@@ -179,7 +182,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว'),
+      find.widgetWithText(FilledButton, '고객 탑승 확인 / รับลูกค้าขึ้นรถแล้ว'),
       findsOneWidget,
     );
   });
@@ -194,7 +197,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว'),
+      find.widgetWithText(FilledButton, '고객 탑승 확인 / รับลูกค้าขึ้นรถแล้ว'),
     );
     await tester.pumpAndSettle();
 
@@ -213,7 +216,7 @@ void main() {
     expect(api.markPickedUpCalls, 1);
     expect(api.detailCalls, greaterThan(1));
     expect(
-      find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
+      find.widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน'),
       findsOneWidget,
     );
   });
@@ -228,7 +231,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
+      find.widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน'),
       findsOneWidget,
     );
   });
@@ -335,7 +338,7 @@ void main() {
       await tester.tap(
         find.widgetWithText(
           FilledButton,
-          '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน',
+          '운행 종료 / ยืนยันจบงาน',
         ),
       );
       await tester.pumpAndSettle();
@@ -382,16 +385,16 @@ void main() {
     expect(
       find.widgetWithText(
         FilledButton,
-        '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+        '픽업지로 출발 / ออกเดินทางไปรับลูกค้า',
       ),
       findsNothing,
     );
     expect(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
       findsNothing,
     );
     expect(
-      find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
+      find.widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน'),
       findsNothing,
     );
   });
@@ -616,7 +619,7 @@ void main() {
     expect(
       find.widgetWithText(
         FilledButton,
-        '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+        '픽업지로 출발 / ออกเดินทางไปรับลูกค้า',
       ),
       findsNothing,
     );
@@ -742,7 +745,7 @@ void main() {
     expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
   });
 
-  testWidgets('customer message action opens internal driver chat', (
+  testWidgets('driver booking detail does not show customer message action', (
     tester,
   ) async {
     _useTallViewport(tester);
@@ -752,73 +755,25 @@ void main() {
           detail: _booking(
             status: 'DRIVER_ASSIGNED',
             actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+            phone: '+66812345678',
           ),
         ),
-        chatPageBuilder: (bookingNumber) =>
-            Scaffold(body: Text('chat:$bookingNumber')),
       ),
     );
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-      120,
+      find.textContaining('고객에게 전화'),
+      200,
       scrollable: find.byType(Scrollable),
     );
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
-    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
-    expect(find.byIcon(Icons.phone), findsNothing);
-
-    final messageButton = find.widgetWithText(
-      OutlinedButton,
-      '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
-    );
-    await tester.ensureVisible(messageButton);
-    tester.widget<OutlinedButton>(messageButton).onPressed?.call();
-    await tester.pumpAndSettle();
-
-    expect(find.text('chat:TX202607010001'), findsOneWidget);
-  });
-
-  testWidgets('customer message action works without customer phone', (
-    tester,
-  ) async {
-    _useTallViewport(tester);
-    await tester.pumpWidget(
-      _wrap(
-        _FakeDriverApi(
-          detail: _booking(
-            status: 'DRIVER_ASSIGNED',
-            actions: ['VIEW_DETAILS'],
-            phone: '',
-          ),
-        ),
-        chatPageBuilder: (bookingNumber) =>
-            Scaffold(body: Text('chat:$bookingNumber')),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(
-      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-      120,
-      scrollable: find.byType(Scrollable),
-    );
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
-    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
-
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('chat:TX202607010001'), findsOneWidget);
+    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsNothing);
+    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsOneWidget);
   });
 }
 
 Widget _wrap(
   DriverApiService api, {
-  Widget Function(String bookingNumber)? chatPageBuilder,
   bool showStatusControl = false,
   DriverLocationApiService? locationApi,
   DriverSettlementApiService? settlementApi,
@@ -827,7 +782,6 @@ Widget _wrap(
     home: DriverBookingDetailPage(
       bookingNumber: 'TX202607010001',
       api: api,
-      chatPageBuilder: chatPageBuilder,
       showStatusControl: showStatusControl,
       locationApi: locationApi,
       settlementApi: settlementApi,

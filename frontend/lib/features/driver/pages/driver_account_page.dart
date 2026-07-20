@@ -11,6 +11,7 @@ import '../../notification/services/notification_device_registration_service.dar
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../models/driver_status.dart';
+import '../pages/driver_notifications_page.dart';
 import '../pages/driver_profile_page.dart';
 import '../pages/driver_support_page.dart';
 import '../services/driver_api_service.dart';
@@ -46,6 +47,7 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
   Future<DriverStatus>? _statusFuture;
   Future<String?>? _nameFuture;
   Future<int>? _pendingSettlementFuture;
+  Future<int>? _unreadNotificationsFuture;
   bool _enablingNotifications = false;
 
   @override
@@ -62,6 +64,7 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
       _pendingSettlementFuture = _settlementApi.listSettlements().then(
         DriverUx.countPendingSettlements,
       );
+      _unreadNotificationsFuture = _api.getUnreadNotificationCount();
     });
   }
 
@@ -173,6 +176,21 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
             ratingFuture: _ratingFuture,
           ),
           const SizedBox(height: AppTokens.spaceMd),
+          _AccountMenuTile(
+            icon: Icons.notifications_outlined,
+            title: l10n.t('driver_account_notifications'),
+            badgeFuture: _unreadNotificationsFuture,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverNotificationsPage(
+                  api: _api,
+                  deviceRegistrationService: _deviceRegistration,
+                  showAppBar: true,
+                ),
+              ),
+            ).then((_) => _load()),
+          ),
           _AccountMenuTile(
             icon: Icons.receipt_long_outlined,
             title: l10n.t('driver_account_settlement'),

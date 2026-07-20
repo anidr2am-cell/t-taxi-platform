@@ -4,6 +4,20 @@ import 'driver_trip_flow.dart';
 import 'services/driver_api_service.dart';
 import 'models/driver_booking.dart';
 
+class DriverTripStepInfo {
+  const DriverTripStepInfo({
+    required this.step,
+    required this.totalSteps,
+    required this.titleKey,
+    this.hintKey,
+  });
+
+  final int step;
+  final int totalSteps;
+  final String titleKey;
+  final String? hintKey;
+}
+
 /// Job list grouping for driver today view.
 enum DriverJobGroup { active, upcoming, completed }
 
@@ -36,12 +50,86 @@ class DriverUx {
 
   static bool isReadOnly(String status) => isTerminal(status);
 
-  static bool canMessageCustomer(String status) {
+  static bool canContactCustomer(String status) {
     return status == 'DRIVER_ASSIGNED' ||
         status == 'ON_ROUTE' ||
         status == 'DRIVER_ARRIVED' ||
-        status == 'PICKED_UP' ||
-        status == 'CONFIRMED';
+        status == 'PICKED_UP';
+  }
+
+  @Deprecated('Driver-customer messaging removed; use canContactCustomer')
+  static bool canMessageCustomer(String status) => canContactCustomer(status);
+
+  static DriverTripStepInfo? tripStepInfo(DriverBooking booking) {
+    if (isTerminal(booking.status)) return null;
+
+    final action = DriverTripFlow.primaryActionToken(booking);
+    if (action != null) {
+      return switch (action) {
+        'ACCEPT_BOOKING' => const DriverTripStepInfo(
+          step: 2,
+          totalSteps: 7,
+          titleKey: 'driver_step_standby',
+          hintKey: 'driver_step_standby_hint',
+        ),
+        'START_ON_ROUTE' => const DriverTripStepInfo(
+          step: 3,
+          totalSteps: 7,
+          titleKey: 'driver_step_depart_pickup',
+          hintKey: 'driver_step_depart_pickup_hint',
+        ),
+        'MARK_ARRIVED' => const DriverTripStepInfo(
+          step: 4,
+          totalSteps: 7,
+          titleKey: 'driver_step_arrived_pickup',
+          hintKey: 'driver_step_arrived_pickup_hint',
+        ),
+        'MARK_PICKED_UP' => const DriverTripStepInfo(
+          step: 5,
+          totalSteps: 7,
+          titleKey: 'driver_step_customer_boarded',
+          hintKey: 'driver_step_customer_boarded_hint',
+        ),
+        'END_TRIP' => const DriverTripStepInfo(
+          step: 6,
+          totalSteps: 7,
+          titleKey: 'driver_step_finish_trip',
+          hintKey: 'driver_step_finish_trip_hint',
+        ),
+        _ => null,
+      };
+    }
+
+    return switch (booking.status) {
+      'DRIVER_ASSIGNED' => const DriverTripStepInfo(
+        step: 1,
+        totalSteps: 7,
+        titleKey: 'driver_step_assigned',
+        hintKey: 'driver_step_assigned_hint',
+      ),
+      'ON_ROUTE' => const DriverTripStepInfo(
+        step: 3,
+        totalSteps: 7,
+        titleKey: 'driver_step_depart_pickup',
+      ),
+      'DRIVER_ARRIVED' => const DriverTripStepInfo(
+        step: 4,
+        totalSteps: 7,
+        titleKey: 'driver_step_arrived_pickup',
+      ),
+      'PICKED_UP' => const DriverTripStepInfo(
+        step: 6,
+        totalSteps: 7,
+        titleKey: 'driver_step_in_transit',
+      ),
+      'SETTLEMENT_PENDING' => const DriverTripStepInfo(
+        step: 7,
+        totalSteps: 7,
+        titleKey: 'driver_step_settlement',
+        hintKey: 'driver_step_settlement_hint',
+      ),
+      _ => null,
+    };
   }
 
   static String? nextActionKey(DriverBooking booking) {

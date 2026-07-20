@@ -121,17 +121,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
 
   bool get _isCompleted => widget.result.status == 'COMPLETED';
 
-  bool get _canShowChat {
-    const chatStatuses = {
-      'DRIVER_ASSIGNED',
-      'ON_ROUTE',
-      'DRIVER_ARRIVED',
-      'PICKED_UP',
-    };
-    return widget.enableCustomerTools &&
-        chatStatuses.contains(widget.result.status) &&
-        widget.result.guestAccessToken?.isNotEmpty == true;
-  }
+  bool get _canShowChat => false;
 
   bool get _canShowNotifications =>
       widget.enableCustomerTools &&

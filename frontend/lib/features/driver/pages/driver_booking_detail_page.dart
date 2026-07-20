@@ -22,14 +22,13 @@ import '../services/driver_api_service.dart';
 import '../utils/driver_money_format.dart';
 import '../widgets/driver_status_control.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
-import 'driver_chat_page.dart';
+import '../widgets/driver_workflow_widgets.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
   const DriverBookingDetailPage({
     super.key,
     required this.bookingNumber,
     DriverApiService? api,
-    this.chatPageBuilder,
     this.showStatusControl = false,
     this.locationApi,
     this.positionProvider,
@@ -38,7 +37,6 @@ class DriverBookingDetailPage extends StatefulWidget {
 
   final String bookingNumber;
   final DriverApiService api;
-  final Widget Function(String bookingNumber)? chatPageBuilder;
   final bool showStatusControl;
   final DriverLocationApiService? locationApi;
   final DriverPositionProvider? positionProvider;
@@ -250,20 +248,6 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     }
   }
 
-  void _openCustomerChat() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            widget.chatPageBuilder?.call(widget.bookingNumber) ??
-            DriverChatPage(
-              bookingNumber: widget.bookingNumber,
-              bookingDetailPageBuilder: (bookingNumber) =>
-                  DriverBookingDetailPage(bookingNumber: bookingNumber),
-            ),
-      ),
-    );
-  }
-
   void _openSettlementDetail() {
     Navigator.of(context)
         .push(
@@ -389,7 +373,8 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                   key: const Key('driverDetailScroll'),
                   padding: AppUi.pagePadding(context),
                   children: [
-                    _StatusHeader(booking: booking),
+                    DriverStepIndicator(booking: booking),
+                    const SizedBox(height: AppTokens.spaceMd),
                     if (widget.showStatusControl)
                       _DriverDetailLocationSection(
                         booking: booking,
@@ -542,11 +527,16 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                               label: l10n.t('driver_detail_customer_name'),
                               value: booking.customerDisplayName!,
                             ),
-                          if (DriverUx.canMessageCustomer(booking.status))
+                          if (DriverUx.canContactCustomer(booking.status) &&
+                              DriverTripContact.hasCallablePhone(
+                                booking.customerPhone,
+                              ))
                             AppUi.secondaryButton(
-                              label: l10n.t('driver_message_customer'),
-                              icon: Icons.chat_bubble_outline,
-                              onPressed: _openCustomerChat,
+                              label: l10n.t('driver_call_customer'),
+                              icon: Icons.phone_outlined,
+                              onPressed: () => DriverTripContact.callPhone(
+                                booking.customerPhone!,
+                              ),
                               fullWidth: true,
                             ),
                         ],
@@ -832,56 +822,6 @@ class _DriverDetailLocationSection extends StatelessWidget {
           positionProvider: positionProvider,
         );
       },
-    );
-  }
-}
-
-class _StatusHeader extends StatelessWidget {
-  const _StatusHeader({required this.booking});
-
-  final DriverBooking booking;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final statusLabel = l10n.t(DriverUx.statusLabelKey(booking.status));
-    final nextKey = DriverUx.nextActionKey(booking);
-
-    return AppUi.surfaceCard(
-      backgroundColor: AppTokens.primaryLight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  statusLabel,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppTokens.primaryDark,
-                  ),
-                ),
-              ),
-              AppUi.statusBadge(
-                statusLabel,
-                tone: AppUi.toneForBookingStatus(booking.status),
-              ),
-            ],
-          ),
-          if (nextKey != null) ...[
-            const SizedBox(height: AppTokens.spaceMd),
-            Text(
-              l10n.t('driver_next_action'),
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(color: AppTokens.textSecondary),
-            ),
-            const SizedBox(height: AppTokens.spaceSm),
-            AppUi.actionBanner(message: l10n.t(nextKey), icon: Icons.flag),
-          ],
-        ],
-      ),
     );
   }
 }

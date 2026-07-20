@@ -42,11 +42,6 @@ class GuestBookingLookupPage extends StatefulWidget {
 }
 
 class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
-  static const _pickupAlertStatuses = {
-    'DRIVER_ASSIGNED',
-    'ON_ROUTE',
-    'DRIVER_ARRIVED',
-  };
   final _formKey = GlobalKey<FormState>();
   final _bookingNumberController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -161,14 +156,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     );
   }
 
-  bool _canSendPickupAlert(GuestBookingLookupResult result) {
-    final hasDriver =
-        result.driverName?.trim().isNotEmpty == true ||
-        result.capabilities.chatAvailable;
-    return _pickupAlertStatuses.contains(result.status) &&
-        hasDriver &&
-        result.guestAccessToken.trim().isNotEmpty;
-  }
+  bool _canSendPickupAlert(GuestBookingLookupResult result) => false;
 
   bool _canShowTracking(GuestBookingLookupResult result) {
     const trackingStatuses = {
@@ -190,11 +178,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         result.guestAccessToken.trim().isNotEmpty;
   }
 
-  bool _canShowChat(GuestBookingLookupResult result) {
-    return widget.enableCustomerTools &&
-        result.capabilities.chatAvailable &&
-        result.guestAccessToken.trim().isNotEmpty;
-  }
+  bool _canShowChat(GuestBookingLookupResult result) => false;
 
   bool _canShowDriverPhone(GuestBookingLookupResult result) {
     const activeStatuses = {

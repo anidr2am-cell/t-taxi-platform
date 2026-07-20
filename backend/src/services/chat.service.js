@@ -48,6 +48,24 @@ class ChatService {
     return !READ_ONLY_STATUSES.has(bookingStatus);
   }
 
+  assertBookingPeerChatDisabled(authUser, guestAccessToken) {
+    if (authUser?.role === ROLES.DRIVER) {
+      throw new AppError("Driver-customer chat is no longer available", {
+        statusCode: 410,
+        errorCode: ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+      });
+    }
+    if (
+      authUser?.role === ROLES.CUSTOMER ||
+      (!authUser && guestAccessToken)
+    ) {
+      throw new AppError("Customer-driver chat is no longer available", {
+        statusCode: 410,
+        errorCode: ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+      });
+    }
+  }
+
   mapParticipantRole(userRole) {
     if (userRole === ROLES.DRIVER) return "DRIVER";
     if (userRole === ROLES.ADMIN || userRole === ROLES.SUPER_ADMIN)
@@ -362,6 +380,7 @@ class ChatService {
         errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
       });
     }
+    this.assertBookingPeerChatDisabled(authUser, guestAccessToken);
     const room = await this.ensureRoom(conn, booking);
     const adminLike =
       authUser?.role === ROLES.ADMIN || authUser?.role === ROLES.SUPER_ADMIN;
