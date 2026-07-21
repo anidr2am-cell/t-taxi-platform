@@ -183,6 +183,27 @@ class QaDriverApi extends DriverApiService {
   };
 
   @override
+  Future<Map<String, dynamic>> getRatingSummary() async => {
+    'averageRating': 4.8,
+    'reviewCount': 3,
+  };
+
+  @override
+  Future<Map<String, dynamic>> getProfile() async => {
+    'name': 'Somchai',
+    'phone': '+66812345678',
+    'email': 'driver@example.com',
+    'vehicle': {
+      'typeCode': 'SUV',
+      'typeName': 'SUV',
+      'modelName': 'Camry',
+      'plateNumber': 'ABC-1234',
+      'color': 'White',
+      'year': 2022,
+    },
+  };
+
+  @override
   Future<DriverJobsToday> getTodayBookings() async {
     todayCalls += 1;
     if (loadError != null) throw loadError!;

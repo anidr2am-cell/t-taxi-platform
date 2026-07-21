@@ -405,7 +405,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(api.claimCalls, 1);
       await tester.pumpAndSettle();
-      expect(api.todayCalls, greaterThan(1));
+      expect(find.byType(DriverBookingDetailPage), findsOneWidget);
     });
 
     testWidgets('already claimed and network errors show friendly copy', (

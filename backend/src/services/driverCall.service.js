@@ -12,6 +12,9 @@ const {
 } = require('../socket/realtime');
 const NOTIFICATION_TYPES = require('../constants/notificationTypes');
 const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
+const {
+  assertNoPickupTimeConflict,
+} = require('../policies/driverBookingConflictPolicy');
 
 class DriverCallService {
   constructor(
@@ -181,13 +184,11 @@ class DriverCallService {
         });
       }
 
-      const hasActiveJob = await this.driverRepository.hasActiveJob(conn, driver.id);
-      if (hasActiveJob) {
-        throw new AppError('Driver already has an active assignment', {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.DRIVER_NOT_AVAILABLE,
-        });
-      }
+      const conflictRows = await this.driverRepository.findActiveAssignmentPickupsForConflict(
+        conn,
+        driver.id,
+      );
+      assertNoPickupTimeConflict(conflictRows, booking.scheduled_pickup_at);
 
       const vehicle = await this.driverRepository.findMatchingVehicle(
         conn,
@@ -234,12 +235,20 @@ class DriverCallService {
         },
       });
 
-      await conn.commit();
-
-      confirmedPayload = await this.driverJobService.getDetail(
+      const detailRow = await this.bookingRepository.findActiveDriverBookingByNumberForUpdate(
+        conn,
         driverUserId,
         normalizedBookingNumber,
       );
+      if (!detailRow) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+      confirmedPayload = this.driverJobService.mapDetail(detailRow);
+
+      await conn.commit();
     } catch (err) {
       await conn.rollback();
       throw err;

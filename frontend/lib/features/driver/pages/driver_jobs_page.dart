@@ -126,12 +126,12 @@ class _DriverJobsPageState extends State<DriverJobsPage>
     setState(() => _claimingCalls.add(call.bookingNumber));
     final l10n = context.l10n;
     try {
-      await _api.claimOpenCall(call.bookingNumber);
+      final booking = await _api.claimOpenCall(call.bookingNumber);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.t('driver_claim_success'))),
       );
-      _refresh();
+      _openDetail(booking);
     } catch (err) {
       if (!mounted) return;
       final isAlreadyClaimed =
@@ -142,10 +142,13 @@ class _DriverJobsPageState extends State<DriverJobsPage>
           content: Text(
             isAlreadyClaimed
                 ? l10n.t('driver_claim_already_assigned')
-                : userFacingError(
-                    err,
-                    fallback: l10n.t('driver_load_failed'),
-                  ),
+                : err is DriverApiException
+                ? driverApiErrorMessage(
+                    message: err.message,
+                    errorCode: err.errorCode,
+                    languageCode: Localizations.localeOf(context).languageCode,
+                  )
+                : userFacingError(err, fallback: l10n.t('driver_load_failed')),
           ),
         ),
       );
@@ -387,7 +390,7 @@ class _OpenCallsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final buttonEnabled = online && !hasActiveJob;
+    final buttonEnabled = online;
 
     return AppUi.surfaceCard(
       child: Column(

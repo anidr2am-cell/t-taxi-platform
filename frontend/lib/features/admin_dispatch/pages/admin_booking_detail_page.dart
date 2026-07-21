@@ -1436,11 +1436,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                 label: l10n.t('status'),
                 value: assignment['driverStatus'] as String,
               ),
-            if (vehicle != null)
+            if (vehicle != null) ...[
               AppUi.summaryRow(
-                label: 'Vehicle',
-                value: _vehicleSummary(vehicle),
+                label: l10n.t('airport_meeting_vehicle_type'),
+                value: _vehicleTypeLabel(vehicle),
               ),
+              AppUi.summaryRow(
+                label: l10n.t('airport_meeting_vehicle_plate'),
+                value: _vehiclePlateLabel(vehicle),
+              ),
+            ],
             if (assignment['assignedAt'] != null)
               AppUi.summaryRow(
                 label: 'Assigned at',
@@ -2063,6 +2068,19 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         ],
       ),
     );
+  }
+
+  String _vehicleTypeLabel(Map<String, dynamic> vehicle) {
+    final typeName = (vehicle['typeName'] as String?)?.trim();
+    if (typeName != null && typeName.isNotEmpty) return typeName;
+    final typeCode = (vehicle['typeCode'] as String?)?.trim();
+    if (typeCode != null && typeCode.isNotEmpty) return typeCode;
+    return '-';
+  }
+
+  String _vehiclePlateLabel(Map<String, dynamic> vehicle) {
+    final plate = (vehicle['plateNumber'] as String?)?.trim();
+    return plate == null || plate.isEmpty ? '-' : plate;
   }
 
   String _vehicleSummary(Map<String, dynamic> vehicle) {

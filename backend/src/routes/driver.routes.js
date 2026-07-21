@@ -1,5 +1,6 @@
 const express = require('express');
 const driverController = require('../controllers/driver.controller');
+const driverProfileController = require('../controllers/driverProfile.controller');
 const driverLocationController = require('../controllers/driverLocation.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
@@ -7,6 +8,8 @@ const validate = require('../middlewares/validate.middleware');
 const createRateLimit = require('../middlewares/rateLimit.middleware');
 const ROLES = require('../constants/roles');
 const { locationUpdateSchema } = require('../validators/driverLocation.validator');
+const { updateDriverProfileSchema } = require('../validators/driverProfile.validator');
+const { single } = require('../config/multer');
 
 const router = express.Router();
 const driverLocationRateLimit = createRateLimit({ windowMs: 60_000, max: 60 });
@@ -14,11 +17,32 @@ const driverLocationRateLimit = createRateLimit({ windowMs: 60_000, max: 60 });
 router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
 
 router.get('/status', driverController.getStatus);
+router.get('/profile', driverProfileController.getProfile);
+router.patch(
+  '/profile',
+  validate({ body: updateDriverProfileSchema }),
+  driverProfileController.updateProfile,
+);
+router.get('/profile/avatar', driverProfileController.streamAvatar);
+router.post(
+  '/profile/avatar',
+  single,
+  driverProfileController.handleUploadError,
+  driverProfileController.uploadAvatar,
+);
+router.get('/profile/vehicle-photo', driverProfileController.streamVehiclePhoto);
+router.post(
+  '/profile/vehicle-photo',
+  single,
+  driverProfileController.handleUploadError,
+  driverProfileController.uploadVehiclePhoto,
+);
 router.post('/online', driverController.goOnline);
 router.post('/offline', driverController.goOffline);
 router.get('/calls/open', driverController.listOpenCalls);
 router.post('/calls/:bookingNumber/claim', driverController.claimOpenCall);
 router.get('/bookings/today', driverController.listTodayBookings);
+router.get('/bookings/scheduled', driverController.listScheduledBookings);
 router.post(
   '/location',
   driverLocationRateLimit,

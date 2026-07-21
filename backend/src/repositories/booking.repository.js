@@ -567,6 +567,24 @@ class BookingRepository {
     return rows;
   }
 
+  async findActiveDriverBookingsScheduled(driverUserId) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.driverJobSelectSql()}
+        AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'NO_SHOW')
+        ORDER BY
+          CASE
+            WHEN b.status IN ('ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING') THEN 0
+            ELSE 1
+          END ASC,
+          b.scheduled_pickup_at ASC,
+          b.booking_number ASC
+      `,
+      [driverUserId],
+    );
+    return rows;
+  }
+
   async findActiveDriverBookingByNumber(driverUserId, bookingNumber) {
     const [rows] = await this.pool.query(
       `

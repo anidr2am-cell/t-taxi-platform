@@ -315,10 +315,13 @@ class DriverJobService {
   }
 
   async listToday(driverUserId, now = new Date()) {
+    return this.listScheduled(driverUserId, now);
+  }
+
+  async listScheduled(driverUserId, now = new Date()) {
     const range = this.getTodayRange(now);
-    const rows = await this.bookingRepository.findActiveDriverBookingsForDate(
+    const rows = await this.bookingRepository.findActiveDriverBookingsScheduled(
       driverUserId,
-      range,
     );
     return {
       date: range.date,

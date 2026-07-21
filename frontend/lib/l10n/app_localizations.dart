@@ -629,7 +629,8 @@ class AppLocalizations {
       'driver_claim_confirm_message':
           'Please check the time and locations before confirming.',
       'driver_claim_success': 'Job accepted.',
-      'driver_claim_already_assigned': 'Another driver accepted this job first.',
+      'driver_claim_already_assigned':
+          'Another driver accepted this job first.',
       'driver_open_calls_online_required':
           'You can receive calls only when you are online.',
       'driver_open_calls_empty': 'No available calls right now.',
@@ -649,17 +650,21 @@ class AppLocalizations {
       'driver_step_standby_hint':
           'Confirm you are ready before travel time (usually 1 hour before pickup).',
       'driver_step_depart_pickup': 'Head to pickup',
-      'driver_step_depart_pickup_hint': 'Open maps and start driving to the pickup point.',
+      'driver_step_depart_pickup_hint':
+          'Open maps and start driving to the pickup point.',
       'driver_step_arrived_pickup': 'Arrived at pickup',
-      'driver_step_arrived_pickup_hint': 'Confirm after you reach the pickup point.',
+      'driver_step_arrived_pickup_hint':
+          'Confirm after you reach the pickup point.',
       'driver_step_customer_boarded': 'Customer boarded',
-      'driver_step_customer_boarded_hint': 'Confirm after the customer is in the vehicle.',
+      'driver_step_customer_boarded_hint':
+          'Confirm after the customer is in the vehicle.',
       'driver_step_in_transit': 'Trip in progress',
       'driver_step_finish_trip': 'Finish trip',
       'driver_step_finish_trip_hint':
           'After finishing, you must pay commission and upload a slip before the next job.',
       'driver_step_settlement': 'Settlement required',
-      'driver_step_settlement_hint': 'Pay commission and upload your transfer slip.',
+      'driver_step_settlement_hint':
+          'Pay commission and upload your transfer slip.',
       'driver_today_greeting_generic': 'Hello',
       'driver_today_greeting_named': 'Hello, {name}',
       'driver_today_trip_count': 'You have {count} trips today',
@@ -670,7 +675,7 @@ class AppLocalizations {
       'driver_today_cta_settlement_waiting': 'Waiting for confirmation',
       'driver_today_remaining_title': '{count} trips left today',
       'driver_today_completed_title': 'Completed today ({count})',
-      'driver_today_empty_title': 'No trips scheduled for today.',
+      'driver_today_empty_title': 'No scheduled trips.',
       'driver_today_empty_message':
           'You will be notified when a new trip is assigned.',
       'driver_quick_navigate': 'Navigate',
@@ -697,6 +702,18 @@ class AppLocalizations {
       'driver_account_settlement': 'Settlement',
       'driver_account_support': 'Customer support',
       'driver_account_profile': 'My profile',
+      'driver_account_vehicle_title': 'My vehicle',
+      'driver_account_vehicle_empty': 'No vehicle information registered yet.',
+      'driver_account_vehicle_color': 'Color',
+      'driver_account_vehicle_year': 'Year',
+      'driver_account_vehicle_model': 'Model',
+      'driver_profile_edit_title': 'Edit profile',
+      'driver_profile_save': 'Save changes',
+      'driver_profile_save_success': 'Profile updated.',
+      'driver_profile_save_failed': 'Could not save profile. Please try again.',
+      'driver_profile_readonly_email': 'Email (cannot be changed)',
+      'driver_profile_upload_avatar': 'Change profile photo',
+      'driver_profile_upload_vehicle_photo': 'Change vehicle photo',
       'driver_account_language': 'Language',
       'driver_account_notification_settings': 'Notification settings',
       'driver_account_terms': 'Terms of service',
@@ -4484,8 +4501,7 @@ class AppLocalizations {
         '다른 기사가 먼저 수락했습니다 / งานนี้มีคนขับรับไปแล้ว',
     'driver_open_calls_online_required':
         '온라인 상태에서만 콜을 받을 수 있습니다.\n(รับงานได้เฉพาะเมื่อออนไลน์เท่านั้น)',
-    'driver_open_calls_empty':
-        '배차 가능한 콜이 없습니다.\n(ไม่มีงานที่พร้อมให้รับ)',
+    'driver_open_calls_empty': '배차 가능한 콜이 없습니다.\n(ไม่มีงานที่พร้อมให้รับ)',
     'driver_settlement_block_title':
         '아직 신규 업무를 받을 수 없습니다\n(ยังไม่สามารถรับงานใหม่ได้)',
     'driver_settlement_block_message':
@@ -4497,7 +4513,8 @@ class AppLocalizations {
     'driver_home_new_calls_cta': '새 콜 보기 / ดูงานใหม่',
     'driver_call_customer': '고객에게 전화 / โทรหาลูกค้า',
     'driver_account_notifications': '알림\n(การแจ้งเตือน)',
-    'driver_step_progress': '단계 {step}/{total}\n(ขั้นตอนที่ {step} จาก {total})',
+    'driver_step_progress':
+        '단계 {step}/{total}\n(ขั้นตอนที่ {step} จาก {total})',
     'driver_step_assigned': '배정 확인됨 / งานได้รับการยืนยัน',
     'driver_step_assigned_hint':
         'Stand by 전 예약 내용을 확인하세요.\n(ตรวจสอบรายละเอียดก่อนยืนยัน Stand by)',
@@ -4532,7 +4549,7 @@ class AppLocalizations {
     'driver_today_remaining_title':
         '오늘 남은 예약 {count}건\n(งานที่เหลือวันนี้ {count} งาน)',
     'driver_today_completed_title': '완료된 운행 ({count})\n(งานที่เสร็จแล้ว)',
-    'driver_today_empty_title': '오늘 예정된 운행이 없습니다.\n(วันนี้ไม่มีงานที่กำหนดไว้)',
+    'driver_today_empty_title': '예정된 운행이 없습니다.\n(ไม่มีงานที่กำหนดไว้)',
     'driver_today_empty_message':
         '새 예약이 배정되면 알림으로 알려드립니다.\n(ระบบจะแจ้งเตือนเมื่อมีงานใหม่)',
     'driver_quick_navigate': '길찾기 / นำทาง',
@@ -4560,6 +4577,20 @@ class AppLocalizations {
     'driver_account_settlement': '정산\n(การชำระบัญชี)',
     'driver_account_support': '고객센터\n(ศูนย์บริการลูกค้า)',
     'driver_account_profile': '내 프로필\n(โปรไฟล์ของฉัน)',
+    'driver_account_vehicle_title': '내 차량\n(รถของฉัน)',
+    'driver_account_vehicle_empty':
+        '등록된 차량 정보가 없습니다.\n(ยังไม่มีข้อมูลรถที่ลงทะเบียนไว้)',
+    'driver_account_vehicle_color': '차량 색상 / สีรถ',
+    'driver_account_vehicle_year': '차량 연식 / ปีรถ',
+    'driver_account_vehicle_model': '차량 모델 / รุ่นรถ',
+    'driver_profile_edit_title': '프로필 수정 / แก้ไขโปรไฟล์',
+    'driver_profile_save': '저장 / บันทึก',
+    'driver_profile_save_success': '저장되었습니다.\n(บันทึกเรียบร้อยแล้ว)',
+    'driver_profile_save_failed':
+        '저장하지 못했습니다. 다시 시도해 주세요.\n(บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง)',
+    'driver_profile_readonly_email': '이메일 (변경 불가) / อีเมล (แก้ไขไม่ได้)',
+    'driver_profile_upload_avatar': '프로필 사진 변경 / เปลี่ยนรูปโปรไฟล์',
+    'driver_profile_upload_vehicle_photo': '차량 사진 변경 / เปลี่ยนรูปรถ',
     'driver_account_language': '언어\n(ภาษา)',
     'driver_account_notification_settings': '알림 설정\n(การตั้งค่าการแจ้งเตือน)',
     'driver_account_terms': '이용약관\n(ข้อกำหนดการใช้งาน)',

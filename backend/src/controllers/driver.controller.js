@@ -15,6 +15,11 @@ const listTodayBookings = asyncHandler(async (req, res) => {
   return success(res, data, 'OK');
 });
 
+const listScheduledBookings = asyncHandler(async (req, res) => {
+  const data = await getDriverJobService().listScheduled(req.user.id);
+  return success(res, data, 'OK');
+});
+
 const listOpenCalls = asyncHandler(async (req, res) => {
   const data = await getDriverCallService().listOpenCalls(req.user.id);
   return success(res, data, 'OK');
@@ -127,6 +132,7 @@ const goOffline = asyncHandler(async (req, res) => {
 
 module.exports = {
   listTodayBookings,
+  listScheduledBookings,
   listOpenCalls,
   claimOpenCall,
   releaseAssignment,

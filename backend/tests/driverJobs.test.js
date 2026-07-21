@@ -97,6 +97,25 @@ test('DRIVER can access today endpoint', async () => {
   assert.equal(res.body.data.items[0].assignmentStatus, 'ASSIGNED');
 });
 
+test('DRIVER can access scheduled endpoint', async () => {
+  container.register('driverJobService', () => ({
+    async listScheduled(driverUserId) {
+      assert.equal(driverUserId, 44);
+      return {
+        date: '2026-07-01',
+        items: [{ bookingNumber: 'TX209901010002', status: 'ON_ROUTE' }],
+      };
+    },
+  }));
+
+  const res = await request(app)
+    .get('/api/v1/driver/bookings/scheduled')
+    .set('Authorization', `Bearer ${sign('DRIVER', 44)}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.items[0].bookingNumber, 'TX209901010002');
+});
+
 test('DRIVER detail endpoint returns accepted assignment status', async () => {
   container.register('driverJobService', () => ({
     async getDetail(driverUserId, bookingNumber) {
@@ -196,7 +215,7 @@ test('today range includes 00:00 and 23:59 Thailand service-local pickups', () =
 
 test('today list sorting is requested from repository and mapped concisely', async () => {
   const service = new DriverJobService({
-    async findActiveDriverBookingsForDate(_driverUserId, _range) {
+    async findActiveDriverBookingsScheduled(_driverUserId) {
       return [row({ booking_number: 'TX202607010001' })];
     },
   });
@@ -210,6 +229,25 @@ test('today list sorting is requested from repository and mapped concisely', asy
   assert.equal(result.items[0].passengerCount, 3);
   assert.equal(result.items[0].customerDisplayName, 'Kim');
   assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS', 'ACCEPT_BOOKING']);
+});
+
+test('scheduled list uses upcoming repository query without date filter', async () => {
+  let called = false;
+  const service = new DriverJobService({
+    async findActiveDriverBookingsScheduled(_driverUserId) {
+      called = true;
+      return [
+        row({ booking_number: 'TX202607010002', status: 'ON_ROUTE' }),
+        row({ booking_number: 'TX202607100001', status: 'DRIVER_ASSIGNED' }),
+      ];
+    },
+  });
+
+  const result = await service.listScheduled(44);
+
+  assert.equal(called, true);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].status, 'ON_ROUTE');
 });
 
 test('driver can access assigned booking detail', async () => {

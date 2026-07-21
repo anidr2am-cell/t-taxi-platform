@@ -161,7 +161,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.textContaining('오늘 예정된 운행이 없습니다'), findsOneWidget);
+    expect(find.textContaining('예정된 운행이 없습니다'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -647,7 +647,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('오늘 예정된 운행이 없습니다'), findsOneWidget);
+    expect(find.textContaining('예정된 운행이 없습니다'), findsOneWidget);
   });
 
   testWidgets('today page shows new calls prompt without inline claim cards', (
@@ -731,10 +731,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final claimButton = find.widgetWithText(
-      FilledButton,
-      '이 콜 수락 / รับงานนี้',
-    );
+    final claimButton = find.widgetWithText(FilledButton, '이 콜 수락 / รับงานนี้');
     await tester.scrollUntilVisible(
       claimButton,
       400,
@@ -752,7 +749,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.claimCalls, 1);
-    expect(api.todayCalls, greaterThan(1));
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
   });
 
   testWidgets('jobs page claim conflict shows already claimed message', (
@@ -776,10 +773,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final claimButton = find.widgetWithText(
-      FilledButton,
-      '이 콜 수락 / รับงานนี้',
-    );
+    final claimButton = find.widgetWithText(FilledButton, '이 콜 수락 / รับงานนี้');
     await tester.scrollUntilVisible(
       claimButton,
       400,
@@ -797,10 +791,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.claimCalls, 1);
-    expect(
-      find.textContaining('다른 기사가 먼저 수락했습니다'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('다른 기사가 먼저 수락했습니다'), findsOneWidget);
   });
 
   testWidgets('today layout has no horizontal overflow at 360px', (
@@ -874,10 +865,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('픽업지로 출발 / ออกเดินทางไปรับลูกค้า'),
-      findsNothing,
-    );
+    expect(find.text('픽업지로 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
     expect(find.text('Cancelled'), findsOneWidget);
   });
 
@@ -1003,6 +991,20 @@ class _FakeLoginApi extends DriverApiService {
   };
 
   @override
+  Future<Map<String, dynamic>> getRatingSummary() async => {
+    'averageRating': null,
+    'reviewCount': 0,
+  };
+
+  @override
+  Future<Map<String, dynamic>> getProfile() async => {
+    'name': 'Somchai',
+    'phone': '+66812345678',
+    'email': 'driver@example.com',
+    'vehicle': null,
+  };
+
+  @override
   Future<DriverJobsToday> getTodayBookings() async =>
       const DriverJobsToday(date: '2026-07-01', items: []);
 
@@ -1062,6 +1064,27 @@ class _FakeJobsApi extends DriverApiService {
   @override
   Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async => {
     'items': [],
+  };
+
+  @override
+  Future<Map<String, dynamic>> getRatingSummary() async => {
+    'averageRating': null,
+    'reviewCount': 0,
+  };
+
+  @override
+  Future<Map<String, dynamic>> getProfile() async => {
+    'name': 'Somchai',
+    'phone': '+66812345678',
+    'email': 'driver@example.com',
+    'vehicle': {
+      'typeCode': 'SUV',
+      'typeName': 'SUV',
+      'modelName': 'Camry',
+      'plateNumber': 'ABC-1234',
+      'color': 'White',
+      'year': 2022,
+    },
   };
 
   @override

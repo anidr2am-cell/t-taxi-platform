@@ -249,6 +249,18 @@ String driverApiErrorMessage({
     };
   }
 
+  if (errorCode == 'DRIVER_BOOKING_TIME_CONFLICT') {
+    return switch (languageCode) {
+      'ko' => '픽업 시간이 기존 예약과 3시간 이내라 이 콜을 수락할 수 없습니다.',
+      'th' =>
+        'เวลารับลูกค้าใกล้กับงานที่รับไว้เกินไป (น้อยกว่า 3 ชั่วโมง) จึงรับงานนี้ไม่ได้',
+      'zh' => '新客户上车时间与已有订单相差不足 3 小时，无法接受此订单。',
+      'ja' => 'ピックアップ時間が既存の予約から3時間以内のため、このコールは受け付けられません。',
+      _ =>
+        'This job cannot be accepted because its pickup time is less than 3 hours from another assigned job.',
+    };
+  }
+
   if (errorCode == 'DRIVER_ASSIGNMENT_NOT_ACTIVE' ||
       errorCode == 'DRIVER_BOOKING_STATUS_NOT_ALLOWED' ||
       errorCode == 'BOOKING_NOT_ACCEPTABLE') {
