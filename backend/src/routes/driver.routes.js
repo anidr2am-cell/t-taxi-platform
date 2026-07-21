@@ -41,8 +41,6 @@ router.post('/online', driverController.goOnline);
 router.post('/offline', driverController.goOffline);
 router.get('/calls/open', driverController.listOpenCalls);
 router.post('/calls/:bookingNumber/claim', driverController.claimOpenCall);
-router.get('/bookings/today', driverController.listTodayBookings);
-router.get('/bookings/scheduled', driverController.listScheduledBookings);
 router.post(
   '/location',
   driverLocationRateLimit,
@@ -54,6 +52,8 @@ router.get('/notifications', require('../controllers/notification.controller').l
 router.get('/notifications/unread-count', require('../controllers/notification.controller').driverUnreadCount);
 router.post('/notifications/:notificationId/read', require('../controllers/notification.controller').markDriverRead);
 router.post('/notifications/read-all', require('../controllers/notification.controller').markDriverReadAll);
+router.get('/bookings/scheduled', driverController.listScheduledBookings);
+router.get('/bookings/today', driverController.listTodayBookings);
 router.post('/bookings/:bookingNumber/start-route', driverController.startOnRoute);
 router.post('/bookings/:bookingNumber/arrive', driverController.markArrived);
 router.post('/bookings/:bookingNumber/mark-picked-up', driverController.markPickedUp);
