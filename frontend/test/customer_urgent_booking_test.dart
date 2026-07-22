@@ -4,14 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/urgent_negotiation_status.dart';
+import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
+import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
 import 'package:frontend/features/booking/pages/urgent_booking_flow_page.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/customer_urgent_negotiation_socket_service.dart';
+import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +42,10 @@ void main() {
   });
 
   group('UrgentBookingFlowPage', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
     const result = BookingCreateResult(
       bookingId: 10,
       bookingNumber: 'TX202607230001',
@@ -58,6 +65,7 @@ void main() {
       WidgetTester tester, {
       required FakeCustomerUrgentApi api,
       required FakeCustomerUrgentSocket socket,
+      GuestBookingLookupService? lookupService,
     }) async {
       await tester.pumpWidget(
         ChangeNotifierProvider(
@@ -79,6 +87,7 @@ void main() {
                   customerPhone: '01012345678',
                   apiService: api,
                   socketService: socket,
+                  lookupService: lookupService,
                 ),
               );
             },
@@ -270,6 +279,106 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('confirmed socket navigates to booking detail with driver info', (
+      tester,
+    ) async {
+      final lookup = FakeGuestBookingLookupForUrgent(
+        detail: _urgentAssignedLookupDetail(),
+      );
+      final api = FakeCustomerUrgentApi(
+        status: const UrgentNegotiationStatus(
+          bookingNumber: 'TX202607230001',
+          bookingId: 10,
+          bookingStatus: 'OPEN',
+          negotiationId: 1,
+          status: 'BROADCASTING',
+          attemptCount: 0,
+        ),
+      );
+      final socket = FakeCustomerUrgentSocket();
+
+      await pumpFlow(
+        tester,
+        api: api,
+        socket: socket,
+        lookupService: lookup,
+      );
+
+      socket.simulateConfirmed({});
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GuestBookingLookupPage), findsOneWidget);
+      expect(find.text('Somchai Driver'), findsWidgets);
+      expect(find.textContaining('1กก 1234'), findsWidgets);
+      expect(lookup.lookupCalls, 1);
+      expect(lookup.lastLookupPhone, '01012345678');
+    });
+
+    testWidgets('accept decision navigates to booking detail with driver info', (
+      tester,
+    ) async {
+      final lookup = FakeGuestBookingLookupForUrgent(
+        detail: _urgentAssignedLookupDetail(),
+      );
+      final api = FakeCustomerUrgentApi(
+        status: const UrgentNegotiationStatus(
+          bookingNumber: 'TX202607230001',
+          bookingId: 10,
+          bookingStatus: 'OPEN',
+          negotiationId: 1,
+          status: 'AWAITING_CUSTOMER',
+          attemptCount: 1,
+          proposedEtaMinutes: 18,
+        ),
+        decisionResult: const UrgentDecisionResult(
+          bookingNumber: 'TX202607230001',
+          decision: 'ACCEPT',
+          status: 'CONFIRMED',
+          bookingStatus: 'DRIVER_ASSIGNED',
+        ),
+      );
+      final socket = FakeCustomerUrgentSocket();
+
+      await pumpFlow(
+        tester,
+        api: api,
+        socket: socket,
+        lookupService: lookup,
+      );
+
+      socket.simulateEtaProposed({'etaMinutes': 18});
+      await tester.pump();
+
+      await tester.tap(find.text('수락'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GuestBookingLookupPage), findsOneWidget);
+      expect(find.text('Somchai Driver'), findsWidgets);
+      expect(lookup.lookupCalls, 1);
+    });
+
+    test('confirmed navigation lookup persists guest access token', () async {
+      SharedPreferences.setMockInitialValues({});
+      final lookup = FakeGuestBookingLookupForUrgent(
+        detail: _urgentAssignedLookupDetail(),
+      );
+
+      await lookup.lookup(
+        bookingNumber: 'TX202607230001',
+        phone: '01012345678',
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('guest_access_token_TX202607230001'),
+        'guest-token',
+      );
+    });
   });
 
   group('urgent confirm dialog copy', () {
@@ -388,8 +497,74 @@ class FakeCustomerUrgentSocket extends CustomerUrgentNegotiationSocketService {
     onCancelled?.call(payload);
   }
 
+  void simulateConfirmed(Map<String, dynamic> payload) {
+    onConfirmed?.call(payload);
+  }
+
   @override
   void disconnect() {}
+}
+
+GuestBookingLookupResult _urgentAssignedLookupDetail() {
+  return GuestBookingLookupResult.fromJson({
+    'bookingId': 10,
+    'bookingNumber': 'TX202607230001',
+    'status': 'DRIVER_ASSIGNED',
+    'scheduledPickupAt': '2026-07-23T11:30:00+07:00',
+    'serviceType': {'name': 'Airport Pickup'},
+    'route': {
+      'origin': {'address': 'BKK Airport'},
+      'destination': {'address': 'Pattaya Hotel'},
+    },
+    'pricing': {
+      'totalAmount': 1500,
+      'currency': 'THB',
+      'paymentMethod': 'PAY_DRIVER',
+    },
+    'assignedDriver': {
+      'name': 'Somchai Driver',
+      'phone': '+66 81 000 0001',
+      'vehicle': {
+        'typeName': 'Sedan',
+        'plateNumber': '1กก 1234',
+        'color': 'White',
+      },
+    },
+    'capabilities': {
+      'chatAvailable': true,
+      'notificationsAvailable': true,
+      'dropoffQrIssueAvailable': false,
+      'reviewAvailable': false,
+      'trackingAvailable': true,
+      'boardingQrRecoverable': true,
+      'boardingQrPreviouslyIssued': true,
+    },
+    'guestAccess': {
+      'token': 'guest-token',
+      'expiresAt': '2099-07-02T00:00:00Z',
+    },
+  }).copyWith(customerPhone: '01012345678');
+}
+
+class FakeGuestBookingLookupForUrgent extends GuestBookingLookupService {
+  FakeGuestBookingLookupForUrgent({required this.detail})
+    : super(baseUrl: 'http://test', client: _FakeHttpClient());
+
+  final GuestBookingLookupResult detail;
+  int lookupCalls = 0;
+  String? lastLookupPhone;
+
+  @override
+  Future<GuestBookingLookupResult> lookup({
+    required String bookingNumber,
+    required String phone,
+  }) async {
+    lookupCalls += 1;
+    lastLookupPhone = phone;
+    final resolved = detail.copyWith(customerPhone: phone.trim());
+    await persist(resolved);
+    return resolved;
+  }
 }
 
 class _FakeHttpClient implements http.Client {

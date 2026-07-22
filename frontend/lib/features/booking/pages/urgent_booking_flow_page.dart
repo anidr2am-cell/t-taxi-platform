@@ -12,6 +12,7 @@ import '../models/urgent_negotiation_status.dart';
 import '../services/booking_api_service.dart';
 import '../services/customer_urgent_negotiation_socket_service.dart';
 import '../services/guest_booking_lookup_service.dart';
+import 'guest_booking_lookup_page.dart';
 
 enum UrgentFlowPhase {
   searching,
@@ -78,6 +79,7 @@ class _UrgentBookingFlowPageState extends State<UrgentBookingFlowPage> {
   int? _proposedEtaMinutes;
   String? _errorMessage;
   bool _busy = false;
+  bool _bookingDetailNavigationStarted = false;
   Timer? _pollTimer;
 
   String? get _guestToken => widget.result.guestAccessToken;
@@ -179,6 +181,7 @@ class _UrgentBookingFlowPageState extends State<UrgentBookingFlowPage> {
   }
 
   void _applyStatus(UrgentNegotiationStatus status, {UrgentFlowPhase? forcePhase}) {
+    final previousPhase = _phase;
     setState(() {
       _status = status;
       _proposedEtaMinutes ??= status.proposedEtaMinutes;
@@ -192,12 +195,64 @@ class _UrgentBookingFlowPageState extends State<UrgentBookingFlowPage> {
       }
     });
     _syncPollingFallback();
+    if (_phase == UrgentFlowPhase.confirmed &&
+        previousPhase != UrgentFlowPhase.confirmed) {
+      _scheduleBookingDetailNavigation();
+    }
   }
 
   void _setPhase(UrgentFlowPhase phase) {
     if (!mounted) return;
+    final previousPhase = _phase;
     setState(() => _phase = phase);
     _syncPollingFallback();
+    if (phase == UrgentFlowPhase.confirmed &&
+        previousPhase != UrgentFlowPhase.confirmed) {
+      _scheduleBookingDetailNavigation();
+    }
+  }
+
+  void _scheduleBookingDetailNavigation() {
+    if (_bookingDetailNavigationStarted) return;
+    _bookingDetailNavigationStarted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _openBookingDetail();
+    });
+  }
+
+  Future<void> _openBookingDetail() async {
+    if (!mounted) return;
+    final phone = widget.customerPhone?.trim();
+    if (phone == null || phone.isEmpty) {
+      setState(() {
+        _bookingDetailNavigationStarted = false;
+        _errorMessage = 'guest_lookup_refresh_needs_phone';
+      });
+      return;
+    }
+
+    try {
+      final detail = await _lookup.lookup(
+        bookingNumber: widget.result.bookingNumber,
+        phone: phone,
+      );
+      if (!mounted) return;
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => GuestBookingLookupPage(
+            enableCustomerTools: true,
+            lookupService: _lookup,
+            initialResult: detail,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _bookingDetailNavigationStarted = false;
+        _errorMessage = userFacingError(e, fallback: 'ui_action_failed');
+      });
+    }
   }
 
   Future<void> _submitDecision(String decision) async {
@@ -364,12 +419,23 @@ class _UrgentBookingFlowPageState extends State<UrgentBookingFlowPage> {
           icon: Icons.check_circle_outline,
           title: l10n.t('customer_urgent_confirmed_title'),
           body: l10n.t('customer_urgent_confirmed_body'),
-          actions: [
-            FilledButton(
-              onPressed: _goHome,
-              child: Text(l10n.t('customer_urgent_go_home')),
-            ),
-          ],
+          trailing: const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          actions: _bookingDetailNavigationStarted
+              ? null
+              : [
+                  FilledButton(
+                    onPressed: _scheduleBookingDetailNavigation,
+                    child: Text(l10n.t('booking_detail_view')),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: _goHome,
+                    child: Text(l10n.t('customer_urgent_go_home')),
+                  ),
+                ],
         );
       case UrgentFlowPhase.exhausted:
         return _messageCard(

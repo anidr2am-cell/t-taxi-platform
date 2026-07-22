@@ -29,6 +29,7 @@ class GuestBookingLookupPage extends StatefulWidget {
     this.enableCustomerTools = false,
     this.reviewApi,
     this.trackingBuilder,
+    this.initialResult,
   });
 
   final GuestBookingLookupService? lookupService;
@@ -37,6 +38,7 @@ class GuestBookingLookupPage extends StatefulWidget {
   final bool enableCustomerTools;
   final BookingReviewApi? reviewApi;
   final Widget Function(GuestBookingLookupResult result)? trackingBuilder;
+  final GuestBookingLookupResult? initialResult;
 
   @override
   State<GuestBookingLookupPage> createState() => _GuestBookingLookupPageState();
@@ -58,7 +60,23 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   @override
   void initState() {
     super.initState();
-    _loadCached();
+    final initialResult = widget.initialResult;
+    if (initialResult != null) {
+      _applyInitialResult(initialResult);
+    } else {
+      _loadCached();
+    }
+  }
+
+  void _applyInitialResult(GuestBookingLookupResult result) {
+    _bookingNumberController.text = result.bookingNumber;
+    if (result.customerPhone != null && result.customerPhone!.isNotEmpty) {
+      _phoneController.text = result.customerPhone!;
+    }
+    setState(() {
+      _result = result;
+      _loading = false;
+    });
   }
 
   @override

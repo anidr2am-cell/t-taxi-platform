@@ -196,7 +196,7 @@ class AppLocalizations {
       'customer_urgent_retry_cancel': 'Cancel booking',
       'customer_urgent_confirmed_title': 'Driver confirmed',
       'customer_urgent_confirmed_body':
-          'Your driver has been assigned. You can check booking details from the home screen.',
+          'Your driver has been assigned. Opening your booking details.',
       'customer_urgent_exhausted_title': 'No nearby drivers available',
       'customer_urgent_exhausted_body':
           'There are no waiting drivers nearby. Your booking will be cancelled.',
@@ -1533,7 +1533,7 @@ class AppLocalizations {
       'customer_urgent_retry_accept': '수락',
       'customer_urgent_retry_cancel': '취소',
       'customer_urgent_confirmed_title': '배차가 확정되었습니다',
-      'customer_urgent_confirmed_body': '기사님이 배정되었습니다. 홈 화면에서 예약 내역을 확인할 수 있습니다.',
+      'customer_urgent_confirmed_body': '기사님이 배정되었습니다. 예약 상세 화면으로 이동합니다.',
       'customer_urgent_exhausted_title': '대기 중인 기사가 없습니다',
       'customer_urgent_exhausted_body':
           '가까운 곳에 대기중인 기사가 없습니다. 예약을 취소하겠습니다',
@@ -2661,7 +2661,7 @@ class AppLocalizations {
       'customer_urgent_retry_accept': '继续寻找',
       'customer_urgent_retry_cancel': '取消预约',
       'customer_urgent_confirmed_title': '司机已确认',
-      'customer_urgent_confirmed_body': '司机已分配。您可在首页查看预约详情。',
+      'customer_urgent_confirmed_body': '司机已分配。正在打开预约详情页面。',
       'customer_urgent_exhausted_title': '附近暂无可用司机',
       'customer_urgent_exhausted_body': '附近没有待命的司机。您的预约将被取消。',
       'customer_urgent_go_home': '返回首页',
@@ -3197,7 +3197,7 @@ class AppLocalizations {
       'customer_urgent_retry_cancel': '予約をキャンセル',
       'customer_urgent_confirmed_title': '配車が確定しました',
       'customer_urgent_confirmed_body':
-          'ドライバーが割り当てられました。ホーム画面から予約内容を確認できます。',
+          'ドライバーが割り当てられました。予約詳細画面を開いています。',
       'customer_urgent_exhausted_title': '近くに待機中のドライバーがいません',
       'customer_urgent_exhausted_body':
           '近くに待機中のドライバーがいません。予約をキャンセルします。',
@@ -3611,7 +3611,7 @@ class AppLocalizations {
       'customer_urgent_retry_cancel': 'ยกเลิกการจอง',
       'customer_urgent_confirmed_title': 'ยืนยันการจัดรถแล้ว',
       'customer_urgent_confirmed_body':
-          'มีการมอบหมายคนขับแล้ว คุณสามารถตรวจสอบรายละเอียดได้จากหน้าแรก',
+          'มีการมอบหมายคนขับแล้ว กำลังเปิดหน้ารายละเอียดการจอง',
       'customer_urgent_exhausted_title': 'ไม่มีคนขับใกล้เคียง',
       'customer_urgent_exhausted_body':
           'ไม่มีคนขับที่รอรับงานใกล้เคียง เราจะยกเลิกการจองของคุณ',
