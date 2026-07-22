@@ -67,6 +67,117 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('urgent lock with mysql naive lockExpiresAt renders ETA countdown', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final lockExpiresAt = _mysqlNaiveMinutesFromNow(3);
+    final api = FakeUrgentJobsApi(
+      initialToken: 'tok',
+      online: true,
+      lockExpiresAt: lockExpiresAt,
+      openCalls: [urgentOpenCall(number: 'TX202607230098')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: DriverJobsPage(api: api))),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '수락 / รับงาน'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('남은 시간'), findsOneWidget);
+    expect(find.textContaining('7:'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('legacy mislabeled ISO Z lockExpiresAt does not crash ETA dialog', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final api = FakeUrgentJobsApi(
+      initialToken: 'tok',
+      online: true,
+      lockExpiresAt: _mislabeledIsoZMinutesFromNow(3),
+      openCalls: [urgentOpenCall(number: 'TX202607230097')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: DriverJobsPage(api: api))),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '수락 / รับงาน'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('urgent ETA submit with mysql naive customerDecisionExpiresAt shows banner', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final api = FakeUrgentJobsApi(
+      initialToken: 'tok',
+      online: true,
+      customerDecisionExpiresAt: _mysqlNaiveMinutesFromNow(2),
+      openCalls: [urgentOpenCall(number: 'TX202607230096')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ko'),
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '수락 / รับงาน'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.enterText(find.byType(TextFormField), '25');
+    await tester.tap(find.widgetWithText(TextButton, '제출 / ส่ง'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.textContaining('고객 확인 대기 중'), findsOneWidget);
+    expect(find.textContaining('7:'), findsNothing);
+  });
+
+  testWidgets('legacy mislabeled customerDecisionExpiresAt does not crash banner', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final api = FakeUrgentJobsApi(
+      initialToken: 'tok',
+      online: true,
+      customerDecisionExpiresAt: _mislabeledIsoZMinutesFromNow(2),
+      openCalls: [urgentOpenCall(number: 'TX202607230095')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ko'),
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '수락 / รับงาน'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.enterText(find.byType(TextFormField), '25');
+    await tester.tap(find.widgetWithText(TextButton, '제출 / ส่ง'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.textContaining('고객 확인 대기 중'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('urgent lock 409 removes card and shows message', (tester) async {
     _useTallViewport(tester);
     final api = FakeUrgentJobsApi(
@@ -206,6 +317,28 @@ void _useTallViewport(WidgetTester tester) {
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
+String _mysqlNaiveMinutesFromNow(int minutes) {
+  final bangkokWall = DateTime.now().toUtc().add(const Duration(hours: 7));
+  final target = bangkokWall.add(Duration(minutes: minutes));
+  return '${target.year.toString().padLeft(4, '0')}-'
+      '${target.month.toString().padLeft(2, '0')}-'
+      '${target.day.toString().padLeft(2, '0')} '
+      '${target.hour.toString().padLeft(2, '0')}:'
+      '${target.minute.toString().padLeft(2, '0')}:'
+      '${target.second.toString().padLeft(2, '0')}.000';
+}
+
+String _mislabeledIsoZMinutesFromNow(int minutes) {
+  final bangkokWall = DateTime.now().toUtc().add(const Duration(hours: 7));
+  final target = bangkokWall.add(Duration(minutes: minutes));
+  return '${target.year.toString().padLeft(4, '0')}-'
+      '${target.month.toString().padLeft(2, '0')}-'
+      '${target.day.toString().padLeft(2, '0')}T'
+      '${target.hour.toString().padLeft(2, '0')}:'
+      '${target.minute.toString().padLeft(2, '0')}:'
+      '${target.second.toString().padLeft(2, '0')}.000Z';
+}
+
 class FakeUrgentJobsApi extends DriverApiService {
   FakeUrgentJobsApi({
     this.openCalls = const [],
@@ -214,6 +347,7 @@ class FakeUrgentJobsApi extends DriverApiService {
     this.online = false,
     String? initialToken,
     this.lockExpiresAt = '2099-07-23 01:30:00.000',
+    this.customerDecisionExpiresAt = '2099-07-23 01:32:00.000',
   }) : _token = initialToken;
 
   FakeUrgentJobsApi.expiredLock({
@@ -232,6 +366,7 @@ class FakeUrgentJobsApi extends DriverApiService {
   final Object? etaError;
   final bool online;
   final String lockExpiresAt;
+  final String customerDecisionExpiresAt;
   final String? _token;
   int lockCalls = 0;
 
@@ -278,7 +413,7 @@ class FakeUrgentJobsApi extends DriverApiService {
       'bookingNumber': bookingNumber,
       'etaMinutes': etaMinutes,
       'status': 'AWAITING_CUSTOMER',
-      'customerDecisionExpiresAt': '2099-07-23 01:32:00.000',
+      'customerDecisionExpiresAt': customerDecisionExpiresAt,
     };
   }
 }

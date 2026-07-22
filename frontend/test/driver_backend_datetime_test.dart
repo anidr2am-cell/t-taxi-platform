@@ -3,7 +3,7 @@ import 'package:frontend/features/driver/utils/driver_backend_datetime.dart';
 
 void main() {
   group('parseBackendServiceDateTime', () {
-    test('parses ISO8601 Z without double-appending timezone', () {
+    test('parses ISO8601 Z as native UTC', () {
       final parsed = parseBackendServiceDateTime('2026-07-22T20:24:03.024Z');
 
       expect(parsed, isNotNull);
@@ -33,13 +33,21 @@ void main() {
       );
     });
 
-    test('naive MySQL and matching ISO Z refer to the same instant', () {
+    test('naive MySQL and matching UTC ISO Z refer to the same instant', () {
       final mysql = parseBackendServiceDateTime('2026-07-23 03:24:03');
       final iso = parseBackendServiceDateTime('2026-07-22T20:24:03.000Z');
 
       expect(mysql, isNotNull);
       expect(iso, isNotNull);
       expect(mysql!.millisecondsSinceEpoch, iso!.millisecondsSinceEpoch);
+    });
+
+    test('legacy mislabeled ISO Z does not throw', () {
+      expect(
+        () => parseBackendServiceDateTime('2026-07-23T03:24:03.000Z'),
+        returnsNormally,
+      );
+      expect(parseBackendServiceDateTime('2026-07-23T03:24:03.000Z'), isNotNull);
     });
 
     test('returns null for invalid or empty input without throwing', () {

@@ -83,13 +83,11 @@ class _DriverUrgentEtaDialogState extends State<_DriverUrgentEtaDialog> {
 
   void _updateRemaining() {
     if (!mounted) return;
-    final expiresAt = parseBackendServiceDateTime(widget.lockExpiresAt);
-    if (expiresAt == null) {
-      setState(() => _remaining = const Duration(minutes: 3));
-    } else {
-      final diff = expiresAt.difference(DateTime.now());
-      setState(() => _remaining = diff.isNegative ? Duration.zero : diff);
-    }
+    final remaining = remainingUntilBackendServiceDateTime(
+      widget.lockExpiresAt,
+      fallback: const Duration(minutes: 3),
+    );
+    setState(() => _remaining = remaining);
     if (_remaining <= Duration.zero) {
       _countdownTimer?.cancel();
       Navigator.of(context).pop(

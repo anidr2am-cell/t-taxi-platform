@@ -3,7 +3,10 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const ROLES = require('../constants/roles');
-const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
+const {
+  formatServiceDateTimeForApi,
+  parseServiceDateTimeToMs,
+} = require('../utils/serviceDateTime.util');
 const { assertNoPickupTimeConflict } = require('../policies/driverBookingConflictPolicy');
 const {
   emitDriverUrgentCallEtaRequired,
@@ -221,7 +224,9 @@ class UrgentNegotiationService {
         attemptNumber,
         driverId: driver.id,
         status: lockedNegotiation?.status || 'LOCKED',
-        lockExpiresAt: lockedNegotiation?.lock_expires_at || null,
+        lockExpiresAt: formatServiceDateTimeForApi(
+          lockedNegotiation?.lock_expires_at,
+        ),
       };
       driverUserIdForEmit = driver.user_id;
 
@@ -360,7 +365,9 @@ class UrgentNegotiationService {
         driverId: driver.id,
         status: updatedNegotiation.status,
         etaMinutes: normalizedEtaMinutes,
-        customerDecisionExpiresAt: updatedNegotiation.customer_decision_expires_at,
+        customerDecisionExpiresAt: formatServiceDateTimeForApi(
+          updatedNegotiation.customer_decision_expires_at,
+        ),
       };
 
       await conn.commit();
@@ -1126,7 +1133,9 @@ class UrgentNegotiationService {
         attemptCount: Number(negotiation.attempt_count || 0),
         minRequiredEtaMinutes: negotiation.min_required_eta_minutes,
         proposedEtaMinutes: latestAttempt?.proposed_eta_minutes ?? null,
-        customerDecisionExpiresAt: negotiation.customer_decision_expires_at,
+        customerDecisionExpiresAt: formatServiceDateTimeForApi(
+          negotiation.customer_decision_expires_at,
+        ),
         closedReason: negotiation.status === 'CANCELLED'
           ? negotiation.closed_reason
           : null,
