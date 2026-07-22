@@ -98,6 +98,11 @@ function emitBookingUrgentNegotiationCancelled(bookingId, payload) {
   ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:cancelled', payload);
 }
 
+function emitBookingUrgentNegotiationExpired(bookingId, payload) {
+  if (!ioInstance || !bookingId) return;
+  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:expired', payload);
+}
+
 function emitChatRoomEvent(roomId, eventName, payload) {
   if (!ioInstance || !roomId) return;
   ioInstance.to(`chat:${roomId}`).emit(eventName, payload);
@@ -124,5 +129,6 @@ module.exports = {
   emitDriverUrgentCallNew,
   emitDriverUrgentCallCancelled,
   emitBookingUrgentNegotiationCancelled,
+  emitBookingUrgentNegotiationExpired,
   emitChatRoomEvent,
 };

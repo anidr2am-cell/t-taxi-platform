@@ -16,6 +16,7 @@ const {
   emitDriverUrgentCallNew,
   emitDriverUrgentCallCancelled,
   emitBookingUrgentNegotiationCancelled,
+  emitBookingUrgentNegotiationExpired,
 } = require('../socket/realtime');
 const URGENT_NEGOTIATION_TIMEOUT_CONFIG = require('../constants/urgentNegotiationTimeoutConfig');
 const logger = require('../utils/logger');
@@ -784,6 +785,16 @@ class UrgentNegotiationService {
       driverUserId: timedOutDriver?.user_id ?? null,
     }));
 
+    if (fromStatus === 'AWAITING_CUSTOMER') {
+      socketActions.push(
+        () => emitBookingUrgentNegotiationExpired(booking.id, {
+          bookingNumber: booking.booking_number,
+          negotiationId: negotiation.id,
+          attemptCount: nextAttemptCount,
+        }),
+      );
+    }
+
     return {
       bookingNumber: booking.booking_number,
       bookingId: booking.id,
@@ -1057,6 +1068,72 @@ class UrgentNegotiationService {
       ...result,
       decision: 'AUTO_REJECT',
     };
+  }
+
+  async getCustomerNegotiationStatus(bookingNumber, options = {}) {
+    const normalizedBookingNumber = this.driverJobService.validateBookingNumber(bookingNumber);
+    const authUser = options.authUser ?? null;
+    const guestAccessToken = options.guestAccessToken ?? null;
+
+    const conn = await this.pool.getConnection();
+    try {
+      const booking = await this.urgentNegotiationRepository.findBookingForCustomer(
+        conn,
+        normalizedBookingNumber,
+      );
+      if (!booking) {
+        this.throwAppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.NOT_FOUND,
+        });
+      }
+      if (!Number(booking.is_urgent_request)) {
+        this.throwAppError('Booking is not an urgent request', {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+
+      await this.bookingService.assertCustomerOrGuestAccess(
+        conn,
+        booking,
+        authUser,
+        guestAccessToken,
+      );
+
+      const negotiation = await this.urgentNegotiationRepository.findNegotiationByBookingId(
+        conn,
+        booking.id,
+      );
+      if (!negotiation) {
+        this.throwAppError('Urgent negotiation not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.URGENT_NEGOTIATION_NOT_FOUND,
+        });
+      }
+
+      const latestAttempt = await this.urgentNegotiationRepository.findLatestAttempt(
+        conn,
+        negotiation.id,
+      );
+
+      return {
+        bookingNumber: booking.booking_number,
+        bookingId: booking.id,
+        bookingStatus: booking.status,
+        negotiationId: negotiation.id,
+        status: negotiation.status,
+        attemptCount: Number(negotiation.attempt_count || 0),
+        minRequiredEtaMinutes: negotiation.min_required_eta_minutes,
+        proposedEtaMinutes: latestAttempt?.proposed_eta_minutes ?? null,
+        customerDecisionExpiresAt: negotiation.customer_decision_expires_at,
+        closedReason: negotiation.status === 'CANCELLED'
+          ? negotiation.closed_reason
+          : null,
+      };
+    } finally {
+      conn.release();
+    }
   }
 }
 module.exports = UrgentNegotiationService;

@@ -60,6 +60,18 @@ const submitUrgentDecision = asyncHandler(async (req, res) => {
   return success(res, data, 'OK');
 });
 
+const getUrgentNegotiation = asyncHandler(async (req, res) => {
+  const guestAccessToken = extractGuestAccessTokenFromHeader(req);
+  const data = await getUrgentNegotiationService().getCustomerNegotiationStatus(
+    req.params.bookingNumber,
+    {
+      authUser: req.user || null,
+      guestAccessToken,
+    },
+  );
+  return success(res, data, 'OK');
+});
+
 const issueDropoffQr = asyncHandler(async (req, res) => {
   const data = await getBookingService().issueDropoffQr(
     req.params.bookingNumber,
@@ -99,6 +111,7 @@ module.exports = {
   updateBookingStatus,
   cancelBooking,
   submitUrgentDecision,
+  getUrgentNegotiation,
   issueDropoffQr,
   issueBoardingQr,
   lookupGuestBooking,

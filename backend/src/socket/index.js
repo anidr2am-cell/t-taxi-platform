@@ -7,6 +7,7 @@ const ERROR_CODES = require('../constants/errorCodes');
 const { registerChatHandlers } = require('./handlers/chat.handler');
 const { registerDriverLocationHandlers } = require('./handlers/driverLocation.handler');
 const { registerDriverCallHandlers } = require('./handlers/driverCalls.handler');
+const { registerBookingHandlers } = require('./handlers/booking.handler');
 const { setRealtimeIo } = require('./realtime');
 
 function rejectUnauthorized(next, message = 'Unauthorized') {
@@ -51,6 +52,7 @@ function initSocket(io) {
     registerChatHandlers(io, socket);
     registerDriverLocationHandlers(io, socket);
     registerDriverCallHandlers(io, socket);
+    registerBookingHandlers(io, socket);
 
     socket.on('disconnect', (reason) => {
       logger.debug('Socket disconnected', { id: socket.id, reason });
