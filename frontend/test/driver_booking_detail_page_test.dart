@@ -455,7 +455,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Suvarnabhumi Airport'), findsOneWidget);
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
     expect(
       find.text('999 Moo 1 Nong Prue, Bang Phli, Samut Prakan 10540'),
       findsOneWidget,
@@ -513,8 +513,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('BKK Airport'), findsOneWidget);
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
     expect(find.text('Pattaya Hotel'), findsOneWidget);
+    // Avoid showing the same raw "BKK Airport" label twice.
+    expect(find.text('BKK Airport'), findsNothing);
   });
 
   test('driver maps URL uses coordinates when available', () {
@@ -548,6 +550,15 @@ void main() {
     expect(uri, isNotNull);
     expect(uri!.queryParameters['query'], 'Hilton Pattaya 333/101 Beach Road');
     expect(uri.queryParameters['query_place_id'], 'google-hilton-pattaya');
+  });
+
+  test('driver maps URL rejects ambiguous Bangkok city-only queries', () {
+    expect(
+      DriverTripContact.googleMapsUriForLocation(
+        const DriverBookingLocation(address: 'Bangkok, Thailand'),
+      ),
+      isNull,
+    );
   });
 
   test('driver maps URL rejects empty or invalid locations', () {

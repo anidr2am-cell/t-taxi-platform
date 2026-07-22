@@ -257,7 +257,7 @@ void main() {
 
       expect(find.textContaining('지금 할 일'), findsOneWidget);
       expect(find.text('09:30'), findsWidgets);
-      expect(find.text('BKK Airport'), findsWidgets);
+      expect(find.textContaining('BKK — Suvarnabhumi Airport'), findsWidgets);
       expect(find.text('Pattaya Hotel'), findsWidgets);
       expect(find.text('운행 계속하기 / ดำเนินงานต่อ'), findsOneWidget);
       expect(
@@ -357,7 +357,7 @@ void main() {
       expect(find.textContaining('내 업무'), findsOneWidget);
       expect(find.textContaining('지난 업무'), findsOneWidget);
       expect(find.textContaining('10:30'), findsWidgets);
-      expect(find.textContaining('BKK Airport'), findsWidgets);
+      expect(find.textContaining('BKK — Suvarnabhumi Airport'), findsWidgets);
       expect(find.textContaining('Pattaya Hotel'), findsWidgets);
       expect(find.textContaining('고객 결제 총액'), findsWidgets);
       expect(find.textContaining('회사에 납부할 수수료'), findsNothing);

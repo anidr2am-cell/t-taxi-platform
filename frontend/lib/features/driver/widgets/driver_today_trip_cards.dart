@@ -7,6 +7,17 @@ import '../driver_trip_contact.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 
+String _routeLabel(DriverBooking booking, {required bool origin}) {
+  final location = origin
+      ? (booking.pickupLocation ??
+            DriverBookingLocation(address: booking.origin))
+      : (booking.destinationLocation ??
+            DriverBookingLocation(address: booking.destination));
+  final labeled = DriverTripContact.displayLabelFor(location);
+  if (labeled.isNotEmpty) return labeled;
+  return origin ? booking.origin : booking.destination;
+}
+
 class DriverTodayCurrentTripCard extends StatelessWidget {
   const DriverTodayCurrentTripCard({
     super.key,
@@ -25,8 +36,8 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final guidanceKey = DriverUx.statusGuidanceKey(booking.status);
-    final navigateAddress = DriverUx.navigateTargetAddress(booking);
-    final canNavigate = DriverTripContact.hasNavigableAddress(navigateAddress);
+    final navigateLocation = DriverUx.navigateTargetLocation(booking);
+    final canNavigate = DriverTripContact.hasNavigableLocation(navigateLocation);
     final canContact = DriverUx.canContactCustomer(booking.status);
     final phone = canContact ? customerPhone ?? booking.customerPhone : null;
     final canCall = DriverTripContact.hasCallablePhone(phone);
@@ -79,7 +90,10 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          _RouteLine(origin: booking.origin, destination: booking.destination),
+          _RouteLine(
+            origin: _routeLabel(booking, origin: true),
+            destination: _routeLabel(booking, origin: false),
+          ),
           const SizedBox(height: AppTokens.spaceSm),
           Wrap(
             spacing: AppTokens.spaceSm,
@@ -135,7 +149,9 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
                   label: l10n.t('driver_quick_navigate'),
                   enabled: canNavigate,
                   onPressed: canNavigate
-                      ? () => DriverTripContact.openMaps(navigateAddress)
+                      ? () => DriverTripContact.openMapsForLocation(
+                            navigateLocation,
+                          )
                       : null,
                 ),
               ),
@@ -219,8 +235,8 @@ class DriverTodayTripListTile extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           _RouteLine(
-            origin: booking.origin,
-            destination: booking.destination,
+            origin: _routeLabel(booking, origin: true),
+            destination: _routeLabel(booking, origin: false),
             compact: true,
           ),
           if (booking.customerDisplayName != null) ...[

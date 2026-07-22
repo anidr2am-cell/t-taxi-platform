@@ -32,6 +32,23 @@ ON DUPLICATE KEY UPDATE
   is_active = 1,
   deleted_at = NULL;
 
+-- Sync: frontend/lib/features/booking/models/thailand_registered_airports.dart
+UPDATE locations
+SET
+  latitude = CASE code
+    WHEN 'BKK' THEN 13.6899990
+    WHEN 'DMK' THEN 13.9132600
+    ELSE latitude
+  END,
+  longitude = CASE code
+    WHEN 'BKK' THEN 100.7479240
+    WHEN 'DMK' THEN 100.6020100
+    ELSE longitude
+  END
+WHERE deleted_at IS NULL
+  AND type = 'AIRPORT'
+  AND code IN ('BKK', 'DMK');
+
 INSERT INTO locations (code, type, display_name, is_active, deleted_at)
 VALUES
   ('PATTAYA', 'CITY', 'Pattaya', 1, NULL),

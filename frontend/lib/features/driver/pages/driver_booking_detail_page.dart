@@ -905,10 +905,30 @@ class _DriverLocationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final displayName = location.displayName.isNotEmpty
-        ? location.displayName
+    final labeled = DriverTripContact.displayLabelFor(location);
+    final displayName = labeled.isNotEmpty
+        ? labeled
         : l10n.t('driver_location_unavailable');
-    final address = location.secondaryAddress;
+    final knownAirport = DriverTripContact.resolveKnownAirport(location);
+    final String? address;
+    if (knownAirport != null) {
+      final bookingSecondary = location.secondaryAddress;
+      if (bookingSecondary != null &&
+          bookingSecondary.isNotEmpty &&
+          !DriverTripContact.isAmbiguousCityOnly(bookingSecondary)) {
+        address = bookingSecondary;
+      } else {
+        final knownAddress = knownAirport.address?.trim();
+        address =
+            (knownAddress != null &&
+                knownAddress.isNotEmpty &&
+                knownAddress != knownAirport.displayName)
+            ? knownAddress
+            : null;
+      }
+    } else {
+      address = location.secondaryAddress;
+    }
     final canOpen =
         DriverTripContact.googleMapsUriForLocation(location) != null;
 
@@ -939,6 +959,8 @@ class _DriverLocationCard extends StatelessWidget {
                 const SizedBox(height: AppTokens.spaceXs),
                 Text(
                   displayName,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppTokens.textPrimary,
                     fontWeight: FontWeight.w800,

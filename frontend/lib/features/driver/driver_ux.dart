@@ -1,5 +1,6 @@
 import '../booking/utils/booking_status_display.dart';
 import '../settlement/utils/settlement_receipt.dart';
+import 'driver_trip_contact.dart';
 import 'driver_trip_flow.dart';
 import 'services/driver_api_service.dart';
 import 'models/driver_booking.dart';
@@ -337,10 +338,27 @@ class DriverUx {
   }
 
   static String navigateTargetAddress(DriverBooking booking) {
+    final location = navigateTargetLocation(booking);
+    final labeled = DriverTripContact.displayLabelFor(location);
+    if (labeled.isNotEmpty) return labeled;
+    return booking.status == 'PICKED_UP' ? booking.destination : booking.origin;
+  }
+
+  static DriverBookingLocation navigateTargetLocation(DriverBooking booking) {
     if (booking.status == 'PICKED_UP') {
-      return booking.destination;
+      return booking.destinationLocation ??
+          DriverBookingLocation(
+            address: booking.destination,
+            latitude: booking.destinationLatitude,
+            longitude: booking.destinationLongitude,
+          );
     }
-    return booking.origin;
+    return booking.pickupLocation ??
+        DriverBookingLocation(
+          address: booking.origin,
+          latitude: booking.originLatitude,
+          longitude: booking.originLongitude,
+        );
   }
 
   static int countPendingSettlements(List<dynamic> items) {

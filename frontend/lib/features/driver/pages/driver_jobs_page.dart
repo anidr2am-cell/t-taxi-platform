@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../driver_auth.dart';
+import '../driver_trip_contact.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
@@ -452,7 +453,11 @@ class _OpenCallsSection extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 6),
-                      Text('${call.origin} → ${call.destination}'),
+                      Text(
+                        '${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.destination))}',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 6),
                       Text(
                         '${call.serviceTypeName} · ${call.vehicleTypeName} · '
@@ -753,7 +758,10 @@ class _JobCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  booking.origin,
+                  DriverTripContact.displayLabelFor(
+                    booking.pickupLocation ??
+                        DriverBookingLocation(address: booking.origin),
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -777,7 +785,10 @@ class _JobCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  booking.destination,
+                  DriverTripContact.displayLabelFor(
+                    booking.destinationLocation ??
+                        DriverBookingLocation(address: booking.destination),
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
