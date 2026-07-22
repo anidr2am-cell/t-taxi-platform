@@ -186,6 +186,7 @@ test('lockNegotiation succeeds for BROADCASTING negotiation and creates attempt 
   assert.equal(result.attemptNumber, 1);
   assert.equal(result.driverId, 7);
   assert.equal(result.status, 'LOCKED');
+  assert.equal(result.lockExpiresAt, '2026-07-23 01:30:00.000');
   assert.deepEqual(calls.attempts, [{
     negotiationId: 100,
     attemptNumber: 1,

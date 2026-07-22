@@ -66,13 +66,10 @@ class _DriverUrgentNegotiationBannerState
       setState(() => _remaining = Duration.zero);
       return;
     }
-    final expiresAt = parseBackendServiceDateTime(state.expiresAt);
-    if (expiresAt == null) {
-      setState(() => _remaining = const Duration(minutes: 2));
-      return;
-    }
-    final diff = expiresAt.difference(DateTime.now());
-    final remaining = diff.isNegative ? Duration.zero : diff;
+    final remaining = remainingUntilBackendServiceDateTime(
+      state.expiresAt,
+      fallback: const Duration(minutes: 2),
+    );
     setState(() => _remaining = remaining);
     if (remaining <= Duration.zero) {
       _tickTimer?.cancel();
