@@ -37,6 +37,17 @@ class UrgentBookingFlowPage extends StatefulWidget {
   final CustomerUrgentNegotiationSocketService? socketService;
   final GuestBookingLookupService? lookupService;
 
+  static const pollInterval = Duration(seconds: 8);
+
+  @visibleForTesting
+  static bool shouldPollFallback({
+    required bool hasActiveSubscription,
+    required bool isTerminalPhase,
+  }) {
+    if (isTerminalPhase) return false;
+    return !hasActiveSubscription;
+  }
+
   @visibleForTesting
   static UrgentFlowPhase phaseFromStatus(UrgentNegotiationStatus status) {
     if (status.isConfirmed || status.bookingStatus == 'DRIVER_ASSIGNED') {
@@ -71,6 +82,15 @@ class _UrgentBookingFlowPageState extends State<UrgentBookingFlowPage> {
 
   String? get _guestToken => widget.result.guestAccessToken;
 
+  bool get _usingInjectedSocket => widget.socketService != null;
+
+  bool get _isTerminalPhase =>
+      _phase == UrgentFlowPhase.confirmed ||
+      _phase == UrgentFlowPhase.exhausted;
+
+  @visibleForTesting
+  bool get isPollingActive => _pollTimer?.isActive == true;
+
   @override
   void initState() {
     super.initState();
@@ -97,15 +117,40 @@ class _UrgentBookingFlowPageState extends State<UrgentBookingFlowPage> {
       final status = UrgentNegotiationStatus.fromJson(payload);
       _applyStatus(status);
     };
+    _socket.onSubscriptionStateChanged = _syncPollingFallback;
 
-    final usingInjectedSocket = widget.socketService != null;
-    if (!usingInjectedSocket) {
+    if (!_usingInjectedSocket) {
       _socket.connect(guestAccessToken: token);
       await _socket.subscribe(widget.result.bookingNumber);
     }
     await _refreshStatus();
+    _syncPollingFallback();
+  }
+
+  void _syncPollingFallback() {
+    if (!mounted) return;
+    if (UrgentBookingFlowPage.shouldPollFallback(
+      hasActiveSubscription: _socket.hasActiveSubscription,
+      isTerminalPhase: _isTerminalPhase,
+    )) {
+      _startPolling();
+    } else {
+      _stopPolling();
+    }
+  }
+
+  void _startPolling() {
+    if (_pollTimer?.isActive == true || _isTerminalPhase) return;
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) => _refreshStatus());
+    _pollTimer = Timer.periodic(
+      UrgentBookingFlowPage.pollInterval,
+      (_) => _refreshStatus(),
+    );
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   void _handleEtaProposed(Map<String, dynamic> payload) {
@@ -146,11 +191,13 @@ class _UrgentBookingFlowPageState extends State<UrgentBookingFlowPage> {
         _proposedEtaMinutes = status.proposedEtaMinutes ?? _proposedEtaMinutes;
       }
     });
+    _syncPollingFallback();
   }
 
   void _setPhase(UrgentFlowPhase phase) {
     if (!mounted) return;
     setState(() => _phase = phase);
+    _syncPollingFallback();
   }
 
   Future<void> _submitDecision(String decision) async {
