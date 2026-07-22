@@ -711,12 +711,17 @@ class BookingRepository {
         bl.carriers_20_inch,
         bl.carriers_24_inch_plus,
         bl.golf_bags,
-        bl.special_items
+        bl.special_items,
+        b.is_urgent_request,
+        b.urgent_negotiation_id,
+        bun.min_required_eta_minutes AS urgent_min_required_eta_minutes
       FROM bookings b
       INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
       INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
       LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
       LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+      LEFT JOIN booking_urgent_negotiations bun ON bun.id = b.urgent_negotiation_id
+        AND bun.status = 'BROADCASTING'
     `;
   }
 

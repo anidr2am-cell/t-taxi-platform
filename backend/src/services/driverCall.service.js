@@ -102,6 +102,11 @@ class DriverCallService {
         golfBags: Number(row.golf_bags || 0),
         specialItems: row.special_items ?? null,
       },
+      isUrgentRequest: Number(row.is_urgent_request || 0) === 1,
+      negotiationId: row.urgent_negotiation_id ?? null,
+      minRequiredEtaMinutes: row.urgent_min_required_eta_minutes == null
+        ? null
+        : Number(row.urgent_min_required_eta_minutes),
     };
   }
 
