@@ -38,6 +38,13 @@ class BookingWizardController extends ChangeNotifier {
   bool get isSubmitting => _isSubmitting;
   bool get isInitialized => _isInitialized;
 
+  /// Marks the controller ready for widget tests that inject a preconfigured instance.
+  @visibleForTesting
+  void markInitializedForTest() {
+    _isInitialized = true;
+    notifyListeners();
+  }
+
   static const validationSteps = [0, 1, 2, 3, 4, 5, 6, 7];
   static const preConfirmationSteps = [0, 1, 2, 3, 4, 5, 6];
 

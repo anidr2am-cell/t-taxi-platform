@@ -27,7 +27,13 @@ import '../widgets/wizard_status_views.dart';
 import '../widgets/wizard_step_indicator.dart';
 
 class BookingWizardPage extends StatefulWidget {
-  const BookingWizardPage({super.key});
+  const BookingWizardPage({super.key, this.now, this.controller});
+
+  /// Fixed clock for tests. Ignored when [controller] is provided.
+  final DateTime Function()? now;
+
+  /// Preconfigured controller for tests. Skips [BookingWizardController.initialize].
+  final BookingWizardController? controller;
 
   @override
   State<BookingWizardPage> createState() => _BookingWizardPageState();
@@ -48,10 +54,17 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
   @override
   void initState() {
     super.initState();
-    _controller = BookingWizardController();
-    _controller.initialize().then((_) {
-      if (mounted) _controller.syncDerivedData();
-    });
+    _controller =
+        widget.controller ?? BookingWizardController(now: widget.now);
+    if (widget.controller != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _controller.syncDerivedData();
+      });
+    } else {
+      _controller.initialize().then((_) {
+        if (mounted) _controller.syncDerivedData();
+      });
+    }
   }
 
   @override
@@ -109,15 +122,25 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     }
   }
 
+  Future<void> _handleProceedToConfirmation() async {
+    if (_controller.isSubmitting || _controller.isLoading) return;
+    if (_controller.state.step == 7) return;
+    if (!_controller.canProceedToConfirmation()) return;
+
+    await _controller.goToStep(7);
+    _scrollToSection(7);
+  }
+
   Future<void> _handleSubmit() async {
     if (_controller.isSubmitting || _controller.isLoading) return;
-    if (_controller.isUrgentPickupWindowSelected()) return;
+    if (_controller.state.step != 7) return;
 
     await _submitBooking(bookingMode: 'STANDARD');
   }
 
   Future<void> _handleUrgentSubmit() async {
     if (_controller.isSubmitting || _controller.isLoading) return;
+    if (_controller.state.step != 7) return;
     if (!_controller.isUrgentPickupWindowSelected()) return;
 
     final l10n = context.l10n;
@@ -151,12 +174,6 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final firstIncomplete = _controller.firstIncompleteStep();
     if (firstIncomplete != null && firstIncomplete < 7) {
       _scrollToSection(firstIncomplete);
-      return;
-    }
-
-    if (_controller.state.step != 7) {
-      await _controller.goToStep(7);
-      _scrollToSection(7);
       return;
     }
 
@@ -328,19 +345,21 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         final state = _controller.state;
         final isConfirmationStep = state.step == 7;
         final isUrgentWindow = _controller.isUrgentPickupWindowSelected();
+        final isBusy = _controller.isLoading || _controller.isSubmitting;
+        final canProceedToConfirmation =
+            !isConfirmationStep &&
+            _controller.canProceedToConfirmation() &&
+            !isBusy;
         final canSubmitStandard =
-            (isConfirmationStep
-                ? _controller.canSubmitStandard()
-                : _controller.canProceedToConfirmation()) &&
-            !_controller.isLoading &&
-            !_controller.isSubmitting &&
-            !isUrgentWindow;
+            isConfirmationStep &&
+            !isUrgentWindow &&
+            _controller.canSubmitStandard() &&
+            !isBusy;
         final canSubmitUrgent =
             isConfirmationStep &&
             isUrgentWindow &&
             _controller.canSubmitUrgent() &&
-            !_controller.isLoading &&
-            !_controller.isSubmitting;
+            !isBusy;
 
         return Scaffold(
           appBar: AppBar(
@@ -418,6 +437,15 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                               ),
                               const SizedBox(height: 12),
                             ],
+                            if (canProceedToConfirmation)
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: _handleProceedToConfirmation,
+                                  child: Text(l10n.t('customer_review_booking')),
+                                ),
+                              ),
                             if (canSubmitUrgent)
                               SizedBox(
                                 width: double.infinity,
@@ -435,16 +463,12 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                       : Text(l10n.t('customer_urgent_request')),
                                 ),
                               ),
-                            if (canSubmitUrgent && canSubmitStandard)
-                              const SizedBox(height: 8),
                             if (canSubmitStandard)
                               SizedBox(
                                 width: double.infinity,
                                 height: 48,
                                 child: ElevatedButton(
-                                  onPressed: canSubmitStandard
-                                      ? _handleSubmit
-                                      : null,
+                                  onPressed: _handleSubmit,
                                   child: _controller.isSubmitting
                                       ? Row(
                                           mainAxisAlignment:
@@ -468,13 +492,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                             ),
                                           ],
                                         )
-                                      : Text(
-                                          l10n.t(
-                                            isConfirmationStep
-                                                ? 'customer_confirm_booking'
-                                                : 'customer_review_booking',
-                                          ),
-                                        ),
+                                      : Text(l10n.t('customer_confirm_booking')),
                                 ),
                               ),
                           ],
