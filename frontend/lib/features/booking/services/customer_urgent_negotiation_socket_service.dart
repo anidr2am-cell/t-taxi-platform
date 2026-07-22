@@ -17,8 +17,12 @@ class CustomerUrgentNegotiationSocketService {
   UrgentNegotiationEventHandler? onCancelled;
   UrgentNegotiationEventHandler? onExpired;
   UrgentNegotiationEventHandler? onSubscribed;
+  void Function()? onSubscriptionStateChanged;
+
+  bool _subscriptionActive = false;
 
   bool get isConnected => _socket?.connected == true;
+  bool get hasActiveSubscription => isConnected && _subscriptionActive;
 
   io.Socket connect({String? accessToken, String? guestAccessToken}) {
     if (_socket != null) {
@@ -57,6 +61,14 @@ class CustomerUrgentNegotiationSocketService {
       }
     });
 
+    _socket!.onDisconnect((_) {
+      _setSubscriptionActive(false);
+    });
+
+    _socket!.onConnectError((_) {
+      _setSubscriptionActive(false);
+    });
+
     _registerEvent('booking:urgent-negotiation:eta-proposed', onEtaProposed);
     _registerEvent('booking:urgent-negotiation:confirmed', onConfirmed);
     _registerEvent('booking:urgent-negotiation:cancelled', onCancelled);
@@ -83,7 +95,10 @@ class CustomerUrgentNegotiationSocketService {
 
   Future<UrgentNegotiationStatus?> subscribe(String bookingNumber) async {
     _subscribedBookingNumber = bookingNumber;
-    if (_socket == null || !_socket!.connected) return null;
+    if (_socket == null || !_socket!.connected) {
+      _setSubscriptionActive(false);
+      return null;
+    }
 
     final completer = Completer<UrgentNegotiationStatus?>();
     _socket!.emitWithAck(
@@ -92,6 +107,7 @@ class CustomerUrgentNegotiationSocketService {
       ack: (ack) {
         if (ack is Map && ack['ok'] == true) {
           _subscribedBookingId = ack['bookingId'] as int?;
+          _setSubscriptionActive(true);
           final statusRaw = ack['status'];
           if (statusRaw is Map) {
             completer.complete(
@@ -102,6 +118,7 @@ class CustomerUrgentNegotiationSocketService {
             return;
           }
         }
+        _setSubscriptionActive(false);
         completer.complete(null);
       },
     );
@@ -112,6 +129,13 @@ class CustomerUrgentNegotiationSocketService {
     _socket?.emit('booking:urgent-negotiation:unsubscribe', {});
     _subscribedBookingNumber = null;
     _subscribedBookingId = null;
+    _setSubscriptionActive(false);
+  }
+
+  void _setSubscriptionActive(bool active) {
+    if (_subscriptionActive == active) return;
+    _subscriptionActive = active;
+    onSubscriptionStateChanged?.call();
   }
 
   void _detachListeners() {

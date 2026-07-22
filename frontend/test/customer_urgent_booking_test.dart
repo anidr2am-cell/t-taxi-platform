@@ -89,6 +89,70 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
+    test('shouldPollFallback stops when socket subscription is active', () {
+      expect(
+        UrgentBookingFlowPage.shouldPollFallback(
+          hasActiveSubscription: true,
+          isTerminalPhase: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('shouldPollFallback resumes when socket subscription is inactive', () {
+      expect(
+        UrgentBookingFlowPage.shouldPollFallback(
+          hasActiveSubscription: false,
+          isTerminalPhase: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('shouldPollFallback stops in terminal phases', () {
+      expect(
+        UrgentBookingFlowPage.shouldPollFallback(
+          hasActiveSubscription: false,
+          isTerminalPhase: true,
+        ),
+        isFalse,
+      );
+    });
+
+    testWidgets('polling runs only as fallback when socket is not subscribed', (
+      tester,
+    ) async {
+      final api = FakeCustomerUrgentApi(
+        status: const UrgentNegotiationStatus(
+          bookingNumber: 'TX202607230001',
+          bookingId: 10,
+          bookingStatus: 'OPEN',
+          negotiationId: 1,
+          status: 'BROADCASTING',
+          attemptCount: 0,
+        ),
+      );
+      final socket = FakeCustomerUrgentSocket(subscriptionActive: false);
+
+      await pumpFlow(tester, api: api, socket: socket);
+      expect(api.statusFetchCount, 1);
+
+      await tester.pump(UrgentBookingFlowPage.pollInterval);
+      expect(api.statusFetchCount, 2);
+
+      socket.setSubscriptionActive(true);
+      await tester.pump();
+
+      await tester.pump(UrgentBookingFlowPage.pollInterval);
+      expect(api.statusFetchCount, 2);
+
+      socket.setSubscriptionActive(false);
+      await tester.pump();
+
+      await tester.pump(UrgentBookingFlowPage.pollInterval);
+      expect(api.statusFetchCount, 3);
+    });
+
     test('phaseFromStatus maps awaiting customer to eta proposed', () {
       expect(
         UrgentBookingFlowPage.phaseFromStatus(
@@ -276,12 +340,14 @@ class FakeCustomerUrgentApi extends BookingApiService {
 
   final UrgentNegotiationStatus status;
   final UrgentDecisionResult? decisionResult;
+  int statusFetchCount = 0;
 
   @override
   Future<UrgentNegotiationStatus> getUrgentNegotiation({
     required String bookingNumber,
     String? guestAccessToken,
   }) async {
+    statusFetchCount += 1;
     return status;
   }
 
@@ -302,6 +368,18 @@ class FakeCustomerUrgentApi extends BookingApiService {
 }
 
 class FakeCustomerUrgentSocket extends CustomerUrgentNegotiationSocketService {
+  FakeCustomerUrgentSocket({this.subscriptionActive = false});
+
+  bool subscriptionActive;
+
+  @override
+  bool get hasActiveSubscription => subscriptionActive;
+
+  void setSubscriptionActive(bool active) {
+    subscriptionActive = active;
+    onSubscriptionStateChanged?.call();
+  }
+
   void simulateEtaProposed(Map<String, dynamic> payload) {
     onEtaProposed?.call(payload);
   }
