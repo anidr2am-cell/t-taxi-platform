@@ -13,6 +13,13 @@ import 'package:frontend/features/driver_settlement/services/driver_settlement_a
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
 
+const _releaseAssignmentButtonLabel = '배정 반납 / คืนงานที่ได้รับมอบหมาย';
+const _releaseAssignmentDialogTitle =
+    '이 예약의 배정을 반납하시겠습니까?\n(ต้องการคืนงานที่ได้รับมอบหมายสำหรับการจองนี้หรือไม่)';
+const _releaseAssignmentDialogCancel = '유지 / คงไว้';
+const _releaseReasonScheduleConflict = '일정 충돌 / ตารางงานซ้ำซ้อน';
+const _releaseReasonAccident = '사고 / อุบัติเหตุ';
+
 void main() {
   testWidgets('shows standby confirmation and release actions when assigned', (
     tester,
@@ -35,7 +42,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.widgetWithText(OutlinedButton, 'Release assignment'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
       findsOneWidget,
     );
     expect(
@@ -658,7 +665,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.widgetWithText(OutlinedButton, 'Release assignment'),
+        find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
         findsOneWidget,
       );
       expect(
@@ -686,17 +693,17 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, 'Release assignment'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Release this booking assignment?'), findsOneWidget);
+    expect(find.text(_releaseAssignmentDialogTitle), findsOneWidget);
     expect(
-      find.textContaining('The customer booking stays active'),
+      find.textContaining('고객 예약은 유지되며'),
       findsOneWidget,
     );
 
-    await _selectReleaseReason(tester, 'Schedule conflict');
+    await _selectReleaseReason(tester, _releaseReasonScheduleConflict);
     await tester.tap(find.byKey(const ValueKey('driver_release_confirm')));
     await tester.pumpAndSettle();
 
@@ -717,10 +724,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, 'Release assignment'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Keep assignment'));
+    await tester.tap(find.widgetWithText(TextButton, _releaseAssignmentDialogCancel));
     await tester.pumpAndSettle();
 
     expect(api.releaseCalls, 0);
@@ -746,10 +753,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, 'Release assignment'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
     );
     await tester.pumpAndSettle();
-    await _selectReleaseReason(tester, 'Accident');
+    await _selectReleaseReason(tester, _releaseReasonAccident);
     await tester.tap(find.byKey(const ValueKey('driver_release_confirm')));
     await tester.pumpAndSettle();
 
@@ -774,7 +781,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(OutlinedButton, 'Release assignment'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
       findsNothing,
     );
   });
@@ -795,11 +802,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(OutlinedButton, 'Release assignment'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
       findsOneWidget,
     );
     expect(
-      find.textContaining('Normal release is limited within 2 hours'),
+      find.textContaining('픽업까지 2시간 이내'),
       findsWidgets,
     );
   });

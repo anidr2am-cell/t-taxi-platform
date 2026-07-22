@@ -51,16 +51,23 @@ void main() {
     });
   }
 
-  test('ko uses 배정 반납 wording', () {
-    final l10n = AppLocalizations('ko');
-    expect(l10n.t('driver_release_assignment'), '배정 반납');
-    expect(l10n.t('status_reassignment_in_progress'), '기사 재배정 중');
+  test('driver release assignment uses bilingual driver UI override', () {
+    const expected = '배정 반납 / คืนงานที่ได้รับมอบหมาย';
+    for (final language in ['ko', 'th', 'en']) {
+      final l10n = AppLocalizations(language);
+      expect(l10n.t('driver_release_assignment'), expected);
+    }
   });
 
-  test('th uses คืนงาน wording for driver release', () {
-    final l10n = AppLocalizations('th');
-    expect(l10n.t('driver_release_assignment'), 'คืนงาน');
-    expect(l10n.t('status_reassignment_in_progress'), 'กำลังจัดหาคนขับใหม่');
+  test('ko and th keep locale-specific reassignment status copy', () {
+    expect(
+      AppLocalizations('ko').t('status_reassignment_in_progress'),
+      '기사 재배정 중',
+    );
+    expect(
+      AppLocalizations('th').t('status_reassignment_in_progress'),
+      'กำลังจัดหาคนขับใหม่',
+    );
   });
 
   test('zh and ja return localized reassignment guidance', () {
