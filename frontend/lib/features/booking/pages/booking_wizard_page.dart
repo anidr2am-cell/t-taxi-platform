@@ -11,6 +11,7 @@ import '../models/booking_wizard_state.dart';
 import '../models/location_option.dart';
 import '../models/service_type_option.dart';
 import '../pages/booking_complete_page.dart';
+import '../pages/urgent_booking_flow_page.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/step_customer_info.dart';
 import '../widgets/step_destination_select.dart';
@@ -110,7 +111,38 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
 
   Future<void> _handleSubmit() async {
     if (_controller.isSubmitting || _controller.isLoading) return;
+    if (_controller.isUrgentPickupWindowSelected()) return;
 
+    await _submitBooking(bookingMode: 'STANDARD');
+  }
+
+  Future<void> _handleUrgentSubmit() async {
+    if (_controller.isSubmitting || _controller.isLoading) return;
+    if (!_controller.isUrgentPickupWindowSelected()) return;
+
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.t('customer_urgent_confirm_title')),
+        content: Text(l10n.t('customer_urgent_confirm_body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.t('ui_cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.t('customer_urgent_confirm_submit')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _submitBooking(bookingMode: 'URGENT');
+  }
+
+  Future<void> _submitBooking({required String bookingMode}) async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
 
@@ -128,7 +160,10 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       return;
     }
 
-    if (!_controller.canSubmitAll()) return;
+    final canSubmit = bookingMode == 'URGENT'
+        ? _controller.canSubmitUrgent()
+        : _controller.canSubmitStandard();
+    if (!canSubmit) return;
 
     final snapshot = _controller.state;
     final review = _controller.buildCompleteReview();
@@ -138,7 +173,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       snapshot.destination,
     );
 
-    final result = await _controller.submitBooking();
+    final result = bookingMode == 'URGENT'
+        ? await _controller.submitUrgentBooking()
+        : await _controller.submitBooking();
     if (result == null) {
       if (_controller.state.errorMessage != null) {
         messenger.showSnackBar(
@@ -156,6 +193,19 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     }
 
     if (!mounted) return;
+
+    if (bookingMode == 'URGENT' || result.isUrgentRequest) {
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => UrgentBookingFlowPage(
+            result: result,
+            customerPhone: snapshot.customerPhone,
+          ),
+        ),
+      );
+      return;
+    }
+
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => BookingCompletePage(
@@ -277,10 +327,18 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
 
         final state = _controller.state;
         final isConfirmationStep = state.step == 7;
-        final canSubmit =
+        final isUrgentWindow = _controller.isUrgentPickupWindowSelected();
+        final canSubmitStandard =
             (isConfirmationStep
-                ? _controller.canSubmitAll()
+                ? _controller.canSubmitStandard()
                 : _controller.canProceedToConfirmation()) &&
+            !_controller.isLoading &&
+            !_controller.isSubmitting &&
+            !isUrgentWindow;
+        final canSubmitUrgent =
+            isConfirmationStep &&
+            isUrgentWindow &&
+            _controller.canSubmitUrgent() &&
             !_controller.isLoading &&
             !_controller.isSubmitting;
 
@@ -347,39 +405,79 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                     child: SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.all(AppTokens.spaceMd),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: canSubmit ? _handleSubmit : null,
-                            child: _controller.isSubmitting
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (isConfirmationStep && isUrgentWindow) ...[
+                              AppUi.surfaceCard(
+                                backgroundColor: AppTokens.warningLight,
+                                child: Text(
+                                  l10n.t('customer_urgent_pickup_hint'),
+                                  style: const TextStyle(height: 1.45),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (canSubmitUrgent)
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: FilledButton(
+                                  onPressed: _handleUrgentSubmit,
+                                  child: _controller.isSubmitting
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(l10n.t('customer_urgent_request')),
+                                ),
+                              ),
+                            if (canSubmitUrgent && canSubmitStandard)
+                              const SizedBox(height: 8),
+                            if (canSubmitStandard)
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: canSubmitStandard
+                                      ? _handleSubmit
+                                      : null,
+                                  child: _controller.isSubmitting
+                                      ? Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Flexible(
+                                              child: Text(
+                                                l10n.t(
+                                                  'customer_booking_processing',
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Text(
+                                          l10n.t(
+                                            isConfirmationStep
+                                                ? 'customer_confirm_booking'
+                                                : 'customer_review_booking',
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Flexible(
-                                        child: Text(
-                                          l10n.t('customer_booking_processing'),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Text(
-                                    l10n.t(
-                                      isConfirmationStep
-                                          ? 'customer_confirm_booking'
-                                          : 'customer_review_booking',
-                                    ),
-                                  ),
-                          ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),

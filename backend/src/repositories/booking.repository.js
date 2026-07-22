@@ -47,6 +47,7 @@ class BookingRepository {
           route_id, total_amount, currency, payment_status, payment_method, commission_status,
           customer_user_id, customer_name, customer_email, customer_phone, customer_country_code,
           special_requests, metadata, boarding_qr_token_hash, boarding_qr_expires_at,
+          is_urgent_request,
           created_by, updated_by
         ) VALUES (
           ?, ?, ?,
@@ -56,7 +57,7 @@ class BookingRepository {
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?, ?
+          ?, ?, ?
         )
       `,
       [
@@ -90,6 +91,7 @@ class BookingRepository {
         row.metadata ? JSON.stringify(row.metadata) : null,
         row.boardingQrTokenHash,
         row.boardingQrExpiresAt,
+        row.isUrgentRequest ? 1 : 0,
         row.createdBy,
         row.updatedBy,
       ],

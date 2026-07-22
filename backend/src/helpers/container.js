@@ -218,6 +218,7 @@ container.register(
       c.get("driverRepository"),
       c.get("notificationRepository"),
       c.get("commissionSettlementService"),
+      c.get("urgentNegotiationRepository"),
     ),
 );
 container.register(

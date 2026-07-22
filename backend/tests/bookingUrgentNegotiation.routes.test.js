@@ -33,8 +33,38 @@ function registerUrgentNegotiationService(handlers = {}) {
       }
       throw new Error('submitCustomerDecision should not be called in this test');
     },
+    async getCustomerNegotiationStatus(bookingNumber, options) {
+      if (handlers.getCustomerNegotiationStatus) {
+        return handlers.getCustomerNegotiationStatus(bookingNumber, options);
+      }
+      throw new Error('getCustomerNegotiationStatus should not be called in this test');
+    },
   }));
 }
+
+test('GET /bookings/:bookingNumber/urgent-negotiation returns current status', async () => {
+  registerUrgentNegotiationService({
+    async getCustomerNegotiationStatus(bookingNumber, options) {
+      assert.equal(bookingNumber, BOOKING_NUMBER);
+      assert.equal(options.guestAccessToken, 'guest-token-value');
+      return {
+        bookingNumber,
+        bookingId: 10,
+        bookingStatus: 'OPEN',
+        negotiationId: 100,
+        status: 'BROADCASTING',
+        attemptCount: 0,
+      };
+    },
+  });
+
+  const res = await request(app)
+    .get(`/api/v1/bookings/${BOOKING_NUMBER}/urgent-negotiation`)
+    .set('X-Guest-Access-Token', 'guest-token-value');
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.status, 'BROADCASTING');
+});
 
 test('POST /bookings/:bookingNumber/urgent-decision returns 200 with negotiation payload', async () => {
   let capturedBookingNumber = null;

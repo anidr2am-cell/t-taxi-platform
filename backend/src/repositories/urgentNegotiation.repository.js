@@ -27,6 +27,29 @@ class UrgentNegotiationRepository {
     return rows[0] || null;
   }
 
+  async findBookingForCustomer(conn, bookingNumber) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.is_urgent_request,
+          b.urgent_negotiation_id,
+          b.status,
+          b.scheduled_pickup_at,
+          b.customer_user_id,
+          b.vehicle_type_id
+        FROM bookings b
+        WHERE b.booking_number = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
   async findBookingForUrgentLockById(conn, bookingId) {
     const [rows] = await conn.query(
       `
@@ -144,6 +167,30 @@ class UrgentNegotiationRepository {
         ORDER BY id DESC
         LIMIT 1
         FOR UPDATE
+      `,
+      [bookingId],
+    );
+    return rows[0] || null;
+  }
+
+  async findNegotiationByBookingId(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          id,
+          booking_id,
+          status,
+          attempt_count,
+          locked_driver_id,
+          locked_at,
+          lock_expires_at,
+          min_required_eta_minutes,
+          customer_decision_expires_at,
+          closed_reason
+        FROM booking_urgent_negotiations
+        WHERE booking_id = ?
+        ORDER BY id DESC
+        LIMIT 1
       `,
       [bookingId],
     );
