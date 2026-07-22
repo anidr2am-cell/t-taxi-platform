@@ -38,6 +38,35 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
   });
 
+  testWidgets('urgent lock with ISO Z lockExpiresAt renders ETA countdown', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final lockExpiresAt = DateTime.now()
+        .toUtc()
+        .add(const Duration(minutes: 3))
+        .toIso8601String();
+    final api = FakeUrgentJobsApi(
+      initialToken: 'tok',
+      online: true,
+      lockExpiresAt: lockExpiresAt,
+      openCalls: [urgentOpenCall(number: 'TX202607230099')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: DriverJobsPage(api: api))),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '수락 / รับงาน'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(TextFormField), findsOneWidget);
+    expect(find.textContaining('남은 시간'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('urgent lock 409 removes card and shows message', (tester) async {
     _useTallViewport(tester);
     final api = FakeUrgentJobsApi(
