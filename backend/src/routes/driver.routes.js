@@ -10,6 +10,7 @@ const ROLES = require('../constants/roles');
 const { locationUpdateSchema } = require('../validators/driverLocation.validator');
 const { updateDriverProfileSchema } = require('../validators/driverProfile.validator');
 const { releaseAssignmentSchema } = require('../validators/driverCall.validator');
+const { submitUrgentCallEtaSchema } = require('../validators/urgentNegotiation.validator');
 const { single } = require('../config/multer');
 
 const router = express.Router();
@@ -42,6 +43,12 @@ router.post('/online', driverController.goOnline);
 router.post('/offline', driverController.goOffline);
 router.get('/calls/open', driverController.listOpenCalls);
 router.post('/calls/:bookingNumber/claim', driverController.claimOpenCall);
+router.post('/urgent-calls/:bookingNumber/lock', driverController.lockUrgentCall);
+router.post(
+  '/urgent-calls/:bookingNumber/eta',
+  validate({ body: submitUrgentCallEtaSchema }),
+  driverController.submitUrgentCallEta,
+);
 router.post(
   '/location',
   driverLocationRateLimit,
