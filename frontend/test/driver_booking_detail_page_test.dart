@@ -640,6 +640,38 @@ void main() {
     );
   });
 
+  testWidgets(
+    'shows release button when primaryKey is null but release is available',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          _FakeDriverApi(
+            detail: _booking(
+              status: 'DRIVER_ASSIGNED',
+              // No trip primary action → primaryKey is null (standby not open yet).
+              actions: ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+              releaseAssignmentAvailable: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(OutlinedButton, 'Release assignment'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Confirm ready for job'),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Head to pickup'),
+        findsNothing,
+      );
+    },
+  );
+
   testWidgets('release action confirms, calls API once, and pops detail', (
     tester,
   ) async {

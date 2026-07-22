@@ -717,26 +717,28 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                   ],
                 ),
               ),
-              if (primaryKey != null && !readOnly)
+              if (!readOnly && (primaryKey != null || canReleaseAssignment))
                 AppUi.adminStickyActions(
                   actions: [
-                    SizedBox(
-                      height: 52,
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _processing
-                            ? null
-                            : () => _onPrimaryAction(
-                                booking,
-                                actionToken,
-                                primaryKey,
-                              ),
-                        icon: const Icon(Icons.touch_app_outlined),
-                        label: Text(l10n.t(primaryKey)),
+                    if (primaryKey != null)
+                      SizedBox(
+                        height: 52,
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _processing
+                              ? null
+                              : () => _onPrimaryAction(
+                                  booking,
+                                  actionToken,
+                                  primaryKey,
+                                ),
+                          icon: const Icon(Icons.touch_app_outlined),
+                          label: Text(l10n.t(primaryKey)),
+                        ),
                       ),
-                    ),
                     if (canReleaseAssignment) ...[
-                      const SizedBox(height: AppTokens.spaceSm),
+                      if (primaryKey != null)
+                        const SizedBox(height: AppTokens.spaceSm),
                       SizedBox(
                         height: 48,
                         width: double.infinity,
