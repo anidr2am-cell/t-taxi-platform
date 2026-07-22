@@ -288,6 +288,7 @@ class BookingStatusService {
     this.validateTransition(fromStatus, toStatus, actor.role);
     const occurredAt = new Date().toISOString();
     let releasedDriverUserId = booking.driver_user_id ?? null;
+    let releaseReasonCode = null;
 
     await this.bookingRepository.updateStatus(conn, booking.id, toStatus, actor.id, {
       cancellationReason: input.reason ?? input.memo ?? null,
@@ -307,11 +308,14 @@ class BookingStatusService {
     }
 
     if (toStatus === BOOKING_STATUS.CANCELLED) {
+      releaseReasonCode = actor.role === ROLES.CUSTOMER
+        ? 'CUSTOMER_CANCELLED'
+        : 'ADMIN_CANCELLED';
       await this.bookingRepository.clearAssignmentOnCancel(
         conn,
         booking.id,
         actor.id,
-        actor.role === ROLES.CUSTOMER ? 'CUSTOMER_CANCELLED' : 'ADMIN_CANCELLED',
+        releaseReasonCode,
       );
     }
 
@@ -357,6 +361,8 @@ class BookingStatusService {
       outboxId,
       releasedDriverUserId:
         toStatus === BOOKING_STATUS.CANCELLED ? releasedDriverUserId : null,
+      releaseReasonCode,
+      releasedAt: toStatus === BOOKING_STATUS.CANCELLED ? occurredAt : null,
     };
   }
 
@@ -386,7 +392,10 @@ class BookingStatusService {
     if (transition.releasedDriverUserId) {
       emitDriverAssignmentReleased(transition.releasedDriverUserId, {
         bookingNumber,
-        reason: 'CANCELLED',
+        reason: transition.releaseReasonCode || 'CANCELLED',
+        reasonCode: transition.releaseReasonCode || 'CUSTOMER_CANCELLED',
+        bookingStatus: BOOKING_STATUS.CANCELLED,
+        releasedAt: transition.releasedAt || new Date().toISOString(),
       });
     }
     return transition.result;
@@ -494,6 +503,7 @@ class BookingStatusService {
         eventPayload,
         outboxId,
         releasedDriverUserId,
+        releasedAt: occurredAt,
       };
     } catch (err) {
       await conn.rollback();
@@ -506,7 +516,10 @@ class BookingStatusService {
     if (transition.releasedDriverUserId) {
       emitDriverAssignmentReleased(transition.releasedDriverUserId, {
         bookingNumber,
-        reason: 'CANCELLED',
+        reason: 'CUSTOMER_CANCELLED',
+        reasonCode: 'CUSTOMER_CANCELLED',
+        bookingStatus: BOOKING_STATUS.CANCELLED,
+        releasedAt: transition.releasedAt || new Date().toISOString(),
       });
     }
     return transition.result;

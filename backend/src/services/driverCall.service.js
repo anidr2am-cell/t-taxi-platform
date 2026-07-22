@@ -535,7 +535,10 @@ class DriverCallService {
       bookingNumber: normalizedBookingNumber,
       status: BOOKING_STATUS.OPEN,
       reason: 'DRIVER_RELEASED',
+      reasonCode: 'DRIVER_RELEASED',
+      bookingStatus: BOOKING_STATUS.OPEN,
       reassignmentPriority: releaseResult?.reassignmentPriority,
+      releasedAt: new Date().toISOString(),
     });
     emitDriverCallClaimed({ bookingNumber: normalizedBookingNumber });
     for (const target of openCallTargets) {

@@ -285,11 +285,132 @@ test('driver cannot access another driver booking', async () => {
     async findDriverTerminalBookingByNumber() {
       return null;
     },
+    async findDriverAssignmentAccessOutcome() {
+      return null;
+    },
   });
 
   await assert.rejects(
     () => service.getDetail(44, 'TX202607010001'),
     (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_FOUND,
+  );
+});
+
+test('previous driver gets CUSTOMER_CANCELLED after customer cancel', async () => {
+  const service = new DriverJobService({
+    async findActiveDriverBookingByNumber() {
+      return null;
+    },
+    async findDriverTerminalBookingByNumber() {
+      return null;
+    },
+    async findDriverAssignmentAccessOutcome(driverUserId, bookingNumber) {
+      assert.equal(driverUserId, 44);
+      assert.equal(bookingNumber, 'TX202607010001');
+      return {
+        booking_number: bookingNumber,
+        booking_status: 'CANCELLED',
+        assignment_is_active: 0,
+        assignment_reason: 'CUSTOMER_CANCELLED',
+        has_other_active_assignment: 0,
+        unassigned_at: '2026-07-22 10:00:00',
+      };
+    },
+  });
+
+  await assert.rejects(
+    () => service.getDetail(44, 'TX202607010001'),
+    (err) =>
+      err.statusCode === 409
+      && err.errorCode === ERROR_CODES.DRIVER_ASSIGNMENT_RELEASED
+      && err.details?.reasonCode === 'CUSTOMER_CANCELLED'
+      && err.details?.bookingNumber === 'TX202607010001'
+      && err.details?.bookingStatus === 'CANCELLED',
+  );
+});
+
+test('previous driver gets ADMIN_CANCELLED after admin cancel', async () => {
+  const service = new DriverJobService({
+    async findActiveDriverBookingByNumber() {
+      return null;
+    },
+    async findDriverTerminalBookingByNumber() {
+      return null;
+    },
+    async findDriverAssignmentAccessOutcome() {
+      return {
+        booking_number: 'TX202607010001',
+        booking_status: 'CANCELLED',
+        assignment_is_active: 0,
+        assignment_reason: 'ADMIN_CANCELLED',
+        has_other_active_assignment: 0,
+        unassigned_at: null,
+      };
+    },
+  });
+
+  await assert.rejects(
+    () => service.getDetail(44, 'TX202607010001'),
+    (err) =>
+      err.errorCode === ERROR_CODES.DRIVER_ASSIGNMENT_RELEASED
+      && err.details?.reasonCode === 'ADMIN_CANCELLED',
+  );
+});
+
+test('previous driver gets DRIVER_RELEASED after self release', async () => {
+  const service = new DriverJobService({
+    async findActiveDriverBookingByNumber() {
+      return null;
+    },
+    async findDriverTerminalBookingByNumber() {
+      return null;
+    },
+    async findDriverAssignmentAccessOutcome() {
+      return {
+        booking_number: 'TX202607010001',
+        booking_status: 'OPEN',
+        assignment_is_active: 0,
+        assignment_reason: 'DRIVER_RELEASED_ASSIGNMENT',
+        has_other_active_assignment: 0,
+        unassigned_at: '2026-07-22 10:00:00',
+      };
+    },
+  });
+
+  await assert.rejects(
+    () => service.getDetail(44, 'TX202607010001'),
+    (err) =>
+      err.errorCode === ERROR_CODES.DRIVER_ASSIGNMENT_RELEASED
+      && err.details?.reasonCode === 'DRIVER_RELEASED'
+      && err.details?.bookingStatus === 'OPEN',
+  );
+});
+
+test('previous driver gets REASSIGNED when another driver is active', async () => {
+  const service = new DriverJobService({
+    async findActiveDriverBookingByNumber() {
+      return null;
+    },
+    async findDriverTerminalBookingByNumber() {
+      return null;
+    },
+    async findDriverAssignmentAccessOutcome() {
+      return {
+        booking_number: 'TX202607010001',
+        booking_status: 'DRIVER_ASSIGNED',
+        assignment_is_active: 0,
+        assignment_reason: 'ADMIN_REASSIGN',
+        has_other_active_assignment: 1,
+        unassigned_at: '2026-07-22 10:00:00',
+      };
+    },
+  });
+
+  await assert.rejects(
+    () => service.getDetail(44, 'TX202607010001'),
+    (err) =>
+      err.errorCode === ERROR_CODES.DRIVER_ASSIGNMENT_RELEASED
+      && err.details?.reasonCode === 'REASSIGNED_TO_ANOTHER_DRIVER',
   );
 });
 

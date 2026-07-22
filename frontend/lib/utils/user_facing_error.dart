@@ -216,6 +216,16 @@ String driverApiErrorMessage({
     };
   }
 
+  if (errorCode == 'DRIVER_ASSIGNMENT_RELEASED') {
+    return switch (languageCode) {
+      'ko' => '이 예약의 배정이 해제되어 더 이상 진행할 수 없습니다.',
+      'th' => 'งานนี้ถูกยกเลิกการมอบหมายแล้ว ไม่สามารถดำเนินการต่อได้',
+      'zh' => '此预订的派单已解除，无法继续进行。',
+      'ja' => 'この予約の配車は解除されたため、これ以上進められません。',
+      _ => 'This assignment was released and can no longer be continued.',
+    };
+  }
+
   if (errorCode == 'BOOKING_NOT_FOUND' ||
       errorCode == 'BOOKING_NOT_ACCESSIBLE') {
     return switch (languageCode) {

@@ -9,6 +9,7 @@ class DriverCallSocketService {
   DriverCallPayloadHandler? onNewCall;
   DriverCallPayloadHandler? onClaimed;
   DriverCallPayloadHandler? onConfirmed;
+  DriverCallPayloadHandler? onAssignmentReleased;
   DriverCallPayloadHandler? onError;
   VoidCallback? onReconnect;
 
@@ -40,6 +41,11 @@ class DriverCallSocketService {
     });
     _socket!.on('driver:call:confirmed', (data) {
       if (data is Map) onConfirmed?.call(Map<String, dynamic>.from(data));
+    });
+    _socket!.on('driver:assignment:released', (data) {
+      if (data is Map) {
+        onAssignmentReleased?.call(Map<String, dynamic>.from(data));
+      }
     });
     _socket!.on('driver:calls:error', (data) {
       if (data is Map) onError?.call(Map<String, dynamic>.from(data));

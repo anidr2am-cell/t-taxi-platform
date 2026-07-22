@@ -625,6 +625,52 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  /**
+   * Returns the latest inactive/active assignment link for this driver+booking,
+   * only when the driver previously had an assignment. Used to explain why detail
+   * is no longer available without leaking existence to unrelated drivers.
+   */
+  async findDriverAssignmentAccessOutcome(driverUserId, bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.id AS booking_id,
+          b.booking_number,
+          b.status AS booking_status,
+          my_bda.id AS assignment_id,
+          my_bda.status AS assignment_status,
+          my_bda.is_active AS assignment_is_active,
+          my_bda.assignment_reason,
+          my_bda.unassigned_at,
+          EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments other_bda
+            WHERE other_bda.booking_id = b.id
+              AND other_bda.deleted_at IS NULL
+              AND other_bda.is_active = 1
+              AND other_bda.driver_id <> my_bda.driver_id
+            LIMIT 1
+          ) AS has_other_active_assignment
+        FROM bookings b
+        INNER JOIN booking_driver_assignments my_bda
+          ON my_bda.booking_id = b.id
+         AND my_bda.deleted_at IS NULL
+        INNER JOIN drivers d
+          ON d.id = my_bda.driver_id
+         AND d.deleted_at IS NULL
+         AND d.user_id = ?
+        WHERE b.booking_number = ?
+          AND b.deleted_at IS NULL
+        ORDER BY
+          my_bda.assigned_at DESC,
+          my_bda.id DESC
+        LIMIT 1
+      `,
+      [driverUserId, bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
   async findActiveDriverBookingByNumberForUpdate(conn, driverUserId, bookingNumber) {
     const [rows] = await conn.query(
       `

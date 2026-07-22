@@ -766,6 +766,36 @@ class AppLocalizations {
       'driver_release_reason_SCHEDULE_CONFLICT': 'Schedule conflict',
       'driver_release_reason_LOCATION_TOO_FAR': 'Location too far',
       'driver_release_reason_OTHER': 'Other',
+      'driver_assignment_ended_confirm': 'OK',
+      'driver_booking_not_found': 'Booking information could not be found.',
+      'driver_assignment_ended_generic_title': 'Assignment ended',
+      'driver_assignment_ended_generic_message':
+          'You can no longer continue this booking.',
+      'driver_assignment_ended_generic_snackbar':
+          'Assignment for {bookingNumber} was released.',
+      'driver_assignment_ended_customer_title': 'Customer cancelled',
+      'driver_assignment_ended_customer_message':
+          'The customer cancelled the booking, so your assignment was released automatically.',
+      'driver_assignment_ended_customer_snackbar':
+          'Customer cancelled {bookingNumber}. Assignment released.',
+      'driver_assignment_ended_admin_title': 'Admin cancelled',
+      'driver_assignment_ended_admin_message':
+          'An admin cancelled the booking, so your assignment was released.',
+      'driver_assignment_ended_admin_snackbar':
+          'Admin cancelled {bookingNumber}. Assignment released.',
+      'driver_assignment_ended_released_title': 'Assignment released',
+      'driver_assignment_ended_released_message':
+          'Assignment release completed. This booking is open again for other drivers.',
+      'driver_assignment_ended_released_snackbar':
+          'You released {bookingNumber}. It is open for other drivers.',
+      'driver_assignment_ended_reassigned_title': 'Reassigned',
+      'driver_assignment_ended_reassigned_message':
+          'This booking was assigned to another driver.',
+      'driver_assignment_ended_reassigned_snackbar':
+          '{bookingNumber} was assigned to another driver.',
+      'driver_assignment_ended_completed_title': 'Trip completed',
+      'driver_assignment_ended_completed_message':
+          'This trip is already completed.',
       'driver_confirm_mark_arrived_title': 'Arrived at pickup?',
       'driver_confirm_mark_arrived_message':
           'Have you arrived at the pickup location?',
@@ -2096,6 +2126,34 @@ class AppLocalizations {
       'driver_release_reason_SCHEDULE_CONFLICT': '일정 충돌',
       'driver_release_reason_LOCATION_TOO_FAR': '거리 문제',
       'driver_release_reason_OTHER': '기타',
+      'driver_assignment_ended_confirm': '확인',
+      'driver_booking_not_found': '예약 정보를 찾을 수 없습니다.',
+      'driver_assignment_ended_generic_title': '배정이 해제되었습니다',
+      'driver_assignment_ended_generic_message': '더 이상 이 예약을 진행할 수 없습니다.',
+      'driver_assignment_ended_generic_snackbar':
+          '예약 {bookingNumber} 배정이 해제되었습니다.',
+      'driver_assignment_ended_customer_title': '고객이 예약을 취소했습니다',
+      'driver_assignment_ended_customer_message':
+          '고객이 예약을 취소하여 배정이 자동 해제되었습니다.',
+      'driver_assignment_ended_customer_snackbar':
+          '고객 취소로 예약 {bookingNumber} 배정이 해제되었습니다.',
+      'driver_assignment_ended_admin_title': '관리자가 예약을 취소했습니다',
+      'driver_assignment_ended_admin_message':
+          '관리자가 예약을 취소하여 배정이 해제되었습니다.',
+      'driver_assignment_ended_admin_snackbar':
+          '관리자 취소로 예약 {bookingNumber} 배정이 해제되었습니다.',
+      'driver_assignment_ended_released_title': '배정 반납이 완료되었습니다',
+      'driver_assignment_ended_released_message':
+          '배정 반납이 완료되었습니다. 해당 예약은 다른 기사에게 다시 공개됩니다.',
+      'driver_assignment_ended_released_snackbar':
+          '예약 {bookingNumber} 배정 반납이 완료되었습니다.',
+      'driver_assignment_ended_reassigned_title': '다른 기사에게 배정되었습니다',
+      'driver_assignment_ended_reassigned_message':
+          '이 예약은 다른 기사에게 배정되었습니다.',
+      'driver_assignment_ended_reassigned_snackbar':
+          '예약 {bookingNumber}이(가) 다른 기사에게 배정되었습니다.',
+      'driver_assignment_ended_completed_title': '운행이 완료되었습니다',
+      'driver_assignment_ended_completed_message': '이 예약은 이미 완료되었습니다.',
       'guest_status_guidance_driver_assigned': '기사가 배정되었습니다. 곧 픽업지로 이동합니다.',
       'guest_status_guidance_on_route': '기사가 픽업지로 이동 중입니다.',
       'guest_status_guidance_driver_arrived': '기사가 픽업지에 도착했습니다.',
@@ -2652,6 +2710,29 @@ class AppLocalizations {
       'driver_release_reason_SCHEDULE_CONFLICT': '行程冲突',
       'driver_release_reason_LOCATION_TOO_FAR': '距离过远',
       'driver_release_reason_OTHER': '其他',
+      'driver_assignment_ended_confirm': '确定',
+      'driver_booking_not_found': '找不到预订信息。',
+      'driver_assignment_ended_generic_title': '派单已结束',
+      'driver_assignment_ended_generic_message': '无法继续进行此预订。',
+      'driver_assignment_ended_generic_snackbar': '预订 {bookingNumber} 的派单已解除。',
+      'driver_assignment_ended_customer_title': '客户已取消预订',
+      'driver_assignment_ended_customer_message': '客户取消了预订，派单已自动解除。',
+      'driver_assignment_ended_customer_snackbar':
+          '客户取消了预订 {bookingNumber}，派单已解除。',
+      'driver_assignment_ended_admin_title': '管理员已取消预订',
+      'driver_assignment_ended_admin_message': '管理员取消了预订，派单已解除。',
+      'driver_assignment_ended_admin_snackbar':
+          '管理员取消了预订 {bookingNumber}，派单已解除。',
+      'driver_assignment_ended_released_title': '已退回派单',
+      'driver_assignment_ended_released_message': '派单退回已完成。该预订将重新开放给其他司机。',
+      'driver_assignment_ended_released_snackbar':
+          '您已退回预订 {bookingNumber}，已重新开放。',
+      'driver_assignment_ended_reassigned_title': '已改派其他司机',
+      'driver_assignment_ended_reassigned_message': '此预订已分配给其他司机。',
+      'driver_assignment_ended_reassigned_snackbar':
+          '预订 {bookingNumber} 已分配给其他司机。',
+      'driver_assignment_ended_completed_title': '行程已完成',
+      'driver_assignment_ended_completed_message': '此行程已完成。',
       'guest_status_guidance_driver_assigned': '司机已分配，即将前往接客地点。',
       'guest_status_guidance_on_route': '司机正在前往接客地点。',
       'guest_status_guidance_driver_arrived': '司机已到达接客地点。',
@@ -3146,6 +3227,34 @@ class AppLocalizations {
       'driver_release_reason_SCHEDULE_CONFLICT': 'スケジュールの都合',
       'driver_release_reason_LOCATION_TOO_FAR': '距離が遠い',
       'driver_release_reason_OTHER': 'その他',
+      'driver_assignment_ended_confirm': '確認',
+      'driver_booking_not_found': '予約情報が見つかりません。',
+      'driver_assignment_ended_generic_title': '配車が終了しました',
+      'driver_assignment_ended_generic_message': 'この予約はこれ以上進められません。',
+      'driver_assignment_ended_generic_snackbar':
+          '予約 {bookingNumber} の配車が解除されました。',
+      'driver_assignment_ended_customer_title': 'お客様が予約をキャンセルしました',
+      'driver_assignment_ended_customer_message':
+          'お客様が予約をキャンセルしたため、配車が自動的に解除されました。',
+      'driver_assignment_ended_customer_snackbar':
+          'お客様キャンセルにより予約 {bookingNumber} の配車が解除されました。',
+      'driver_assignment_ended_admin_title': '管理者が予約をキャンセルしました',
+      'driver_assignment_ended_admin_message':
+          '管理者が予約をキャンセルしたため、配車が解除されました。',
+      'driver_assignment_ended_admin_snackbar':
+          '管理者キャンセルにより予約 {bookingNumber} の配車が解除されました。',
+      'driver_assignment_ended_released_title': '配車の返却が完了しました',
+      'driver_assignment_ended_released_message':
+          '配車の返却が完了しました。この予約は他のドライバーに再公開されます。',
+      'driver_assignment_ended_released_snackbar':
+          '予約 {bookingNumber} の配車返却が完了しました。',
+      'driver_assignment_ended_reassigned_title': '他のドライバーに割り当てられました',
+      'driver_assignment_ended_reassigned_message':
+          'この予約は他のドライバーに割り当てられました。',
+      'driver_assignment_ended_reassigned_snackbar':
+          '予約 {bookingNumber} は他のドライバーに割り当てられました。',
+      'driver_assignment_ended_completed_title': '運行が完了しました',
+      'driver_assignment_ended_completed_message': 'この予約はすでに完了しています。',
       'guest_status_guidance_driver_assigned':
           'ドライバーが割り当てられました。まもなく迎え場所へ向かいます。',
       'guest_status_guidance_on_route': 'ドライバーが迎え場所へ向かっています。',
@@ -3687,6 +3796,36 @@ class AppLocalizations {
       'driver_release_reason_SCHEDULE_CONFLICT': 'ตารางชนกัน',
       'driver_release_reason_LOCATION_TOO_FAR': 'ระยะทางไกลเกินไป',
       'driver_release_reason_OTHER': 'อื่นๆ',
+      'driver_assignment_ended_confirm': 'ตกลง',
+      'driver_booking_not_found': 'ไม่พบข้อมูลการจอง',
+      'driver_assignment_ended_generic_title': 'ยกเลิกการมอบหมายงานแล้ว',
+      'driver_assignment_ended_generic_message':
+          'ไม่สามารถดำเนินการจองนี้ต่อได้',
+      'driver_assignment_ended_generic_snackbar':
+          'ยกเลิกการมอบหมายงาน {bookingNumber} แล้ว',
+      'driver_assignment_ended_customer_title': 'ลูกค้ายกเลิกการจองแล้ว',
+      'driver_assignment_ended_customer_message':
+          'งานนี้ถูกยกเลิกการมอบหมายโดยอัตโนมัติเนื่องจากลูกค้ายกเลิกการจอง',
+      'driver_assignment_ended_customer_snackbar':
+          'ลูกค้ายกเลิก {bookingNumber} งานถูกยกเลิกการมอบหมายแล้ว',
+      'driver_assignment_ended_admin_title': 'แอดมินยกเลิกการจองแล้ว',
+      'driver_assignment_ended_admin_message':
+          'แอดมินยกเลิกการจองแล้ว งานของคุณถูกยกเลิกการมอบหมาย',
+      'driver_assignment_ended_admin_snackbar':
+          'แอดมินยกเลิก {bookingNumber} งานถูกยกเลิกการมอบหมายแล้ว',
+      'driver_assignment_ended_released_title': 'คืนงานเรียบร้อยแล้ว',
+      'driver_assignment_ended_released_message':
+          'คืนงานเรียบร้อยแล้ว การจองนี้จะเปิดให้คนขับคนอื่นอีกครั้ง',
+      'driver_assignment_ended_released_snackbar':
+          'คืนงาน {bookingNumber} เรียบร้อยแล้ว',
+      'driver_assignment_ended_reassigned_title': 'มอบหมายให้คนขับคนอื่นแล้ว',
+      'driver_assignment_ended_reassigned_message':
+          'การจองนี้ถูกมอบหมายให้คนขับคนอื่นแล้ว',
+      'driver_assignment_ended_reassigned_snackbar':
+          '{bookingNumber} ถูกมอบหมายให้คนขับคนอื่นแล้ว',
+      'driver_assignment_ended_completed_title': 'การเดินทางเสร็จสิ้นแล้ว',
+      'driver_assignment_ended_completed_message':
+          'การจองนี้เสร็จสิ้นแล้ว',
       'guest_status_guidance_driver_assigned':
           'มอบหมายคนขับแล้ว และจะออกเดินทางไปจุดรับเร็วๆ นี้',
       'guest_status_guidance_on_route': 'คนขับกำลังเดินทางไปจุดรับ',

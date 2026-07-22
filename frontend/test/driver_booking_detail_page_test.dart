@@ -776,13 +776,49 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
-          detailError: const DriverApiException('Booking not found'),
+          detailError: const DriverApiException(
+            'Booking not found',
+            errorCode: 'BOOKING_NOT_FOUND',
+            statusCode: 404,
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Booking not found'), findsOneWidget);
+    expect(find.text('Booking information could not be found.'), findsOneWidget);
     expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
+  });
+
+  testWidgets('customer cancel reason shows assignment ended guidance', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detailError: const DriverApiException(
+            'The customer cancelled the booking.',
+            errorCode: 'DRIVER_ASSIGNMENT_RELEASED',
+            statusCode: 409,
+            details: {
+              'reasonCode': 'CUSTOMER_CANCELLED',
+              'bookingNumber': 'TX202607010001',
+              'bookingStatus': 'CANCELLED',
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'The customer cancelled the booking, so your assignment was released automatically.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('OK'), findsOneWidget);
+    expect(find.textContaining('Booking not found'), findsNothing);
+    expect(find.textContaining('콜을 찾을 수 없습니다'), findsNothing);
   });
 
   testWidgets('driver booking detail does not show customer message action', (

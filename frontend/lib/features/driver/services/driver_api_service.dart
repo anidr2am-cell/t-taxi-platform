@@ -9,18 +9,40 @@ import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 
 class DriverApiException implements Exception {
-  const DriverApiException(this.message, {this.errorCode, this.statusCode});
+  const DriverApiException(
+    this.message, {
+    this.errorCode,
+    this.statusCode,
+    this.details,
+  });
 
   final String message;
   final String? errorCode;
   final int? statusCode;
+  final Map<String, dynamic>? details;
 
   @override
   String toString() => message;
 
+  String? get reasonCode {
+    final fromDetails = details?['reasonCode']?.toString();
+    if (fromDetails != null && fromDetails.trim().isNotEmpty) {
+      return fromDetails.trim().toUpperCase();
+    }
+    return null;
+  }
+
+  bool get isAssignmentEnded =>
+      errorCode == 'DRIVER_ASSIGNMENT_RELEASED' ||
+      reasonCode == 'CUSTOMER_CANCELLED' ||
+      reasonCode == 'ADMIN_CANCELLED' ||
+      reasonCode == 'DRIVER_RELEASED' ||
+      reasonCode == 'REASSIGNED_TO_ANOTHER_DRIVER';
+
   bool get isStaleStatus =>
       errorCode == 'INVALID_STATUS_TRANSITION' ||
       errorCode == 'BOOKING_NOT_FOUND' ||
+      errorCode == 'DRIVER_ASSIGNMENT_RELEASED' ||
       message.toLowerCase().contains('invalid status');
 }
 
@@ -122,8 +144,11 @@ class DriverApiService {
       }
       throw DriverApiException(
         decoded['message'] as String? ?? 'Request failed',
-        errorCode: decoded['error_code'] as String?,
+        errorCode: decoded['error_code'] as String? ?? decoded['code'] as String?,
         statusCode: response.statusCode,
+        details: decoded['details'] is Map
+            ? Map<String, dynamic>.from(decoded['details'] as Map)
+            : null,
       );
     }
 
@@ -153,8 +178,11 @@ class DriverApiService {
       }
       throw DriverApiException(
         decoded['message'] as String? ?? 'Request failed',
-        errorCode: decoded['error_code'] as String?,
+        errorCode: decoded['error_code'] as String? ?? decoded['code'] as String?,
         statusCode: response.statusCode,
+        details: decoded['details'] is Map
+            ? Map<String, dynamic>.from(decoded['details'] as Map)
+            : null,
       );
     }
 

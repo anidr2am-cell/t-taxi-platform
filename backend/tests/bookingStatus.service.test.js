@@ -13,6 +13,7 @@ const ERROR_CODES = require('../src/constants/errorCodes');
 const ROLES = require('../src/constants/roles');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
 const { appEvents, EVENTS } = require('../src/events');
+const { driverUserRoom, setRealtimeIo } = require('../src/socket/realtime');
 
 const actor = { id: 7, role: ROLES.ADMIN };
 
@@ -307,6 +308,79 @@ test('customer can cancel DRIVER_ASSIGNED when more than 2h remain', async () =>
   assert.equal(harness.calls.clearAssignmentOnCancel, 1);
   assert.equal(harness.records.clearAssignmentOnCancel.reason, 'CUSTOMER_CANCELLED');
   assert.equal(harness.records.outbox.eventType, EVENTS.BOOKING_CANCELLED);
+});
+
+test('customer cancel emits assignment released socket with CUSTOMER_CANCELLED after commit', async () => {
+  const emitted = [];
+  setRealtimeIo({
+    to(room) {
+      return {
+        emit(event, payload) {
+          emitted.push({ room, event, payload });
+        },
+      };
+    },
+  });
+  const harness = createHarness({
+    booking: createBooking({
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      driver_user_id: 99,
+    }),
+  });
+  const deadlineMs = Date.parse('2026-07-25T13:00:00+07:00');
+
+  try {
+    await harness.service.transition(
+      'TX202607010001',
+      { status: BOOKING_STATUS.CANCELLED, reason: 'CUSTOMER_CANCELLED' },
+      { id: 55, role: ROLES.CUSTOMER },
+      { nowMs: deadlineMs - 1000 },
+    );
+
+    assert.equal(emitted.length, 1);
+    assert.equal(emitted[0].room, driverUserRoom(99));
+    assert.equal(emitted[0].event, 'driver:assignment:released');
+    assert.equal(emitted[0].payload.bookingNumber, 'TX202607010001');
+    assert.equal(emitted[0].payload.reasonCode, 'CUSTOMER_CANCELLED');
+    assert.equal(emitted[0].payload.bookingStatus, BOOKING_STATUS.CANCELLED);
+    assert.ok(emitted[0].payload.releasedAt);
+    assert.equal(emitted[0].payload.guestAccessToken, undefined);
+    assert.equal(emitted[0].payload.phone, undefined);
+  } finally {
+    setRealtimeIo(null);
+  }
+});
+
+test('customer cancel rollback emits no socket event', async () => {
+  const emitted = [];
+  setRealtimeIo({
+    to(room) {
+      return {
+        emit(event, payload) {
+          emitted.push({ room, event, payload });
+        },
+      };
+    },
+  });
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.DRIVER_ASSIGNED }),
+    commitError: new Error('commit failed'),
+  });
+  const deadlineMs = Date.parse('2026-07-25T13:00:00+07:00');
+
+  try {
+    await assert.rejects(
+      () => harness.service.transition(
+        'TX202607010001',
+        { status: BOOKING_STATUS.CANCELLED },
+        { id: 55, role: ROLES.CUSTOMER },
+        { nowMs: deadlineMs - 1000 },
+      ),
+    );
+    assert.equal(emitted.length, 0);
+  } finally {
+    setRealtimeIo(null);
+  }
 });
 
 test('customer cannot cancel DRIVER_ASSIGNED at exact 2h deadline', async () => {

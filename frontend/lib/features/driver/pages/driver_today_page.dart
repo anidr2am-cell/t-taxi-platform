@@ -15,6 +15,7 @@ import '../models/driver_status.dart';
 import '../pages/driver_booking_detail_page.dart';
 import '../services/driver_api_service.dart';
 import '../services/driver_call_socket_service.dart';
+import '../utils/driver_assignment_ended.dart';
 import '../widgets/driver_today_trip_cards.dart';
 import '../widgets/driver_workflow_widgets.dart';
 
@@ -90,6 +91,21 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
       }
       ..onConfirmed = (_) {
         if (mounted) _refresh();
+      }
+      ..onAssignmentReleased = (payload) {
+        if (!mounted) return;
+        final bookingNumber = payload['bookingNumber']?.toString();
+        final reasonCode = payload['reasonCode']?.toString() ??
+            payload['reason']?.toString();
+        _refresh();
+        if (bookingNumber == null || bookingNumber.isEmpty) return;
+        final snackKey = DriverAssignmentEndedReason.snackbarKey(reasonCode);
+        final text = context.l10n
+            .t(snackKey)
+            .replaceAll('{bookingNumber}', bookingNumber);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(text)));
       }
       ..onReconnect = () {
         if (mounted) _refresh();

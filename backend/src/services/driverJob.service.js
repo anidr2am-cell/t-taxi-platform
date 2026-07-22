@@ -6,6 +6,10 @@ const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
 const {
   evaluateDriverAssignmentRelease,
 } = require('../policies/driverAssignmentRelease.policy');
+const {
+  resolveAssignmentEndedReason,
+  safeMessageForEndedReason,
+} = require('../policies/driverAssignmentEnded.policy');
 
 const THAILAND_TIME_ZONE = 'Asia/Bangkok';
 const STANDBY_WINDOW_MS = 60 * 60 * 1000;
@@ -371,13 +375,56 @@ class DriverJobService {
     }
 
     if (!row) {
+      await this.throwAssignmentEndedOrNotFound(
+        driverUserId,
+        normalizedBookingNumber,
+      );
+    }
+
+    return this.mapDetail(row);
+  }
+
+  async throwAssignmentEndedOrNotFound(driverUserId, bookingNumber) {
+    const outcome = this.bookingRepository.findDriverAssignmentAccessOutcome
+      ? await this.bookingRepository.findDriverAssignmentAccessOutcome(
+          driverUserId,
+          bookingNumber,
+        )
+      : null;
+
+    if (!outcome) {
       throw new AppError('Booking not found', {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.BOOKING_NOT_FOUND || ERROR_CODES.NOT_FOUND,
       });
     }
 
-    return this.mapDetail(row);
+    // Still has an active assignment for this driver — should have been found above.
+    if (Number(outcome.assignment_is_active) === 1) {
+      throw new AppError('Booking not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.BOOKING_NOT_FOUND || ERROR_CODES.NOT_FOUND,
+      });
+    }
+
+    const reasonCode = resolveAssignmentEndedReason({
+      bookingStatus: outcome.booking_status,
+      assignmentReason: outcome.assignment_reason,
+      hasOtherActiveAssignment: Boolean(outcome.has_other_active_assignment),
+    });
+
+    throw new AppError(safeMessageForEndedReason(reasonCode), {
+      statusCode: HTTP_STATUS.CONFLICT,
+      errorCode: ERROR_CODES.DRIVER_ASSIGNMENT_RELEASED,
+      details: {
+        reasonCode,
+        bookingNumber: outcome.booking_number || bookingNumber,
+        bookingStatus: outcome.booking_status || null,
+        releasedAt: outcome.unassigned_at
+          ? new Date(outcome.unassigned_at).toISOString()
+          : null,
+      },
+    });
   }
 }
 

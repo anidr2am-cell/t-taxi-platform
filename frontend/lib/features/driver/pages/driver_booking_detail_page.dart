@@ -19,6 +19,8 @@ import '../driver_trip_flow.dart';
 import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 import '../services/driver_api_service.dart';
+import '../services/driver_call_socket_service.dart';
+import '../utils/driver_assignment_ended.dart';
 import '../utils/driver_money_format.dart';
 import '../widgets/driver_status_control.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
@@ -33,6 +35,7 @@ class DriverBookingDetailPage extends StatefulWidget {
     this.locationApi,
     this.positionProvider,
     this.settlementApi,
+    this.callSocket,
   }) : api = api ?? const DriverApiService();
 
   final String bookingNumber;
@@ -41,6 +44,7 @@ class DriverBookingDetailPage extends StatefulWidget {
   final DriverLocationApiService? locationApi;
   final DriverPositionProvider? positionProvider;
   final DriverSettlementApiService? settlementApi;
+  final DriverCallSocketService? callSocket;
 
   @override
   State<DriverBookingDetailPage> createState() =>
@@ -55,6 +59,8 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   bool _confirmingAction = false;
   String? _actionError;
   String? _processingKey;
+  DriverCallSocketService? _ownedCallSocket;
+  bool _showingEndedDialog = false;
 
   DriverSettlementApiService get _settlementApi =>
       widget.settlementApi ?? const DriverSettlementApiService();
@@ -63,6 +69,65 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   void initState() {
     super.initState();
     _loadBooking();
+    _connectAssignmentSocket();
+  }
+
+  @override
+  void dispose() {
+    _ownedCallSocket?.disconnect();
+    super.dispose();
+  }
+
+  Future<void> _connectAssignmentSocket() async {
+    if (widget.callSocket != null) {
+      widget.callSocket!.onAssignmentReleased = _onAssignmentReleasedPayload;
+      return;
+    }
+    final token = await widget.api.getSavedToken();
+    if (!mounted || token == null || token.isEmpty) return;
+    final socket = DriverCallSocketService()
+      ..onAssignmentReleased = _onAssignmentReleasedPayload;
+    _ownedCallSocket = socket;
+    await socket.connect(accessToken: token);
+  }
+
+  void _onAssignmentReleasedPayload(Map<String, dynamic> payload) {
+    final bookingNumber = payload['bookingNumber']?.toString();
+    if (bookingNumber != widget.bookingNumber) return;
+    final reasonCode = DriverAssignmentEndedReason.normalize(
+      payload['reasonCode']?.toString() ?? payload['reason']?.toString(),
+    );
+    _showAssignmentEndedDialog(reasonCode);
+  }
+
+  Future<void> _showAssignmentEndedDialog(String? reasonCode) async {
+    if (!mounted || _showingEndedDialog) return;
+    _showingEndedDialog = true;
+    final l10n = context.l10n;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          DriverAssignmentEndedReason.localizeTitle(l10n, reasonCode),
+        ),
+        content: Text(
+          DriverAssignmentEndedReason.localize(
+            l10n,
+            reasonCode,
+            bookingNumber: widget.bookingNumber,
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.t('driver_assignment_ended_confirm')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    Navigator.of(context).pop(true);
   }
 
   void _loadBooking() {
@@ -317,13 +382,38 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                 if (context.mounted) driverHandleApiError(context, err);
               });
             }
-            final message = err is DriverApiException
-                ? err.message
-                : userFacingError(err, fallback: l10n.t('driver_detail_error'));
+            final apiErr = err is DriverApiException ? err : null;
+            final reasonCode = apiErr?.isAssignmentEnded == true
+                ? (apiErr!.reasonCode ??
+                      DriverAssignmentEndedReason.noActiveAssignment)
+                : apiErr?.errorCode == 'BOOKING_NOT_FOUND'
+                ? DriverAssignmentEndedReason.bookingNotFound
+                : null;
+            final message = reasonCode != null
+                ? DriverAssignmentEndedReason.localize(
+                    l10n,
+                    reasonCode,
+                    bookingNumber: widget.bookingNumber,
+                  )
+                : apiErr != null
+                ? driverApiErrorMessage(
+                    message: apiErr.message,
+                    errorCode: apiErr.errorCode,
+                    languageCode: l10n.languageCode,
+                  )
+                : userFacingError(
+                    err,
+                    fallback: l10n.t('driver_detail_error'),
+                  );
+            final ended = apiErr?.isAssignmentEnded == true;
             return AppUi.errorState(
               message: message,
-              onRetry: _loadBooking,
-              retryLabel: l10n.t('driver_retry'),
+              onRetry: ended
+                  ? () => Navigator.of(context).pop(true)
+                  : _loadBooking,
+              retryLabel: ended
+                  ? l10n.t('driver_assignment_ended_confirm')
+                  : l10n.t('driver_retry'),
             );
           }
           final booking = snapshot.data!;
