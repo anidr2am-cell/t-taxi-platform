@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/driver/driver_trip_contact.dart';
 import 'package:frontend/features/driver/models/driver_booking.dart';
@@ -9,6 +10,7 @@ import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
 import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
 
 void main() {
@@ -20,7 +22,8 @@ void main() {
         _FakeDriverApi(
           detail: _booking(
             status: 'DRIVER_ASSIGNED',
-            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING', 'RELEASE_ASSIGNMENT'],
+            releaseAssignmentAvailable: true,
           ),
         ),
       ),
@@ -32,7 +35,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, 'Release assignment'),
       findsOneWidget,
     );
     expect(
@@ -84,6 +87,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(_FakeDriverApi(detailFuture: completer.future)),
     );
+    await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     completer.complete(_booking());
@@ -642,29 +646,30 @@ void main() {
     final api = _FakeDriverApi(
       detail: _booking(
         status: 'DRIVER_ASSIGNED',
-        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: true,
       ),
     );
     await tester.pumpWidget(_wrap(api));
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, 'Release assignment'),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('운행 포기'), findsWidgets);
-    expect(find.text('운행을 포기하시겠습니까?'), findsOneWidget);
-
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.widgetWithText(FilledButton, '운행 포기'),
-      ),
+    expect(find.text('Release this booking assignment?'), findsOneWidget);
+    expect(
+      find.textContaining('The customer booking stays active'),
+      findsOneWidget,
     );
+
+    await _selectReleaseReason(tester, 'Schedule conflict');
+    await tester.tap(find.byKey(const ValueKey('driver_release_confirm')));
     await tester.pumpAndSettle();
 
     expect(api.releaseCalls, 1);
+    expect(api.lastReleaseReasonCode, 'SCHEDULE_CONFLICT');
     expect(find.byType(DriverBookingDetailPage), findsNothing);
   });
 
@@ -672,17 +677,18 @@ void main() {
     final api = _FakeDriverApi(
       detail: _booking(
         status: 'DRIVER_ASSIGNED',
-        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: true,
       ),
     );
     await tester.pumpWidget(_wrap(api));
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, 'Release assignment'),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, '취소'));
+    await tester.tap(find.widgetWithText(TextButton, 'Keep assignment'));
     await tester.pumpAndSettle();
 
     expect(api.releaseCalls, 0);
@@ -695,7 +701,8 @@ void main() {
     final api = _FakeDriverApi(
       detail: _booking(
         status: 'DRIVER_ASSIGNED',
-        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: true,
       ),
       releaseError: const DriverApiException(
         'Booking can only be released before the trip starts',
@@ -707,15 +714,11 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, 'Release assignment'),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.widgetWithText(FilledButton, '운행 포기'),
-      ),
-    );
+    await _selectReleaseReason(tester, 'Accident');
+    await tester.tap(find.byKey(const ValueKey('driver_release_confirm')));
     await tester.pumpAndSettle();
 
     expect(api.releaseCalls, 1);
@@ -731,6 +734,7 @@ void main() {
           detail: _booking(
             status: 'DRIVER_ARRIVED',
             actions: ['MARK_PICKED_UP'],
+            releaseAssignmentAvailable: false,
           ),
         ),
       ),
@@ -738,8 +742,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, 'Release assignment'),
       findsNothing,
+    );
+  });
+
+  testWidgets('emergency-only release shows emergency hint', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+            releaseAssignmentAvailable: false,
+            releaseAssignmentEmergencyOnly: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(OutlinedButton, 'Release assignment'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Normal release is limited within 2 hours'),
+      findsWidgets,
     );
   });
 
@@ -788,8 +817,23 @@ Widget _wrap(
   bool showStatusControl = false,
   DriverLocationApiService? locationApi,
   DriverSettlementApiService? settlementApi,
+  Locale locale = const Locale('en'),
 }) {
   return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLanguages
+        .map((code) => Locale(code))
+        .toList(),
+    localizationsDelegates: [
+      AppLocalizationsDelegate(locale.languageCode),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    theme: ThemeData(
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: Colors.transparent,
+    ),
     home: DriverBookingDetailPage(
       bookingNumber: 'TX202607010001',
       api: api,
@@ -824,6 +868,8 @@ DriverBooking _booking({
   double? originLongitude,
   double? destinationLatitude,
   double? destinationLongitude,
+  bool releaseAssignmentAvailable = false,
+  bool releaseAssignmentEmergencyOnly = false,
 }) {
   return DriverBooking(
     bookingNumber: 'TX202607010001',
@@ -861,7 +907,16 @@ DriverBooking _booking({
     currency: 'THB',
     paymentMethodLabel: 'PAY_DRIVER_AT_DESTINATION',
     allowedActions: actions,
+    releaseAssignmentAvailable: releaseAssignmentAvailable,
+    releaseAssignmentEmergencyOnly: releaseAssignmentEmergencyOnly,
   );
+}
+
+Future<void> _selectReleaseReason(WidgetTester tester, String label) async {
+  await tester.tap(find.byKey(const ValueKey('driver_release_reason')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label).last);
+  await tester.pumpAndSettle();
 }
 
 class _FakeDriverApi extends DriverApiService {
@@ -887,6 +942,8 @@ class _FakeDriverApi extends DriverApiService {
   bool online;
   int detailCalls = 0;
   int releaseCalls = 0;
+  String? lastReleaseReasonCode;
+  String? lastReleaseReasonDetail;
   int acceptCalls = 0;
   int markPickedUpCalls = 0;
   int endTripCalls = 0;
@@ -917,11 +974,22 @@ class _FakeDriverApi extends DriverApiService {
   }
 
   @override
-  Future<Map<String, dynamic>> releaseAssignment(String bookingNumber) async {
+  Future<Map<String, dynamic>> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  }) async {
     releaseCalls += 1;
+    lastReleaseReasonCode = reasonCode;
+    lastReleaseReasonDetail = reasonDetail;
     if (releaseError != null) throw releaseError!;
     _current = _booking(status: 'OPEN', actions: []);
-    return {'bookingNumber': bookingNumber, 'status': 'OPEN', 'released': true};
+    return {
+      'bookingNumber': bookingNumber,
+      'status': 'OPEN',
+      'released': true,
+      'reasonCode': reasonCode,
+    };
   }
 
   @override

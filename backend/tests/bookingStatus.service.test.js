@@ -28,6 +28,7 @@ function createBooking(overrides = {}) {
     customer_user_id: 55,
     driver_id: 9,
     driver_user_id: 99,
+    scheduled_pickup_at: '2026-07-25 15:00:00',
     ...overrides,
   };
 }
@@ -85,6 +86,14 @@ function createHarness({ booking = createBooking(), commitError = null } = {}) {
     async completeActiveAssignment(_conn, bookingId) {
       calls.completeActiveAssignment = (calls.completeActiveAssignment ?? 0) + 1;
       records.completeActiveAssignment = { bookingId };
+    },
+    async clearAssignmentOnCancel(_conn, bookingId, actorUserId, reason) {
+      calls.clearAssignmentOnCancel = (calls.clearAssignmentOnCancel ?? 0) + 1;
+      records.clearAssignmentOnCancel = { bookingId, actorUserId, reason };
+      return { id: 1, driver_id: booking.driver_id };
+    },
+    async findActiveGuestTokenForBooking() {
+      return { id: 1 };
     },
   };
   const outboxRepository = {
@@ -279,4 +288,117 @@ test('COMPLETED transition closes active driver assignment', async () => {
   assert.equal(result.status, 'COMPLETED');
   assert.equal(harness.calls.completeActiveAssignment, 1);
   assert.deepEqual(harness.records.completeActiveAssignment, { bookingId: 10 });
+});
+
+test('customer can cancel DRIVER_ASSIGNED when more than 2h remain', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.DRIVER_ASSIGNED }),
+  });
+  const deadlineMs = Date.parse('2026-07-25T13:00:00+07:00');
+
+  const result = await harness.service.transition(
+    'TX202607010001',
+    { status: BOOKING_STATUS.CANCELLED, reason: 'CUSTOMER_CANCELLED' },
+    { id: 55, role: ROLES.CUSTOMER },
+    { nowMs: deadlineMs - 1000 },
+  );
+
+  assert.equal(result.status, BOOKING_STATUS.CANCELLED);
+  assert.equal(harness.calls.clearAssignmentOnCancel, 1);
+  assert.equal(harness.records.clearAssignmentOnCancel.reason, 'CUSTOMER_CANCELLED');
+  assert.equal(harness.records.outbox.eventType, EVENTS.BOOKING_CANCELLED);
+});
+
+test('customer cannot cancel DRIVER_ASSIGNED at exact 2h deadline', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.DRIVER_ASSIGNED }),
+  });
+  const deadlineMs = Date.parse('2026-07-25T13:00:00+07:00');
+
+  await assert.rejects(
+    () => harness.service.transition(
+      'TX202607010001',
+      { status: BOOKING_STATUS.CANCELLED },
+      { id: 55, role: ROLES.CUSTOMER },
+      { nowMs: deadlineMs },
+    ),
+    (err) => err instanceof AppError
+      && err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION
+      && err.errors?.[0]?.reason === 'WITHIN_TWO_HOURS',
+  );
+  assert.equal(harness.calls.updateStatus, 0);
+});
+
+test('admin can force-cancel DRIVER_ASSIGNED inside 2h window', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.DRIVER_ASSIGNED }),
+  });
+  const deadlineMs = Date.parse('2026-07-25T13:00:00+07:00');
+
+  const result = await harness.service.transition(
+    'TX202607010001',
+    { status: BOOKING_STATUS.CANCELLED, reason: 'ADMIN_FORCE' },
+    { id: 7, role: ROLES.ADMIN },
+    { nowMs: deadlineMs + 60_000 },
+  );
+
+  assert.equal(result.status, BOOKING_STATUS.CANCELLED);
+  assert.equal(harness.records.clearAssignmentOnCancel.reason, 'ADMIN_CANCELLED');
+});
+
+test('customer cancel via guest token clears assignment', async () => {
+  const harness = createHarness({
+    booking: createBooking({
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      customer_user_id: null,
+    }),
+  });
+  const deadlineMs = Date.parse('2026-07-25T13:00:00+07:00');
+
+  const result = await harness.service.cancelByCustomer(
+    'TX202607010001',
+    { guestAccessToken: 'guest-token-value' },
+    null,
+    { nowMs: deadlineMs - 1000 },
+  );
+
+  assert.equal(result.status, BOOKING_STATUS.CANCELLED);
+  assert.equal(harness.calls.clearAssignmentOnCancel, 1);
+  assert.equal(result.canCancel, false);
+  assert.equal(result.cancellationBlockedReason, 'ALREADY_CANCELLED');
+});
+
+test('duplicate customer cancel is idempotent', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.CANCELLED }),
+  });
+
+  const result = await harness.service.cancelByCustomer(
+    'TX202607010001',
+    { guestAccessToken: 'guest-token-value' },
+    null,
+  );
+
+  assert.equal(result.status, BOOKING_STATUS.CANCELLED);
+  assert.equal(result.idempotent, true);
+  assert.equal(harness.calls.updateStatus, 0);
+  assert.equal(harness.calls.clearAssignmentOnCancel ?? 0, 0);
+});
+
+test('customer cannot cancel ON_ROUTE even with ample time', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.ON_ROUTE }),
+  });
+  const deadlineMs = Date.parse('2026-07-25T13:00:00+07:00');
+
+  await assert.rejects(
+    () => harness.service.transition(
+      'TX202607010001',
+      { status: BOOKING_STATUS.CANCELLED },
+      { id: 55, role: ROLES.CUSTOMER },
+      { nowMs: deadlineMs - 3_600_000 },
+    ),
+    (err) => err instanceof AppError
+      && err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
 });

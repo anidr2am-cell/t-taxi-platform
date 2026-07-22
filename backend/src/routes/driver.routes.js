@@ -9,6 +9,7 @@ const createRateLimit = require('../middlewares/rateLimit.middleware');
 const ROLES = require('../constants/roles');
 const { locationUpdateSchema } = require('../validators/driverLocation.validator');
 const { updateDriverProfileSchema } = require('../validators/driverProfile.validator');
+const { releaseAssignmentSchema } = require('../validators/driverCall.validator');
 const { single } = require('../config/multer');
 
 const router = express.Router();
@@ -59,7 +60,11 @@ router.post('/bookings/:bookingNumber/arrive', driverController.markArrived);
 router.post('/bookings/:bookingNumber/mark-picked-up', driverController.markPickedUp);
 router.post('/bookings/:bookingNumber/end-trip', driverController.endTrip);
 router.post('/bookings/:bookingNumber/complete', driverController.completeTrip);
-router.post('/bookings/:bookingNumber/release', driverController.releaseAssignment);
+router.post(
+  '/bookings/:bookingNumber/release',
+  validate({ body: releaseAssignmentSchema }),
+  driverController.releaseAssignment,
+);
 router.post('/bookings/:bookingNumber/accept', driverController.acceptBooking);
 // Legacy QR scan routes — compatibility only; button trip flow must not call these.
 router.post('/bookings/:bookingNumber/scan-boarding', driverController.scanBoarding);

@@ -228,7 +228,7 @@ test('today list sorting is requested from repository and mapped concisely', asy
   assert.equal(result.items[0].pickupTime, '09:30');
   assert.equal(result.items[0].passengerCount, 3);
   assert.equal(result.items[0].customerDisplayName, 'Kim');
-  assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS', 'ACCEPT_BOOKING']);
+  assert.deepEqual(result.items[0].allowedActions, ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING']);
 });
 
 test('scheduled list uses upcoming repository query without date filter', async () => {
@@ -373,11 +373,11 @@ test('driver assigned booking requires acceptance before start route action', ()
 
   assert.deepEqual(
     service.mapBase(row({ assignment_status: 'ASSIGNED' })).allowedActions,
-    ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+    ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING'],
   );
   assert.deepEqual(
     service.mapBase(row({ assignment_status: 'ACCEPTED' })).allowedActions,
-    ['VIEW_DETAILS', 'START_ON_ROUTE'],
+    ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'START_ON_ROUTE'],
   );
 });
 
@@ -400,8 +400,8 @@ test('standby action is hidden before allowed time and exposed when eligible', (
     new Date('2026-07-18T15:00:00.000Z'),
   );
 
-  assert.deepEqual(future, ['VIEW_DETAILS']);
-  assert.deepEqual(eligible, ['VIEW_DETAILS', 'ACCEPT_BOOKING']);
+  assert.deepEqual(future, ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT']);
+  assert.deepEqual(eligible, ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING']);
 });
 
 test('driver detail maps structured pickup and destination locations', () => {

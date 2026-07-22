@@ -31,7 +31,7 @@ class BookingApiErrorDetail {
 
   factory BookingApiErrorDetail.fromJson(Map<String, dynamic> json) {
     return BookingApiErrorDetail(
-      field: json['field'] as String? ?? '',
+      field: json['field'] as String? ?? json['reason'] as String? ?? '',
       type: json['type'] as String?,
       source: json['source'] as String?,
       message: json['message'] as String?,

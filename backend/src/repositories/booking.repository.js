@@ -321,6 +321,15 @@ class BookingRepository {
               AND bci.deleted_at IS NULL
             LIMIT 1
           ) AS name_sign_requested,
+          EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments released_bda
+            WHERE released_bda.booking_id = b.id
+              AND released_bda.is_active = 0
+              AND released_bda.deleted_at IS NULL
+              AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+            LIMIT 1
+          ) AS has_driver_release_history,
           d.name AS driver_name,
           d.phone AS driver_phone,
           dv.plate_number AS assigned_vehicle_plate,
@@ -702,6 +711,7 @@ class BookingRepository {
               AND released_bda.is_active = 0
               AND released_bda.deleted_at IS NULL
               AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+              AND released_bda.unassigned_at > (UTC_TIMESTAMP() - INTERVAL 30 MINUTE)
           )
           AND NOT EXISTS (
             SELECT 1
@@ -1264,7 +1274,36 @@ class BookingRepository {
         dv.plate_number AS assigned_vehicle_plate,
         dv.model_name AS assigned_vehicle_model,
         av.code AS assigned_vehicle_type_code,
-        av.name AS assigned_vehicle_type_name
+        av.name AS assigned_vehicle_type_name,
+        (
+          SELECT rbda.unassigned_at
+          FROM booking_driver_assignments rbda
+          WHERE rbda.booking_id = b.id
+            AND rbda.is_active = 0
+            AND rbda.deleted_at IS NULL
+            AND rbda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+          LIMIT 1
+        ) AS last_driver_release_at,
+        (
+          SELECT rd.name
+          FROM booking_driver_assignments rbda
+          INNER JOIN drivers rd ON rd.id = rbda.driver_id AND rd.deleted_at IS NULL
+          WHERE rbda.booking_id = b.id
+            AND rbda.is_active = 0
+            AND rbda.deleted_at IS NULL
+            AND rbda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+          LIMIT 1
+        ) AS last_released_driver_name,
+        (
+          SELECT JSON_UNQUOTE(JSON_EXTRACT(bal.payload, '$.reasonCode'))
+          FROM booking_activity_logs bal
+          WHERE bal.booking_id = b.id
+            AND bal.activity_type = 'DRIVER_RELEASED_ASSIGNMENT'
+          ORDER BY bal.id DESC
+          LIMIT 1
+        ) AS last_driver_release_reason_code
       ${this.adminQueueFromSql(adminUserId)}
     `;
   }
@@ -1593,8 +1632,12 @@ class BookingRepository {
     return result.affectedRows === 1;
   }
 
-  async hasReleasedAssignment(conn, bookingId, driverId) {
+  async hasReleasedAssignment(conn, bookingId, driverId, { withinCooldown = true } = {}) {
     const executor = conn ?? this.pool;
+    // Exclusive 30m boundary: at exactly 30 minutes the same driver may see/claim again.
+    const cooldownSql = withinCooldown
+      ? 'AND bda.unassigned_at > (UTC_TIMESTAMP() - INTERVAL 30 MINUTE)'
+      : '';
     const [rows] = await executor.query(
       `
         SELECT 1
@@ -1604,6 +1647,7 @@ class BookingRepository {
           AND bda.is_active = 0
           AND bda.deleted_at IS NULL
           AND bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          ${cooldownSql}
         LIMIT 1
       `,
       [bookingId, driverId],
@@ -1627,6 +1671,26 @@ class BookingRepository {
       `,
       [bookingId],
     );
+  }
+
+  async clearAssignmentOnCancel(conn, bookingId, actorUserId, reason = 'CUSTOMER_CANCELLED') {
+    const active = await this.findActiveAssignmentForUpdate(conn, bookingId);
+    if (active) {
+      await this.deactivateAssignment(conn, active.id, reason);
+    }
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          driver_id = NULL,
+          updated_by = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `,
+      [actorUserId ?? null, bookingId],
+    );
+    return active || null;
   }
 
   async insertDriverAssignment(conn, row) {

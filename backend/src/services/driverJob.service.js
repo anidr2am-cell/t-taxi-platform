@@ -3,6 +3,9 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const SERVICE_TYPES = require('../constants/serviceTypes');
 const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
+const {
+  evaluateDriverAssignmentRelease,
+} = require('../policies/driverAssignmentRelease.policy');
 
 const THAILAND_TIME_ZONE = 'Asia/Bangkok';
 const STANDBY_WINDOW_MS = 60 * 60 * 1000;
@@ -69,16 +72,21 @@ class DriverJobService {
     const status = row.status;
     const assignmentStatus = row.assignment_status ?? null;
     if (status === 'DRIVER_ASSIGNED') {
+      const actions = ['VIEW_DETAILS'];
+      if (assignmentStatus === 'ASSIGNED' || assignmentStatus === 'ACCEPTED') {
+        actions.push('RELEASE_ASSIGNMENT');
+      }
       if (assignmentStatus === 'ASSIGNED') {
-        if (!this.canConfirmStandby(row, now)) {
-          return ['VIEW_DETAILS'];
+        if (this.canConfirmStandby(row, now)) {
+          actions.push('ACCEPT_BOOKING');
         }
-        return ['VIEW_DETAILS', 'ACCEPT_BOOKING'];
+        return actions;
       }
       if (assignmentStatus === 'ACCEPTED') {
-        return ['VIEW_DETAILS', 'START_ON_ROUTE'];
+        actions.push('START_ON_ROUTE');
+        return actions;
       }
-      return ['VIEW_DETAILS'];
+      return actions;
     }
     if (status === 'ON_ROUTE') {
       return ['VIEW_DETAILS', 'MARK_ARRIVED'];
@@ -271,6 +279,24 @@ class DriverJobService {
     };
   }
 
+  releaseCapabilities(row, now = new Date()) {
+    const nowMs = now instanceof Date ? now.getTime() : Number(now);
+    const evaluation = evaluateDriverAssignmentRelease({
+      bookingStatus: row.status,
+      scheduledPickupAt: row.scheduled_pickup_at,
+      hasActiveAssignment: ['ASSIGNED', 'ACCEPTED'].includes(row.assignment_status),
+      isAssignedDriver: true,
+      nowMs,
+    });
+    return {
+      releaseAssignmentAvailable: evaluation.releaseAssignmentAvailable,
+      releaseAssignmentEmergencyOnly: evaluation.releaseAssignmentEmergencyOnly,
+      assignmentReleaseDeadline: evaluation.assignmentReleaseDeadline,
+      assignmentReleaseBlockedReason: evaluation.assignmentReleaseBlockedReason,
+      reassignmentPriority: evaluation.reassignmentPriority,
+    };
+  }
+
   mapDetail(row) {
     const detail = {
       ...this.mapBase(row),
@@ -296,6 +322,7 @@ class DriverJobService {
       specialInstructions: row.special_requests,
       paymentMethod: row.payment_method,
       nameSignRequested: Boolean(row.name_sign_requested),
+      capabilities: this.releaseCapabilities(row),
       qr: {
         boarding: {
           available: Boolean(row.boarding_qr_token_hash),

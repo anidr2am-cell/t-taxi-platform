@@ -284,8 +284,19 @@ class DriverApiService {
     );
   }
 
-  Future<Map<String, dynamic>> releaseAssignment(String bookingNumber) async {
-    final data = await _post('/driver/bookings/$bookingNumber/release');
+  Future<Map<String, dynamic>> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  }) async {
+    final data = await _post(
+      '/driver/bookings/$bookingNumber/release',
+      body: {
+        'reasonCode': reasonCode,
+        if (reasonDetail != null && reasonDetail.trim().isNotEmpty)
+          'reasonDetail': reasonDetail.trim(),
+      },
+    );
     return Map<String, dynamic>.from(data as Map);
   }
 

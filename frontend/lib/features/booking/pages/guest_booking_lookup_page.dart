@@ -15,6 +15,7 @@ import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/assigned_driver_status_card.dart';
 import '../widgets/airport_meeting_guide_card.dart';
+import '../widgets/guest_booking_cancel_section.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../../chat/services/chat_socket_service.dart';
 import 'customer_booking_chat_page.dart';
@@ -386,8 +387,14 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               ),
               const SizedBox(height: AppTokens.spaceMd),
               AppUi.statusBadge(
-                BookingStatusDisplay.label(l10n, result.status),
-                tone: AppUi.toneForBookingStatus(result.status),
+                BookingStatusDisplay.label(
+                  l10n,
+                  result.status,
+                  reassignmentInProgress: result.reassignmentInProgress,
+                ),
+                tone: result.reassignmentInProgress
+                    ? AppStatusTone.warning
+                    : AppUi.toneForBookingStatus(result.status),
               ),
             ],
           ),
@@ -398,7 +405,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           const SizedBox(height: AppTokens.spaceMd),
           AssignedDriverStatusCard(result: result),
         ],
-        if (BookingStatusDisplay.customerGuidance(l10n, result.status) !=
+        if (BookingStatusDisplay.customerGuidance(
+              l10n,
+              result.status,
+              reassignmentInProgress: result.reassignmentInProgress,
+            ) !=
             null) ...[
           const SizedBox(height: AppTokens.spaceMd),
           AppUi.surfaceCard(
@@ -410,7 +421,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    BookingStatusDisplay.customerGuidance(l10n, result.status)!,
+                    BookingStatusDisplay.customerGuidance(
+                      l10n,
+                      result.status,
+                      reassignmentInProgress: result.reassignmentInProgress,
+                    )!,
                     style: const TextStyle(
                       color: AppTokens.textSecondary,
                       height: 1.45,
@@ -421,6 +436,17 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
           ),
         ],
+        const SizedBox(height: AppTokens.spaceMd),
+        GuestBookingCancelSection(
+          booking: result,
+          lookupService: _lookupService,
+          onCancelled: (updated) {
+            setState(() {
+              _result = updated;
+              _error = null;
+            });
+          },
+        ),
         if (reviewSubmitted) ...[
           const SizedBox(height: AppTokens.spaceMd),
           BookingReviewForm(
@@ -592,7 +618,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           const SizedBox(height: 8),
           AppUi.summaryRow(
             label: l10n.t('status'),
-            value: BookingStatusDisplay.label(l10n, result.status),
+            value: BookingStatusDisplay.label(
+              l10n,
+              result.status,
+              reassignmentInProgress: result.reassignmentInProgress,
+            ),
           ),
           AppUi.summaryRow(
             label: l10n.t('pickup_datetime'),
@@ -614,7 +644,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            BookingStatusDisplay.customerGuidance(l10n, result.status) ??
+            BookingStatusDisplay.customerGuidance(
+                  l10n,
+                  result.status,
+                  reassignmentInProgress: result.reassignmentInProgress,
+                ) ??
                 l10n.t('customer_status_unknown_guidance'),
             style: const TextStyle(
               color: AppTokens.textSecondary,

@@ -17,6 +17,7 @@ import '../../chat/services/chat_socket_service.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/booking_chat_section.dart';
+import '../widgets/guest_booking_cancel_section.dart';
 import 'customer_booking_chat_page.dart';
 import 'guest_booking_lookup_page.dart';
 
@@ -71,10 +72,18 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     'DRIVER_ARRIVED',
   };
   bool _pickupAlertSent = false;
+  late String _status;
+  late bool _canCancel;
+  String? _cancellationDeadline;
+  String? _cancellationBlockedReason;
 
   @override
   void initState() {
     super.initState();
+    _status = widget.result.status;
+    _canCancel = widget.result.canCancel;
+    _cancellationDeadline = widget.result.cancellationDeadline;
+    _cancellationBlockedReason = widget.result.cancellationBlockedReason;
     BookingReviewApi().persistGuestToken(
       widget.result.bookingNumber,
       widget.result.guestAccessToken,
@@ -91,7 +100,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     final summary = GuestBookingLookupResult.fromCreateSummary(
       bookingId: widget.result.bookingId,
       bookingNumber: widget.result.bookingNumber,
-      status: widget.result.status,
+      status: _status,
       totalAmount: widget.result.totalAmount,
       currency: widget.result.currency,
       paymentMethod: widget.result.paymentMethod,
@@ -103,9 +112,36 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       serviceTypeCode: widget.serviceTypeCode,
       originAirportCode: widget.originAirportCode,
       nameSignRequested: widget.nameSignRequested,
+      canCancel: _canCancel,
+      cancellationDeadline: _cancellationDeadline,
+      cancellationBlockedReason: _cancellationBlockedReason,
+      scheduledPickupAt: widget.scheduledPickupAt,
     );
     await (widget.lookupService ?? GuestBookingLookupService())
         .persistFromCreateSummary(summary);
+  }
+
+  GuestBookingLookupResult get _cancelBookingView {
+    return GuestBookingLookupResult.fromCreateSummary(
+      bookingId: widget.result.bookingId,
+      bookingNumber: widget.result.bookingNumber,
+      status: _status,
+      totalAmount: widget.result.totalAmount,
+      currency: widget.result.currency,
+      paymentMethod: widget.result.paymentMethod,
+      guestAccessToken: widget.result.guestAccessToken ?? '',
+      customerPhone: widget.customerPhone ?? '',
+      serviceTypeName: widget.serviceLabel,
+      originAddress: widget.originLabel,
+      destinationAddress: widget.destinationLabel,
+      serviceTypeCode: widget.serviceTypeCode,
+      originAirportCode: widget.originAirportCode,
+      nameSignRequested: widget.nameSignRequested,
+      canCancel: _canCancel,
+      cancellationDeadline: _cancellationDeadline,
+      cancellationBlockedReason: _cancellationBlockedReason,
+      scheduledPickupAt: widget.scheduledPickupAt,
+    );
   }
 
   void _openBookingLookup() {
@@ -119,7 +155,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     );
   }
 
-  bool get _isCompleted => widget.result.status == 'COMPLETED';
+  bool get _isCompleted => _status == 'COMPLETED';
 
   bool get _canShowChat => false;
 
@@ -139,14 +175,17 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
         widget.result.bookingId != null &&
         widget.result.guestAccessToken?.isNotEmpty == true &&
         widget.result.trackingAvailable &&
-        statuses.contains(widget.result.status);
+        statuses.contains(_status);
   }
 
   bool get _canShowReviewForm =>
       widget.enableCustomerTools &&
-      widget.result.status == 'COMPLETED' &&
+      _status == 'COMPLETED' &&
       widget.result.guestAccessToken?.isNotEmpty == true &&
       widget.review == null;
+
+  bool get _canShowCancel =>
+      widget.result.guestAccessToken?.isNotEmpty == true;
 
   Future<void> _copyBookingNumber() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -212,7 +251,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               const SizedBox(height: AppTokens.spaceLg),
               _BookingNumberCard(
                 bookingNumber: result.bookingNumber,
-                statusLabel: BookingStatusDisplay.label(l10n, result.status),
+                statusLabel: BookingStatusDisplay.label(l10n, _status),
                 pickupDateTime: CustomerBookingFormat.pickupDateTime(
                   l10n,
                   widget.scheduledPickupAt,
@@ -230,13 +269,13 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 ),
                 nextAction: BookingStatusDisplay.customerGuidance(
                   l10n,
-                  result.status,
+                  _status,
                 ),
                 l10n: l10n,
                 onCopy: _copyBookingNumber,
-                statusTone: AppUi.toneForBookingStatus(result.status),
+                statusTone: AppUi.toneForBookingStatus(_status),
               ),
-              if (BookingStatusDisplay.customerGuidance(l10n, result.status) !=
+              if (BookingStatusDisplay.customerGuidance(l10n, _status) !=
                   null) ...[
                 const SizedBox(height: AppTokens.spaceMd),
                 AppUi.surfaceCard(
@@ -254,7 +293,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                         child: Text(
                           BookingStatusDisplay.customerGuidance(
                             l10n,
-                            result.status,
+                            _status,
                           )!,
                           style: const TextStyle(
                             color: AppTokens.textSecondary,
@@ -264,6 +303,22 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                       ),
                     ],
                   ),
+                ),
+              ],
+              if (_canShowCancel) ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                GuestBookingCancelSection(
+                  booking: _cancelBookingView,
+                  lookupService: widget.lookupService,
+                  onCancelled: (updated) {
+                    setState(() {
+                      _status = updated.status;
+                      _canCancel = updated.canCancel;
+                      _cancellationDeadline = updated.cancellationDeadline;
+                      _cancellationBlockedReason =
+                          updated.cancellationBlockedReason;
+                    });
+                  },
                 ),
               ],
               const SizedBox(height: AppTokens.spaceMd),
@@ -316,7 +371,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   vehicleInfo: widget.meetingVehicleInfo,
                   pickupAlertSent: _pickupAlertSent,
                   onNotifyPickup:
-                      _pickupAlertStatuses.contains(widget.result.status) &&
+                      _pickupAlertStatuses.contains(_status) &&
                           widget.meetingVehicleInfo?.hasAssignedDetails ==
                               true &&
                           widget.result.guestAccessToken?.isNotEmpty == true
@@ -345,7 +400,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   GuestDriverTrackingSection(
                     bookingId: result.bookingId!,
                     guestAccessToken: result.guestAccessToken!,
-                    bookingStatus: result.status,
+                    bookingStatus: _status,
                   ),
                   const SizedBox(height: AppTokens.spaceMd),
                 ],

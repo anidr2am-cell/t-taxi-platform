@@ -37,8 +37,9 @@ const releaseAssignment = asyncHandler(async (req, res) => {
   const data = await getDriverCallService().releaseAssignment(
     req.user.id,
     req.params.bookingNumber,
+    req.body || {},
   );
-  return success(res, data, 'OK');
+  return success(res, data, 'Assignment released');
 });
 
 const acceptBooking = asyncHandler(async (req, res) => {

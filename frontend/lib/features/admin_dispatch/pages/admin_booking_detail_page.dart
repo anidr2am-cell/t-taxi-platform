@@ -975,7 +975,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               if (severity != null && severity.isNotEmpty)
                 AppUi.statusBadge(
                   AdminOperationsUx.severityLabel(l10n, severity),
-                  tone: severity == 'URGENT'
+                  tone: severity == 'CRITICAL' || severity == 'URGENT'
                       ? AppStatusTone.error
                       : AppStatusTone.warning,
                 ),

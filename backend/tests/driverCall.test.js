@@ -82,7 +82,7 @@ function createHarness(overrides = {}) {
     booking_number: 'TX202607130001',
     status: BOOKING_STATUS.OPEN,
     vehicle_type_id: 3,
-    scheduled_pickup_at: '2026-07-13 10:00:00',
+    scheduled_pickup_at: '2099-07-13 10:00:00',
     ...overrides.booking,
   };
   const driver = {
@@ -423,7 +423,7 @@ test('claimOpenCall rejects offline or busy drivers', async () => {
     conflictRows: [{
       id: 5,
       booking_number: 'TX202607120001',
-      scheduled_pickup_at: '2026-07-13 11:00:00',
+      scheduled_pickup_at: '2099-07-13 11:00:00',
     }],
   });
   await assert.rejects(
@@ -467,10 +467,14 @@ test('releaseAssignment reopens booking, clears active assignment, and notifies 
     activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
   });
 
-  const result = await service.releaseAssignment(42, 'TX202607130001');
+  const result = await service.releaseAssignment(42, 'TX202607130001', {
+    reasonCode: 'SCHEDULE_CONFLICT',
+  });
 
   assert.equal(result.status, BOOKING_STATUS.OPEN);
   assert.equal(result.released, true);
+  assert.equal(result.reassignmentPriority, 'NORMAL');
+  assert.equal(result.reasonCode, 'SCHEDULE_CONFLICT');
   assert.equal(conn.committed, true);
   assert.equal(conn.rolledBack, false);
   assert.deepEqual(calls.deactivatedAssignments[0], {
@@ -511,7 +515,9 @@ test('releaseAssignment excludes settlement-blocked drivers from reopened call n
     blockedDriverIds: [9],
   });
 
-  const result = await service.releaseAssignment(42, 'TX202607130001');
+  const result = await service.releaseAssignment(42, 'TX202607130001', {
+    reasonCode: 'DRIVER_ILLNESS',
+  });
 
   assert.equal(result.released, true);
   assert.equal(calls.notifications.length, 1);
@@ -524,7 +530,9 @@ test('releaseAssignment rejects wrong driver and started trip', async () => {
     activeAssignment: { id: 77, driver_id: 99, status: 'ASSIGNED', is_active: 1 },
   });
   await assert.rejects(
-    () => wrongDriver.service.releaseAssignment(42, 'TX202607130001'),
+    () => wrongDriver.service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'SCHEDULE_CONFLICT',
+    }),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_NOT_ASSIGNED_TO_DRIVER,
   );
   assert.equal(wrongDriver.conn.rolledBack, true);
@@ -534,7 +542,9 @@ test('releaseAssignment rejects wrong driver and started trip', async () => {
     activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
   });
   await assert.rejects(
-    () => started.service.releaseAssignment(42, 'TX202607130001'),
+    () => started.service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'ACCIDENT',
+    }),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_RELEASE_NOT_ALLOWED,
   );
 });
@@ -545,7 +555,9 @@ test('releaseAssignment keeps existing compatibility for ACCEPTED assignment', a
     activeAssignment: { id: 77, driver_id: 7, status: 'ACCEPTED', is_active: 1 },
   });
 
-  const result = await service.releaseAssignment(42, 'TX202607130001');
+  const result = await service.releaseAssignment(42, 'TX202607130001', {
+    reasonCode: 'SCHEDULE_CONFLICT',
+  });
 
   assert.equal(result.released, true);
   assert.equal(conn.committed, true);
@@ -560,7 +572,9 @@ test('releaseAssignment duplicate request returns conflict without reopening aga
   });
 
   await assert.rejects(
-    () => service.releaseAssignment(42, 'TX202607130001'),
+    () => service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'SCHEDULE_CONFLICT',
+    }),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.ASSIGNMENT_ALREADY_RELEASED,
   );
   assert.equal(conn.rolledBack, true);
@@ -588,13 +602,47 @@ test('releaseAssignment rolls back and emits no events when reopening fails', as
   };
 
   await assert.rejects(
-    () => service.releaseAssignment(42, 'TX202607130001'),
+    () => service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'SCHEDULE_CONFLICT',
+    }),
     /update failed/,
   );
   assert.equal(conn.rolledBack, true);
   assert.equal(conn.committed, false);
   assert.equal(emitted.length, 0);
   setRealtimeIo(null);
+});
+
+test('releaseAssignment blocks normal reason within 2h but allows emergency CRITICAL', async () => {
+  const pickup = '2026-07-25 15:00:00';
+  const nowMs = Date.parse('2026-07-25T14:00:00+07:00');
+  const blocked = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED, scheduled_pickup_at: pickup },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+  await assert.rejects(
+    () => blocked.service.releaseAssignment(
+      42,
+      'TX202607130001',
+      { reasonCode: 'SCHEDULE_CONFLICT' },
+      { nowMs },
+    ),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_RELEASE_NOT_ALLOWED,
+  );
+
+  const allowed = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED, scheduled_pickup_at: pickup },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+  const result = await allowed.service.releaseAssignment(
+    42,
+    'TX202607130001',
+    { reasonCode: 'VEHICLE_BREAKDOWN', reasonDetail: 'Engine light' },
+    { nowMs },
+  );
+  assert.equal(result.released, true);
+  assert.equal(result.reassignmentPriority, 'CRITICAL');
+  assert.equal(allowed.calls.activityLogs[0].activity.payload.emergency, true);
 });
 
 test('claimOpenCall rejects a booking previously released by the same driver', async () => {

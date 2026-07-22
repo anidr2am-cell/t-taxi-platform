@@ -180,31 +180,27 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     }
   }
 
-  Future<void> _releaseAssignment() async {
+  Future<void> _releaseAssignment(DriverBooking booking) async {
     if (_processing) return;
     final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
+    final emergencyOnly = booking.releaseAssignmentEmergencyOnly;
+    final canNormalRelease = booking.releaseAssignmentAvailable;
+    if (!canNormalRelease && !emergencyOnly) {
+      setState(() {
+        _actionError = l10n.t('driver_release_assignment_blocked');
+      });
+      return;
+    }
+
+    final result = await showDialog<({String reasonCode, String? detail})>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.t('driver_release_assignment_title')),
-        content: Text(l10n.t('driver_release_assignment_message')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.t('driver_release_assignment_cancel')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTokens.error,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.t('driver_release_assignment_confirm')),
-          ),
-        ],
+      builder: (dialogContext) => _ReleaseAssignmentDialog(
+        emergencyOnly: emergencyOnly,
+        bookingNumber: booking.bookingNumber,
+        scheduledPickupAt: booking.scheduledPickupAt,
       ),
     );
-    if (confirmed != true || !mounted || _processing) return;
+    if (result == null || !mounted || _processing) return;
 
     setState(() {
       _processing = true;
@@ -212,7 +208,11 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     });
 
     try {
-      await widget.api.releaseAssignment(widget.bookingNumber);
+      await widget.api.releaseAssignment(
+        widget.bookingNumber,
+        reasonCode: result.reasonCode,
+        reasonDetail: result.detail,
+      );
       if (!mounted) return;
       setState(() => _processing = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -340,7 +340,11 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
           final readOnly = DriverUx.isReadOnly(booking.status);
           final showSettlementInfo = booking.status == 'SETTLEMENT_PENDING';
           final showCompletedInfo = booking.status == 'COMPLETED';
-          final canReleaseAssignment = booking.status == 'DRIVER_ASSIGNED';
+          final canReleaseAssignment =
+              booking.status == 'DRIVER_ASSIGNED' &&
+              (booking.releaseAssignmentAvailable ||
+                  booking.releaseAssignmentEmergencyOnly ||
+                  booking.allowedActions.contains('RELEASE_ASSIGNMENT'));
 
           return Column(
             children: [
@@ -651,11 +655,23 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                             foregroundColor: AppTokens.error,
                             side: const BorderSide(color: AppTokens.error),
                           ),
-                          onPressed: _processing ? null : _releaseAssignment,
+                          onPressed: _processing
+                              ? null
+                              : () => _releaseAssignment(booking),
                           icon: const Icon(Icons.cancel_outlined),
                           label: Text(l10n.t('driver_release_assignment')),
                         ),
                       ),
+                      if (booking.releaseAssignmentEmergencyOnly) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        Text(
+                          l10n.t('driver_release_assignment_emergency_hint'),
+                          style: const TextStyle(
+                            color: AppTokens.warning,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -1270,5 +1286,145 @@ class _SettlementSection extends StatelessWidget {
       default:
         return AppStatusTone.neutral;
     }
+  }
+}
+
+class _ReleaseAssignmentDialog extends StatefulWidget {
+  const _ReleaseAssignmentDialog({
+    required this.emergencyOnly,
+    required this.bookingNumber,
+    this.scheduledPickupAt,
+  });
+
+  final bool emergencyOnly;
+  final String bookingNumber;
+  final String? scheduledPickupAt;
+
+  @override
+  State<_ReleaseAssignmentDialog> createState() =>
+      _ReleaseAssignmentDialogState();
+}
+
+class _ReleaseAssignmentDialogState extends State<_ReleaseAssignmentDialog> {
+  static const _normalReasons = [
+    'SCHEDULE_CONFLICT',
+    'LOCATION_TOO_FAR',
+    'OTHER',
+  ];
+  static const _emergencyReasons = [
+    'VEHICLE_BREAKDOWN',
+    'ACCIDENT',
+    'DRIVER_ILLNESS',
+    'FAMILY_EMERGENCY',
+  ];
+
+  String? _reasonCode;
+  final _detailController = TextEditingController();
+
+  @override
+  void dispose() {
+    _detailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final reasons = widget.emergencyOnly
+        ? _emergencyReasons
+        : [..._emergencyReasons, ..._normalReasons];
+    final detailRequired = _reasonCode == 'OTHER';
+    final canSubmit = _reasonCode != null &&
+        (!detailRequired || _detailController.text.trim().length >= 3);
+
+    return AlertDialog(
+      title: Text(l10n.t('driver_release_assignment_title')),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.t('driver_release_assignment_message')),
+            const SizedBox(height: 12),
+            Text(
+              '${l10n.t('reservation_number')}: ${widget.bookingNumber}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            if (widget.scheduledPickupAt != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${l10n.t('pickup_datetime')}: ${widget.scheduledPickupAt}',
+              ),
+            ],
+            if (widget.emergencyOnly) ...[
+              const SizedBox(height: 12),
+              Text(
+                l10n.t('driver_release_assignment_emergency_hint'),
+                style: const TextStyle(color: AppTokens.warning, height: 1.4),
+              ),
+            ],
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              key: const ValueKey('driver_release_reason'),
+              value: _reasonCode,
+              decoration: InputDecoration(
+                labelText: l10n.t('driver_release_reason_label'),
+              ),
+              items: reasons
+                  .map(
+                    (code) => DropdownMenuItem(
+                      value: code,
+                      child: Text(l10n.t('driver_release_reason_$code')),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _reasonCode = value),
+            ),
+            if (detailRequired || _reasonCode != null) ...[
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('driver_release_reason_detail'),
+                controller: _detailController,
+                maxLines: 3,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: l10n.t('driver_release_reason_detail_label'),
+                  hintText: detailRequired
+                      ? l10n.t('driver_release_reason_detail_required')
+                      : null,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text(
+              l10n.t('driver_release_assignment_irreversible'),
+              style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.t('driver_release_assignment_cancel')),
+        ),
+        FilledButton(
+          key: const ValueKey('driver_release_confirm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppTokens.error,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: !canSubmit
+              ? null
+              : () => Navigator.of(context).pop((
+                    reasonCode: _reasonCode!,
+                    detail: _detailController.text.trim().isEmpty
+                        ? null
+                        : _detailController.text.trim(),
+                  )),
+          child: Text(l10n.t('driver_release_assignment_confirm')),
+        ),
+      ],
+    );
   }
 }

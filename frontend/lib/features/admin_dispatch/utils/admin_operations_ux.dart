@@ -87,6 +87,8 @@ class AdminOperationsUx {
 
   static String severityLabel(AppLocalizations l10n, String? severity) {
     switch (severity) {
+      case 'CRITICAL':
+        return l10n.t('admin_ops_severity_critical');
       case 'URGENT':
         return l10n.t('admin_ops_severity_urgent');
       case 'SOON':
@@ -114,6 +116,16 @@ class AdminOperationsUx {
         return l10n.t('admin_ops_reason_pickup_overdue_stalled');
       case 'PICKUP_SOON_UNASSIGNED':
         return l10n.t('admin_ops_reason_pickup_soon_unassigned');
+      case 'CRITICAL_REASSIGNMENT':
+        return l10n.t('admin_ops_reason_critical_reassignment');
+      case 'URGENT_REASSIGNMENT':
+        return l10n.t('admin_ops_reason_urgent_reassignment');
+      case 'DRIVER_RELEASED_REASSIGNMENT':
+        return l10n.t('admin_ops_reason_driver_released_reassignment');
+      case 'CRITICAL_UNASSIGNED':
+        return l10n.t('admin_ops_reason_critical_unassigned');
+      case 'URGENT_UNASSIGNED':
+        return l10n.t('admin_ops_reason_urgent_unassigned');
       case 'CUSTOMER_INQUIRY':
         return l10n.t('admin_ops_reason_customer_inquiry');
       case 'BOARDING_DELAY':
