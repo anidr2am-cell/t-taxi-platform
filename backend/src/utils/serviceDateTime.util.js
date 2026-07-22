@@ -58,9 +58,44 @@ function getElapsedMsSinceServiceDateTime(value, nowMs = Date.now()) {
   return nowMs - parsedMs;
 }
 
+/**
+ * Serialize a service datetime for JSON/socket payloads.
+ * mysql2 Date values must not be sent as ISO-8601 `Z` strings because their
+ * digits are Bangkok wall clock, not UTC (see parseServiceDateTimeToMs).
+ *
+ * @returns {string|null}
+ */
+function formatServiceDateTimeForApi(value) {
+  if (value == null || value === '') return null;
+
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    if (Number.isNaN(ms)) return null;
+    return formatMysqlDateTimeFromDate(value);
+  }
+
+  const str = String(value).trim();
+  if (!str) return null;
+
+  if (MYSQL_DATETIME_RE.test(str)) {
+    return str;
+  }
+
+  const isoMatch = str.match(
+    /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/i,
+  );
+  if (isoMatch) {
+    return `${isoMatch[1]} ${isoMatch[2]}${isoMatch[3] || ''}`;
+  }
+
+  return str;
+}
+
 module.exports = {
   SERVICE_TIME_ZONE,
   SERVICE_UTC_OFFSET,
+  formatMysqlDateTimeFromDate,
+  formatServiceDateTimeForApi,
   parseServiceDateTimeToMs,
   getElapsedMsSinceServiceDateTime,
 };

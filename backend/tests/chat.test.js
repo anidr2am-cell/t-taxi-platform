@@ -326,7 +326,7 @@ test("one room per booking via ensureRoom idempotency", async () => {
   });
   const room = await service.getRoom(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
   );
   assert.equal(room.roomId, 1);
@@ -378,7 +378,7 @@ test("assignment sync creates driver and admin participants and removes old driv
   );
 });
 
-test("valid customer access", async () => {
+test("customer booking chat disabled", async () => {
   const { service, state } = buildHarness();
   state.rooms.push({
     id: 1,
@@ -387,24 +387,20 @@ test("valid customer access", async () => {
     is_active: 1,
     created_at: new Date(),
   });
-  state.participants.push({
-    id: 1,
-    chat_room_id: 1,
-    user_id: 8,
-    participant_role: "CUSTOMER",
-    display_name: "Kim",
-    last_read_at: null,
-  });
-  const room = await service.getRoom(
-    "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
-    null,
+  await assert.rejects(
+    () =>
+      service.getRoom(
+        "TX202607010001",
+        { id: 8, role: ROLES.CUSTOMER },
+        null,
+      ),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
-  assert.equal(room.bookingNumber, "TX202607010001");
-  assert.equal(room.sendingAllowed, true);
 });
 
-test("valid guest header access", async () => {
+test("guest booking chat disabled", async () => {
   const { service, state } = buildHarness();
   state.rooms.push({
     id: 1,
@@ -413,9 +409,12 @@ test("valid guest header access", async () => {
     is_active: 1,
     created_at: new Date(),
   });
-  const room = await service.getRoom("TX202607010001", null, "guest-token");
-  assert.equal(room.bookingNumber, "TX202607010001");
-  assert.ok(state.participants.some((p) => p.user_id == null));
+  await assert.rejects(
+    () => service.getRoom("TX202607010001", null, "guest-token"),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
+  );
 });
 
 test("booking number alone rejected", async () => {
@@ -441,7 +440,7 @@ test("wrong guest token rejected", async () => {
   );
 });
 
-test("assigned driver access", async () => {
+test("assigned driver booking chat disabled", async () => {
   const { service, state } = buildHarness();
   state.rooms.push({
     id: 1,
@@ -450,13 +449,17 @@ test("assigned driver access", async () => {
     is_active: 1,
     created_at: new Date(),
   });
-  const room = await service.getRoom(
-    "TX202607010001",
-    { id: 44, role: ROLES.DRIVER },
-    null,
+  await assert.rejects(
+    () =>
+      service.getRoom(
+        "TX202607010001",
+        { id: 44, role: ROLES.DRIVER },
+        null,
+      ),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
-  assert.equal(room.sendingAllowed, true);
-  assert.ok(state.participants.some((p) => p.participant_role === "DRIVER"));
 });
 
 test("old reassigned driver cannot send", async () => {
@@ -502,12 +505,19 @@ test("admin access", async () => {
 });
 
 test("message trim and validation", async () => {
-  const { service } = buildHarness();
+  const { service, state } = buildHarness();
+  state.rooms.push({
+    id: 1,
+    booking_id: 10,
+    room_code: "CHAT-TX202607010001",
+    is_active: 1,
+    created_at: new Date(),
+  });
   await assert.rejects(
     () =>
       service.sendMessage(
         "TX202607010001",
-        { id: 8, role: ROLES.CUSTOMER },
+        { id: 1, role: ROLES.ADMIN },
         null,
         {
           text: "   ",
@@ -519,12 +529,19 @@ test("message trim and validation", async () => {
 });
 
 test("message length limit", async () => {
-  const { service } = buildHarness();
+  const { service, state } = buildHarness();
+  state.rooms.push({
+    id: 1,
+    booking_id: 10,
+    room_code: "CHAT-TX202607010001",
+    is_active: 1,
+    created_at: new Date(),
+  });
   await assert.rejects(
     () =>
       service.sendMessage(
         "TX202607010001",
-        { id: 8, role: ROLES.CUSTOMER },
+        { id: 1, role: ROLES.ADMIN },
         null,
         {
           text: "x".repeat(2001),
@@ -566,41 +583,32 @@ test("duplicate clientMessageId returns one message", async () => {
   };
   await service.sendMessage(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
     payload,
   );
   await service.sendMessage(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
     payload,
   );
   assert.equal(state.messages.length, 1);
 });
 
-test("guest pickup alert stores fixed text once", async () => {
-  const { service, state } = buildHarness({
+test("guest pickup alert disabled with peer chat removal", async () => {
+  const { service } = buildHarness({
     booking: { customer_user_id: null },
   });
-  const first = await service.sendPickupAlert(
-    "TX202607010001",
-    null,
-    "guest-token",
+  await assert.rejects(
+    () => service.sendPickupAlert("TX202607010001", null, "guest-token"),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
-  const second = await service.sendPickupAlert(
-    "TX202607010001",
-    null,
-    "guest-token",
-  );
-
-  assert.equal(first.text, "도착하고 수화물을 찾았습니다");
-  assert.equal(first.alreadySent, false);
-  assert.equal(second.alreadySent, true);
-  assert.equal(state.messages.length, 1);
 });
 
-test("pickup alert rejects missing assignment and terminal status", async () => {
+test("pickup alert disabled for guest peer chat", async () => {
   const missingAssignment = buildHarness({
     booking: { customer_user_id: null },
     driverAssigned: false,
@@ -612,7 +620,9 @@ test("pickup alert rejects missing assignment and terminal status", async () => 
         null,
         "guest-token",
       ),
-    (err) => err.errorCode === ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
 
   const completed = buildHarness({
@@ -624,7 +634,9 @@ test("pickup alert rejects missing assignment and terminal status", async () => 
   await assert.rejects(
     () =>
       completed.service.sendPickupAlert("TX202607010001", null, "guest-token"),
-    (err) => err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
 });
 
@@ -639,7 +651,7 @@ test("pickup alert rejects invalid guest token", async () => {
   );
 });
 
-test("terminal booking read-only rule", async () => {
+test("terminal booking read-only rule for admin", async () => {
   const { service, state } = buildHarness({
     booking: booking({ status: BOOKING_STATUS.COMPLETED }),
   });
@@ -650,17 +662,9 @@ test("terminal booking read-only rule", async () => {
     is_active: 1,
     created_at: new Date(),
   });
-  state.participants.push({
-    id: 1,
-    chat_room_id: 1,
-    user_id: 8,
-    participant_role: "CUSTOMER",
-    display_name: "Kim",
-    last_read_at: null,
-  });
   const room = await service.getRoom(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
   );
   assert.equal(room.sendingAllowed, false);
@@ -668,7 +672,7 @@ test("terminal booking read-only rule", async () => {
     () =>
       service.sendMessage(
         "TX202607010001",
-        { id: 8, role: ROLES.CUSTOMER },
+        { id: 1, role: ROLES.ADMIN },
         null,
         {
           text: "late message",
@@ -706,19 +710,18 @@ test("chat notification outbox created once per recipient", async () => {
   });
   await service.sendMessage(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
     {
-      text: "Ping driver",
+      text: "Ping participants",
       clientMessageId: "44444444-4444-4444-8444-444444444444",
     },
   );
   assert.equal(state.outbox.length, 1);
   assert.equal(state.outbox[0].eventType, "chat.message_sent");
-  assert.equal(state.outbox[0].payload.messageId, 1);
 });
 
-test("unread excludes own messages", async () => {
+test("unread excludes own messages for admin", async () => {
   const { service, state } = buildHarness();
   state.rooms.push({
     id: 1,
@@ -727,25 +730,9 @@ test("unread excludes own messages", async () => {
     is_active: 1,
     created_at: new Date(),
   });
-  state.participants.push({
-    id: 1,
-    chat_room_id: 1,
-    user_id: 8,
-    participant_role: "CUSTOMER",
-    display_name: "Kim",
-    last_read_at: null,
-  });
-  state.participants.push({
-    id: 2,
-    chat_room_id: 1,
-    user_id: 44,
-    participant_role: "DRIVER",
-    display_name: "Driver",
-    last_read_at: null,
-  });
   await service.sendMessage(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
     {
       text: "mine",
@@ -754,19 +741,13 @@ test("unread excludes own messages", async () => {
   );
   const room = await service.getRoom(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
   );
   assert.equal(room.unreadCount, 0);
-  const driverRoom = await service.getRoom(
-    "TX202607010001",
-    { id: 44, role: ROLES.DRIVER },
-    null,
-  );
-  assert.equal(driverRoom.unreadCount, 1);
 });
 
-test("read state decreases unread count", async () => {
+test("read state decreases unread count for admin", async () => {
   const { service, state } = buildHarness();
   state.rooms.push({
     id: 1,
@@ -778,31 +759,31 @@ test("read state decreases unread count", async () => {
   state.participants.push({
     id: 1,
     chat_room_id: 1,
-    user_id: 8,
-    participant_role: "CUSTOMER",
-    display_name: "Kim",
+    user_id: 1,
+    participant_role: "ADMIN",
+    display_name: "Admin",
     last_read_at: null,
   });
   state.participants.push({
     id: 2,
     chat_room_id: 1,
-    user_id: 44,
-    participant_role: "DRIVER",
-    display_name: "Driver",
+    user_id: 2,
+    participant_role: "ADMIN",
+    display_name: "Admin2",
     last_read_at: null,
   });
   const sent = await service.sendMessage(
     "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
+    { id: 1, role: ROLES.ADMIN },
     null,
     {
-      text: "hello driver",
+      text: "hello other admin",
       clientMessageId: "66666666-6666-4666-8666-666666666666",
     },
   );
   const read = await service.markRead(
     "TX202607010001",
-    { id: 44, role: ROLES.DRIVER },
+    { id: 2, role: ROLES.ADMIN },
     null,
     {
       upToMessageId: sent.message.messageId,
@@ -855,13 +836,17 @@ test("admin can hide and restore a chat message without exposing original text",
   await service.hideAdminMessage(1, { id: 1, role: ROLES.ADMIN }, {
     reason: "ADMIN_MODERATION",
   });
-  const customerMessages = await service.listMessages(
-    "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
-    null,
+  await assert.rejects(
+    () =>
+      service.listMessages(
+        "TX202607010001",
+        { id: 8, role: ROLES.CUSTOMER },
+        null,
+      ),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
-  assert.equal(customerMessages.items[0].text, "삭제된 메시지입니다.");
-  assert.equal(customerMessages.items[0].text.includes("private original"), false);
 
   const adminMessages = await service.listAdminMessages(
     "TX202607010001",
@@ -909,7 +894,9 @@ test("archived chat room is blocked for customer but restorable by admin", async
         { id: 8, role: ROLES.CUSTOMER },
         null,
       ),
-    (err) => err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE,
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
 
   const adminRoom = await service.getAdminRoom("TX202607010001", {
@@ -922,10 +909,15 @@ test("archived chat room is blocked for customer but restorable by admin", async
     id: 1,
     role: ROLES.ADMIN,
   });
-  const customerRoom = await service.getRoom(
-    "TX202607010001",
-    { id: 8, role: ROLES.CUSTOMER },
-    null,
+  await assert.rejects(
+    () =>
+      service.getRoom(
+        "TX202607010001",
+        { id: 8, role: ROLES.CUSTOMER },
+        null,
+      ),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
   );
-  assert.equal(customerRoom.archived, false);
 });

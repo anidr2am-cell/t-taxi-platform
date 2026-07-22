@@ -69,13 +69,6 @@ class DriverStatusService {
       };
     }
 
-    if (activeJob) {
-      return {
-        canReceiveCalls: false,
-        reasonCode: CALL_ELIGIBILITY.ACTIVE_TRIP,
-      };
-    }
-
     if (!online || driver.status === DRIVER_STATUS.OFFLINE) {
       return {
         canReceiveCalls: false,

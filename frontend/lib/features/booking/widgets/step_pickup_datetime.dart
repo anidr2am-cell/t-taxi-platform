@@ -157,7 +157,8 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
     final selected =
         widget.controller.selectedPickupDateTime() ??
         widget.controller.defaultPickupDateTime();
-    final min = widget.controller.minimumPickupDateTime();
+    final min = widget.controller.earliestSelectablePickupDateTime();
+    final showUrgentHint = widget.controller.isUrgentPickupWindowSelected();
     final flightNumberError =
         widget.state.errorMessage == 'flight_number_invalid'
         ? l10n.t('flight_number_invalid')
@@ -177,6 +178,19 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             l10n.t('pickup_minimum_notice'),
             style: WizardCompact.hintTextStyle,
           ),
+        if (showUrgentHint) ...[
+          if (widget.embedded) const SizedBox(height: WizardCompact.fieldGap),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.warningLight,
+            padding: widget.embedded
+                ? const EdgeInsets.all(WizardCompact.cardPadding)
+                : const EdgeInsets.all(AppTokens.spaceMd),
+            child: Text(
+              l10n.t('customer_urgent_pickup_hint'),
+              style: const TextStyle(height: 1.45),
+            ),
+          ),
+        ],
         if (widget.embedded) const SizedBox(height: WizardCompact.fieldGap),
         LayoutBuilder(
           builder: (context, constraints) {

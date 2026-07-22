@@ -216,6 +216,16 @@ String driverApiErrorMessage({
     };
   }
 
+  if (errorCode == 'DRIVER_ASSIGNMENT_RELEASED') {
+    return switch (languageCode) {
+      'ko' => '이 예약의 배정이 해제되어 더 이상 진행할 수 없습니다.',
+      'th' => 'งานนี้ถูกยกเลิกการมอบหมายแล้ว ไม่สามารถดำเนินการต่อได้',
+      'zh' => '此预订的派单已解除，无法继续进行。',
+      'ja' => 'この予約の配車は解除されたため、これ以上進められません。',
+      _ => 'This assignment was released and can no longer be continued.',
+    };
+  }
+
   if (errorCode == 'BOOKING_NOT_FOUND' ||
       errorCode == 'BOOKING_NOT_ACCESSIBLE') {
     return switch (languageCode) {
@@ -224,6 +234,30 @@ String driverApiErrorMessage({
       'zh' => '找不到预订信息。请刷新状态。',
       'ja' => '予約情報が見つかりません。状態を更新してください。',
       _ => 'Booking information could not be found. Please refresh the status.',
+    };
+  }
+
+  if (errorCode == 'URGENT_ALREADY_LOCKED') {
+    return switch (languageCode) {
+      'ko' => '다른 기사가 이미 수락한 콜입니다.',
+      'th' => 'คนขับคนอื่นรับงานเร่งด่วนนี้แล้ว',
+      _ => 'Another driver has already accepted this urgent call.',
+    };
+  }
+
+  if (errorCode == 'URGENT_ETA_WINDOW_EXPIRED') {
+    return switch (languageCode) {
+      'ko' => '도착 예상 시간 입력 시간이 만료되었습니다.',
+      'th' => 'หมดเวลากรอกเวลาที่จะถึงแล้ว',
+      _ => 'The time window to submit your ETA has expired.',
+    };
+  }
+
+  if (errorCode == 'URGENT_ETA_NOT_FAST_ENOUGH') {
+    return switch (languageCode) {
+      'ko' => '이전 거절보다 더 빠른 도착 예상 시간을 입력해 주세요.',
+      'th' => 'กรุณากรอกเวลาที่จะถึงให้เร็วกว่าครั้งก่อน',
+      _ => 'Please enter a faster ETA than the previous rejection required.',
     };
   }
 
@@ -246,6 +280,18 @@ String driverApiErrorMessage({
       'zh' => '找不到此行程的预约时间。请联系管理员。',
       'ja' => 'この仕事の予約時刻が見つかりません。管理者に連絡してください。',
       _ => 'Appointment time was not found. Please contact admin.',
+    };
+  }
+
+  if (errorCode == 'DRIVER_BOOKING_TIME_CONFLICT') {
+    return switch (languageCode) {
+      'ko' => '픽업 시간이 기존 예약과 3시간 이내라 이 콜을 수락할 수 없습니다.',
+      'th' =>
+        'เวลารับลูกค้าใกล้กับงานที่รับไว้เกินไป (น้อยกว่า 3 ชั่วโมง) จึงรับงานนี้ไม่ได้',
+      'zh' => '新客户上车时间与已有订单相差不足 3 小时，无法接受此订单。',
+      'ja' => 'ピックアップ時間が既存の予約から3時間以内のため、このコールは受け付けられません。',
+      _ =>
+        'This job cannot be accepted because its pickup time is less than 3 hours from another assigned job.',
     };
   }
 

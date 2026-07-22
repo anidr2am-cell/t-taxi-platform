@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../../../config/app_config.dart';
 import '../models/booking_create_result.dart';
 import '../models/pricing_result.dart';
+import '../models/urgent_negotiation_status.dart';
 import '../models/vehicle_recommendation.dart';
 
 class BookingApiException implements Exception {
@@ -31,7 +32,7 @@ class BookingApiErrorDetail {
 
   factory BookingApiErrorDetail.fromJson(Map<String, dynamic> json) {
     return BookingApiErrorDetail(
-      field: json['field'] as String? ?? '',
+      field: json['field'] as String? ?? json['reason'] as String? ?? '',
       type: json['type'] as String?,
       source: json['source'] as String?,
       message: json['message'] as String?,
@@ -268,6 +269,52 @@ class BookingApiService {
       body: body,
     );
     return BoardingQrIssueResult.fromJson(
+      Map<String, dynamic>.from(data as Map),
+    );
+  }
+
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) async {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      if (guestAccessToken != null && guestAccessToken.isNotEmpty)
+        'X-Guest-Access-Token': guestAccessToken,
+    };
+    final uri = Uri.parse('$_base/bookings/$bookingNumber/urgent-negotiation');
+    final response = await _client.get(uri, headers: headers);
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode >= 400) {
+      final message = decoded is Map
+          ? (decoded['message'] as String? ?? 'Request failed')
+          : 'Request failed';
+      final code = decoded is Map ? decoded['error_code'] as String? : null;
+      throw BookingApiException(message, code);
+    }
+    final data = decoded is Map && decoded.containsKey('data')
+        ? decoded['data']
+        : decoded;
+    return UrgentNegotiationStatus.fromJson(
+      Map<String, dynamic>.from(data as Map),
+    );
+  }
+
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
+  }) async {
+    final body = <String, dynamic>{'decision': decision};
+    if (guestAccessToken != null && guestAccessToken.isNotEmpty) {
+      body['guestAccessToken'] = guestAccessToken;
+    }
+    final data = await _request(
+      'POST',
+      '/bookings/$bookingNumber/urgent-decision',
+      body: body,
+    );
+    return UrgentDecisionResult.fromJson(
       Map<String, dynamic>.from(data as Map),
     );
   }

@@ -1,50 +1,26 @@
 import 'location_option.dart';
+import 'thailand_registered_airports.dart';
 
 /// Static Thailand airport shortcuts — no Google API calls.
-/// All entries are Thailand airports (see [LocationOption.address] / id prefix `airport:`).
+///
+/// Registered staging airports (BKK/DMK/CNX/HKT) come from
+/// [ThailandRegisteredAirports] so Flutter and SQL stay aligned.
+/// Google Place IDs are intentionally omitted until verified.
 class AirportShortcuts {
   static List<LocationOption> get thailandAirports => all;
 
   static const List<LocationOption> all = [
-    LocationOption(
-      id: 'airport:BKK',
-      displayName: 'Suvarnabhumi Airport (BKK)',
-      kind: LocationKind.airport,
-      code: 'BKK',
-      name: 'Suvarnabhumi Airport',
-      address: 'Bangkok, Thailand',
-    ),
-    LocationOption(
-      id: 'airport:DMK',
-      displayName: 'Don Mueang Airport (DMK)',
-      kind: LocationKind.airport,
-      code: 'DMK',
-      name: 'Don Mueang International Airport',
-      address: 'Bangkok, Thailand',
-    ),
-    LocationOption(
-      id: 'airport:HKT',
-      displayName: 'Phuket Airport (HKT)',
-      kind: LocationKind.airport,
-      code: 'HKT',
-      name: 'Phuket International Airport',
-      address: 'Phuket, Thailand',
-    ),
-    LocationOption(
-      id: 'airport:CNX',
-      displayName: 'Chiang Mai Airport (CNX)',
-      kind: LocationKind.airport,
-      code: 'CNX',
-      name: 'Chiang Mai International Airport',
-      address: 'Chiang Mai, Thailand',
-    ),
+    ...ThailandRegisteredAirports.all,
     LocationOption(
       id: 'airport:UTP',
-      displayName: 'U-Tapao Airport (UTP)',
+      displayName: 'UTP — U-Tapao Rayong-Pattaya International Airport',
       kind: LocationKind.airport,
       code: 'UTP',
-      name: 'U-Tapao Rayong-Pattaya International Airport',
-      address: 'Rayong, Thailand',
+      name: 'UTP — U-Tapao Rayong-Pattaya International Airport',
+      address:
+          'UTP U-Tapao Rayong-Pattaya International Airport, Rayong, Thailand',
+      latitude: 12.679944,
+      longitude: 101.005028,
     ),
   ];
 }

@@ -172,6 +172,35 @@ class AppLocalizations {
       'customer_review_booking': 'Review booking',
       'customer_confirm_booking': 'Confirm booking',
       'customer_booking_processing': 'Processing your booking',
+      'customer_urgent_pickup_hint':
+          'If your pickup time is within 2 hours, tap Urgent Request to continue.',
+      'customer_urgent_request': 'Urgent request',
+      'customer_urgent_confirm_title': 'Confirm urgent request',
+      'customer_urgent_confirm_body':
+          'Urgent requests may take longer to assign a driver. Once matched, we will share the driver\'s estimated arrival time first. Tap Confirm if you would like to proceed.',
+      'customer_urgent_confirm_submit': 'Confirm',
+      'customer_urgent_flow_title': 'Urgent request',
+      'customer_urgent_searching_title': 'Finding a driver',
+      'customer_urgent_searching_body':
+          'We are searching for an available driver near you.',
+      'customer_urgent_eta_title':
+          'Your driver is expected to arrive in about {minutes} minutes',
+      'customer_urgent_eta_body':
+          'Please accept if this arrival time works for you, or reject to search for a faster option.',
+      'customer_urgent_accept_eta': 'Accept',
+      'customer_urgent_reject_eta': 'Reject',
+      'customer_urgent_retry_title': 'Look for a faster driver?',
+      'customer_urgent_retry_body':
+          'We can keep searching for another driver with a shorter arrival time.',
+      'customer_urgent_retry_accept': 'Keep searching',
+      'customer_urgent_retry_cancel': 'Cancel booking',
+      'customer_urgent_confirmed_title': 'Driver confirmed',
+      'customer_urgent_confirmed_body':
+          'Your driver has been assigned. Opening your booking details.',
+      'customer_urgent_exhausted_title': 'No nearby drivers available',
+      'customer_urgent_exhausted_body':
+          'There are no waiting drivers nearby. Your booking will be cancelled.',
+      'customer_urgent_go_home': 'Go to home',
       'origin': 'Origin',
       'destination': 'Destination',
       'airport': 'Airport',
@@ -596,6 +625,7 @@ class AppLocalizations {
       'admin_ops_route_airport_dropoff': 'Origin → Airport',
       'admin_ops_route_city_transfer': 'Origin → Destination',
       'driver_nav_jobs': 'Jobs',
+      'driver_nav_home': 'Home',
       'driver_nav_today': 'Today',
       'driver_nav_history': 'Trip history',
       'driver_nav_account': 'My account',
@@ -619,6 +649,82 @@ class AppLocalizations {
       'driver_jobs_group_active': 'Active / Current',
       'driver_jobs_group_upcoming': 'Upcoming',
       'driver_jobs_group_completed': 'Completed',
+      'driver_jobs_tab_new': 'New calls',
+      'driver_jobs_tab_mine': 'My jobs',
+      'driver_jobs_tab_past': 'Past jobs',
+      'driver_jobs_open_history': 'View all trip history',
+      'driver_claim_call': 'Accept this job',
+      'driver_claim_confirm_title': 'Accept this job?',
+      'driver_claim_confirm_message':
+          'Please check the time and locations before confirming.',
+      'driver_claim_success': 'Job accepted.',
+      'driver_claim_already_assigned':
+          'Another driver accepted this job first.',
+      'driver_open_calls_online_required':
+          'You can receive calls only when you are online.',
+      'driver_open_calls_empty': 'No available calls right now.',
+      'driver_urgent_badge': 'Urgent',
+      'driver_urgent_section_title': 'Urgent request calls',
+      'driver_urgent_call_new_arrived': 'An urgent request call has arrived.',
+      'driver_urgent_accept': 'Accept',
+      'driver_urgent_already_locked':
+          'Another driver has already accepted this call.',
+      'driver_urgent_eta_dialog_title': 'Enter arrival ETA',
+      'driver_urgent_eta_dialog_message':
+          'After you enter your estimated arrival time, the booking will be confirmed once the customer accepts. Please enter your ETA.',
+      'driver_urgent_eta_minutes_label': 'ETA (minutes)',
+      'driver_urgent_eta_submit': 'Submit',
+      'driver_urgent_eta_countdown': 'Time remaining: {time}',
+      'driver_urgent_eta_invalid': 'Enter a valid number of minutes.',
+      'driver_urgent_eta_success':
+          'ETA submitted. Waiting for customer confirmation.',
+      'driver_urgent_confirmed': 'Customer confirmed. The booking is assigned.',
+      'driver_urgent_min_eta_hint':
+          'A previous rejection requires ETA under {minutes} minutes.',
+      'driver_urgent_awaiting_customer':
+          'Waiting for customer confirmation ({time} remaining).',
+      'driver_urgent_eta_lock_expired':
+          'The time window to submit your ETA has expired.',
+      'driver_urgent_eta_not_fast_enough':
+          'Please enter a faster ETA than the previous rejection required.',
+      'driver_urgent_round_ended':
+          'The customer declined or this negotiation round ended.',
+      'driver_urgent_cancelled': 'This urgent request call was cancelled.',
+      'driver_settlement_block_title': 'Cannot receive new jobs yet',
+      'driver_settlement_block_message':
+          'Please pay the commission and upload your transfer slip. You can receive new jobs after admin review.',
+      'driver_settlement_block_cta': 'Go to settlement',
+      'driver_home_new_calls_title': 'New jobs available',
+      'driver_home_new_calls_message': '{count} new call(s) are waiting.',
+      'driver_home_new_calls_cta': 'View new jobs',
+      'driver_home_urgent_calls_title': 'Urgent request calls',
+      'driver_home_urgent_calls_message':
+          '{count} urgent request call(s) are waiting.',
+      'driver_home_urgent_calls_cta': 'View urgent calls',
+      'driver_call_customer': 'Call customer',
+      'driver_account_notifications': 'Notifications',
+      'driver_step_progress': 'Step {step} of {total}',
+      'driver_step_assigned': 'Job confirmed',
+      'driver_step_assigned_hint': 'Review the booking details before standby.',
+      'driver_step_standby': 'Confirm standby',
+      'driver_step_standby_hint':
+          'Confirm you are ready before travel time (usually 1 hour before pickup).',
+      'driver_step_depart_pickup': 'Head to pickup',
+      'driver_step_depart_pickup_hint':
+          'Open maps and start driving to the pickup point.',
+      'driver_step_arrived_pickup': 'Arrived at pickup',
+      'driver_step_arrived_pickup_hint':
+          'Confirm after you reach the pickup point.',
+      'driver_step_customer_boarded': 'Customer boarded',
+      'driver_step_customer_boarded_hint':
+          'Confirm after the customer is in the vehicle.',
+      'driver_step_in_transit': 'Trip in progress',
+      'driver_step_finish_trip': 'Finish trip',
+      'driver_step_finish_trip_hint':
+          'After finishing, you must pay commission and upload a slip before the next job.',
+      'driver_step_settlement': 'Settlement required',
+      'driver_step_settlement_hint':
+          'Pay commission and upload your transfer slip.',
       'driver_today_greeting_generic': 'Hello',
       'driver_today_greeting_named': 'Hello, {name}',
       'driver_today_trip_count': 'You have {count} trips today',
@@ -629,7 +735,7 @@ class AppLocalizations {
       'driver_today_cta_settlement_waiting': 'Waiting for confirmation',
       'driver_today_remaining_title': '{count} trips left today',
       'driver_today_completed_title': 'Completed today ({count})',
-      'driver_today_empty_title': 'No trips scheduled for today.',
+      'driver_today_empty_title': 'No scheduled trips.',
       'driver_today_empty_message':
           'You will be notified when a new trip is assigned.',
       'driver_quick_navigate': 'Navigate',
@@ -656,6 +762,18 @@ class AppLocalizations {
       'driver_account_settlement': 'Settlement',
       'driver_account_support': 'Customer support',
       'driver_account_profile': 'My profile',
+      'driver_account_vehicle_title': 'My vehicle',
+      'driver_account_vehicle_empty': 'No vehicle information registered yet.',
+      'driver_account_vehicle_color': 'Color',
+      'driver_account_vehicle_year': 'Year',
+      'driver_account_vehicle_model': 'Model',
+      'driver_profile_edit_title': 'Edit profile',
+      'driver_profile_save': 'Save changes',
+      'driver_profile_save_success': 'Profile updated.',
+      'driver_profile_save_failed': 'Could not save profile. Please try again.',
+      'driver_profile_readonly_email': 'Email (cannot be changed)',
+      'driver_profile_upload_avatar': 'Change profile photo',
+      'driver_profile_upload_vehicle_photo': 'Change vehicle photo',
       'driver_account_language': 'Language',
       'driver_account_notification_settings': 'Notification settings',
       'driver_account_terms': 'Terms of service',
@@ -664,13 +782,13 @@ class AppLocalizations {
       'driver_account_privacy_placeholder': 'Privacy page coming soon',
       'driver_logout_confirm_title': 'Log out?',
       'driver_logout_confirm_message': 'You will need to sign in again.',
-      'driver_action_start_on_route': 'Start heading to pickup',
-      'driver_action_accept_booking': 'Confirm standby',
+      'driver_action_start_on_route': 'Head to pickup',
+      'driver_action_accept_booking': 'Confirm ready for job',
       'driver_view_booking_detail': 'View booking',
       'driver_action_mark_arrived': 'Arrived at pickup',
-      'driver_action_mark_picked_up': 'Confirm customer boarded',
-      'driver_action_end_trip': 'Arrived at destination and end trip',
-      'driver_action_complete_trip': 'Arrived at destination and end trip',
+      'driver_action_mark_picked_up': 'Customer boarded',
+      'driver_action_end_trip': 'Finish trip',
+      'driver_action_complete_trip': 'Finish trip',
       'driver_confirm_no': 'No',
       'driver_confirm_yes': 'Yes',
       'driver_confirm_start_on_route_title': 'Start heading to pickup?',
@@ -683,14 +801,61 @@ class AppLocalizations {
       'driver_confirm_accept_booking_yes': 'Confirm standby',
       'driver_accept_booking_processing': 'Confirming standby',
       'driver_success_accept_booking': 'Standby confirmed',
-      'driver_release_assignment': 'Release trip',
-      'driver_release_assignment_title': 'Release trip',
-      'driver_release_assignment_message': 'Do you want to release this trip?',
-      'driver_release_assignment_cancel': 'Cancel',
-      'driver_release_assignment_confirm': 'Release trip',
-      'driver_release_assignment_success': 'Trip released.',
+      'driver_release_assignment': 'Release assignment',
+      'driver_release_assignment_title': 'Release this booking assignment?',
+      'driver_release_assignment_message':
+          'The customer booking stays active. Another driver will be assigned.',
+      'driver_release_assignment_cancel': 'Keep assignment',
+      'driver_release_assignment_confirm': 'Release assignment',
+      'driver_release_assignment_success': 'Assignment released.',
       'driver_release_assignment_failed':
-          'Could not release this trip. Please try again.',
+          'Could not release this assignment. Please try again.',
+      'driver_release_assignment_blocked':
+          'This assignment cannot be released in the current status.',
+      'driver_release_assignment_emergency_hint':
+          'Normal release is limited within 2 hours of pickup. You can release only for an emergency.',
+      'driver_release_assignment_irreversible':
+          'This cannot be undone. You will not keep this booking.',
+      'driver_release_reason_label': 'Release reason',
+      'driver_release_reason_detail_label': 'Details',
+      'driver_release_reason_detail_required': 'Please enter another reason',
+      'driver_release_reason_VEHICLE_BREAKDOWN': 'Vehicle breakdown',
+      'driver_release_reason_ACCIDENT': 'Accident',
+      'driver_release_reason_DRIVER_ILLNESS': 'Driver illness',
+      'driver_release_reason_FAMILY_EMERGENCY': 'Family emergency',
+      'driver_release_reason_SCHEDULE_CONFLICT': 'Schedule conflict',
+      'driver_release_reason_LOCATION_TOO_FAR': 'Location too far',
+      'driver_release_reason_OTHER': 'Other',
+      'driver_assignment_ended_confirm': 'OK',
+      'driver_booking_not_found': 'Booking information could not be found.',
+      'driver_assignment_ended_generic_title': 'Assignment ended',
+      'driver_assignment_ended_generic_message':
+          'You can no longer continue this booking.',
+      'driver_assignment_ended_generic_snackbar':
+          'Assignment for {bookingNumber} was released.',
+      'driver_assignment_ended_customer_title': 'Customer cancelled',
+      'driver_assignment_ended_customer_message':
+          'The customer cancelled the booking, so your assignment was released automatically.',
+      'driver_assignment_ended_customer_snackbar':
+          'Customer cancelled {bookingNumber}. Assignment released.',
+      'driver_assignment_ended_admin_title': 'Admin cancelled',
+      'driver_assignment_ended_admin_message':
+          'An admin cancelled the booking, so your assignment was released.',
+      'driver_assignment_ended_admin_snackbar':
+          'Admin cancelled {bookingNumber}. Assignment released.',
+      'driver_assignment_ended_released_title': 'Assignment released',
+      'driver_assignment_ended_released_message':
+          'Assignment release completed. This booking is open again for other drivers.',
+      'driver_assignment_ended_released_snackbar':
+          'You released {bookingNumber}. It is open for other drivers.',
+      'driver_assignment_ended_reassigned_title': 'Reassigned',
+      'driver_assignment_ended_reassigned_message':
+          'This booking was assigned to another driver.',
+      'driver_assignment_ended_reassigned_snackbar':
+          '{bookingNumber} was assigned to another driver.',
+      'driver_assignment_ended_completed_title': 'Trip completed',
+      'driver_assignment_ended_completed_message':
+          'This trip is already completed.',
       'driver_confirm_mark_arrived_title': 'Arrived at pickup?',
       'driver_confirm_mark_arrived_message':
           'Have you arrived at the pickup location?',
@@ -793,7 +958,7 @@ class AppLocalizations {
       'driver_detail_error': 'Could not load booking',
       'driver_section_trip': 'Trip',
       'driver_pickup_time': 'Pickup time',
-      'driver_call_customer': 'Message customer',
+      'driver_message_customer': 'Message customer',
       'driver_estimated_arrival': 'Estimated arrival',
       'driver_section_chat': 'Chat',
       'driver_next_action': 'Next action',
@@ -957,10 +1122,45 @@ class AppLocalizations {
       'guest_lookup_refresh_needs_phone':
           'Enter your phone on the lookup form to refresh this booking.',
       'booking_complete_track_cta': 'Track my booking',
+      'booking_cancel_section': 'Cancel booking',
+      'booking_cancel_action': 'Cancel booking',
+      'booking_cancel_policy_hint':
+          'You can cancel until 2 hours before pickup.',
+      'booking_cancel_confirm_title': 'Cancel this booking?',
+      'booking_cancel_confirm_action': 'Confirm cancellation',
+      'booking_cancel_confirm_irreversible':
+          'Cancellation cannot be undone.',
+      'booking_cancel_success': 'Your booking has been cancelled.',
+      'booking_cancel_failed': 'Unable to cancel this booking. Please try again.',
+      'booking_cancel_blocked_within_two_hours':
+          'Bookings cannot be cancelled within 2 hours of the scheduled pickup time.',
+      'booking_cancel_blocked_trip_started':
+          'Trips that have already started cannot be cancelled.',
+      'booking_cancel_blocked_already_cancelled':
+          'This booking is already cancelled.',
+      'booking_cancel_blocked_completed':
+          'Completed bookings cannot be cancelled.',
+      'booking_cancel_blocked_no_show':
+          'No-show bookings cannot be cancelled.',
+      'booking_cancel_blocked_invalid_pickup':
+          'This booking cannot be cancelled because the pickup time is invalid.',
+      'booking_cancel_blocked_locked':
+          'This booking is locked and cannot be cancelled.',
+      'booking_cancel_driver_assigned': 'Driver assigned: {name}',
+      'booking_cancel_driver_assigned_generic': 'Driver assigned',
       'guest_status_guidance_pending':
           'Your booking is received. We will confirm it shortly.',
       'guest_status_guidance_confirmed':
           'Your booking is confirmed. A driver will be assigned before pickup.',
+      'guest_status_guidance_reassignment':
+          'Your previous driver became unavailable. We are assigning a new driver. Your schedule and fare stay the same.',
+      'status_reassignment_in_progress': 'Reassigning driver',
+      'admin_ops_severity_critical': 'Critical',
+      'admin_ops_reason_critical_reassignment': 'Critical reassignment',
+      'admin_ops_reason_urgent_reassignment': 'Urgent reassignment',
+      'admin_ops_reason_driver_released_reassignment': 'Driver released · reassignment',
+      'admin_ops_reason_critical_unassigned': 'Critical · unassigned',
+      'admin_ops_reason_urgent_unassigned': 'Urgent · unassigned',
       'guest_status_guidance_driver_assigned':
           'A driver has been assigned and will head to your pickup point soon.',
       'guest_status_guidance_on_route':
@@ -1313,6 +1513,31 @@ class AppLocalizations {
       'customer_review_booking': '예약 내용 확인하기',
       'customer_confirm_booking': '예약 확정하기',
       'customer_booking_processing': '예약을 처리하고 있습니다',
+      'customer_urgent_pickup_hint':
+          '픽업 요청시간이 2시간 이내인 경우 긴급요청을 클릭하셔서 진행 가능합니다',
+      'customer_urgent_request': '긴급요청',
+      'customer_urgent_confirm_title': '긴급 요청 확인',
+      'customer_urgent_confirm_body':
+          '긴급 요청의 경우 배차에 시간이 다소 소요될 수 있습니다. 배차가 완료되면 기사님의 도착시간을 먼저 안내 해드리오니 배차를 원하시면 확정 버튼을 눌러주시기 바랍니다.',
+      'customer_urgent_confirm_submit': '확정',
+      'customer_urgent_flow_title': '긴급 요청',
+      'customer_urgent_searching_title': '기사를 찾고 있습니다',
+      'customer_urgent_searching_body': '주변에서 배차 가능한 기사를 찾고 있습니다.',
+      'customer_urgent_eta_title': '기사님이 약 {minutes}분 후 도착 예정입니다',
+      'customer_urgent_eta_body':
+          '도착 시간이 괜찮으시면 수락을, 더 빠른 기사를 원하시면 거절을 눌러주세요.',
+      'customer_urgent_accept_eta': '수락',
+      'customer_urgent_reject_eta': '거절',
+      'customer_urgent_retry_title': '더 빠른 기사를 찾아볼까요?',
+      'customer_urgent_retry_body': '다른 기사를 계속 찾아볼 수 있습니다.',
+      'customer_urgent_retry_accept': '수락',
+      'customer_urgent_retry_cancel': '취소',
+      'customer_urgent_confirmed_title': '배차가 확정되었습니다',
+      'customer_urgent_confirmed_body': '기사님이 배정되었습니다. 예약 상세 화면으로 이동합니다.',
+      'customer_urgent_exhausted_title': '대기 중인 기사가 없습니다',
+      'customer_urgent_exhausted_body':
+          '가까운 곳에 대기중인 기사가 없습니다. 예약을 취소하겠습니다',
+      'customer_urgent_go_home': '홈으로',
       'origin': '출발지',
       'destination': '도착지',
       'airport': '공항',
@@ -1932,8 +2157,88 @@ class AppLocalizations {
       'guest_lookup_refresh': '새로고침',
       'guest_lookup_refresh_needs_phone': '새로고침하려면 조회 화면에서 전화번호를 입력해 주세요.',
       'booking_complete_track_cta': '예약 상태 확인',
+      'booking_cancel_section': '예약 취소',
+      'booking_cancel_action': '예약 취소',
+      'booking_cancel_policy_hint': '픽업 2시간 전까지 취소할 수 있습니다.',
+      'booking_cancel_confirm_title': '예약을 취소할까요?',
+      'booking_cancel_confirm_action': '취소 확정',
+      'booking_cancel_confirm_irreversible': '취소 후에는 되돌릴 수 없습니다.',
+      'booking_cancel_success': '예약이 취소되었습니다.',
+      'booking_cancel_failed': '예약을 취소하지 못했습니다. 다시 시도해 주세요.',
+      'booking_cancel_blocked_within_two_hours':
+          '픽업 예정 시각 2시간 이내에는 예약을 취소할 수 없습니다.',
+      'booking_cancel_blocked_trip_started': '운행이 시작된 예약은 취소할 수 없습니다.',
+      'booking_cancel_blocked_already_cancelled': '이미 취소된 예약입니다.',
+      'booking_cancel_blocked_completed': '완료된 예약은 취소할 수 없습니다.',
+      'booking_cancel_blocked_no_show': '노쇼 처리된 예약은 취소할 수 없습니다.',
+      'booking_cancel_blocked_invalid_pickup':
+          '픽업 시각이 올바르지 않아 예약을 취소할 수 없습니다.',
+      'booking_cancel_blocked_locked': '이 예약은 잠겨 있어 취소할 수 없습니다.',
+      'booking_cancel_driver_assigned': '기사 배정됨: {name}',
+      'booking_cancel_driver_assigned_generic': '기사 배정됨',
       'guest_status_guidance_pending': '예약이 접수되었습니다. 곧 확인 처리됩니다.',
       'guest_status_guidance_confirmed': '예약이 확정되었습니다. 픽업 전에 기사가 배정됩니다.',
+      'guest_status_guidance_reassignment':
+          '기존 기사의 사정으로 새 기사를 배정하고 있습니다. 예약 일정과 요금은 변경되지 않습니다.',
+      'status_reassignment_in_progress': '기사 재배정 중',
+      'admin_ops_severity_critical': '최긴급',
+      'admin_ops_reason_critical_reassignment': '긴급 재배차',
+      'admin_ops_reason_urgent_reassignment': '주의 재배차',
+      'admin_ops_reason_driver_released_reassignment': '기사 반납 · 재배차',
+      'admin_ops_reason_critical_unassigned': '최긴급 · 미배차',
+      'admin_ops_reason_urgent_unassigned': '주의 · 미배차',
+      'driver_release_assignment': '배정 반납',
+      'driver_release_assignment_title': '이 예약의 배정을 반납하시겠습니까?',
+      'driver_release_assignment_message':
+          '고객 예약은 유지되며 다른 기사를 다시 배정합니다.',
+      'driver_release_assignment_cancel': '유지',
+      'driver_release_assignment_confirm': '배정 반납',
+      'driver_release_assignment_success': '배정이 해제되었습니다.',
+      'driver_release_assignment_failed':
+          '배정 반납에 실패했습니다. 다시 시도해 주세요.',
+      'driver_release_assignment_blocked':
+          '현재 상태에서는 배정을 반납할 수 없습니다.',
+      'driver_release_assignment_emergency_hint':
+          '픽업까지 2시간 이내에는 일반 배정 반납이 제한됩니다. 긴급 상황인 경우에만 배정을 반납할 수 있습니다.',
+      'driver_release_assignment_irreversible': '반납 후에는 되돌릴 수 없습니다.',
+      'driver_release_reason_label': '반납 사유',
+      'driver_release_reason_detail_label': '상세 설명',
+      'driver_release_reason_detail_required': '기타 사유를 입력하세요.',
+      'driver_release_reason_VEHICLE_BREAKDOWN': '차량 고장',
+      'driver_release_reason_ACCIDENT': '사고',
+      'driver_release_reason_DRIVER_ILLNESS': '질병',
+      'driver_release_reason_FAMILY_EMERGENCY': '가족 긴급 상황',
+      'driver_release_reason_SCHEDULE_CONFLICT': '일정 충돌',
+      'driver_release_reason_LOCATION_TOO_FAR': '거리 문제',
+      'driver_release_reason_OTHER': '기타',
+      'driver_assignment_ended_confirm': '확인',
+      'driver_booking_not_found': '예약 정보를 찾을 수 없습니다.',
+      'driver_assignment_ended_generic_title': '배정이 해제되었습니다',
+      'driver_assignment_ended_generic_message': '더 이상 이 예약을 진행할 수 없습니다.',
+      'driver_assignment_ended_generic_snackbar':
+          '예약 {bookingNumber} 배정이 해제되었습니다.',
+      'driver_assignment_ended_customer_title': '고객이 예약을 취소했습니다',
+      'driver_assignment_ended_customer_message':
+          '고객이 예약을 취소하여 배정이 자동 해제되었습니다.',
+      'driver_assignment_ended_customer_snackbar':
+          '고객 취소로 예약 {bookingNumber} 배정이 해제되었습니다.',
+      'driver_assignment_ended_admin_title': '관리자가 예약을 취소했습니다',
+      'driver_assignment_ended_admin_message':
+          '관리자가 예약을 취소하여 배정이 해제되었습니다.',
+      'driver_assignment_ended_admin_snackbar':
+          '관리자 취소로 예약 {bookingNumber} 배정이 해제되었습니다.',
+      'driver_assignment_ended_released_title': '배정 반납이 완료되었습니다',
+      'driver_assignment_ended_released_message':
+          '배정 반납이 완료되었습니다. 해당 예약은 다른 기사에게 다시 공개됩니다.',
+      'driver_assignment_ended_released_snackbar':
+          '예약 {bookingNumber} 배정 반납이 완료되었습니다.',
+      'driver_assignment_ended_reassigned_title': '다른 기사에게 배정되었습니다',
+      'driver_assignment_ended_reassigned_message':
+          '이 예약은 다른 기사에게 배정되었습니다.',
+      'driver_assignment_ended_reassigned_snackbar':
+          '예약 {bookingNumber}이(가) 다른 기사에게 배정되었습니다.',
+      'driver_assignment_ended_completed_title': '운행이 완료되었습니다',
+      'driver_assignment_ended_completed_message': '이 예약은 이미 완료되었습니다.',
       'guest_status_guidance_driver_assigned': '기사가 배정되었습니다. 곧 픽업지로 이동합니다.',
       'guest_status_guidance_on_route': '기사가 픽업지로 이동 중입니다.',
       'guest_status_guidance_driver_arrived': '기사가 픽업지에 도착했습니다.',
@@ -2338,6 +2643,28 @@ class AppLocalizations {
       'customer_review_booking': '检查预约',
       'customer_confirm_booking': '确认预约',
       'customer_booking_processing': '正在处理预约',
+      'customer_urgent_pickup_hint': '若接送时间在2小时以内，请点击“紧急请求”继续。',
+      'customer_urgent_request': '紧急请求',
+      'customer_urgent_confirm_title': '确认紧急请求',
+      'customer_urgent_confirm_body':
+          '紧急请求可能需要更长时间才能安排司机。匹配成功后，我们会先告知预计到达时间。如需继续，请点击确认。',
+      'customer_urgent_confirm_submit': '确认',
+      'customer_urgent_flow_title': '紧急请求',
+      'customer_urgent_searching_title': '正在寻找司机',
+      'customer_urgent_searching_body': '我们正在为您寻找附近可用的司机。',
+      'customer_urgent_eta_title': '司机预计约 {minutes} 分钟后到达',
+      'customer_urgent_eta_body': '若到达时间合适请点击接受，若希望更快到达请点击拒绝。',
+      'customer_urgent_accept_eta': '接受',
+      'customer_urgent_reject_eta': '拒绝',
+      'customer_urgent_retry_title': '要继续寻找更快的司机吗？',
+      'customer_urgent_retry_body': '我们可以继续为您寻找到达时间更短的司机。',
+      'customer_urgent_retry_accept': '继续寻找',
+      'customer_urgent_retry_cancel': '取消预约',
+      'customer_urgent_confirmed_title': '司机已确认',
+      'customer_urgent_confirmed_body': '司机已分配。正在打开预约详情页面。',
+      'customer_urgent_exhausted_title': '附近暂无可用司机',
+      'customer_urgent_exhausted_body': '附近没有待命的司机。您的预约将被取消。',
+      'customer_urgent_go_home': '返回首页',
       'selected_location': '已选位置',
       'customer_payment_method': '付款方式',
       'customer_payment_pay_driver': '到达目的地后向司机付款',
@@ -2440,8 +2767,79 @@ class AppLocalizations {
       'guest_lookup_refresh': '刷新',
       'guest_lookup_refresh_needs_phone': '请在查询表单中输入电话号码以刷新此预订。',
       'booking_complete_track_cta': '查看我的预订',
+      'booking_cancel_section': '取消预订',
+      'booking_cancel_action': '取消预订',
+      'booking_cancel_policy_hint': '可在上车前 2 小时取消。',
+      'booking_cancel_confirm_title': '要取消此预订吗？',
+      'booking_cancel_confirm_action': '确认取消',
+      'booking_cancel_confirm_irreversible': '取消后无法恢复。',
+      'booking_cancel_success': '您的预订已取消。',
+      'booking_cancel_failed': '无法取消此预订，请重试。',
+      'booking_cancel_blocked_within_two_hours':
+          '距预定上车时间不足 2 小时时无法取消预订。',
+      'booking_cancel_blocked_trip_started': '行程已开始的预订无法取消。',
+      'booking_cancel_blocked_already_cancelled': '此预订已取消。',
+      'booking_cancel_blocked_completed': '已完成的预订无法取消。',
+      'booking_cancel_blocked_no_show': '标记为未到场的预订无法取消。',
+      'booking_cancel_blocked_invalid_pickup': '上车时间无效，无法取消此预订。',
+      'booking_cancel_blocked_locked': '此预订已锁定，无法取消。',
+      'booking_cancel_driver_assigned': '已分配司机：{name}',
+      'booking_cancel_driver_assigned_generic': '已分配司机',
       'guest_status_guidance_pending': '您的预订已收到，我们将尽快确认。',
       'guest_status_guidance_confirmed': '您的预订已确认，接客前将分配司机。',
+      'guest_status_guidance_reassignment':
+          '原定司机因故无法接送，正在为您重新安排司机。行程时间与费用不变。',
+      'status_reassignment_in_progress': '正在重新安排司机',
+      'admin_ops_severity_critical': '紧急',
+      'admin_ops_reason_critical_reassignment': '紧急再派车',
+      'admin_ops_reason_urgent_reassignment': '加急再派车',
+      'admin_ops_reason_driver_released_reassignment': '司机退回 · 再派车',
+      'admin_ops_reason_critical_unassigned': '紧急 · 未派车',
+      'admin_ops_reason_urgent_unassigned': '加急 · 未派车',
+      'driver_release_assignment': '退回派单',
+      'driver_release_assignment_title': '要退回此预订的派单吗？',
+      'driver_release_assignment_message': '客户预订将保留，并重新安排其他司机。',
+      'driver_release_assignment_cancel': '保留派单',
+      'driver_release_assignment_confirm': '退回派单',
+      'driver_release_assignment_success': '派单已解除。',
+      'driver_release_assignment_failed': '退回派单失败，请重试。',
+      'driver_release_assignment_blocked': '当前状态无法退回派单。',
+      'driver_release_assignment_emergency_hint':
+          '距接客不足 2 小时时，普通退回派单受限制。仅紧急情况可退回。',
+      'driver_release_assignment_irreversible': '退回后无法撤销。',
+      'driver_release_reason_label': '退回原因',
+      'driver_release_reason_detail_label': '详细说明',
+      'driver_release_reason_detail_required': '请输入其他原因',
+      'driver_release_reason_VEHICLE_BREAKDOWN': '车辆故障',
+      'driver_release_reason_ACCIDENT': '事故',
+      'driver_release_reason_DRIVER_ILLNESS': '司机身体不适',
+      'driver_release_reason_FAMILY_EMERGENCY': '家庭紧急情况',
+      'driver_release_reason_SCHEDULE_CONFLICT': '行程冲突',
+      'driver_release_reason_LOCATION_TOO_FAR': '距离过远',
+      'driver_release_reason_OTHER': '其他',
+      'driver_assignment_ended_confirm': '确定',
+      'driver_booking_not_found': '找不到预订信息。',
+      'driver_assignment_ended_generic_title': '派单已结束',
+      'driver_assignment_ended_generic_message': '无法继续进行此预订。',
+      'driver_assignment_ended_generic_snackbar': '预订 {bookingNumber} 的派单已解除。',
+      'driver_assignment_ended_customer_title': '客户已取消预订',
+      'driver_assignment_ended_customer_message': '客户取消了预订，派单已自动解除。',
+      'driver_assignment_ended_customer_snackbar':
+          '客户取消了预订 {bookingNumber}，派单已解除。',
+      'driver_assignment_ended_admin_title': '管理员已取消预订',
+      'driver_assignment_ended_admin_message': '管理员取消了预订，派单已解除。',
+      'driver_assignment_ended_admin_snackbar':
+          '管理员取消了预订 {bookingNumber}，派单已解除。',
+      'driver_assignment_ended_released_title': '已退回派单',
+      'driver_assignment_ended_released_message': '派单退回已完成。该预订将重新开放给其他司机。',
+      'driver_assignment_ended_released_snackbar':
+          '您已退回预订 {bookingNumber}，已重新开放。',
+      'driver_assignment_ended_reassigned_title': '已改派其他司机',
+      'driver_assignment_ended_reassigned_message': '此预订已分配给其他司机。',
+      'driver_assignment_ended_reassigned_snackbar':
+          '预订 {bookingNumber} 已分配给其他司机。',
+      'driver_assignment_ended_completed_title': '行程已完成',
+      'driver_assignment_ended_completed_message': '此行程已完成。',
       'guest_status_guidance_driver_assigned': '司机已分配，即将前往接客地点。',
       'guest_status_guidance_on_route': '司机正在前往接客地点。',
       'guest_status_guidance_driver_arrived': '司机已到达接客地点。',
@@ -2778,6 +3176,32 @@ class AppLocalizations {
       'customer_review_booking': '予約内容を確認',
       'customer_confirm_booking': '予約を確定',
       'customer_booking_processing': '予約を処理しています',
+      'customer_urgent_pickup_hint':
+          'ピックアップ時間が2時間以内の場合は、緊急リクエストをタップして進めてください。',
+      'customer_urgent_request': '緊急リクエスト',
+      'customer_urgent_confirm_title': '緊急リクエストの確認',
+      'customer_urgent_confirm_body':
+          '緊急リクエストは配車に時間がかかる場合があります。配車が完了すると、まずドライバーの到着予定時刻をお知らせします。配車を希望される場合は確定を押してください。',
+      'customer_urgent_confirm_submit': '確定',
+      'customer_urgent_flow_title': '緊急リクエスト',
+      'customer_urgent_searching_title': 'ドライバーを探しています',
+      'customer_urgent_searching_body': '近くで対応可能なドライバーを探しています。',
+      'customer_urgent_eta_title': 'ドライバーは約{minutes}分後に到着予定です',
+      'customer_urgent_eta_body':
+          '到着時間で問題なければ承認、より早いドライバーを希望する場合は拒否を押してください。',
+      'customer_urgent_accept_eta': '承認',
+      'customer_urgent_reject_eta': '拒否',
+      'customer_urgent_retry_title': 'より早いドライバーを探しますか？',
+      'customer_urgent_retry_body': '到着時間が短い別のドライバーを引き続き探せます。',
+      'customer_urgent_retry_accept': '探す',
+      'customer_urgent_retry_cancel': '予約をキャンセル',
+      'customer_urgent_confirmed_title': '配車が確定しました',
+      'customer_urgent_confirmed_body':
+          'ドライバーが割り当てられました。予約詳細画面を開いています。',
+      'customer_urgent_exhausted_title': '近くに待機中のドライバーがいません',
+      'customer_urgent_exhausted_body':
+          '近くに待機中のドライバーがいません。予約をキャンセルします。',
+      'customer_urgent_go_home': 'ホームへ',
       'selected_location': '選択した場所',
       'customer_payment_method': '支払方法',
       'customer_payment_pay_driver': '目的地到着後にドライバーへ直接支払い',
@@ -2884,8 +3308,86 @@ class AppLocalizations {
       'guest_lookup_refresh': '更新',
       'guest_lookup_refresh_needs_phone': '更新するには検索フォームで電話番号を入力してください。',
       'booking_complete_track_cta': '予約状況を確認',
+      'booking_cancel_section': '予約キャンセル',
+      'booking_cancel_action': '予約をキャンセル',
+      'booking_cancel_policy_hint': 'ピックアップの2時間前までキャンセルできます。',
+      'booking_cancel_confirm_title': 'この予約をキャンセルしますか？',
+      'booking_cancel_confirm_action': 'キャンセルを確定',
+      'booking_cancel_confirm_irreversible': 'キャンセル後は元に戻せません。',
+      'booking_cancel_success': '予約をキャンセルしました。',
+      'booking_cancel_failed': '予約をキャンセルできませんでした。もう一度お試しください。',
+      'booking_cancel_blocked_within_two_hours':
+          '予定ピックアップ時刻の2時間以内は予約をキャンセルできません。',
+      'booking_cancel_blocked_trip_started': '運行が開始された予約はキャンセルできません。',
+      'booking_cancel_blocked_already_cancelled': 'この予約はすでにキャンセル済みです。',
+      'booking_cancel_blocked_completed': '完了した予約はキャンセルできません。',
+      'booking_cancel_blocked_no_show': 'ノーショー扱いの予約はキャンセルできません。',
+      'booking_cancel_blocked_invalid_pickup':
+          'ピックアップ時刻が無効なため、この予約はキャンセルできません。',
+      'booking_cancel_blocked_locked': 'この予約はロックされているためキャンセルできません。',
+      'booking_cancel_driver_assigned': 'ドライバー割当済み: {name}',
+      'booking_cancel_driver_assigned_generic': 'ドライバー割当済み',
       'guest_status_guidance_pending': '予約を受け付けました。まもなく確認します。',
       'guest_status_guidance_confirmed': '予約が確定しました。迎え前にドライバーが割り当てられます。',
+      'guest_status_guidance_reassignment':
+          '担当ドライバーの都合により、新しいドライバーを手配しています。日時と料金は変わりません。',
+      'status_reassignment_in_progress': 'ドライバー再手配中',
+      'admin_ops_severity_critical': '最優先',
+      'admin_ops_reason_critical_reassignment': '緊急再配車',
+      'admin_ops_reason_urgent_reassignment': '至急再配車',
+      'admin_ops_reason_driver_released_reassignment': 'ドライバー返却 · 再配車',
+      'admin_ops_reason_critical_unassigned': '最優先 · 未配車',
+      'admin_ops_reason_urgent_unassigned': '至急 · 未配車',
+      'driver_release_assignment': '配車を返却',
+      'driver_release_assignment_title': 'この予約の配車を返却しますか？',
+      'driver_release_assignment_message':
+          'お客様の予約は維持され、別のドライバーを再手配します。',
+      'driver_release_assignment_cancel': '配車を維持',
+      'driver_release_assignment_confirm': '配車を返却',
+      'driver_release_assignment_success': '配車を解除しました。',
+      'driver_release_assignment_failed': '配車の返却に失敗しました。もう一度お試しください。',
+      'driver_release_assignment_blocked': '現在の状態では配車を返却できません。',
+      'driver_release_assignment_emergency_hint':
+          'ピックアップまで2時間以内は通常の配車返却が制限されます。緊急時のみ返却できます。',
+      'driver_release_assignment_irreversible': '返却後は取り消せません。',
+      'driver_release_reason_label': '返却理由',
+      'driver_release_reason_detail_label': '詳細',
+      'driver_release_reason_detail_required': 'その他の理由を入力してください',
+      'driver_release_reason_VEHICLE_BREAKDOWN': '車両トラブル',
+      'driver_release_reason_ACCIDENT': '事故',
+      'driver_release_reason_DRIVER_ILLNESS': '体調不良',
+      'driver_release_reason_FAMILY_EMERGENCY': '家族の緊急事態',
+      'driver_release_reason_SCHEDULE_CONFLICT': 'スケジュールの都合',
+      'driver_release_reason_LOCATION_TOO_FAR': '距離が遠い',
+      'driver_release_reason_OTHER': 'その他',
+      'driver_assignment_ended_confirm': '確認',
+      'driver_booking_not_found': '予約情報が見つかりません。',
+      'driver_assignment_ended_generic_title': '配車が終了しました',
+      'driver_assignment_ended_generic_message': 'この予約はこれ以上進められません。',
+      'driver_assignment_ended_generic_snackbar':
+          '予約 {bookingNumber} の配車が解除されました。',
+      'driver_assignment_ended_customer_title': 'お客様が予約をキャンセルしました',
+      'driver_assignment_ended_customer_message':
+          'お客様が予約をキャンセルしたため、配車が自動的に解除されました。',
+      'driver_assignment_ended_customer_snackbar':
+          'お客様キャンセルにより予約 {bookingNumber} の配車が解除されました。',
+      'driver_assignment_ended_admin_title': '管理者が予約をキャンセルしました',
+      'driver_assignment_ended_admin_message':
+          '管理者が予約をキャンセルしたため、配車が解除されました。',
+      'driver_assignment_ended_admin_snackbar':
+          '管理者キャンセルにより予約 {bookingNumber} の配車が解除されました。',
+      'driver_assignment_ended_released_title': '配車の返却が完了しました',
+      'driver_assignment_ended_released_message':
+          '配車の返却が完了しました。この予約は他のドライバーに再公開されます。',
+      'driver_assignment_ended_released_snackbar':
+          '予約 {bookingNumber} の配車返却が完了しました。',
+      'driver_assignment_ended_reassigned_title': '他のドライバーに割り当てられました',
+      'driver_assignment_ended_reassigned_message':
+          'この予約は他のドライバーに割り当てられました。',
+      'driver_assignment_ended_reassigned_snackbar':
+          '予約 {bookingNumber} は他のドライバーに割り当てられました。',
+      'driver_assignment_ended_completed_title': '運行が完了しました',
+      'driver_assignment_ended_completed_message': 'この予約はすでに完了しています。',
       'guest_status_guidance_driver_assigned':
           'ドライバーが割り当てられました。まもなく迎え場所へ向かいます。',
       'guest_status_guidance_on_route': 'ドライバーが迎え場所へ向かっています。',
@@ -3086,6 +3588,34 @@ class AppLocalizations {
       'customer_review_booking': 'ตรวจสอบการจอง',
       'customer_confirm_booking': 'ยืนยันการจอง',
       'customer_booking_processing': 'กำลังดำเนินการจอง',
+      'customer_urgent_pickup_hint':
+          'หากเวลารับอยู่ภายใน 2 ชั่วโมง ให้แตะ คำขอด่วน เพื่อดำเนินการต่อ',
+      'customer_urgent_request': 'คำขอด่วน',
+      'customer_urgent_confirm_title': 'ยืนยันคำขอด่วน',
+      'customer_urgent_confirm_body':
+          'คำขอด่วนอาจใช้เวลาจัดรถนานขึ้น เมื่อจัดรถแล้วเราจะแจ้งเวลาถึงโดยประมาณของคนขับก่อน หากต้องการดำเนินการต่อ กรุณาแตะ ยืนยัน',
+      'customer_urgent_confirm_submit': 'ยืนยัน',
+      'customer_urgent_flow_title': 'คำขอด่วน',
+      'customer_urgent_searching_title': 'กำลังค้นหาคนขับ',
+      'customer_urgent_searching_body': 'เรากำลังค้นหาคนขับที่พร้อมให้บริการใกล้คุณ',
+      'customer_urgent_eta_title':
+          'คนขับคาดว่าจะถึงในอีกประมาณ {minutes} นาที',
+      'customer_urgent_eta_body':
+          'หากเวลานี้เหมาะสม กรุณากด ยอมรับ หากต้องการคนขับที่ถึงเร็วกว่า กรุณากด ปฏิเสธ',
+      'customer_urgent_accept_eta': 'ยอมรับ',
+      'customer_urgent_reject_eta': 'ปฏิเสธ',
+      'customer_urgent_retry_title': 'ต้องการหาคนขับที่เร็วกว่านี้ไหม?',
+      'customer_urgent_retry_body':
+          'เราสามารถค้นหาคนขับคนอื่นที่มีเวลาถึงสั้นกว่าได้',
+      'customer_urgent_retry_accept': 'ค้นหาต่อ',
+      'customer_urgent_retry_cancel': 'ยกเลิกการจอง',
+      'customer_urgent_confirmed_title': 'ยืนยันการจัดรถแล้ว',
+      'customer_urgent_confirmed_body':
+          'มีการมอบหมายคนขับแล้ว กำลังเปิดหน้ารายละเอียดการจอง',
+      'customer_urgent_exhausted_title': 'ไม่มีคนขับใกล้เคียง',
+      'customer_urgent_exhausted_body':
+          'ไม่มีคนขับที่รอรับงานใกล้เคียง เราจะยกเลิกการจองของคุณ',
+      'customer_urgent_go_home': 'กลับหน้าแรก',
       'origin': 'จุดเริ่มต้น',
       'destination': 'ปลายทาง',
       'airport': 'สนามบิน',
@@ -3362,10 +3892,101 @@ class AppLocalizations {
       'guest_lookup_refresh_needs_phone':
           'กรุณากรอกเบอร์โทรในแบบฟอร์มค้นหาเพื่อรีเฟรชการจองนี้',
       'booking_complete_track_cta': 'ติดตามการจองของฉัน',
+      'booking_cancel_section': 'ยกเลิกการจอง',
+      'booking_cancel_action': 'ยกเลิกการจอง',
+      'booking_cancel_policy_hint':
+          'คุณสามารถยกเลิกได้จนถึง 2 ชั่วโมงก่อนเวลารับ',
+      'booking_cancel_confirm_title': 'ต้องการยกเลิกการจองนี้หรือไม่?',
+      'booking_cancel_confirm_action': 'ยืนยันการยกเลิก',
+      'booking_cancel_confirm_irreversible':
+          'เมื่อยกเลิกแล้วจะไม่สามารถย้อนกลับได้',
+      'booking_cancel_success': 'ยกเลิกการจองของคุณแล้ว',
+      'booking_cancel_failed':
+          'ไม่สามารถยกเลิกการจองนี้ได้ กรุณาลองอีกครั้ง',
+      'booking_cancel_blocked_within_two_hours':
+          'ไม่สามารถยกเลิกการจองภายใน 2 ชั่วโมงก่อนเวลารับที่กำหนด',
+      'booking_cancel_blocked_trip_started':
+          'ไม่สามารถยกเลิกการจองที่เริ่มการเดินทางแล้ว',
+      'booking_cancel_blocked_already_cancelled':
+          'การจองนี้ถูกยกเลิกแล้ว',
+      'booking_cancel_blocked_completed':
+          'ไม่สามารถยกเลิกการจองที่เสร็จสิ้นแล้ว',
+      'booking_cancel_blocked_no_show':
+          'ไม่สามารถยกเลิกการจองที่ถูกทำเครื่องหมายว่าไม่มา',
+      'booking_cancel_blocked_invalid_pickup':
+          'ไม่สามารถยกเลิกการจองนี้ได้เนื่องจากเวลารับไม่ถูกต้อง',
+      'booking_cancel_blocked_locked':
+          'การจองนี้ถูกล็อกและไม่สามารถยกเลิกได้',
+      'booking_cancel_driver_assigned': 'มอบหมายคนขับแล้ว: {name}',
+      'booking_cancel_driver_assigned_generic': 'มอบหมายคนขับแล้ว',
       'guest_status_guidance_pending':
           'ได้รับการจองของคุณแล้ว เราจะยืนยันในเร็วๆ นี้',
       'guest_status_guidance_confirmed':
           'การจองได้รับการยืนยันแล้ว จะมีการมอบหมายคนขับก่อนเวลารับ',
+      'guest_status_guidance_reassignment':
+          'คนขับเดิมไม่สามารถรับงานได้ กำลังจัดหาคนขับใหม่ ตารางเวลาและค่าโดยสารไม่เปลี่ยนแปลง',
+      'status_reassignment_in_progress': 'กำลังจัดหาคนขับใหม่',
+      'admin_ops_severity_critical': 'เร่งด่วนมาก',
+      'admin_ops_reason_critical_reassignment': 'จัดคนขับใหม่เร่งด่วนมาก',
+      'admin_ops_reason_urgent_reassignment': 'จัดคนขับใหม่เร่งด่วน',
+      'admin_ops_reason_driver_released_reassignment': 'คนขับคืนงาน · จัดคนขับใหม่',
+      'admin_ops_reason_critical_unassigned': 'เร่งด่วนมาก · ยังไม่มอบหมาย',
+      'admin_ops_reason_urgent_unassigned': 'เร่งด่วน · ยังไม่มอบหมาย',
+      'driver_release_assignment': 'คืนงาน',
+      'driver_release_assignment_title': 'ต้องการคืนงานที่ได้รับมอบหมายนี้หรือไม่?',
+      'driver_release_assignment_message':
+          'การจองของลูกค้ายังคงอยู่ และจะมอบหมายคนขับคนอื่น',
+      'driver_release_assignment_cancel': 'เก็บงานไว้',
+      'driver_release_assignment_confirm': 'คืนงาน',
+      'driver_release_assignment_success': 'ยกเลิกการมอบหมายงานแล้ว',
+      'driver_release_assignment_failed':
+          'คืนงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+      'driver_release_assignment_blocked':
+          'สถานะปัจจุบันไม่สามารถคืนงานได้',
+      'driver_release_assignment_emergency_hint':
+          'ภายใน 2 ชั่วโมงก่อนเวลารับ การคืนงานปกติถูกจำกัด คืนงานได้เฉพาะกรณีฉุกเฉินเท่านั้น',
+      'driver_release_assignment_irreversible':
+          'เมื่อคืนงานแล้วจะย้อนกลับไม่ได้',
+      'driver_release_reason_label': 'เหตุผลที่คืนงาน',
+      'driver_release_reason_detail_label': 'รายละเอียด',
+      'driver_release_reason_detail_required': 'กรุณาระบุเหตุผลอื่น',
+      'driver_release_reason_VEHICLE_BREAKDOWN': 'รถเสีย',
+      'driver_release_reason_ACCIDENT': 'อุบัติเหตุ',
+      'driver_release_reason_DRIVER_ILLNESS': 'เจ็บป่วย',
+      'driver_release_reason_FAMILY_EMERGENCY': 'เหตุฉุกเฉินครอบครัว',
+      'driver_release_reason_SCHEDULE_CONFLICT': 'ตารางชนกัน',
+      'driver_release_reason_LOCATION_TOO_FAR': 'ระยะทางไกลเกินไป',
+      'driver_release_reason_OTHER': 'อื่นๆ',
+      'driver_assignment_ended_confirm': 'ตกลง',
+      'driver_booking_not_found': 'ไม่พบข้อมูลการจอง',
+      'driver_assignment_ended_generic_title': 'ยกเลิกการมอบหมายงานแล้ว',
+      'driver_assignment_ended_generic_message':
+          'ไม่สามารถดำเนินการจองนี้ต่อได้',
+      'driver_assignment_ended_generic_snackbar':
+          'ยกเลิกการมอบหมายงาน {bookingNumber} แล้ว',
+      'driver_assignment_ended_customer_title': 'ลูกค้ายกเลิกการจองแล้ว',
+      'driver_assignment_ended_customer_message':
+          'งานนี้ถูกยกเลิกการมอบหมายโดยอัตโนมัติเนื่องจากลูกค้ายกเลิกการจอง',
+      'driver_assignment_ended_customer_snackbar':
+          'ลูกค้ายกเลิก {bookingNumber} งานถูกยกเลิกการมอบหมายแล้ว',
+      'driver_assignment_ended_admin_title': 'แอดมินยกเลิกการจองแล้ว',
+      'driver_assignment_ended_admin_message':
+          'แอดมินยกเลิกการจองแล้ว งานของคุณถูกยกเลิกการมอบหมาย',
+      'driver_assignment_ended_admin_snackbar':
+          'แอดมินยกเลิก {bookingNumber} งานถูกยกเลิกการมอบหมายแล้ว',
+      'driver_assignment_ended_released_title': 'คืนงานเรียบร้อยแล้ว',
+      'driver_assignment_ended_released_message':
+          'คืนงานเรียบร้อยแล้ว การจองนี้จะเปิดให้คนขับคนอื่นอีกครั้ง',
+      'driver_assignment_ended_released_snackbar':
+          'คืนงาน {bookingNumber} เรียบร้อยแล้ว',
+      'driver_assignment_ended_reassigned_title': 'มอบหมายให้คนขับคนอื่นแล้ว',
+      'driver_assignment_ended_reassigned_message':
+          'การจองนี้ถูกมอบหมายให้คนขับคนอื่นแล้ว',
+      'driver_assignment_ended_reassigned_snackbar':
+          '{bookingNumber} ถูกมอบหมายให้คนขับคนอื่นแล้ว',
+      'driver_assignment_ended_completed_title': 'การเดินทางเสร็จสิ้นแล้ว',
+      'driver_assignment_ended_completed_message':
+          'การจองนี้เสร็จสิ้นแล้ว',
       'guest_status_guidance_driver_assigned':
           'มอบหมายคนขับแล้ว และจะออกเดินทางไปจุดรับเร็วๆ นี้',
       'guest_status_guidance_on_route': 'คนขับกำลังเดินทางไปจุดรับ',
@@ -4399,7 +5020,8 @@ class AppLocalizations {
     'driver_application_cta': '기사 등록 신청 / สมัครคนขับ',
     'driver_load_failed': '정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลได้)',
     'driver_action_failed': '처리 중 오류가 발생했습니다\n(เกิดข้อผิดพลาดระหว่างดำเนินการ)',
-    'driver_nav_jobs': '배정 예약\n(งานที่ได้รับมอบหมาย)',
+    'driver_nav_jobs': '업무\n(งาน)',
+    'driver_nav_home': '홈\n(หน้าหลัก)',
     'driver_nav_today': '오늘\n(วันนี้)',
     'driver_nav_history': '운행 기록\n(ประวัติการเดินทาง)',
     'driver_nav_account': '내 정보\n(บัญชีของฉัน)',
@@ -4415,8 +5037,8 @@ class AppLocalizations {
     'driver_qr_scan_success_dropoff':
         '운행 종료가 확인되었습니다.\n(ยืนยันการสิ้นสุดการเดินทางแล้ว)',
     'driver_nav_notifications': '알림\n(การแจ้งเตือน)',
-    'driver_nav_settlement': '정산\n(การชำระบัญชี)',
-    'driver_nav_profile': '내 정보\n(โปรไฟล์)',
+    'driver_nav_settlement': '정산\n(การเงิน)',
+    'driver_nav_profile': '내 정보\n(บัญชี)',
     'driver_refresh': '새로고침 / รีเฟรช',
     'driver_retry': '다시 시도 / ลองอีกครั้ง',
     'driver_jobs_error_title':
@@ -4429,6 +5051,90 @@ class AppLocalizations {
     'driver_jobs_group_active': '진행 중\n(งานปัจจุบัน)',
     'driver_jobs_group_upcoming': '예정\n(งานที่กำลังจะมาถึง)',
     'driver_jobs_group_completed': '완료\n(เสร็จสิ้น)',
+    'driver_jobs_tab_new': '새 콜\n(งานใหม่)',
+    'driver_jobs_tab_mine': '내 업무\n(งานของฉัน)',
+    'driver_jobs_tab_past': '지난 업무\n(งานที่ผ่านมา)',
+    'driver_jobs_open_history': '전체 운행 기록 보기\n(ดูประวัติการเดินทางทั้งหมด)',
+    'driver_claim_call': '이 콜 수락 / รับงานนี้',
+    'driver_claim_confirm_title': '이 콜을 수락할까요?\n(ต้องการรับงานนี้หรือไม่?)',
+    'driver_claim_confirm_message':
+        '확인 전 시간과 장소를 다시 확인해 주세요.\n(กรุณาตรวจสอบเวลาและสถานที่ก่อนยืนยัน)',
+    'driver_claim_success': '콜 수락 완료 / รับงานแล้ว',
+    'driver_claim_already_assigned':
+        '다른 기사가 먼저 수락했습니다 / งานนี้มีคนขับรับไปแล้ว',
+    'driver_open_calls_online_required':
+        '온라인 상태에서만 콜을 받을 수 있습니다.\n(รับงานได้เฉพาะเมื่อออนไลน์เท่านั้น)',
+    'driver_open_calls_empty': '배차 가능한 콜이 없습니다.\n(ไม่มีงานที่พร้อมให้รับ)',
+    'driver_urgent_badge': '긴급\n(ด่วน)',
+    'driver_urgent_section_title': '긴급 요청 콜\n(งานเร่งด่วน)',
+    'driver_urgent_call_new_arrived':
+        '긴급 요청 콜이 도착했습니다.\n(มีงานเร่งด่วนเข้ามา)',
+    'driver_urgent_accept': '수락 / รับงาน',
+    'driver_urgent_already_locked':
+        '다른 기사가 이미 수락한 콜입니다.\n(คนขับคนอื่นรับงานนี้แล้ว)',
+    'driver_urgent_eta_dialog_title': '도착 예상 시간 입력\n(กรอกเวลาที่จะถึง)',
+    'driver_urgent_eta_dialog_message':
+        '도착 예상 시간을 입력하시면 고객이 수락을 한 이후 예약이 확정됩니다. 도착 예상시간을 입력해주세요\n(กรอกเวลาที่จะถึง ลูกค้ายืนยันแล้วจึงจะยืนยันการจอง)',
+    'driver_urgent_eta_minutes_label': '도착 예상 시간 (분)\n(นาที)',
+    'driver_urgent_eta_submit': '제출 / ส่ง',
+    'driver_urgent_eta_countdown': '남은 시간: {time}\n(เวลาที่เหลือ: {time})',
+    'driver_urgent_eta_invalid':
+        '유효한 분 단위 숫자를 입력해 주세요.\n(กรุณากรอกจำนวนนาทีที่ถูกต้อง)',
+    'driver_urgent_eta_success':
+        '도착 예상 시간이 제출되었습니다. 고객 확인을 기다려 주세요.\n(ส่งเวลาแล้ว รอลูกค้ายืนยัน)',
+    'driver_urgent_confirmed':
+        '고객이 수락했습니다. 예약이 배정되었습니다.\n(ลูกค้ายืนยันแล้ว ได้รับงานแล้ว)',
+    'driver_urgent_min_eta_hint':
+        '이전 거절로 {minutes}분 미만 ETA가 필요합니다.\n(ต้องน้อยกว่า {minutes} นาที)',
+    'driver_urgent_awaiting_customer':
+        '고객 확인 대기 중 (남은 시간 {time})\n(รอลูกค้ายืนยัน เหลือ {time})',
+    'driver_urgent_eta_lock_expired':
+        '도착 예상 시간 입력 시간이 만료되었습니다.\n(หมดเวลากรอกเวลาที่จะถึงแล้ว)',
+    'driver_urgent_eta_not_fast_enough':
+        '이전 거절보다 더 빠른 도착 예상 시간을 입력해 주세요.\n(กรุณากรอกเวลาที่จะถึงให้เร็วกว่าครั้งก่อน)',
+    'driver_urgent_round_ended':
+        '고객이 거절했거나 협상 라운드가 종료되었습니다.\n(ลูกค้าปฏิเสธหรือรอบการเจรจาจบแล้ว)',
+    'driver_urgent_cancelled':
+        '긴급 요청 콜이 취소되었습니다.\n(งานเร่งด่วนถูกยกเลิกแล้ว)',
+    'driver_settlement_block_title':
+        '아직 신규 업무를 받을 수 없습니다\n(ยังไม่สามารถรับงานใหม่ได้)',
+    'driver_settlement_block_message':
+        '커미션을 송금하고 슬립을 업로드한 뒤 관리자 확인을 기다려 주세요.\n(กรุณาชำระค่าคอมมิชชั่นและอัปโหลดสลิป หลังจากแอดมินตรวจสอบแล้วจึงจะรับงานใหม่ได้)',
+    'driver_settlement_block_cta': '정산 화면으로 / ไปที่หน้าชำระเงิน',
+    'driver_home_new_calls_title': '새 콜이 있습니다\n(มีงานใหม่)',
+    'driver_home_new_calls_message':
+        '새 콜 {count}건이 대기 중입니다.\n(มีงานใหม่ {count} งาน)',
+    'driver_home_new_calls_cta': '새 콜 보기 / ดูงานใหม่',
+    'driver_home_urgent_calls_title': '긴급 요청 콜\n(งานเร่งด่วน)',
+    'driver_home_urgent_calls_message':
+        '긴급 요청 콜 {count}건이 대기 중입니다.\n(มีงานเร่งด่วน {count} งาน)',
+    'driver_home_urgent_calls_cta': '긴급 콜 보기 / ดูงานเร่งด่วน',
+    'driver_call_customer': '고객에게 전화 / โทรหาลูกค้า',
+    'driver_account_notifications': '알림\n(การแจ้งเตือน)',
+    'driver_step_progress':
+        '단계 {step}/{total}\n(ขั้นตอนที่ {step} จาก {total})',
+    'driver_step_assigned': '배정 확인됨 / งานได้รับการยืนยัน',
+    'driver_step_assigned_hint':
+        'Stand by 전 예약 내용을 확인하세요.\n(ตรวจสอบรายละเอียดก่อนยืนยัน Stand by)',
+    'driver_step_standby': 'Stand by 확인 / ยืนยัน Stand by',
+    'driver_step_standby_hint':
+        '픽업 1시간 전부터 확인 가능합니다.\n(ยืนยันได้ก่อนเวลานัดหมาย 1 ชั่วโมง)',
+    'driver_step_depart_pickup': '픽업지로 출발 / เดินทางไปรับลูกค้า',
+    'driver_step_depart_pickup_hint':
+        '지도를 열고 픽업 장소로 이동하세요.\n(เปิดแผนที่แล้วไปยังจุดรับ)',
+    'driver_step_arrived_pickup': '픽업지 도착 / ถึงจุดรับแล้ว',
+    'driver_step_arrived_pickup_hint':
+        '픽업 지점에 도착하면 확인하세요.\n(ยืนยันหลังถึงจุดรับ)',
+    'driver_step_customer_boarded': '고객 탑승 / ลูกค้าขึ้นรถแล้ว',
+    'driver_step_customer_boarded_hint':
+        '고객이 탑승하면 확인하세요.\n(ยืนยันหลังลูกค้าขึ้นรถ)',
+    'driver_step_in_transit': '운행 중 / กำลังเดินทาง',
+    'driver_step_finish_trip': '운행 종료 / ยืนยันจบงาน',
+    'driver_step_finish_trip_hint':
+        '종료 후 커미션 송금과 슬립 업로드가 필요합니다.\n(หลังจบงานต้องชำระค่าคอมมิชชั่นและอัปโหลดสลิป)',
+    'driver_step_settlement': '정산 필요 / ชำระค่าคอมมิชชั่น',
+    'driver_step_settlement_hint':
+        '커미션 송금과 슬립 업로드를 완료하세요.\n(ชำระค่าคอมมิชชั่นและอัปโหลดสลิป)',
     'driver_today_greeting_generic': '안녕하세요\n(สวัสดี)',
     'driver_today_greeting_named': '안녕하세요, {name} 기사님\n(สวัสดี คุณ{name})',
     'driver_today_trip_count':
@@ -4441,7 +5147,7 @@ class AppLocalizations {
     'driver_today_remaining_title':
         '오늘 남은 예약 {count}건\n(งานที่เหลือวันนี้ {count} งาน)',
     'driver_today_completed_title': '완료된 운행 ({count})\n(งานที่เสร็จแล้ว)',
-    'driver_today_empty_title': '오늘 예정된 운행이 없습니다.\n(วันนี้ไม่มีงานที่กำหนดไว้)',
+    'driver_today_empty_title': '예정된 운행이 없습니다.\n(ไม่มีงานที่กำหนดไว้)',
     'driver_today_empty_message':
         '새 예약이 배정되면 알림으로 알려드립니다.\n(ระบบจะแจ้งเตือนเมื่อมีงานใหม่)',
     'driver_quick_navigate': '길찾기 / นำทาง',
@@ -4469,6 +5175,20 @@ class AppLocalizations {
     'driver_account_settlement': '정산\n(การชำระบัญชี)',
     'driver_account_support': '고객센터\n(ศูนย์บริการลูกค้า)',
     'driver_account_profile': '내 프로필\n(โปรไฟล์ของฉัน)',
+    'driver_account_vehicle_title': '내 차량\n(รถของฉัน)',
+    'driver_account_vehicle_empty':
+        '등록된 차량 정보가 없습니다.\n(ยังไม่มีข้อมูลรถที่ลงทะเบียนไว้)',
+    'driver_account_vehicle_color': '차량 색상 / สีรถ',
+    'driver_account_vehicle_year': '차량 연식 / ปีรถ',
+    'driver_account_vehicle_model': '차량 모델 / รุ่นรถ',
+    'driver_profile_edit_title': '프로필 수정 / แก้ไขโปรไฟล์',
+    'driver_profile_save': '저장 / บันทึก',
+    'driver_profile_save_success': '저장되었습니다.\n(บันทึกเรียบร้อยแล้ว)',
+    'driver_profile_save_failed':
+        '저장하지 못했습니다. 다시 시도해 주세요.\n(บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง)',
+    'driver_profile_readonly_email': '이메일 (변경 불가) / อีเมล (แก้ไขไม่ได้)',
+    'driver_profile_upload_avatar': '프로필 사진 변경 / เปลี่ยนรูปโปรไฟล์',
+    'driver_profile_upload_vehicle_photo': '차량 사진 변경 / เปลี่ยนรูปรถ',
     'driver_account_language': '언어\n(ภาษา)',
     'driver_account_notification_settings': '알림 설정\n(การตั้งค่าการแจ้งเตือน)',
     'driver_account_terms': '이용약관\n(ข้อกำหนดการใช้งาน)',
@@ -4478,13 +5198,13 @@ class AppLocalizations {
     'driver_logout_confirm_title': '로그아웃할까요?\n(ต้องการออกจากระบบหรือไม่)',
     'driver_logout_confirm_message':
         '다시 로그인해야 합니다.\n(ต้องเข้าสู่ระบบใหม่อีกครั้ง)',
-    'driver_action_start_on_route': '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
-    'driver_action_accept_booking': '운행 확정 / ยืนยันการรับงาน',
+    'driver_action_start_on_route': '픽업지로 출발 / ออกเดินทางไปรับลูกค้า',
+    'driver_action_accept_booking': '운행 준비 확인 / ยืนยันว่าพร้อมปฏิบัติงาน',
     'driver_view_booking_detail': '예약 상세 보기 / ดูรายละเอียดการจอง',
-    'driver_action_mark_arrived': '픽업 장소 도착 / ถึงจุดรับแล้ว',
-    'driver_action_mark_picked_up': '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว',
-    'driver_action_end_trip': '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน',
-    'driver_action_complete_trip': '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน',
+    'driver_action_mark_arrived': '픽업지 도착 / ถึงจุดรับแล้ว',
+    'driver_action_mark_picked_up': '고객 탑승 확인 / รับลูกค้าขึ้นรถแล้ว',
+    'driver_action_end_trip': '운행 종료 / ยืนยันจบงาน',
+    'driver_action_complete_trip': '운행 종료 / ยืนยันจบงาน',
     'driver_confirm_no': '아니요 / ไม่',
     'driver_confirm_yes': '예 / ใช่',
     'driver_confirm_start_on_route_title': '픽업 장소로 이동을 시작할까요?',
@@ -4496,13 +5216,35 @@ class AppLocalizations {
     'driver_confirm_accept_booking_yes': '운행 확정 / ยืนยัน',
     'driver_accept_booking_processing': '운행을 확정하고 있습니다\n(กำลังยืนยันงาน)',
     'driver_success_accept_booking': '운행이 확정되었습니다\n(ยืนยันงานแล้ว)',
-    'driver_release_assignment': '운행 포기 / ยกเลิกการรับงาน',
-    'driver_release_assignment_title': '운행 포기',
-    'driver_release_assignment_message': '운행을 포기하시겠습니까?',
-    'driver_release_assignment_cancel': '취소',
-    'driver_release_assignment_confirm': '운행 포기',
-    'driver_release_assignment_success': '운행을 포기했습니다.',
-    'driver_release_assignment_failed': '운행 포기 처리에 실패했습니다. 다시 시도해 주세요.',
+    'driver_release_assignment': '배정 반납 / คืนงานที่ได้รับมอบหมาย',
+    'driver_release_assignment_title':
+        '이 예약의 배정을 반납하시겠습니까?\n(ต้องการคืนงานที่ได้รับมอบหมายสำหรับการจองนี้หรือไม่)',
+    'driver_release_assignment_message':
+        '고객 예약은 유지되며 다른 기사를 다시 배정합니다.\n(การจองของลูกค้ายังคงอยู่ และจะมอบหมายให้คนขับท่านอื่น)',
+    'driver_release_assignment_cancel': '유지 / คงไว้',
+    'driver_release_assignment_confirm': '배정 반납 / คืนงาน',
+    'driver_release_assignment_success':
+        '배정이 해제되었습니다.\n(คืนงานเรียบร้อยแล้ว)',
+    'driver_release_assignment_failed':
+        '배정 반납에 실패했습니다. 다시 시도해 주세요.\n(ไม่สามารถคืนงานได้ กรุณาลองอีกครั้ง)',
+    'driver_release_assignment_blocked':
+        '현재 상태에서는 배정을 반납할 수 없습니다.\n(ไม่สามารถคืนงานได้ในสถานะปัจจุบัน)',
+    'driver_release_assignment_emergency_hint':
+        '픽업까지 2시간 이내에는 일반 배정 반납이 제한됩니다. 긴급 상황인 경우에만 배정을 반납할 수 있습니다.\n(ภายใน 2 ชั่วโมงก่อนรับลูกค้า จะคืนงานได้เฉพาะกรณีฉุกเฉินเท่านั้น)',
+    'driver_release_assignment_irreversible':
+        '반납 후에는 되돌릴 수 없습니다.\n(หลังคืนงานแล้วจะไม่สามารถย้อนกลับได้)',
+    'driver_release_reason_label': '반납 사유 / เหตุผลในการคืนงาน',
+    'driver_release_reason_detail_label': '상세 설명 / รายละเอียดเพิ่มเติม',
+    'driver_release_reason_detail_required':
+        '기타 사유를 입력하세요.\n(กรุณาระบุเหตุผลอื่น)',
+    'driver_release_reason_VEHICLE_BREAKDOWN': '차량 고장 / รถเสีย',
+    'driver_release_reason_ACCIDENT': '사고 / อุบัติเหตุ',
+    'driver_release_reason_DRIVER_ILLNESS': '질병 / คนขับป่วย',
+    'driver_release_reason_FAMILY_EMERGENCY':
+        '가족 긴급 상황 / เหตุฉุกเฉินครอบครัว',
+    'driver_release_reason_SCHEDULE_CONFLICT': '일정 충돌 / ตารางงานซ้ำซ้อน',
+    'driver_release_reason_LOCATION_TOO_FAR': '거리 문제 / จุดรับอยู่ไกลเกินไป',
+    'driver_release_reason_OTHER': '기타 / อื่นๆ',
     'driver_confirm_mark_arrived_title': '픽업 장소에 도착하셨습니까?',
     'driver_confirm_mark_arrived_message': '픽업 장소에 도착했습니까?',
     'driver_confirm_mark_arrived_yes': '도착 / ถึงแล้ว',
@@ -4618,7 +5360,6 @@ class AppLocalizations {
     'driver_detail_customer_info': '고객 정보\n(ข้อมูลลูกค้า)',
     'driver_detail_customer_name': '고객 이름\n(ชื่อลูกค้า)',
     'driver_pickup_time': '픽업 시간\n(เวลารับ)',
-    'driver_call_customer': '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
     'driver_message_customer': '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
     'driver_estimated_arrival': '예상 도착 시간\n(เวลาถึงโดยประมาณ)',
     'driver_section_chat': '채팅\n(แชต)',
@@ -4857,6 +5598,9 @@ class AppLocalizations {
         _airportMeetingActionTranslations[languageCode]?[key] ??
         _airportMeetingActionTranslations['en']?[key];
     if (airportMeetingText != null) return airportMeetingText;
+    // Driver bilingual map wins for shared driver chrome keys. Release /
+    // reassignment keys intentionally live only in locale maps so en/ko/zh/ja/th
+    // each return a real translation (no key fallback, no forced bilingual).
     final driverText = _driverUiTranslations[key];
     if (driverText != null) return driverText;
     final lang = _translations[languageCode] ?? _translations['en']!;

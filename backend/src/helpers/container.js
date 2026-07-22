@@ -59,6 +59,11 @@ const FlightSyncWorker = require("../workers/flightSync.worker");
 const FlightSyncSchedulerService = require("../services/flightSyncScheduler.service");
 const ChatService = require("../services/chat.service");
 const DriverApplicationService = require("../services/driverApplication.service");
+const DriverProfileService = require("../services/driverProfile.service");
+const UrgentNegotiationRepository = require("../repositories/urgentNegotiation.repository");
+const UrgentNegotiationService = require("../services/urgentNegotiation.service");
+const UrgentNegotiationTimeoutWorker = require("../workers/urgentNegotiationTimeout.worker");
+const UrgentNegotiationSchedulerService = require("../services/urgentNegotiationScheduler.service");
 const SupportInquiryService = require("../services/supportInquiry.service");
 const AdminBookingNoteRepository = require("../repositories/adminBookingNote.repository");
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
@@ -213,6 +218,7 @@ container.register(
       c.get("driverRepository"),
       c.get("notificationRepository"),
       c.get("commissionSettlementService"),
+      c.get("urgentNegotiationRepository"),
     ),
 );
 container.register(
@@ -264,6 +270,7 @@ container.register(
       c.get("notificationRepository"),
       c.get("chatRepository"),
       c.get("commissionSettlementService"),
+      c.get("urgentNegotiationRepository"),
     ),
 );
 container.register(
@@ -481,6 +488,56 @@ container.register(
       c.get("driverApplicationRepository"),
       c.get("fileRepository"),
       c.get("userRepository"),
+    ),
+);
+container.register(
+  "driverProfileService",
+  (c) =>
+    new DriverProfileService(
+      database.pool,
+      c.get("driverRepository"),
+      c.get("vehicleRepository"),
+      c.get("fileRepository"),
+      c.get("driverApplicationRepository"),
+    ),
+);
+container.register(
+  "urgentNegotiationRepository",
+  () => new UrgentNegotiationRepository(database.pool),
+);
+container.register(
+  "urgentNegotiationService",
+  (c) =>
+    new UrgentNegotiationService(
+      database.pool,
+      c.get("urgentNegotiationRepository"),
+      c.get("driverRepository"),
+      c.get("driverJobService"),
+      c.get("bookingRepository"),
+      c.get("bookingService"),
+      c.get("chatService"),
+    ),
+);
+container.register(
+  "urgentNegotiationTimeoutWorker",
+  (c) =>
+    new UrgentNegotiationTimeoutWorker({
+      urgentNegotiationService: c.get("urgentNegotiationService"),
+      config: {
+        batchSize: config.external.urgentNegotiationTimeoutBatchSize,
+      },
+    }),
+);
+container.register(
+  "urgentNegotiationSchedulerService",
+  (c) =>
+    new UrgentNegotiationSchedulerService(
+      c.get("urgentNegotiationTimeoutWorker"),
+      {
+        enabled: config.external.urgentNegotiationTimeoutEnabled,
+        intervalMs: config.external.urgentNegotiationTimeoutIntervalMs,
+        batchSize: config.external.urgentNegotiationTimeoutBatchSize,
+      },
     ),
 );
 container.register(

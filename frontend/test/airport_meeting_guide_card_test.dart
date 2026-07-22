@@ -174,7 +174,7 @@ void main() {
     expect(warningText.style?.color, AppTokens.error);
   });
 
-  testWidgets('guest lookup pickup action sends expected chat message', (
+  testWidgets('guest lookup hides driver chat and pickup alert actions', (
     tester,
   ) async {
     final chatApi = _FakeBookingChatApi();
@@ -188,32 +188,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Tell driver I’m ready'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Tell driver I’m ready'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Send'));
-    await tester.pumpAndSettle();
 
-    expect(chatApi.sentGuestToken, 'guest-token');
-    expect(chatApi.sentBookingNumber, 'TX202607010001');
-    expect(chatApi.pickupAlertSendCount, 1);
-    expect(find.text('Booking chat'), findsWidgets);
-    expect(find.text('Type a message'), findsOneWidget);
-
-    Navigator.of(tester.element(find.text('Booking chat').first)).pop();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Message driver'));
-    await tester.pumpAndSettle();
-
-    expect(chatApi.pickupAlertSendCount, 1);
-    expect(find.text('Booking chat'), findsWidgets);
+    expect(find.text('Tell driver I’m ready'), findsNothing);
+    expect(find.text('Booking chat'), findsNothing);
+    expect(chatApi.pickupAlertSendCount, 0);
   });
 
-  testWidgets('guest lookup stays on guide when pickup alert fails', (
+  testWidgets('guest lookup does not expose removed pickup alert flow', (
     tester,
   ) async {
     final chatApi = _FakeBookingChatApi(failPickupAlert: true);
@@ -227,24 +208,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Tell driver I’m ready'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Tell driver I’m ready'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Send'));
-    await tester.pumpAndSettle();
 
+    expect(find.text('Tell driver I’m ready'), findsNothing);
     expect(find.text('Booking chat'), findsNothing);
-    expect(
-      find.text('Could not send the pickup notification. Please try again.'),
-      findsOneWidget,
-    );
+    expect(chatApi.pickupAlertSendCount, 0);
   });
 
-  testWidgets('lookup enables pickup alert in active pickup statuses', (
+  testWidgets('lookup keeps pickup alert disabled in active pickup statuses', (
     tester,
   ) async {
     for (final status in ['DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED']) {
@@ -261,11 +231,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('Tell driver I’m ready'),
-        findsOneWidget,
-        reason: status,
-      );
+      expect(find.text('Tell driver I’m ready'), findsNothing, reason: status);
     }
   });
 
@@ -325,7 +291,7 @@ void main() {
     expect(find.text('Boarding QR'), findsNothing);
   });
 
-  testWidgets('booking complete pickup action opens customer chat', (
+  testWidgets('booking complete hides removed customer chat', (
     tester,
   ) async {
     final chatApi = _FakeBookingChatApi();
@@ -349,21 +315,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Tell driver I’m ready'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Tell driver I’m ready'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Send'));
-    await tester.pumpAndSettle();
 
-    expect(chatApi.sentGuestToken, 'guest-token');
-    expect(chatApi.sentBookingNumber, 'TX202607010001');
-    expect(chatApi.pickupAlertSendCount, 1);
-    expect(find.text('Booking chat'), findsWidgets);
-    expect(find.text('Type a message'), findsOneWidget);
+    expect(find.text('Booking chat'), findsNothing);
+    expect(chatApi.pickupAlertSendCount, 0);
   });
 
   testWidgets(

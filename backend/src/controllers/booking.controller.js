@@ -11,6 +11,7 @@ const getBookingService = () => container.get('bookingService');
 const getBookingStatusService = () => container.get('bookingStatusService');
 const getGuestBookingLookupService = () => container.get('guestBookingLookupService');
 const getGuestVehiclePhotoService = () => container.get('guestVehiclePhotoService');
+const getUrgentNegotiationService = () => container.get('urgentNegotiationService');
 
 const recommendVehicle = asyncHandler(async (req, res) => {
   const data = await getVehicleRecommendationService().recommend(req.body);
@@ -29,6 +30,46 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
     req.user,
   );
   return success(res, data, 'Booking status updated');
+});
+
+const cancelBooking = asyncHandler(async (req, res) => {
+  const guestAccessToken =
+    req.body?.guestAccessToken || extractGuestAccessTokenFromHeader(req);
+  const data = await getBookingStatusService().cancelByCustomer(
+    req.params.bookingNumber,
+    {
+      ...req.body,
+      guestAccessToken,
+    },
+    req.user || null,
+  );
+  return success(res, data, 'Booking cancelled');
+});
+
+const submitUrgentDecision = asyncHandler(async (req, res) => {
+  const guestAccessToken =
+    req.body?.guestAccessToken || extractGuestAccessTokenFromHeader(req);
+  const data = await getUrgentNegotiationService().submitCustomerDecision(
+    req.params.bookingNumber,
+    req.body.decision,
+    {
+      authUser: req.user || null,
+      guestAccessToken,
+    },
+  );
+  return success(res, data, 'OK');
+});
+
+const getUrgentNegotiation = asyncHandler(async (req, res) => {
+  const guestAccessToken = extractGuestAccessTokenFromHeader(req);
+  const data = await getUrgentNegotiationService().getCustomerNegotiationStatus(
+    req.params.bookingNumber,
+    {
+      authUser: req.user || null,
+      guestAccessToken,
+    },
+  );
+  return success(res, data, 'OK');
 });
 
 const issueDropoffQr = asyncHandler(async (req, res) => {
@@ -68,6 +109,9 @@ module.exports = {
   recommendVehicle,
   createBooking,
   updateBookingStatus,
+  cancelBooking,
+  submitUrgentDecision,
+  getUrgentNegotiation,
   issueDropoffQr,
   issueBoardingQr,
   lookupGuestBooking,

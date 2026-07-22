@@ -9,12 +9,14 @@ class AppError extends Error {
     statusCode = HTTP_STATUS.BAD_REQUEST,
     errorCode = ERROR_CODES.VALIDATION_ERROR,
     errors = null,
+    details = null,
     isOperational = true,
   } = {}) {
     super(message);
     this.statusCode = statusCode;
     this.errorCode = errorCode;
     this.errors = errors;
+    this.details = details;
     this.isOperational = isOperational;
     Error.captureStackTrace(this, this.constructor);
   }

@@ -883,7 +883,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Driver A'), findsOneWidget);
     expect(find.text('AVAILABLE'), findsWidgets);
-    expect(find.text('SUV · LOCAL-SUV-D2 · Local Test SUV'), findsOneWidget);
+    expect(find.text('SUV'), findsWidgets);
+    expect(find.text('LOCAL-SUV-D2'), findsOneWidget);
     expect(find.text('2026-06-30T23:14:47.000Z'), findsOneWidget);
     expect(find.text('ASSIGNED'), findsOneWidget);
   });

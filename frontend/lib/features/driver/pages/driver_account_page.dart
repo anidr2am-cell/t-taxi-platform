@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/booking_provider.dart';
 import '../../../theme/app_tokens.dart';
+import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
@@ -11,6 +12,7 @@ import '../../notification/services/notification_device_registration_service.dar
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../models/driver_status.dart';
+import '../pages/driver_notifications_page.dart';
 import '../pages/driver_profile_page.dart';
 import '../pages/driver_support_page.dart';
 import '../services/driver_api_service.dart';
@@ -45,7 +47,9 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
   Future<Map<String, dynamic>>? _ratingFuture;
   Future<DriverStatus>? _statusFuture;
   Future<String?>? _nameFuture;
+  Future<Map<String, dynamic>>? _profileFuture;
   Future<int>? _pendingSettlementFuture;
+  Future<int>? _unreadNotificationsFuture;
   bool _enablingNotifications = false;
 
   @override
@@ -59,9 +63,11 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
       _ratingFuture = _api.getRatingSummary();
       _statusFuture = _api.getStatus();
       _nameFuture = _api.getDriverDisplayName();
+      _profileFuture = _api.getProfile();
       _pendingSettlementFuture = _settlementApi.listSettlements().then(
         DriverUx.countPendingSettlements,
       );
+      _unreadNotificationsFuture = _api.getUnreadNotificationCount();
     });
   }
 
@@ -104,14 +110,18 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
     if (!mounted) return;
     setState(() => _enablingNotifications = false);
     final message = switch (result.status) {
-      NotificationDeviceRegistrationStatus.registered =>
-        context.l10n.t('driver_notification_enabled'),
-      NotificationDeviceRegistrationStatus.permissionDenied =>
-        context.l10n.t('driver_notification_denied'),
-      NotificationDeviceRegistrationStatus.unsupported =>
-        context.l10n.t('driver_notification_unsupported'),
-      NotificationDeviceRegistrationStatus.configMissing =>
-        context.l10n.t('driver_notification_unconfigured'),
+      NotificationDeviceRegistrationStatus.registered => context.l10n.t(
+        'driver_notification_enabled',
+      ),
+      NotificationDeviceRegistrationStatus.permissionDenied => context.l10n.t(
+        'driver_notification_denied',
+      ),
+      NotificationDeviceRegistrationStatus.unsupported => context.l10n.t(
+        'driver_notification_unsupported',
+      ),
+      NotificationDeviceRegistrationStatus.configMissing => context.l10n.t(
+        'driver_notification_unconfigured',
+      ),
       NotificationDeviceRegistrationStatus.failed =>
         result.message ?? context.l10n.t('driver_notification_failed'),
     };
@@ -173,6 +183,23 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
             ratingFuture: _ratingFuture,
           ),
           const SizedBox(height: AppTokens.spaceMd),
+          _AccountVehicleSection(profileFuture: _profileFuture, api: _api),
+          const SizedBox(height: AppTokens.spaceMd),
+          _AccountMenuTile(
+            icon: Icons.notifications_outlined,
+            title: l10n.t('driver_account_notifications'),
+            badgeFuture: _unreadNotificationsFuture,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverNotificationsPage(
+                  api: _api,
+                  deviceRegistrationService: _deviceRegistration,
+                  showAppBar: true,
+                ),
+              ),
+            ).then((_) => _load()),
+          ),
           _AccountMenuTile(
             icon: Icons.receipt_long_outlined,
             title: l10n.t('driver_account_settlement'),
@@ -345,6 +372,147 @@ class _AccountHeader extends StatelessWidget {
     }
     return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
         .toUpperCase();
+  }
+}
+
+class _AccountVehicleSection extends StatelessWidget {
+  const _AccountVehicleSection({
+    required this.profileFuture,
+    required this.api,
+  });
+
+  final Future<Map<String, dynamic>>? profileFuture;
+  final DriverApiService api;
+
+  String _dash(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? '-' : trimmed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return FutureBuilder<Map<String, dynamic>>(
+      future: profileFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return AppUi.surfaceCard(
+            child: Text(l10n.t('driver_rating_loading')),
+          );
+        }
+        if (snapshot.hasError) {
+          return AppUi.surfaceCard(
+            child: Text(
+              userFacingError(
+                snapshot.error!,
+                fallback: l10n.t('driver_load_failed'),
+              ),
+              style: const TextStyle(color: AppTokens.error),
+            ),
+          );
+        }
+        final profile = snapshot.data ?? {};
+        final vehicle = profile['vehicle'] is Map
+            ? Map<String, dynamic>.from(profile['vehicle'] as Map)
+            : null;
+        if (vehicle == null) {
+          return AppUi.surfaceCard(
+            child: Text(
+              l10n.t('driver_account_vehicle_empty'),
+              style: const TextStyle(color: AppTokens.textSecondary),
+            ),
+          );
+        }
+        final photoUrl = api.resolveProfileAssetUrl(
+          vehicle['photoUrl'] as String?,
+        );
+        return AppUi.surfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.t('driver_account_vehicle_title'),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              if (photoUrl.isNotEmpty)
+                ClipRRect(
+                  borderRadius: AppTokens.borderRadiusSm,
+                  child: Image.network(
+                    photoUrl,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              if (photoUrl.isNotEmpty)
+                const SizedBox(height: AppTokens.spaceSm),
+              _VehicleInfoRow(
+                label: l10n.t('airport_meeting_vehicle_type'),
+                value: _dash(
+                  vehicle['typeName'] as String? ??
+                      vehicle['typeCode'] as String?,
+                ),
+              ),
+              _VehicleInfoRow(
+                label: l10n.t('driver_account_vehicle_model'),
+                value: _dash(vehicle['modelName'] as String?),
+              ),
+              _VehicleInfoRow(
+                label: l10n.t('airport_meeting_vehicle_plate'),
+                value: _dash(vehicle['plateNumber'] as String?),
+              ),
+              _VehicleInfoRow(
+                label: l10n.t('driver_account_vehicle_color'),
+                value: _dash(vehicle['color'] as String?),
+              ),
+              _VehicleInfoRow(
+                label: l10n.t('driver_account_vehicle_year'),
+                value: vehicle['year'] == null ? '-' : '${vehicle['year']}',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _VehicleInfoRow extends StatelessWidget {
+  const _VehicleInfoRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

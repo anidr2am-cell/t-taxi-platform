@@ -9,7 +9,15 @@ class DriverCallSocketService {
   DriverCallPayloadHandler? onNewCall;
   DriverCallPayloadHandler? onClaimed;
   DriverCallPayloadHandler? onConfirmed;
+  DriverCallPayloadHandler? onAssignmentReleased;
   DriverCallPayloadHandler? onError;
+  DriverCallPayloadHandler? onUrgentCallNew;
+  DriverCallPayloadHandler? onUrgentCallLocked;
+  DriverCallPayloadHandler? onUrgentCallEtaRequired;
+  DriverCallPayloadHandler? onUrgentCallRoundEnded;
+  DriverCallPayloadHandler? onUrgentCallConfirmed;
+  DriverCallPayloadHandler? onUrgentCallCancelled;
+  DriverCallPayloadHandler? onUrgentCallUnlocked;
   VoidCallback? onReconnect;
 
   Future<void> connect({required String accessToken}) async {
@@ -41,8 +49,26 @@ class DriverCallSocketService {
     _socket!.on('driver:call:confirmed', (data) {
       if (data is Map) onConfirmed?.call(Map<String, dynamic>.from(data));
     });
+    _socket!.on('driver:assignment:released', (data) {
+      if (data is Map) {
+        onAssignmentReleased?.call(Map<String, dynamic>.from(data));
+      }
+    });
     _socket!.on('driver:calls:error', (data) {
       if (data is Map) onError?.call(Map<String, dynamic>.from(data));
+    });
+    _listenUrgent('driver:urgent-call:new', onUrgentCallNew);
+    _listenUrgent('driver:urgent-call:locked', onUrgentCallLocked);
+    _listenUrgent('driver:urgent-call:eta-required', onUrgentCallEtaRequired);
+    _listenUrgent('driver:urgent-call:round-ended', onUrgentCallRoundEnded);
+    _listenUrgent('driver:urgent-call:confirmed', onUrgentCallConfirmed);
+    _listenUrgent('driver:urgent-call:cancelled', onUrgentCallCancelled);
+    _listenUrgent('driver:urgent-call:unlocked', onUrgentCallUnlocked);
+  }
+
+  void _listenUrgent(String event, DriverCallPayloadHandler? handler) {
+    _socket!.on(event, (data) {
+      if (data is Map) handler?.call(Map<String, dynamic>.from(data));
     });
   }
 

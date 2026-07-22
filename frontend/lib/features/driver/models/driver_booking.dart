@@ -45,6 +45,10 @@ class DriverBooking {
     this.paymentMethodLabel,
     this.qr,
     this.allowedActions = const [],
+    this.releaseAssignmentAvailable = false,
+    this.releaseAssignmentEmergencyOnly = false,
+    this.assignmentReleaseDeadline,
+    this.assignmentReleaseBlockedReason,
   });
 
   final String bookingNumber;
@@ -92,6 +96,10 @@ class DriverBooking {
   final String? paymentMethodLabel;
   final Map<String, dynamic>? qr;
   final List<String> allowedActions;
+  final bool releaseAssignmentAvailable;
+  final bool releaseAssignmentEmergencyOnly;
+  final String? assignmentReleaseDeadline;
+  final String? assignmentReleaseBlockedReason;
 
   bool get hasRouteCoordinates =>
       originLatitude != null &&
@@ -109,6 +117,9 @@ class DriverBooking {
     );
     final vehicleType = Map<String, dynamic>.from(
       json['vehicleType'] as Map? ?? {},
+    );
+    final capabilities = Map<String, dynamic>.from(
+      json['capabilities'] as Map? ?? {},
     );
     return DriverBooking(
       bookingNumber: json['bookingNumber'] as String? ?? '',
@@ -180,6 +191,15 @@ class DriverBooking {
       allowedActions: (json['allowedActions'] as List? ?? [])
           .map((item) => item.toString())
           .toList(),
+      releaseAssignmentAvailable:
+          capabilities['releaseAssignmentAvailable'] == true ||
+          (json['allowedActions'] as List? ?? []).contains('RELEASE_ASSIGNMENT'),
+      releaseAssignmentEmergencyOnly:
+          capabilities['releaseAssignmentEmergencyOnly'] == true,
+      assignmentReleaseDeadline:
+          capabilities['assignmentReleaseDeadline'] as String?,
+      assignmentReleaseBlockedReason:
+          capabilities['assignmentReleaseBlockedReason'] as String?,
     );
   }
 }
@@ -275,6 +295,9 @@ class DriverOpenCall {
     this.driverExpectedIncomeAmount,
     this.driverExpectedIncomeCurrency,
     this.luggage,
+    this.isUrgentRequest = false,
+    this.negotiationId,
+    this.minRequiredEtaMinutes,
   });
 
   final String bookingNumber;
@@ -296,6 +319,41 @@ class DriverOpenCall {
   final double? driverExpectedIncomeAmount;
   final String? driverExpectedIncomeCurrency;
   final Map<String, dynamic>? luggage;
+  final bool isUrgentRequest;
+  final int? negotiationId;
+  final int? minRequiredEtaMinutes;
+
+  DriverOpenCall copyWith({
+    bool? isUrgentRequest,
+    int? negotiationId,
+    int? minRequiredEtaMinutes,
+  }) {
+    return DriverOpenCall(
+      bookingNumber: bookingNumber,
+      status: status,
+      pickupDate: pickupDate,
+      pickupTime: pickupTime,
+      origin: origin,
+      destination: destination,
+      serviceTypeName: serviceTypeName,
+      vehicleTypeName: vehicleTypeName,
+      amount: amount,
+      currency: currency,
+      passengerCount: passengerCount,
+      customerPaymentAmount: customerPaymentAmount,
+      customerPaymentCurrency: customerPaymentCurrency,
+      customerPaymentMethod: customerPaymentMethod,
+      companyCommissionAmount: companyCommissionAmount,
+      companyCommissionCurrency: companyCommissionCurrency,
+      driverExpectedIncomeAmount: driverExpectedIncomeAmount,
+      driverExpectedIncomeCurrency: driverExpectedIncomeCurrency,
+      luggage: luggage,
+      isUrgentRequest: isUrgentRequest ?? this.isUrgentRequest,
+      negotiationId: negotiationId ?? this.negotiationId,
+      minRequiredEtaMinutes:
+          minRequiredEtaMinutes ?? this.minRequiredEtaMinutes,
+    );
+  }
 
   factory DriverOpenCall.fromJson(Map<String, dynamic> json) {
     final serviceType = Map<String, dynamic>.from(
@@ -336,6 +394,9 @@ class DriverOpenCall {
       luggage: json['luggage'] == null
           ? null
           : Map<String, dynamic>.from(json['luggage'] as Map),
+      isUrgentRequest: json['isUrgentRequest'] == true,
+      negotiationId: (json['negotiationId'] as num?)?.toInt(),
+      minRequiredEtaMinutes: (json['minRequiredEtaMinutes'] as num?)?.toInt(),
     );
   }
 }

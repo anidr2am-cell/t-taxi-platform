@@ -458,22 +458,24 @@ test('MVP lifecycle — booking through review with commission, notifications, a
   await h.driverTripFlow.markArrived(DRIVER_USER_ID, BOOKING_NUMBER);
   assert.equal(state.status, BOOKING_STATUS.DRIVER_ARRIVED);
 
-  const guestRoom = await h.chat.getRoom(BOOKING_NUMBER, null, GUEST_TOKEN);
-  assert.ok(guestRoom.roomId);
+  await assert.rejects(
+    () => h.chat.getRoom(BOOKING_NUMBER, null, GUEST_TOKEN),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
+  );
 
-  const sent = await h.chat.sendMessage(BOOKING_NUMBER, null, GUEST_TOKEN, {
-    text: 'Thanks driver',
-    clientMessageId: 'mvp-chat-msg-1',
-  });
-  assert.equal(sent.message.text, 'Thanks driver');
-  assert.equal(state.chatMessages.length, 1);
-
-  const duplicate = await h.chat.sendMessage(BOOKING_NUMBER, null, GUEST_TOKEN, {
-    text: 'Thanks driver',
-    clientMessageId: 'mvp-chat-msg-1',
-  });
-  assert.equal(state.chatMessages.length, 1);
-  assert.equal(duplicate.message.messageId, sent.message.messageId);
+  await assert.rejects(
+    () =>
+      h.chat.sendMessage(BOOKING_NUMBER, null, GUEST_TOKEN, {
+        text: 'Thanks driver',
+        clientMessageId: 'mvp-chat-msg-1',
+      }),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
+  );
+  assert.equal(state.chatMessages.length, 0);
 
   await h.driverQr.scanBoarding(
     DRIVER_USER_ID,
@@ -547,8 +549,12 @@ test('MVP lifecycle — booking through review with commission, notifications, a
   const summary = await h.review.getDriverRatingSummary(DRIVER_USER_ID);
   assert.equal(summary.reviewCount, 1);
 
-  const readOnlyRoom = await h.chat.getRoom(BOOKING_NUMBER, null, GUEST_TOKEN);
-  assert.equal(readOnlyRoom.sendingAllowed, false);
+  await assert.rejects(
+    () => h.chat.getRoom(BOOKING_NUMBER, null, GUEST_TOKEN),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
+  );
 });
 
 test('MVP failure paths — wrong driver, guest, reassignment, notification isolation', async () => {
@@ -571,7 +577,17 @@ test('MVP failure paths — wrong driver, guest, reassignment, notification isol
   );
 
   h.state.activeDriverUserId = DRIVER_USER_ID;
-  await h.chat.getRoom(BOOKING_NUMBER, { id: DRIVER_USER_ID, role: 'DRIVER' }, null);
+  await assert.rejects(
+    () =>
+      h.chat.getRoom(
+        BOOKING_NUMBER,
+        { id: DRIVER_USER_ID, role: 'DRIVER' },
+        null,
+      ),
+    (err) =>
+      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
+      err.statusCode === 410,
+  );
 
   h.state.activeDriverUserId = OLD_DRIVER_USER_ID;
   await assert.rejects(

@@ -10,6 +10,7 @@ import 'package:frontend/features/driver/pages/driver_account_page.dart';
 import 'package:frontend/features/driver/pages/driver_today_page.dart';
 import 'package:frontend/features/driver_settlement/pages/driver_settlement_list_page.dart';
 import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
+import 'package:frontend/features/driver/pages/driver_jobs_page.dart';
 import 'package:frontend/features/driver/pages/driver_login_page.dart';
 import 'package:frontend/features/driver/pages/driver_qr_scan_page.dart';
 import 'package:frontend/features/driver/pages/driver_shell_page.dart';
@@ -48,10 +49,11 @@ void main() {
       expect(grouped[DriverJobGroup.completed]!.length, 1);
     });
 
-    test('canMessageCustomer requires active booking status', () {
-      expect(DriverUx.canMessageCustomer('DRIVER_ASSIGNED'), true);
-      expect(DriverUx.canMessageCustomer('PICKED_UP'), true);
-      expect(DriverUx.canMessageCustomer('COMPLETED'), false);
+    test('canContactCustomer requires active booking status', () {
+      expect(DriverUx.canContactCustomer('DRIVER_ASSIGNED'), true);
+      expect(DriverUx.canContactCustomer('PICKED_UP'), true);
+      expect(DriverUx.canContactCustomer('COMPLETED'), false);
+      expect(DriverUx.canContactCustomer('CONFIRMED'), false);
     });
     test('selectCurrentTrip prefers picked up over assigned', () {
       final items = [
@@ -159,7 +161,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.textContaining('오늘 예정된 운행이 없습니다'), findsOneWidget);
+    expect(find.textContaining('예정된 운행이 없습니다'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -329,11 +331,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('오늘'), findsWidgets);
-    expect(find.textContaining('운행 기록'), findsOneWidget);
-    expect(find.textContaining('내 정보'), findsOneWidget);
-    expect(find.byIcon(Icons.receipt_long_outlined), findsNothing);
-    expect(find.byIcon(Icons.support_agent_outlined), findsNothing);
+    expect(find.textContaining('หน้าหลัก'), findsWidgets);
+    expect(find.textContaining('งาน'), findsWidgets);
+    expect(find.textContaining('การเงิน'), findsOneWidget);
+    expect(find.textContaining('บัญชี'), findsOneWidget);
+    expect(find.textContaining('운행 기록'), findsNothing);
   });
 
   testWidgets('today page shows current trip CTA without status mutation', (
@@ -645,10 +647,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('오늘 예정된 운행이 없습니다'), findsOneWidget);
+    expect(find.textContaining('예정된 운행이 없습니다'), findsOneWidget);
   });
 
-  testWidgets('today page shows waiting open calls and claim CTA', (
+  testWidgets('today page shows new calls prompt without inline claim cards', (
     tester,
   ) async {
     final api = _FakeJobsApi(
@@ -659,15 +661,9 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Waiting calls'), findsOneWidget);
-    expect(find.textContaining('BKK Airport'), findsOneWidget);
-    expect(find.textContaining('Pattaya Hotel'), findsOneWidget);
-    expect(find.textContaining('기사 예상 수입'), findsOneWidget);
-    expect(find.textContaining('THB 2,200'), findsOneWidget);
-    expect(find.textContaining('고객 결제 총액'), findsOneWidget);
-    expect(find.textContaining('THB 2,500'), findsOneWidget);
-    expect(find.textContaining('Claim call'), findsOneWidget);
-    expect(find.textContaining('+66'), findsNothing);
+    expect(find.textContaining('새 콜 보기 / ดูงานใหม่'), findsOneWidget);
+    expect(find.textContaining('Claim call'), findsNothing);
+    expect(find.textContaining('Waiting calls'), findsNothing);
   });
 
   testWidgets('today page shows settlement blocked new-call guidance', (
@@ -686,7 +682,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('ยังไม่สามารถรับงานใหม่ได้'), findsOneWidget);
+    expect(find.textContaining('ยังไม่สามารถรับงานใหม่ได้'), findsWidgets);
+    expect(find.textContaining('ไปที่หน้าชำระเงิน'), findsOneWidget);
     expect(find.textContaining('Claim call'), findsNothing);
   });
 
@@ -715,31 +712,50 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.textContaining('ยังไม่สามารถรับงานใหม่ได้'), findsOneWidget);
+    expect(find.textContaining('ยังไม่สามารถรับงานใหม่ได้'), findsWidgets);
   });
 
-  testWidgets('today page claim open call success refreshes jobs', (
+  testWidgets('jobs page claim open call success refreshes jobs', (
     tester,
   ) async {
+    _useTallViewport(tester);
     final api = _FakeJobsApi(
       initialToken: 'tok',
       online: true,
       openCalls: [_openCall(number: 'TX202607130002')],
     );
-    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.textContaining('Claim call'));
+    final claimButton = find.widgetWithText(FilledButton, '이 콜 수락 / รับงานนี้');
+    await tester.scrollUntilVisible(
+      claimButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(claimButton);
+    await tester.tap(claimButton);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, '이 콜 수락 / รับงานนี้'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(api.claimCalls, 1);
-    expect(api.todayCalls, greaterThan(1));
-    expect(find.textContaining('Assignment confirmed'), findsOneWidget);
+    expect(find.byType(DriverBookingDetailPage), findsOneWidget);
   });
 
-  testWidgets('today page claim conflict shows already claimed message', (
+  testWidgets('jobs page claim conflict shows already claimed message', (
     tester,
   ) async {
+    _useTallViewport(tester);
     final api = _FakeJobsApi(
       initialToken: 'tok',
       online: true,
@@ -750,17 +766,108 @@ void main() {
       ),
       openCalls: [_openCall(number: 'TX202607130003')],
     );
-    await tester.pumpWidget(MaterialApp(home: DriverTodayPage(api: api)));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.textContaining('Claim call'));
+    final claimButton = find.widgetWithText(FilledButton, '이 콜 수락 / รับงานนี้');
+    await tester.scrollUntilVisible(
+      claimButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(claimButton);
+    await tester.tap(claimButton);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, '이 콜 수락 / รับงานนี้'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(api.claimCalls, 1);
+    expect(find.textContaining('다른 기사가 먼저 수락했습니다'), findsOneWidget);
+  });
+
+  testWidgets('jobs page urgent accept opens ETA dialog and submits', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      openCalls: [_urgentOpenCall()],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final acceptButton = find.widgetWithText(FilledButton, '수락 / รับงาน');
+    await tester.scrollUntilVisible(
+      acceptButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(acceptButton);
+    await tester.tap(acceptButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(api.lockCalls, 1);
+    expect(find.byType(AlertDialog), findsOneWidget);
     expect(
-      find.textContaining('Another driver claimed it first'),
+      find.textContaining('도착 예상 시간을 입력하시면'),
       findsOneWidget,
     );
+
+    await tester.enterText(find.byType(TextFormField), '20');
+    await tester.tap(find.widgetWithText(TextButton, '제출 / ส่ง'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.textContaining('고객 확인 대기 중'), findsOneWidget);
+    expect(find.textContaining('02:00'), findsNothing);
+  });
+
+  testWidgets('jobs page urgent lock conflict removes card', (tester) async {
+    _useTallViewport(tester);
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      lockError: const DriverApiException(
+        'Already locked',
+        statusCode: 409,
+        errorCode: 'URGENT_ALREADY_LOCKED',
+      ),
+      openCalls: [_urgentOpenCall(number: 'TX202607130100')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final acceptButton = find.widgetWithText(FilledButton, '수락 / รับงาน');
+    await tester.scrollUntilVisible(
+      acceptButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(acceptButton);
+    await tester.pumpAndSettle();
+
+    expect(api.lockCalls, 1);
+    expect(find.textContaining('다른 기사가 이미 수락한 콜입니다'), findsOneWidget);
+    expect(find.text('TX202607130100'), findsNothing);
   });
 
   testWidgets('today layout has no horizontal overflow at 360px', (
@@ -796,7 +903,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('message button opens booking chat room', (tester) async {
+  testWidgets('booking detail hides removed customer message action', (
+    tester,
+  ) async {
     _useTallViewport(tester);
     await tester.pumpWidget(
       MaterialApp(
@@ -809,66 +918,17 @@ void main() {
               phone: '+66123456789',
             ),
           ),
-          chatPageBuilder: (bookingNumber) =>
-              Scaffold(body: Text('chat:$bookingNumber')),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-      120,
-      scrollable: find.byType(Scrollable),
-    );
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
-    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
-
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('chat:TX202607010001'), findsOneWidget);
-  });
-
-  testWidgets('message button does not require customer phone', (tester) async {
-    _useTallViewport(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: DriverBookingDetailPage(
-          bookingNumber: 'TX202607010001',
-          api: _FakeDetailApi(
-            detail: _booking(
-              status: 'DRIVER_ASSIGNED',
-              actions: ['VIEW_DETAILS'],
-              phone: '',
-            ),
-          ),
-          chatPageBuilder: (bookingNumber) =>
-              Scaffold(body: Text('chat:$bookingNumber')),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-      120,
-      scrollable: find.byType(Scrollable),
-    );
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
-    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
-
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('chat:TX202607010001'), findsOneWidget);
+    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsNothing);
   });
 
   testWidgets('cancelled booking is read-only without primary action', (
     tester,
   ) async {
+    _useTallViewport(tester);
     await tester.pumpWidget(
       MaterialApp(
         home: DriverBookingDetailPage(
@@ -881,11 +941,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ'), findsNothing);
-    expect(find.text('Cancelled'), findsWidgets);
+    expect(find.text('픽업지로 출발 / ออกเดินทางไปรับลูกค้า'), findsNothing);
+    expect(find.text('Cancelled'), findsOneWidget);
   });
 
   testWidgets('stale status error refreshes booking', (tester) async {
+    _useTallViewport(tester);
     final api = _FakeDetailApi(
       detail: _booking(status: 'ON_ROUTE', actions: ['MARK_ARRIVED']),
       arrivedError: const DriverApiException(
@@ -908,7 +969,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '도착 / ถึงแล้ว'));
@@ -916,7 +977,7 @@ void main() {
 
     expect(find.textContaining('current trip stage'), findsOneWidget);
     expect(
-      find.widgetWithText(FilledButton, '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว'),
+      find.widgetWithText(FilledButton, '고객 탑승 확인 / รับลูกค้าขึ้นรถแล้ว'),
       findsOneWidget,
     );
   });
@@ -974,6 +1035,13 @@ DriverOpenCall _openCall({String number = 'TX202607130001'}) {
   );
 }
 
+DriverOpenCall _urgentOpenCall({String number = 'TX202607130099'}) {
+  return _openCall(number: number).copyWith(
+    isUrgentRequest: true,
+    negotiationId: 100,
+  );
+}
+
 void _useTallViewport(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 1400);
   tester.view.devicePixelRatio = 1.0;
@@ -1006,6 +1074,20 @@ class _FakeLoginApi extends DriverApiService {
   };
 
   @override
+  Future<Map<String, dynamic>> getRatingSummary() async => {
+    'averageRating': null,
+    'reviewCount': 0,
+  };
+
+  @override
+  Future<Map<String, dynamic>> getProfile() async => {
+    'name': 'Somchai',
+    'phone': '+66812345678',
+    'email': 'driver@example.com',
+    'vehicle': null,
+  };
+
+  @override
   Future<DriverJobsToday> getTodayBookings() async =>
       const DriverJobsToday(date: '2026-07-01', items: []);
 
@@ -1031,6 +1113,8 @@ class _FakeJobsApi extends DriverApiService {
     this.openCallBlockedMessage,
     this.error,
     this.claimError,
+    this.lockError,
+    this.etaError,
     this.hasActiveJob = false,
     this.online = false,
     String? initialToken,
@@ -1042,11 +1126,14 @@ class _FakeJobsApi extends DriverApiService {
   final String? openCallBlockedMessage;
   final Object? error;
   final Object? claimError;
+  final Object? lockError;
+  final Object? etaError;
   final bool hasActiveJob;
   final bool online;
   final String? _token;
   int todayCalls = 0;
   int claimCalls = 0;
+  int lockCalls = 0;
   int startRouteCalls = 0;
   int markArrivedCalls = 0;
   int boardingScanCalls = 0;
@@ -1065,6 +1152,27 @@ class _FakeJobsApi extends DriverApiService {
   @override
   Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async => {
     'items': [],
+  };
+
+  @override
+  Future<Map<String, dynamic>> getRatingSummary() async => {
+    'averageRating': null,
+    'reviewCount': 0,
+  };
+
+  @override
+  Future<Map<String, dynamic>> getProfile() async => {
+    'name': 'Somchai',
+    'phone': '+66812345678',
+    'email': 'driver@example.com',
+    'vehicle': {
+      'typeCode': 'SUV',
+      'typeName': 'SUV',
+      'modelName': 'Camry',
+      'plateNumber': 'ABC-1234',
+      'color': 'White',
+      'year': 2022,
+    },
   };
 
   @override
@@ -1088,6 +1196,33 @@ class _FakeJobsApi extends DriverApiService {
     claimCalls += 1;
     if (claimError != null) throw claimError!;
     return _booking(status: 'DRIVER_ASSIGNED', number: bookingNumber);
+  }
+
+  @override
+  Future<Map<String, dynamic>> lockUrgentCall(String bookingNumber) async {
+    lockCalls += 1;
+    if (lockError != null) throw lockError!;
+    return {
+      'bookingNumber': bookingNumber,
+      'negotiationId': 100,
+      'attemptNumber': 1,
+      'status': 'LOCKED',
+      'lockExpiresAt': '2099-07-23 01:30:00.000',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> submitUrgentCallEta(
+    String bookingNumber,
+    int etaMinutes,
+  ) async {
+    if (etaError != null) throw etaError!;
+    return {
+      'bookingNumber': bookingNumber,
+      'etaMinutes': etaMinutes,
+      'status': 'AWAITING_CUSTOMER',
+      'customerDecisionExpiresAt': '2099-07-23 01:32:00.000',
+    };
   }
 
   @override

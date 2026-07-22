@@ -42,7 +42,7 @@ const optionalCountryField = Joi.string()
   .custom((value) => normalizeOptionalCountry(value))
   .default(null);
 
-function validateScheduledPickupAt(value, helpers) {
+function validateStandardScheduledPickupAt(value, helpers) {
   const timestamp = Date.parse(value);
   if (Number.isNaN(timestamp)) {
     return helpers.error('date.format');
@@ -51,6 +51,24 @@ function validateScheduledPickupAt(value, helpers) {
   const minimum = Date.now() + (2 * 60 * 60 * 1000);
   if (timestamp < minimum) {
     return helpers.message('scheduledPickupAt must be at least 2 hours from now');
+  }
+
+  return value;
+}
+
+function validateUrgentScheduledPickupAt(value, helpers) {
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return helpers.error('date.format');
+  }
+
+  const now = Date.now();
+  const maximum = now + (2 * 60 * 60 * 1000);
+  if (timestamp < now) {
+    return helpers.message('scheduledPickupAt must be in the future');
+  }
+  if (timestamp >= maximum) {
+    return helpers.message('scheduledPickupAt must be within 2 hours for urgent booking');
   }
 
   return value;
@@ -75,10 +93,15 @@ const placeSchema = Joi.object({
 });
 
 const createBookingSchema = Joi.object({
+  bookingMode: Joi.string().valid('STANDARD', 'URGENT').default('STANDARD'),
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).required(),
   vehicleTypeCode: Joi.string().valid(...Object.values(VEHICLE_TYPES)).required(),
   vehicleCount: Joi.number().integer().min(1).max(5).default(1),
-  scheduledPickupAt: Joi.string().isoDate().required().custom(validateScheduledPickupAt),
+  scheduledPickupAt: Joi.string().isoDate().required().when('bookingMode', {
+    is: 'URGENT',
+    then: Joi.custom(validateUrgentScheduledPickupAt),
+    otherwise: Joi.custom(validateStandardScheduledPickupAt),
+  }),
   origin: placeSchema.required(),
   destination: placeSchema.required(),
   originAirportIata: Joi.string().length(3).uppercase().allow(null),
@@ -135,6 +158,12 @@ const updateBookingStatusSchema = Joi.object({
   memo: unicodeText({ max: 500, allowEmpty: true }).default(null),
 });
 
+const cancelBookingSchema = Joi.object({
+  guestAccessToken: Joi.string().trim().min(1).max(512).optional(),
+  reason: unicodeText({ max: 100, allowEmpty: true }).default(null),
+  memo: unicodeText({ max: 500, allowEmpty: true }).default(null),
+});
+
 const guestBookingLookupSchema = Joi.object({
   bookingNumber: Joi.string().trim().uppercase().pattern(/^TX\d{12}$/).required(),
   phone: Joi.string().trim().min(4).max(30).required(),
@@ -144,6 +173,7 @@ module.exports = {
   vehicleRecommendSchema,
   createBookingSchema,
   updateBookingStatusSchema,
+  cancelBookingSchema,
   guestBookingLookupSchema,
   normalizeOptionalEmail,
   normalizeOptionalCountry,

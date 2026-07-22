@@ -1,0 +1,5 @@
+module.exports = {
+  DEFAULT_INTERVAL_MS: 30000,
+  DEFAULT_BATCH_SIZE: 20,
+  MAX_ATTEMPTS: 3,
+};

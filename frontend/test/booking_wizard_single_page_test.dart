@@ -121,20 +121,16 @@ void main() {
       );
     });
 
-    testWidgets('confirm button disabled until all required fields complete', (
+    testWidgets('review button hidden until all required fields complete', (
       tester,
     ) async {
       await pumpWizard(tester);
 
-      final confirmButton = find.widgetWithText(
-        ElevatedButton,
-        'Review booking',
-      );
-      expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
+      expect(find.text('Review booking'), findsNothing);
 
       await tester.tap(find.text('Airport Pickup'));
       await tester.pumpAndSettle();
-      expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
+      expect(find.text('Review booking'), findsNothing);
     });
 
     testWidgets('shows validation hints for incomplete sections', (
@@ -145,11 +141,7 @@ void main() {
       await tester.tap(find.text('City Transfer'));
       await tester.pumpAndSettle();
 
-      final confirmButton = find.widgetWithText(
-        ElevatedButton,
-        'Review booking',
-      );
-      expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
+      expect(find.text('Review booking'), findsNothing);
       expect(find.text('Please select an origin.'), findsOneWidget);
     });
 

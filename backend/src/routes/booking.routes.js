@@ -18,6 +18,7 @@ const {
   vehicleRecommendSchema,
   createBookingSchema,
   updateBookingStatusSchema,
+  cancelBookingSchema,
 } = require("../validators/booking.validator");
 const { pricingCalculateSchema } = require("../validators/pricing.validator");
 const {
@@ -29,6 +30,9 @@ const {
   sendChatMessageSchema,
   markChatReadSchema,
 } = require("../validators/chat.validator");
+const {
+  submitUrgentDecisionSchema,
+} = require("../validators/urgentNegotiation.validator");
 
 const router = express.Router();
 
@@ -62,6 +66,26 @@ router.patch(
   ]),
   validate({ body: updateBookingStatusSchema }),
   bookingController.updateBookingStatus,
+);
+
+router.post(
+  "/:bookingNumber/cancel",
+  optionalAuthMiddleware,
+  validate({ body: cancelBookingSchema }),
+  bookingController.cancelBooking,
+);
+
+router.post(
+  "/:bookingNumber/urgent-decision",
+  optionalAuthMiddleware,
+  validate({ body: submitUrgentDecisionSchema }),
+  bookingController.submitUrgentDecision,
+);
+
+router.get(
+  "/:bookingNumber/urgent-negotiation",
+  optionalAuthMiddleware,
+  bookingController.getUrgentNegotiation,
 );
 
 // Legacy QR issue routes — compatibility only; customer UI must not call these.
