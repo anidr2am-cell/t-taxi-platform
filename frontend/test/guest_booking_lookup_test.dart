@@ -20,6 +20,21 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets('initialResult shows booking detail immediately', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(
+          initialResult: _result().copyWith(status: 'DRIVER_ASSIGNED'),
+          enableCustomerTools: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('TX202607010001'), findsOneWidget);
+    expect(find.text('Driver A'), findsWidgets);
+  });
+
   test(
     'lookup posts booking number and phone then persists guest access',
     () async {
