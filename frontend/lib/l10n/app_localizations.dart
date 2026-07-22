@@ -5020,6 +5020,35 @@ class AppLocalizations {
     'driver_confirm_accept_booking_yes': '운행 확정 / ยืนยัน',
     'driver_accept_booking_processing': '운행을 확정하고 있습니다\n(กำลังยืนยันงาน)',
     'driver_success_accept_booking': '운행이 확정되었습니다\n(ยืนยันงานแล้ว)',
+    'driver_release_assignment': '배정 반납 / คืนงานที่ได้รับมอบหมาย',
+    'driver_release_assignment_title':
+        '이 예약의 배정을 반납하시겠습니까?\n(ต้องการคืนงานที่ได้รับมอบหมายสำหรับการจองนี้หรือไม่)',
+    'driver_release_assignment_message':
+        '고객 예약은 유지되며 다른 기사를 다시 배정합니다.\n(การจองของลูกค้ายังคงอยู่ และจะมอบหมายให้คนขับท่านอื่น)',
+    'driver_release_assignment_cancel': '유지 / คงไว้',
+    'driver_release_assignment_confirm': '배정 반납 / คืนงาน',
+    'driver_release_assignment_success':
+        '배정이 해제되었습니다.\n(คืนงานเรียบร้อยแล้ว)',
+    'driver_release_assignment_failed':
+        '배정 반납에 실패했습니다. 다시 시도해 주세요.\n(ไม่สามารถคืนงานได้ กรุณาลองอีกครั้ง)',
+    'driver_release_assignment_blocked':
+        '현재 상태에서는 배정을 반납할 수 없습니다.\n(ไม่สามารถคืนงานได้ในสถานะปัจจุบัน)',
+    'driver_release_assignment_emergency_hint':
+        '픽업까지 2시간 이내에는 일반 배정 반납이 제한됩니다. 긴급 상황인 경우에만 배정을 반납할 수 있습니다.\n(ภายใน 2 ชั่วโมงก่อนรับลูกค้า จะคืนงานได้เฉพาะกรณีฉุกเฉินเท่านั้น)',
+    'driver_release_assignment_irreversible':
+        '반납 후에는 되돌릴 수 없습니다.\n(หลังคืนงานแล้วจะไม่สามารถย้อนกลับได้)',
+    'driver_release_reason_label': '반납 사유 / เหตุผลในการคืนงาน',
+    'driver_release_reason_detail_label': '상세 설명 / รายละเอียดเพิ่มเติม',
+    'driver_release_reason_detail_required':
+        '기타 사유를 입력하세요.\n(กรุณาระบุเหตุผลอื่น)',
+    'driver_release_reason_VEHICLE_BREAKDOWN': '차량 고장 / รถเสีย',
+    'driver_release_reason_ACCIDENT': '사고 / อุบัติเหตุ',
+    'driver_release_reason_DRIVER_ILLNESS': '질병 / คนขับป่วย',
+    'driver_release_reason_FAMILY_EMERGENCY':
+        '가족 긴급 상황 / เหตุฉุกเฉินครอบครัว',
+    'driver_release_reason_SCHEDULE_CONFLICT': '일정 충돌 / ตารางงานซ้ำซ้อน',
+    'driver_release_reason_LOCATION_TOO_FAR': '거리 문제 / จุดรับอยู่ไกลเกินไป',
+    'driver_release_reason_OTHER': '기타 / อื่นๆ',
     'driver_confirm_mark_arrived_title': '픽업 장소에 도착하셨습니까?',
     'driver_confirm_mark_arrived_message': '픽업 장소에 도착했습니까?',
     'driver_confirm_mark_arrived_yes': '도착 / ถึงแล้ว',
