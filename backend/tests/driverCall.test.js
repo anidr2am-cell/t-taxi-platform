@@ -14,6 +14,7 @@ const ERROR_CODES = require('../src/constants/errorCodes');
 const NOTIFICATION_TYPES = require('../src/constants/notificationTypes');
 const { registerDriverCallHandlers } = require('../src/socket/handlers/driverCalls.handler');
 const { DRIVER_ALL_ROOM, driverUserRoom, setRealtimeIo } = require('../src/socket/realtime');
+const HTTP_STATUS = require('../src/constants/httpStatus');
 
 function createConn() {
   return {
@@ -76,6 +77,9 @@ function createHarness(overrides = {}) {
     notifications: [],
     conflictLookups: [],
     getDetailCalls: [],
+    urgentActiveLookups: [],
+    urgentNegotiationsInserted: [],
+    urgentNegotiationLinks: [],
   };
   const booking = {
     id: 10,
@@ -131,6 +135,10 @@ function createHarness(overrides = {}) {
     },
     async insertActivityLog(_conn, bookingId, activity) {
       calls.activityLogs.push({ bookingId, activity });
+    },
+    async updateUrgentNegotiationId(_conn, bookingId, negotiationId) {
+      calls.urgentNegotiationLinks.push({ bookingId, negotiationId });
+      booking.urgent_negotiation_id = negotiationId;
     },
     async findActiveDriverBookingByNumberForUpdate() {
       return overrides.detailRow ?? {
@@ -252,6 +260,16 @@ function createHarness(overrides = {}) {
       return overrides.commissionBlocked ?? false;
     },
   };
+  const urgentNegotiationRepository = {
+    async findActiveNegotiationForBookingForUpdate(_conn, bookingId) {
+      calls.urgentActiveLookups.push(bookingId);
+      return overrides.activeUrgentNegotiation ?? null;
+    },
+    async insertNegotiation(_conn, { bookingId }) {
+      calls.urgentNegotiationsInserted.push({ bookingId });
+      return overrides.newNegotiationId ?? 500;
+    },
+  };
   return {
     conn,
     calls,
@@ -263,6 +281,7 @@ function createHarness(overrides = {}) {
       notificationRepository,
       chatRepository,
       commissionSettlementService,
+      urgentNegotiationRepository,
     ),
   };
 }
@@ -652,6 +671,136 @@ test('claimOpenCall rejects a booking previously released by the same driver', a
     () => service.claimOpenCall(42, 'TX202607130001'),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.ASSIGNMENT_ALREADY_RELEASED,
   );
+});
+
+test('claimOpenCall rejects urgent booking with active negotiation in BROADCASTING', async () => {
+  const { service, calls } = createHarness({
+    booking: { is_urgent_request: 1, status: BOOKING_STATUS.OPEN },
+    activeUrgentNegotiation: { id: 100, status: 'BROADCASTING' },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.statusCode === HTTP_STATUS.CONFLICT
+      && err.errorCode === ERROR_CODES.URGENT_NEGOTIATION_ACTIVE,
+  );
+  assert.equal(calls.assignments.length, 0);
+  assert.deepEqual(calls.urgentActiveLookups, [10]);
+});
+
+test('claimOpenCall rejects urgent booking with active negotiation in LOCKED', async () => {
+  const { service } = createHarness({
+    booking: { is_urgent_request: 1, status: BOOKING_STATUS.OPEN },
+    activeUrgentNegotiation: { id: 100, status: 'LOCKED' },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.errorCode === ERROR_CODES.URGENT_NEGOTIATION_ACTIVE,
+  );
+});
+
+test('claimOpenCall rejects urgent booking with active negotiation in AWAITING_CUSTOMER', async () => {
+  const { service } = createHarness({
+    booking: { is_urgent_request: 1, status: BOOKING_STATUS.OPEN },
+    activeUrgentNegotiation: { id: 100, status: 'AWAITING_CUSTOMER' },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.errorCode === ERROR_CODES.URGENT_NEGOTIATION_ACTIVE,
+  );
+});
+
+test('claimOpenCall on confirmed urgent booking is blocked by OPEN status check before urgent gate', async () => {
+  const { service, calls } = createHarness({
+    booking: {
+      is_urgent_request: 1,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+    },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.errorCode === ERROR_CODES.ALREADY_ASSIGNED,
+  );
+  assert.equal(calls.urgentActiveLookups.length, 0);
+});
+
+test('claimOpenCall on cancelled urgent booking is blocked by OPEN status check', async () => {
+  const { service, calls } = createHarness({
+    booking: {
+      is_urgent_request: 1,
+      status: BOOKING_STATUS.CANCELLED,
+    },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.errorCode === ERROR_CODES.ALREADY_ASSIGNED,
+  );
+  assert.equal(calls.urgentActiveLookups.length, 0);
+});
+
+test('claimOpenCall still works for non-urgent open bookings', async () => {
+  setRealtimeIo({ to() { return { emit() {} }; } });
+  const { service, conn, calls } = createHarness({
+    booking: { is_urgent_request: 0, status: BOOKING_STATUS.OPEN },
+  });
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+
+  assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
+  assert.equal(conn.committed, true);
+  assert.equal(calls.assignments.length, 1);
+  assert.equal(calls.urgentActiveLookups.length, 0);
+  setRealtimeIo(null);
+});
+
+test('releaseAssignment on urgent booking restarts negotiation and emits driver:urgent-call:new', async () => {
+  const emitted = [];
+  setRealtimeIo({
+    to(room) {
+      return {
+        emit(event, payload) {
+          emitted.push({ room, event, payload });
+        },
+      };
+    },
+  });
+  const { service, conn, calls } = createHarness({
+    booking: {
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      is_urgent_request: 1,
+      urgent_negotiation_id: 100,
+    },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+    newNegotiationId: 501,
+  });
+
+  const result = await service.releaseAssignment(42, 'TX202607130001', {
+    reasonCode: 'SCHEDULE_CONFLICT',
+  });
+
+  assert.equal(result.released, true);
+  assert.equal(conn.committed, true);
+  assert.deepEqual(calls.urgentNegotiationsInserted, [{ bookingId: 10 }]);
+  assert.deepEqual(calls.urgentNegotiationLinks, [{ bookingId: 10, negotiationId: 501 }]);
+  assert.equal(calls.notifications.length, 0);
+  assert.equal(
+    emitted.some((row) => row.room === DRIVER_ALL_ROOM && row.event === 'driver:urgent-call:new'),
+    true,
+  );
+  assert.equal(
+    emitted.some((row) => row.event === 'driver:call:new'),
+    false,
+  );
+  assert.equal(
+    emitted.some((row) => row.room === driverUserRoom(42) && row.event === 'driver:assignment:released'),
+    true,
+  );
+  setRealtimeIo(null);
 });
 
 test('booking creation helper stores notifications for eligible online drivers', async () => {

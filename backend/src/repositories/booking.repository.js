@@ -391,6 +391,8 @@ class BookingRepository {
           b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
           b.scheduled_pickup_at,
           b.payment_status, b.payment_method, b.customer_user_id,
+          b.is_urgent_request,
+          b.urgent_negotiation_id,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           b.dropoff_qr_token_hash, b.dropoff_qr_expires_at, b.dropoff_qr_used_at,
           d.user_id AS driver_user_id,
@@ -903,6 +905,20 @@ class BookingRepository {
         WHERE id = ? AND deleted_at IS NULL
       `,
       [actorUserId, bookingId],
+    );
+  }
+
+  async updateUrgentNegotiationId(conn, bookingId, negotiationId) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          urgent_negotiation_id = ?,
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `,
+      [negotiationId, bookingId],
     );
   }
 
