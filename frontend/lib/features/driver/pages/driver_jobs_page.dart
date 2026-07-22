@@ -12,8 +12,12 @@ import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 import '../services/driver_api_service.dart';
+import '../services/driver_call_socket_bridge.dart';
+import '../services/driver_urgent_negotiation_controller.dart';
 import '../utils/driver_money_format.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
+import '../widgets/driver_urgent_eta_dialog.dart';
+import '../widgets/driver_urgent_negotiation_banner.dart';
 import '../widgets/driver_workflow_widgets.dart';
 import 'driver_booking_detail_page.dart';
 import 'driver_trip_history_page.dart';
@@ -35,17 +39,25 @@ class _DriverJobsPageState extends State<DriverJobsPage>
   Future<_JobsPageData>? _future;
   Future<DriverStatus>? _statusFuture;
   final Set<String> _claimingCalls = {};
+  final Set<String> _lockingCalls = {};
+  final Set<String> _hiddenUrgentCalls = {};
+  final Map<String, _UrgentCallMeta> _urgentMeta = {};
 
   @override
   void initState() {
     super.initState();
     _api = widget.api ?? DriverApiService();
     _tabController = TabController(length: 3, vsync: this);
+    DriverCallSocketBridge.instance.onUrgentEvent = _handleUrgentSocketEvent;
     _loadData();
   }
 
   @override
   void dispose() {
+    if (DriverCallSocketBridge.instance.onUrgentEvent ==
+        _handleUrgentSocketEvent) {
+      DriverCallSocketBridge.instance.onUrgentEvent = null;
+    }
     _tabController.dispose();
     super.dispose();
   }
@@ -76,10 +88,141 @@ class _DriverJobsPageState extends State<DriverJobsPage>
     }
     return _JobsPageData(
       jobs: jobs,
-      openCalls: openCalls.items,
+      openCalls: _visibleOpenCalls(openCalls.items),
       openCallBlockedReason: openCalls.blockedReason,
       openCallBlockedMessage: openCalls.message,
     );
+  }
+
+  List<DriverOpenCall> _visibleOpenCalls(List<DriverOpenCall> calls) {
+    return calls
+        .map((call) {
+          if (!call.isUrgentRequest) return call;
+          final meta = _urgentMeta[call.bookingNumber];
+          if (meta == null) return call;
+          return call.copyWith(
+            negotiationId: meta.negotiationId ?? call.negotiationId,
+            minRequiredEtaMinutes:
+                meta.minRequiredEtaMinutes ?? call.minRequiredEtaMinutes,
+          );
+        })
+        .where(
+          (call) =>
+              !call.isUrgentRequest ||
+              !_hiddenUrgentCalls.contains(call.bookingNumber),
+        )
+        .toList(growable: false);
+  }
+
+  void _handleUrgentSocketEvent(
+    String event,
+    Map<String, dynamic> payload,
+  ) {
+    final bookingNumber = payload['bookingNumber']?.toString();
+    if (bookingNumber == null || bookingNumber.isEmpty) return;
+
+    final minEta = (payload['minRequiredEtaMinutes'] as num?)?.toInt();
+    final negotiationId = (payload['negotiationId'] as num?)?.toInt();
+    final lockExpiresAt = payload['lockExpiresAt']?.toString();
+
+    void mergeMeta() {
+      final existing = _urgentMeta[bookingNumber];
+      _urgentMeta[bookingNumber] = _UrgentCallMeta(
+        negotiationId: negotiationId ?? existing?.negotiationId,
+        minRequiredEtaMinutes: minEta ?? existing?.minRequiredEtaMinutes,
+        lockExpiresAt: lockExpiresAt ?? existing?.lockExpiresAt,
+      );
+    }
+
+    switch (event) {
+      case 'new':
+      case 'unlocked':
+      case 'round-ended':
+        setState(() {
+          mergeMeta();
+          if (event != 'new') {
+            _hiddenUrgentCalls.remove(bookingNumber);
+          }
+        });
+        _refresh();
+        break;
+      case 'locked':
+      case 'cancelled':
+        setState(() => _hiddenUrgentCalls.add(bookingNumber));
+        _refresh();
+        break;
+      case 'confirmed':
+        setState(() => _hiddenUrgentCalls.add(bookingNumber));
+        _refresh();
+        break;
+      case 'eta-required':
+        setState(mergeMeta);
+        break;
+    }
+  }
+
+  Future<void> _lockUrgentCall(DriverOpenCall call) async {
+    if (_lockingCalls.contains(call.bookingNumber)) return;
+    setState(() => _lockingCalls.add(call.bookingNumber));
+    final l10n = context.l10n;
+    try {
+      final result = await _api.lockUrgentCall(call.bookingNumber);
+      if (!mounted) return;
+      final lockExpiresAt = result['lockExpiresAt']?.toString() ?? '';
+      final dialogResult = await showDriverUrgentEtaDialog(
+        context: context,
+        api: _api,
+        bookingNumber: call.bookingNumber,
+        lockExpiresAt: lockExpiresAt,
+        minRequiredEtaMinutes: call.minRequiredEtaMinutes,
+      );
+      if (!mounted) return;
+      if (dialogResult?.submitted == true) {
+        final decisionExpiresAt = dialogResult!.customerDecisionExpiresAt;
+        if (decisionExpiresAt != null && decisionExpiresAt.isNotEmpty) {
+          DriverUrgentNegotiationController.instance.startAwaitingCustomer(
+            bookingNumber: call.bookingNumber,
+            customerDecisionExpiresAt: decisionExpiresAt,
+          );
+        }
+        setState(() => _hiddenUrgentCalls.add(call.bookingNumber));
+      } else if (dialogResult?.timedOut == true) {
+        DriverUrgentNegotiationController.instance.showMessagePhase(
+          call.bookingNumber,
+          DriverUrgentNegotiationBannerPhase.etaLockExpired,
+        );
+      }
+      _refresh();
+    } catch (err) {
+      if (!mounted) return;
+      final alreadyLocked =
+          err is DriverApiException &&
+          err.errorCode == 'URGENT_ALREADY_LOCKED';
+      if (alreadyLocked) {
+        setState(() => _hiddenUrgentCalls.add(call.bookingNumber));
+      } else {
+        _refresh();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            alreadyLocked
+                ? l10n.t('driver_urgent_already_locked')
+                : err is DriverApiException
+                ? driverApiErrorMessage(
+                    message: err.message,
+                    errorCode: err.errorCode,
+                    languageCode: Localizations.localeOf(context).languageCode,
+                  )
+                : userFacingError(err, fallback: l10n.t('driver_load_failed')),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _lockingCalls.remove(call.bookingNumber));
+      }
+    }
   }
 
   void _openDetail(DriverBooking booking) {
@@ -164,100 +307,110 @@ class _DriverJobsPageState extends State<DriverJobsPage>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return FutureBuilder<_JobsPageData>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return AppUi.loadingState();
-        }
-        if (snapshot.hasError) {
-          final err = snapshot.error!;
-          if (driverIsAuthError(err)) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted) driverHandleApiError(context, err);
-            });
-          }
-          return AppUi.errorState(
-            message: userFacingError(
-              err,
-              fallback: l10n.t('driver_load_failed'),
-            ),
-            onRetry: _refresh,
-            retryLabel: l10n.t('driver_retry'),
-          );
-        }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const DriverUrgentNegotiationBanner(),
+        Expanded(
+          child: FutureBuilder<_JobsPageData>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return AppUi.loadingState();
+              }
+              if (snapshot.hasError) {
+                final err = snapshot.error!;
+                if (driverIsAuthError(err)) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) driverHandleApiError(context, err);
+                  });
+                }
+                return AppUi.errorState(
+                  message: userFacingError(
+                    err,
+                    fallback: l10n.t('driver_load_failed'),
+                  ),
+                  onRetry: _refresh,
+                  retryLabel: l10n.t('driver_retry'),
+                );
+              }
 
-        final data = snapshot.data!;
-        final grouped = DriverUx.groupBookings(data.jobs.items);
-        final locationBooking = _locationBooking(data.jobs.items);
+              final data = snapshot.data!;
+              final grouped = DriverUx.groupBookings(data.jobs.items);
+              final locationBooking = _locationBooking(data.jobs.items);
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: AppUi.pagePadding(context).copyWith(
-                top: AppTokens.spaceSm,
-                bottom: 0,
-              ),
-              child: FutureBuilder<DriverStatus>(
-                future: _statusFuture,
-                builder: (context, statusSnapshot) {
-                  if (statusSnapshot.hasError &&
-                      driverIsAuthError(statusSnapshot.error!)) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (context.mounted) {
-                        driverHandleApiError(context, statusSnapshot.error!);
-                      }
-                    });
-                  }
-                  return DriverLiveLocationControl(
-                    hasActiveJob: locationBooking != null,
-                    online: statusSnapshot.data?.online,
-                    bookingNumber: locationBooking?.bookingNumber,
-                    bookingStatus: locationBooking?.status,
-                  );
-                },
-              ),
-            ),
-            TabBar(
-              controller: _tabController,
-              tabs: [
-                Tab(text: l10n.t('driver_jobs_tab_new')),
-                Tab(text: l10n.t('driver_jobs_tab_mine')),
-                Tab(text: l10n.t('driver_jobs_tab_past')),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _OpenCallsTab(
-                    data: data,
-                    statusFuture: _statusFuture,
-                    claimingCalls: _claimingCalls,
-                    onRefresh: _refresh,
-                    onClaim: _confirmAndClaimOpenCall,
-                    onOpenSettlement: _openSettlementList,
+                  Padding(
+                    padding: AppUi.pagePadding(context).copyWith(
+                      top: AppTokens.spaceSm,
+                      bottom: 0,
+                    ),
+                    child: FutureBuilder<DriverStatus>(
+                      future: _statusFuture,
+                      builder: (context, statusSnapshot) {
+                        if (statusSnapshot.hasError &&
+                            driverIsAuthError(statusSnapshot.error!)) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (context.mounted) {
+                              driverHandleApiError(context, statusSnapshot.error!);
+                            }
+                          });
+                        }
+                        return DriverLiveLocationControl(
+                          hasActiveJob: locationBooking != null,
+                          online: statusSnapshot.data?.online,
+                          bookingNumber: locationBooking?.bookingNumber,
+                          bookingStatus: locationBooking?.status,
+                        );
+                      },
+                    ),
                   ),
-                  _MyJobsTab(
-                    date: data.jobs.date,
-                    active: grouped[DriverJobGroup.active]!,
-                    upcoming: grouped[DriverJobGroup.upcoming]!,
-                    onRefresh: _refresh,
-                    onOpenDetail: _openDetail,
+                  TabBar(
+                    controller: _tabController,
+                    tabs: [
+                      Tab(text: l10n.t('driver_jobs_tab_new')),
+                      Tab(text: l10n.t('driver_jobs_tab_mine')),
+                      Tab(text: l10n.t('driver_jobs_tab_past')),
+                    ],
                   ),
-                  _PastJobsTab(
-                    completed: grouped[DriverJobGroup.completed]!,
-                    onRefresh: _refresh,
-                    onOpenDetail: _openDetail,
-                    onOpenTripHistory: _openTripHistory,
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _OpenCallsTab(
+                          data: data,
+                          statusFuture: _statusFuture,
+                          claimingCalls: _claimingCalls,
+                          lockingCalls: _lockingCalls,
+                          onRefresh: _refresh,
+                          onClaim: _confirmAndClaimOpenCall,
+                          onLockUrgent: _lockUrgentCall,
+                          onOpenSettlement: _openSettlementList,
+                        ),
+                        _MyJobsTab(
+                          date: data.jobs.date,
+                          active: grouped[DriverJobGroup.active]!,
+                          upcoming: grouped[DriverJobGroup.upcoming]!,
+                          onRefresh: _refresh,
+                          onOpenDetail: _openDetail,
+                        ),
+                        _PastJobsTab(
+                          completed: grouped[DriverJobGroup.completed]!,
+                          onRefresh: _refresh,
+                          onOpenDetail: _openDetail,
+                          onOpenTripHistory: _openTripHistory,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -287,6 +440,25 @@ class _JobsPageData {
   final List<DriverOpenCall> openCalls;
   final String? openCallBlockedReason;
   final String? openCallBlockedMessage;
+
+  List<DriverOpenCall> get urgentCalls =>
+      openCalls.where((call) => call.isUrgentRequest).toList(growable: false);
+
+  List<DriverOpenCall> get regularCalls => openCalls
+      .where((call) => !call.isUrgentRequest)
+      .toList(growable: false);
+}
+
+class _UrgentCallMeta {
+  const _UrgentCallMeta({
+    this.negotiationId,
+    this.minRequiredEtaMinutes,
+    this.lockExpiresAt,
+  });
+
+  final int? negotiationId;
+  final int? minRequiredEtaMinutes;
+  final String? lockExpiresAt;
 }
 
 class _OpenCallsTab extends StatelessWidget {
@@ -294,16 +466,20 @@ class _OpenCallsTab extends StatelessWidget {
     required this.data,
     required this.statusFuture,
     required this.claimingCalls,
+    required this.lockingCalls,
     required this.onRefresh,
     required this.onClaim,
+    required this.onLockUrgent,
     required this.onOpenSettlement,
   });
 
   final _JobsPageData data;
   final Future<DriverStatus>? statusFuture;
   final Set<String> claimingCalls;
+  final Set<String> lockingCalls;
   final VoidCallback onRefresh;
   final ValueChanged<DriverOpenCall> onClaim;
+  final ValueChanged<DriverOpenCall> onLockUrgent;
   final VoidCallback onOpenSettlement;
 
   @override
@@ -332,19 +508,205 @@ class _OpenCallsTab extends StatelessWidget {
             builder: (context, statusSnapshot) {
               final online = statusSnapshot.data?.online ?? false;
               final hasActiveJob = statusSnapshot.data?.hasActiveJob ?? false;
-              return _OpenCallsSection(
-                calls: settlementBlocked ? const [] : data.openCalls,
-                online: online,
-                hasActiveJob: hasActiveJob,
-                claimingCalls: claimingCalls,
-                onClaim: onClaim,
-                showOnlineRequired: !online,
-                showEmptyState: online && data.openCalls.isEmpty,
-                emptyMessage: l10n.t('driver_open_calls_empty'),
-                onlineRequiredMessage: l10n.t('driver_open_calls_online_required'),
+              final urgentCalls =
+                  settlementBlocked ? const <DriverOpenCall>[] : data.urgentCalls;
+              final regularCalls =
+                  settlementBlocked ? const <DriverOpenCall>[] : data.regularCalls;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (urgentCalls.isNotEmpty) ...[
+                    _UrgentCallsSection(
+                      calls: urgentCalls,
+                      online: online,
+                      lockingCalls: lockingCalls,
+                      onLock: onLockUrgent,
+                    ),
+                    const SizedBox(height: AppTokens.spaceMd),
+                  ],
+                  _OpenCallsSection(
+                    calls: regularCalls,
+                    online: online,
+                    hasActiveJob: hasActiveJob,
+                    claimingCalls: claimingCalls,
+                    onClaim: onClaim,
+                    showOnlineRequired: !online,
+                    showEmptyState:
+                        online &&
+                        urgentCalls.isEmpty &&
+                        regularCalls.isEmpty,
+                    emptyMessage: l10n.t('driver_open_calls_empty'),
+                    onlineRequiredMessage:
+                        l10n.t('driver_open_calls_online_required'),
+                  ),
+                ],
               );
             },
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UrgentCallsSection extends StatelessWidget {
+  const _UrgentCallsSection({
+    required this.calls,
+    required this.online,
+    required this.lockingCalls,
+    required this.onLock,
+  });
+
+  final List<DriverOpenCall> calls;
+  final bool online;
+  final Set<String> lockingCalls;
+  final ValueChanged<DriverOpenCall> onLock;
+
+  String _luggageSummary(DriverOpenCall call) {
+    final luggage = call.luggage ?? {};
+    final parts = <String>[];
+    final c20 = luggage['carriers20Inch'] as num? ?? 0;
+    final c24 = luggage['carriers24InchPlus'] as num? ?? 0;
+    final golf = luggage['golfBags'] as num? ?? 0;
+    final special = luggage['specialItems']?.toString().trim();
+    if (c20 > 0) parts.add('20": ${c20.toInt()}');
+    if (c24 > 0) parts.add('24"+: ${c24.toInt()}');
+    if (golf > 0) parts.add('Golf: ${golf.toInt()}');
+    if (special != null && special.isNotEmpty) parts.add(special);
+    return parts.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final buttonEnabled = online;
+
+    return AppUi.surfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.priority_high, color: AppTokens.warning),
+              const SizedBox(width: AppTokens.spaceSm),
+              Expanded(
+                child: Text(
+                  l10n.t('driver_urgent_section_title'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              AppUi.statusBadge(
+                l10n.t('driver_urgent_badge'),
+                tone: AppStatusTone.warning,
+              ),
+            ],
+          ),
+          ...calls.map((call) {
+            final locking = lockingCalls.contains(call.bookingNumber);
+            final customerTotal = call.customerPaymentAmount != null
+                ? DriverMoneyFormat.money(
+                    call.customerPaymentAmount!,
+                    call.customerPaymentCurrency ?? call.currency,
+                  )
+                : call.amount > 0
+                ? DriverMoneyFormat.money(call.amount, call.currency)
+                : null;
+            final luggage = _luggageSummary(call);
+            final minEta = call.minRequiredEtaMinutes;
+            return Padding(
+              padding: const EdgeInsets.only(top: AppTokens.spaceSm),
+              child: Container(
+                padding: const EdgeInsets.all(AppTokens.spaceMd),
+                decoration: BoxDecoration(
+                  color: AppTokens.warning.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                  border: Border.all(
+                    color: AppTokens.warning.withValues(alpha: 0.28),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${call.pickupDate} ${call.pickupTime}',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        AppUi.statusBadge(
+                          l10n.t('driver_urgent_badge'),
+                          tone: AppStatusTone.warning,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.destination))}',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${call.serviceTypeName} · ${call.vehicleTypeName} · '
+                      '${call.passengerCount} ${l10n.t('driver_passengers')}',
+                      style: const TextStyle(color: AppTokens.textSecondary),
+                    ),
+                    if (minEta != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n
+                            .t('driver_urgent_min_eta_hint')
+                            .replaceAll('{minutes}', '$minEta'),
+                        style: const TextStyle(color: AppTokens.warning),
+                      ),
+                    ],
+                    if (customerTotal != null) ...[
+                      const SizedBox(height: 8),
+                      AppUi.summaryRow(
+                        label: l10n.t('driver_customer_total_amount'),
+                        value: customerTotal,
+                        emphasize: true,
+                      ),
+                    ],
+                    if (luggage.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        luggage,
+                        style: const TextStyle(color: AppTokens.textMuted),
+                      ),
+                    ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: FilledButton.icon(
+                        onPressed: buttonEnabled && !locking
+                            ? () => onLock(call)
+                            : null,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTokens.warning,
+                        ),
+                        icon: locking
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle_outline),
+                        label: Text(l10n.t('driver_urgent_accept')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );

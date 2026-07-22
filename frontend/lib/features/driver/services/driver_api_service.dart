@@ -312,6 +312,22 @@ class DriverApiService {
     );
   }
 
+  Future<Map<String, dynamic>> lockUrgentCall(String bookingNumber) async {
+    final data = await _post('/driver/urgent-calls/$bookingNumber/lock');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> submitUrgentCallEta(
+    String bookingNumber,
+    int etaMinutes,
+  ) async {
+    final data = await _post(
+      '/driver/urgent-calls/$bookingNumber/eta',
+      body: {'etaMinutes': etaMinutes},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<Map<String, dynamic>> releaseAssignment(
     String bookingNumber, {
     required String reasonCode,

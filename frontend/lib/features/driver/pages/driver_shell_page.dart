@@ -79,6 +79,7 @@ class _DriverShellPageState extends State<DriverShellPage> {
       DriverTodayPage(
         api: _api,
         settlementApi: _settlementApi,
+        enableCallSocket: true,
         onSessionChanged: _refreshSession,
         onNavigateToJobs: () => _switchTab(1),
         onNavigateToSettlement: () => _switchTab(2),
@@ -100,7 +101,12 @@ class _DriverShellPageState extends State<DriverShellPage> {
         body: Column(
           children: [
             DriverStatusControl(api: _api, onStatusChanged: _refreshSession),
-            Expanded(child: pages[_index]),
+            Expanded(
+              child: IndexedStack(
+                index: _index,
+                children: pages,
+              ),
+            ),
           ],
         ),
         bottomNavigationBar: NavigationBar(

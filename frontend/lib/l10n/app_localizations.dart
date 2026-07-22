@@ -634,6 +634,33 @@ class AppLocalizations {
       'driver_open_calls_online_required':
           'You can receive calls only when you are online.',
       'driver_open_calls_empty': 'No available calls right now.',
+      'driver_urgent_badge': 'Urgent',
+      'driver_urgent_section_title': 'Urgent request calls',
+      'driver_urgent_call_new_arrived': 'An urgent request call has arrived.',
+      'driver_urgent_accept': 'Accept',
+      'driver_urgent_already_locked':
+          'Another driver has already accepted this call.',
+      'driver_urgent_eta_dialog_title': 'Enter arrival ETA',
+      'driver_urgent_eta_dialog_message':
+          'After you enter your estimated arrival time, the booking will be confirmed once the customer accepts. Please enter your ETA.',
+      'driver_urgent_eta_minutes_label': 'ETA (minutes)',
+      'driver_urgent_eta_submit': 'Submit',
+      'driver_urgent_eta_countdown': 'Time remaining: {time}',
+      'driver_urgent_eta_invalid': 'Enter a valid number of minutes.',
+      'driver_urgent_eta_success':
+          'ETA submitted. Waiting for customer confirmation.',
+      'driver_urgent_confirmed': 'Customer confirmed. The booking is assigned.',
+      'driver_urgent_min_eta_hint':
+          'A previous rejection requires ETA under {minutes} minutes.',
+      'driver_urgent_awaiting_customer':
+          'Waiting for customer confirmation ({time} remaining).',
+      'driver_urgent_eta_lock_expired':
+          'The time window to submit your ETA has expired.',
+      'driver_urgent_eta_not_fast_enough':
+          'Please enter a faster ETA than the previous rejection required.',
+      'driver_urgent_round_ended':
+          'The customer declined or this negotiation round ended.',
+      'driver_urgent_cancelled': 'This urgent request call was cancelled.',
       'driver_settlement_block_title': 'Cannot receive new jobs yet',
       'driver_settlement_block_message':
           'Please pay the commission and upload your transfer slip. You can receive new jobs after admin review.',
@@ -641,6 +668,10 @@ class AppLocalizations {
       'driver_home_new_calls_title': 'New jobs available',
       'driver_home_new_calls_message': '{count} new call(s) are waiting.',
       'driver_home_new_calls_cta': 'View new jobs',
+      'driver_home_urgent_calls_title': 'Urgent request calls',
+      'driver_home_urgent_calls_message':
+          '{count} urgent request call(s) are waiting.',
+      'driver_home_urgent_calls_cta': 'View urgent calls',
       'driver_call_customer': 'Call customer',
       'driver_account_notifications': 'Notifications',
       'driver_step_progress': 'Step {step} of {total}',
@@ -4904,6 +4935,37 @@ class AppLocalizations {
     'driver_open_calls_online_required':
         '온라인 상태에서만 콜을 받을 수 있습니다.\n(รับงานได้เฉพาะเมื่อออนไลน์เท่านั้น)',
     'driver_open_calls_empty': '배차 가능한 콜이 없습니다.\n(ไม่มีงานที่พร้อมให้รับ)',
+    'driver_urgent_badge': '긴급\n(ด่วน)',
+    'driver_urgent_section_title': '긴급 요청 콜\n(งานเร่งด่วน)',
+    'driver_urgent_call_new_arrived':
+        '긴급 요청 콜이 도착했습니다.\n(มีงานเร่งด่วนเข้ามา)',
+    'driver_urgent_accept': '수락 / รับงาน',
+    'driver_urgent_already_locked':
+        '다른 기사가 이미 수락한 콜입니다.\n(คนขับคนอื่นรับงานนี้แล้ว)',
+    'driver_urgent_eta_dialog_title': '도착 예상 시간 입력\n(กรอกเวลาที่จะถึง)',
+    'driver_urgent_eta_dialog_message':
+        '도착 예상 시간을 입력하시면 고객이 수락을 한 이후 예약이 확정됩니다. 도착 예상시간을 입력해주세요\n(กรอกเวลาที่จะถึง ลูกค้ายืนยันแล้วจึงจะยืนยันการจอง)',
+    'driver_urgent_eta_minutes_label': '도착 예상 시간 (분)\n(นาที)',
+    'driver_urgent_eta_submit': '제출 / ส่ง',
+    'driver_urgent_eta_countdown': '남은 시간: {time}\n(เวลาที่เหลือ: {time})',
+    'driver_urgent_eta_invalid':
+        '유효한 분 단위 숫자를 입력해 주세요.\n(กรุณากรอกจำนวนนาทีที่ถูกต้อง)',
+    'driver_urgent_eta_success':
+        '도착 예상 시간이 제출되었습니다. 고객 확인을 기다려 주세요.\n(ส่งเวลาแล้ว รอลูกค้ายืนยัน)',
+    'driver_urgent_confirmed':
+        '고객이 수락했습니다. 예약이 배정되었습니다.\n(ลูกค้ายืนยันแล้ว ได้รับงานแล้ว)',
+    'driver_urgent_min_eta_hint':
+        '이전 거절로 {minutes}분 미만 ETA가 필요합니다.\n(ต้องน้อยกว่า {minutes} นาที)',
+    'driver_urgent_awaiting_customer':
+        '고객 확인 대기 중 (남은 시간 {time})\n(รอลูกค้ายืนยัน เหลือ {time})',
+    'driver_urgent_eta_lock_expired':
+        '도착 예상 시간 입력 시간이 만료되었습니다.\n(หมดเวลากรอกเวลาที่จะถึงแล้ว)',
+    'driver_urgent_eta_not_fast_enough':
+        '이전 거절보다 더 빠른 도착 예상 시간을 입력해 주세요.\n(กรุณากรอกเวลาที่จะถึงให้เร็วกว่าครั้งก่อน)',
+    'driver_urgent_round_ended':
+        '고객이 거절했거나 협상 라운드가 종료되었습니다.\n(ลูกค้าปฏิเสธหรือรอบการเจรจาจบแล้ว)',
+    'driver_urgent_cancelled':
+        '긴급 요청 콜이 취소되었습니다.\n(งานเร่งด่วนถูกยกเลิกแล้ว)',
     'driver_settlement_block_title':
         '아직 신규 업무를 받을 수 없습니다\n(ยังไม่สามารถรับงานใหม่ได้)',
     'driver_settlement_block_message':
@@ -4913,6 +4975,10 @@ class AppLocalizations {
     'driver_home_new_calls_message':
         '새 콜 {count}건이 대기 중입니다.\n(มีงานใหม่ {count} งาน)',
     'driver_home_new_calls_cta': '새 콜 보기 / ดูงานใหม่',
+    'driver_home_urgent_calls_title': '긴급 요청 콜\n(งานเร่งด่วน)',
+    'driver_home_urgent_calls_message':
+        '긴급 요청 콜 {count}건이 대기 중입니다.\n(มีงานเร่งด่วน {count} งาน)',
+    'driver_home_urgent_calls_cta': '긴급 콜 보기 / ดูงานเร่งด่วน',
     'driver_call_customer': '고객에게 전화 / โทรหาลูกค้า',
     'driver_account_notifications': '알림\n(การแจ้งเตือน)',
     'driver_step_progress':

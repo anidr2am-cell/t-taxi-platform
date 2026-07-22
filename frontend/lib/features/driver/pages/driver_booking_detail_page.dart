@@ -24,6 +24,7 @@ import '../utils/driver_assignment_ended.dart';
 import '../utils/driver_money_format.dart';
 import '../widgets/driver_status_control.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
+import '../widgets/driver_urgent_negotiation_banner.dart';
 import '../widgets/driver_workflow_widgets.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
@@ -443,6 +444,9 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                   api: widget.api,
                   onStatusChanged: _reloadStatus,
                 ),
+              DriverUrgentNegotiationBanner(
+                bookingNumber: widget.bookingNumber,
+              ),
               if (_processing) ...[
                 const LinearProgressIndicator(minHeight: 3),
                 if (_processingKey != null)

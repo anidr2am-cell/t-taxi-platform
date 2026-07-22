@@ -237,6 +237,30 @@ String driverApiErrorMessage({
     };
   }
 
+  if (errorCode == 'URGENT_ALREADY_LOCKED') {
+    return switch (languageCode) {
+      'ko' => '다른 기사가 이미 수락한 콜입니다.',
+      'th' => 'คนขับคนอื่นรับงานเร่งด่วนนี้แล้ว',
+      _ => 'Another driver has already accepted this urgent call.',
+    };
+  }
+
+  if (errorCode == 'URGENT_ETA_WINDOW_EXPIRED') {
+    return switch (languageCode) {
+      'ko' => '도착 예상 시간 입력 시간이 만료되었습니다.',
+      'th' => 'หมดเวลากรอกเวลาที่จะถึงแล้ว',
+      _ => 'The time window to submit your ETA has expired.',
+    };
+  }
+
+  if (errorCode == 'URGENT_ETA_NOT_FAST_ENOUGH') {
+    return switch (languageCode) {
+      'ko' => '이전 거절보다 더 빠른 도착 예상 시간을 입력해 주세요.',
+      'th' => 'กรุณากรอกเวลาที่จะถึงให้เร็วกว่าครั้งก่อน',
+      _ => 'Please enter a faster ETA than the previous rejection required.',
+    };
+  }
+
   if (errorCode == 'DRIVER_STANDBY_TOO_EARLY') {
     return switch (languageCode) {
       'ko' => '아직 Stand by를 확정할 수 없습니다. 예약 기준 1시간 전부터 가능합니다.',
