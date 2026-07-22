@@ -9,6 +9,7 @@ const getDriverStatusService = () => container.get('driverStatusService');
 const getDriverCallService = () => container.get('driverCallService');
 const getDriverBookingAcceptanceService = () =>
   container.get('driverBookingAcceptanceService');
+const getUrgentNegotiationService = () => container.get('urgentNegotiationService');
 
 const listTodayBookings = asyncHandler(async (req, res) => {
   const data = await getDriverJobService().listToday(req.user.id);
@@ -29,6 +30,23 @@ const claimOpenCall = asyncHandler(async (req, res) => {
   const data = await getDriverCallService().claimOpenCall(
     req.user.id,
     req.params.bookingNumber,
+  );
+  return success(res, data, 'OK');
+});
+
+const lockUrgentCall = asyncHandler(async (req, res) => {
+  const data = await getUrgentNegotiationService().lockNegotiation(
+    req.user.id,
+    req.params.bookingNumber,
+  );
+  return success(res, data, 'OK');
+});
+
+const submitUrgentCallEta = asyncHandler(async (req, res) => {
+  const data = await getUrgentNegotiationService().submitEta(
+    req.user.id,
+    req.params.bookingNumber,
+    req.body.etaMinutes,
   );
   return success(res, data, 'OK');
 });
@@ -136,6 +154,8 @@ module.exports = {
   listScheduledBookings,
   listOpenCalls,
   claimOpenCall,
+  lockUrgentCall,
+  submitUrgentCallEta,
   releaseAssignment,
   acceptBooking,
   getBookingDetail,
