@@ -9,6 +9,7 @@ const {
   emitDriverCallConfirmed,
   emitDriverCallAvailable,
   emitDriverAssignmentReleased,
+  emitDriverUrgentCallNew,
 } = require('../socket/realtime');
 const NOTIFICATION_TYPES = require('../constants/notificationTypes');
 const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
@@ -51,6 +52,7 @@ class DriverCallService {
     notificationRepository = null,
     chatRepository = null,
     commissionSettlementService = null,
+    urgentNegotiationRepository = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -59,6 +61,7 @@ class DriverCallService {
     this.notificationRepository = notificationRepository;
     this.chatRepository = chatRepository;
     this.commissionSettlementService = commissionSettlementService;
+    this.urgentNegotiationRepository = urgentNegotiationRepository;
   }
 
   validateBookingNumber(bookingNumber) {
@@ -179,6 +182,49 @@ class DriverCallService {
     }
   }
 
+  async assertNoActiveUrgentNegotiation(conn, bookingId) {
+    if (!this.urgentNegotiationRepository) return;
+    const activeNegotiation = await this.urgentNegotiationRepository
+      .findActiveNegotiationForBookingForUpdate(conn, bookingId);
+    if (activeNegotiation) {
+      throw new AppError('Urgent negotiation is already in progress for this booking', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.URGENT_NEGOTIATION_ACTIVE,
+        errors: [{
+          negotiationId: activeNegotiation.id,
+          status: activeNegotiation.status,
+        }],
+      });
+    }
+  }
+
+  async restartUrgentNegotiationAfterRelease(conn, booking, evaluation) {
+    if (!this.urgentNegotiationRepository) {
+      throw new AppError('Urgent negotiation service is unavailable', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.URGENT_NEGOTIATION_NOT_FOUND,
+      });
+    }
+
+    const negotiationId = await this.urgentNegotiationRepository.insertNegotiation(conn, {
+      bookingId: booking.id,
+    });
+    await this.bookingRepository.updateUrgentNegotiationId(
+      conn,
+      booking.id,
+      negotiationId,
+    );
+
+    return {
+      bookingNumber: booking.booking_number,
+      negotiationId,
+      attemptCount: 0,
+      minRequiredEtaMinutes: null,
+      reassignmentPriority: evaluation.reassignmentPriority,
+      releasedByDriver: true,
+    };
+  }
+
   async claimOpenCall(driverUserId, bookingNumber) {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
     const conn = await this.pool.getConnection();
@@ -203,6 +249,10 @@ class DriverCallService {
       }
       if (booking.status !== BOOKING_STATUS.OPEN) {
         this.throwAlreadyClaimed();
+      }
+
+      if (Number(booking.is_urgent_request)) {
+        await this.assertNoActiveUrgentNegotiation(conn, booking.id);
       }
 
       const active = await this.bookingRepository.findActiveAssignmentForUpdate(
@@ -375,6 +425,7 @@ class DriverCallService {
     let releasedDriverUserId = driverUserId;
     let openCallPayload = null;
     let openCallTargets = [];
+    let urgentRebroadcastPayload = null;
     let releaseResult = null;
     const nowMs = options.nowMs ?? Date.now();
 
@@ -505,11 +556,20 @@ class DriverCallService {
         reassignmentPriority: evaluation.reassignmentPriority,
         releasedByDriver: true,
       };
-      openCallTargets = await this.notifyEligibleDriversForReopenedBooking(conn, {
-        booking,
-        openCallPayload,
-        releasedAssignmentId: active.id,
-      });
+
+      if (Number(booking.is_urgent_request)) {
+        urgentRebroadcastPayload = await this.restartUrgentNegotiationAfterRelease(
+          conn,
+          { ...booking, booking_number: normalizedBookingNumber },
+          evaluation,
+        );
+      } else {
+        openCallTargets = await this.notifyEligibleDriversForReopenedBooking(conn, {
+          booking,
+          openCallPayload,
+          releasedAssignmentId: active.id,
+        });
+      }
 
       await conn.commit();
       releasedDriverUserId = driver.user_id;
@@ -540,9 +600,13 @@ class DriverCallService {
       reassignmentPriority: releaseResult?.reassignmentPriority,
       releasedAt: new Date().toISOString(),
     });
-    emitDriverCallClaimed({ bookingNumber: normalizedBookingNumber });
-    for (const target of openCallTargets) {
-      emitDriverCallAvailable(target.userId, openCallPayload);
+    if (urgentRebroadcastPayload) {
+      emitDriverUrgentCallNew(urgentRebroadcastPayload);
+    } else {
+      emitDriverCallClaimed({ bookingNumber: normalizedBookingNumber });
+      for (const target of openCallTargets) {
+        emitDriverCallAvailable(target.userId, openCallPayload);
+      }
     }
 
     return releaseResult;
