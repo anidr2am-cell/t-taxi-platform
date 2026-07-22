@@ -1055,7 +1055,7 @@ class _BookingListCard extends StatelessWidget {
             const SizedBox(height: 6),
             AppUi.statusBadge(
               AdminOperationsUx.severityLabel(l10n, severity),
-              tone: severity == 'URGENT'
+              tone: severity == 'CRITICAL' || severity == 'URGENT'
                   ? AppStatusTone.error
                   : AppStatusTone.warning,
             ),

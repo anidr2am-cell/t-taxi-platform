@@ -48,11 +48,23 @@ class BookingStatusDisplay {
     AppLocalizations l10n,
     String status, {
     BookingStatusAudience audience = BookingStatusAudience.customer,
+    bool reassignmentInProgress = false,
   }) {
+    if (reassignmentInProgress &&
+        (status == 'OPEN' || status == 'PENDING' || status == 'CONFIRMED')) {
+      return l10n.t('status_reassignment_in_progress');
+    }
     return l10n.t(statusLabelKey(status, audience: audience));
   }
 
-  static String? customerGuidanceKey(String status) {
+  static String? customerGuidanceKey(
+    String status, {
+    bool reassignmentInProgress = false,
+  }) {
+    if (reassignmentInProgress &&
+        (status == 'OPEN' || status == 'PENDING' || status == 'CONFIRMED')) {
+      return 'guest_status_guidance_reassignment';
+    }
     switch (status) {
       case 'PENDING':
         return 'guest_status_guidance_pending';
@@ -80,8 +92,15 @@ class BookingStatusDisplay {
     }
   }
 
-  static String? customerGuidance(AppLocalizations l10n, String status) {
-    final key = customerGuidanceKey(status);
+  static String? customerGuidance(
+    AppLocalizations l10n,
+    String status, {
+    bool reassignmentInProgress = false,
+  }) {
+    final key = customerGuidanceKey(
+      status,
+      reassignmentInProgress: reassignmentInProgress,
+    );
     return key == null ? null : l10n.t(key);
   }
 }

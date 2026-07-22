@@ -7,19 +7,28 @@ import '../driver_trip_contact.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 
+String _routeLabel(DriverBooking booking, {required bool origin}) {
+  final location = origin
+      ? (booking.pickupLocation ??
+            DriverBookingLocation(address: booking.origin))
+      : (booking.destinationLocation ??
+            DriverBookingLocation(address: booking.destination));
+  final labeled = DriverTripContact.displayLabelFor(location);
+  if (labeled.isNotEmpty) return labeled;
+  return origin ? booking.origin : booking.destination;
+}
+
 class DriverTodayCurrentTripCard extends StatelessWidget {
   const DriverTodayCurrentTripCard({
     super.key,
     required this.booking,
     required this.onOpenPrimary,
-    this.onOpenChat,
     this.customerPhone,
     this.settlement,
   });
 
   final DriverBooking booking;
   final VoidCallback onOpenPrimary;
-  final VoidCallback? onOpenChat;
   final String? customerPhone;
   final Map<String, dynamic>? settlement;
 
@@ -27,14 +36,11 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final guidanceKey = DriverUx.statusGuidanceKey(booking.status);
-    final navigateAddress = DriverUx.navigateTargetAddress(booking);
-    final canNavigate = DriverTripContact.hasNavigableAddress(navigateAddress);
-    final canContactCustomer = DriverUx.canMessageCustomer(booking.status);
-    final phone = canContactCustomer
-        ? customerPhone ?? booking.customerPhone
-        : null;
+    final navigateLocation = DriverUx.navigateTargetLocation(booking);
+    final canNavigate = DriverTripContact.hasNavigableLocation(navigateLocation);
+    final canContact = DriverUx.canContactCustomer(booking.status);
+    final phone = canContact ? customerPhone ?? booking.customerPhone : null;
     final canCall = DriverTripContact.hasCallablePhone(phone);
-    final canChat = onOpenChat != null && canContactCustomer;
     final luggageCount = _luggageCount(booking);
 
     return AppUi.surfaceCard(
@@ -84,7 +90,10 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          _RouteLine(origin: booking.origin, destination: booking.destination),
+          _RouteLine(
+            origin: _routeLabel(booking, origin: true),
+            destination: _routeLabel(booking, origin: false),
+          ),
           const SizedBox(height: AppTokens.spaceSm),
           Wrap(
             spacing: AppTokens.spaceSm,
@@ -109,6 +118,11 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
                 icon: Icons.directions_car_outlined,
                 label: booking.vehicleTypeName,
               ),
+              if (booking.nameSignRequested)
+                _MetaChip(
+                  icon: Icons.badge_outlined,
+                  label: l10n.t('driver_name_sign_required'),
+                ),
             ],
           ),
           if (booking.flightNumber != null) ...[
@@ -135,30 +149,25 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
                   label: l10n.t('driver_quick_navigate'),
                   enabled: canNavigate,
                   onPressed: canNavigate
-                      ? () => DriverTripContact.openMaps(navigateAddress)
+                      ? () => DriverTripContact.openMapsForLocation(
+                            navigateLocation,
+                          )
                       : null,
                 ),
               ),
-              const SizedBox(width: AppTokens.spaceSm),
-              Expanded(
-                child: _QuickActionButton(
-                  icon: Icons.phone_outlined,
-                  label: l10n.t('driver_quick_call'),
-                  enabled: canCall,
-                  onPressed: canCall && phone != null
-                      ? () => DriverTripContact.callPhone(phone)
-                      : null,
+              if (canContact) ...[
+                const SizedBox(width: AppTokens.spaceSm),
+                Expanded(
+                  child: _QuickActionButton(
+                    icon: Icons.phone_outlined,
+                    label: l10n.t('driver_call_customer'),
+                    enabled: canCall,
+                    onPressed: canCall && phone != null
+                        ? () => DriverTripContact.callPhone(phone)
+                        : null,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppTokens.spaceSm),
-              Expanded(
-                child: _QuickActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  label: l10n.t('driver_quick_chat'),
-                  enabled: canChat,
-                  onPressed: canChat ? onOpenChat : null,
-                ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: AppTokens.spaceMd),
@@ -226,8 +235,8 @@ class DriverTodayTripListTile extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           _RouteLine(
-            origin: booking.origin,
-            destination: booking.destination,
+            origin: _routeLabel(booking, origin: true),
+            destination: _routeLabel(booking, origin: false),
             compact: true,
           ),
           if (booking.customerDisplayName != null) ...[

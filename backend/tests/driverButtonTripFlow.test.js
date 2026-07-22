@@ -28,6 +28,7 @@ test('driver allowed actions expose button flow without QR actions', () => {
     scheduled_pickup_at: '2026-07-18 22:00:00',
   }, new Date('2026-07-18T13:59:59.000Z')), [
     'VIEW_DETAILS',
+    'RELEASE_ASSIGNMENT',
   ]);
   assert.deepEqual(service.allowedActions({
     status: BOOKING_STATUS.DRIVER_ASSIGNED,
@@ -35,6 +36,7 @@ test('driver allowed actions expose button flow without QR actions', () => {
     scheduled_pickup_at: '2026-07-18 22:00:00',
   }, new Date('2026-07-18T15:00:00.000Z')), [
     'VIEW_DETAILS',
+    'RELEASE_ASSIGNMENT',
     'ACCEPT_BOOKING',
   ]);
   assert.deepEqual(service.allowedActions({
@@ -42,6 +44,7 @@ test('driver allowed actions expose button flow without QR actions', () => {
     assignment_status: 'ACCEPTED',
   }), [
     'VIEW_DETAILS',
+    'RELEASE_ASSIGNMENT',
     'START_ON_ROUTE',
   ]);
   assert.deepEqual(service.allowedActions({ status: BOOKING_STATUS.ON_ROUTE }), [

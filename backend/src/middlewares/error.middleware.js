@@ -56,6 +56,29 @@ function errorMiddleware(err, req, res, next) {
     body.errors = err.errors;
   }
 
+  if (
+    isAppError &&
+    err.details &&
+    typeof err.details === 'object' &&
+    !Array.isArray(err.details)
+  ) {
+    // Allowlist only known safe keys for driver-facing assignment outcomes.
+    const details = {};
+    for (const key of [
+      'reasonCode',
+      'bookingNumber',
+      'bookingStatus',
+      'releasedAt',
+    ]) {
+      if (err.details[key] != null && err.details[key] !== '') {
+        details[key] = err.details[key];
+      }
+    }
+    if (Object.keys(details).length > 0) {
+      body.details = details;
+    }
+  }
+
   if (config.server.nodeEnv === 'development' && !isAppError && !exposeInternalDetails) {
     body.stack = err.stack;
   }

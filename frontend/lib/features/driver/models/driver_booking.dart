@@ -45,6 +45,10 @@ class DriverBooking {
     this.paymentMethodLabel,
     this.qr,
     this.allowedActions = const [],
+    this.releaseAssignmentAvailable = false,
+    this.releaseAssignmentEmergencyOnly = false,
+    this.assignmentReleaseDeadline,
+    this.assignmentReleaseBlockedReason,
   });
 
   final String bookingNumber;
@@ -92,6 +96,10 @@ class DriverBooking {
   final String? paymentMethodLabel;
   final Map<String, dynamic>? qr;
   final List<String> allowedActions;
+  final bool releaseAssignmentAvailable;
+  final bool releaseAssignmentEmergencyOnly;
+  final String? assignmentReleaseDeadline;
+  final String? assignmentReleaseBlockedReason;
 
   bool get hasRouteCoordinates =>
       originLatitude != null &&
@@ -109,6 +117,9 @@ class DriverBooking {
     );
     final vehicleType = Map<String, dynamic>.from(
       json['vehicleType'] as Map? ?? {},
+    );
+    final capabilities = Map<String, dynamic>.from(
+      json['capabilities'] as Map? ?? {},
     );
     return DriverBooking(
       bookingNumber: json['bookingNumber'] as String? ?? '',
@@ -180,6 +191,15 @@ class DriverBooking {
       allowedActions: (json['allowedActions'] as List? ?? [])
           .map((item) => item.toString())
           .toList(),
+      releaseAssignmentAvailable:
+          capabilities['releaseAssignmentAvailable'] == true ||
+          (json['allowedActions'] as List? ?? []).contains('RELEASE_ASSIGNMENT'),
+      releaseAssignmentEmergencyOnly:
+          capabilities['releaseAssignmentEmergencyOnly'] == true,
+      assignmentReleaseDeadline:
+          capabilities['assignmentReleaseDeadline'] as String?,
+      assignmentReleaseBlockedReason:
+          capabilities['assignmentReleaseBlockedReason'] as String?,
     );
   }
 }

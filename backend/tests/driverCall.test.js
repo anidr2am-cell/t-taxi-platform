@@ -74,12 +74,15 @@ function createHarness(overrides = {}) {
     deactivatedChatParticipants: [],
     reopened: [],
     notifications: [],
+    conflictLookups: [],
+    getDetailCalls: [],
   };
   const booking = {
     id: 10,
     booking_number: 'TX202607130001',
     status: BOOKING_STATUS.OPEN,
     vehicle_type_id: 3,
+    scheduled_pickup_at: '2099-07-13 10:00:00',
     ...overrides.booking,
   };
   const driver = {
@@ -129,6 +132,28 @@ function createHarness(overrides = {}) {
     async insertActivityLog(_conn, bookingId, activity) {
       calls.activityLogs.push({ bookingId, activity });
     },
+    async findActiveDriverBookingByNumberForUpdate() {
+      return overrides.detailRow ?? {
+        booking_number: booking.booking_number,
+        status: BOOKING_STATUS.DRIVER_ASSIGNED,
+        assignment_status: 'ASSIGNED',
+        scheduled_pickup_at: booking.scheduled_pickup_at,
+        pickup_date: '2026-07-13',
+        pickup_time: '10:00',
+        origin_address: 'BKK Airport',
+        destination_address: 'Pattaya Hotel',
+        service_type_code: 'AIRPORT_PICKUP',
+        service_type_name: 'Airport pickup',
+        vehicle_type_code: 'VAN',
+        vehicle_type_name: 'Van',
+        adults: 2,
+        children: 0,
+        infants: 0,
+        payment_method: 'PAY_DRIVER',
+        total_amount: 2500,
+        currency: 'THB',
+      };
+    },
   };
   const driverRepository = {
     async findByUserId() {
@@ -139,6 +164,10 @@ function createHarness(overrides = {}) {
     },
     async hasActiveJob() {
       return overrides.hasActiveJob ?? false;
+    },
+    async findActiveAssignmentPickupsForConflict() {
+      calls.conflictLookups.push({ driverId: driver.id });
+      return overrides.conflictRows ?? [];
     },
     async findMatchingVehicle() {
       return overrides.matchingVehicle === false
@@ -174,10 +203,20 @@ function createHarness(overrides = {}) {
     validateBookingNumber(value) {
       return String(value).trim().toUpperCase();
     },
-    async getDetail() {
+    async getDetail(userId, bookingNumber) {
+      calls.getDetailCalls.push({ userId, bookingNumber });
       return {
         bookingNumber: booking.booking_number,
         status: BOOKING_STATUS.DRIVER_ASSIGNED,
+        customerPhone: '+66812345678',
+      };
+    },
+    mapDetail(row) {
+      return {
+        bookingNumber: row.booking_number ?? booking.booking_number,
+        status: row.status ?? BOOKING_STATUS.DRIVER_ASSIGNED,
+        pickupDate: row.pickup_date ?? '2026-07-13',
+        pickupTime: row.pickup_time ?? '10:00',
         customerPhone: '+66812345678',
       };
     },
@@ -303,7 +342,62 @@ test('claimOpenCall atomically creates assignment and moves booking to DRIVER_AS
     emitted.some((row) => row.room === driverUserRoom(42) && row.event === 'driver:call:confirmed'),
     true,
   );
+  assert.equal(result.bookingNumber, 'TX202607130001');
+  assert.equal(result.booking.bookingNumber, 'TX202607130001');
   setRealtimeIo(null);
+});
+
+test('claimOpenCall allows pickup times exactly 3 hours apart', async () => {
+  const { service, conn, calls } = createHarness({
+    conflictRows: [{
+      id: 5,
+      booking_number: 'TX202607120001',
+      scheduled_pickup_at: '2026-07-13 13:00:00',
+    }],
+    booking: { scheduled_pickup_at: '2026-07-13 10:00:00' },
+  });
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+
+  assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
+  assert.equal(conn.committed, true);
+  assert.equal(calls.conflictLookups.length, 1);
+});
+
+test('claimOpenCall rejects pickup conflict even when hasActiveJob is false', async () => {
+  const { service, calls } = createHarness({
+    hasActiveJob: false,
+    conflictRows: [{
+      id: 5,
+      booking_number: 'TX202607120001',
+      scheduled_pickup_at: '2026-07-13 11:00:00',
+    }],
+    booking: { scheduled_pickup_at: '2026-07-13 10:00:00' },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_BOOKING_TIME_CONFLICT,
+  );
+  assert.equal(calls.conflictLookups.length, 1);
+});
+
+test('claimOpenCall returns booking detail mapped inside transaction', async () => {
+  const { service, calls } = createHarness({
+    detailRow: {
+      booking_number: 'TX202607130001',
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      assignment_status: 'ASSIGNED',
+      pickup_date: '2026-07-13',
+      pickup_time: '10:30',
+    },
+  });
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+
+  assert.equal(result.booking.pickupTime, '10:30');
+  assert.equal(result.booking.bookingNumber, 'TX202607130001');
+  assert.deepEqual(calls.getDetailCalls, []);
 });
 
 test('claimOpenCall returns 409 when another driver already claimed booking', async () => {
@@ -325,10 +419,16 @@ test('claimOpenCall rejects offline or busy drivers', async () => {
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_NOT_AVAILABLE,
   );
 
-  const busy = createHarness({ hasActiveJob: true });
+  const busy = createHarness({
+    conflictRows: [{
+      id: 5,
+      booking_number: 'TX202607120001',
+      scheduled_pickup_at: '2099-07-13 11:00:00',
+    }],
+  });
   await assert.rejects(
     () => busy.service.claimOpenCall(42, 'TX202607130001'),
-    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_NOT_AVAILABLE,
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_BOOKING_TIME_CONFLICT,
   );
 });
 
@@ -367,10 +467,14 @@ test('releaseAssignment reopens booking, clears active assignment, and notifies 
     activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
   });
 
-  const result = await service.releaseAssignment(42, 'TX202607130001');
+  const result = await service.releaseAssignment(42, 'TX202607130001', {
+    reasonCode: 'SCHEDULE_CONFLICT',
+  });
 
   assert.equal(result.status, BOOKING_STATUS.OPEN);
   assert.equal(result.released, true);
+  assert.equal(result.reassignmentPriority, 'NORMAL');
+  assert.equal(result.reasonCode, 'SCHEDULE_CONFLICT');
   assert.equal(conn.committed, true);
   assert.equal(conn.rolledBack, false);
   assert.deepEqual(calls.deactivatedAssignments[0], {
@@ -411,7 +515,9 @@ test('releaseAssignment excludes settlement-blocked drivers from reopened call n
     blockedDriverIds: [9],
   });
 
-  const result = await service.releaseAssignment(42, 'TX202607130001');
+  const result = await service.releaseAssignment(42, 'TX202607130001', {
+    reasonCode: 'DRIVER_ILLNESS',
+  });
 
   assert.equal(result.released, true);
   assert.equal(calls.notifications.length, 1);
@@ -424,7 +530,9 @@ test('releaseAssignment rejects wrong driver and started trip', async () => {
     activeAssignment: { id: 77, driver_id: 99, status: 'ASSIGNED', is_active: 1 },
   });
   await assert.rejects(
-    () => wrongDriver.service.releaseAssignment(42, 'TX202607130001'),
+    () => wrongDriver.service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'SCHEDULE_CONFLICT',
+    }),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_NOT_ASSIGNED_TO_DRIVER,
   );
   assert.equal(wrongDriver.conn.rolledBack, true);
@@ -434,7 +542,9 @@ test('releaseAssignment rejects wrong driver and started trip', async () => {
     activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
   });
   await assert.rejects(
-    () => started.service.releaseAssignment(42, 'TX202607130001'),
+    () => started.service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'ACCIDENT',
+    }),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_RELEASE_NOT_ALLOWED,
   );
 });
@@ -445,7 +555,9 @@ test('releaseAssignment keeps existing compatibility for ACCEPTED assignment', a
     activeAssignment: { id: 77, driver_id: 7, status: 'ACCEPTED', is_active: 1 },
   });
 
-  const result = await service.releaseAssignment(42, 'TX202607130001');
+  const result = await service.releaseAssignment(42, 'TX202607130001', {
+    reasonCode: 'SCHEDULE_CONFLICT',
+  });
 
   assert.equal(result.released, true);
   assert.equal(conn.committed, true);
@@ -460,7 +572,9 @@ test('releaseAssignment duplicate request returns conflict without reopening aga
   });
 
   await assert.rejects(
-    () => service.releaseAssignment(42, 'TX202607130001'),
+    () => service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'SCHEDULE_CONFLICT',
+    }),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.ASSIGNMENT_ALREADY_RELEASED,
   );
   assert.equal(conn.rolledBack, true);
@@ -488,13 +602,47 @@ test('releaseAssignment rolls back and emits no events when reopening fails', as
   };
 
   await assert.rejects(
-    () => service.releaseAssignment(42, 'TX202607130001'),
+    () => service.releaseAssignment(42, 'TX202607130001', {
+      reasonCode: 'SCHEDULE_CONFLICT',
+    }),
     /update failed/,
   );
   assert.equal(conn.rolledBack, true);
   assert.equal(conn.committed, false);
   assert.equal(emitted.length, 0);
   setRealtimeIo(null);
+});
+
+test('releaseAssignment blocks normal reason within 2h but allows emergency CRITICAL', async () => {
+  const pickup = '2026-07-25 15:00:00';
+  const nowMs = Date.parse('2026-07-25T14:00:00+07:00');
+  const blocked = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED, scheduled_pickup_at: pickup },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+  await assert.rejects(
+    () => blocked.service.releaseAssignment(
+      42,
+      'TX202607130001',
+      { reasonCode: 'SCHEDULE_CONFLICT' },
+      { nowMs },
+    ),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.BOOKING_RELEASE_NOT_ALLOWED,
+  );
+
+  const allowed = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED, scheduled_pickup_at: pickup },
+    activeAssignment: { id: 77, driver_id: 7, status: 'ASSIGNED', is_active: 1 },
+  });
+  const result = await allowed.service.releaseAssignment(
+    42,
+    'TX202607130001',
+    { reasonCode: 'VEHICLE_BREAKDOWN', reasonDetail: 'Engine light' },
+    { nowMs },
+  );
+  assert.equal(result.released, true);
+  assert.equal(result.reassignmentPriority, 'CRITICAL');
+  assert.equal(allowed.calls.activityLogs[0].activity.payload.emergency, true);
 });
 
 test('claimOpenCall rejects a booking previously released by the same driver', async () => {

@@ -169,6 +169,15 @@ class AdminDispatchService {
       createdAt: row.created_at,
       operations,
       primaryCta: operations.primaryCta,
+      reassignment: row.last_driver_release_at
+        ? {
+            inProgress: !row.assignment_id
+              && ['PENDING', 'OPEN', 'CONFIRMED'].includes(row.status),
+            lastReleasedAt: row.last_driver_release_at,
+            lastReleasedDriverName: row.last_released_driver_name ?? null,
+            lastReleaseReasonCode: row.last_driver_release_reason_code ?? null,
+          }
+        : null,
     };
   }
 

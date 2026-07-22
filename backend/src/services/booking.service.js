@@ -15,6 +15,9 @@ const {
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
 const { emitDriverCallAvailable } = require('../socket/realtime');
+const {
+  evaluateCustomerCancellation,
+} = require('../policies/customerBookingCancellation.policy');
 
 const TRUST_MESSAGE = 'Keep your booking number. You can check driver assignment and trip status on the booking lookup page.';
 
@@ -472,6 +475,10 @@ class BookingService {
       }
 
       const booking = await this.bookingRepository.findById(bookingId);
+      const cancellation = evaluateCustomerCancellation({
+        status: booking.status,
+        scheduledPickupAt: booking.scheduled_pickup_at,
+      });
 
       return {
         bookingId: booking.id,
@@ -485,6 +492,9 @@ class BookingService {
         chatRoomCode: roomCode,
         boardingQrToken,
         trustMessage: TRUST_MESSAGE,
+        canCancel: cancellation.canCancel,
+        cancellationDeadline: cancellation.cancellationDeadline,
+        cancellationBlockedReason: cancellation.cancellationBlockedReason,
       };
     } catch (err) {
       await conn.rollback();

@@ -106,7 +106,7 @@ test("evaluateOperations does not mark active assignment as unassigned", () => {
   assert.notEqual(ops.primaryCta, "ASSIGN_DRIVER");
 });
 
-test("evaluateOperations keeps a four-hour-future unassigned booking out of needs action", () => {
+test("evaluateOperations flags a four-hour-future unassigned booking as urgent reassignment window", () => {
   const service = new AdminOperationsService(() => fixedNow());
   const ops = service.evaluateOperations({
     status: "PENDING",
@@ -115,8 +115,9 @@ test("evaluateOperations keeps a four-hour-future unassigned booking out of need
     assignment_id: null,
     updated_at: "2026-07-11 10:00:00",
   });
-  assert.equal(ops.needsAction, false);
-  assert.equal(ops.primaryActionReason, null);
+  assert.equal(ops.needsAction, true);
+  assert.equal(ops.primaryActionReason, "URGENT_UNASSIGNED");
+  assert.equal(ops.severity, "URGENT");
 });
 
 test("evaluateOperations includes a 30-minute-future unassigned booking in needs action", () => {
@@ -129,7 +130,8 @@ test("evaluateOperations includes a 30-minute-future unassigned booking in needs
     updated_at: "2026-07-11 10:00:00",
   });
   assert.equal(ops.needsAction, true);
-  assert.equal(ops.primaryActionReason, "PICKUP_SOON_UNASSIGNED");
+  assert.equal(ops.primaryActionReason, "CRITICAL_UNASSIGNED");
+  assert.equal(ops.severity, "CRITICAL");
 });
 
 test("evaluateOperations marks low rating as urgent", () => {
