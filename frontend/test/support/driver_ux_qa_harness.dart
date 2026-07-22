@@ -137,6 +137,17 @@ DriverOpenCall qaOpenCall({String number = 'TX202607130001'}) {
   );
 }
 
+DriverOpenCall qaUrgentOpenCall({
+  String number = 'TX202607130002',
+  int? minRequiredEtaMinutes,
+}) {
+  return qaOpenCall(number: number).copyWith(
+    isUrgentRequest: true,
+    negotiationId: 100,
+    minRequiredEtaMinutes: minRequiredEtaMinutes,
+  );
+}
+
 class QaDriverApi extends DriverApiService {
   QaDriverApi({
     this.jobs,
@@ -145,6 +156,7 @@ class QaDriverApi extends DriverApiService {
     this.openCallBlockedMessage,
     this.loadError,
     this.claimError,
+    this.lockError,
     this.claimDelay = Duration.zero,
     this.online = true,
     this.hasActiveJob = false,
@@ -158,6 +170,7 @@ class QaDriverApi extends DriverApiService {
   String? openCallBlockedMessage;
   Object? loadError;
   Object? claimError;
+  Object? lockError;
   Duration claimDelay;
   bool online;
   bool hasActiveJob;
@@ -166,6 +179,7 @@ class QaDriverApi extends DriverApiService {
 
   int todayCalls = 0;
   int claimCalls = 0;
+  int lockCalls = 0;
   bool claimInFlight = false;
 
   @override
@@ -228,6 +242,33 @@ class QaDriverApi extends DriverApiService {
     claimInFlight = false;
     if (claimError != null) throw claimError!;
     return qaBooking(status: 'DRIVER_ASSIGNED', number: bookingNumber);
+  }
+
+  @override
+  Future<Map<String, dynamic>> lockUrgentCall(String bookingNumber) async {
+    lockCalls += 1;
+    await Future<void>.delayed(claimDelay);
+    if (lockError != null) throw lockError!;
+    return {
+      'bookingNumber': bookingNumber,
+      'negotiationId': 100,
+      'attemptNumber': 1,
+      'status': 'LOCKED',
+      'lockExpiresAt': '2099-07-23 01:30:00.000',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> submitUrgentCallEta(
+    String bookingNumber,
+    int etaMinutes,
+  ) async {
+    return {
+      'bookingNumber': bookingNumber,
+      'etaMinutes': etaMinutes,
+      'status': 'AWAITING_CUSTOMER',
+      'customerDecisionExpiresAt': '2099-07-23 01:32:00.000',
+    };
   }
 
   @override

@@ -794,6 +794,82 @@ void main() {
     expect(find.textContaining('다른 기사가 먼저 수락했습니다'), findsOneWidget);
   });
 
+  testWidgets('jobs page urgent accept opens ETA dialog and submits', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      openCalls: [_urgentOpenCall()],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final acceptButton = find.widgetWithText(FilledButton, '수락 / รับงาน');
+    await tester.scrollUntilVisible(
+      acceptButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(acceptButton);
+    await tester.tap(acceptButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(api.lockCalls, 1);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.textContaining('도착 예상 시간을 입력하시면'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(find.byType(TextFormField), '20');
+    await tester.tap(find.widgetWithText(TextButton, '제출 / ส่ง'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.textContaining('고객 확인 대기 중'), findsOneWidget);
+    expect(find.textContaining('02:00'), findsNothing);
+  });
+
+  testWidgets('jobs page urgent lock conflict removes card', (tester) async {
+    _useTallViewport(tester);
+    final api = _FakeJobsApi(
+      initialToken: 'tok',
+      online: true,
+      lockError: const DriverApiException(
+        'Already locked',
+        statusCode: 409,
+        errorCode: 'URGENT_ALREADY_LOCKED',
+      ),
+      openCalls: [_urgentOpenCall(number: 'TX202607130100')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DriverJobsPage(api: api)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final acceptButton = find.widgetWithText(FilledButton, '수락 / รับงาน');
+    await tester.scrollUntilVisible(
+      acceptButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(acceptButton);
+    await tester.pumpAndSettle();
+
+    expect(api.lockCalls, 1);
+    expect(find.textContaining('다른 기사가 이미 수락한 콜입니다'), findsOneWidget);
+    expect(find.text('TX202607130100'), findsNothing);
+  });
+
   testWidgets('today layout has no horizontal overflow at 360px', (
     tester,
   ) async {
@@ -959,6 +1035,13 @@ DriverOpenCall _openCall({String number = 'TX202607130001'}) {
   );
 }
 
+DriverOpenCall _urgentOpenCall({String number = 'TX202607130099'}) {
+  return _openCall(number: number).copyWith(
+    isUrgentRequest: true,
+    negotiationId: 100,
+  );
+}
+
 void _useTallViewport(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 1400);
   tester.view.devicePixelRatio = 1.0;
@@ -1030,6 +1113,8 @@ class _FakeJobsApi extends DriverApiService {
     this.openCallBlockedMessage,
     this.error,
     this.claimError,
+    this.lockError,
+    this.etaError,
     this.hasActiveJob = false,
     this.online = false,
     String? initialToken,
@@ -1041,11 +1126,14 @@ class _FakeJobsApi extends DriverApiService {
   final String? openCallBlockedMessage;
   final Object? error;
   final Object? claimError;
+  final Object? lockError;
+  final Object? etaError;
   final bool hasActiveJob;
   final bool online;
   final String? _token;
   int todayCalls = 0;
   int claimCalls = 0;
+  int lockCalls = 0;
   int startRouteCalls = 0;
   int markArrivedCalls = 0;
   int boardingScanCalls = 0;
@@ -1108,6 +1196,33 @@ class _FakeJobsApi extends DriverApiService {
     claimCalls += 1;
     if (claimError != null) throw claimError!;
     return _booking(status: 'DRIVER_ASSIGNED', number: bookingNumber);
+  }
+
+  @override
+  Future<Map<String, dynamic>> lockUrgentCall(String bookingNumber) async {
+    lockCalls += 1;
+    if (lockError != null) throw lockError!;
+    return {
+      'bookingNumber': bookingNumber,
+      'negotiationId': 100,
+      'attemptNumber': 1,
+      'status': 'LOCKED',
+      'lockExpiresAt': '2099-07-23 01:30:00.000',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> submitUrgentCallEta(
+    String bookingNumber,
+    int etaMinutes,
+  ) async {
+    if (etaError != null) throw etaError!;
+    return {
+      'bookingNumber': bookingNumber,
+      'etaMinutes': etaMinutes,
+      'status': 'AWAITING_CUSTOMER',
+      'customerDecisionExpiresAt': '2099-07-23 01:32:00.000',
+    };
   }
 
   @override
