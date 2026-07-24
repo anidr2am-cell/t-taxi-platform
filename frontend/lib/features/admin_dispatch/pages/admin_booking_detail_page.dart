@@ -785,6 +785,47 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         _parseDateTime(detail['updatedAt']);
   }
 
+  Map<String, dynamic>? _previousReleasedDriver(Map<String, dynamic> detail) {
+    final previous = detail['previousDriver'];
+    if (previous is Map) {
+      final map = Map<String, dynamic>.from(previous);
+      final name = map['driverDisplayName']?.toString().trim();
+      if (name != null && name.isNotEmpty) return map;
+    }
+
+    final history = detail['assignmentHistory'];
+    if (history is! List) return null;
+
+    Map<String, dynamic>? latest;
+    DateTime? latestUnassignedAt;
+    for (final item in history) {
+      if (item is! Map) continue;
+      final entry = Map<String, dynamic>.from(item);
+      if (entry['isActive'] == true) continue;
+      if (entry['assignmentReason'] != 'DRIVER_RELEASED_ASSIGNMENT') continue;
+      final name = entry['driverDisplayName']?.toString().trim();
+      if (name == null || name.isEmpty) continue;
+
+      final unassignedAt = _parseDateTime(entry['unassignedAt']);
+      if (latest == null ||
+          (unassignedAt != null &&
+              (latestUnassignedAt == null ||
+                  unassignedAt.isAfter(latestUnassignedAt)))) {
+        latest = entry;
+        latestUnassignedAt = unassignedAt;
+      }
+    }
+    return latest;
+  }
+
+  String _previousReleasedDriverName(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+  ) {
+    return _previousReleasedDriver(detail)?['driverDisplayName']?.toString().trim() ??
+        '';
+  }
+
   String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
   String _formatAbsolute(DateTime value) {
@@ -1073,6 +1114,58 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final assignmentStatus = assignment == null
         ? l10n.t('admin_dispatch_unassigned')
         : assignment['status'] as String? ?? '-';
+    final previousDriverName = _previousReleasedDriverName(l10n, detail);
+    final summaryRows = <Widget>[
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_current_status'),
+        value: BookingStatusDisplay.label(
+          l10n,
+          status,
+          audience: BookingStatusAudience.admin,
+        ),
+      ),
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_last_status_change'),
+        value: changedAt == null
+            ? '-'
+            : _formatAbsoluteWithRelative(l10n, changedAt),
+      ),
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_status_duration'),
+        value: changedAt == null
+            ? '-'
+            : _formatDuration(l10n, DateTime.now().difference(changedAt)),
+      ),
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_driver_assignment_status'),
+        value: '$driverName · $assignmentStatus',
+      ),
+      if (previousDriverName.isNotEmpty)
+        AppUi.summaryRow(
+          label: l10n.t('admin_detail_previous_driver'),
+          value: previousDriverName,
+        ),
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_driver_status'),
+        value: driverStatus ?? '-',
+      ),
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_settlement_status'),
+        value: _settlementStatusLabel(l10n, detail),
+      ),
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_receipt_status'),
+        value: _receiptStatusLabel(l10n),
+      ),
+      AppUi.summaryRow(
+        label: l10n.t('admin_detail_recommended_action'),
+        value: AdminOperationsUx.nextActionLabel(
+          l10n,
+          operations,
+          detail,
+        ),
+      ),
+    ];
 
     return AppUi.adminDetailSection(
       context: context,
@@ -1084,52 +1177,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _summaryGrid([
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_current_status'),
-              value: BookingStatusDisplay.label(
-                l10n,
-                status,
-                audience: BookingStatusAudience.admin,
-              ),
-            ),
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_last_status_change'),
-              value: changedAt == null
-                  ? '-'
-                  : _formatAbsoluteWithRelative(l10n, changedAt),
-            ),
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_status_duration'),
-              value: changedAt == null
-                  ? '-'
-                  : _formatDuration(l10n, DateTime.now().difference(changedAt)),
-            ),
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_driver_assignment_status'),
-              value: '$driverName · $assignmentStatus',
-            ),
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_driver_status'),
-              value: driverStatus ?? '-',
-            ),
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_settlement_status'),
-              value: _settlementStatusLabel(l10n, detail),
-            ),
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_receipt_status'),
-              value: _receiptStatusLabel(l10n),
-            ),
-            AppUi.summaryRow(
-              label: l10n.t('admin_detail_recommended_action'),
-              value: AdminOperationsUx.nextActionLabel(
-                l10n,
-                operations,
-                detail,
-              ),
-            ),
-          ]),
+          _summaryGrid(summaryRows),
           if (latest != null &&
               (latest['memo'] as String?)?.trim().isNotEmpty == true) ...[
             const SizedBox(height: AppTokens.spaceSm),

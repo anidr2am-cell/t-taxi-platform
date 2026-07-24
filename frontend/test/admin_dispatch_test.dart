@@ -1660,6 +1660,124 @@ void main() {
     expect(onRouteY, lessThan(assignedY));
   });
 
+  testWidgets('operations summary shows previous released driver', (tester) async {
+    final detail = {
+      'bookingNumber': 'TX202607250007',
+      'status': 'OPEN',
+      'route': {
+        'origin': {'address': 'BKK'},
+        'destination': {'address': 'Pattaya'},
+      },
+      'customer': {'name': 'QA Dispatch UI', 'phone': '+66955550007'},
+      'pricing': {
+        'totalAmount': 1100,
+        'currency': 'THB',
+        'paymentMethod': 'PAY_DRIVER',
+      },
+      'activeAssignment': null,
+      'allowedActions': ['ASSIGN_DRIVER'],
+      'operations': {
+        'primaryActionReason': 'CRITICAL_REASSIGNMENT',
+        'primaryCta': 'ASSIGN_DRIVER',
+      },
+      'assignmentHistory': [
+        {
+          'assignmentId': 118,
+          'driverId': 6,
+          'driverDisplayName': 'test3',
+          'status': 'CANCELLED',
+          'isActive': false,
+          'assignedAt': '2026-07-25 02:44:47',
+          'unassignedAt': '2026-07-25 02:46:24',
+          'assignmentReason': 'DRIVER_RELEASED_ASSIGNMENT',
+        },
+      ],
+      'statusHistory': [
+        {
+          'fromStatus': 'DRIVER_ASSIGNED',
+          'toStatus': 'OPEN',
+          'changedByRole': 'DRIVER',
+          'createdAt': '2026-07-25 02:46:24',
+        },
+      ],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607250007',
+          api: _FakeAdminApi(detailResponse: detail),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Operations summary'), findsOneWidget);
+    expect(find.text('Previous driver'), findsOneWidget);
+    expect(find.text('test3'), findsOneWidget);
+  });
+
+  testWidgets('operations summary hides previous driver without release history', (
+    tester,
+  ) async {
+    final detail = {
+      'bookingNumber': 'TX202607010001',
+      'status': 'OPEN',
+      'route': {
+        'origin': {'address': 'BKK'},
+        'destination': {'address': 'Pattaya'},
+      },
+      'customer': {'name': 'Kim', 'phone': '+66123456789'},
+      'pricing': {
+        'totalAmount': 1200,
+        'currency': 'THB',
+        'paymentMethod': 'PAY_DRIVER',
+      },
+      'activeAssignment': null,
+      'allowedActions': ['ASSIGN_DRIVER'],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: detail),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Operations summary'), findsOneWidget);
+    expect(find.text('Previous driver'), findsNothing);
+  });
+
+  testWidgets('operations summary reads previousDriver from detail payload', (
+    tester,
+  ) async {
+    final detail = {
+      ..._settlementPendingDetail(),
+      'status': 'OPEN',
+      'activeAssignment': null,
+      'previousDriver': {
+        'driverId': 6,
+        'driverDisplayName': 'Released Driver',
+      },
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(detailResponse: detail),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Previous driver'), findsOneWidget);
+    expect(find.text('Released Driver'), findsOneWidget);
+  });
+
   testWidgets('receipt-required approval race shows friendly guidance', (
     tester,
   ) async {
