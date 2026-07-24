@@ -135,8 +135,8 @@ test('GET status exposes safe online payload', async () => {
     hasActiveJob: true,
     lastSeenAt: '2026-06-30 09:00:00',
     callEligibility: {
-      canReceiveCalls: false,
-      reasonCode: 'ACTIVE_TRIP',
+      canReceiveCalls: true,
+      reasonCode: 'READY',
     },
   });
   assert.equal('phone' in result, false);

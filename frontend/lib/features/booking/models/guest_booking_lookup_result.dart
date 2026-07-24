@@ -14,6 +14,10 @@ class GuestBookingLookupResult {
     required this.guestAccessExpiresAt,
     required this.capabilities,
     this.canReview = false,
+    this.canCancel = false,
+    this.cancellationDeadline,
+    this.cancellationBlockedReason,
+    this.reassignmentInProgress = false,
     this.review,
     this.serviceTypeCode,
     this.originAirportCode,
@@ -41,6 +45,10 @@ class GuestBookingLookupResult {
   final String? guestAccessExpiresAt;
   final GuestBookingCapabilities capabilities;
   final bool canReview;
+  final bool canCancel;
+  final String? cancellationDeadline;
+  final String? cancellationBlockedReason;
+  final bool reassignmentInProgress;
   final GuestBookingReviewSnapshot? review;
   final String? serviceTypeCode;
   final String? originAirportCode;
@@ -102,6 +110,11 @@ class GuestBookingLookupResult {
       canReview:
           json['canReview'] == true ||
           (json['canReview'] == null && capabilities.reviewAvailable),
+      canCancel:
+          json['canCancel'] == true || capabilities.cancelAvailable,
+      cancellationDeadline: json['cancellationDeadline'] as String?,
+      cancellationBlockedReason: json['cancellationBlockedReason'] as String?,
+      reassignmentInProgress: json['reassignmentInProgress'] == true,
       review: json['review'] is Map
           ? GuestBookingReviewSnapshot.fromJson(
               Map<String, dynamic>.from(json['review'] as Map),
@@ -153,6 +166,10 @@ class GuestBookingLookupResult {
     String? status,
     GuestBookingCapabilities? capabilities,
     bool? canReview,
+    bool? canCancel,
+    String? cancellationDeadline,
+    String? cancellationBlockedReason,
+    bool? reassignmentInProgress,
     GuestBookingReviewSnapshot? review,
   }) {
     return GuestBookingLookupResult(
@@ -170,6 +187,13 @@ class GuestBookingLookupResult {
       guestAccessExpiresAt: guestAccessExpiresAt,
       capabilities: capabilities ?? this.capabilities,
       canReview: canReview ?? this.canReview,
+      canCancel: canCancel ?? this.canCancel,
+      cancellationDeadline:
+          cancellationDeadline ?? this.cancellationDeadline,
+      cancellationBlockedReason:
+          cancellationBlockedReason ?? this.cancellationBlockedReason,
+      reassignmentInProgress:
+          reassignmentInProgress ?? this.reassignmentInProgress,
       review: review ?? this.review,
       serviceTypeCode: serviceTypeCode,
       originAirportCode: originAirportCode,
@@ -199,9 +223,14 @@ class GuestBookingLookupResult {
     String? serviceTypeCode,
     String? originAirportCode,
     bool nameSignRequested = false,
+    bool canCancel = false,
+    String? cancellationDeadline,
+    String? cancellationBlockedReason,
+    String? scheduledPickupAt,
   }) {
     const boardingQrStatuses = {
       'PENDING',
+      'OPEN',
       'CONFIRMED',
       'DRIVER_ASSIGNED',
       'ON_ROUTE',
@@ -211,7 +240,7 @@ class GuestBookingLookupResult {
       bookingId: bookingId,
       bookingNumber: bookingNumber,
       status: status,
-      scheduledPickupAt: null,
+      scheduledPickupAt: scheduledPickupAt,
       serviceTypeName: serviceTypeName,
       originAddress: originAddress,
       destinationAddress: destinationAddress,
@@ -228,8 +257,12 @@ class GuestBookingLookupResult {
         trackingAvailable: false,
         boardingQrRecoverable: boardingQrStatuses.contains(status),
         boardingQrPreviouslyIssued: boardingQrStatuses.contains(status),
+        cancelAvailable: canCancel,
       ),
       canReview: false,
+      canCancel: canCancel,
+      cancellationDeadline: cancellationDeadline,
+      cancellationBlockedReason: cancellationBlockedReason,
       serviceTypeCode: serviceTypeCode,
       originAirportCode: originAirportCode,
       nameSignRequested: nameSignRequested,
@@ -264,6 +297,12 @@ class GuestBookingLookupResult {
     },
     'capabilities': capabilities.toJson(),
     'canReview': canReview,
+    'canCancel': canCancel,
+    if (cancellationDeadline != null)
+      'cancellationDeadline': cancellationDeadline,
+    if (cancellationBlockedReason != null)
+      'cancellationBlockedReason': cancellationBlockedReason,
+    'reassignmentInProgress': reassignmentInProgress,
     if (review != null) 'review': review!.toJson(),
     'assignedDriver': driverName == null
         ? null
@@ -356,6 +395,7 @@ class GuestBookingCapabilities {
     required this.trackingAvailable,
     required this.boardingQrRecoverable,
     required this.boardingQrPreviouslyIssued,
+    this.cancelAvailable = false,
   });
 
   final bool chatAvailable;
@@ -365,6 +405,7 @@ class GuestBookingCapabilities {
   final bool trackingAvailable;
   final bool boardingQrRecoverable;
   final bool boardingQrPreviouslyIssued;
+  final bool cancelAvailable;
 
   factory GuestBookingCapabilities.fromJson(Map<String, dynamic> json) {
     return GuestBookingCapabilities(
@@ -375,6 +416,7 @@ class GuestBookingCapabilities {
       trackingAvailable: json['trackingAvailable'] == true,
       boardingQrRecoverable: json['boardingQrRecoverable'] == true,
       boardingQrPreviouslyIssued: json['boardingQrPreviouslyIssued'] == true,
+      cancelAvailable: json['cancelAvailable'] == true,
     );
   }
 
@@ -386,5 +428,6 @@ class GuestBookingCapabilities {
     'trackingAvailable': trackingAvailable,
     'boardingQrRecoverable': boardingQrRecoverable,
     'boardingQrPreviouslyIssued': boardingQrPreviouslyIssued,
+    'cancelAvailable': cancelAvailable,
   };
 }

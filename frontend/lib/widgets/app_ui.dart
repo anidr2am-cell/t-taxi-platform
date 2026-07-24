@@ -353,10 +353,20 @@ abstract final class AppUi {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                Text(
+                  title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
                 if (subtitle != null && subtitle.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: AppTokens.textSecondary)),
+                  Text(
+                    subtitle,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppTokens.textSecondary),
+                  ),
                 ],
                 if (meta != null && meta.isNotEmpty) ...[
                   const SizedBox(height: 4),

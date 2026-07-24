@@ -31,6 +31,20 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
   return success(res, data, 'Booking status updated');
 });
 
+const cancelBooking = asyncHandler(async (req, res) => {
+  const guestAccessToken =
+    req.body?.guestAccessToken || extractGuestAccessTokenFromHeader(req);
+  const data = await getBookingStatusService().cancelByCustomer(
+    req.params.bookingNumber,
+    {
+      ...req.body,
+      guestAccessToken,
+    },
+    req.user || null,
+  );
+  return success(res, data, 'Booking cancelled');
+});
+
 const issueDropoffQr = asyncHandler(async (req, res) => {
   const data = await getBookingService().issueDropoffQr(
     req.params.bookingNumber,
@@ -68,6 +82,7 @@ module.exports = {
   recommendVehicle,
   createBooking,
   updateBookingStatus,
+  cancelBooking,
   issueDropoffQr,
   issueBoardingQr,
   lookupGuestBooking,

@@ -7,7 +7,6 @@ import '../../../widgets/app_ui.dart';
 import '../driver_auth.dart';
 import '../driver_ux.dart';
 import '../pages/driver_booking_detail_page.dart';
-import '../pages/driver_chat_page.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../../notification/services/notification_device_registration_service.dart';
@@ -18,14 +17,12 @@ class DriverNotificationsPage extends StatefulWidget {
     super.key,
     this.api,
     this.deviceRegistrationService,
-    this.chatPageBuilder,
     this.detailPageBuilder,
     this.showAppBar = true,
   });
 
   final DriverApiService? api;
   final NotificationDeviceRegistrationService? deviceRegistrationService;
-  final Widget Function(String bookingNumber)? chatPageBuilder;
   final Widget Function(String bookingNumber)? detailPageBuilder;
   final bool showAppBar;
 
@@ -147,24 +144,8 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
     final payload = Map<String, dynamic>.from(item['payload'] as Map? ?? {});
     final bookingNumber = payload['bookingNumber'] as String?;
     final type = item['notificationType'] as String? ?? '';
-    final category = item['category'] as String? ?? '';
-    final action = item['action'] as String? ?? '';
-    final deepLink = item['deepLink'] as String? ?? '';
 
     if (bookingNumber != null && bookingNumber.isNotEmpty) {
-      if (_isChatNotification(
-        type: type,
-        category: category,
-        action: action,
-        deepLink: deepLink,
-        payload: payload,
-      )) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => _buildChatPage(bookingNumber)),
-        );
-        return;
-      }
       if (type.contains('COMMISSION') ||
           type.contains('RECEIPT') ||
           type.contains('SETTLEMENT')) {
@@ -188,26 +169,6 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.l10n.t('driver_notification_no_target'))),
     );
-  }
-
-  bool _isChatNotification({
-    required String type,
-    required String category,
-    required String action,
-    required String deepLink,
-    required Map<String, dynamic> payload,
-  }) {
-    final candidates = [
-      type,
-      category,
-      action,
-      deepLink,
-      payload['type'] as String? ?? '',
-      payload['category'] as String? ?? '',
-      payload['action'] as String? ?? '',
-      payload['deepLink'] as String? ?? '',
-    ].map((value) => value.toUpperCase()).join(' ');
-    return candidates.contains('CHAT') || candidates.contains('MESSAGE');
   }
 
   String _typeBadgeLabel(Map<String, dynamic> item, AppLocalizations l10n) {
@@ -243,14 +204,6 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
       return l10n.t('notification_type_booking');
     }
     return l10n.t('notification_type_system');
-  }
-
-  Widget _buildChatPage(String bookingNumber) {
-    return widget.chatPageBuilder?.call(bookingNumber) ??
-        DriverChatPage(
-          bookingNumber: bookingNumber,
-          bookingDetailPageBuilder: _buildDetailPage,
-        );
   }
 
   Widget _buildDetailPage(String bookingNumber) {

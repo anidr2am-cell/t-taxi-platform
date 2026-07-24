@@ -13,12 +13,11 @@ import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 import '../pages/driver_booking_detail_page.dart';
-import '../pages/driver_chat_page.dart';
-import '../pages/driver_notifications_page.dart';
 import '../services/driver_api_service.dart';
 import '../services/driver_call_socket_service.dart';
-import '../utils/driver_money_format.dart';
+import '../utils/driver_assignment_ended.dart';
 import '../widgets/driver_today_trip_cards.dart';
+import '../widgets/driver_workflow_widgets.dart';
 
 class DriverTodayPage extends StatefulWidget {
   const DriverTodayPage({
@@ -26,11 +25,15 @@ class DriverTodayPage extends StatefulWidget {
     this.api,
     this.settlementApi,
     this.onSessionChanged,
+    this.onNavigateToJobs,
+    this.onNavigateToSettlement,
   });
 
   final DriverApiService? api;
   final DriverSettlementApiService? settlementApi;
   final VoidCallback? onSessionChanged;
+  final VoidCallback? onNavigateToJobs;
+  final VoidCallback? onNavigateToSettlement;
 
   @override
   State<DriverTodayPage> createState() => _DriverTodayPageState();
@@ -42,10 +45,8 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
   Future<_TodayData>? _future;
   Future<DriverStatus>? _statusFuture;
   Future<String?>? _nameFuture;
-  Future<int>? _unreadFuture;
   final Map<String, String?> _phoneCache = {};
   final Set<String> _phoneLoading = {};
-  final Set<String> _claimingCalls = {};
   final Set<String> _notifiedOpenCalls = {};
   DriverCallSocketService? _callSocket;
   bool _completedExpanded = false;
@@ -91,6 +92,21 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
       ..onConfirmed = (_) {
         if (mounted) _refresh();
       }
+      ..onAssignmentReleased = (payload) {
+        if (!mounted) return;
+        final bookingNumber = payload['bookingNumber']?.toString();
+        final reasonCode = payload['reasonCode']?.toString() ??
+            payload['reason']?.toString();
+        _refresh();
+        if (bookingNumber == null || bookingNumber.isEmpty) return;
+        final snackKey = DriverAssignmentEndedReason.snackbarKey(reasonCode);
+        final text = context.l10n
+            .t(snackKey)
+            .replaceAll('{bookingNumber}', bookingNumber);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(text)));
+      }
       ..onReconnect = () {
         if (mounted) _refresh();
       };
@@ -107,7 +123,6 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
       _future = _loadTodayData();
       _statusFuture = _api.getStatus();
       _nameFuture = _api.getDriverDisplayName();
-      _unreadFuture = _api.getUnreadNotificationCount();
       _phoneCache.clear();
       _phoneLoading.clear();
     });
@@ -147,41 +162,6 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
     );
   }
 
-  Future<void> _claimOpenCall(DriverOpenCall call) async {
-    if (_claimingCalls.contains(call.bookingNumber)) return;
-    setState(() => _claimingCalls.add(call.bookingNumber));
-    try {
-      await _api.claimOpenCall(call.bookingNumber);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_driverCallText(context, 'confirmed'))),
-      );
-      _refresh();
-    } catch (err) {
-      if (!mounted) return;
-      final isAlreadyClaimed =
-          err is DriverApiException &&
-          (err.statusCode == 409 || err.errorCode == 'ALREADY_ASSIGNED');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isAlreadyClaimed
-                ? _driverCallText(context, 'already_claimed')
-                : userFacingError(
-                    err,
-                    fallback: context.l10n.t('driver_load_failed'),
-                  ),
-          ),
-        ),
-      );
-      _refresh();
-    } finally {
-      if (mounted) {
-        setState(() => _claimingCalls.remove(call.bookingNumber));
-      }
-    }
-  }
-
   void _openDetail(DriverBooking booking) {
     Navigator.push(
       context,
@@ -213,29 +193,6 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
       return;
     }
     _openDetail(booking);
-  }
-
-  void _openChat(DriverBooking booking) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DriverChatPage(
-          bookingNumber: booking.bookingNumber,
-          bookingDetailPageBuilder: (number) => DriverBookingDetailPage(
-            bookingNumber: number,
-            api: _api,
-            showStatusControl: true,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openNotifications() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => DriverNotificationsPage(api: _api)),
-    ).then((_) => _refresh());
   }
 
   Future<void> _ensurePhone(DriverBooking booking) async {
@@ -277,10 +234,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
               });
             }
             return AppUi.errorState(
-              message: userFacingError(
-                err,
-                fallback: l10n.t('driver_load_failed'),
-              ),
+              message: l10n.t('driver_load_failed'),
               onRetry: _refresh,
               retryLabel: l10n.t('driver_retry'),
             );
@@ -302,18 +256,10 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                   return a.bookingNumber.compareTo(b.bookingNumber);
                 });
           final completed = DriverUx.completedTodayTrips(items);
-          final hasActiveJob = items.any(
-            (booking) => const {
-              'DRIVER_ASSIGNED',
-              'ON_ROUTE',
-              'DRIVER_ARRIVED',
-              'PICKED_UP',
-            }.contains(booking.status),
-          );
           final locationBooking = _locationBooking(items, current: current);
 
           if (current != null &&
-              DriverUx.canMessageCustomer(current.status) &&
+              DriverUx.canContactCustomer(current.status) &&
               (current.customerPhone == null ||
                   current.customerPhone!.isEmpty) &&
               !_phoneCache.containsKey(current.bookingNumber) &&
@@ -340,10 +286,15 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                       )
                       .length,
                   nameFuture: _nameFuture,
-                  unreadFuture: _unreadFuture,
-                  onOpenNotifications: _openNotifications,
                   onRefresh: _refresh,
                 ),
+                if (data?.openCallBlockedReason == 'UNPAID_SETTLEMENT') ...[
+                  const SizedBox(height: AppTokens.spaceMd),
+                  DriverSettlementBlockBanner(
+                    message: data?.openCallBlockedMessage ?? '',
+                    onOpenSettlement: widget.onNavigateToSettlement ?? () {},
+                  ),
+                ],
                 const SizedBox(height: AppTokens.spaceMd),
                 FutureBuilder<DriverStatus>(
                   future: _statusFuture,
@@ -365,20 +316,15 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                   },
                 ),
                 const SizedBox(height: AppTokens.spaceMd),
-                FutureBuilder<DriverStatus>(
-                  future: _statusFuture,
-                  builder: (context, statusSnapshot) {
-                    return _OpenCallsSection(
-                      calls: openCalls,
-                      blockedReason: data?.openCallBlockedReason,
-                      blockedMessage: data?.openCallBlockedMessage,
-                      online: statusSnapshot.data?.online ?? false,
-                      hasActiveJob: hasActiveJob,
-                      claimingCalls: _claimingCalls,
-                      onClaim: _claimOpenCall,
-                    );
-                  },
-                ),
+                if (openCalls.isNotEmpty &&
+                    current == null &&
+                    data?.openCallBlockedReason != 'UNPAID_SETTLEMENT') ...[
+                  const SizedBox(height: AppTokens.spaceMd),
+                  _NewCallsPrompt(
+                    count: openCalls.length,
+                    onOpenJobs: widget.onNavigateToJobs,
+                  ),
+                ],
                 if (items.isEmpty) ...[
                   const SizedBox(height: AppTokens.spaceLg),
                   AppUi.emptyState(
@@ -399,13 +345,10 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                     DriverTodayCurrentTripCard(
                       booking: current,
                       settlement: settlements[current.bookingNumber],
-                      customerPhone: DriverUx.canMessageCustomer(current.status)
+                      customerPhone: DriverUx.canContactCustomer(current.status)
                           ? _phoneCache[current.bookingNumber]
                           : null,
                       onOpenPrimary: () => _openPrimary(current),
-                      onOpenChat: DriverUx.canMessageCustomer(current.status)
-                          ? () => _openChat(current)
-                          : null,
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                   ],
@@ -560,169 +503,42 @@ String _driverCallText(BuildContext context, String key) {
   return values[language]?[key] ?? values['en']![key] ?? key;
 }
 
-class _OpenCallsSection extends StatelessWidget {
-  const _OpenCallsSection({
-    required this.calls,
-    this.blockedReason,
-    this.blockedMessage,
-    required this.online,
-    required this.hasActiveJob,
-    required this.claimingCalls,
-    required this.onClaim,
-  });
+class _NewCallsPrompt extends StatelessWidget {
+  const _NewCallsPrompt({required this.count, this.onOpenJobs});
 
-  final List<DriverOpenCall> calls;
-  final String? blockedReason;
-  final String? blockedMessage;
-  final bool online;
-  final bool hasActiveJob;
-  final Set<String> claimingCalls;
-  final ValueChanged<DriverOpenCall> onClaim;
-
-  String _luggageSummary(DriverOpenCall call) {
-    final luggage = call.luggage ?? {};
-    final parts = <String>[];
-    final c20 = luggage['carriers20Inch'] as num? ?? 0;
-    final c24 = luggage['carriers24InchPlus'] as num? ?? 0;
-    final golf = luggage['golfBags'] as num? ?? 0;
-    final special = luggage['specialItems']?.toString().trim();
-    if (c20 > 0) parts.add('20": ${c20.toInt()}');
-    if (c24 > 0) parts.add('24"+: ${c24.toInt()}');
-    if (golf > 0) parts.add('Golf: ${golf.toInt()}');
-    if (special != null && special.isNotEmpty) parts.add(special);
-    return parts.join(' · ');
-  }
+  final int count;
+  final VoidCallback? onOpenJobs;
 
   @override
   Widget build(BuildContext context) {
-    final buttonEnabled = online && !hasActiveJob;
+    final l10n = context.l10n;
     return AppUi.surfaceCard(
+      backgroundColor: AppTokens.infoLight,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.campaign_outlined, color: AppTokens.primary),
-              const SizedBox(width: AppTokens.spaceSm),
-              Expanded(
-                child: Text(
-                  _driverCallText(context, 'waiting_title'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            l10n.t('driver_home_new_calls_title'),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          if (!online)
-            Text(
-              _driverCallText(context, 'online_required'),
-              style: const TextStyle(color: AppTokens.warning),
-            )
-          else if (blockedReason == 'UNPAID_SETTLEMENT')
-            Text(
-              blockedMessage?.trim().isNotEmpty == true
-                  ? blockedMessage!
-                  : _driverCallText(context, 'settlement_blocked'),
-              style: const TextStyle(
-                color: AppTokens.warning,
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          else if (calls.isEmpty)
-            Text(
-              _driverCallText(context, 'empty'),
-              style: const TextStyle(color: AppTokens.textSecondary),
-            )
-          else
-            ...calls.map((call) {
-              final claiming = claimingCalls.contains(call.bookingNumber);
-              final expectedIncome = call.driverExpectedIncomeAmount == null
-                  ? null
-                  : DriverMoneyFormat.money(
-                      call.driverExpectedIncomeAmount!,
-                      call.driverExpectedIncomeCurrency ?? call.currency,
-                    );
-              final customerTotal = call.customerPaymentAmount == null
-                  ? null
-                  : DriverMoneyFormat.money(
-                      call.customerPaymentAmount!,
-                      call.customerPaymentCurrency ?? call.currency,
-                    );
-              final luggage = _luggageSummary(call);
-              return Padding(
-                padding: const EdgeInsets.only(top: AppTokens.spaceSm),
-                child: Container(
-                  padding: const EdgeInsets.all(AppTokens.spaceMd),
-                  decoration: BoxDecoration(
-                    color: AppTokens.primary.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-                    border: Border.all(
-                      color: AppTokens.primary.withValues(alpha: 0.16),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${call.pickupDate} ${call.pickupTime}',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 6),
-                      Text('${call.origin} → ${call.destination}'),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${call.serviceTypeName} · ${call.vehicleTypeName}',
-                        style: const TextStyle(color: AppTokens.textSecondary),
-                      ),
-                      if (expectedIncome != null) ...[
-                        const SizedBox(height: 8),
-                        AppUi.summaryRow(
-                          label: context.l10n.t('driver_expected_income'),
-                          value: expectedIncome,
-                          emphasize: true,
-                        ),
-                      ],
-                      if (customerTotal != null) ...[
-                        const SizedBox(height: 4),
-                        AppUi.summaryRow(
-                          label: context.l10n.t('driver_customer_total_amount'),
-                          value: customerTotal,
-                        ),
-                      ],
-                      if (luggage.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          luggage,
-                          style: const TextStyle(color: AppTokens.textMuted),
-                        ),
-                      ],
-                      const SizedBox(height: AppTokens.spaceMd),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: FilledButton.icon(
-                          onPressed: buttonEnabled && !claiming
-                              ? () => onClaim(call)
-                              : null,
-                          icon: claiming
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.touch_app_outlined),
-                          label: Text(_driverCallText(context, 'claim')),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
+          Text(
+            l10n
+                .t('driver_home_new_calls_message')
+                .replaceAll('{count}', '$count'),
+            style: const TextStyle(height: 1.4),
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: onOpenJobs,
+              icon: const Icon(Icons.work_outline),
+              label: Text(l10n.t('driver_home_new_calls_cta')),
+            ),
+          ),
         ],
       ),
     );
@@ -734,16 +550,12 @@ class _TodayHeader extends StatelessWidget {
     required this.date,
     required this.tripCount,
     required this.nameFuture,
-    required this.unreadFuture,
-    required this.onOpenNotifications,
     required this.onRefresh,
   });
 
   final String date;
   final int tripCount;
   final Future<String?>? nameFuture;
-  final Future<int>? unreadFuture;
-  final VoidCallback onOpenNotifications;
   final VoidCallback onRefresh;
 
   @override
@@ -798,21 +610,6 @@ class _TodayHeader extends StatelessWidget {
               onPressed: onRefresh,
               icon: const Icon(Icons.refresh),
               tooltip: l10n.t('driver_refresh'),
-            ),
-            FutureBuilder<int>(
-              future: unreadFuture,
-              builder: (context, snapshot) {
-                final unread = snapshot.data ?? 0;
-                return Badge(
-                  isLabelVisible: unread > 0,
-                  label: Text('$unread'),
-                  child: IconButton(
-                    onPressed: onOpenNotifications,
-                    icon: const Icon(Icons.notifications_outlined),
-                    tooltip: l10n.t('driver_nav_notifications'),
-                  ),
-                );
-              },
             ),
           ],
         ),

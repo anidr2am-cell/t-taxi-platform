@@ -59,6 +59,7 @@ const FlightSyncWorker = require("../workers/flightSync.worker");
 const FlightSyncSchedulerService = require("../services/flightSyncScheduler.service");
 const ChatService = require("../services/chat.service");
 const DriverApplicationService = require("../services/driverApplication.service");
+const DriverProfileService = require("../services/driverProfile.service");
 const SupportInquiryService = require("../services/supportInquiry.service");
 const AdminBookingNoteRepository = require("../repositories/adminBookingNote.repository");
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
@@ -481,6 +482,17 @@ container.register(
       c.get("driverApplicationRepository"),
       c.get("fileRepository"),
       c.get("userRepository"),
+    ),
+);
+container.register(
+  "driverProfileService",
+  (c) =>
+    new DriverProfileService(
+      database.pool,
+      c.get("driverRepository"),
+      c.get("vehicleRepository"),
+      c.get("fileRepository"),
+      c.get("driverApplicationRepository"),
     ),
 );
 container.register(

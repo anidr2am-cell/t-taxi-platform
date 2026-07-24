@@ -748,6 +748,19 @@ void main() {
     },
   );
 
+  test('lookup parses reassignmentInProgress without cancelling booking', () {
+    final json = _lookupJson();
+    json['status'] = 'OPEN';
+    json['reassignmentInProgress'] = true;
+    json['assignedDriver'] = null;
+    json['canCancel'] = true;
+    final result = GuestBookingLookupResult.fromJson(json);
+    expect(result.status, 'OPEN');
+    expect(result.reassignmentInProgress, isTrue);
+    expect(result.canCancel, isTrue);
+    expect(result.driverName, isNull);
+  });
+
   testWidgets('ja locale shows localized review guidance on trip end', (
     tester,
   ) async {
@@ -769,6 +782,210 @@ void main() {
     expect(find.text('運行終了'), findsWidgets);
     expect(find.textContaining('ご利用ありがとうございました'), findsWidgets);
     expect(find.text('How was your ride?'), findsNothing);
+  });
+
+  test('lookup parses canCancel and cancellation fields from server', () {
+    final json = _lookupJson();
+    json['status'] = 'DRIVER_ASSIGNED';
+    json['canCancel'] = true;
+    json['cancellationDeadline'] = '2026-07-01T07:30:00+07:00';
+    json['cancellationBlockedReason'] = null;
+    json['capabilities'] = {
+      ..._capabilities(),
+      'cancelAvailable': true,
+    };
+
+    final result = GuestBookingLookupResult.fromJson(json);
+    expect(result.canCancel, isTrue);
+    expect(result.cancellationDeadline, '2026-07-01T07:30:00+07:00');
+    expect(result.capabilities.cancelAvailable, isTrue);
+  });
+
+  test('cancelBooking posts guest token and updates cached status', () async {
+    Uri? requestedUri;
+    Map<String, dynamic>? body;
+    Map<String, String>? headers;
+    final service = GuestBookingLookupService(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        requestedUri = request.url;
+        headers = request.headers;
+        body = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'bookingNumber': 'TX202607010001',
+              'status': 'CANCELLED',
+              'canCancel': false,
+              'cancellationDeadline': '2026-07-01T07:30:00+07:00',
+              'cancellationBlockedReason': 'ALREADY_CANCELLED',
+            },
+          }),
+          200,
+        );
+      }),
+    );
+
+    final booking = GuestBookingLookupResult.fromJson({
+      ..._lookupJson(),
+      'status': 'DRIVER_ASSIGNED',
+      'canCancel': true,
+      'cancellationDeadline': '2026-07-01T07:30:00+07:00',
+    });
+    await service.persist(booking);
+
+    final updated = await service.cancelBooking(booking: booking);
+    expect(requestedUri!.path, '/api/v1/bookings/TX202607010001/cancel');
+    expect(headers!['X-Guest-Access-Token'], 'guest-token');
+    expect(body!['guestAccessToken'], 'guest-token');
+    expect(updated.status, 'CANCELLED');
+    expect(updated.canCancel, isFalse);
+    expect(updated.cancellationBlockedReason, 'ALREADY_CANCELLED');
+
+    final cached = await service.loadCached();
+    expect(cached?.status, 'CANCELLED');
+  });
+
+  testWidgets(
+    'shows cancel button for assigned driver when server canCancel is true',
+    (tester) async {
+      final json = _lookupJson();
+      json['status'] = 'DRIVER_ASSIGNED';
+      json['canCancel'] = true;
+      json['cancellationDeadline'] = '2026-07-01T07:30:00+07:00';
+      json['cancellationBlockedReason'] = null;
+      final result = GuestBookingLookupResult.fromJson(json);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(cached: result),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsOneWidget);
+      expect(
+        find.text('You can cancel until 2 hours before pickup.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'hides cancel button when server canCancel is false within two hours',
+    (tester) async {
+      final json = _lookupJson();
+      json['status'] = 'DRIVER_ASSIGNED';
+      json['canCancel'] = false;
+      json['cancellationDeadline'] = '2026-07-01T07:30:00+07:00';
+      json['cancellationBlockedReason'] = 'WITHIN_TWO_HOURS';
+      final result = GuestBookingLookupResult.fromJson(json);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: _FakeLookupService(cached: result),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsNothing);
+      expect(
+        find.text(
+          'Bookings cannot be cancelled within 2 hours of the scheduled pickup time.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('cancel confirm dialog shows booking details then cancels', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['status'] = 'DRIVER_ASSIGNED';
+    json['canCancel'] = true;
+    json['cancellationDeadline'] = '2026-07-01T07:30:00+07:00';
+    final booking = GuestBookingLookupResult.fromJson(json);
+    final service = _FakeLookupService(cached: booking);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
+        ),
+        home: GuestBookingLookupPage(lookupService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cancelButton = find.byKey(const ValueKey('guest_booking_cancel_button'));
+    await tester.ensureVisible(cancelButton);
+    await tester.pumpAndSettle();
+    await tester.tap(cancelButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cancel this booking?'), findsOneWidget);
+    expect(find.text('TX202607010001'), findsWidgets);
+    expect(find.textContaining('Cancellation cannot be undone.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('guest_booking_cancel_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(service.cancelCount, 1);
+    expect(find.text('Cancelled'), findsWidgets);
+    expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsNothing);
+  });
+
+  testWidgets('cancel failure keeps booking and shows server reason', (
+    tester,
+  ) async {
+    final json = _lookupJson();
+    json['status'] = 'DRIVER_ASSIGNED';
+    json['canCancel'] = true;
+    final booking = GuestBookingLookupResult.fromJson(json);
+    final service = _FakeLookupService(
+      cached: booking,
+      cancelError: BookingApiException(
+        'Bookings cannot be cancelled within 2 hours of the scheduled pickup time',
+        'INVALID_STATUS_TRANSITION',
+        const [
+          BookingApiErrorDetail(field: 'WITHIN_TWO_HOURS'),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
+        ),
+        home: GuestBookingLookupPage(lookupService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cancelButton = find.byKey(const ValueKey('guest_booking_cancel_button'));
+    await tester.ensureVisible(cancelButton);
+    await tester.pumpAndSettle();
+    await tester.tap(cancelButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('guest_booking_cancel_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsOneWidget);
+    expect(
+      find.text(
+        'Bookings cannot be cancelled within 2 hours of the scheduled pickup time.',
+      ),
+      findsWidgets,
+    );
   });
 }
 
@@ -871,16 +1088,19 @@ class _FakeLookupService extends GuestBookingLookupService {
     this.errorCode,
     this.refreshedStatus,
     this.refreshedResult,
+    this.cancelError,
   }) : super(
          baseUrl: 'http://localhost:3000',
          client: MockClient((_) async => http.Response('{}', 200)),
        );
 
-  final GuestBookingLookupResult? cached;
+  GuestBookingLookupResult? cached;
   final String? errorCode;
   final String? refreshedStatus;
   final GuestBookingLookupResult? refreshedResult;
+  final BookingApiException? cancelError;
   int refreshCount = 0;
+  int cancelCount = 0;
 
   @override
   Future<GuestBookingLookupResult?> loadCached() async => cached;
@@ -902,6 +1122,35 @@ class _FakeLookupService extends GuestBookingLookupService {
       return base.copyWith(status: refreshedStatus);
     }
     return base;
+  }
+
+  @override
+  Future<GuestBookingLookupResult> cancelBooking({
+    required GuestBookingLookupResult booking,
+    String? reason,
+  }) async {
+    cancelCount += 1;
+    if (cancelError != null) {
+      throw cancelError!;
+    }
+    final updated = booking.copyWith(
+      status: 'CANCELLED',
+      canCancel: false,
+      cancellationBlockedReason: 'ALREADY_CANCELLED',
+      capabilities: GuestBookingCapabilities(
+        chatAvailable: booking.capabilities.chatAvailable,
+        notificationsAvailable: booking.capabilities.notificationsAvailable,
+        dropoffQrIssueAvailable: false,
+        reviewAvailable: booking.capabilities.reviewAvailable,
+        trackingAvailable: false,
+        boardingQrRecoverable: false,
+        boardingQrPreviouslyIssued:
+            booking.capabilities.boardingQrPreviouslyIssued,
+        cancelAvailable: false,
+      ),
+    );
+    cached = updated;
+    return updated;
   }
 }
 

@@ -3,6 +3,13 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const SERVICE_TYPES = require('../constants/serviceTypes');
 const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
+const {
+  evaluateDriverAssignmentRelease,
+} = require('../policies/driverAssignmentRelease.policy');
+const {
+  resolveAssignmentEndedReason,
+  safeMessageForEndedReason,
+} = require('../policies/driverAssignmentEnded.policy');
 
 const THAILAND_TIME_ZONE = 'Asia/Bangkok';
 const STANDBY_WINDOW_MS = 60 * 60 * 1000;
@@ -69,16 +76,21 @@ class DriverJobService {
     const status = row.status;
     const assignmentStatus = row.assignment_status ?? null;
     if (status === 'DRIVER_ASSIGNED') {
+      const actions = ['VIEW_DETAILS'];
+      if (assignmentStatus === 'ASSIGNED' || assignmentStatus === 'ACCEPTED') {
+        actions.push('RELEASE_ASSIGNMENT');
+      }
       if (assignmentStatus === 'ASSIGNED') {
-        if (!this.canConfirmStandby(row, now)) {
-          return ['VIEW_DETAILS'];
+        if (this.canConfirmStandby(row, now)) {
+          actions.push('ACCEPT_BOOKING');
         }
-        return ['VIEW_DETAILS', 'ACCEPT_BOOKING'];
+        return actions;
       }
       if (assignmentStatus === 'ACCEPTED') {
-        return ['VIEW_DETAILS', 'START_ON_ROUTE'];
+        actions.push('START_ON_ROUTE');
+        return actions;
       }
-      return ['VIEW_DETAILS'];
+      return actions;
     }
     if (status === 'ON_ROUTE') {
       return ['VIEW_DETAILS', 'MARK_ARRIVED'];
@@ -271,6 +283,24 @@ class DriverJobService {
     };
   }
 
+  releaseCapabilities(row, now = new Date()) {
+    const nowMs = now instanceof Date ? now.getTime() : Number(now);
+    const evaluation = evaluateDriverAssignmentRelease({
+      bookingStatus: row.status,
+      scheduledPickupAt: row.scheduled_pickup_at,
+      hasActiveAssignment: ['ASSIGNED', 'ACCEPTED'].includes(row.assignment_status),
+      isAssignedDriver: true,
+      nowMs,
+    });
+    return {
+      releaseAssignmentAvailable: evaluation.releaseAssignmentAvailable,
+      releaseAssignmentEmergencyOnly: evaluation.releaseAssignmentEmergencyOnly,
+      assignmentReleaseDeadline: evaluation.assignmentReleaseDeadline,
+      assignmentReleaseBlockedReason: evaluation.assignmentReleaseBlockedReason,
+      reassignmentPriority: evaluation.reassignmentPriority,
+    };
+  }
+
   mapDetail(row) {
     const detail = {
       ...this.mapBase(row),
@@ -296,6 +326,7 @@ class DriverJobService {
       specialInstructions: row.special_requests,
       paymentMethod: row.payment_method,
       nameSignRequested: Boolean(row.name_sign_requested),
+      capabilities: this.releaseCapabilities(row),
       qr: {
         boarding: {
           available: Boolean(row.boarding_qr_token_hash),
@@ -315,10 +346,13 @@ class DriverJobService {
   }
 
   async listToday(driverUserId, now = new Date()) {
+    return this.listScheduled(driverUserId, now);
+  }
+
+  async listScheduled(driverUserId, now = new Date()) {
     const range = this.getTodayRange(now);
-    const rows = await this.bookingRepository.findActiveDriverBookingsForDate(
+    const rows = await this.bookingRepository.findActiveDriverBookingsScheduled(
       driverUserId,
-      range,
     );
     return {
       date: range.date,
@@ -341,13 +375,56 @@ class DriverJobService {
     }
 
     if (!row) {
+      await this.throwAssignmentEndedOrNotFound(
+        driverUserId,
+        normalizedBookingNumber,
+      );
+    }
+
+    return this.mapDetail(row);
+  }
+
+  async throwAssignmentEndedOrNotFound(driverUserId, bookingNumber) {
+    const outcome = this.bookingRepository.findDriverAssignmentAccessOutcome
+      ? await this.bookingRepository.findDriverAssignmentAccessOutcome(
+          driverUserId,
+          bookingNumber,
+        )
+      : null;
+
+    if (!outcome) {
       throw new AppError('Booking not found', {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.BOOKING_NOT_FOUND || ERROR_CODES.NOT_FOUND,
       });
     }
 
-    return this.mapDetail(row);
+    // Still has an active assignment for this driver — should have been found above.
+    if (Number(outcome.assignment_is_active) === 1) {
+      throw new AppError('Booking not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.BOOKING_NOT_FOUND || ERROR_CODES.NOT_FOUND,
+      });
+    }
+
+    const reasonCode = resolveAssignmentEndedReason({
+      bookingStatus: outcome.booking_status,
+      assignmentReason: outcome.assignment_reason,
+      hasOtherActiveAssignment: Boolean(outcome.has_other_active_assignment),
+    });
+
+    throw new AppError(safeMessageForEndedReason(reasonCode), {
+      statusCode: HTTP_STATUS.CONFLICT,
+      errorCode: ERROR_CODES.DRIVER_ASSIGNMENT_RELEASED,
+      details: {
+        reasonCode,
+        bookingNumber: outcome.booking_number || bookingNumber,
+        bookingStatus: outcome.booking_status || null,
+        releasedAt: outcome.unassigned_at
+          ? new Date(outcome.unassigned_at).toISOString()
+          : null,
+      },
+    });
   }
 }
 

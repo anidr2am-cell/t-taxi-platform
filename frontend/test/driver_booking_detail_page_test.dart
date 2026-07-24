@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/driver/driver_trip_contact.dart';
 import 'package:frontend/features/driver/models/driver_booking.dart';
@@ -9,7 +10,15 @@ import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
 import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
+
+const _releaseAssignmentButtonLabel = '배정 반납 / คืนงานที่ได้รับมอบหมาย';
+const _releaseAssignmentDialogTitle =
+    '이 예약의 배정을 반납하시겠습니까?\n(ต้องการคืนงานที่ได้รับมอบหมายสำหรับการจองนี้หรือไม่)';
+const _releaseAssignmentDialogCancel = '유지 / คงไว้';
+const _releaseReasonScheduleConflict = '일정 충돌 / ตารางงานซ้ำซ้อน';
+const _releaseReasonAccident = '사고 / อุบัติเหตุ';
 
 void main() {
   testWidgets('shows standby confirmation and release actions when assigned', (
@@ -20,7 +29,8 @@ void main() {
         _FakeDriverApi(
           detail: _booking(
             status: 'DRIVER_ASSIGNED',
-            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+            actions: ['VIEW_DETAILS', 'ACCEPT_BOOKING', 'RELEASE_ASSIGNMENT'],
+            releaseAssignmentAvailable: true,
           ),
         ),
       ),
@@ -28,15 +38,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
+      find.widgetWithText(FilledButton, '운행 준비 확인 / ยืนยันว่าพร้อมปฏิบัติงาน'),
       findsOneWidget,
     );
     expect(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
       findsOneWidget,
     );
     expect(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
       findsNothing,
     );
   });
@@ -54,13 +64,16 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(
-        find.widgetWithText(FilledButton, '운행 확정 / ยืนยันการรับงาน'),
+        find.widgetWithText(FilledButton, '운행 준비 확인 / ยืนยันว่าพร้อมปฏิบัติงาน'),
       );
       await tester.pumpAndSettle();
       await tester.tap(
         find.descendant(
           of: find.byType(AlertDialog),
-          matching: find.widgetWithText(FilledButton, '운행 확정 / ยืนยัน'),
+          matching: find.widgetWithText(
+            FilledButton,
+            '운행 확정 / ยืนยัน',
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -69,7 +82,7 @@ void main() {
       expect(
         find.widgetWithText(
           FilledButton,
-          '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+          '픽업지로 출발 / ออกเดินทางไปรับลูกค้า',
         ),
         findsOneWidget,
       );
@@ -81,6 +94,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(_FakeDriverApi(detailFuture: completer.future)),
     );
+    await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     completer.complete(_booking());
@@ -103,7 +117,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '도착 / ถึงแล้ว'));
@@ -129,7 +143,7 @@ void main() {
 
     await tester.tap(
       find
-          .widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน')
+          .widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน')
           .first,
     );
     await tester.pumpAndSettle();
@@ -161,7 +175,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
       findsOneWidget,
     );
   });
@@ -179,7 +193,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว'),
+      find.widgetWithText(FilledButton, '고객 탑승 확인 / รับลูกค้าขึ้นรถแล้ว'),
       findsOneWidget,
     );
   });
@@ -194,7 +208,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(FilledButton, '고객 탑승 확인 / ยืนยันว่าลูกค้าขึ้นรถแล้ว'),
+      find.widgetWithText(FilledButton, '고객 탑승 확인 / รับลูกค้าขึ้นรถแล้ว'),
     );
     await tester.pumpAndSettle();
 
@@ -213,7 +227,7 @@ void main() {
     expect(api.markPickedUpCalls, 1);
     expect(api.detailCalls, greaterThan(1));
     expect(
-      find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
+      find.widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน'),
       findsOneWidget,
     );
   });
@@ -228,7 +242,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
+      find.widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน'),
       findsOneWidget,
     );
   });
@@ -335,7 +349,7 @@ void main() {
       await tester.tap(
         find.widgetWithText(
           FilledButton,
-          '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน',
+          '운행 종료 / ยืนยันจบงาน',
         ),
       );
       await tester.pumpAndSettle();
@@ -382,16 +396,16 @@ void main() {
     expect(
       find.widgetWithText(
         FilledButton,
-        '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+        '픽업지로 출발 / ออกเดินทางไปรับลูกค้า',
       ),
       findsNothing,
     );
     expect(
-      find.widgetWithText(FilledButton, '픽업 장소 도착 / ถึงจุดรับแล้ว'),
+      find.widgetWithText(FilledButton, '픽업지 도착 / ถึงจุดรับแล้ว'),
       findsNothing,
     );
     expect(
-      find.widgetWithText(FilledButton, '목적지 도착 및 운행 종료 / ถึงจุดหมายและจบงาน'),
+      find.widgetWithText(FilledButton, '운행 종료 / ยืนยันจบงาน'),
       findsNothing,
     );
   });
@@ -452,7 +466,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Suvarnabhumi Airport'), findsOneWidget);
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
     expect(
       find.text('999 Moo 1 Nong Prue, Bang Phli, Samut Prakan 10540'),
       findsOneWidget,
@@ -510,8 +524,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('BKK Airport'), findsOneWidget);
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
     expect(find.text('Pattaya Hotel'), findsOneWidget);
+    // Avoid showing the same raw "BKK Airport" label twice.
+    expect(find.text('BKK Airport'), findsNothing);
   });
 
   test('driver maps URL uses coordinates when available', () {
@@ -545,6 +561,15 @@ void main() {
     expect(uri, isNotNull);
     expect(uri!.queryParameters['query'], 'Hilton Pattaya 333/101 Beach Road');
     expect(uri.queryParameters['query_place_id'], 'google-hilton-pattaya');
+  });
+
+  test('driver maps URL rejects ambiguous Bangkok city-only queries', () {
+    expect(
+      DriverTripContact.googleMapsUriForLocation(
+        const DriverBookingLocation(address: 'Bangkok, Thailand'),
+      ),
+      isNull,
+    );
   });
 
   test('driver maps URL rejects empty or invalid locations', () {
@@ -616,11 +641,43 @@ void main() {
     expect(
       find.widgetWithText(
         FilledButton,
-        '픽업 장소로 이동 시작 / เริ่มเดินทางไปยังจุดรับ',
+        '픽업지로 출발 / ออกเดินทางไปรับลูกค้า',
       ),
       findsNothing,
     );
   });
+
+  testWidgets(
+    'shows release button when primaryKey is null but release is available',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          _FakeDriverApi(
+            detail: _booking(
+              status: 'DRIVER_ASSIGNED',
+              // No trip primary action → primaryKey is null (standby not open yet).
+              actions: ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+              releaseAssignmentAvailable: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Confirm ready for job'),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Head to pickup'),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets('release action confirms, calls API once, and pops detail', (
     tester,
@@ -628,29 +685,30 @@ void main() {
     final api = _FakeDriverApi(
       detail: _booking(
         status: 'DRIVER_ASSIGNED',
-        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: true,
       ),
     );
     await tester.pumpWidget(_wrap(api));
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('운행 포기'), findsWidgets);
-    expect(find.text('운행을 포기하시겠습니까?'), findsOneWidget);
-
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.widgetWithText(FilledButton, '운행 포기'),
-      ),
+    expect(find.text(_releaseAssignmentDialogTitle), findsOneWidget);
+    expect(
+      find.textContaining('고객 예약은 유지되며'),
+      findsOneWidget,
     );
+
+    await _selectReleaseReason(tester, _releaseReasonScheduleConflict);
+    await tester.tap(find.byKey(const ValueKey('driver_release_confirm')));
     await tester.pumpAndSettle();
 
     expect(api.releaseCalls, 1);
+    expect(api.lastReleaseReasonCode, 'SCHEDULE_CONFLICT');
     expect(find.byType(DriverBookingDetailPage), findsNothing);
   });
 
@@ -658,17 +716,18 @@ void main() {
     final api = _FakeDriverApi(
       detail: _booking(
         status: 'DRIVER_ASSIGNED',
-        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: true,
       ),
     );
     await tester.pumpWidget(_wrap(api));
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, '취소'));
+    await tester.tap(find.widgetWithText(TextButton, _releaseAssignmentDialogCancel));
     await tester.pumpAndSettle();
 
     expect(api.releaseCalls, 0);
@@ -681,7 +740,8 @@ void main() {
     final api = _FakeDriverApi(
       detail: _booking(
         status: 'DRIVER_ASSIGNED',
-        actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+        actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: true,
       ),
       releaseError: const DriverApiException(
         'Booking can only be released before the trip starts',
@@ -693,15 +753,11 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.widgetWithText(FilledButton, '운행 포기'),
-      ),
-    );
+    await _selectReleaseReason(tester, _releaseReasonAccident);
+    await tester.tap(find.byKey(const ValueKey('driver_release_confirm')));
     await tester.pumpAndSettle();
 
     expect(api.releaseCalls, 1);
@@ -717,6 +773,7 @@ void main() {
           detail: _booking(
             status: 'DRIVER_ARRIVED',
             actions: ['MARK_PICKED_UP'],
+            releaseAssignmentAvailable: false,
           ),
         ),
       ),
@@ -724,8 +781,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.widgetWithText(OutlinedButton, '운행 포기 / ยกเลิกการรับงาน'),
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
       findsNothing,
+    );
+  });
+
+  testWidgets('emergency-only release shows emergency hint', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS', 'START_ON_ROUTE', 'RELEASE_ASSIGNMENT'],
+            releaseAssignmentAvailable: false,
+            releaseAssignmentEmergencyOnly: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(OutlinedButton, _releaseAssignmentButtonLabel),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('픽업까지 2시간 이내'),
+      findsWidgets,
     );
   });
 
@@ -733,16 +815,52 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         _FakeDriverApi(
-          detailError: const DriverApiException('Booking not found'),
+          detailError: const DriverApiException(
+            'Booking not found',
+            errorCode: 'BOOKING_NOT_FOUND',
+            statusCode: 404,
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Booking not found'), findsOneWidget);
+    expect(find.text('Booking information could not be found.'), findsOneWidget);
     expect(find.text('다시 시도 / ลองอีกครั้ง'), findsOneWidget);
   });
 
-  testWidgets('customer message action opens internal driver chat', (
+  testWidgets('customer cancel reason shows assignment ended guidance', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detailError: const DriverApiException(
+            'The customer cancelled the booking.',
+            errorCode: 'DRIVER_ASSIGNMENT_RELEASED',
+            statusCode: 409,
+            details: {
+              'reasonCode': 'CUSTOMER_CANCELLED',
+              'bookingNumber': 'TX202607010001',
+              'bookingStatus': 'CANCELLED',
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining(
+        'The customer cancelled the booking, so your assignment was released automatically.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('OK'), findsOneWidget);
+    expect(find.textContaining('Booking not found'), findsNothing);
+    expect(find.textContaining('콜을 찾을 수 없습니다'), findsNothing);
+  });
+
+  testWidgets('driver booking detail does not show customer message action', (
     tester,
   ) async {
     _useTallViewport(tester);
@@ -752,82 +870,48 @@ void main() {
           detail: _booking(
             status: 'DRIVER_ASSIGNED',
             actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
+            phone: '+66812345678',
           ),
         ),
-        chatPageBuilder: (bookingNumber) =>
-            Scaffold(body: Text('chat:$bookingNumber')),
       ),
     );
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-      120,
+      find.textContaining('고객에게 전화'),
+      200,
       scrollable: find.byType(Scrollable),
     );
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
-    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
-    expect(find.byIcon(Icons.phone), findsNothing);
-
-    final messageButton = find.widgetWithText(
-      OutlinedButton,
-      '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า',
-    );
-    await tester.ensureVisible(messageButton);
-    tester.widget<OutlinedButton>(messageButton).onPressed?.call();
-    await tester.pumpAndSettle();
-
-    expect(find.text('chat:TX202607010001'), findsOneWidget);
-  });
-
-  testWidgets('customer message action works without customer phone', (
-    tester,
-  ) async {
-    _useTallViewport(tester);
-    await tester.pumpWidget(
-      _wrap(
-        _FakeDriverApi(
-          detail: _booking(
-            status: 'DRIVER_ASSIGNED',
-            actions: ['VIEW_DETAILS'],
-            phone: '',
-          ),
-        ),
-        chatPageBuilder: (bookingNumber) =>
-            Scaffold(body: Text('chat:$bookingNumber')),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(
-      find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-      120,
-      scrollable: find.byType(Scrollable),
-    );
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsNothing);
-    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsOneWidget);
-
-    await tester.tap(
-      find.widgetWithText(OutlinedButton, '고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('chat:TX202607010001'), findsOneWidget);
+    expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsNothing);
+    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsOneWidget);
   });
 }
 
 Widget _wrap(
   DriverApiService api, {
-  Widget Function(String bookingNumber)? chatPageBuilder,
   bool showStatusControl = false,
   DriverLocationApiService? locationApi,
   DriverSettlementApiService? settlementApi,
+  Locale locale = const Locale('en'),
 }) {
   return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLanguages
+        .map((code) => Locale(code))
+        .toList(),
+    localizationsDelegates: [
+      AppLocalizationsDelegate(locale.languageCode),
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    theme: ThemeData(
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: Colors.transparent,
+    ),
     home: DriverBookingDetailPage(
       bookingNumber: 'TX202607010001',
       api: api,
-      chatPageBuilder: chatPageBuilder,
       showStatusControl: showStatusControl,
       locationApi: locationApi,
       settlementApi: settlementApi,
@@ -859,6 +943,8 @@ DriverBooking _booking({
   double? originLongitude,
   double? destinationLatitude,
   double? destinationLongitude,
+  bool releaseAssignmentAvailable = false,
+  bool releaseAssignmentEmergencyOnly = false,
 }) {
   return DriverBooking(
     bookingNumber: 'TX202607010001',
@@ -896,7 +982,16 @@ DriverBooking _booking({
     currency: 'THB',
     paymentMethodLabel: 'PAY_DRIVER_AT_DESTINATION',
     allowedActions: actions,
+    releaseAssignmentAvailable: releaseAssignmentAvailable,
+    releaseAssignmentEmergencyOnly: releaseAssignmentEmergencyOnly,
   );
+}
+
+Future<void> _selectReleaseReason(WidgetTester tester, String label) async {
+  await tester.tap(find.byKey(const ValueKey('driver_release_reason')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label).last);
+  await tester.pumpAndSettle();
 }
 
 class _FakeDriverApi extends DriverApiService {
@@ -922,6 +1017,8 @@ class _FakeDriverApi extends DriverApiService {
   bool online;
   int detailCalls = 0;
   int releaseCalls = 0;
+  String? lastReleaseReasonCode;
+  String? lastReleaseReasonDetail;
   int acceptCalls = 0;
   int markPickedUpCalls = 0;
   int endTripCalls = 0;
@@ -952,11 +1049,22 @@ class _FakeDriverApi extends DriverApiService {
   }
 
   @override
-  Future<Map<String, dynamic>> releaseAssignment(String bookingNumber) async {
+  Future<Map<String, dynamic>> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  }) async {
     releaseCalls += 1;
+    lastReleaseReasonCode = reasonCode;
+    lastReleaseReasonDetail = reasonDetail;
     if (releaseError != null) throw releaseError!;
     _current = _booking(status: 'OPEN', actions: []);
-    return {'bookingNumber': bookingNumber, 'status': 'OPEN', 'released': true};
+    return {
+      'bookingNumber': bookingNumber,
+      'status': 'OPEN',
+      'released': true,
+      'reasonCode': reasonCode,
+    };
   }
 
   @override

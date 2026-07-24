@@ -33,6 +33,19 @@ ON DUPLICATE KEY UPDATE
   is_active = 1,
   deleted_at = NULL;
 
+-- Keep coordinates in sync for BKK airport location (no Place ID invention).
+-- Sync: frontend/lib/features/booking/models/thailand_registered_airports.dart
+UPDATE locations
+SET
+  latitude = 13.6899990,
+  longitude = 100.7479240,
+  display_name = 'Suvarnabhumi Airport',
+  is_active = 1,
+  deleted_at = NULL
+WHERE code = 'BKK'
+  AND type = 'AIRPORT'
+  AND deleted_at IS NULL;
+
 INSERT INTO locations (code, type, display_name, is_active, deleted_at)
 VALUES ('PATTAYA', 'CITY', 'Pattaya', 1, NULL)
 ON DUPLICATE KEY UPDATE

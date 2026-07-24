@@ -364,6 +364,57 @@ class AdminOperationsService {
       });
     }
 
+    if (unassigned && row.last_driver_release_at) {
+      const remainingMs = pickupMs == null ? null : pickupMs - nowMs;
+      if (
+        remainingMs != null &&
+        remainingMs <= OPERATIONS_THRESHOLDS.UNASSIGNED_TWO_HOURS_MS
+      ) {
+        reasons.push({
+          code: 'CRITICAL_REASSIGNMENT',
+          severity: OPERATIONS_SEVERITY.CRITICAL,
+          priority: 15,
+        });
+      } else if (
+        remainingMs != null &&
+        remainingMs < OPERATIONS_THRESHOLDS.UNASSIGNED_SIX_HOURS_MS
+      ) {
+        reasons.push({
+          code: 'URGENT_REASSIGNMENT',
+          severity: OPERATIONS_SEVERITY.URGENT,
+          priority: 25,
+        });
+      } else {
+        reasons.push({
+          code: 'DRIVER_RELEASED_REASSIGNMENT',
+          severity: OPERATIONS_SEVERITY.SOON,
+          priority: 105,
+        });
+      }
+    } else if (
+      unassigned &&
+      pickupMs != null &&
+      pickupMs >= nowMs &&
+      pickupMs - nowMs <= OPERATIONS_THRESHOLDS.UNASSIGNED_TWO_HOURS_MS
+    ) {
+      reasons.push({
+        code: 'CRITICAL_UNASSIGNED',
+        severity: OPERATIONS_SEVERITY.CRITICAL,
+        priority: 18,
+      });
+    } else if (
+      unassigned &&
+      pickupMs != null &&
+      pickupMs >= nowMs &&
+      pickupMs - nowMs < OPERATIONS_THRESHOLDS.UNASSIGNED_SIX_HOURS_MS
+    ) {
+      reasons.push({
+        code: 'URGENT_UNASSIGNED',
+        severity: OPERATIONS_SEVERITY.URGENT,
+        priority: 28,
+      });
+    }
+
     if (this.hasReceiptSubmitted(row)) {
       reasons.push({
         code: 'RECEIPT_REVIEW',
@@ -428,9 +479,10 @@ class AdminOperationsService {
   }
 
   severityRank(severity) {
-    if (severity === OPERATIONS_SEVERITY.URGENT) return 0;
-    if (severity === OPERATIONS_SEVERITY.SOON) return 1;
-    return 2;
+    if (severity === OPERATIONS_SEVERITY.CRITICAL) return 0;
+    if (severity === OPERATIONS_SEVERITY.URGENT) return 1;
+    if (severity === OPERATIONS_SEVERITY.SOON) return 2;
+    return 3;
   }
 
   evaluateOperations(row, nowMs = this.now().getTime()) {
@@ -486,6 +538,11 @@ class AdminOperationsService {
         return OPERATIONS_CTA.SETTLEMENT_DETAIL;
       case 'PICKUP_OVERDUE_UNASSIGNED':
       case 'PICKUP_SOON_UNASSIGNED':
+      case 'CRITICAL_REASSIGNMENT':
+      case 'URGENT_REASSIGNMENT':
+      case 'DRIVER_RELEASED_REASSIGNMENT':
+      case 'CRITICAL_UNASSIGNED':
+      case 'URGENT_UNASSIGNED':
         return OPERATIONS_CTA.ASSIGN_DRIVER;
       case 'CUSTOMER_INQUIRY':
         return OPERATIONS_CTA.OPEN_CHAT;

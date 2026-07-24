@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_config.dart';
@@ -8,18 +9,40 @@ import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 
 class DriverApiException implements Exception {
-  const DriverApiException(this.message, {this.errorCode, this.statusCode});
+  const DriverApiException(
+    this.message, {
+    this.errorCode,
+    this.statusCode,
+    this.details,
+  });
 
   final String message;
   final String? errorCode;
   final int? statusCode;
+  final Map<String, dynamic>? details;
 
   @override
   String toString() => message;
 
+  String? get reasonCode {
+    final fromDetails = details?['reasonCode']?.toString();
+    if (fromDetails != null && fromDetails.trim().isNotEmpty) {
+      return fromDetails.trim().toUpperCase();
+    }
+    return null;
+  }
+
+  bool get isAssignmentEnded =>
+      errorCode == 'DRIVER_ASSIGNMENT_RELEASED' ||
+      reasonCode == 'CUSTOMER_CANCELLED' ||
+      reasonCode == 'ADMIN_CANCELLED' ||
+      reasonCode == 'DRIVER_RELEASED' ||
+      reasonCode == 'REASSIGNED_TO_ANOTHER_DRIVER';
+
   bool get isStaleStatus =>
       errorCode == 'INVALID_STATUS_TRANSITION' ||
       errorCode == 'BOOKING_NOT_FOUND' ||
+      errorCode == 'DRIVER_ASSIGNMENT_RELEASED' ||
       message.toLowerCase().contains('invalid status');
 }
 
@@ -121,8 +144,11 @@ class DriverApiService {
       }
       throw DriverApiException(
         decoded['message'] as String? ?? 'Request failed',
-        errorCode: decoded['error_code'] as String?,
+        errorCode: decoded['error_code'] as String? ?? decoded['code'] as String?,
         statusCode: response.statusCode,
+        details: decoded['details'] is Map
+            ? Map<String, dynamic>.from(decoded['details'] as Map)
+            : null,
       );
     }
 
@@ -152,8 +178,11 @@ class DriverApiService {
       }
       throw DriverApiException(
         decoded['message'] as String? ?? 'Request failed',
-        errorCode: decoded['error_code'] as String?,
+        errorCode: decoded['error_code'] as String? ?? decoded['code'] as String?,
         statusCode: response.statusCode,
+        details: decoded['details'] is Map
+            ? Map<String, dynamic>.from(decoded['details'] as Map)
+            : null,
       );
     }
 
@@ -180,9 +209,94 @@ class DriverApiService {
     return DriverStatus.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
-  Future<DriverJobsToday> getTodayBookings() async {
-    final data = await _get('/driver/bookings/today');
+  Future<dynamic> _patch(String path, {Map<String, dynamic>? body}) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) {
+      throw const DriverApiException('Please log in again');
+    }
+
+    final response = await http.patch(
+      Uri.parse('$_base$path'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body ?? {}),
+    );
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode >= 400) {
+      if (response.statusCode == 401) {
+        await logout();
+      }
+      throw DriverApiException(
+        decoded['message'] as String? ?? 'Request failed',
+        errorCode: decoded['error_code'] as String?,
+        statusCode: response.statusCode,
+      );
+    }
+
+    return decoded['data'];
+  }
+
+  Future<dynamic> _postFile(
+    String path,
+    List<int> bytes,
+    String filename,
+  ) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) {
+      throw const DriverApiException('Please log in again');
+    }
+    final ext = filename.contains('.')
+        ? filename.split('.').last.toLowerCase()
+        : '';
+    final mimeType = switch (ext) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'application/octet-stream',
+    };
+    final request = http.MultipartRequest('POST', Uri.parse('$_base$path'));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType.parse(mimeType),
+      ),
+    );
+    final streamed = await request.send();
+    final body = await streamed.stream.bytesToString();
+    final decoded = jsonDecode(body) as Map<String, dynamic>;
+    if (streamed.statusCode >= 400) {
+      if (streamed.statusCode == 401) {
+        await logout();
+      }
+      throw DriverApiException(
+        decoded['message'] as String? ?? 'Upload failed',
+        errorCode: decoded['error_code'] as String?,
+        statusCode: streamed.statusCode,
+      );
+    }
+    return decoded['data'];
+  }
+
+  String resolveProfileAssetUrl(String? path) {
+    if (path == null || path.trim().isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return '${AppConfig.apiBaseUrl}$path';
+  }
+
+  Future<DriverJobsToday> getScheduledBookings() async {
+    final data = await _get('/driver/bookings/scheduled');
     return DriverJobsToday.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<DriverJobsToday> getTodayBookings() async {
+    return getScheduledBookings();
   }
 
   Future<DriverOpenCalls> getOpenCalls() async {
@@ -198,8 +312,19 @@ class DriverApiService {
     );
   }
 
-  Future<Map<String, dynamic>> releaseAssignment(String bookingNumber) async {
-    final data = await _post('/driver/bookings/$bookingNumber/release');
+  Future<Map<String, dynamic>> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  }) async {
+    final data = await _post(
+      '/driver/bookings/$bookingNumber/release',
+      body: {
+        'reasonCode': reasonCode,
+        if (reasonDetail != null && reasonDetail.trim().isNotEmpty)
+          'reasonDetail': reasonDetail.trim(),
+      },
+    );
     return Map<String, dynamic>.from(data as Map);
   }
 
@@ -275,5 +400,41 @@ class DriverApiService {
 
   Future<void> markAllNotificationsRead() async {
     await _post('/driver/notifications/read-all');
+  }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    final data = await _get('/driver/profile');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> body) async {
+    final data = await _patch('/driver/profile', body: body);
+    final profile = Map<String, dynamic>.from(data as Map);
+    final name = profile['name'] as String?;
+    if (name != null && name.trim().isNotEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_driverNameKey, name.trim());
+    }
+    return profile;
+  }
+
+  Future<Map<String, dynamic>> uploadProfileAvatar(
+    List<int> bytes,
+    String filename,
+  ) async {
+    final data = await _postFile('/driver/profile/avatar', bytes, filename);
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> uploadVehiclePhoto(
+    List<int> bytes,
+    String filename,
+  ) async {
+    final data = await _postFile(
+      '/driver/profile/vehicle-photo',
+      bytes,
+      filename,
+    );
+    return Map<String, dynamic>.from(data as Map);
   }
 }

@@ -321,6 +321,15 @@ class BookingRepository {
               AND bci.deleted_at IS NULL
             LIMIT 1
           ) AS name_sign_requested,
+          EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments released_bda
+            WHERE released_bda.booking_id = b.id
+              AND released_bda.is_active = 0
+              AND released_bda.deleted_at IS NULL
+              AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+            LIMIT 1
+          ) AS has_driver_release_history,
           d.name AS driver_name,
           d.phone AS driver_phone,
           dv.plate_number AS assigned_vehicle_plate,
@@ -567,6 +576,24 @@ class BookingRepository {
     return rows;
   }
 
+  async findActiveDriverBookingsScheduled(driverUserId) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.driverJobSelectSql()}
+        AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'NO_SHOW')
+        ORDER BY
+          CASE
+            WHEN b.status IN ('ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING') THEN 0
+            ELSE 1
+          END ASC,
+          b.scheduled_pickup_at ASC,
+          b.booking_number ASC
+      `,
+      [driverUserId],
+    );
+    return rows;
+  }
+
   async findActiveDriverBookingByNumber(driverUserId, bookingNumber) {
     const [rows] = await this.pool.query(
       `
@@ -591,6 +618,52 @@ class BookingRepository {
           AND b.status IN ('COMPLETED', 'CANCELLED', 'NO_SHOW')
           AND b.booking_number = ?
           AND b.is_archived = 0
+        LIMIT 1
+      `,
+      [driverUserId, bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  /**
+   * Returns the latest inactive/active assignment link for this driver+booking,
+   * only when the driver previously had an assignment. Used to explain why detail
+   * is no longer available without leaking existence to unrelated drivers.
+   */
+  async findDriverAssignmentAccessOutcome(driverUserId, bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.id AS booking_id,
+          b.booking_number,
+          b.status AS booking_status,
+          my_bda.id AS assignment_id,
+          my_bda.status AS assignment_status,
+          my_bda.is_active AS assignment_is_active,
+          my_bda.assignment_reason,
+          my_bda.unassigned_at,
+          EXISTS (
+            SELECT 1
+            FROM booking_driver_assignments other_bda
+            WHERE other_bda.booking_id = b.id
+              AND other_bda.deleted_at IS NULL
+              AND other_bda.is_active = 1
+              AND other_bda.driver_id <> my_bda.driver_id
+            LIMIT 1
+          ) AS has_other_active_assignment
+        FROM bookings b
+        INNER JOIN booking_driver_assignments my_bda
+          ON my_bda.booking_id = b.id
+         AND my_bda.deleted_at IS NULL
+        INNER JOIN drivers d
+          ON d.id = my_bda.driver_id
+         AND d.deleted_at IS NULL
+         AND d.user_id = ?
+        WHERE b.booking_number = ?
+          AND b.deleted_at IS NULL
+        ORDER BY
+          my_bda.assigned_at DESC,
+          my_bda.id DESC
         LIMIT 1
       `,
       [driverUserId, bookingNumber],
@@ -684,6 +757,7 @@ class BookingRepository {
               AND released_bda.is_active = 0
               AND released_bda.deleted_at IS NULL
               AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+              AND released_bda.unassigned_at > (UTC_TIMESTAMP() - INTERVAL 30 MINUTE)
           )
           AND NOT EXISTS (
             SELECT 1
@@ -1246,7 +1320,36 @@ class BookingRepository {
         dv.plate_number AS assigned_vehicle_plate,
         dv.model_name AS assigned_vehicle_model,
         av.code AS assigned_vehicle_type_code,
-        av.name AS assigned_vehicle_type_name
+        av.name AS assigned_vehicle_type_name,
+        (
+          SELECT rbda.unassigned_at
+          FROM booking_driver_assignments rbda
+          WHERE rbda.booking_id = b.id
+            AND rbda.is_active = 0
+            AND rbda.deleted_at IS NULL
+            AND rbda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+          LIMIT 1
+        ) AS last_driver_release_at,
+        (
+          SELECT rd.name
+          FROM booking_driver_assignments rbda
+          INNER JOIN drivers rd ON rd.id = rbda.driver_id AND rd.deleted_at IS NULL
+          WHERE rbda.booking_id = b.id
+            AND rbda.is_active = 0
+            AND rbda.deleted_at IS NULL
+            AND rbda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+          LIMIT 1
+        ) AS last_released_driver_name,
+        (
+          SELECT JSON_UNQUOTE(JSON_EXTRACT(bal.payload, '$.reasonCode'))
+          FROM booking_activity_logs bal
+          WHERE bal.booking_id = b.id
+            AND bal.activity_type = 'DRIVER_RELEASED_ASSIGNMENT'
+          ORDER BY bal.id DESC
+          LIMIT 1
+        ) AS last_driver_release_reason_code
       ${this.adminQueueFromSql(adminUserId)}
     `;
   }
@@ -1575,8 +1678,12 @@ class BookingRepository {
     return result.affectedRows === 1;
   }
 
-  async hasReleasedAssignment(conn, bookingId, driverId) {
+  async hasReleasedAssignment(conn, bookingId, driverId, { withinCooldown = true } = {}) {
     const executor = conn ?? this.pool;
+    // Exclusive 30m boundary: at exactly 30 minutes the same driver may see/claim again.
+    const cooldownSql = withinCooldown
+      ? 'AND bda.unassigned_at > (UTC_TIMESTAMP() - INTERVAL 30 MINUTE)'
+      : '';
     const [rows] = await executor.query(
       `
         SELECT 1
@@ -1586,6 +1693,7 @@ class BookingRepository {
           AND bda.is_active = 0
           AND bda.deleted_at IS NULL
           AND bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          ${cooldownSql}
         LIMIT 1
       `,
       [bookingId, driverId],
@@ -1609,6 +1717,26 @@ class BookingRepository {
       `,
       [bookingId],
     );
+  }
+
+  async clearAssignmentOnCancel(conn, bookingId, actorUserId, reason = 'CUSTOMER_CANCELLED') {
+    const active = await this.findActiveAssignmentForUpdate(conn, bookingId);
+    if (active) {
+      await this.deactivateAssignment(conn, active.id, reason);
+    }
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          driver_id = NULL,
+          updated_by = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `,
+      [actorUserId ?? null, bookingId],
+    );
+    return active || null;
   }
 
   async insertDriverAssignment(conn, row) {

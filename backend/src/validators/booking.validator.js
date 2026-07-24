@@ -135,6 +135,12 @@ const updateBookingStatusSchema = Joi.object({
   memo: unicodeText({ max: 500, allowEmpty: true }).default(null),
 });
 
+const cancelBookingSchema = Joi.object({
+  guestAccessToken: Joi.string().trim().min(1).max(512).optional(),
+  reason: unicodeText({ max: 100, allowEmpty: true }).default(null),
+  memo: unicodeText({ max: 500, allowEmpty: true }).default(null),
+});
+
 const guestBookingLookupSchema = Joi.object({
   bookingNumber: Joi.string().trim().uppercase().pattern(/^TX\d{12}$/).required(),
   phone: Joi.string().trim().min(4).max(30).required(),
@@ -144,6 +150,7 @@ module.exports = {
   vehicleRecommendSchema,
   createBookingSchema,
   updateBookingStatusSchema,
+  cancelBookingSchema,
   guestBookingLookupSchema,
   normalizeOptionalEmail,
   normalizeOptionalCountry,

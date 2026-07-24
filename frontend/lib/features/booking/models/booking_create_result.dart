@@ -11,6 +11,9 @@ class BookingCreateResult {
   final String boardingQrToken;
   final String trustMessage;
   final bool trackingAvailable;
+  final bool canCancel;
+  final String? cancellationDeadline;
+  final String? cancellationBlockedReason;
 
   const BookingCreateResult({
     this.bookingId,
@@ -25,6 +28,9 @@ class BookingCreateResult {
     required this.boardingQrToken,
     required this.trustMessage,
     this.trackingAvailable = false,
+    this.canCancel = false,
+    this.cancellationDeadline,
+    this.cancellationBlockedReason,
   });
 
   factory BookingCreateResult.fromJson(Map<String, dynamic> json) {
@@ -44,6 +50,10 @@ class BookingCreateResult {
       boardingQrToken: json['boardingQrToken'] as String? ?? '',
       trustMessage: json['trustMessage'] as String? ?? '',
       trackingAvailable: capabilities['trackingAvailable'] == true,
+      canCancel:
+          json['canCancel'] == true || capabilities['cancelAvailable'] == true,
+      cancellationDeadline: json['cancellationDeadline'] as String?,
+      cancellationBlockedReason: json['cancellationBlockedReason'] as String?,
     );
   }
 }

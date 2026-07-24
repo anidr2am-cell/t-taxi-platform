@@ -6,6 +6,9 @@ const { parseStoredTags } = require('../constants/reviewTags');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
 const { isBookingReviewEligible } = require('../utils/reviewEligibility.util');
 const GuestVehiclePhotoService = require('./guestVehiclePhoto.service');
+const {
+  evaluateCustomerCancellation,
+} = require('../policies/customerBookingCancellation.policy');
 
 const LOOKUP_GUEST_TOKEN_TTL_HOURS = 24;
 const CUSTOMER_TRACKING_STATUSES = new Set([
@@ -128,12 +131,27 @@ class GuestBookingLookupService {
     const reviewEligible = this.isReviewEligible(row);
     const reviewSubmitted = Boolean(review);
     const canReview = reviewEligible && !reviewSubmitted;
+    const cancellation = evaluateCustomerCancellation({
+      status: row.status,
+      scheduledPickupAt: row.scheduled_pickup_at_text ?? row.scheduled_pickup_at,
+    });
+    const reassignmentInProgress = Boolean(row.has_driver_release_history)
+      && !assignedDriver
+      && [
+        BOOKING_STATUS.PENDING,
+        BOOKING_STATUS.OPEN,
+        BOOKING_STATUS.CONFIRMED,
+      ].includes(row.status);
 
     return {
       bookingId: row.id,
       bookingNumber: row.booking_number,
       status: row.status,
+      reassignmentInProgress,
       canReview,
+      canCancel: cancellation.canCancel,
+      cancellationDeadline: cancellation.cancellationDeadline,
+      cancellationBlockedReason: cancellation.cancellationBlockedReason,
       scheduledPickupAt: this.formatThailandIso(row.scheduled_pickup_at_text),
       serviceType: {
         code: row.service_type_code,
@@ -187,6 +205,7 @@ class GuestBookingLookupService {
         trackingAvailable: CUSTOMER_TRACKING_STATUSES.has(row.status),
         boardingQrRecoverable,
         boardingQrPreviouslyIssued: Boolean(row.boarding_qr_token_hash) && !terminalStatus,
+        cancelAvailable: cancellation.canCancel,
       },
       review: this.mapGuestReviewState(row, review),
       guestAccess: {

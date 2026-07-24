@@ -496,6 +496,284 @@ class DriverRepository {
       [userId, action, driverId, JSON.stringify(payload ?? {})],
     );
   }
+
+  async findActiveAssignmentPickupsForConflict(conn, driverId, excludeBookingId = null) {
+    const params = [driverId];
+    let excludeSql = '';
+    if (excludeBookingId != null) {
+      excludeSql = 'AND b.id <> ?';
+      params.push(excludeBookingId);
+    }
+    const [rows] = await conn.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.scheduled_pickup_at
+        FROM booking_driver_assignments bda
+        INNER JOIN bookings b ON b.id = bda.booking_id
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+        WHERE bda.driver_id = ?
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+          AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+          AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+          ${excludeSql}
+      `,
+      params,
+    );
+    return rows;
+  }
+
+  async findProfileByUserId(userId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          d.id AS driver_id,
+          d.user_id,
+          d.name,
+          d.phone,
+          d.status,
+          d.is_active,
+          u.email,
+          u.phone AS user_phone,
+          up.display_name,
+          up.avatar_url,
+          dv.id AS vehicle_id,
+          dv.plate_number,
+          dv.model_name,
+          dv.color,
+          vt.id AS vehicle_type_id,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          da.id AS application_id,
+          da.vehicle_year,
+          (
+            SELECT f.id
+            FROM driver_application_files daf
+            INNER JOIN files f ON f.id = daf.file_id AND f.deleted_at IS NULL
+            WHERE daf.driver_application_id = da.id
+              AND daf.category = 'DRIVER_VEHICLE_PHOTO'
+            ORDER BY daf.sort_order ASC, f.id ASC
+            LIMIT 1
+          ) AS vehicle_photo_file_id
+        FROM drivers d
+        INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL
+        LEFT JOIN user_profiles up ON up.user_id = d.user_id AND up.deleted_at IS NULL
+        LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id
+          AND dv.is_primary = 1
+          AND dv.is_active = 1
+          AND dv.deleted_at IS NULL
+        LEFT JOIN vehicle_types vt ON vt.id = dv.vehicle_type_id AND vt.deleted_at IS NULL
+        LEFT JOIN driver_applications da ON da.approved_driver_id = d.id
+          AND da.status = 'APPROVED'
+          AND da.deleted_at IS NULL
+        WHERE d.user_id = ?
+          AND d.deleted_at IS NULL
+          AND d.is_archived = 0
+        LIMIT 1
+      `,
+      [userId],
+    );
+    return rows[0] || null;
+  }
+
+  async findProfileByUserIdForUpdate(conn, userId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          d.id,
+          d.user_id,
+          d.name,
+          d.phone,
+          d.primary_vehicle_type_id,
+          u.email,
+          u.phone AS user_phone,
+          up.id AS profile_id,
+          up.avatar_url,
+          dv.id AS vehicle_id,
+          dv.vehicle_type_id,
+          dv.plate_number,
+          dv.model_name,
+          dv.color,
+          da.id AS application_id,
+          da.vehicle_year
+        FROM drivers d
+        INNER JOIN users u ON u.id = d.user_id AND u.deleted_at IS NULL
+        LEFT JOIN user_profiles up ON up.user_id = d.user_id AND up.deleted_at IS NULL
+        LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id
+          AND dv.is_primary = 1
+          AND dv.is_active = 1
+          AND dv.deleted_at IS NULL
+        LEFT JOIN driver_applications da ON da.approved_driver_id = d.id
+          AND da.status = 'APPROVED'
+          AND da.deleted_at IS NULL
+        WHERE d.user_id = ?
+          AND d.deleted_at IS NULL
+          AND d.is_archived = 0
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [userId],
+    );
+    return rows[0] || null;
+  }
+
+  async updateSelfProfile(conn, { driverId, userId, name, phone, actorUserId }) {
+    await conn.query(
+      `
+        UPDATE drivers
+        SET name = ?, phone = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [name, phone, actorUserId, driverId],
+    );
+    await conn.query(
+      `
+        UPDATE users
+        SET phone = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [phone, userId],
+    );
+    if (name) {
+      const [existing] = await conn.query(
+        `SELECT id FROM user_profiles WHERE user_id = ? AND deleted_at IS NULL LIMIT 1`,
+        [userId],
+      );
+      if (existing[0]) {
+        await conn.query(
+          `
+            UPDATE user_profiles
+            SET display_name = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND deleted_at IS NULL
+          `,
+          [name, userId],
+        );
+      } else {
+        await conn.query(
+          `INSERT INTO user_profiles (user_id, display_name) VALUES (?, ?)`,
+          [userId, name],
+        );
+      }
+    }
+  }
+
+  async updatePrimaryVehicle(conn, { vehicleId, driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId }) {
+    await conn.query(
+      `
+        UPDATE driver_vehicles
+        SET
+          vehicle_type_id = ?,
+          plate_number = ?,
+          model_name = ?,
+          color = ?,
+          updated_by = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND driver_id = ? AND deleted_at IS NULL
+      `,
+      [vehicleTypeId, plateNumber, modelName, color, actorUserId, vehicleId, driverId],
+    );
+    await conn.query(
+      `
+        UPDATE drivers
+        SET primary_vehicle_type_id = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [vehicleTypeId, actorUserId, driverId],
+    );
+  }
+
+  async insertPrimaryVehicle(conn, { driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId }) {
+    const [result] = await conn.query(
+      `
+        INSERT INTO driver_vehicles (
+          driver_id, vehicle_type_id, plate_number, model_name, color,
+          is_primary, is_active, created_by, updated_by
+        ) VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?)
+      `,
+      [driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId, actorUserId],
+    );
+    await conn.query(
+      `
+        UPDATE drivers
+        SET primary_vehicle_type_id = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [vehicleTypeId, actorUserId, driverId],
+    );
+    return result.insertId;
+  }
+
+  async updateApplicationVehicleYear(conn, applicationId, vehicleYear) {
+    await conn.query(
+      `
+        UPDATE driver_applications
+        SET vehicle_year = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [vehicleYear, applicationId],
+    );
+  }
+
+  async updateAvatarUrl(conn, userId, avatarUrl) {
+    const [existing] = await conn.query(
+      `SELECT id FROM user_profiles WHERE user_id = ? AND deleted_at IS NULL LIMIT 1`,
+      [userId],
+    );
+    if (existing[0]) {
+      await conn.query(
+        `
+          UPDATE user_profiles
+          SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ? AND deleted_at IS NULL
+        `,
+        [avatarUrl, userId],
+      );
+    } else {
+      await conn.query(
+        `INSERT INTO user_profiles (user_id, avatar_url) VALUES (?, ?)`,
+        [userId, avatarUrl],
+      );
+    }
+  }
+
+  async findAvatarFileByUserId(userId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT f.id, f.file_path, f.mime_type, f.original_filename
+        FROM files f
+        WHERE f.entity_type = 'DRIVER_AVATAR'
+          AND f.entity_id = ?
+          AND f.deleted_at IS NULL
+        ORDER BY f.id DESC
+        LIMIT 1
+      `,
+      [userId],
+    );
+    return rows[0] || null;
+  }
+
+  async findVehiclePhotoFileByDriverId(driverId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT f.id, f.file_path, f.mime_type, f.original_filename
+        FROM driver_applications da
+        INNER JOIN driver_application_files daf
+          ON daf.driver_application_id = da.id
+         AND daf.category = 'DRIVER_VEHICLE_PHOTO'
+        INNER JOIN files f ON f.id = daf.file_id AND f.deleted_at IS NULL
+        WHERE da.approved_driver_id = ?
+          AND da.status = 'APPROVED'
+          AND da.deleted_at IS NULL
+        ORDER BY daf.sort_order ASC, f.id DESC
+        LIMIT 1
+      `,
+      [driverId],
+    );
+    return rows[0] || null;
+  }
 }
 
 module.exports = DriverRepository;

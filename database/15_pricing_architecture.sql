@@ -258,6 +258,29 @@ WHERE a.deleted_at IS NULL
     SELECT 1 FROM locations l WHERE l.code = a.iata_code AND l.deleted_at IS NULL
   );
 
+-- Airport map coordinates (WGS84). Keep in sync with
+-- frontend/lib/features/booking/models/thailand_registered_airports.dart
+-- Place IDs stay null until verified.
+UPDATE locations
+SET
+  latitude = CASE code
+    WHEN 'BKK' THEN 13.6899990
+    WHEN 'DMK' THEN 13.9132600
+    WHEN 'CNX' THEN 18.7679959
+    WHEN 'HKT' THEN 8.1054010
+    ELSE latitude
+  END,
+  longitude = CASE code
+    WHEN 'BKK' THEN 100.7479240
+    WHEN 'DMK' THEN 100.6020100
+    WHEN 'CNX' THEN 98.9685630
+    WHEN 'HKT' THEN 98.3060540
+    ELSE longitude
+  END
+WHERE deleted_at IS NULL
+  AND type = 'AIRPORT'
+  AND code IN ('BKK', 'DMK', 'CNX', 'HKT');
+
 INSERT INTO locations (code, type, display_name, is_active)
 SELECT 'PATTAYA', 'CITY', 'Pattaya', 1
 FROM DUAL

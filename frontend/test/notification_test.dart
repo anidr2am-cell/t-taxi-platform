@@ -78,7 +78,7 @@ void main() {
     expect(find.text('Settlement'), findsOneWidget);
   });
 
-  testWidgets('driver chat notification opens driver chat page', (
+  testWidgets('driver chat notification opens booking detail page', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -86,8 +86,8 @@ void main() {
         home: DriverNotificationsPage(
           api: _FakeDriverNotificationApi(chatNotification: true),
           deviceRegistrationService: _FakeDeviceRegistrationService(),
-          chatPageBuilder: (bookingNumber) =>
-              Scaffold(body: Text('driver-chat:$bookingNumber')),
+          detailPageBuilder: (bookingNumber) =>
+              Scaffold(body: Text('driver-detail:$bookingNumber')),
         ),
       ),
     );
@@ -97,7 +97,7 @@ void main() {
     await tester.tap(find.text('New customer message'));
     await tester.pumpAndSettle();
 
-    expect(find.text('driver-chat:TX202607010001'), findsOneWidget);
+    expect(find.text('driver-detail:TX202607010001'), findsOneWidget);
   });
 
   testWidgets('admin unread filter', (tester) async {
