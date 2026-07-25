@@ -13,10 +13,16 @@ import 'driver_today_page.dart';
 
 /// Mobile-first driver shell: Home, Jobs, Settlement, Profile.
 class DriverShellPage extends StatefulWidget {
-  const DriverShellPage({super.key, this.api, this.settlementApi});
+  const DriverShellPage({
+    super.key,
+    this.api,
+    this.settlementApi,
+    this.enableCallSocket = true,
+  });
 
   final DriverApiService? api;
   final DriverSettlementApiService? settlementApi;
+  final bool enableCallSocket;
 
   @override
   State<DriverShellPage> createState() => _DriverShellPageState();
@@ -79,7 +85,7 @@ class _DriverShellPageState extends State<DriverShellPage> {
       DriverTodayPage(
         api: _api,
         settlementApi: _settlementApi,
-        enableCallSocket: true,
+        enableCallSocket: widget.enableCallSocket,
         onSessionChanged: _refreshSession,
         onNavigateToJobs: () => _switchTab(1),
         onNavigateToSettlement: () => _switchTab(2),

@@ -15,9 +15,18 @@ import 'package:frontend/features/driver/pages/driver_login_page.dart';
 import 'package:frontend/features/driver/pages/driver_qr_scan_page.dart';
 import 'package:frontend/features/driver/pages/driver_shell_page.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
+import 'package:frontend/features/driver/services/driver_urgent_negotiation_controller.dart';
 import 'package:frontend/features/driver/widgets/driver_status_control.dart';
 
 void main() {
+  setUp(() {
+    DriverUrgentNegotiationController.instance.clear();
+  });
+
+  tearDown(() {
+    DriverUrgentNegotiationController.instance.clear();
+  });
+
   group('DriverUx grouping', () {
     test('active jobs include assigned, arrived, and picked up', () {
       expect(DriverUx.groupForStatus('DRIVER_ASSIGNED'), DriverJobGroup.active);
@@ -150,7 +159,7 @@ void main() {
 
   testWidgets('login success routes to Today shell', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: DriverLoginPage(api: _FakeLoginApi())),
+      MaterialApp(home: _driverTestLogin(api: _FakeLoginApi())),
     );
     await tester.pumpAndSettle();
 
@@ -173,7 +182,9 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: DriverLoginPage(api: _FakeLoginApi(initialToken: 'tok')),
+        home: _driverTestLogin(
+          api: _FakeLoginApi(initialToken: 'tok'),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -185,7 +196,7 @@ void main() {
   testWidgets('expired token on jobs redirects to login', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: DriverShellPage(
+        home: _driverTestShell(
           api: _FakeJobsApi(
             initialToken: 'tok',
             error: const DriverApiException('Please log in', statusCode: 401),
@@ -328,7 +339,7 @@ void main() {
       initialToken: 'tok',
       jobs: const DriverJobsToday(date: '2026-07-01', items: []),
     );
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('หน้าหลัก'), findsWidgets);
@@ -381,7 +392,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
@@ -406,7 +417,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.qr_code_scanner), findsNothing);
@@ -426,7 +437,7 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+      await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('오프라인'), findsWidgets);
@@ -454,7 +465,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
     await tester.pumpAndSettle();
 
     await tester.tap(
@@ -482,7 +493,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
     await tester.pumpAndSettle();
 
     final button = tester.widget<OutlinedButton>(
@@ -504,7 +515,7 @@ void main() {
       onlineError: const DriverApiException('Online failed'),
     );
 
-    await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+    await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
     await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithIcon(FilledButton, Icons.play_circle_fill));
@@ -527,7 +538,7 @@ void main() {
         delayStatusChange: true,
       );
 
-      await tester.pumpWidget(MaterialApp(home: DriverShellPage(api: api)));
+      await tester.pumpWidget(MaterialApp(home: _driverTestShell(api: api)));
       await tester.pumpAndSettle();
 
       final button = find.byType(FilledButton).first;
@@ -553,7 +564,7 @@ void main() {
       tester.view.physicalSize = Size(width, 800);
       await tester.pumpWidget(
         MaterialApp(
-          home: DriverShellPage(
+          home: _driverTestShell(
             api: _ShellStatusApi(
               status: const DriverStatus(
                 driverId: 7,
@@ -1047,6 +1058,28 @@ void _useTallViewport(WidgetTester tester) {
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+DriverShellPage _driverTestShell({
+  required DriverApiService api,
+  DriverSettlementApiService? settlementApi,
+}) {
+  return DriverShellPage(
+    api: api,
+    enableCallSocket: false,
+    settlementApi: settlementApi ?? _FakeSettlementApi(),
+  );
+}
+
+DriverLoginPage _driverTestLogin({
+  required DriverApiService api,
+  DriverSettlementApiService? settlementApi,
+}) {
+  return DriverLoginPage(
+    api: api,
+    enableCallSocket: false,
+    settlementApi: settlementApi ?? _FakeSettlementApi(),
+  );
 }
 
 class _FakeLoginApi extends DriverApiService {

@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/user_facing_error.dart';
+import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../pages/driver_shell_page.dart';
 import '../services/driver_api_service.dart';
 
 class DriverLoginPage extends StatefulWidget {
-  const DriverLoginPage({super.key, this.api});
+  const DriverLoginPage({
+    super.key,
+    this.api,
+    this.settlementApi,
+    this.enableCallSocket = true,
+  });
 
   final DriverApiService? api;
+  final DriverSettlementApiService? settlementApi;
+  final bool enableCallSocket;
 
   @override
   State<DriverLoginPage> createState() => _DriverLoginPageState();
@@ -46,7 +54,11 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
       context,
       MaterialPageRoute(
         settings: const RouteSettings(name: '/driver/home'),
-        builder: (_) => DriverShellPage(api: _api),
+        builder: (_) => DriverShellPage(
+          api: _api,
+          settlementApi: widget.settlementApi,
+          enableCallSocket: widget.enableCallSocket,
+        ),
       ),
       (_) => false,
     );
