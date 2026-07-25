@@ -60,6 +60,7 @@ const FlightSyncSchedulerService = require("../services/flightSyncScheduler.serv
 const ChatService = require("../services/chat.service");
 const DriverApplicationService = require("../services/driverApplication.service");
 const DriverProfileService = require("../services/driverProfile.service");
+const DriverVehicleService = require("../services/driverVehicle.service");
 const UrgentNegotiationRepository = require("../repositories/urgentNegotiation.repository");
 const UrgentNegotiationService = require("../services/urgentNegotiation.service");
 const UrgentNegotiationTimeoutWorker = require("../workers/urgentNegotiationTimeout.worker");
@@ -499,6 +500,16 @@ container.register(
       c.get("vehicleRepository"),
       c.get("fileRepository"),
       c.get("driverApplicationRepository"),
+    ),
+);
+container.register(
+  "driverVehicleService",
+  (c) =>
+    new DriverVehicleService(
+      database.pool,
+      c.get("driverRepository"),
+      c.get("vehicleRepository"),
+      c.get("fileRepository"),
     ),
 );
 container.register(

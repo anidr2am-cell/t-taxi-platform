@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_config.dart';
 import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
+import '../models/driver_vehicle.dart';
 
 class DriverApiException implements Exception {
   const DriverApiException(
@@ -452,5 +453,84 @@ class DriverApiService {
       filename,
     );
     return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<List<DriverVehicleItem>> listVehicles() async {
+    final data = await _get('/driver/vehicles');
+    final map = Map<String, dynamic>.from(data as Map);
+    final items = map['items'] as List? ?? const [];
+    return items
+        .map(
+          (item) => DriverVehicleItem.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
+  }
+
+  Future<DriverVehicleItem> createVehicle({
+    required int vehicleTypeId,
+    required String plateNumber,
+    String? modelName,
+    String? color,
+    required List<({String field, String filename, List<int> bytes})> files,
+  }) async {
+    final token = await getSavedToken();
+    if (token == null || token.isEmpty) {
+      throw const DriverApiException('Please log in again');
+    }
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_base/driver/vehicles'),
+    );
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['vehicleTypeId'] = '$vehicleTypeId';
+    request.fields['plateNumber'] = plateNumber.trim();
+    if (modelName != null && modelName.trim().isNotEmpty) {
+      request.fields['modelName'] = modelName.trim();
+    }
+    if (color != null && color.trim().isNotEmpty) {
+      request.fields['color'] = color.trim();
+    }
+    for (final file in files) {
+      final ext = file.filename.contains('.')
+          ? file.filename.split('.').last.toLowerCase()
+          : '';
+      final mimeType = switch (ext) {
+        'jpg' || 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'pdf' => 'application/pdf',
+        _ => 'application/octet-stream',
+      };
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          file.field,
+          file.bytes,
+          filename: file.filename,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    }
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final response = await http.Response.fromStream(streamed);
+    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (response.statusCode == 401) {
+        await logout();
+      }
+      throw DriverApiException(
+        decoded is Map
+            ? decoded['message'] as String? ?? 'Request failed'
+            : 'Request failed',
+        errorCode: decoded is Map
+            ? decoded['error_code'] as String?
+            : null,
+        statusCode: response.statusCode,
+      );
+    }
+    return DriverVehicleItem.fromJson(
+      Map<String, dynamic>.from((decoded as Map)['data'] as Map),
+    );
   }
 }

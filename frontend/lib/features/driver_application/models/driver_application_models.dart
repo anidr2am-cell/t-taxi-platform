@@ -421,7 +421,7 @@ class DriverApplicationVehicleType {
 
   factory DriverApplicationVehicleType.fromJson(Map<String, dynamic> json) {
     return DriverApplicationVehicleType(
-      id: json['id'] as int? ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       code: json['code'] as String? ?? '',
       name: json['name'] as String? ?? json['code'] as String? ?? '',
     );

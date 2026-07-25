@@ -5178,6 +5178,34 @@ class AppLocalizations {
     'driver_account_settlement': '정산\n(การชำระบัญชี)',
     'driver_account_support': '고객센터\n(ศูนย์บริการลูกค้า)',
     'driver_account_profile': '내 프로필\n(โปรไฟล์ของฉัน)',
+    'driver_vehicles_menu': '차량 관리\n(จัดการรถ)',
+    'driver_vehicles_title': '차량 관리\n(จัดการรถ)',
+    'driver_vehicles_empty':
+        '등록된 차량이 없습니다.\n(ยังไม่มีรถที่ลงทะเบียน)',
+    'driver_vehicle_add': '차량 추가 / เพิ่มรถ',
+    'driver_vehicle_add_title': '차량 추가\n(เพิ่มรถ)',
+    'driver_vehicle_submit': '승인 요청 / ส่งคำขออนุมัติ',
+    'driver_vehicle_add_success':
+        '차량이 승인 대기로 등록되었습니다.\n(ลงทะเบียนรถแล้ว รอการอนุมัติ)',
+    'driver_vehicle_add_failed':
+        '차량을 등록하지 못했습니다.\n(ไม่สามารถลงทะเบียนรถได้)',
+    'driver_vehicle_type_label': '차종 / ประเภทรถ',
+    'driver_vehicle_plate_label': '번호판 / ทะเบียนรถ',
+    'driver_vehicle_photos_title': '차량 사진\n(รูปรถ)',
+    'driver_vehicle_photos_hint':
+        '차량 사진 3~6장을 업로드해 주세요.\n(อัปโหลดรูปรถ 3–6 รูป)',
+    'driver_vehicle_photos_required':
+        '차량 사진 3장 이상이 필요합니다.\n(ต้องมีรูปรถอย่างน้อย 3 รูป)',
+    'driver_vehicle_insurance_title': '보험증\n(กรมธรรม์ประกัน)',
+    'driver_vehicle_registration_title': '차량등록증\n(ทะเบียนรถ)',
+    'driver_vehicle_doc_hint':
+        '서류 사진 또는 PDF를 업로드해 주세요.\n(อัปโหลดรูปเอกสารหรือ PDF)',
+    'driver_vehicle_doc_required':
+        '필수 서류를 업로드해 주세요.\n(กรุณาอัปโหลดเอกสารที่จำเป็น)',
+    'driver_vehicle_status_pending': '승인 대기 / รออนุมัติ',
+    'driver_vehicle_status_approved': '승인됨 / อนุมัติแล้ว',
+    'driver_vehicle_status_rejected': '거절됨 / ถูกปฏิเสธ',
+    'driver_vehicle_primary_badge': '대표 차량\n(รถหลัก)',
     'driver_account_vehicle_title': '내 차량\n(รถของฉัน)',
     'driver_account_vehicle_empty':
         '등록된 차량 정보가 없습니다.\n(ยังไม่มีข้อมูลรถที่ลงทะเบียนไว้)',

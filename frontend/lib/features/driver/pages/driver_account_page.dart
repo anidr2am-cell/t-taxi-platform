@@ -15,6 +15,7 @@ import '../models/driver_status.dart';
 import '../pages/driver_notifications_page.dart';
 import '../pages/driver_profile_page.dart';
 import '../pages/driver_support_page.dart';
+import '../pages/driver_vehicles_page.dart';
 import '../services/driver_api_service.dart';
 
 class DriverAccountPage extends StatefulWidget {
@@ -230,6 +231,16 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
                   deviceRegistrationService: _deviceRegistration,
                   onStatusChanged: widget.onStatusChanged,
                 ),
+              ),
+            ),
+          ),
+          _AccountMenuTile(
+            icon: Icons.directions_car_outlined,
+            title: l10n.t('driver_vehicles_menu'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverVehiclesPage(api: _api),
               ),
             ),
           ),

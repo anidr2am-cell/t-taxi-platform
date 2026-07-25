@@ -774,6 +774,167 @@ class DriverRepository {
     );
     return rows[0] || null;
   }
+
+  async listVehiclesByDriverId(driverId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          dv.id,
+          dv.driver_id,
+          dv.vehicle_type_id,
+          dv.plate_number,
+          dv.model_name,
+          dv.color,
+          dv.is_primary,
+          dv.is_active,
+          COALESCE(dv.approval_status, 'APPROVED') AS approval_status,
+          dv.rejection_reason,
+          dv.created_at,
+          dv.updated_at,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_VEHICLE_PHOTO'
+          ) AS photo_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_INSURANCE_CERTIFICATE'
+          ) AS insurance_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_VEHICLE_REGISTRATION'
+          ) AS registration_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_TAX_CERTIFICATE'
+          ) AS tax_count
+        FROM driver_vehicles dv
+        INNER JOIN vehicle_types vt ON vt.id = dv.vehicle_type_id AND vt.deleted_at IS NULL
+        WHERE dv.driver_id = ?
+          AND dv.deleted_at IS NULL
+        ORDER BY dv.is_primary DESC, dv.id DESC
+      `,
+      [driverId],
+    );
+    return rows;
+  }
+
+  async findVehicleByIdForDriver(driverId, vehicleId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          dv.id,
+          dv.driver_id,
+          dv.vehicle_type_id,
+          dv.plate_number,
+          dv.model_name,
+          dv.color,
+          dv.is_primary,
+          dv.is_active,
+          COALESCE(dv.approval_status, 'APPROVED') AS approval_status,
+          dv.rejection_reason,
+          dv.created_at,
+          dv.updated_at,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_VEHICLE_PHOTO'
+          ) AS photo_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_INSURANCE_CERTIFICATE'
+          ) AS insurance_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_VEHICLE_REGISTRATION'
+          ) AS registration_count,
+          (
+            SELECT COUNT(*)
+            FROM driver_vehicle_files dvf
+            WHERE dvf.driver_vehicle_id = dv.id
+              AND dvf.category = 'DRIVER_TAX_CERTIFICATE'
+          ) AS tax_count
+        FROM driver_vehicles dv
+        INNER JOIN vehicle_types vt ON vt.id = dv.vehicle_type_id AND vt.deleted_at IS NULL
+        WHERE dv.id = ?
+          AND dv.driver_id = ?
+          AND dv.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [vehicleId, driverId],
+    );
+    return rows[0] || null;
+  }
+
+  async findVehicleByPlateForUpdate(conn, plateNumber) {
+    const [rows] = await conn.query(
+      `
+        SELECT id, driver_id, plate_number, is_active, approval_status
+        FROM driver_vehicles
+        WHERE plate_number = ?
+          AND deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [plateNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async insertPendingVehicle(conn, {
+    driverId,
+    vehicleTypeId,
+    plateNumber,
+    modelName,
+    color,
+    actorUserId,
+  }) {
+    const [result] = await conn.query(
+      `
+        INSERT INTO driver_vehicles (
+          driver_id, vehicle_type_id, plate_number, model_name, color,
+          is_primary, is_active, approval_status, created_by, updated_by
+        ) VALUES (?, ?, ?, ?, ?, 0, 0, 'PENDING', ?, ?)
+      `,
+      [
+        driverId,
+        vehicleTypeId,
+        plateNumber,
+        modelName,
+        color,
+        actorUserId,
+        actorUserId,
+      ],
+    );
+    return result.insertId;
+  }
+
+  async insertVehicleFile(conn, { vehicleId, fileId, category, sortOrder }) {
+    await conn.query(
+      `
+        INSERT INTO driver_vehicle_files (
+          driver_vehicle_id, file_id, category, sort_order
+        ) VALUES (?, ?, ?, ?)
+      `,
+      [vehicleId, fileId, category, sortOrder ?? 0],
+    );
+  }
 }
 
 module.exports = DriverRepository;

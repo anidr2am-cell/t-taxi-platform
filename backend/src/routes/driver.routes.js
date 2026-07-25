@@ -1,6 +1,7 @@
 const express = require('express');
 const driverController = require('../controllers/driver.controller');
 const driverProfileController = require('../controllers/driverProfile.controller');
+const driverVehicleController = require('../controllers/driverVehicle.controller');
 const driverLocationController = require('../controllers/driverLocation.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
@@ -10,11 +11,18 @@ const ROLES = require('../constants/roles');
 const { locationUpdateSchema } = require('../validators/driverLocation.validator');
 const { updateDriverProfileSchema } = require('../validators/driverProfile.validator');
 const { releaseAssignmentSchema } = require('../validators/driverCall.validator');
+const { createDriverVehicleSchema } = require('../validators/driverVehicle.validator');
 const { submitUrgentCallEtaSchema } = require('../validators/urgentNegotiation.validator');
-const { single } = require('../config/multer');
+const { single, upload } = require('../config/multer');
 
 const router = express.Router();
 const driverLocationRateLimit = createRateLimit({ windowMs: 60_000, max: 60 });
+const vehicleFiles = upload.fields([
+  { name: 'vehiclePhotos', maxCount: 6 },
+  { name: 'insuranceCertificate', maxCount: 1 },
+  { name: 'vehicleRegistration', maxCount: 1 },
+  { name: 'taxCertificate', maxCount: 1 },
+]);
 
 router.use(authMiddleware, roleMiddleware([ROLES.DRIVER]));
 
@@ -38,6 +46,15 @@ router.post(
   single,
   driverProfileController.handleUploadError,
   driverProfileController.uploadVehiclePhoto,
+);
+router.get('/vehicles', driverVehicleController.listVehicles);
+router.post(
+  '/vehicles',
+  vehicleFiles,
+  driverVehicleController.handleUploadError,
+  driverVehicleController.normalizeMultipartBody,
+  validate({ body: createDriverVehicleSchema }),
+  driverVehicleController.createVehicle,
 );
 router.post('/online', driverController.goOnline);
 router.post('/offline', driverController.goOffline);
