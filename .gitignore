@@ -25,3 +25,6 @@ Thumbs.db
 database/.mysql-data/
 database/.mysql-repro-data/
 database/_mysql_clean_*/
+
+tmp/
+.pr72-*
