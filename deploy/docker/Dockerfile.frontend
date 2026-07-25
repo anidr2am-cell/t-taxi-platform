@@ -26,13 +26,15 @@ RUN test -n "$APP_ENV" \
         /api|https://*) ;; \
         http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*) \
           echo "API_BASE_URL must not point to localhost when APP_ENV=production"; exit 1 ;; \
-        *) echo "API_BASE_URL must be /api or an https URL when APP_ENV=production"; exit 1 ;; \
+        http://*) ;; \
+        *) echo "API_BASE_URL must be /api, https://, or http:// (non-localhost) when APP_ENV=production"; exit 1 ;; \
       esac; \
       case "$SOCKET_URL" in \
         https://*) ;; \
         http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*) \
           echo "SOCKET_URL must not point to localhost when APP_ENV=production"; exit 1 ;; \
-        *) echo "SOCKET_URL must be an https URL when APP_ENV=production"; exit 1 ;; \
+        http://*) ;; \
+        *) echo "SOCKET_URL must be https:// or http:// (non-localhost) when APP_ENV=production"; exit 1 ;; \
       esac; \
     fi
 
