@@ -8,6 +8,7 @@ import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/models/place_prediction.dart';
 import 'package:frontend/features/booking/models/pricing_result.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
+import 'package:frontend/features/booking/models/urgent_negotiation_status.dart';
 import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
@@ -465,7 +466,7 @@ void main() {
     expect(controller.state.errorMessage, contains('past'));
   });
 
-  test('pickup time must be at least 2 hours from now', () async {
+  test('pickup within two hours is allowed as urgent window', () {
     final controller = BookingWizardController(
       apiService: _CapturingBookingApi(),
       storage: _MemoryBookingStateStorage(),
@@ -475,13 +476,14 @@ void main() {
       now: () => DateTime.utc(2026, 6, 29, 3),
     );
 
-    final ok = await controller.setPickupDateTime(
-      DateTime(2026, 6, 29, 11, 30),
+    expect(
+      controller.isUrgentPickupWindow(DateTime(2026, 6, 29, 11, 30)),
+      isTrue,
     );
-
-    expect(ok, false);
-    expect(controller.canProceedFromCurrentStep(), false);
-    expect(controller.state.errorMessage, 'pickup_time_minimum');
+    expect(
+      controller.isStandardPickupAllowed(DateTime(2026, 6, 29, 11, 30)),
+      isFalse,
+    );
   });
 
   test('pickup date and time persist in wizard state', () async {
@@ -1059,6 +1061,23 @@ class _CapturingBookingApi implements BookingApiService {
     required String bookingNumber,
     required String? guestAccessToken,
     bool forceReissue = false,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
   }) {
     throw UnimplementedError();
   }

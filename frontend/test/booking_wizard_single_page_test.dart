@@ -10,6 +10,7 @@ import 'package:frontend/features/booking/models/booking_wizard_state.dart';
 import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/models/pricing_result.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
+import 'package:frontend/features/booking/models/urgent_negotiation_status.dart';
 import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/pages/booking_wizard_page.dart';
@@ -554,6 +555,23 @@ class _TrackingRecommendApi implements BookingApiService {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
 }
 
 class _CountingBookingApi implements BookingApiService {
@@ -627,6 +645,23 @@ class _CountingBookingApi implements BookingApiService {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
 }
 
 class _CapturingBookingApi implements BookingApiService {
@@ -692,6 +727,23 @@ class _CapturingBookingApi implements BookingApiService {
     required String bookingNumber,
     required String? guestAccessToken,
     bool forceReissue = false,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
   }) {
     throw UnimplementedError();
   }

@@ -20,7 +20,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('BookingWizardController urgent pickup window', () {
-    final fixedNow = DateTime(2026, 7, 23, 10, 0);
+    final fixedNow = DateTime.utc(2026, 7, 23, 3, 0);
 
     BookingWizardController controller() {
       return BookingWizardController(now: () => fixedNow);

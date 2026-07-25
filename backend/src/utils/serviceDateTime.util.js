@@ -6,7 +6,7 @@
  */
 const SERVICE_TIME_ZONE = 'Asia/Bangkok';
 const SERVICE_UTC_OFFSET = '+07:00';
-const MYSQL_DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
+const MYSQL_DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(\.\d{1,6})?$/;
 
 function formatMysqlDateTimeFromDate(value) {
   const y = value.getUTCFullYear();

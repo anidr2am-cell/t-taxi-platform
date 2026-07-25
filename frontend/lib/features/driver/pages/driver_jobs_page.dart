@@ -753,7 +753,7 @@ class _OpenCallsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final buttonEnabled = online;
+    final buttonEnabled = online && !hasActiveJob;
 
     return AppUi.surfaceCard(
       child: Column(

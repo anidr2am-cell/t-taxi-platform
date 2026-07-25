@@ -43,3 +43,11 @@ test('formatServiceDateTimeForApi returns null for empty values', () => {
   assert.equal(formatServiceDateTimeForApi(null), null);
   assert.equal(formatServiceDateTimeForApi(''), null);
 });
+
+test('parseServiceDateTimeToMs treats fractional MySQL datetimes as Bangkok wall clock', () => {
+  const nowMs = Date.parse('2099-07-23 01:30:00+07:00');
+  const lockExpiresMs = parseServiceDateTimeToMs('2099-07-23 01:29:00.000');
+
+  assert.notEqual(lockExpiresMs, null);
+  assert.ok(nowMs >= lockExpiresMs);
+});
