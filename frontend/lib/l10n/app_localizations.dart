@@ -5141,6 +5141,12 @@ class AppLocalizations {
     'driver_claim_confirm_title': '이 콜을 수락할까요?\n(ต้องการรับงานนี้หรือไม่?)',
     'driver_claim_confirm_message':
         '확인 전 시간과 장소를 다시 확인해 주세요.\n(กรุณาตรวจสอบเวลาและสถานที่ก่อนยืนยัน)',
+    'driver_claim_vehicle_pick_title':
+        '어느 차량으로 가시겠습니까?\n(จะใช้รถคันไหนไปรับงาน?)',
+    'driver_claim_vehicle_pick_help':
+        '이 콜에 사용 가능한 승인 차량을 선택해 주세요.\n(เลือกรถที่อนุมัติแล้วซึ่งใช้รับงานนี้ได้)',
+    'driver_claim_vehicle_exact_badge': '동일 차종 / ประเภทตรงกัน',
+    'driver_claim_vehicle_cancel': '취소 / ยกเลิก',
     'driver_claim_success': '콜 수락 완료 / รับงานแล้ว',
     'driver_claim_already_assigned':
         '다른 기사가 먼저 수락했습니다 / งานนี้มีคนขับรับไปแล้ว',

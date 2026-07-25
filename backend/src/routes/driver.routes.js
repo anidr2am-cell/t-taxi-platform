@@ -10,7 +10,7 @@ const createRateLimit = require('../middlewares/rateLimit.middleware');
 const ROLES = require('../constants/roles');
 const { locationUpdateSchema } = require('../validators/driverLocation.validator');
 const { updateDriverProfileSchema } = require('../validators/driverProfile.validator');
-const { releaseAssignmentSchema } = require('../validators/driverCall.validator');
+const { releaseAssignmentSchema, claimOpenCallSchema } = require('../validators/driverCall.validator');
 const { createDriverVehicleSchema } = require('../validators/driverVehicle.validator');
 const { submitUrgentCallEtaSchema } = require('../validators/urgentNegotiation.validator');
 const { single, upload } = require('../config/multer');
@@ -59,7 +59,11 @@ router.post(
 router.post('/online', driverController.goOnline);
 router.post('/offline', driverController.goOffline);
 router.get('/calls/open', driverController.listOpenCalls);
-router.post('/calls/:bookingNumber/claim', driverController.claimOpenCall);
+router.post(
+  '/calls/:bookingNumber/claim',
+  validate({ body: claimOpenCallSchema }),
+  driverController.claimOpenCall,
+);
 router.post('/urgent-calls/:bookingNumber/lock', driverController.lockUrgentCall);
 router.post(
   '/urgent-calls/:bookingNumber/eta',

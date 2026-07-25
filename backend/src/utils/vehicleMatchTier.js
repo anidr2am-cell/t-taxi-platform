@@ -70,6 +70,14 @@ function isExactVehicleMatch(driverVehicleCodes, bookingVehicleCode) {
     .includes(bookingCode);
 }
 
+/** Single driver vehicle vs booking type (exact or hierarchy upgrade). */
+function isVehicleCompatibleWithBooking(vehicleTypeCode, bookingVehicleCode) {
+  return isBookingCompatibleWithDriverVehicles(
+    [vehicleTypeCode],
+    bookingVehicleCode,
+  );
+}
+
 /**
  * SQL predicate: driver_vehicles row (alias) covers booking vehicle type (id expression).
  * Expects joins to vt_driver / vt_booking to be provided by the caller, OR use
@@ -171,6 +179,7 @@ module.exports = {
   activeApprovedVehicleCodes,
   isBookingCompatibleWithDriverVehicles,
   isExactVehicleMatch,
+  isVehicleCompatibleWithBooking,
   driverVehicleCoversBookingExistsSql,
   exactVehicleMatchExistsSql,
   compatibleDriverVehicleIdSubquerySql,

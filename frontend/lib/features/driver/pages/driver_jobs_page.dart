@@ -262,15 +262,80 @@ class _DriverJobsPageState extends State<DriverJobsPage>
       confirmKey: 'driver_claim_call',
     );
     if (!confirmed || !mounted) return;
-    await _claimOpenCall(call);
+
+    final vehicles = call.compatibleVehicles;
+    int? selectedVehicleId;
+    if (vehicles.length >= 2) {
+      selectedVehicleId = await _pickClaimVehicle(vehicles);
+      if (selectedVehicleId == null || !mounted) return;
+    } else if (vehicles.length == 1) {
+      selectedVehicleId = vehicles.first.driverVehicleId;
+    }
+
+    await _claimOpenCall(call, driverVehicleId: selectedVehicleId);
   }
 
-  Future<void> _claimOpenCall(DriverOpenCall call) async {
+  Future<int?> _pickClaimVehicle(
+    List<DriverOpenCallCompatibleVehicle> vehicles,
+  ) async {
+    final l10n = context.l10n;
+    return showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(l10n.t('driver_claim_vehicle_pick_title')),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text(
+              l10n.t('driver_claim_vehicle_pick_help'),
+              style: const TextStyle(color: AppTokens.textSecondary),
+            ),
+          ),
+          for (final vehicle in vehicles)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, vehicle.driverVehicleId),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  vehicle.vehicleTypeName.isNotEmpty
+                      ? vehicle.vehicleTypeName
+                      : vehicle.vehicleTypeCode,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(vehicle.plateNumber),
+                trailing: vehicle.isExactMatch
+                    ? Text(
+                        l10n.t('driver_claim_vehicle_exact_badge'),
+                        style: const TextStyle(
+                          color: AppTokens.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.t('driver_claim_vehicle_cancel')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _claimOpenCall(
+    DriverOpenCall call, {
+    int? driverVehicleId,
+  }) async {
     if (_claimingCalls.contains(call.bookingNumber)) return;
     setState(() => _claimingCalls.add(call.bookingNumber));
     final l10n = context.l10n;
     try {
-      final booking = await _api.claimOpenCall(call.bookingNumber);
+      final booking = await _api.claimOpenCall(
+        call.bookingNumber,
+        driverVehicleId: driverVehicleId,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.t('driver_claim_success'))),

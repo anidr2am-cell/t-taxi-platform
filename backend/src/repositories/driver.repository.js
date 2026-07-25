@@ -248,6 +248,7 @@ class DriverRepository {
           dv.plate_number,
           dv.model_name,
           vt_driver.code AS vehicle_type_code,
+          vt_driver.name AS vehicle_type_name,
           vt_driver.match_tier AS driver_match_tier,
           vt_booking.code AS booking_vehicle_type_code,
           vt_booking.match_tier AS booking_match_tier
@@ -278,6 +279,102 @@ class DriverRepository {
         LIMIT 1
       `,
       [vehicleTypeId, driverId],
+    );
+    return rows[0] || null;
+  }
+
+  async listApprovedActiveVehicles(driverId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          dv.id,
+          dv.vehicle_type_id,
+          dv.plate_number,
+          dv.model_name,
+          dv.is_primary,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          vt.match_tier
+        FROM driver_vehicles dv
+        INNER JOIN vehicle_types vt
+          ON vt.id = dv.vehicle_type_id
+         AND vt.deleted_at IS NULL
+        WHERE dv.driver_id = ?
+          AND dv.is_active = 1
+          AND COALESCE(dv.approval_status, 'APPROVED') = 'APPROVED'
+          AND dv.deleted_at IS NULL
+        ORDER BY dv.is_primary DESC, vt.match_tier ASC, dv.id ASC
+      `,
+      [driverId],
+    );
+    return rows;
+  }
+
+  async findApprovedVehicleByIdForDriver(conn, driverId, vehicleId) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
+      `
+        SELECT
+          dv.id,
+          dv.driver_id,
+          dv.vehicle_type_id,
+          dv.plate_number,
+          dv.model_name,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          vt.match_tier
+        FROM driver_vehicles dv
+        INNER JOIN vehicle_types vt
+          ON vt.id = dv.vehicle_type_id
+         AND vt.deleted_at IS NULL
+        WHERE dv.id = ?
+          AND dv.driver_id = ?
+          AND dv.is_active = 1
+          AND COALESCE(dv.approval_status, 'APPROVED') = 'APPROVED'
+          AND dv.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [vehicleId, driverId],
+    );
+    return rows[0] || null;
+  }
+
+  async findCompatibleVehicleById(conn, driverId, vehicleId, bookingVehicleTypeId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          dv.id,
+          dv.vehicle_type_id,
+          dv.plate_number,
+          dv.model_name,
+          vt_driver.code AS vehicle_type_code,
+          vt_driver.name AS vehicle_type_name,
+          vt_driver.match_tier AS driver_match_tier,
+          vt_booking.code AS booking_vehicle_type_code,
+          vt_booking.match_tier AS booking_match_tier
+        FROM driver_vehicles dv
+        INNER JOIN vehicle_types vt_driver
+          ON vt_driver.id = dv.vehicle_type_id
+         AND vt_driver.deleted_at IS NULL
+        INNER JOIN vehicle_types vt_booking
+          ON vt_booking.id = ?
+         AND vt_booking.deleted_at IS NULL
+        WHERE dv.id = ?
+          AND dv.driver_id = ?
+          AND dv.is_active = 1
+          AND COALESCE(dv.approval_status, 'APPROVED') = 'APPROVED'
+          AND dv.deleted_at IS NULL
+          AND (
+            dv.vehicle_type_id = vt_booking.id
+            OR (
+              vt_booking.match_tier IS NOT NULL
+              AND vt_driver.match_tier IS NOT NULL
+              AND vt_driver.match_tier >= vt_booking.match_tier
+            )
+          )
+        LIMIT 1
+      `,
+      [bookingVehicleTypeId, vehicleId, driverId],
     );
     return rows[0] || null;
   }

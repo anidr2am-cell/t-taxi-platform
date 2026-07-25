@@ -75,6 +75,16 @@ test('VIP_VAN and LUXURY stay exact-match-only', () => {
   assert.deepEqual(visibleCodes(['LUXURY']), ['LUXURY']);
 });
 
+test('isVehicleCompatibleWithBooking allows VAN on SEDAN and blocks SEDAN on SUV', () => {
+  const {
+    isVehicleCompatibleWithBooking,
+  } = require('../src/utils/vehicleMatchTier');
+  assert.equal(isVehicleCompatibleWithBooking('VAN', 'SEDAN'), true);
+  assert.equal(isVehicleCompatibleWithBooking('SEDAN', 'SUV'), false);
+  assert.equal(isVehicleCompatibleWithBooking('SUV', 'VAN'), false);
+  assert.equal(isVehicleCompatibleWithBooking('SUV', 'SEDAN'), true);
+});
+
 test('SQL fragments require approval_status and match_tier hierarchy (not sort_order)', () => {
   const covers = driverVehicleCoversBookingExistsSql();
   assert.match(covers, /approval_status/);

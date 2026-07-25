@@ -183,7 +183,46 @@ function createHarness(overrides = {}) {
       if (overrides.matchingVehicle && typeof overrides.matchingVehicle === 'object') {
         return overrides.matchingVehicle;
       }
-      return { id: 55, vehicle_type_id: 3 };
+      return { id: 55, vehicle_type_id: 3, vehicle_type_code: 'VAN', plate_number: 'VAN-1' };
+    },
+    async listApprovedActiveVehicles() {
+      return overrides.approvedVehicles ?? [
+        {
+          id: 55,
+          vehicle_type_id: 3,
+          vehicle_type_code: 'VAN',
+          vehicle_type_name: 'Van',
+          plate_number: 'VAN-1',
+        },
+      ];
+    },
+    async findApprovedVehicleByIdForDriver(_conn, _driverId, vehicleId) {
+      if (overrides.ownedVehicleById === null) return null;
+      if (overrides.ownedVehicleById) return overrides.ownedVehicleById;
+      const vehicles = overrides.approvedVehicles ?? [
+        {
+          id: 55,
+          vehicle_type_id: 3,
+          vehicle_type_code: 'VAN',
+          vehicle_type_name: 'Van',
+          plate_number: 'VAN-1',
+        },
+      ];
+      return vehicles.find((item) => Number(item.id) === Number(vehicleId)) || null;
+    },
+    async findCompatibleVehicleById(_conn, _driverId, vehicleId) {
+      if (overrides.compatibleVehicleById === false) return null;
+      if (overrides.compatibleVehicleById) return overrides.compatibleVehicleById;
+      const vehicles = overrides.approvedVehicles ?? [
+        {
+          id: 55,
+          vehicle_type_id: 3,
+          vehicle_type_code: 'VAN',
+          vehicle_type_name: 'Van',
+          plate_number: 'VAN-1',
+        },
+      ];
+      return vehicles.find((item) => Number(item.id) === Number(vehicleId)) || null;
     },
     async listEligibleForOpenBooking() {
       return overrides.eligibleDrivers ?? [
@@ -306,6 +345,8 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(result.items[0].luggage.golfBags, 1);
   assert.equal(result.items[0].isExactVehicleMatch, true);
   assert.equal(result.items[0].vehicleMatchType, 'EXACT');
+  assert.equal(result.items[0].compatibleVehicles.length, 1);
+  assert.equal(result.items[0].compatibleVehicles[0].driverVehicleId, 55);
   assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
   assert.equal(Object.hasOwn(result.items[0], 'customerEmail'), false);
   assert.equal(Object.hasOwn(result.items[0], 'specialInstructions'), false);
@@ -504,6 +545,84 @@ test('claimOpenCall assigns compatible hierarchy vehicle returned by findMatchin
   assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
   assert.equal(conn.committed, true);
   assert.equal(calls.assignments[0].driverVehicleId, 88);
+});
+
+test('claimOpenCall uses explicit driverVehicleId when compatible (VAN on SEDAN call)', async () => {
+  const { service, calls } = createHarness({
+    booking: { vehicle_type_id: 1 },
+    compatibleVehicleById: {
+      id: 88,
+      vehicle_type_id: 4,
+      vehicle_type_code: 'VAN',
+      plate_number: 'VAN-88',
+    },
+  });
+
+  await service.claimOpenCall(42, 'TX202607130001', { driverVehicleId: 88 });
+  assert.equal(calls.assignments[0].driverVehicleId, 88);
+  assert.equal(calls.activityLogs[0].activity.payload.vehicleSelectedByDriver, true);
+});
+
+test('claimOpenCall rejects another driver vehicle id', async () => {
+  const { service } = createHarness({
+    compatibleVehicleById: false,
+    ownedVehicleById: null,
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001', { driverVehicleId: 999 }),
+    (err) => err.statusCode === 404
+      && err.errorCode === ERROR_CODES.DRIVER_VEHICLE_NOT_FOUND,
+  );
+});
+
+test('claimOpenCall rejects incompatible SEDAN vehicle on SUV booking', async () => {
+  const { service } = createHarness({
+    booking: { vehicle_type_id: 2 },
+    compatibleVehicleById: false,
+    ownedVehicleById: {
+      id: 11,
+      vehicle_type_id: 1,
+      vehicle_type_code: 'SEDAN',
+      plate_number: 'SED-1',
+    },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001', { driverVehicleId: 11 }),
+    (err) => err.statusCode === 409
+      && err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+  );
+});
+
+test('open call list includes multiple compatibleVehicles for multi-vehicle drivers', async () => {
+  const { service } = createHarness({
+    openRows: [openCallRow({
+      vehicle_type_code: 'SEDAN',
+      vehicle_type_name: 'Sedan',
+      is_exact_vehicle_match: 0,
+    })],
+    approvedVehicles: [
+      {
+        id: 11,
+        vehicle_type_code: 'SEDAN',
+        vehicle_type_name: 'Sedan',
+        plate_number: 'S-1',
+      },
+      {
+        id: 22,
+        vehicle_type_code: 'VAN',
+        vehicle_type_name: 'Van',
+        plate_number: 'V-1',
+      },
+    ],
+  });
+  const result = await service.listOpenCalls(42);
+  assert.equal(result.items[0].compatibleVehicles.length, 2);
+  assert.deepEqual(
+    result.items[0].compatibleVehicles.map((item) => item.driverVehicleId),
+    [11, 22],
+  );
 });
 
 test('releaseAssignment reopens booking, clears active assignment, and notifies other drivers', async () => {

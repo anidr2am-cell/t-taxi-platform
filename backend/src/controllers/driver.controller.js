@@ -30,6 +30,7 @@ const claimOpenCall = asyncHandler(async (req, res) => {
   const data = await getDriverCallService().claimOpenCall(
     req.user.id,
     req.params.bookingNumber,
+    req.body || {},
   );
   return success(res, data, 'OK');
 });

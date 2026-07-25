@@ -21,6 +21,9 @@ const {
   evaluateDriverAssignmentRelease,
   RELEASE_BLOCKED_REASON,
 } = require('../policies/driverAssignmentRelease.policy');
+const {
+  isVehicleCompatibleWithBooking,
+} = require('../utils/vehicleMatchTier');
 
 const RELEASE_BLOCK_MESSAGES = {
   [RELEASE_BLOCKED_REASON.NOT_ASSIGNED_DRIVER]:
@@ -72,10 +75,31 @@ class DriverCallService {
     return Number(row.adults || 0) + Number(row.children || 0) + Number(row.infants || 0);
   }
 
-  mapOpenCall(row) {
+  mapCompatibleVehicles(driverVehicles, bookingVehicleCode) {
+    return (driverVehicles || [])
+      .filter((vehicle) => isVehicleCompatibleWithBooking(
+        vehicle.vehicle_type_code,
+        bookingVehicleCode,
+      ))
+      .map((vehicle) => ({
+        driverVehicleId: Number(vehicle.id),
+        vehicleTypeCode: vehicle.vehicle_type_code,
+        vehicleTypeName: vehicle.vehicle_type_name,
+        plateNumber: vehicle.plate_number,
+        isExactMatch:
+          String(vehicle.vehicle_type_code || '').toUpperCase()
+          === String(bookingVehicleCode || '').toUpperCase(),
+      }));
+  }
+
+  mapOpenCall(row, driverVehicles = []) {
     const paymentSummary = this.driverJobService.paymentSummary
       ? this.driverJobService.paymentSummary(row)
       : {};
+    const compatibleVehicles = this.mapCompatibleVehicles(
+      driverVehicles,
+      row.vehicle_type_code,
+    );
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -99,6 +123,7 @@ class DriverCallService {
         ? 'EXACT'
         : 'COMPATIBLE_UPGRADE',
       isExactVehicleMatch: Number(row.is_exact_vehicle_match) === 1,
+      compatibleVehicles,
       passengerCount: this.passengerCount(row),
       amount: Number(row.total_amount || 0),
       currency: row.currency,
@@ -118,14 +143,14 @@ class DriverCallService {
   }
 
   async listOpenCalls(driverUserId) {
+    const driver = await this.driverRepository.findByUserId(driverUserId);
+    if (!driver || !driver.is_active || driver.user_is_active === 0) {
+      throw new AppError('Driver not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
+      });
+    }
     if (this.commissionSettlementService) {
-      const driver = await this.driverRepository.findByUserId(driverUserId);
-      if (!driver || !driver.is_active || driver.user_is_active === 0) {
-        throw new AppError('Driver not found', {
-          statusCode: HTTP_STATUS.NOT_FOUND,
-          errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
-        });
-      }
       if (await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)) {
         return {
           items: [],
@@ -134,9 +159,12 @@ class DriverCallService {
         };
       }
     }
-    const rows = await this.bookingRepository.findOpenDriverCallsForDriver(driverUserId);
+    const [rows, driverVehicles] = await Promise.all([
+      this.bookingRepository.findOpenDriverCallsForDriver(driverUserId),
+      this.driverRepository.listApprovedActiveVehicles(driver.id),
+    ]);
     return {
-      items: rows.map((row) => this.mapOpenCall(row)),
+      items: rows.map((row) => this.mapOpenCall(row, driverVehicles)),
     };
   }
 
@@ -237,8 +265,22 @@ class DriverCallService {
     };
   }
 
-  async claimOpenCall(driverUserId, bookingNumber) {
+  async claimOpenCall(driverUserId, bookingNumber, input = {}) {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
+    const requestedVehicleId = input.driverVehicleId == null
+      ? null
+      : Number(input.driverVehicleId);
+    if (
+      requestedVehicleId != null
+      && (!Number.isInteger(requestedVehicleId) || requestedVehicleId <= 0)
+    ) {
+      throw new AppError('driverVehicleId is invalid', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+        errors: [{ field: 'driverVehicleId', message: 'must be a positive integer' }],
+      });
+    }
+
     const conn = await this.pool.getConnection();
     let confirmedPayload = null;
 
@@ -293,16 +335,43 @@ class DriverCallService {
       );
       assertNoPickupTimeConflict(conflictRows, booking.scheduled_pickup_at);
 
-      const vehicle = await this.driverRepository.findMatchingVehicle(
-        conn,
-        driver.id,
-        booking.vehicle_type_id,
-      );
-      if (!vehicle) {
-        throw new AppError('Driver vehicle type does not match booking', {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
-        });
+      let vehicle;
+      if (requestedVehicleId != null) {
+        vehicle = await this.driverRepository.findCompatibleVehicleById(
+          conn,
+          driver.id,
+          requestedVehicleId,
+          booking.vehicle_type_id,
+        );
+        if (!vehicle) {
+          const owned = await this.driverRepository.findApprovedVehicleByIdForDriver(
+            conn,
+            driver.id,
+            requestedVehicleId,
+          );
+          if (!owned) {
+            throw new AppError('Selected vehicle was not found for this driver', {
+              statusCode: HTTP_STATUS.NOT_FOUND,
+              errorCode: ERROR_CODES.DRIVER_VEHICLE_NOT_FOUND,
+            });
+          }
+          throw new AppError('Selected vehicle type is not compatible with this booking', {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+          });
+        }
+      } else {
+        vehicle = await this.driverRepository.findMatchingVehicle(
+          conn,
+          driver.id,
+          booking.vehicle_type_id,
+        );
+        if (!vehicle) {
+          throw new AppError('Driver vehicle type does not match booking', {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+          });
+        }
       }
 
       const assignmentId = await this.bookingRepository.insertDriverAssignment(conn, {
@@ -335,6 +404,10 @@ class DriverCallService {
           bookingNumber: normalizedBookingNumber,
           driverId: driver.id,
           assignmentId,
+          driverVehicleId: vehicle.id,
+          vehicleTypeCode: vehicle.vehicle_type_code ?? null,
+          plateNumber: vehicle.plate_number ?? null,
+          vehicleSelectedByDriver: requestedVehicleId != null,
         },
       });
 

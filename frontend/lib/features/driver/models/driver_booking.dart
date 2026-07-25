@@ -274,6 +274,32 @@ class DriverJobsToday {
   }
 }
 
+class DriverOpenCallCompatibleVehicle {
+  const DriverOpenCallCompatibleVehicle({
+    required this.driverVehicleId,
+    required this.vehicleTypeCode,
+    required this.vehicleTypeName,
+    required this.plateNumber,
+    this.isExactMatch = false,
+  });
+
+  final int driverVehicleId;
+  final String vehicleTypeCode;
+  final String vehicleTypeName;
+  final String plateNumber;
+  final bool isExactMatch;
+
+  factory DriverOpenCallCompatibleVehicle.fromJson(Map<String, dynamic> json) {
+    return DriverOpenCallCompatibleVehicle(
+      driverVehicleId: (json['driverVehicleId'] as num?)?.toInt() ?? 0,
+      vehicleTypeCode: json['vehicleTypeCode'] as String? ?? '',
+      vehicleTypeName: json['vehicleTypeName'] as String? ?? '',
+      plateNumber: json['plateNumber'] as String? ?? '',
+      isExactMatch: json['isExactMatch'] == true,
+    );
+  }
+}
+
 class DriverOpenCall {
   const DriverOpenCall({
     required this.bookingNumber,
@@ -298,6 +324,7 @@ class DriverOpenCall {
     this.isUrgentRequest = false,
     this.negotiationId,
     this.minRequiredEtaMinutes,
+    this.compatibleVehicles = const [],
   });
 
   final String bookingNumber;
@@ -322,11 +349,13 @@ class DriverOpenCall {
   final bool isUrgentRequest;
   final int? negotiationId;
   final int? minRequiredEtaMinutes;
+  final List<DriverOpenCallCompatibleVehicle> compatibleVehicles;
 
   DriverOpenCall copyWith({
     bool? isUrgentRequest,
     int? negotiationId,
     int? minRequiredEtaMinutes,
+    List<DriverOpenCallCompatibleVehicle>? compatibleVehicles,
   }) {
     return DriverOpenCall(
       bookingNumber: bookingNumber,
@@ -352,6 +381,7 @@ class DriverOpenCall {
       negotiationId: negotiationId ?? this.negotiationId,
       minRequiredEtaMinutes:
           minRequiredEtaMinutes ?? this.minRequiredEtaMinutes,
+      compatibleVehicles: compatibleVehicles ?? this.compatibleVehicles,
     );
   }
 
@@ -397,6 +427,15 @@ class DriverOpenCall {
       isUrgentRequest: json['isUrgentRequest'] == true,
       negotiationId: (json['negotiationId'] as num?)?.toInt(),
       minRequiredEtaMinutes: (json['minRequiredEtaMinutes'] as num?)?.toInt(),
+      compatibleVehicles: (json['compatibleVehicles'] as List? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => DriverOpenCallCompatibleVehicle.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((item) => item.driverVehicleId > 0)
+          .toList(growable: false),
     );
   }
 }

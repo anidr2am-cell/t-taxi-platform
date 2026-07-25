@@ -12,6 +12,11 @@ const releaseAssignmentSchema = Joi.object({
   reasonDetail: Joi.string().trim().max(500).allow('', null).optional(),
 });
 
+const claimOpenCallSchema = Joi.object({
+  driverVehicleId: Joi.number().integer().positive().optional(),
+});
+
 module.exports = {
   releaseAssignmentSchema,
+  claimOpenCallSchema,
 };
