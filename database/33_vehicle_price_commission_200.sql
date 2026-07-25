@@ -37,7 +37,7 @@ WHERE deleted_at IS NULL
   AND is_active = 1
   AND price > 0;
 
-INSERT INTO settings (group_name, key_name, value, value_type, is_public, description)
+INSERT INTO settings (group_name, key_name, value, data_type, is_encrypted, description)
 VALUES (
   'settlement',
   'commission_fixed_amount',
@@ -48,6 +48,6 @@ VALUES (
 )
 ON DUPLICATE KEY UPDATE
   value = VALUES(value),
-  value_type = VALUES(value_type),
+  data_type = VALUES(data_type),
   description = VALUES(description),
   updated_at = CURRENT_TIMESTAMP;
