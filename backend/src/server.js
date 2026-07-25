@@ -50,6 +50,7 @@ if (config.swagger.enabled) {
   });
 
   container.get('flightSyncSchedulerService').start();
+  container.get('urgentNegotiationSchedulerService').start();
 });
 
 function shutdown(signal) {
@@ -58,6 +59,11 @@ function shutdown(signal) {
     container.get('flightSyncSchedulerService').stop();
   } catch (err) {
     logger.warn('Flight sync worker stop failed', { error: err.message });
+  }
+  try {
+    container.get('urgentNegotiationSchedulerService').stop();
+  } catch (err) {
+    logger.warn('Urgent negotiation timeout worker stop failed', { error: err.message });
   }
   httpServer.close(() => {
     logger.info('HTTP server closed');

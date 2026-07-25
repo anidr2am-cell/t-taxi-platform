@@ -44,6 +44,65 @@ function emitDriverAssignmentReleased(driverUserId, payload) {
   ioInstance.to(driverUserRoom(driverUserId)).emit('driver:assignment:released', payload);
 }
 
+function emitDriverUrgentCallEtaRequired(driverUserId, payload) {
+  if (!ioInstance) return;
+  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:urgent-call:eta-required', payload);
+}
+
+function emitDriverUrgentCallLocked(payload) {
+  if (!ioInstance) return;
+  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:locked', payload);
+}
+
+function guestBookingRoom(bookingId) {
+  return `guest_booking:${bookingId}`;
+}
+
+function emitBookingUrgentNegotiationEtaProposed(bookingId, payload) {
+  if (!ioInstance || !bookingId) return;
+  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:eta-proposed', payload);
+}
+
+function emitDriverUrgentCallConfirmed(driverUserId, payload) {
+  if (!ioInstance) return;
+  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:urgent-call:confirmed', payload);
+}
+
+function emitBookingUrgentNegotiationConfirmed(bookingId, payload) {
+  if (!ioInstance || !bookingId) return;
+  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:confirmed', payload);
+}
+
+function emitDriverUrgentCallRoundEnded(driverUserId, payload) {
+  if (!ioInstance) return;
+  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:urgent-call:round-ended', payload);
+}
+
+function emitDriverUrgentCallUnlocked(payload) {
+  if (!ioInstance) return;
+  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:unlocked', payload);
+}
+
+function emitDriverUrgentCallNew(payload) {
+  if (!ioInstance) return;
+  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:new', payload);
+}
+
+function emitDriverUrgentCallCancelled(payload) {
+  if (!ioInstance) return;
+  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:cancelled', payload);
+}
+
+function emitBookingUrgentNegotiationCancelled(bookingId, payload) {
+  if (!ioInstance || !bookingId) return;
+  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:cancelled', payload);
+}
+
+function emitBookingUrgentNegotiationExpired(bookingId, payload) {
+  if (!ioInstance || !bookingId) return;
+  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:expired', payload);
+}
+
 function emitChatRoomEvent(roomId, eventName, payload) {
   if (!ioInstance || !roomId) return;
   ioInstance.to(`chat:${roomId}`).emit(eventName, payload);
@@ -52,6 +111,7 @@ function emitChatRoomEvent(roomId, eventName, payload) {
 module.exports = {
   DRIVER_ALL_ROOM,
   driverUserRoom,
+  guestBookingRoom,
   setRealtimeIo,
   getRealtimeIo,
   joinDriverRooms,
@@ -59,5 +119,16 @@ module.exports = {
   emitDriverCallClaimed,
   emitDriverCallConfirmed,
   emitDriverAssignmentReleased,
+  emitDriverUrgentCallEtaRequired,
+  emitDriverUrgentCallLocked,
+  emitBookingUrgentNegotiationEtaProposed,
+  emitDriverUrgentCallConfirmed,
+  emitBookingUrgentNegotiationConfirmed,
+  emitDriverUrgentCallRoundEnded,
+  emitDriverUrgentCallUnlocked,
+  emitDriverUrgentCallNew,
+  emitDriverUrgentCallCancelled,
+  emitBookingUrgentNegotiationCancelled,
+  emitBookingUrgentNegotiationExpired,
   emitChatRoomEvent,
 };

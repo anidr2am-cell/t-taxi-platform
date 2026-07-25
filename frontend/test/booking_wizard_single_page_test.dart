@@ -10,6 +10,7 @@ import 'package:frontend/features/booking/models/booking_wizard_state.dart';
 import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/models/pricing_result.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
+import 'package:frontend/features/booking/models/urgent_negotiation_status.dart';
 import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/pages/booking_wizard_page.dart';
@@ -121,20 +122,16 @@ void main() {
       );
     });
 
-    testWidgets('confirm button disabled until all required fields complete', (
+    testWidgets('review button hidden until all required fields complete', (
       tester,
     ) async {
       await pumpWizard(tester);
 
-      final confirmButton = find.widgetWithText(
-        ElevatedButton,
-        'Review booking',
-      );
-      expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
+      expect(find.text('Review booking'), findsNothing);
 
       await tester.tap(find.text('Airport Pickup'));
       await tester.pumpAndSettle();
-      expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
+      expect(find.text('Review booking'), findsNothing);
     });
 
     testWidgets('shows validation hints for incomplete sections', (
@@ -145,11 +142,7 @@ void main() {
       await tester.tap(find.text('City Transfer'));
       await tester.pumpAndSettle();
 
-      final confirmButton = find.widgetWithText(
-        ElevatedButton,
-        'Review booking',
-      );
-      expect(tester.widget<ElevatedButton>(confirmButton).onPressed, isNull);
+      expect(find.text('Review booking'), findsNothing);
       expect(find.text('Please select an origin.'), findsOneWidget);
     });
 
@@ -562,6 +555,23 @@ class _TrackingRecommendApi implements BookingApiService {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
 }
 
 class _CountingBookingApi implements BookingApiService {
@@ -635,6 +645,23 @@ class _CountingBookingApi implements BookingApiService {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
 }
 
 class _CapturingBookingApi implements BookingApiService {
@@ -700,6 +727,23 @@ class _CapturingBookingApi implements BookingApiService {
     required String bookingNumber,
     required String? guestAccessToken,
     bool forceReissue = false,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentNegotiationStatus> getUrgentNegotiation({
+    required String bookingNumber,
+    String? guestAccessToken,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UrgentDecisionResult> submitUrgentDecision({
+    required String bookingNumber,
+    required String decision,
+    String? guestAccessToken,
   }) {
     throw UnimplementedError();
   }

@@ -47,6 +47,7 @@ class BookingRepository {
           route_id, total_amount, currency, payment_status, payment_method, commission_status,
           customer_user_id, customer_name, customer_email, customer_phone, customer_country_code,
           special_requests, metadata, boarding_qr_token_hash, boarding_qr_expires_at,
+          is_urgent_request,
           created_by, updated_by
         ) VALUES (
           ?, ?, ?,
@@ -56,7 +57,7 @@ class BookingRepository {
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?, ?
+          ?, ?, ?
         )
       `,
       [
@@ -90,6 +91,7 @@ class BookingRepository {
         row.metadata ? JSON.stringify(row.metadata) : null,
         row.boardingQrTokenHash,
         row.boardingQrExpiresAt,
+        row.isUrgentRequest ? 1 : 0,
         row.createdBy,
         row.updatedBy,
       ],
@@ -391,6 +393,8 @@ class BookingRepository {
           b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
           b.scheduled_pickup_at,
           b.payment_status, b.payment_method, b.customer_user_id,
+          b.is_urgent_request,
+          b.urgent_negotiation_id,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           b.dropoff_qr_token_hash, b.dropoff_qr_expires_at, b.dropoff_qr_used_at,
           d.user_id AS driver_user_id,
@@ -709,12 +713,17 @@ class BookingRepository {
         bl.carriers_20_inch,
         bl.carriers_24_inch_plus,
         bl.golf_bags,
-        bl.special_items
+        bl.special_items,
+        b.is_urgent_request,
+        b.urgent_negotiation_id,
+        bun.min_required_eta_minutes AS urgent_min_required_eta_minutes
       FROM bookings b
       INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
       INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
       LEFT JOIN booking_passengers bp ON bp.booking_id = b.id AND bp.deleted_at IS NULL
       LEFT JOIN booking_luggage bl ON bl.booking_id = b.id AND bl.deleted_at IS NULL
+      LEFT JOIN booking_urgent_negotiations bun ON bun.id = b.urgent_negotiation_id
+        AND bun.status = 'BROADCASTING'
     `;
   }
 
@@ -903,6 +912,20 @@ class BookingRepository {
         WHERE id = ? AND deleted_at IS NULL
       `,
       [actorUserId, bookingId],
+    );
+  }
+
+  async updateUrgentNegotiationId(conn, bookingId, negotiationId) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          urgent_negotiation_id = ?,
+          updated_at = CURRENT_TIMESTAMP(3)
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `,
+      [negotiationId, bookingId],
     );
   }
 

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
-import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../driver_location/widgets/driver_live_location_control.dart';
 import '../../driver_settlement/pages/driver_settlement_list_page.dart';
@@ -14,6 +13,7 @@ import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 import '../pages/driver_booking_detail_page.dart';
 import '../services/driver_api_service.dart';
+import '../services/driver_call_socket_bridge.dart';
 import '../services/driver_call_socket_service.dart';
 import '../utils/driver_assignment_ended.dart';
 import '../widgets/driver_today_trip_cards.dart';
@@ -27,6 +27,7 @@ class DriverTodayPage extends StatefulWidget {
     this.onSessionChanged,
     this.onNavigateToJobs,
     this.onNavigateToSettlement,
+    this.enableCallSocket = false,
   });
 
   final DriverApiService? api;
@@ -34,6 +35,7 @@ class DriverTodayPage extends StatefulWidget {
   final VoidCallback? onSessionChanged;
   final VoidCallback? onNavigateToJobs;
   final VoidCallback? onNavigateToSettlement;
+  final bool enableCallSocket;
 
   @override
   State<DriverTodayPage> createState() => _DriverTodayPageState();
@@ -48,6 +50,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
   final Map<String, String?> _phoneCache = {};
   final Set<String> _phoneLoading = {};
   final Set<String> _notifiedOpenCalls = {};
+  final Set<String> _notifiedUrgentCalls = {};
   DriverCallSocketService? _callSocket;
   bool _completedExpanded = false;
 
@@ -57,7 +60,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
     _api = widget.api ?? DriverApiService();
     _settlementApi = widget.settlementApi ?? const DriverSettlementApiService();
     _loadData();
-    if (widget.api == null) {
+    if (widget.enableCallSocket) {
       _connectCallSocket();
     }
   }
@@ -110,8 +113,61 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
       ..onReconnect = () {
         if (mounted) _refresh();
       };
+    socket
+      ..onUrgentCallNew = (payload) {
+        _handleUrgentSocketEvent('new', payload);
+      }
+      ..onUrgentCallLocked = (payload) {
+        _handleUrgentSocketEvent('locked', payload);
+      }
+      ..onUrgentCallEtaRequired = (payload) {
+        _handleUrgentSocketEvent('eta-required', payload);
+      }
+      ..onUrgentCallRoundEnded = (payload) {
+        _handleUrgentSocketEvent('round-ended', payload);
+      }
+      ..onUrgentCallConfirmed = (payload) {
+        _handleUrgentSocketEvent('confirmed', payload);
+      }
+      ..onUrgentCallCancelled = (payload) {
+        _handleUrgentSocketEvent('cancelled', payload);
+      }
+      ..onUrgentCallUnlocked = (payload) {
+        _handleUrgentSocketEvent('unlocked', payload);
+      };
     _callSocket = socket;
     await socket.connect(accessToken: token);
+  }
+
+  void _handleUrgentSocketEvent(
+    String event,
+    Map<String, dynamic> payload,
+  ) {
+    DriverCallSocketBridge.instance.dispatch(event, payload);
+    if (!mounted) return;
+
+    if (event == 'new') {
+      final bookingNumber = payload['bookingNumber']?.toString();
+      final shouldAlert =
+          bookingNumber == null || _notifiedUrgentCalls.add(bookingNumber);
+      if (shouldAlert) {
+        SystemSound.play(SystemSoundType.alert);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.t('driver_urgent_call_new_arrived'))),
+      );
+    } else if (event == 'confirmed') {
+      // Banner state is handled by [DriverUrgentNegotiationController].
+    }
+
+    if (event == 'new' ||
+        event == 'locked' ||
+        event == 'unlocked' ||
+        event == 'cancelled' ||
+        event == 'round-ended' ||
+        event == 'confirmed') {
+      _refresh();
+    }
   }
 
   void _refresh() {
@@ -243,6 +299,10 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
           final data = snapshot.data;
           final items = data?.jobs.items ?? [];
           final openCalls = data?.openCalls ?? [];
+          final regularOpenCalls =
+              openCalls.where((call) => !call.isUrgentRequest).toList();
+          final urgentOpenCalls =
+              openCalls.where((call) => call.isUrgentRequest).toList();
           final settlements = data?.settlements ?? {};
           final current = DriverUx.selectCurrentTrip(
             items,
@@ -316,12 +376,21 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                   },
                 ),
                 const SizedBox(height: AppTokens.spaceMd),
-                if (openCalls.isNotEmpty &&
+                if (regularOpenCalls.isNotEmpty &&
                     current == null &&
                     data?.openCallBlockedReason != 'UNPAID_SETTLEMENT') ...[
                   const SizedBox(height: AppTokens.spaceMd),
                   _NewCallsPrompt(
-                    count: openCalls.length,
+                    count: regularOpenCalls.length,
+                    onOpenJobs: widget.onNavigateToJobs,
+                  ),
+                ],
+                if (urgentOpenCalls.isNotEmpty &&
+                    current == null &&
+                    data?.openCallBlockedReason != 'UNPAID_SETTLEMENT') ...[
+                  const SizedBox(height: AppTokens.spaceSm),
+                  _UrgentCallsPrompt(
+                    count: urgentOpenCalls.length,
                     onOpenJobs: widget.onNavigateToJobs,
                   ),
                 ],
@@ -537,6 +606,62 @@ class _NewCallsPrompt extends StatelessWidget {
               onPressed: onOpenJobs,
               icon: const Icon(Icons.work_outline),
               label: Text(l10n.t('driver_home_new_calls_cta')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UrgentCallsPrompt extends StatelessWidget {
+  const _UrgentCallsPrompt({required this.count, this.onOpenJobs});
+
+  final int count;
+  final VoidCallback? onOpenJobs;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.warning.withValues(alpha: 0.12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              AppUi.statusBadge(
+                l10n.t('driver_urgent_badge'),
+                tone: AppStatusTone.warning,
+              ),
+              const SizedBox(width: AppTokens.spaceSm),
+              Expanded(
+                child: Text(
+                  l10n.t('driver_home_urgent_calls_title'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+          Text(
+            l10n
+                .t('driver_home_urgent_calls_message')
+                .replaceAll('{count}', '$count'),
+            style: const TextStyle(height: 1.4),
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: onOpenJobs,
+              icon: const Icon(Icons.priority_high),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTokens.warning,
+              ),
+              label: Text(l10n.t('driver_home_urgent_calls_cta')),
             ),
           ),
         ],

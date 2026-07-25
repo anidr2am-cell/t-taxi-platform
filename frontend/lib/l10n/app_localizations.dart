@@ -172,6 +172,35 @@ class AppLocalizations {
       'customer_review_booking': 'Review booking',
       'customer_confirm_booking': 'Confirm booking',
       'customer_booking_processing': 'Processing your booking',
+      'customer_urgent_pickup_hint':
+          'If your pickup time is within 2 hours, tap Urgent Request to continue.',
+      'customer_urgent_request': 'Urgent request',
+      'customer_urgent_confirm_title': 'Confirm urgent request',
+      'customer_urgent_confirm_body':
+          'Urgent requests may take longer to assign a driver. Once matched, we will share the driver\'s estimated arrival time first. Tap Confirm if you would like to proceed.',
+      'customer_urgent_confirm_submit': 'Confirm',
+      'customer_urgent_flow_title': 'Urgent request',
+      'customer_urgent_searching_title': 'Finding a driver',
+      'customer_urgent_searching_body':
+          'We are searching for an available driver near you.',
+      'customer_urgent_eta_title':
+          'Your driver is expected to arrive in about {minutes} minutes',
+      'customer_urgent_eta_body':
+          'Please accept if this arrival time works for you, or reject to search for a faster option.',
+      'customer_urgent_accept_eta': 'Accept',
+      'customer_urgent_reject_eta': 'Reject',
+      'customer_urgent_retry_title': 'Look for a faster driver?',
+      'customer_urgent_retry_body':
+          'We can keep searching for another driver with a shorter arrival time.',
+      'customer_urgent_retry_accept': 'Keep searching',
+      'customer_urgent_retry_cancel': 'Cancel booking',
+      'customer_urgent_confirmed_title': 'Driver confirmed',
+      'customer_urgent_confirmed_body':
+          'Your driver has been assigned. Opening your booking details.',
+      'customer_urgent_exhausted_title': 'No nearby drivers available',
+      'customer_urgent_exhausted_body':
+          'There are no waiting drivers nearby. Your booking will be cancelled.',
+      'customer_urgent_go_home': 'Go to home',
       'origin': 'Origin',
       'destination': 'Destination',
       'airport': 'Airport',
@@ -635,6 +664,33 @@ class AppLocalizations {
       'driver_open_calls_online_required':
           'You can receive calls only when you are online.',
       'driver_open_calls_empty': 'No available calls right now.',
+      'driver_urgent_badge': 'Urgent',
+      'driver_urgent_section_title': 'Urgent request calls',
+      'driver_urgent_call_new_arrived': 'An urgent request call has arrived.',
+      'driver_urgent_accept': 'Accept',
+      'driver_urgent_already_locked':
+          'Another driver has already accepted this call.',
+      'driver_urgent_eta_dialog_title': 'Enter arrival ETA',
+      'driver_urgent_eta_dialog_message':
+          'After you enter your estimated arrival time, the booking will be confirmed once the customer accepts. Please enter your ETA.',
+      'driver_urgent_eta_minutes_label': 'ETA (minutes)',
+      'driver_urgent_eta_submit': 'Submit',
+      'driver_urgent_eta_countdown': 'Time remaining: {time}',
+      'driver_urgent_eta_invalid': 'Enter a valid number of minutes.',
+      'driver_urgent_eta_success':
+          'ETA submitted. Waiting for customer confirmation.',
+      'driver_urgent_confirmed': 'Customer confirmed. The booking is assigned.',
+      'driver_urgent_min_eta_hint':
+          'A previous rejection requires ETA under {minutes} minutes.',
+      'driver_urgent_awaiting_customer':
+          'Waiting for customer confirmation ({time} remaining).',
+      'driver_urgent_eta_lock_expired':
+          'The time window to submit your ETA has expired.',
+      'driver_urgent_eta_not_fast_enough':
+          'Please enter a faster ETA than the previous rejection required.',
+      'driver_urgent_round_ended':
+          'The customer declined or this negotiation round ended.',
+      'driver_urgent_cancelled': 'This urgent request call was cancelled.',
       'driver_settlement_block_title': 'Cannot receive new jobs yet',
       'driver_settlement_block_message':
           'Please pay the commission and upload your transfer slip. You can receive new jobs after admin review.',
@@ -642,6 +698,10 @@ class AppLocalizations {
       'driver_home_new_calls_title': 'New jobs available',
       'driver_home_new_calls_message': '{count} new call(s) are waiting.',
       'driver_home_new_calls_cta': 'View new jobs',
+      'driver_home_urgent_calls_title': 'Urgent request calls',
+      'driver_home_urgent_calls_message':
+          '{count} urgent request call(s) are waiting.',
+      'driver_home_urgent_calls_cta': 'View urgent calls',
       'driver_call_customer': 'Call customer',
       'driver_account_notifications': 'Notifications',
       'driver_step_progress': 'Step {step} of {total}',
@@ -1454,6 +1514,31 @@ class AppLocalizations {
       'customer_review_booking': '예약 내용 확인하기',
       'customer_confirm_booking': '예약 확정하기',
       'customer_booking_processing': '예약을 처리하고 있습니다',
+      'customer_urgent_pickup_hint':
+          '픽업 요청시간이 2시간 이내인 경우 긴급요청을 클릭하셔서 진행 가능합니다',
+      'customer_urgent_request': '긴급요청',
+      'customer_urgent_confirm_title': '긴급 요청 확인',
+      'customer_urgent_confirm_body':
+          '긴급 요청의 경우 배차에 시간이 다소 소요될 수 있습니다. 배차가 완료되면 기사님의 도착시간을 먼저 안내 해드리오니 배차를 원하시면 확정 버튼을 눌러주시기 바랍니다.',
+      'customer_urgent_confirm_submit': '확정',
+      'customer_urgent_flow_title': '긴급 요청',
+      'customer_urgent_searching_title': '기사를 찾고 있습니다',
+      'customer_urgent_searching_body': '주변에서 배차 가능한 기사를 찾고 있습니다.',
+      'customer_urgent_eta_title': '기사님이 약 {minutes}분 후 도착 예정입니다',
+      'customer_urgent_eta_body':
+          '도착 시간이 괜찮으시면 수락을, 더 빠른 기사를 원하시면 거절을 눌러주세요.',
+      'customer_urgent_accept_eta': '수락',
+      'customer_urgent_reject_eta': '거절',
+      'customer_urgent_retry_title': '더 빠른 기사를 찾아볼까요?',
+      'customer_urgent_retry_body': '다른 기사를 계속 찾아볼 수 있습니다.',
+      'customer_urgent_retry_accept': '수락',
+      'customer_urgent_retry_cancel': '취소',
+      'customer_urgent_confirmed_title': '배차가 확정되었습니다',
+      'customer_urgent_confirmed_body': '기사님이 배정되었습니다. 예약 상세 화면으로 이동합니다.',
+      'customer_urgent_exhausted_title': '대기 중인 기사가 없습니다',
+      'customer_urgent_exhausted_body':
+          '가까운 곳에 대기중인 기사가 없습니다. 예약을 취소하겠습니다',
+      'customer_urgent_go_home': '홈으로',
       'origin': '출발지',
       'destination': '도착지',
       'airport': '공항',
@@ -2560,6 +2645,28 @@ class AppLocalizations {
       'customer_review_booking': '检查预约',
       'customer_confirm_booking': '确认预约',
       'customer_booking_processing': '正在处理预约',
+      'customer_urgent_pickup_hint': '若接送时间在2小时以内，请点击“紧急请求”继续。',
+      'customer_urgent_request': '紧急请求',
+      'customer_urgent_confirm_title': '确认紧急请求',
+      'customer_urgent_confirm_body':
+          '紧急请求可能需要更长时间才能安排司机。匹配成功后，我们会先告知预计到达时间。如需继续，请点击确认。',
+      'customer_urgent_confirm_submit': '确认',
+      'customer_urgent_flow_title': '紧急请求',
+      'customer_urgent_searching_title': '正在寻找司机',
+      'customer_urgent_searching_body': '我们正在为您寻找附近可用的司机。',
+      'customer_urgent_eta_title': '司机预计约 {minutes} 分钟后到达',
+      'customer_urgent_eta_body': '若到达时间合适请点击接受，若希望更快到达请点击拒绝。',
+      'customer_urgent_accept_eta': '接受',
+      'customer_urgent_reject_eta': '拒绝',
+      'customer_urgent_retry_title': '要继续寻找更快的司机吗？',
+      'customer_urgent_retry_body': '我们可以继续为您寻找到达时间更短的司机。',
+      'customer_urgent_retry_accept': '继续寻找',
+      'customer_urgent_retry_cancel': '取消预约',
+      'customer_urgent_confirmed_title': '司机已确认',
+      'customer_urgent_confirmed_body': '司机已分配。正在打开预约详情页面。',
+      'customer_urgent_exhausted_title': '附近暂无可用司机',
+      'customer_urgent_exhausted_body': '附近没有待命的司机。您的预约将被取消。',
+      'customer_urgent_go_home': '返回首页',
       'selected_location': '已选位置',
       'customer_payment_method': '付款方式',
       'customer_payment_pay_driver': '到达目的地后向司机付款',
@@ -3071,6 +3178,32 @@ class AppLocalizations {
       'customer_review_booking': '予約内容を確認',
       'customer_confirm_booking': '予約を確定',
       'customer_booking_processing': '予約を処理しています',
+      'customer_urgent_pickup_hint':
+          'ピックアップ時間が2時間以内の場合は、緊急リクエストをタップして進めてください。',
+      'customer_urgent_request': '緊急リクエスト',
+      'customer_urgent_confirm_title': '緊急リクエストの確認',
+      'customer_urgent_confirm_body':
+          '緊急リクエストは配車に時間がかかる場合があります。配車が完了すると、まずドライバーの到着予定時刻をお知らせします。配車を希望される場合は確定を押してください。',
+      'customer_urgent_confirm_submit': '確定',
+      'customer_urgent_flow_title': '緊急リクエスト',
+      'customer_urgent_searching_title': 'ドライバーを探しています',
+      'customer_urgent_searching_body': '近くで対応可能なドライバーを探しています。',
+      'customer_urgent_eta_title': 'ドライバーは約{minutes}分後に到着予定です',
+      'customer_urgent_eta_body':
+          '到着時間で問題なければ承認、より早いドライバーを希望する場合は拒否を押してください。',
+      'customer_urgent_accept_eta': '承認',
+      'customer_urgent_reject_eta': '拒否',
+      'customer_urgent_retry_title': 'より早いドライバーを探しますか？',
+      'customer_urgent_retry_body': '到着時間が短い別のドライバーを引き続き探せます。',
+      'customer_urgent_retry_accept': '探す',
+      'customer_urgent_retry_cancel': '予約をキャンセル',
+      'customer_urgent_confirmed_title': '配車が確定しました',
+      'customer_urgent_confirmed_body':
+          'ドライバーが割り当てられました。予約詳細画面を開いています。',
+      'customer_urgent_exhausted_title': '近くに待機中のドライバーがいません',
+      'customer_urgent_exhausted_body':
+          '近くに待機中のドライバーがいません。予約をキャンセルします。',
+      'customer_urgent_go_home': 'ホームへ',
       'selected_location': '選択した場所',
       'customer_payment_method': '支払方法',
       'customer_payment_pay_driver': '目的地到着後にドライバーへ直接支払い',
@@ -3457,6 +3590,34 @@ class AppLocalizations {
       'customer_review_booking': 'ตรวจสอบการจอง',
       'customer_confirm_booking': 'ยืนยันการจอง',
       'customer_booking_processing': 'กำลังดำเนินการจอง',
+      'customer_urgent_pickup_hint':
+          'หากเวลารับอยู่ภายใน 2 ชั่วโมง ให้แตะ คำขอด่วน เพื่อดำเนินการต่อ',
+      'customer_urgent_request': 'คำขอด่วน',
+      'customer_urgent_confirm_title': 'ยืนยันคำขอด่วน',
+      'customer_urgent_confirm_body':
+          'คำขอด่วนอาจใช้เวลาจัดรถนานขึ้น เมื่อจัดรถแล้วเราจะแจ้งเวลาถึงโดยประมาณของคนขับก่อน หากต้องการดำเนินการต่อ กรุณาแตะ ยืนยัน',
+      'customer_urgent_confirm_submit': 'ยืนยัน',
+      'customer_urgent_flow_title': 'คำขอด่วน',
+      'customer_urgent_searching_title': 'กำลังค้นหาคนขับ',
+      'customer_urgent_searching_body': 'เรากำลังค้นหาคนขับที่พร้อมให้บริการใกล้คุณ',
+      'customer_urgent_eta_title':
+          'คนขับคาดว่าจะถึงในอีกประมาณ {minutes} นาที',
+      'customer_urgent_eta_body':
+          'หากเวลานี้เหมาะสม กรุณากด ยอมรับ หากต้องการคนขับที่ถึงเร็วกว่า กรุณากด ปฏิเสธ',
+      'customer_urgent_accept_eta': 'ยอมรับ',
+      'customer_urgent_reject_eta': 'ปฏิเสธ',
+      'customer_urgent_retry_title': 'ต้องการหาคนขับที่เร็วกว่านี้ไหม?',
+      'customer_urgent_retry_body':
+          'เราสามารถค้นหาคนขับคนอื่นที่มีเวลาถึงสั้นกว่าได้',
+      'customer_urgent_retry_accept': 'ค้นหาต่อ',
+      'customer_urgent_retry_cancel': 'ยกเลิกการจอง',
+      'customer_urgent_confirmed_title': 'ยืนยันการจัดรถแล้ว',
+      'customer_urgent_confirmed_body':
+          'มีการมอบหมายคนขับแล้ว กำลังเปิดหน้ารายละเอียดการจอง',
+      'customer_urgent_exhausted_title': 'ไม่มีคนขับใกล้เคียง',
+      'customer_urgent_exhausted_body':
+          'ไม่มีคนขับที่รอรับงานใกล้เคียง เราจะยกเลิกการจองของคุณ',
+      'customer_urgent_go_home': 'กลับหน้าแรก',
       'origin': 'จุดเริ่มต้น',
       'destination': 'ปลายทาง',
       'airport': 'สนามบิน',
@@ -4907,6 +5068,37 @@ class AppLocalizations {
     'driver_open_calls_online_required':
         '온라인 상태에서만 콜을 받을 수 있습니다.\n(รับงานได้เฉพาะเมื่อออนไลน์เท่านั้น)',
     'driver_open_calls_empty': '배차 가능한 콜이 없습니다.\n(ไม่มีงานที่พร้อมให้รับ)',
+    'driver_urgent_badge': '긴급\n(ด่วน)',
+    'driver_urgent_section_title': '긴급 요청 콜\n(งานเร่งด่วน)',
+    'driver_urgent_call_new_arrived':
+        '긴급 요청 콜이 도착했습니다.\n(มีงานเร่งด่วนเข้ามา)',
+    'driver_urgent_accept': '수락 / รับงาน',
+    'driver_urgent_already_locked':
+        '다른 기사가 이미 수락한 콜입니다.\n(คนขับคนอื่นรับงานนี้แล้ว)',
+    'driver_urgent_eta_dialog_title': '도착 예상 시간 입력\n(กรอกเวลาที่จะถึง)',
+    'driver_urgent_eta_dialog_message':
+        '도착 예상 시간을 입력하시면 고객이 수락을 한 이후 예약이 확정됩니다. 도착 예상시간을 입력해주세요\n(กรอกเวลาที่จะถึง ลูกค้ายืนยันแล้วจึงจะยืนยันการจอง)',
+    'driver_urgent_eta_minutes_label': '도착 예상 시간 (분)\n(นาที)',
+    'driver_urgent_eta_submit': '제출 / ส่ง',
+    'driver_urgent_eta_countdown': '남은 시간: {time}\n(เวลาที่เหลือ: {time})',
+    'driver_urgent_eta_invalid':
+        '유효한 분 단위 숫자를 입력해 주세요.\n(กรุณากรอกจำนวนนาทีที่ถูกต้อง)',
+    'driver_urgent_eta_success':
+        '도착 예상 시간이 제출되었습니다. 고객 확인을 기다려 주세요.\n(ส่งเวลาแล้ว รอลูกค้ายืนยัน)',
+    'driver_urgent_confirmed':
+        '고객이 수락했습니다. 예약이 배정되었습니다.\n(ลูกค้ายืนยันแล้ว ได้รับงานแล้ว)',
+    'driver_urgent_min_eta_hint':
+        '이전 거절로 {minutes}분 미만 ETA가 필요합니다.\n(ต้องน้อยกว่า {minutes} นาที)',
+    'driver_urgent_awaiting_customer':
+        '고객 확인 대기 중 (남은 시간 {time})\n(รอลูกค้ายืนยัน เหลือ {time})',
+    'driver_urgent_eta_lock_expired':
+        '도착 예상 시간 입력 시간이 만료되었습니다.\n(หมดเวลากรอกเวลาที่จะถึงแล้ว)',
+    'driver_urgent_eta_not_fast_enough':
+        '이전 거절보다 더 빠른 도착 예상 시간을 입력해 주세요.\n(กรุณากรอกเวลาที่จะถึงให้เร็วกว่าครั้งก่อน)',
+    'driver_urgent_round_ended':
+        '고객이 거절했거나 협상 라운드가 종료되었습니다.\n(ลูกค้าปฏิเสธหรือรอบการเจรจาจบแล้ว)',
+    'driver_urgent_cancelled':
+        '긴급 요청 콜이 취소되었습니다.\n(งานเร่งด่วนถูกยกเลิกแล้ว)',
     'driver_settlement_block_title':
         '아직 신규 업무를 받을 수 없습니다\n(ยังไม่สามารถรับงานใหม่ได้)',
     'driver_settlement_block_message':
@@ -4916,6 +5108,10 @@ class AppLocalizations {
     'driver_home_new_calls_message':
         '새 콜 {count}건이 대기 중입니다.\n(มีงานใหม่ {count} งาน)',
     'driver_home_new_calls_cta': '새 콜 보기 / ดูงานใหม่',
+    'driver_home_urgent_calls_title': '긴급 요청 콜\n(งานเร่งด่วน)',
+    'driver_home_urgent_calls_message':
+        '긴급 요청 콜 {count}건이 대기 중입니다.\n(มีงานเร่งด่วน {count} งาน)',
+    'driver_home_urgent_calls_cta': '긴급 콜 보기 / ดูงานเร่งด่วน',
     'driver_call_customer': '고객에게 전화 / โทรหาลูกค้า',
     'driver_account_notifications': '알림\n(การแจ้งเตือน)',
     'driver_step_progress':

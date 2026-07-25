@@ -250,6 +250,25 @@ test('scheduled list uses upcoming repository query without date filter', async 
   assert.equal(result.items[0].status, 'ON_ROUTE');
 });
 
+test('scheduled list uses upcoming repository query without date filter', async () => {
+  let called = false;
+  const service = new DriverJobService({
+    async findActiveDriverBookingsScheduled(_driverUserId) {
+      called = true;
+      return [
+        row({ booking_number: 'TX202607010002', status: 'ON_ROUTE' }),
+        row({ booking_number: 'TX202607100001', status: 'DRIVER_ASSIGNED' }),
+      ];
+    },
+  });
+
+  const result = await service.listScheduled(44);
+
+  assert.equal(called, true);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].status, 'ON_ROUTE');
+});
+
 test('driver can access assigned booking detail', async () => {
   const service = new DriverJobService({
     async findActiveDriverBookingByNumber(driverUserId, bookingNumber) {

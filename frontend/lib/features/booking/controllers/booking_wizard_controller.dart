@@ -38,6 +38,13 @@ class BookingWizardController extends ChangeNotifier {
   bool get isSubmitting => _isSubmitting;
   bool get isInitialized => _isInitialized;
 
+  /// Marks the controller ready for widget tests that inject a preconfigured instance.
+  @visibleForTesting
+  void markInitializedForTest() {
+    _isInitialized = true;
+    notifyListeners();
+  }
+
   static const validationSteps = [0, 1, 2, 3, 4, 5, 6, 7];
   static const preConfirmationSteps = [0, 1, 2, 3, 4, 5, 6];
 
@@ -225,7 +232,33 @@ class BookingWizardController extends ChangeNotifier {
     return thailandNow().add(const Duration(hours: 2));
   }
 
+  DateTime earliestSelectablePickupDateTime() => thailandNow();
+
+  DateTime maximumUrgentPickupDateTime() {
+    return thailandNow().add(const Duration(hours: 2));
+  }
+
   DateTime defaultPickupDateTime() => minimumPickupDateTime();
+
+  bool isStandardPickupAllowed(DateTime value) {
+    return !_bangkokWallTime(value).isBefore(minimumPickupDateTime());
+  }
+
+  bool isUrgentPickupWindow(DateTime? value) {
+    if (value == null) return false;
+    final pickup = _bangkokWallTime(value);
+    final now = thailandNow();
+    final urgentMax = maximumUrgentPickupDateTime();
+    return !pickup.isBefore(now) && pickup.isBefore(urgentMax);
+  }
+
+  bool isUrgentPickupWindowSelected() {
+    return isUrgentPickupWindow(selectedPickupDateTime());
+  }
+
+  bool isPickupSelectable(DateTime value) {
+    return isStandardPickupAllowed(value) || isUrgentPickupWindow(value);
+  }
 
   String formatDate(DateTime value) {
     final y = value.year.toString().padLeft(4, '0');
@@ -312,7 +345,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   bool isPickupDateTimeAllowed(DateTime value) {
-    return !_bangkokWallTime(value).isBefore(minimumPickupDateTime());
+    return isPickupSelectable(value);
   }
 
   Future<bool> setPickupDateTime(DateTime value) async {
@@ -328,8 +361,12 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    if (!isPickupDateTimeAllowed(bangkokValue)) {
-      _state = _state.copyWith(errorMessage: 'pickup_time_minimum');
+    if (!isPickupSelectable(bangkokValue)) {
+      _state = _state.copyWith(
+        errorMessage: bangkokValue.isBefore(thailandNow())
+            ? 'pickup_date_past'
+            : 'pickup_time_minimum',
+      );
       await _persist();
       notifyListeners();
       return false;
@@ -442,7 +479,7 @@ class BookingWizardController extends ChangeNotifier {
     return null;
   }
 
-  Map<String, dynamic> buildCreatePayload() {
+  Map<String, dynamic> buildCreatePayload({String bookingMode = 'STANDARD'}) {
     final locations = _pricingLocationParams();
     final airportIata = _airportIataForTransfer();
     final scheduledPickupAt = scheduledPickupAtIso();
@@ -451,6 +488,7 @@ class BookingWizardController extends ChangeNotifier {
     }
 
     return {
+      'bookingMode': bookingMode,
       'serviceTypeCode': _state.serviceType!.apiCode,
       'vehicleTypeCode': _state.selectedVehicle!,
       'vehicleCount': 1,
@@ -537,13 +575,26 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<BookingCreateResult?> submitBooking() async {
+    return _submitBooking(bookingMode: 'STANDARD', validatePickup: isStandardPickupAllowed);
+  }
+
+  Future<BookingCreateResult?> submitUrgentBooking() async {
+    return _submitBooking(bookingMode: 'URGENT', validatePickup: isUrgentPickupWindow);
+  }
+
+  Future<BookingCreateResult?> _submitBooking({
+    required String bookingMode,
+    required bool Function(DateTime value) validatePickup,
+  }) async {
     if (_isSubmitting || _isLoading) return null;
-    if (!canSubmitAll()) return null;
+    if (!canSubmitAll(validatePickup: validatePickup)) return null;
 
     _isSubmitting = true;
     _setLoading(true);
     try {
-      final result = await _api.createBooking(buildCreatePayload());
+      final result = await _api.createBooking(
+        buildCreatePayload(bookingMode: bookingMode),
+      );
       await _storage.clear();
       _state = const BookingWizardState();
       notifyListeners();
@@ -966,7 +1017,7 @@ class BookingWizardController extends ChangeNotifier {
         return _state.destination != null;
       case 3:
         final selected = selectedPickupDateTime();
-        return selected != null && isPickupDateTimeAllowed(selected);
+        return selected != null && isPickupSelectable(selected);
       case 4:
         return _state.adults >= 1;
       case 5:
@@ -1038,12 +1089,22 @@ class BookingWizardController extends ChangeNotifier {
 
   int get totalRequiredCount => validationSteps.length;
 
-  bool canSubmitAll() {
+  bool canSubmitAll({bool Function(DateTime value)? validatePickup}) {
+    final pickupValidator = validatePickup ?? isStandardPickupAllowed;
     for (final step in validationSteps) {
+      if (step == 3) {
+        final selected = selectedPickupDateTime();
+        if (selected == null || !pickupValidator(selected)) return false;
+        continue;
+      }
       if (!canProceedFromStep(step)) return false;
     }
     return true;
   }
+
+  bool canSubmitStandard() => canSubmitAll(validatePickup: isStandardPickupAllowed);
+
+  bool canSubmitUrgent() => canSubmitAll(validatePickup: isUrgentPickupWindow);
 
   int? firstIncompleteStep() {
     for (final step in validationSteps) {
@@ -1064,6 +1125,9 @@ class BookingWizardController extends ChangeNotifier {
       case 3:
         if (selectedPickupDateTime() == null) {
           return 'pickup_datetime_required';
+        }
+        if (isUrgentPickupWindowSelected()) {
+          return 'customer_urgent_pickup_hint';
         }
         return _state.errorMessage ?? 'pickup_time_minimum';
       case 4:

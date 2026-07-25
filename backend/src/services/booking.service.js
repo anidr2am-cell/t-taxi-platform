@@ -14,7 +14,7 @@ const {
 } = require('../utils/flightNumber.util');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
-const { emitDriverCallAvailable } = require('../socket/realtime');
+const { emitDriverCallAvailable, emitDriverUrgentCallNew } = require('../socket/realtime');
 const {
   evaluateCustomerCancellation,
 } = require('../policies/customerBookingCancellation.policy');
@@ -49,6 +49,7 @@ class BookingService {
     driverRepository = null,
     notificationRepository = null,
     commissionSettlementService = null,
+    urgentNegotiationRepository = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -63,6 +64,7 @@ class BookingService {
     this.driverRepository = driverRepository;
     this.notificationRepository = notificationRepository;
     this.commissionSettlementService = commissionSettlementService;
+    this.urgentNegotiationRepository = urgentNegotiationRepository;
   }
 
   buildOpenCallPayload({
@@ -316,6 +318,9 @@ class BookingService {
       const originAddress = this.resolvePlaceAddress(origin);
       const destinationAddress = this.resolvePlaceAddress(destination);
 
+      const bookingMode = String(input.bookingMode ?? 'STANDARD').trim().toUpperCase();
+      const isUrgentRequest = bookingMode === 'URGENT';
+
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
         status: BOOKING_STATUS.OPEN,
@@ -347,6 +352,7 @@ class BookingService {
         metadata: Object.keys(metadata).length ? metadata : null,
         boardingQrTokenHash: hashToken(boardingQrToken),
         boardingQrExpiresAt: this.formatDateTime(boardingExpires),
+        isUrgentRequest,
         createdBy,
         updatedBy: createdBy,
       });
@@ -399,15 +405,19 @@ class BookingService {
         toStatus: BOOKING_STATUS.OPEN,
         changedByUserId: customerUserId,
         changedByRole: customerUserId ? 'CUSTOMER' : 'SYSTEM',
-        reason: 'BOOKING_CREATED_OPEN_CALL',
+        reason: isUrgentRequest ? 'BOOKING_CREATED_URGENT_REQUEST' : 'BOOKING_CREATED_OPEN_CALL',
       });
 
       await this.bookingRepository.insertActivityLog(conn, bookingId, {
-        activityType: 'BOOKING_CREATED',
+        activityType: isUrgentRequest ? 'URGENT_BOOKING_CREATED' : 'BOOKING_CREATED',
         actorUserId: customerUserId,
         actorRole: customerUserId ? 'CUSTOMER' : 'SYSTEM',
-        description: 'Booking created',
-        payload: { bookingNumber, paymentMethod: PAYMENT_METHODS.PAY_DRIVER },
+        description: isUrgentRequest ? 'Urgent booking created' : 'Booking created',
+        payload: {
+          bookingNumber,
+          paymentMethod: PAYMENT_METHODS.PAY_DRIVER,
+          bookingMode,
+        },
       });
 
       const roomCode = `CHAT-${bookingNumber}`;
@@ -429,6 +439,8 @@ class BookingService {
       }
 
       let outboxId = null;
+      let openCallTargets = [];
+      let urgentNegotiationId = null;
       const openCallPayload = this.buildOpenCallPayload({
         bookingNumber,
         scheduledPickupAt,
@@ -444,12 +456,30 @@ class BookingService {
           specialItems,
         },
       });
-      const openCallTargets = await this.notifyEligibleDriversForOpenBooking(conn, {
-        bookingId,
-        bookingNumber,
-        vehicleTypeId: vehicleType.id,
-        openCallPayload,
-      });
+
+      if (isUrgentRequest) {
+        if (!this.urgentNegotiationRepository) {
+          throw new AppError('Urgent negotiation service is unavailable', {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.URGENT_NEGOTIATION_NOT_FOUND,
+          });
+        }
+        urgentNegotiationId = await this.urgentNegotiationRepository.insertNegotiation(conn, {
+          bookingId,
+        });
+        await this.bookingRepository.updateUrgentNegotiationId(
+          conn,
+          bookingId,
+          urgentNegotiationId,
+        );
+      } else {
+        openCallTargets = await this.notifyEligibleDriversForOpenBooking(conn, {
+          bookingId,
+          bookingNumber,
+          vehicleTypeId: vehicleType.id,
+          openCallPayload,
+        });
+      }
 
       if (this.outboxRepository) {
         outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
@@ -470,8 +500,17 @@ class BookingService {
       if (this.outboxProcessor && outboxId) {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
       }
-      for (const target of openCallTargets) {
-        emitDriverCallAvailable(target.userId, openCallPayload);
+      if (isUrgentRequest) {
+        emitDriverUrgentCallNew({
+          bookingNumber,
+          negotiationId: urgentNegotiationId,
+          attemptCount: 0,
+          minRequiredEtaMinutes: null,
+        });
+      } else {
+        for (const target of openCallTargets) {
+          emitDriverCallAvailable(target.userId, openCallPayload);
+        }
       }
 
       const booking = await this.bookingRepository.findById(bookingId);
@@ -492,6 +531,7 @@ class BookingService {
         chatRoomCode: roomCode,
         boardingQrToken,
         trustMessage: TRUST_MESSAGE,
+        isUrgentRequest,
         canCancel: cancellation.canCancel,
         cancellationDeadline: cancellation.cancellationDeadline,
         cancellationBlockedReason: cancellation.cancellationBlockedReason,
