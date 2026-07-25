@@ -15,7 +15,7 @@ void main() {
         create: (_) => LocaleState(),
         child: MaterialApp(
           home: const _CustomerPlaceholder(),
-          routes: {'/admin': (_) => const AdminScreen(initialTab: 6)},
+          routes: {'/admin': (_) => const AdminScreen(initialTab: 7)},
         ),
       ),
     );

@@ -1172,6 +1172,7 @@ class _FakeJobsApi extends DriverApiService {
   int boardingScanCalls = 0;
   int dropoffScanCalls = 0;
   String? lastScannedToken;
+  int? lastClaimedDriverVehicleId;
 
   @override
   Future<String?> getSavedToken() async => _token;
@@ -1225,8 +1226,12 @@ class _FakeJobsApi extends DriverApiService {
   }
 
   @override
-  Future<DriverBooking> claimOpenCall(String bookingNumber) async {
+  Future<DriverBooking> claimOpenCall(
+    String bookingNumber, {
+    int? driverVehicleId,
+  }) async {
     claimCalls += 1;
+    lastClaimedDriverVehicleId = driverVehicleId;
     if (claimError != null) throw claimError!;
     return _booking(status: 'DRIVER_ASSIGNED', number: bookingNumber);
   }

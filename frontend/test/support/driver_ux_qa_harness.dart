@@ -181,6 +181,7 @@ class QaDriverApi extends DriverApiService {
   int claimCalls = 0;
   int lockCalls = 0;
   bool claimInFlight = false;
+  int? lastClaimedDriverVehicleId;
 
   @override
   Future<String?> getSavedToken() async => _token;
@@ -235,8 +236,12 @@ class QaDriverApi extends DriverApiService {
   }
 
   @override
-  Future<DriverBooking> claimOpenCall(String bookingNumber) async {
+  Future<DriverBooking> claimOpenCall(
+    String bookingNumber, {
+    int? driverVehicleId,
+  }) async {
     claimCalls += 1;
+    lastClaimedDriverVehicleId = driverVehicleId;
     claimInFlight = true;
     await Future<void>.delayed(claimDelay);
     claimInFlight = false;
