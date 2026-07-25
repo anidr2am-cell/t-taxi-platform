@@ -1,4 +1,8 @@
 const database = require('../config/database');
+const {
+  driverVehicleCoversBookingExistsSql,
+  exactVehicleMatchExistsSql,
+} = require('../utils/vehicleMatchTier');
 
 const SETTLEMENT_ELIGIBLE_BOOKING_STATUSES_SQL = "'SETTLEMENT_PENDING', 'COMPLETED'";
 
@@ -688,7 +692,7 @@ class BookingRepository {
     return rows[0] || null;
   }
 
-  openDriverCallSelectSql() {
+  openDriverCallSelectSql({ includeExactVehicleMatch = false } = {}) {
     return `
       SELECT
         b.id,
@@ -716,7 +720,8 @@ class BookingRepository {
         bl.special_items,
         b.is_urgent_request,
         b.urgent_negotiation_id,
-        bun.min_required_eta_minutes AS urgent_min_required_eta_minutes
+        bun.min_required_eta_minutes AS urgent_min_required_eta_minutes${includeExactVehicleMatch ? `,
+        ${exactVehicleMatchExistsSql()} AS is_exact_vehicle_match` : ''}
       FROM bookings b
       INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
       INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
@@ -730,7 +735,7 @@ class BookingRepository {
   async findOpenDriverCallsForDriver(driverUserId) {
     const [rows] = await this.pool.query(
       `
-        ${this.openDriverCallSelectSql()}
+        ${this.openDriverCallSelectSql({ includeExactVehicleMatch: true })}
         INNER JOIN drivers d ON d.user_id = ?
           AND d.deleted_at IS NULL
           AND d.is_active = 1
@@ -743,14 +748,7 @@ class BookingRepository {
         WHERE b.deleted_at IS NULL
           AND b.is_archived = 0
           AND b.status = 'OPEN'
-          AND EXISTS (
-            SELECT 1
-            FROM driver_vehicles dv
-            WHERE dv.driver_id = d.id
-              AND dv.vehicle_type_id = b.vehicle_type_id
-              AND dv.is_active = 1
-              AND dv.deleted_at IS NULL
-          )
+          AND ${driverVehicleCoversBookingExistsSql()}
           AND NOT EXISTS (
             SELECT 1
             FROM booking_driver_assignments active_bda

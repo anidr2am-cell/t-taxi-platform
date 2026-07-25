@@ -59,6 +59,7 @@ function openCallRow(overrides = {}) {
     carriers_24_inch_plus: 2,
     golf_bags: 1,
     special_items: 'folding stroller',
+    is_exact_vehicle_match: 1,
     ...overrides,
   };
 }
@@ -178,9 +179,11 @@ function createHarness(overrides = {}) {
       return overrides.conflictRows ?? [];
     },
     async findMatchingVehicle() {
-      return overrides.matchingVehicle === false
-        ? null
-        : { id: 55, vehicle_type_id: 3 };
+      if (overrides.matchingVehicle === false) return null;
+      if (overrides.matchingVehicle && typeof overrides.matchingVehicle === 'object') {
+        return overrides.matchingVehicle;
+      }
+      return { id: 55, vehicle_type_id: 3 };
     },
     async listEligibleForOpenBooking() {
       return overrides.eligibleDrivers ?? [
@@ -301,9 +304,25 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(result.items[0].driverExpectedIncomeAmount, 2200);
   assert.equal(result.items[0].driverExpectedIncomeCurrency, 'THB');
   assert.equal(result.items[0].luggage.golfBags, 1);
+  assert.equal(result.items[0].isExactVehicleMatch, true);
+  assert.equal(result.items[0].vehicleMatchType, 'EXACT');
   assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
   assert.equal(Object.hasOwn(result.items[0], 'customerEmail'), false);
   assert.equal(Object.hasOwn(result.items[0], 'specialInstructions'), false);
+});
+
+test('open call list marks hierarchy downgrade calls as COMPATIBLE_UPGRADE', async () => {
+  const { service } = createHarness({
+    openRows: [openCallRow({
+      vehicle_type_code: 'SEDAN',
+      vehicle_type_name: 'Sedan',
+      is_exact_vehicle_match: 0,
+    })],
+  });
+  const result = await service.listOpenCalls(42);
+  assert.equal(result.items[0].vehicleType.code, 'SEDAN');
+  assert.equal(result.items[0].isExactVehicleMatch, false);
+  assert.equal(result.items[0].vehicleMatchType, 'COMPATIBLE_UPGRADE');
 });
 
 test('open call list keeps unsafe expected income nullable', async () => {
@@ -468,6 +487,23 @@ test('claimOpenCall rejects vehicle type mismatch', async () => {
     () => service.claimOpenCall(42, 'TX202607130001'),
     (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE,
   );
+});
+
+test('claimOpenCall assigns compatible hierarchy vehicle returned by findMatchingVehicle', async () => {
+  const { service, conn, calls } = createHarness({
+    booking: { vehicle_type_id: 1 },
+    matchingVehicle: {
+      id: 88,
+      vehicle_type_id: 4,
+      vehicle_type_code: 'VAN',
+      plate_number: 'VAN-1',
+    },
+  });
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+  assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
+  assert.equal(conn.committed, true);
+  assert.equal(calls.assignments[0].driverVehicleId, 88);
 });
 
 test('releaseAssignment reopens booking, clears active assignment, and notifies other drivers', async () => {

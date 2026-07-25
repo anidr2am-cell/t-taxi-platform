@@ -92,6 +92,13 @@ class DriverCallService {
         code: row.vehicle_type_code,
         name: row.vehicle_type_name,
       },
+      // EXACT = driver has approved active vehicle of the booking type.
+      // COMPATIBLE_UPGRADE = higher-tier hierarchy vehicle covering a lower booking
+      // (e.g. VAN driver seeing a SEDAN call). Frontend can badge non-exact rows.
+      vehicleMatchType: Number(row.is_exact_vehicle_match) === 1
+        ? 'EXACT'
+        : 'COMPATIBLE_UPGRADE',
+      isExactVehicleMatch: Number(row.is_exact_vehicle_match) === 1,
       passengerCount: this.passengerCount(row),
       amount: Number(row.total_amount || 0),
       currency: row.currency,

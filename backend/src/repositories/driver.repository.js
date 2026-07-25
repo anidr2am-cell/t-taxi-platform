@@ -1,5 +1,6 @@
 const database = require('../config/database');
 const SCORING = require('../constants/driverAssignmentScoring');
+const { compatibleDriverVehicleIdSubquerySql } = require('../utils/vehicleMatchTier');
 
 class DriverRepository {
   constructor(pool = database.pool) {
@@ -241,16 +242,42 @@ class DriverRepository {
   async findMatchingVehicle(conn, driverId, vehicleTypeId) {
     const [rows] = await conn.query(
       `
-        SELECT id, vehicle_type_id, plate_number, model_name
-        FROM driver_vehicles
-        WHERE driver_id = ?
-          AND vehicle_type_id = ?
-          AND is_active = 1
-          AND deleted_at IS NULL
-        ORDER BY is_primary DESC, id ASC
+        SELECT
+          dv.id,
+          dv.vehicle_type_id,
+          dv.plate_number,
+          dv.model_name,
+          vt_driver.code AS vehicle_type_code,
+          vt_driver.match_tier AS driver_match_tier,
+          vt_booking.code AS booking_vehicle_type_code,
+          vt_booking.match_tier AS booking_match_tier
+        FROM driver_vehicles dv
+        INNER JOIN vehicle_types vt_driver
+          ON vt_driver.id = dv.vehicle_type_id
+         AND vt_driver.deleted_at IS NULL
+        INNER JOIN vehicle_types vt_booking
+          ON vt_booking.id = ?
+         AND vt_booking.deleted_at IS NULL
+        WHERE dv.driver_id = ?
+          AND dv.is_active = 1
+          AND COALESCE(dv.approval_status, 'APPROVED') = 'APPROVED'
+          AND dv.deleted_at IS NULL
+          AND (
+            dv.vehicle_type_id = vt_booking.id
+            OR (
+              vt_booking.match_tier IS NOT NULL
+              AND vt_driver.match_tier IS NOT NULL
+              AND vt_driver.match_tier >= vt_booking.match_tier
+            )
+          )
+        ORDER BY
+          CASE WHEN dv.vehicle_type_id = vt_booking.id THEN 0 ELSE 1 END,
+          vt_driver.match_tier ASC,
+          dv.is_primary DESC,
+          dv.id ASC
         LIMIT 1
       `,
-      [driverId, vehicleTypeId],
+      [vehicleTypeId, driverId],
     );
     return rows[0] || null;
   }
@@ -275,16 +302,10 @@ class DriverRepository {
           AND u.role = 'DRIVER'
           AND u.is_active = 1
           AND u.deleted_at IS NULL
-        INNER JOIN driver_vehicles dv ON dv.id = (
-          SELECT dv2.id
-          FROM driver_vehicles dv2
-          WHERE dv2.driver_id = d.id
-            AND dv2.vehicle_type_id = ?
-            AND dv2.is_active = 1
-            AND dv2.deleted_at IS NULL
-          ORDER BY dv2.is_primary DESC, dv2.id ASC
-          LIMIT 1
-        )
+        INNER JOIN driver_vehicles dv ON dv.id = ${compatibleDriverVehicleIdSubquerySql({
+          driverIdExpr: 'd.id',
+          bookingVehicleTypeIdParam: '?',
+        })}
         WHERE d.deleted_at IS NULL
           AND d.is_archived = 0
           AND d.is_active = 1
