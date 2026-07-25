@@ -11,6 +11,7 @@ import '../../features/admin_chat/pages/admin_chat_queue_page.dart';
 import '../../features/admin_support/pages/admin_support_inquiry_page.dart';
 import '../../features/admin_flight/pages/admin_flight_monitor_page.dart';
 import '../../features/admin_driver_application/pages/admin_driver_application_list_page.dart';
+import '../../features/admin_driver_vehicle/pages/admin_driver_vehicle_list_page.dart';
 import '../../features/driver_location/pages/admin_driver_monitor_page.dart';
 import '../../features/admin_pricing/pages/admin_pricing_manager_page.dart';
 import '../../features/admin_settings/pages/admin_settings_page.dart';
@@ -34,12 +35,12 @@ class _AdminScreenState extends State<AdminScreen> {
   int _sessionEpoch = 0;
   final _drawerKey = GlobalKey<ScaffoldState>();
 
-  static const _authGatedIndices = {0, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13};
+  static const _authGatedIndices = {0, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14};
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTab.clamp(0, 13);
+    _selectedIndex = widget.initialTab.clamp(0, 14);
   }
 
   Future<void> _logout() async {
@@ -63,6 +64,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_chats'),
       l10n.t('admin_drivers'),
       l10n.t('admin_driver_application_menu'),
+      l10n.t('admin_driver_vehicle_menu'),
       l10n.t('admin_pricing'),
       l10n.t('admin_golf'),
       l10n.t('admin_airports'),
@@ -80,6 +82,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.chat_bubble_outline,
       Icons.local_taxi_outlined,
       Icons.person_add_alt_1_outlined,
+      Icons.directions_car_outlined,
       Icons.price_change_outlined,
       Icons.golf_course_outlined,
       Icons.flight_outlined,
@@ -97,6 +100,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.chat_bubble,
       Icons.local_taxi,
       Icons.person_add_alt_1,
+      Icons.directions_car,
       Icons.price_change,
       Icons.golf_course,
       Icons.flight,
@@ -237,7 +241,7 @@ class _AdminScreenState extends State<AdminScreen> {
         return AdminAuthGate(
           child: AdminDashboardPage(
             onOpenDispatch: () => setState(() => _selectedIndex = 1),
-            onOpenSettlements: () => setState(() => _selectedIndex = 8),
+            onOpenSettlements: () => setState(() => _selectedIndex = 9),
           ),
         );
       case 1:
@@ -249,22 +253,24 @@ class _AdminScreenState extends State<AdminScreen> {
       case 4:
         return const AdminAuthGate(child: AdminDriverApplicationListPage());
       case 5:
-        return const AdminAuthGate(child: AdminPricingManagerPage());
+        return const AdminAuthGate(child: AdminDriverVehicleListPage());
       case 6:
-        return _buildLegacyNotice(l10n.t('admin_golf'));
+        return const AdminAuthGate(child: AdminPricingManagerPage());
       case 7:
-        return _buildLegacyNotice(l10n.t('admin_airports'));
+        return _buildLegacyNotice(l10n.t('admin_golf'));
       case 8:
-        return const AdminAuthGate(child: AdminSettlementQueuePage());
+        return _buildLegacyNotice(l10n.t('admin_airports'));
       case 9:
-        return const AdminAuthGate(child: AdminReviewQueuePage());
+        return const AdminAuthGate(child: AdminSettlementQueuePage());
       case 10:
-        return const AdminAuthGate(child: AdminNotificationQueuePage());
+        return const AdminAuthGate(child: AdminReviewQueuePage());
       case 11:
-        return const AdminAuthGate(child: AdminFlightMonitorPage());
+        return const AdminAuthGate(child: AdminNotificationQueuePage());
       case 12:
-        return const AdminAuthGate(child: AdminSupportInquiryPage());
+        return const AdminAuthGate(child: AdminFlightMonitorPage());
       case 13:
+        return const AdminAuthGate(child: AdminSupportInquiryPage());
+      case 14:
         return const AdminAuthGate(child: AdminSettingsPage());
       default:
         return const SizedBox.shrink();

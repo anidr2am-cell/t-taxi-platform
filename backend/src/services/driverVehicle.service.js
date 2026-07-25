@@ -22,6 +22,18 @@ const FILE_CATEGORIES = {
   taxCertificate: 'DRIVER_TAX_CERTIFICATE',
 };
 
+const REVIEWABLE_STATUS = 'PENDING';
+
+function parseJson(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 class DriverVehicleService {
   constructor(pool, driverRepository, vehicleRepository, fileRepository) {
     this.pool = pool;
@@ -45,11 +57,80 @@ class DriverVehicleService {
     });
   }
 
-  notFound() {
-    throw new AppError('Driver not found', {
+  notFound(message = 'Driver not found', errorCode = ERROR_CODES.DRIVER_NOT_FOUND) {
+    throw new AppError(message, {
       statusCode: HTTP_STATUS.NOT_FOUND,
-      errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
+      errorCode,
     });
+  }
+
+  vehicleNotFound() {
+    this.notFound('Driver vehicle not found', ERROR_CODES.DRIVER_VEHICLE_NOT_FOUND);
+  }
+
+  invalidTransition(message) {
+    throw new AppError(message, {
+      statusCode: HTTP_STATUS.CONFLICT,
+      errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+    });
+  }
+
+  parsePagination(query = {}) {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit || query.page_size) || 20));
+    return {
+      page,
+      limit,
+      offset: (page - 1) * limit,
+    };
+  }
+
+  parseAdminFilters(query = {}) {
+    const search = query.search == null ? null : String(query.search).trim();
+    return {
+      status: query.status || null,
+      search: search || null,
+    };
+  }
+
+  parseFiles(filesJson) {
+    const files = parseJson(filesJson, []);
+    if (!Array.isArray(files)) return [];
+    return files
+      .filter((file) => file && file.id != null)
+      .map((file) => ({
+        id: Number(file.id),
+        category: file.category,
+        sortOrder: Number(file.sortOrder ?? 0),
+        originalFilename: file.originalFilename || null,
+        mimeType: file.mimeType || null,
+        fileSize: file.fileSize == null ? null : Number(file.fileSize),
+        url: file.url || null,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  }
+
+  mapAdminVehicle(row) {
+    return {
+      id: Number(row.id),
+      driverId: Number(row.driver_id),
+      driverUserId: Number(row.driver_user_id),
+      driverName: row.driver_name,
+      driverPhone: row.driver_phone || null,
+      vehicleTypeId: Number(row.vehicle_type_id),
+      vehicleTypeCode: row.vehicle_type_code,
+      vehicleTypeName: row.vehicle_type_name,
+      plateNumber: row.plate_number,
+      modelName: row.model_name,
+      color: row.color,
+      isPrimary: Number(row.is_primary) === 1,
+      isActive: Number(row.is_active) === 1,
+      approvalStatus: row.approval_status || 'APPROVED',
+      rejectionReason: row.rejection_reason || null,
+      submittedAt: row.created_at,
+      updatedAt: row.updated_at,
+      files: this.parseFiles(row.files_json),
+    };
   }
 
   normalizePlate(plateNumber) {
@@ -247,6 +328,121 @@ class DriverVehicleService {
 
       const created = await this.driverRepository.findVehicleByIdForDriver(driver.id, vehicleId);
       return this.mapVehicle(created);
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async listAdmin(query = {}) {
+    const pagination = this.parsePagination(query);
+    const filters = this.parseAdminFilters(query);
+    const result = await this.driverRepository.listVehiclesForAdmin(filters, pagination);
+    return {
+      page: pagination.page,
+      pageSize: pagination.limit,
+      total: result.total,
+      items: result.items.map((row) => this.mapAdminVehicle(row)),
+    };
+  }
+
+  async getAdminDetail(id) {
+    const vehicle = await this.driverRepository.findVehicleByIdForAdmin(id);
+    if (!vehicle) this.vehicleNotFound();
+    return this.mapAdminVehicle(vehicle);
+  }
+
+  async getAdminFile(vehicleId, fileId) {
+    const file = await this.driverRepository.findVehicleFile(vehicleId, fileId);
+    if (!file) {
+      this.notFound('Driver vehicle file not found', ERROR_CODES.FILE_NOT_FOUND);
+    }
+    return {
+      filePath: file.file_path,
+      mimeType: file.mime_type,
+      originalFilename: file.original_filename,
+    };
+  }
+
+  async approve(id, body = {}, actor, requestMeta = {}) {
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const vehicle = await this.driverRepository.findVehicleByIdForUpdate(conn, id);
+      if (!vehicle) this.vehicleNotFound();
+      if (vehicle.approval_status !== REVIEWABLE_STATUS) {
+        this.invalidTransition('Only pending vehicles can be approved');
+      }
+
+      await this.driverRepository.approveVehicle(conn, vehicle.id, actor.id);
+      await this.driverRepository.insertVehicleAuditLog(conn, {
+        userId: actor.id,
+        action: 'driver_vehicle.approved',
+        entityId: vehicle.id,
+        ipAddress: requestMeta.ipAddress,
+        payload: {
+          driverId: vehicle.driver_id,
+          plateNumber: vehicle.plate_number,
+          adminNote: body.adminNote ?? null,
+        },
+      });
+
+      await conn.commit();
+      return {
+        id: Number(vehicle.id),
+        approvalStatus: 'APPROVED',
+        isActive: true,
+        reviewedBy: actor.id,
+      };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async reject(id, input, actor, requestMeta = {}) {
+    const rejectionReason = String(input.rejectionReason || '').trim();
+    if (!rejectionReason) {
+      this.validation('rejectionReason is required', 'rejectionReason');
+    }
+
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const vehicle = await this.driverRepository.findVehicleByIdForUpdate(conn, id);
+      if (!vehicle) this.vehicleNotFound();
+      if (vehicle.approval_status !== REVIEWABLE_STATUS) {
+        this.invalidTransition('Only pending vehicles can be rejected');
+      }
+
+      await this.driverRepository.rejectVehicle(conn, vehicle.id, {
+        rejectionReason,
+        actorUserId: actor.id,
+      });
+      await this.driverRepository.insertVehicleAuditLog(conn, {
+        userId: actor.id,
+        action: 'driver_vehicle.rejected',
+        entityId: vehicle.id,
+        ipAddress: requestMeta.ipAddress,
+        payload: {
+          driverId: vehicle.driver_id,
+          plateNumber: vehicle.plate_number,
+          hasAdminNote: Boolean(input.adminNote),
+        },
+      });
+
+      await conn.commit();
+      return {
+        id: Number(vehicle.id),
+        approvalStatus: 'REJECTED',
+        isActive: false,
+        rejectionReason,
+        reviewedBy: actor.id,
+      };
     } catch (err) {
       await conn.rollback();
       throw err;

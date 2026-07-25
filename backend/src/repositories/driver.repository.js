@@ -935,6 +935,229 @@ class DriverRepository {
       [vehicleId, fileId, category, sortOrder ?? 0],
     );
   }
+
+  async listVehiclesForAdmin(filters, pagination) {
+    const where = ['dv.deleted_at IS NULL'];
+    const params = [];
+
+    if (filters.status) {
+      where.push('dv.approval_status = ?');
+      params.push(filters.status);
+    }
+    if (filters.search) {
+      where.push(`(
+        d.name LIKE ?
+        OR dv.plate_number LIKE ?
+        OR vt.code LIKE ?
+        OR vt.name LIKE ?
+      )`);
+      const like = `%${filters.search}%`;
+      params.push(like, like, like, like);
+    }
+
+    const whereSql = `WHERE ${where.join(' AND ')}`;
+    const [countRows] = await this.pool.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM driver_vehicles dv
+        INNER JOIN drivers d ON d.id = dv.driver_id AND d.deleted_at IS NULL
+        INNER JOIN vehicle_types vt ON vt.id = dv.vehicle_type_id AND vt.deleted_at IS NULL
+        ${whereSql}
+      `,
+      params,
+    );
+
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          dv.id,
+          dv.driver_id,
+          d.user_id AS driver_user_id,
+          d.name AS driver_name,
+          d.phone AS driver_phone,
+          dv.vehicle_type_id,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          dv.plate_number,
+          dv.model_name,
+          dv.color,
+          dv.is_primary,
+          dv.is_active,
+          COALESCE(dv.approval_status, 'APPROVED') AS approval_status,
+          dv.rejection_reason,
+          dv.created_at,
+          dv.updated_at,
+          (
+            SELECT COALESCE(
+              JSON_ARRAYAGG(
+                JSON_OBJECT(
+                  'id', f.id,
+                  'category', dvf.category,
+                  'sortOrder', dvf.sort_order,
+                  'originalFilename', f.original_filename,
+                  'mimeType', f.mime_type,
+                  'fileSize', f.file_size,
+                  'url', CONCAT('/api/v1/admin/driver-vehicles/', dv.id, '/files/', f.id)
+                )
+              ),
+              JSON_ARRAY()
+            )
+            FROM driver_vehicle_files dvf
+            INNER JOIN files f ON f.id = dvf.file_id AND f.deleted_at IS NULL
+            WHERE dvf.driver_vehicle_id = dv.id
+          ) AS files_json
+        FROM driver_vehicles dv
+        INNER JOIN drivers d ON d.id = dv.driver_id AND d.deleted_at IS NULL
+        INNER JOIN vehicle_types vt ON vt.id = dv.vehicle_type_id AND vt.deleted_at IS NULL
+        ${whereSql}
+        ORDER BY dv.created_at DESC, dv.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [...params, pagination.limit, pagination.offset],
+    );
+
+    return {
+      items: rows,
+      total: Number(countRows[0]?.total ?? 0),
+    };
+  }
+
+  async findVehicleByIdForAdmin(vehicleId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          dv.id,
+          dv.driver_id,
+          d.user_id AS driver_user_id,
+          d.name AS driver_name,
+          d.phone AS driver_phone,
+          dv.vehicle_type_id,
+          vt.code AS vehicle_type_code,
+          vt.name AS vehicle_type_name,
+          dv.plate_number,
+          dv.model_name,
+          dv.color,
+          dv.is_primary,
+          dv.is_active,
+          COALESCE(dv.approval_status, 'APPROVED') AS approval_status,
+          dv.rejection_reason,
+          dv.created_at,
+          dv.updated_at,
+          (
+            SELECT COALESCE(
+              JSON_ARRAYAGG(
+                JSON_OBJECT(
+                  'id', f.id,
+                  'category', dvf.category,
+                  'sortOrder', dvf.sort_order,
+                  'originalFilename', f.original_filename,
+                  'mimeType', f.mime_type,
+                  'fileSize', f.file_size,
+                  'url', CONCAT('/api/v1/admin/driver-vehicles/', dv.id, '/files/', f.id)
+                )
+              ),
+              JSON_ARRAY()
+            )
+            FROM driver_vehicle_files dvf
+            INNER JOIN files f ON f.id = dvf.file_id AND f.deleted_at IS NULL
+            WHERE dvf.driver_vehicle_id = dv.id
+          ) AS files_json
+        FROM driver_vehicles dv
+        INNER JOIN drivers d ON d.id = dv.driver_id AND d.deleted_at IS NULL
+        INNER JOIN vehicle_types vt ON vt.id = dv.vehicle_type_id AND vt.deleted_at IS NULL
+        WHERE dv.id = ?
+          AND dv.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [vehicleId],
+    );
+    return rows[0] || null;
+  }
+
+  async findVehicleByIdForUpdate(conn, vehicleId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          dv.id,
+          dv.driver_id,
+          d.user_id AS driver_user_id,
+          d.name AS driver_name,
+          dv.plate_number,
+          dv.is_active,
+          COALESCE(dv.approval_status, 'APPROVED') AS approval_status,
+          dv.rejection_reason
+        FROM driver_vehicles dv
+        INNER JOIN drivers d ON d.id = dv.driver_id AND d.deleted_at IS NULL
+        WHERE dv.id = ?
+          AND dv.deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [vehicleId],
+    );
+    return rows[0] || null;
+  }
+
+  async findVehicleFile(vehicleId, fileId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT f.id, f.file_path, f.mime_type, f.original_filename
+        FROM driver_vehicle_files dvf
+        INNER JOIN files f ON f.id = dvf.file_id AND f.deleted_at IS NULL
+        WHERE dvf.driver_vehicle_id = ?
+          AND dvf.file_id = ?
+        LIMIT 1
+      `,
+      [vehicleId, fileId],
+    );
+    return rows[0] || null;
+  }
+
+  async approveVehicle(conn, vehicleId, actorUserId) {
+    await conn.query(
+      `
+        UPDATE driver_vehicles
+        SET approval_status = 'APPROVED',
+            is_active = 1,
+            rejection_reason = NULL,
+            updated_by = ?
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `,
+      [actorUserId, vehicleId],
+    );
+  }
+
+  async rejectVehicle(conn, vehicleId, { rejectionReason, actorUserId }) {
+    await conn.query(
+      `
+        UPDATE driver_vehicles
+        SET approval_status = 'REJECTED',
+            is_active = 0,
+            rejection_reason = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND deleted_at IS NULL
+      `,
+      [rejectionReason, actorUserId, vehicleId],
+    );
+  }
+
+  async insertVehicleAuditLog(conn, {
+    userId,
+    action,
+    entityId,
+    payload,
+    ipAddress = null,
+  }) {
+    await conn.query(
+      `
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, payload, ip_address)
+        VALUES (?, ?, 'driver_vehicle', ?, ?, ?)
+      `,
+      [userId, action, entityId, JSON.stringify(payload ?? {}), ipAddress],
+    );
+  }
 }
 
 module.exports = DriverRepository;

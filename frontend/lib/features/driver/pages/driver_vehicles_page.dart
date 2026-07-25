@@ -175,7 +175,7 @@ class _DriverVehiclesPageState extends State<DriverVehiclesPage> {
                           vehicle.rejectionReason?.isNotEmpty == true) ...[
                         const SizedBox(height: AppTokens.spaceSm),
                         Text(
-                          vehicle.rejectionReason!,
+                          '${l10n.t('driver_vehicle_rejection_reason_label')}: ${vehicle.rejectionReason}',
                           style: const TextStyle(color: AppTokens.error),
                         ),
                       ],

@@ -30,6 +30,8 @@ void main() {
     expect(find.text('XYZ-222'), findsOneWidget);
     expect(find.textContaining('승인됨'), findsOneWidget);
     expect(find.textContaining('승인 대기'), findsOneWidget);
+    expect(find.textContaining('거절됨'), findsOneWidget);
+    expect(find.textContaining('서류 미비'), findsOneWidget);
     expect(find.textContaining('차량 추가'), findsOneWidget);
   });
 }
@@ -57,6 +59,17 @@ class _FakeVehiclesApi extends DriverApiService {
         isPrimary: false,
         isActive: false,
         approvalStatus: 'PENDING',
+      ),
+      DriverVehicleItem(
+        id: 3,
+        vehicleTypeId: 2,
+        vehicleTypeCode: 'SUV',
+        vehicleTypeName: 'SUV',
+        plateNumber: 'REJ-333',
+        isPrimary: false,
+        isActive: false,
+        approvalStatus: 'REJECTED',
+        rejectionReason: '서류 미비',
       ),
     ];
   }
