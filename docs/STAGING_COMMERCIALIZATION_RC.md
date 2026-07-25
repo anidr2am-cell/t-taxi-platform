@@ -66,6 +66,18 @@ The migration runners replay all numbered SQL and have no migration history tabl
 
 Staging selectively applied `37_add_settlement_pending_booking_status.sql`. Production must inspect its booking status enum before applying migration 32 or 37. There is no settlement-pending migration numbered 31.
 
+## Migration 32 — Staging 특이사항 (2026-07-25)
+
+- staging DB는 32번(SETTLEMENT_PENDING만 추가하는 구식 status ENUM)을
+  건너뛰고 37/38번(더 최신 status ENUM, OPEN 포함)이 먼저 적용된 상태.
+- 32번을 지금 staging에서 재실행하면 OPEN 상태 예약이 있어서 실패함
+  (Data truncated) - 이건 정상이며, 32번은 staging에서 더 이상
+  실행할 필요 없음.
+- 새 환경(프로덕션 등)을 처음부터 00~42 순서대로 실행하면 32번은
+  38번보다 먼저 실행되므로 문제없이 통과함.
+- migrate.sh를 staging에 "전체 재실행"으로 쓰지 말 것 - 항상 마지막
+  적용 번호 이후 것만 개별 적용할 것.
+
 ## Minimum E2E
 
 - Customer booking/lookup, no QR guidance, status sync, review submit and duplicate block
