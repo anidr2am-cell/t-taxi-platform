@@ -221,4 +221,150 @@ void main() {
       );
     });
   }
+
+  test('urgent lock posts without a body and parses lock deadline', () async {
+    late http.Request request;
+    final repository = DispatchRepository(
+      DispatchApi(
+        client: client(
+          MockClient((incoming) async {
+            request = incoming;
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'bookingNumber': 'TX209912319997',
+                  'bookingId': 10,
+                  'negotiationId': 9,
+                  'attemptId': 3,
+                  'attemptNumber': 1,
+                  'driverId': 7,
+                  'status': 'LOCKED',
+                  'lockExpiresAt': '2026-07-27 10:33:00.000',
+                },
+              }),
+              200,
+            );
+          }),
+        ),
+        storage: storage(),
+      ),
+    );
+
+    final result = await repository.lockUrgentCall('TX209912319997');
+
+    expect(request.method, 'POST');
+    expect(request.url.path, '/api/v1/driver/urgent-calls/TX209912319997/lock');
+    expect(request.body, isEmpty);
+    expect(result.negotiationId, 9);
+    expect(result.lockExpiresAt, '2026-07-27 10:33:00.000');
+  });
+
+  test(
+    'urgent ETA posts a strict JSON integer and parses waiting TTL',
+    () async {
+      late http.Request request;
+      final repository = DispatchRepository(
+        DispatchApi(
+          client: client(
+            MockClient((incoming) async {
+              request = incoming;
+              return http.Response(
+                jsonEncode({
+                  'success': true,
+                  'data': {
+                    'bookingNumber': 'TX209912319997',
+                    'bookingId': 10,
+                    'negotiationId': 9,
+                    'attemptNumber': 1,
+                    'driverId': 7,
+                    'status': 'AWAITING_CUSTOMER',
+                    'etaMinutes': 19,
+                    'customerDecisionExpiresAt': '2026-07-27 10:35:00.000',
+                  },
+                }),
+                200,
+              );
+            }),
+          ),
+          storage: storage(),
+        ),
+      );
+
+      final result = await repository.submitUrgentEta('TX209912319997', 19);
+
+      expect(request.method, 'POST');
+      expect(
+        request.url.path,
+        '/api/v1/driver/urgent-calls/TX209912319997/eta',
+      );
+      expect(jsonDecode(request.body), {'etaMinutes': 19});
+      expect(result.status, 'AWAITING_CUSTOMER');
+      expect(result.customerDecisionExpiresAt, '2026-07-27 10:35:00.000');
+    },
+  );
+
+  for (final scenario in [
+    (409, 'URGENT_ALREADY_LOCKED', ApiFailureKind.urgentAlreadyLocked),
+    (400, 'URGENT_NOT_URGENT_BOOKING', ApiFailureKind.urgentNotUrgentBooking),
+    (
+      409,
+      'URGENT_NEGOTIATION_NOT_BROADCASTING',
+      ApiFailureKind.urgentNotBroadcasting,
+    ),
+    (400, 'URGENT_ETA_INVALID', ApiFailureKind.urgentEtaInvalid),
+    (
+      400,
+      'URGENT_ETA_EXCEEDS_PICKUP_WINDOW',
+      ApiFailureKind.urgentEtaExceedsPickupWindow,
+    ),
+    (403, 'URGENT_NOT_LOCKED_DRIVER', ApiFailureKind.urgentNotLockedDriver),
+    (
+      404,
+      'URGENT_NEGOTIATION_NOT_FOUND',
+      ApiFailureKind.urgentNegotiationNotFound,
+    ),
+    (409, 'URGENT_NOT_LOCKED', ApiFailureKind.urgentNotLocked),
+    (409, 'URGENT_ETA_WINDOW_EXPIRED', ApiFailureKind.urgentEtaExpired),
+    (422, 'URGENT_ETA_NOT_FAST_ENOUGH', ApiFailureKind.urgentEtaNotFastEnough),
+  ]) {
+    test('urgent API classifies ${scenario.$2}', () async {
+      final repository = DispatchRepository(
+        DispatchApi(
+          client: client(
+            MockClient(
+              (_) async => http.Response(
+                jsonEncode({
+                  'success': false,
+                  'error_code': scenario.$2,
+                  'errors': [
+                    {'minRequiredEtaMinutes': 20, 'submittedEtaMinutes': 20},
+                  ],
+                }),
+                scenario.$1,
+              ),
+            ),
+          ),
+          storage: storage(),
+        ),
+      );
+
+      await expectLater(
+        scenario.$2 == 'URGENT_ALREADY_LOCKED' ||
+                scenario.$2 == 'URGENT_NEGOTIATION_NOT_BROADCASTING' ||
+                scenario.$2 == 'URGENT_NOT_URGENT_BOOKING'
+            ? repository.lockUrgentCall('TX209912319997')
+            : repository.submitUrgentEta('TX209912319997', 20),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.kind, 'kind', scenario.$3)
+              .having(
+                (error) => error.errors.first['minRequiredEtaMinutes'],
+                'details',
+                20,
+              ),
+        ),
+      );
+    });
+  }
 }

@@ -7,6 +7,8 @@ import '../data/airport_label_resolver.dart';
 import '../data/dispatch_models.dart';
 import '../data/dispatch_repository.dart';
 import '../data/driver_socket_service.dart';
+import 'urgent_awaiting_banner.dart';
+import 'urgent_eta_dialog.dart';
 import 'vehicle_select_sheet.dart';
 
 class OpenCallsScreen extends StatefulWidget {
@@ -16,12 +18,14 @@ class OpenCallsScreen extends StatefulWidget {
     required this.onUnauthorized,
     required this.onClaimed,
     this.driverSocket,
+    this.onUrgentActivityChanged,
   });
 
   final DispatchReader repository;
   final Future<void> Function() onUnauthorized;
   final VoidCallback onClaimed;
   final DriverSocketConnection? driverSocket;
+  final ValueChanged<bool>? onUrgentActivityChanged;
 
   @override
   State<OpenCallsScreen> createState() => _OpenCallsScreenState();
@@ -37,9 +41,16 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
   bool _loadingCalls = false;
   bool _changingOnline = false;
   final Set<String> _claiming = {};
+  final Set<String> _lockingUrgent = {};
+  final Set<String> _hiddenUrgent = {};
   StreamSubscription<DriverSocketEvent>? _socketSubscription;
   bool _foreground = true;
   bool _showNewCallNotice = false;
+  String? _activeUrgentBooking;
+  String? _customerDecisionExpiresAt;
+  UrgentAwaitingPhase? _awaitingPhase;
+
+  bool get _hasUrgentActivity => _activeUrgentBooking != null;
 
   @override
   void initState() {
@@ -101,7 +112,90 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
       case DriverSocketEventType.assignmentReleased:
       case DriverSocketEventType.reconnected:
         unawaited(_loadCalls());
+      case DriverSocketEventType.urgentCallNew:
+        final bookingNumber = _bookingNumber(event.payload);
+        setState(() {
+          if (bookingNumber != null) _hiddenUrgent.remove(bookingNumber);
+          _showNewCallNotice = true;
+        });
+        unawaited(_loadCalls());
+      case DriverSocketEventType.urgentCallLocked:
+        final bookingNumber = _bookingNumber(event.payload);
+        final lockedDriverId = _intValue(event.payload['lockedDriverId']);
+        final isMine =
+            bookingNumber == _activeUrgentBooking ||
+            (lockedDriverId != null && lockedDriverId == _status?.driverId);
+        if (!isMine && bookingNumber != null) {
+          setState(() => _hiddenUrgent.add(bookingNumber));
+        }
+        unawaited(_loadCalls());
+      case DriverSocketEventType.urgentCallEtaRequired:
+        final bookingNumber = _bookingNumber(event.payload);
+        if (bookingNumber != null && _activeUrgentBooking == null) {
+          _setUrgentActivity(bookingNumber);
+        }
+      case DriverSocketEventType.urgentCallRoundEnded:
+        final bookingNumber = _bookingNumber(event.payload);
+        if (bookingNumber != null) {
+          setState(() => _hiddenUrgent.remove(bookingNumber));
+        }
+        if (bookingNumber == _activeUrgentBooking) {
+          _clearUrgentActivity();
+          _showMessage('고객이 거절했거나 라운드가 종료되었습니다.');
+        }
+        unawaited(_loadCalls());
+      case DriverSocketEventType.urgentCallConfirmed:
+        final bookingNumber = _bookingNumber(event.payload);
+        if (bookingNumber == _activeUrgentBooking) {
+          setState(() => _awaitingPhase = UrgentAwaitingPhase.confirmed);
+          Future<void>.delayed(const Duration(milliseconds: 800), () {
+            if (!mounted || bookingNumber != _activeUrgentBooking) return;
+            _clearUrgentActivity();
+            widget.onClaimed();
+          });
+        }
+        unawaited(_loadCalls());
+      case DriverSocketEventType.urgentCallCancelled:
+        final bookingNumber = _bookingNumber(event.payload);
+        if (bookingNumber != null) {
+          setState(() => _hiddenUrgent.add(bookingNumber));
+        }
+        if (bookingNumber == _activeUrgentBooking) {
+          _clearUrgentActivity();
+          _showMessage('협상이 취소되었습니다.');
+        }
+        unawaited(_loadCalls());
+      case DriverSocketEventType.urgentCallUnlocked:
+        final bookingNumber = _bookingNumber(event.payload);
+        if (bookingNumber != null) {
+          setState(() => _hiddenUrgent.remove(bookingNumber));
+        }
+        unawaited(_loadCalls());
     }
+  }
+
+  String? _bookingNumber(Map<String, dynamic> payload) {
+    final value = payload['bookingNumber'];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  int? _intValue(Object? value) => value is num ? value.toInt() : null;
+
+  void _setUrgentActivity(String bookingNumber) {
+    setState(() {
+      _activeUrgentBooking = bookingNumber;
+    });
+    widget.onUrgentActivityChanged?.call(true);
+  }
+
+  void _clearUrgentActivity() {
+    if (!_hasUrgentActivity) return;
+    setState(() {
+      _activeUrgentBooking = null;
+      _customerDecisionExpiresAt = null;
+      _awaitingPhase = null;
+    });
+    widget.onUrgentActivityChanged?.call(false);
   }
 
   Future<void> _loadStatus() async {
@@ -155,13 +249,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
       final calls = await widget.repository.getOpenCalls();
       if (!mounted) return;
       setState(() {
-        _calls = OpenCallList(
-          items: calls.items
-              .where((call) => !call.isUrgentRequest)
-              .toList(growable: false),
-          blockedReason: calls.blockedReason,
-          message: calls.message,
-        );
+        _calls = calls;
         _loadingCalls = false;
       });
     } on ApiException catch (error) {
@@ -255,6 +343,74 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     }
   }
 
+  Future<void> _lockUrgentCall(OpenCall call) async {
+    if (_lockingUrgent.contains(call.bookingNumber)) return;
+    setState(() => _lockingUrgent.add(call.bookingNumber));
+    try {
+      final lock = await widget.repository.lockUrgentCall(call.bookingNumber);
+      if (!mounted) return;
+      _setUrgentActivity(call.bookingNumber);
+      final result = await showUrgentEtaDialog(
+        context: context,
+        bookingNumber: call.bookingNumber,
+        lockExpiresAt: lock.lockExpiresAt,
+        minRequiredEtaMinutes: call.minRequiredEtaMinutes,
+        onSubmit: (eta) =>
+            widget.repository.submitUrgentEta(call.bookingNumber, eta),
+      );
+      if (!mounted) return;
+      switch (result?.outcome) {
+        case UrgentEtaDialogOutcome.submitted:
+          final etaResult = result?.etaResult;
+          setState(() {
+            _customerDecisionExpiresAt = etaResult?.customerDecisionExpiresAt;
+            _awaitingPhase = UrgentAwaitingPhase.awaiting;
+            _hiddenUrgent.add(call.bookingNumber);
+          });
+        case UrgentEtaDialogOutcome.timedOut:
+          _clearUrgentActivity();
+          _showMessage('ETA 입력 시간이 만료되었습니다.');
+          unawaited(_loadCalls());
+        case UrgentEtaDialogOutcome.lostLock:
+          _clearUrgentActivity();
+          _showMessage('다른 기사에게 넘어간 요청입니다.');
+          unawaited(_loadCalls());
+        case UrgentEtaDialogOutcome.leaveRequested:
+          widget.onUrgentActivityChanged?.call(false);
+          if (mounted) Navigator.of(context).maybePop();
+        case null:
+          break;
+      }
+    } on ApiException catch (error) {
+      if (error.kind == ApiFailureKind.unauthorized) {
+        await widget.onUnauthorized();
+        return;
+      }
+      if (!mounted) return;
+      final unavailable =
+          error.kind == ApiFailureKind.urgentAlreadyLocked ||
+          error.kind == ApiFailureKind.urgentNotBroadcasting;
+      setState(() {
+        if (unavailable) _hiddenUrgent.add(call.bookingNumber);
+      });
+      _showMessage(
+        error.kind == ApiFailureKind.urgentAlreadyLocked
+            ? '다른 기사가 이미 수락한 콜입니다.'
+            : error.kind == ApiFailureKind.urgentNotBroadcasting
+            ? '더 이상 수락할 수 없는 긴급콜입니다.'
+            : error.userMessage,
+      );
+      if (unavailable) unawaited(_loadCalls());
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+    } finally {
+      if (mounted) {
+        setState(() => _lockingUrgent.remove(call.bookingNumber));
+      }
+    }
+  }
+
   Future<void> _claim(OpenCall call, CompatibleVehicle vehicle) async {
     setState(() => _claiming.add(call.bookingNumber));
     try {
@@ -323,77 +479,101 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _handleScreenBack() async {
+    if (!_hasUrgentActivity) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    final leave = await showUrgentLeaveConfirmation(context);
+    if (leave == true && mounted) {
+      widget.onUrgentActivityChanged?.call(false);
+      Navigator.of(context).maybePop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('새 콜')),
-      body: _loadingStatus
-          ? const Center(
-              key: Key('dispatchStatusLoading'),
-              child: CircularProgressIndicator(),
-            )
-          : _statusError != null
-          ? _StatusError(error: _statusError!, onRetry: _loadStatus)
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Material(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                    child: SwitchListTile(
-                      key: const Key('onlineToggle'),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      title: Text(
-                        _status!.online ? '온라인' : '오프라인',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      subtitle: Text(
-                        _status!.online
-                            ? '새 콜을 받을 수 있습니다.'
-                            : '새 콜 수신이 중지되어 있습니다.',
-                      ),
-                      value: _status!.online,
-                      onChanged: _changingOnline ? null : _setOnline,
+    return PopScope(
+      canPop: !_hasUrgentActivity,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_handleScreenBack());
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('새 콜')),
+        body: _loadingStatus
+            ? const Center(
+                key: Key('dispatchStatusLoading'),
+                child: CircularProgressIndicator(),
+              )
+            : _statusError != null
+            ? _StatusError(error: _statusError!, onRetry: _loadStatus)
+            : Column(
+                children: [
+                  if (_awaitingPhase case final phase?)
+                    UrgentAwaitingBanner(
+                      bookingNumber: _activeUrgentBooking!,
+                      customerDecisionExpiresAt: _customerDecisionExpiresAt,
+                      phase: phase,
                     ),
-                  ),
-                ),
-                if (_showNewCallNotice && _status!.online)
-                  Material(
-                    key: const Key('newCallSocketNotice'),
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    child: ListTile(
-                      leading: const Icon(Icons.campaign_outlined),
-                      title: const Text('새 콜이 도착해 목록을 갱신했습니다.'),
-                      trailing: IconButton(
-                        key: const Key('dismissNewCallSocketNotice'),
-                        onPressed: () =>
-                            setState(() => _showNewCallNotice = false),
-                        icon: const Icon(Icons.close),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Material(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(16),
+                      child: SwitchListTile(
+                        key: const Key('onlineToggle'),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        title: Text(
+                          _status!.online ? '온라인' : '오프라인',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        subtitle: Text(
+                          _status!.online
+                              ? '새 콜을 받을 수 있습니다.'
+                              : '새 콜 수신이 중지되어 있습니다.',
+                        ),
+                        value: _status!.online,
+                        onChanged: _changingOnline ? null : _setOnline,
                       ),
                     ),
                   ),
-                Expanded(
-                  child: _status!.online
-                      ? _buildOnlineContent()
-                      : const Center(
-                          key: Key('offlineOpenCallsNotice'),
-                          child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text(
-                              '온라인으로 전환하면 새 콜을 볼 수 있습니다',
-                              textAlign: TextAlign.center,
+                  if (_showNewCallNotice && _status!.online)
+                    Material(
+                      key: const Key('newCallSocketNotice'),
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      child: ListTile(
+                        leading: const Icon(Icons.campaign_outlined),
+                        title: const Text('새 콜이 도착해 목록을 갱신했습니다.'),
+                        trailing: IconButton(
+                          key: const Key('dismissNewCallSocketNotice'),
+                          onPressed: () =>
+                              setState(() => _showNewCallNotice = false),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: _status!.online
+                        ? _buildOnlineContent()
+                        : const Center(
+                            key: Key('offlineOpenCallsNotice'),
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                '온라인으로 전환하면 새 콜을 볼 수 있습니다',
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                        ),
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -421,7 +601,21 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
       );
     }
     final calls = _calls;
-    if (calls == null || calls.items.isEmpty) {
+    final urgentCalls =
+        calls?.items
+            .where(
+              (call) =>
+                  call.isUrgentRequest &&
+                  !_hiddenUrgent.contains(call.bookingNumber),
+            )
+            .toList(growable: false) ??
+        const <OpenCall>[];
+    final regularCalls =
+        calls?.items
+            .where((call) => !call.isUrgentRequest)
+            .toList(growable: false) ??
+        const <OpenCall>[];
+    if (calls == null || (urgentCalls.isEmpty && regularCalls.isEmpty)) {
       return RefreshIndicator(
         onRefresh: _loadCalls,
         child: ListView(
@@ -443,18 +637,164 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     }
     return RefreshIndicator(
       onRefresh: _loadCalls,
-      child: ListView.builder(
+      child: ListView(
         key: const Key('openCallsList'),
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: calls.items.length,
-        itemBuilder: (context, index) {
-          final call = calls.items[index];
-          return _OpenCallCard(
-            call: call,
-            claiming: _claiming.contains(call.bookingNumber),
-            onTap: () => _selectCall(call),
-          );
-        },
+        children: [
+          if (urgentCalls.isNotEmpty)
+            _UrgentCallsSection(
+              calls: urgentCalls,
+              locking: _lockingUrgent,
+              onLock: _lockUrgentCall,
+            ),
+          if (regularCalls.isNotEmpty)
+            ...regularCalls.map(
+              (call) => _OpenCallCard(
+                call: call,
+                claiming: _claiming.contains(call.bookingNumber),
+                onTap: () => _selectCall(call),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UrgentCallsSection extends StatelessWidget {
+  const _UrgentCallsSection({
+    required this.calls,
+    required this.locking,
+    required this.onLock,
+  });
+
+  final List<OpenCall> calls;
+  final Set<String> locking;
+  final ValueChanged<OpenCall> onLock;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('urgentCallsSection'),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+      decoration: BoxDecoration(
+        color: colors.tertiaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.tertiary),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Icon(Icons.priority_high),
+                SizedBox(width: 6),
+                Text(
+                  '긴급콜',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          ...calls.map(
+            (call) => _UrgentCallCard(
+              call: call,
+              locking: locking.contains(call.bookingNumber),
+              onLock: () => onLock(call),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UrgentCallCard extends StatelessWidget {
+  const _UrgentCallCard({
+    required this.call,
+    required this.locking,
+    required this.onLock,
+  });
+
+  final OpenCall call;
+  final bool locking;
+  final VoidCallback onLock;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheduled =
+        _formatDateTime(call.scheduledPickupAt) ??
+        '${call.pickupDate} ${call.pickupTime}';
+    final amount = call.customerPaymentAmount ?? call.amount;
+    final currency = call.customerPaymentCurrency ?? call.currency;
+    final luggage = <String>[
+      if (call.luggage.carriers20Inch > 0) '20″ ${call.luggage.carriers20Inch}',
+      if (call.luggage.carriers24InchPlus > 0)
+        '24″+ ${call.luggage.carriers24InchPlus}',
+      if (call.luggage.golfBags > 0) '골프백 ${call.luggage.golfBags}',
+      ?call.luggage.specialItems,
+    ].join(' · ');
+    return Card(
+      key: Key('urgentCall-${call.bookingNumber}'),
+      margin: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    scheduled,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Chip(label: Text('긴급')),
+              ],
+            ),
+            Text(
+              '${AirportLabelResolver.displayLabelFor(call.origin)} → '
+              '${AirportLabelResolver.displayLabelFor(call.destination)}',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${call.serviceTypeName} · ${call.vehicleTypeName} · '
+              '${call.passengerCount}명',
+            ),
+            const SizedBox(height: 6),
+            Text('$amount $currency'),
+            if (luggage.isNotEmpty) Text(luggage),
+            if (call.minRequiredEtaMinutes case final minimum?) ...[
+              const SizedBox(height: 8),
+              Text(
+                '이전 거절로 $minimum분 미만 ETA 필요',
+                key: Key('urgentMinEta-${call.bookingNumber}'),
+              ),
+            ],
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                key: Key('urgentAccept-${call.bookingNumber}'),
+                onPressed: locking ? null : onLock,
+                icon: locking
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_circle_outline),
+                label: const Text('수락'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

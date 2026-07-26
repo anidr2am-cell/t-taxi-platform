@@ -7,6 +7,7 @@ import '../../bookings/presentation/booking_list_screen.dart';
 import '../data/dispatch_repository.dart';
 import '../data/driver_socket_service.dart';
 import 'open_calls_screen.dart';
+import 'urgent_eta_dialog.dart';
 
 class DriverHomeShell extends StatefulWidget {
   const DriverHomeShell({
@@ -34,8 +35,18 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   int _selectedIndex = 0;
   bool _tripsVisited = false;
   bool _accountVisited = false;
+  bool _hasUrgentActivity = false;
 
-  void _selectTab(int index) {
+  Future<void> _selectTab(int index, {bool force = false}) async {
+    if (!force &&
+        index != _selectedIndex &&
+        _selectedIndex == 0 &&
+        _hasUrgentActivity) {
+      final leave = await showUrgentLeaveConfirmation(context);
+      if (leave != true || !mounted) return;
+      _hasUrgentActivity = false;
+    }
+    if (!mounted) return;
     setState(() {
       _selectedIndex = index;
       if (index == 1) _tripsVisited = true;
@@ -53,8 +64,11 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
             child: OpenCallsScreen(
               repository: widget.dispatchRepository,
               onUnauthorized: widget.onUnauthorized,
-              onClaimed: () => _selectTab(1),
+              onClaimed: () => _selectTab(1, force: true),
               driverSocket: widget.driverSocket,
+              onUrgentActivityChanged: (active) {
+                _hasUrgentActivity = active;
+              },
             ),
           ),
           if (_tripsVisited)
@@ -80,7 +94,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: _selectTab,
+        onDestinationSelected: (index) => _selectTab(index),
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.campaign_outlined),

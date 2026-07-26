@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../../config/app_config.dart';
@@ -11,6 +10,13 @@ enum DriverSocketEventType {
   callClaimed,
   callConfirmed,
   assignmentReleased,
+  urgentCallNew,
+  urgentCallLocked,
+  urgentCallEtaRequired,
+  urgentCallRoundEnded,
+  urgentCallConfirmed,
+  urgentCallCancelled,
+  urgentCallUnlocked,
   reconnected,
 }
 
@@ -108,20 +114,28 @@ class DriverSocketService implements DriverSocketConnection {
       'driver:assignment:released',
       DriverSocketEventType.assignmentReleased,
     );
-    for (final event in const [
-      'driver:urgent-call:new',
-      'driver:urgent-call:locked',
-      'driver:urgent-call:eta-required',
-      'driver:urgent-call:round-ended',
-      'driver:urgent-call:confirmed',
-      'driver:urgent-call:cancelled',
-      'driver:urgent-call:unlocked',
+    for (final binding in const [
+      ('driver:urgent-call:new', DriverSocketEventType.urgentCallNew),
+      ('driver:urgent-call:locked', DriverSocketEventType.urgentCallLocked),
+      (
+        'driver:urgent-call:eta-required',
+        DriverSocketEventType.urgentCallEtaRequired,
+      ),
+      (
+        'driver:urgent-call:round-ended',
+        DriverSocketEventType.urgentCallRoundEnded,
+      ),
+      (
+        'driver:urgent-call:confirmed',
+        DriverSocketEventType.urgentCallConfirmed,
+      ),
+      (
+        'driver:urgent-call:cancelled',
+        DriverSocketEventType.urgentCallCancelled,
+      ),
+      ('driver:urgent-call:unlocked', DriverSocketEventType.urgentCallUnlocked),
     ]) {
-      transport.on(event, (data) {
-        if (kDebugMode) {
-          debugPrint('Ignored foreground urgent socket event: $event');
-        }
-      });
+      _listen(transport, binding.$1, binding.$2);
     }
     transport.connect();
   }

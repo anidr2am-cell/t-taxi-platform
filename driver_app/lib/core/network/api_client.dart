@@ -135,6 +135,31 @@ class ApiClient {
       return decoded;
     }
     final errorCode = decoded['error_code'] as String?;
+    final errors = _errorDetails(decoded['errors']);
+    final urgentKind = switch (errorCode) {
+      'URGENT_ALREADY_LOCKED' => ApiFailureKind.urgentAlreadyLocked,
+      'URGENT_NOT_URGENT_BOOKING' => ApiFailureKind.urgentNotUrgentBooking,
+      'URGENT_NEGOTIATION_NOT_BROADCASTING' =>
+        ApiFailureKind.urgentNotBroadcasting,
+      'URGENT_ETA_INVALID' => ApiFailureKind.urgentEtaInvalid,
+      'URGENT_ETA_EXCEEDS_PICKUP_WINDOW' =>
+        ApiFailureKind.urgentEtaExceedsPickupWindow,
+      'URGENT_NOT_LOCKED_DRIVER' => ApiFailureKind.urgentNotLockedDriver,
+      'URGENT_NEGOTIATION_NOT_FOUND' =>
+        ApiFailureKind.urgentNegotiationNotFound,
+      'URGENT_NOT_LOCKED' => ApiFailureKind.urgentNotLocked,
+      'URGENT_ETA_WINDOW_EXPIRED' => ApiFailureKind.urgentEtaExpired,
+      'URGENT_ETA_NOT_FAST_ENOUGH' => ApiFailureKind.urgentEtaNotFastEnough,
+      _ => null,
+    };
+    if (urgentKind != null) {
+      throw ApiException(
+        urgentKind,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+        errors: errors,
+      );
+    }
     final accountKind = switch (errorCode) {
       'VALIDATION_ERROR' => ApiFailureKind.validation,
       'INVALID_FILE_TYPE' => ApiFailureKind.invalidFileType,
@@ -148,6 +173,7 @@ class ApiClient {
         accountKind,
         statusCode: response.statusCode,
         errorCode: errorCode,
+        errors: errors,
       );
     }
     if (response.statusCode == 401) {
@@ -155,6 +181,7 @@ class ApiClient {
         ApiFailureKind.unauthorized,
         statusCode: response.statusCode,
         errorCode: errorCode,
+        errors: errors,
       );
     }
     if (response.statusCode == 403) {
@@ -162,6 +189,7 @@ class ApiClient {
         ApiFailureKind.forbidden,
         statusCode: response.statusCode,
         errorCode: errorCode,
+        errors: errors,
       );
     }
     if (response.statusCode == 404) {
@@ -169,6 +197,7 @@ class ApiClient {
         ApiFailureKind.notFound,
         statusCode: response.statusCode,
         errorCode: errorCode,
+        errors: errors,
       );
     }
     if (response.statusCode == 409) {
@@ -189,6 +218,7 @@ class ApiClient {
         kind,
         statusCode: response.statusCode,
         errorCode: errorCode,
+        errors: errors,
       );
     }
     if (response.statusCode >= 500) {
@@ -196,12 +226,21 @@ class ApiClient {
         ApiFailureKind.server,
         statusCode: response.statusCode,
         errorCode: errorCode,
+        errors: errors,
       );
     }
     throw ApiException(
       ApiFailureKind.unknown,
       statusCode: response.statusCode,
       errorCode: errorCode,
+      errors: errors,
+    );
+  }
+
+  List<Map<String, dynamic>> _errorDetails(Object? value) {
+    if (value is! List) return const [];
+    return List.unmodifiable(
+      value.whereType<Map>().map(Map<String, dynamic>.from),
     );
   }
 }

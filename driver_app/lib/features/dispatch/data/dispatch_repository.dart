@@ -7,6 +7,11 @@ abstract interface class DispatchReader {
   Future<DriverDispatchStatus> goOffline();
   Future<OpenCallList> getOpenCalls();
   Future<ClaimResult> claimOpenCall(String bookingNumber, int driverVehicleId);
+  Future<UrgentCallLockResult> lockUrgentCall(String bookingNumber);
+  Future<UrgentCallEtaResult> submitUrgentEta(
+    String bookingNumber,
+    int etaMinutes,
+  );
 }
 
 class DispatchRepository implements DispatchReader {
@@ -36,5 +41,19 @@ class DispatchRepository implements DispatchReader {
     int driverVehicleId,
   ) async => ClaimResult.fromEnvelope(
     await _api.claimOpenCall(bookingNumber, driverVehicleId),
+  );
+
+  @override
+  Future<UrgentCallLockResult> lockUrgentCall(String bookingNumber) async =>
+      UrgentCallLockResult.fromEnvelope(
+        await _api.lockUrgentCall(bookingNumber),
+      );
+
+  @override
+  Future<UrgentCallEtaResult> submitUrgentEta(
+    String bookingNumber,
+    int etaMinutes,
+  ) async => UrgentCallEtaResult.fromEnvelope(
+    await _api.submitUrgentEta(bookingNumber, etaMinutes),
   );
 }

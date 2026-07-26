@@ -394,6 +394,9 @@ OpenCall openCall({
   String vehicleMatchType = 'EXACT',
   bool isExactVehicleMatch = true,
   List<CompatibleVehicle>? compatibleVehicles,
+  bool isUrgentRequest = false,
+  int? negotiationId,
+  int? minRequiredEtaMinutes,
 }) => OpenCall(
   bookingNumber: bookingNumber,
   status: 'OPEN',
@@ -425,9 +428,9 @@ OpenCall openCall({
     golfBags: 0,
     specialItems: null,
   ),
-  isUrgentRequest: false,
-  negotiationId: null,
-  minRequiredEtaMinutes: null,
+  isUrgentRequest: isUrgentRequest,
+  negotiationId: negotiationId,
+  minRequiredEtaMinutes: minRequiredEtaMinutes,
 );
 
 ClaimResult claimResult({String bookingNumber = 'TX209912319998'}) =>
@@ -451,18 +454,43 @@ class FakeDispatchReader implements DispatchReader {
     message: null,
   );
   ClaimResult claimResultValue = claimResult();
+  UrgentCallLockResult urgentLockResult = const UrgentCallLockResult(
+    bookingNumber: 'TX209912319997',
+    negotiationId: 9,
+    attemptId: 1,
+    attemptNumber: 1,
+    driverId: 7,
+    status: 'LOCKED',
+    lockExpiresAt: null,
+  );
+  UrgentCallEtaResult urgentEtaResult = const UrgentCallEtaResult(
+    bookingNumber: 'TX209912319997',
+    negotiationId: 9,
+    attemptNumber: 1,
+    driverId: 7,
+    status: 'AWAITING_CUSTOMER',
+    etaMinutes: 20,
+    customerDecisionExpiresAt: null,
+  );
   Object? statusError;
   Object? onlineError;
   Object? offlineError;
   Object? openCallsError;
   Object? claimError;
+  Object? urgentLockError;
+  Object? urgentEtaError;
   int statusCount = 0;
   int onlineCount = 0;
   int offlineCount = 0;
   int openCallsCount = 0;
   int claimCount = 0;
+  int urgentLockCount = 0;
+  int urgentEtaCount = 0;
   String? claimedBookingNumber;
   int? claimedVehicleId;
+  String? lockedBookingNumber;
+  String? etaBookingNumber;
+  int? submittedEtaMinutes;
 
   @override
   Future<DriverDispatchStatus> getStatus() async {
@@ -504,6 +532,26 @@ class FakeDispatchReader implements DispatchReader {
     claimedVehicleId = driverVehicleId;
     if (claimError case final error?) throw error;
     return claimResultValue;
+  }
+
+  @override
+  Future<UrgentCallLockResult> lockUrgentCall(String bookingNumber) async {
+    urgentLockCount++;
+    lockedBookingNumber = bookingNumber;
+    if (urgentLockError case final error?) throw error;
+    return urgentLockResult;
+  }
+
+  @override
+  Future<UrgentCallEtaResult> submitUrgentEta(
+    String bookingNumber,
+    int etaMinutes,
+  ) async {
+    urgentEtaCount++;
+    etaBookingNumber = bookingNumber;
+    submittedEtaMinutes = etaMinutes;
+    if (urgentEtaError case final error?) throw error;
+    return urgentEtaResult;
   }
 }
 

@@ -15,6 +15,16 @@ enum ApiFailureKind {
   invalidFileType,
   fileTooLarge,
   vehiclePlateAlreadyRegistered,
+  urgentAlreadyLocked,
+  urgentNotUrgentBooking,
+  urgentNotBroadcasting,
+  urgentEtaInvalid,
+  urgentEtaExceedsPickupWindow,
+  urgentNotLockedDriver,
+  urgentNegotiationNotFound,
+  urgentNotLocked,
+  urgentEtaExpired,
+  urgentEtaNotFastEnough,
   conflict,
   unavailable,
   timeout,
@@ -25,11 +35,17 @@ enum ApiFailureKind {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.kind, {this.statusCode, this.errorCode});
+  const ApiException(
+    this.kind, {
+    this.statusCode,
+    this.errorCode,
+    this.errors = const [],
+  });
 
   final ApiFailureKind kind;
   final int? statusCode;
   final String? errorCode;
+  final List<Map<String, dynamic>> errors;
 
   String get userMessage => switch (kind) {
     ApiFailureKind.invalidCredentials => '계정 또는 비밀번호를 확인해 주세요.',
@@ -50,6 +66,17 @@ class ApiException implements Exception {
     ApiFailureKind.invalidFileType => '지원하지 않는 파일 형식입니다.',
     ApiFailureKind.fileTooLarge => '파일 크기가 너무 큽니다. 더 작은 파일을 선택해 주세요.',
     ApiFailureKind.vehiclePlateAlreadyRegistered => '이미 등록된 차량 번호입니다.',
+    ApiFailureKind.urgentAlreadyLocked => '다른 기사가 이미 수락한 콜입니다.',
+    ApiFailureKind.urgentNotUrgentBooking => '긴급콜로 처리할 수 없는 예약입니다.',
+    ApiFailureKind.urgentNotBroadcasting => '더 이상 수락할 수 없는 긴급콜입니다.',
+    ApiFailureKind.urgentEtaInvalid => 'ETA를 1분 이상의 정수로 입력해 주세요.',
+    ApiFailureKind.urgentEtaExceedsPickupWindow =>
+      '픽업까지 남은 시간보다 짧은 ETA를 입력해 주세요.',
+    ApiFailureKind.urgentNotLockedDriver => '다른 기사에게 넘어간 요청입니다.',
+    ApiFailureKind.urgentNegotiationNotFound => '긴급 협상 정보를 찾을 수 없습니다.',
+    ApiFailureKind.urgentNotLocked => '긴급콜 잠금이 이미 종료되었습니다.',
+    ApiFailureKind.urgentEtaExpired => 'ETA 입력 시간이 만료되었습니다.',
+    ApiFailureKind.urgentEtaNotFastEnough => '이전 제안보다 더 빠른 ETA를 입력해 주세요.',
     ApiFailureKind.conflict => '예약 상태가 변경되었습니다. 최신 정보를 다시 확인해 주세요.',
     ApiFailureKind.unavailable => '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.',
     ApiFailureKind.timeout => '요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',

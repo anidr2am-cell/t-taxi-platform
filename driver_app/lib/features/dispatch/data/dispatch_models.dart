@@ -310,6 +310,74 @@ class ClaimResult {
   final Map<String, dynamic> booking;
 }
 
+class UrgentCallLockResult {
+  const UrgentCallLockResult({
+    required this.bookingNumber,
+    required this.negotiationId,
+    required this.attemptId,
+    required this.attemptNumber,
+    required this.driverId,
+    required this.status,
+    required this.lockExpiresAt,
+  });
+
+  factory UrgentCallLockResult.fromEnvelope(Map<String, dynamic> envelope) {
+    final data = _envelopeData(envelope);
+    return UrgentCallLockResult(
+      bookingNumber: _requiredBookingNumber(data['bookingNumber']),
+      negotiationId: _requiredPositiveInt(data['negotiationId']),
+      attemptId: _requiredPositiveInt(data['attemptId']),
+      attemptNumber: _requiredPositiveInt(data['attemptNumber']),
+      driverId: _requiredPositiveInt(data['driverId']),
+      status: _requiredString(data['status']),
+      lockExpiresAt: _optionalString(data['lockExpiresAt']),
+    );
+  }
+
+  final String bookingNumber;
+  final int negotiationId;
+  final int attemptId;
+  final int attemptNumber;
+  final int driverId;
+  final String status;
+  final String? lockExpiresAt;
+}
+
+class UrgentCallEtaResult {
+  const UrgentCallEtaResult({
+    required this.bookingNumber,
+    required this.negotiationId,
+    required this.attemptNumber,
+    required this.driverId,
+    required this.status,
+    required this.etaMinutes,
+    required this.customerDecisionExpiresAt,
+  });
+
+  factory UrgentCallEtaResult.fromEnvelope(Map<String, dynamic> envelope) {
+    final data = _envelopeData(envelope);
+    return UrgentCallEtaResult(
+      bookingNumber: _requiredBookingNumber(data['bookingNumber']),
+      negotiationId: _requiredPositiveInt(data['negotiationId']),
+      attemptNumber: _requiredPositiveInt(data['attemptNumber']),
+      driverId: _requiredPositiveInt(data['driverId']),
+      status: _requiredString(data['status']),
+      etaMinutes: _requiredPositiveInt(data['etaMinutes']),
+      customerDecisionExpiresAt: _optionalString(
+        data['customerDecisionExpiresAt'],
+      ),
+    );
+  }
+
+  final String bookingNumber;
+  final int negotiationId;
+  final int attemptNumber;
+  final int driverId;
+  final String status;
+  final int etaMinutes;
+  final String? customerDecisionExpiresAt;
+}
+
 Map<String, dynamic> _envelopeData(Map<String, dynamic> envelope) {
   final data = envelope['data'];
   if (envelope['success'] != true || data is! Map) {
@@ -332,3 +400,26 @@ num _number(Object? value) => value is num ? value : 0;
 num? _optionalNumber(Object? value) => value is num ? value : null;
 
 int? _optionalInt(Object? value) => value is num ? value.toInt() : null;
+
+int _requiredPositiveInt(Object? value) {
+  if (value is! num || value.toInt() <= 0) {
+    throw const ApiException(ApiFailureKind.invalidResponse);
+  }
+  return value.toInt();
+}
+
+String _requiredString(Object? value) {
+  final result = _optionalString(value);
+  if (result == null) {
+    throw const ApiException(ApiFailureKind.invalidResponse);
+  }
+  return result;
+}
+
+String _requiredBookingNumber(Object? value) {
+  final result = _requiredString(value);
+  if (!RegExp(r'^TX\d{12}$').hasMatch(result)) {
+    throw const ApiException(ApiFailureKind.invalidResponse);
+  }
+  return result;
+}

@@ -191,6 +191,16 @@ class BookingAcceptController {
       case ApiFailureKind.invalidFileType:
       case ApiFailureKind.fileTooLarge:
       case ApiFailureKind.vehiclePlateAlreadyRegistered:
+      case ApiFailureKind.urgentAlreadyLocked:
+      case ApiFailureKind.urgentNotUrgentBooking:
+      case ApiFailureKind.urgentNotBroadcasting:
+      case ApiFailureKind.urgentEtaInvalid:
+      case ApiFailureKind.urgentEtaExceedsPickupWindow:
+      case ApiFailureKind.urgentNotLockedDriver:
+      case ApiFailureKind.urgentNegotiationNotFound:
+      case ApiFailureKind.urgentNotLocked:
+      case ApiFailureKind.urgentEtaExpired:
+      case ApiFailureKind.urgentEtaNotFastEnough:
       case ApiFailureKind.configuration:
       case ApiFailureKind.unknown:
         return BookingAcceptOutcome(

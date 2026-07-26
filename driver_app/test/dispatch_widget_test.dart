@@ -172,49 +172,56 @@ void main() {
     expect(find.text('현재 받을 수 있는 새 콜이 없습니다.'), findsOneWidget);
   });
 
-  testWidgets('urgent negotiation calls are not exposed in core dispatch', (
-    tester,
-  ) async {
-    final urgent = OpenCall(
-      bookingNumber: 'TX209912319997',
-      status: 'OPEN',
-      scheduledPickupAt: '2026-07-27T10:30:00.000+07:00',
-      pickupDate: '2026-07-27',
-      pickupTime: '10:30',
-      origin: 'BKK',
-      destination: 'Pattaya Hotel',
-      serviceTypeCode: 'AIRPORT_PICKUP',
-      serviceTypeName: 'Airport pickup',
-      vehicleTypeCode: 'SEDAN',
-      vehicleTypeName: 'Sedan',
-      vehicleMatchType: 'EXACT',
-      isExactVehicleMatch: true,
-      compatibleVehicles: [compatibleVehicle()],
-      passengerCount: 2,
-      amount: 1200,
-      currency: 'THB',
-      customerPaymentAmount: 1200,
-      customerPaymentCurrency: 'THB',
-      customerPaymentMethod: 'PAY_DRIVER',
-      companyCommissionAmount: 300,
-      companyCommissionCurrency: 'THB',
-      driverExpectedIncomeAmount: 900,
-      driverExpectedIncomeCurrency: 'THB',
-      luggage: const OpenCallLuggage(
-        carriers20Inch: 1,
-        carriers24InchPlus: 0,
-        golfBags: 0,
-        specialItems: null,
-      ),
-      isUrgentRequest: true,
-      negotiationId: 9,
-      minRequiredEtaMinutes: 30,
-    );
-    await pumpOpenCalls(tester, onlineReader(calls: [urgent]));
+  testWidgets(
+    'urgent call is shown above regular calls with contract details',
+    (tester) async {
+      final urgent = OpenCall(
+        bookingNumber: 'TX209912319997',
+        status: 'OPEN',
+        scheduledPickupAt: '2026-07-27T10:30:00.000+07:00',
+        pickupDate: '2026-07-27',
+        pickupTime: '10:30',
+        origin: 'BKK',
+        destination: 'Pattaya Hotel',
+        serviceTypeCode: 'AIRPORT_PICKUP',
+        serviceTypeName: 'Airport pickup',
+        vehicleTypeCode: 'SEDAN',
+        vehicleTypeName: 'Sedan',
+        vehicleMatchType: 'EXACT',
+        isExactVehicleMatch: true,
+        compatibleVehicles: [compatibleVehicle()],
+        passengerCount: 2,
+        amount: 1200,
+        currency: 'THB',
+        customerPaymentAmount: 1200,
+        customerPaymentCurrency: 'THB',
+        customerPaymentMethod: 'PAY_DRIVER',
+        companyCommissionAmount: 300,
+        companyCommissionCurrency: 'THB',
+        driverExpectedIncomeAmount: 900,
+        driverExpectedIncomeCurrency: 'THB',
+        luggage: const OpenCallLuggage(
+          carriers20Inch: 1,
+          carriers24InchPlus: 0,
+          golfBags: 0,
+          specialItems: null,
+        ),
+        isUrgentRequest: true,
+        negotiationId: 9,
+        minRequiredEtaMinutes: 30,
+      );
+      await pumpOpenCalls(tester, onlineReader(calls: [urgent]));
 
-    expect(find.byKey(const Key('openCall-TX209912319997')), findsNothing);
-    expect(find.byKey(const Key('openCallsEmpty')), findsOneWidget);
-  });
+      expect(find.byKey(const Key('urgentCallsSection')), findsOneWidget);
+      expect(
+        find.byKey(const Key('urgentCall-TX209912319997')),
+        findsOneWidget,
+      );
+      expect(find.text('긴급콜'), findsOneWidget);
+      expect(find.textContaining('BKK — Suvarnabhumi Airport'), findsOneWidget);
+      expect(find.text('이전 거절로 30분 미만 ETA 필요'), findsOneWidget);
+    },
+  );
 
   testWidgets('pull to refresh reloads open calls', (tester) async {
     final reader = onlineReader();

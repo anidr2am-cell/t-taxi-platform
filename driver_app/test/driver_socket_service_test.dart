@@ -74,28 +74,55 @@ void main() {
     expect(service.isConnected, isFalse);
   });
 
-  test(
-    'urgent socket events are subscribed but intentionally not forwarded',
-    () async {
-      late _FakeSocketTransport transport;
-      final service = DriverSocketService(
-        config: AppConfig.forEnvironment(AppEnvironment.stg),
-        storage: FakeTokenStorage(const AuthTokens(accessToken: 'socket-jwt')),
-        transportFactory: (_, _) => transport = _FakeSocketTransport(),
-      );
-      final received = <DriverSocketEvent>[];
-      final subscription = service.events.listen(received.add);
-      await service.connect();
+  test('forwards all seven urgent socket events with payloads', () async {
+    late _FakeSocketTransport transport;
+    final service = DriverSocketService(
+      config: AppConfig.forEnvironment(AppEnvironment.stg),
+      storage: FakeTokenStorage(const AuthTokens(accessToken: 'socket-jwt')),
+      transportFactory: (_, _) => transport = _FakeSocketTransport(),
+    );
+    final received = <DriverSocketEvent>[];
+    final subscription = service.events.listen(received.add);
+    await service.connect();
 
-      transport.trigger('driver:urgent-call:new', {
+    final bindings = [
+      ('driver:urgent-call:new', DriverSocketEventType.urgentCallNew),
+      ('driver:urgent-call:locked', DriverSocketEventType.urgentCallLocked),
+      (
+        'driver:urgent-call:eta-required',
+        DriverSocketEventType.urgentCallEtaRequired,
+      ),
+      (
+        'driver:urgent-call:round-ended',
+        DriverSocketEventType.urgentCallRoundEnded,
+      ),
+      (
+        'driver:urgent-call:confirmed',
+        DriverSocketEventType.urgentCallConfirmed,
+      ),
+      (
+        'driver:urgent-call:cancelled',
+        DriverSocketEventType.urgentCallCancelled,
+      ),
+      ('driver:urgent-call:unlocked', DriverSocketEventType.urgentCallUnlocked),
+    ];
+    for (final binding in bindings) {
+      transport.trigger(binding.$1, {
         'bookingNumber': 'TX209912319999',
+        'source': binding.$1,
       });
-      await Future<void>.delayed(Duration.zero);
+    }
+    await Future<void>.delayed(Duration.zero);
 
-      expect(received, isEmpty);
-      await subscription.cancel();
-    },
-  );
+    expect(received.map((event) => event.type), bindings.map((row) => row.$2));
+    expect(
+      received.every(
+        (event) => event.payload['bookingNumber'] == 'TX209912319999',
+      ),
+      isTrue,
+    );
+    await subscription.cancel();
+  });
 }
 
 class _FakeSocketTransport implements DriverSocketTransport {
