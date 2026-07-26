@@ -109,6 +109,10 @@ void main() {
       expect(bookingSummary().canAccept, isTrue);
       expect(bookingSummary(canConfirmStandby: false).canAccept, isFalse);
       expect(bookingSummary(standbyAllowedAt: null).canAccept, isFalse);
+      expect(
+        bookingSummary(allowedActions: const ['VIEW_DETAILS']).canAccept,
+        isFalse,
+      );
       expect(bookingSummary(assignmentStatus: 'ACCEPTED').canAccept, isFalse);
       expect(bookingSummary(assignmentStatus: null).canAccept, isFalse);
       expect(

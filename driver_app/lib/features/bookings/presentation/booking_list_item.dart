@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/booking_models.dart';
+import 'booking_display_formatters.dart';
 import 'booking_status_label.dart';
 
 class BookingListItem extends StatelessWidget {
@@ -18,6 +19,10 @@ class BookingListItem extends StatelessWidget {
     final vehicle = booking.vehicleType.name.isNotEmpty
         ? booking.vehicleType.name
         : booking.vehicleType.code;
+    final scheduledPickup = formatBookingDateTime(booking.scheduledPickupAt);
+    final standbyReference = formatBookingDateTime(
+      booking.standbyReferenceTime,
+    );
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       clipBehavior: Clip.antiAlias,
@@ -33,7 +38,7 @@ class BookingListItem extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${booking.pickupDate}  ${booking.pickupTime}',
+                      scheduledPickup ?? '운행 시각 정보 없음',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -48,11 +53,14 @@ class BookingListItem extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 14),
-              _RouteLine(icon: Icons.trip_origin, text: booking.origin),
+              _RouteLine(
+                icon: Icons.trip_origin,
+                text: formatBookingLocation(booking.pickupLocation),
+              ),
               const SizedBox(height: 8),
               _RouteLine(
                 icon: Icons.location_on_outlined,
-                text: booking.destination,
+                text: formatBookingLocation(booking.destinationLocation),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -65,6 +73,11 @@ class BookingListItem extends StatelessWidget {
                     _Fact(icon: Icons.local_taxi_outlined, text: vehicle),
                   if (booking.flightNumber case final flight?)
                     _Fact(icon: Icons.flight_outlined, text: flight),
+                  if (standbyReference != null)
+                    _Fact(
+                      icon: Icons.schedule_outlined,
+                      text: '대기 기준 $standbyReference',
+                    ),
                   if (booking.driverExpectedIncome.isAvailable)
                     _Fact(
                       icon: Icons.payments_outlined,

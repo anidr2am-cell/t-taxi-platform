@@ -68,11 +68,27 @@ void main() {
   });
 
   testWidgets('shows assigned bookings', (tester) async {
-    await pumpBookingList(tester, FakeBookingReader());
+    final reader = FakeBookingReader()
+      ..listResult = bookingList(
+        items: [
+          bookingSummary(
+            scheduledPickupAt: '2026-07-18T10:15:00.000+07:00',
+            standbyReferenceTime: '2026-07-18T09:45:00.000+07:00',
+          ),
+        ],
+      );
+    await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
     expect(find.text('TX209912319999'), findsOneWidget);
     expect(find.text('기사 배정'), findsOneWidget);
+    expect(find.text('2026-07-18 10:15'), findsOneWidget);
+    expect(find.text('대기 기준 2026-07-18 09:45'), findsOneWidget);
+    expect(
+      find.text('Suvarnabhumi Airport\n999 Nong Prue, Bang Phli'),
+      findsOneWidget,
+    );
+    expect(find.text('Test Hotel\nBangkok'), findsOneWidget);
     expect(find.text('예상 수입 THB 900'), findsOneWidget);
   });
 
@@ -156,6 +172,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
     expect(find.text('운행 정보'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('네임보드'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('네임보드'), findsOneWidget);
+    expect(find.text('요청됨'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Synthetic fixture note'),
       300,
@@ -350,6 +373,59 @@ void main() {
     expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
   });
 
+  testWidgets(
+    'before standby time shows disabled state and allowed-time notice',
+    (tester) async {
+      final reader = FakeBookingReader()
+        ..detailResult = bookingDetail(
+          canConfirmStandby: false,
+          standbyAllowedAt: '2026-07-18T01:30:00.000Z',
+        );
+
+      await pumpDetail(tester, reader);
+
+      expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+      final pendingButton = tester.widget<FilledButton>(
+        find.byKey(const Key('standbyPendingButton')),
+      );
+      expect(pendingButton.onPressed, isNull);
+      expect(find.text('2026-07-18 08:30부터 대기 확정 가능'), findsOneWidget);
+    },
+  );
+
+  testWidgets('after standby time with ACCEPT_BOOKING shows enabled button', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        canConfirmStandby: true,
+        allowedActions: const ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+      );
+
+    await pumpDetail(tester, reader);
+
+    final acceptButton = tester.widget<FilledButton>(
+      find.byKey(const Key('acceptBookingButton')),
+    );
+    expect(acceptButton.onPressed, isNotNull);
+    expect(find.byKey(const Key('standbyAllowedAtNotice')), findsNothing);
+  });
+
+  testWidgets('without ACCEPT_BOOKING action hides accept button', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        canConfirmStandby: true,
+        allowedActions: const ['VIEW_DETAILS'],
+      );
+
+    await pumpDetail(tester, reader);
+
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+    expect(find.byKey(const Key('standbyPendingButton')), findsNothing);
+  });
+
   testWidgets('accept button opens confirm dialog without API call', (
     tester,
   ) async {
@@ -446,6 +522,42 @@ void main() {
     expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
     expect(find.byKey(const Key('acceptBookingButton')), findsOneWidget);
     expect(find.textContaining('관리자에게 문의해 주세요'), findsOneWidget);
+  });
+
+  testWidgets('standby too early shows a clear Korean guidance message', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..acceptError = const ApiException(
+        ApiFailureKind.standbyTooEarly,
+        statusCode: 409,
+        errorCode: 'DRIVER_STANDBY_TOO_EARLY',
+      );
+    await pumpDetail(tester, reader);
+
+    await confirmAccept(tester);
+
+    expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
+    expect(find.textContaining('아직 대기 확정 시간이 아닙니다.'), findsOneWidget);
+    expect(reader.acceptCount, 1);
+  });
+
+  testWidgets('missing standby reference shows administrator guidance', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..acceptError = const ApiException(
+        ApiFailureKind.standbyReferenceTimeMissing,
+        statusCode: 409,
+        errorCode: 'DRIVER_STANDBY_REFERENCE_TIME_MISSING',
+      );
+    await pumpDetail(tester, reader);
+
+    await confirmAccept(tester);
+
+    expect(find.textContaining('대기 확정 기준 시간을 확인할 수 없습니다.'), findsOneWidget);
+    expect(find.textContaining('관리자에게 문의해 주세요.'), findsOneWidget);
+    expect(reader.acceptCount, 1);
   });
 
   testWidgets('404 closes detail and refreshes list once', (tester) async {

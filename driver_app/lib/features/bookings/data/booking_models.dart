@@ -318,7 +318,10 @@ class BookingSummary {
   final String? flightNumber;
   final BookingMoney driverExpectedIncome;
 
-  bool get canAccept => canConfirmStandby && standbyAllowedAt != null;
+  bool get canAccept =>
+      canConfirmStandby &&
+      standbyAllowedAt != null &&
+      allowsAction('ACCEPT_BOOKING');
 
   bool allowsAction(String action) => allowedActions.contains(action);
 

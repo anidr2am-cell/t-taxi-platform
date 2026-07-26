@@ -86,6 +86,9 @@ Map<String, dynamic> bookingJson({
   bool includeAssignmentStatus = true,
   bool? canConfirmStandby,
   Object? standbyAllowedAt = '2026-07-18T08:30:00.000+07:00',
+  List<String>? allowedActions,
+  String? scheduledPickupAt = '2026-07-18T09:30:00.000+07:00',
+  String? standbyReferenceTime = '2026-07-18T09:30:00.000+07:00',
 }) {
   final canConfirm =
       canConfirmStandby ??
@@ -96,16 +99,18 @@ Map<String, dynamic> bookingJson({
     'bookingNumber': bookingNumber,
     'status': status,
     'acceptedAt': null,
-    'scheduledPickupAt': '2026-07-18T09:30:00.000+07:00',
+    'scheduledPickupAt': scheduledPickupAt,
     'standbyReferenceTimeType': 'VEHICLE_DEPARTURE',
-    'standbyReferenceTime': '2026-07-18T09:30:00.000+07:00',
+    'standbyReferenceTime': standbyReferenceTime,
     'standbyAllowedAt': standbyAllowedAt,
     'standbyConfirmed': false,
     'standbyConfirmedAt': null,
     'canConfirmStandby': canConfirm,
-    'allowedActions': canConfirm
-        ? ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING']
-        : ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+    'allowedActions':
+        allowedActions ??
+        (canConfirm
+            ? ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING']
+            : ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT']),
     'serviceType': {'code': 'AIRPORT_PICKUP', 'name': '공항 픽업'},
     'pickupDate': pickupDate,
     'pickupTime': pickupTime,
@@ -149,6 +154,9 @@ BookingSummary bookingSummary({
   bool includeAssignmentStatus = true,
   bool? canConfirmStandby,
   Object? standbyAllowedAt = '2026-07-18T08:30:00.000+07:00',
+  List<String>? allowedActions,
+  String? scheduledPickupAt = '2026-07-18T09:30:00.000+07:00',
+  String? standbyReferenceTime = '2026-07-18T09:30:00.000+07:00',
 }) => BookingSummary.fromJson(
   bookingJson(
     bookingNumber: bookingNumber,
@@ -157,6 +165,9 @@ BookingSummary bookingSummary({
     includeAssignmentStatus: includeAssignmentStatus,
     canConfirmStandby: canConfirmStandby,
     standbyAllowedAt: standbyAllowedAt,
+    allowedActions: allowedActions,
+    scheduledPickupAt: scheduledPickupAt,
+    standbyReferenceTime: standbyReferenceTime,
   ),
 );
 
@@ -168,6 +179,10 @@ BookingDetail bookingDetail({
   Object? assignmentStatus = 'ASSIGNED',
   bool includeAssignmentStatus = true,
   String bookingNumber = 'TX209912319999',
+  bool? canConfirmStandby,
+  Object? standbyAllowedAt = '2026-07-18T08:30:00.000+07:00',
+  List<String>? allowedActions,
+  bool nameSignRequested = true,
 }) => BookingDetail.fromEnvelope({
   'success': true,
   'data': {
@@ -176,6 +191,9 @@ BookingDetail bookingDetail({
       status: status,
       assignmentStatus: assignmentStatus,
       includeAssignmentStatus: includeAssignmentStatus,
+      canConfirmStandby: canConfirmStandby,
+      standbyAllowedAt: standbyAllowedAt,
+      allowedActions: allowedActions,
     ),
     'passengers': {'adults': 2, 'children': 0, 'infants': 0},
     'luggage': {
@@ -195,7 +213,7 @@ BookingDetail bookingDetail({
     'customerPaymentCurrency': 'THB',
     'companyCommissionAmount': 300,
     'companyCommissionCurrency': 'THB',
-    'nameSignRequested': true,
+    'nameSignRequested': nameSignRequested,
     'capabilities': {
       'releaseAssignmentAvailable': true,
       'releaseAssignmentEmergencyOnly': false,

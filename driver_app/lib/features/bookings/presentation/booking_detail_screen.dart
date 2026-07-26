@@ -4,6 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
 import 'booking_accept_controller.dart';
+import 'booking_display_formatters.dart';
 import 'booking_status_label.dart';
 
 class BookingDetailScreen extends StatefulWidget {
@@ -271,6 +272,12 @@ class _DetailBody extends StatelessWidget {
         ? booking.vehicleType.name
         : booking.vehicleType.code;
     final flight = detail.flight;
+    final standbyAllowedAt = formatBookingDateTime(booking.standbyAllowedAt);
+    final waitingForStandby =
+        booking.status.code == BookingStatusCode.driverAssigned &&
+        booking.assignmentStatus.isAssigned &&
+        booking.standbyAllowedAt != null &&
+        !booking.canConfirmStandby;
     return ListView(
       key: const Key('detailSuccess'),
       padding: const EdgeInsets.all(16),
@@ -300,6 +307,19 @@ class _DetailBody extends StatelessWidget {
                   )
                 : const Text('예약 수락'),
           ),
+        ] else if (waitingForStandby) ...[
+          const SizedBox(height: 16),
+          const FilledButton(
+            key: Key('standbyPendingButton'),
+            onPressed: null,
+            child: Text('대기 확정 대기'),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$standbyAllowedAt부터 대기 확정 가능',
+            key: const Key('standbyAllowedAtNotice'),
+            textAlign: TextAlign.center,
+          ),
         ],
         const SizedBox(height: 16),
         _Section(
@@ -325,6 +345,8 @@ class _DetailBody extends StatelessWidget {
             ),
             _Info(label: '구성', value: detail.passengers.display),
             _Info(label: '수하물', value: detail.luggage.display),
+            if (detail.nameSignRequested)
+              const _Info(label: '네임보드', value: '요청됨'),
           ],
         ),
         _Section(
