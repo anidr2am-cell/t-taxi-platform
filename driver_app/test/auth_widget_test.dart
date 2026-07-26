@@ -28,6 +28,7 @@ Future<(FakeAuthApi, FakeTokenStorage, AuthController)> pumpApp(
       authController: controller,
       bookingRepository: FakeBookingReader()
         ..listResult = bookingList(items: const []),
+      dispatchRepository: FakeDispatchReader(),
     ),
   );
   await tester.pumpAndSettle();
@@ -82,13 +83,13 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('successful login shows the booking list', (tester) async {
+  testWidgets('successful login shows the new calls tab', (tester) async {
     await pumpApp(tester);
     await enterCredentials(tester);
     await tester.tap(find.byKey(const Key('loginButton')));
     await tester.pumpAndSettle();
-    expect(find.text('오늘의 배정 예약'), findsOneWidget);
-    expect(find.text('오늘 배정된 예약이 없습니다.'), findsOneWidget);
+    expect(find.text('새 콜'), findsWidgets);
+    expect(find.text('온라인으로 전환하면 새 콜을 볼 수 있습니다'), findsOneWidget);
   });
 
   testWidgets('invalid login shows a safe failure message', (tester) async {
@@ -116,7 +117,7 @@ void main() {
       const AuthTokens(accessToken: 'saved', refreshToken: 'refresh'),
     );
     final result = await pumpApp(tester, storage: storage);
-    expect(find.text('오늘의 배정 예약'), findsOneWidget);
+    expect(find.text('새 콜'), findsWidgets);
     expect(result.$1.meCount, 1);
   });
 
@@ -125,6 +126,8 @@ void main() {
       const AuthTokens(accessToken: 'saved', refreshToken: 'refresh'),
     );
     await pumpApp(tester, storage: storage);
+    await tester.tap(find.text('내 운행'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('logoutButton')));
     await tester.pumpAndSettle();
     expect(find.text('기사 로그인'), findsOneWidget);

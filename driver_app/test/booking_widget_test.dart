@@ -285,8 +285,11 @@ void main() {
         config: AppConfig.forEnvironment(AppEnvironment.stg),
         authController: authController,
         bookingRepository: reader,
+        dispatchRepository: FakeDispatchReader(),
       ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('내 운행'));
     await tester.pumpAndSettle();
     expect(find.text('기사 로그인'), findsOneWidget);
     expect(find.text('로그인이 만료되었습니다. 다시 로그인해 주세요.'), findsOneWidget);
@@ -310,8 +313,11 @@ void main() {
         config: AppConfig.forEnvironment(AppEnvironment.stg),
         authController: authController,
         bookingRepository: reader,
+        dispatchRepository: FakeDispatchReader(),
       ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('내 운행'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();

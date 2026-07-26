@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../config/app_config.dart';
 import '../../bookings/data/booking_repository.dart';
-import '../../bookings/presentation/booking_list_screen.dart';
+import '../../dispatch/data/dispatch_repository.dart';
+import '../../dispatch/presentation/driver_home_shell.dart';
 import 'auth_controller.dart';
 import 'login_screen.dart';
 
@@ -12,11 +13,13 @@ class AuthGate extends StatefulWidget {
     required this.controller,
     required this.config,
     required this.bookingRepository,
+    required this.dispatchRepository,
   });
 
   final AuthController controller;
   final AppConfig config;
   final BookingReader bookingRepository;
+  final DispatchReader dispatchRepository;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -65,8 +68,9 @@ class _AuthGateState extends State<AuthGate> {
               ),
             ),
           ),
-          AuthStatus.signedIn => BookingListScreen(
-            repository: widget.bookingRepository,
+          AuthStatus.signedIn => DriverHomeShell(
+            bookingRepository: widget.bookingRepository,
+            dispatchRepository: widget.dispatchRepository,
             onUnauthorized: widget.controller.expireSession,
             onLogout: widget.controller.logout,
           ),

@@ -10,6 +10,8 @@ import '../features/auth/data/auth_repository.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/bookings/data/booking_api.dart';
 import '../features/bookings/data/booking_repository.dart';
+import '../features/dispatch/data/dispatch_api.dart';
+import '../features/dispatch/data/dispatch_repository.dart';
 import 'app.dart';
 
 void runDriverApp(AppEnvironment environment) {
@@ -24,6 +26,9 @@ void runDriverApp(AppEnvironment environment) {
       authController: AuthController(repository),
       bookingRepository: BookingRepository(
         BookingApi(client: apiClient, storage: storage),
+      ),
+      dispatchRepository: DispatchRepository(
+        DispatchApi(client: apiClient, storage: storage),
       ),
     ),
   );

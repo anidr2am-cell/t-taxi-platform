@@ -94,6 +94,8 @@ class ApiClient {
           'DRIVER_STANDBY_TOO_EARLY' => ApiFailureKind.standbyTooEarly,
           'DRIVER_STANDBY_REFERENCE_TIME_MISSING' =>
             ApiFailureKind.standbyReferenceTimeMissing,
+          'DRIVER_BOOKING_TIME_CONFLICT' => ApiFailureKind.bookingTimeConflict,
+          'ALREADY_ASSIGNED' => ApiFailureKind.alreadyClaimed,
           _ => ApiFailureKind.conflict,
         };
         throw ApiException(

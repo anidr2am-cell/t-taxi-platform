@@ -4,6 +4,7 @@ import '../config/app_config.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/auth/presentation/auth_gate.dart';
 import '../features/bookings/data/booking_repository.dart';
+import '../features/dispatch/data/dispatch_repository.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({
@@ -11,11 +12,13 @@ class DriverApp extends StatelessWidget {
     required this.config,
     required this.authController,
     required this.bookingRepository,
+    required this.dispatchRepository,
   });
 
   final AppConfig config;
   final AuthController authController;
   final BookingReader bookingRepository;
+  final DispatchReader dispatchRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +33,7 @@ class DriverApp extends StatelessWidget {
         controller: authController,
         config: config,
         bookingRepository: bookingRepository,
+        dispatchRepository: dispatchRepository,
       ),
     );
   }

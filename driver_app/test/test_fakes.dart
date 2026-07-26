@@ -6,6 +6,8 @@ import 'package:tride_driver/features/auth/data/auth_api.dart';
 import 'package:tride_driver/features/auth/data/auth_models.dart';
 import 'package:tride_driver/features/bookings/data/booking_models.dart';
 import 'package:tride_driver/features/bookings/data/booking_repository.dart';
+import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
+import 'package:tride_driver/features/dispatch/data/dispatch_repository.dart';
 
 DriverUser driverUser({int id = 7, String? name = 'Somchai'}) =>
     DriverUser(id: id, role: 'DRIVER', isActive: true, name: name);
@@ -289,5 +291,156 @@ class FakeBookingReader implements BookingReader {
     if (acceptCompleter case final completer?) return completer.future;
     if (acceptError case final error?) throw error;
     return acceptResult;
+  }
+}
+
+DriverDispatchStatus dispatchStatus({
+  bool online = false,
+  bool canReceiveCalls = false,
+  String status = 'OFFLINE',
+}) => DriverDispatchStatus(
+  driverId: 7,
+  active: true,
+  online: online,
+  status: status,
+  hasActiveJob: false,
+  lastSeenAt: '2026-07-27T01:00:00.000Z',
+  callEligibility: DriverCallEligibility(
+    canReceiveCalls: canReceiveCalls,
+    reasonCode: canReceiveCalls ? 'READY' : 'OFFLINE',
+  ),
+);
+
+CompatibleVehicle compatibleVehicle({
+  int id = 11,
+  String code = 'SEDAN',
+  String name = 'Sedan',
+  String plate = 'กข 1234',
+  bool exact = true,
+}) => CompatibleVehicle(
+  driverVehicleId: id,
+  vehicleTypeCode: code,
+  vehicleTypeName: name,
+  plateNumber: plate,
+  isExactMatch: exact,
+);
+
+OpenCall openCall({
+  String bookingNumber = 'TX209912319998',
+  String origin = 'BKK',
+  String destination = 'Pattaya Hotel',
+  String vehicleMatchType = 'EXACT',
+  bool isExactVehicleMatch = true,
+  List<CompatibleVehicle>? compatibleVehicles,
+}) => OpenCall(
+  bookingNumber: bookingNumber,
+  status: 'OPEN',
+  scheduledPickupAt: '2026-07-27T10:30:00.000+07:00',
+  pickupDate: '2026-07-27',
+  pickupTime: '10:30',
+  origin: origin,
+  destination: destination,
+  serviceTypeCode: 'AIRPORT_PICKUP',
+  serviceTypeName: 'Airport pickup',
+  vehicleTypeCode: 'SEDAN',
+  vehicleTypeName: 'Sedan',
+  vehicleMatchType: vehicleMatchType,
+  isExactVehicleMatch: isExactVehicleMatch,
+  compatibleVehicles: compatibleVehicles ?? [compatibleVehicle()],
+  passengerCount: 2,
+  amount: 1200,
+  currency: 'THB',
+  customerPaymentAmount: 1200,
+  customerPaymentCurrency: 'THB',
+  customerPaymentMethod: 'PAY_DRIVER',
+  companyCommissionAmount: 300,
+  companyCommissionCurrency: 'THB',
+  driverExpectedIncomeAmount: 900,
+  driverExpectedIncomeCurrency: 'THB',
+  luggage: const OpenCallLuggage(
+    carriers20Inch: 1,
+    carriers24InchPlus: 0,
+    golfBags: 0,
+    specialItems: null,
+  ),
+  isUrgentRequest: false,
+  negotiationId: null,
+  minRequiredEtaMinutes: null,
+);
+
+ClaimResult claimResult({String bookingNumber = 'TX209912319998'}) =>
+    ClaimResult(
+      bookingNumber: bookingNumber,
+      status: 'DRIVER_ASSIGNED',
+      booking: {'bookingNumber': bookingNumber, 'status': 'DRIVER_ASSIGNED'},
+    );
+
+class FakeDispatchReader implements DispatchReader {
+  DriverDispatchStatus statusResult = dispatchStatus();
+  DriverDispatchStatus onlineResult = dispatchStatus(
+    online: true,
+    canReceiveCalls: true,
+    status: 'AVAILABLE',
+  );
+  DriverDispatchStatus offlineResult = dispatchStatus();
+  OpenCallList openCallsResult = const OpenCallList(
+    items: [],
+    blockedReason: null,
+    message: null,
+  );
+  ClaimResult claimResultValue = claimResult();
+  Object? statusError;
+  Object? onlineError;
+  Object? offlineError;
+  Object? openCallsError;
+  Object? claimError;
+  int statusCount = 0;
+  int onlineCount = 0;
+  int offlineCount = 0;
+  int openCallsCount = 0;
+  int claimCount = 0;
+  String? claimedBookingNumber;
+  int? claimedVehicleId;
+
+  @override
+  Future<DriverDispatchStatus> getStatus() async {
+    statusCount++;
+    if (statusError case final error?) throw error;
+    return statusResult;
+  }
+
+  @override
+  Future<DriverDispatchStatus> goOnline() async {
+    onlineCount++;
+    if (onlineError case final error?) throw error;
+    statusResult = onlineResult;
+    return onlineResult;
+  }
+
+  @override
+  Future<DriverDispatchStatus> goOffline() async {
+    offlineCount++;
+    if (offlineError case final error?) throw error;
+    statusResult = offlineResult;
+    return offlineResult;
+  }
+
+  @override
+  Future<OpenCallList> getOpenCalls() async {
+    openCallsCount++;
+    if (openCallsError case final error?) throw error;
+    return openCallsResult;
+  }
+
+  @override
+  Future<ClaimResult> claimOpenCall(
+    String bookingNumber,
+    int driverVehicleId,
+  ) async {
+    claimCount++;
+    claimedBookingNumber = bookingNumber;
+    claimedVehicleId = driverVehicleId;
+    if (claimError case final error?) throw error;
+    return claimResultValue;
   }
 }

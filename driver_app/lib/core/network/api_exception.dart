@@ -5,6 +5,8 @@ enum ApiFailureKind {
   notFound,
   standbyTooEarly,
   standbyReferenceTimeMissing,
+  bookingTimeConflict,
+  alreadyClaimed,
   conflict,
   unavailable,
   timeout,
@@ -29,6 +31,8 @@ class ApiException implements Exception {
     ApiFailureKind.standbyTooEarly => '아직 대기 확정 시간이 아닙니다. 대기 가능 시간을 확인해 주세요.',
     ApiFailureKind.standbyReferenceTimeMissing =>
       '대기 확정 기준 시간을 확인할 수 없습니다. 관리자에게 문의해 주세요.',
+    ApiFailureKind.bookingTimeConflict => '기존 운행과 시간이 겹쳐 이 콜을 받을 수 없습니다.',
+    ApiFailureKind.alreadyClaimed => '다른 기사가 먼저 이 콜을 배정받았습니다.',
     ApiFailureKind.conflict => '예약 상태가 변경되었습니다. 최신 정보를 다시 확인해 주세요.',
     ApiFailureKind.unavailable => '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.',
     ApiFailureKind.timeout => '요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',

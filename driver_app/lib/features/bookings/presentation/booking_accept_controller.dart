@@ -167,6 +167,8 @@ class BookingAcceptController {
           message: error.userMessage,
           detail: currentDetail,
         );
+      case ApiFailureKind.bookingTimeConflict:
+      case ApiFailureKind.alreadyClaimed:
       case ApiFailureKind.conflict:
         return _recoverAfterConflict(
           bookingNumber: bookingNumber,
