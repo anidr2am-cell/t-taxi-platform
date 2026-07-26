@@ -90,8 +90,14 @@ class ApiClient {
         );
       }
       if (response.statusCode == 409) {
+        final kind = switch (errorCode) {
+          'DRIVER_STANDBY_TOO_EARLY' => ApiFailureKind.standbyTooEarly,
+          'DRIVER_STANDBY_REFERENCE_TIME_MISSING' =>
+            ApiFailureKind.standbyReferenceTimeMissing,
+          _ => ApiFailureKind.conflict,
+        };
         throw ApiException(
-          ApiFailureKind.conflict,
+          kind,
           statusCode: response.statusCode,
           errorCode: errorCode,
         );

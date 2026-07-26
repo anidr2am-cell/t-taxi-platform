@@ -84,15 +84,51 @@ Map<String, dynamic> bookingJson({
   String pickupDate = '2026-07-18',
   String pickupTime = '09:30',
   bool includeAssignmentStatus = true,
+  bool? canConfirmStandby,
+  Object? standbyAllowedAt = '2026-07-18T08:30:00.000+07:00',
 }) {
+  final canConfirm =
+      canConfirmStandby ??
+      (status == 'DRIVER_ASSIGNED' &&
+          assignmentStatus == 'ASSIGNED' &&
+          standbyAllowedAt != null);
   final json = <String, dynamic>{
     'bookingNumber': bookingNumber,
     'status': status,
+    'acceptedAt': null,
+    'scheduledPickupAt': '2026-07-18T09:30:00.000+07:00',
+    'standbyReferenceTimeType': 'VEHICLE_DEPARTURE',
+    'standbyReferenceTime': '2026-07-18T09:30:00.000+07:00',
+    'standbyAllowedAt': standbyAllowedAt,
+    'standbyConfirmed': false,
+    'standbyConfirmedAt': null,
+    'canConfirmStandby': canConfirm,
+    'allowedActions': canConfirm
+        ? ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING']
+        : ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
     'serviceType': {'code': 'AIRPORT_PICKUP', 'name': '공항 픽업'},
     'pickupDate': pickupDate,
     'pickupTime': pickupTime,
     'origin': 'Suvarnabhumi Airport',
     'destination': 'Test Hotel',
+    'pickupLocation': {
+      'name': 'Suvarnabhumi Airport',
+      'address': '999 Nong Prue, Bang Phli',
+      'latitude': 13.6900,
+      'longitude': 100.7501,
+      'placeId': 'pickup-place-id',
+    },
+    'destinationLocation': {
+      'name': 'Test Hotel',
+      'address': 'Bangkok',
+      'latitude': 13.7563,
+      'longitude': 100.5018,
+      'placeId': 'destination-place-id',
+    },
+    'originLatitude': 13.6900,
+    'originLongitude': 100.7501,
+    'destinationLatitude': 13.7563,
+    'destinationLongitude': 100.5018,
     'passengerCount': 2,
     'vehicleType': {'code': 'SEDAN', 'name': '세단'},
     'customerDisplayName': '테스트 고객',
@@ -111,12 +147,16 @@ BookingSummary bookingSummary({
   String status = 'DRIVER_ASSIGNED',
   Object? assignmentStatus = 'ASSIGNED',
   bool includeAssignmentStatus = true,
+  bool? canConfirmStandby,
+  Object? standbyAllowedAt = '2026-07-18T08:30:00.000+07:00',
 }) => BookingSummary.fromJson(
   bookingJson(
     bookingNumber: bookingNumber,
     status: status,
     assignmentStatus: assignmentStatus,
     includeAssignmentStatus: includeAssignmentStatus,
+    canConfirmStandby: canConfirmStandby,
+    standbyAllowedAt: standbyAllowedAt,
   ),
 );
 
@@ -155,6 +195,14 @@ BookingDetail bookingDetail({
     'customerPaymentCurrency': 'THB',
     'companyCommissionAmount': 300,
     'companyCommissionCurrency': 'THB',
+    'nameSignRequested': true,
+    'capabilities': {
+      'releaseAssignmentAvailable': true,
+      'releaseAssignmentEmergencyOnly': false,
+      'assignmentReleaseDeadline': '2026-07-18T07:30:00.000+07:00',
+      'assignmentReleaseBlockedReason': null,
+      'reassignmentPriority': 'NORMAL',
+    },
   },
 });
 

@@ -19,7 +19,7 @@ class BookingApi implements BookingDataSource {
   @override
   Future<Map<String, dynamic>> getTodayBookings() async {
     return _client.getJson(
-      '/api/v1/driver/bookings/today',
+      '/api/v1/driver/bookings/scheduled',
       bearerToken: await _accessToken(),
     );
   }

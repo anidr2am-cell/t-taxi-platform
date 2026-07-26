@@ -160,6 +160,13 @@ class BookingAcceptController {
           refreshList: true,
           closeDetail: true,
         );
+      case ApiFailureKind.standbyTooEarly:
+      case ApiFailureKind.standbyReferenceTimeMissing:
+        return BookingAcceptOutcome(
+          kind: BookingAcceptOutcomeKind.stillAssigned,
+          message: error.userMessage,
+          detail: currentDetail,
+        );
       case ApiFailureKind.conflict:
         return _recoverAfterConflict(
           bookingNumber: bookingNumber,

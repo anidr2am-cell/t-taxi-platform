@@ -28,7 +28,7 @@ void main() {
     ),
   );
 
-  test('today API uses GET, bearer token, and parses success', () async {
+  test('scheduled API uses GET, bearer token, and parses success', () async {
     late http.Request request;
     final repository = BookingRepository(
       BookingApi(
@@ -48,7 +48,7 @@ void main() {
     final result = await repository.getTodayBookings();
 
     expect(request.method, 'GET');
-    expect(request.url.path, '/api/v1/driver/bookings/today');
+    expect(request.url.path, '/api/v1/driver/bookings/scheduled');
     expect(request.url.query, isEmpty);
     expect(request.headers['authorization'], 'Bearer fixture-token');
     expect(result.items, isEmpty);
@@ -140,6 +140,35 @@ void main() {
     expect(result.idempotent, isTrue);
     expect(requestCount, 1);
   });
+
+  for (final entry in {
+    'DRIVER_STANDBY_TOO_EARLY': ApiFailureKind.standbyTooEarly,
+    'DRIVER_STANDBY_REFERENCE_TIME_MISSING':
+        ApiFailureKind.standbyReferenceTimeMissing,
+  }.entries) {
+    test('accept classifies ${entry.key}', () async {
+      final api = BookingApi(
+        client: client(
+          MockClient(
+            (_) async => http.Response(
+              jsonEncode({'success': false, 'error_code': entry.key}),
+              409,
+            ),
+          ),
+        ),
+        storage: storage(),
+      );
+
+      await expectLater(
+        api.acceptBooking('TX209912319999'),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.kind, 'kind', entry.value)
+              .having((error) => error.errorCode, 'errorCode', entry.key),
+        ),
+      );
+    });
+  }
 
   for (final entry in {
     401: ApiFailureKind.unauthorized,

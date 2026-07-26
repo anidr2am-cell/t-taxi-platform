@@ -131,15 +131,98 @@ class BookingMoney {
   bool get isAvailable => amount != null && currency != null;
 }
 
+class BookingLocation {
+  const BookingLocation({
+    this.name,
+    this.address,
+    this.latitude,
+    this.longitude,
+    this.placeId,
+  });
+
+  factory BookingLocation.fromJson(Object? value) {
+    if (value is! Map<String, dynamic>) return const BookingLocation();
+    return BookingLocation(
+      name: _optionalString(value['name']),
+      address: _optionalString(value['address']),
+      latitude: _optionalDouble(value['latitude']),
+      longitude: _optionalDouble(value['longitude']),
+      placeId: _optionalString(value['placeId']),
+    );
+  }
+
+  final String? name;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
+  final String? placeId;
+}
+
+class BookingCapabilities {
+  const BookingCapabilities({
+    required this.releaseAssignmentAvailable,
+    required this.releaseAssignmentEmergencyOnly,
+    required this.assignmentReleaseDeadline,
+    required this.assignmentReleaseBlockedReason,
+    required this.reassignmentPriority,
+  });
+
+  const BookingCapabilities.empty()
+    : releaseAssignmentAvailable = false,
+      releaseAssignmentEmergencyOnly = false,
+      assignmentReleaseDeadline = null,
+      assignmentReleaseBlockedReason = null,
+      reassignmentPriority = null;
+
+  factory BookingCapabilities.fromJson(Object? value) {
+    if (value is! Map<String, dynamic>) {
+      return const BookingCapabilities.empty();
+    }
+    return BookingCapabilities(
+      releaseAssignmentAvailable: value['releaseAssignmentAvailable'] == true,
+      releaseAssignmentEmergencyOnly:
+          value['releaseAssignmentEmergencyOnly'] == true,
+      assignmentReleaseDeadline: _optionalString(
+        value['assignmentReleaseDeadline'],
+      ),
+      assignmentReleaseBlockedReason: _optionalString(
+        value['assignmentReleaseBlockedReason'],
+      ),
+      reassignmentPriority: _optionalString(value['reassignmentPriority']),
+    );
+  }
+
+  final bool releaseAssignmentAvailable;
+  final bool releaseAssignmentEmergencyOnly;
+  final String? assignmentReleaseDeadline;
+  final String? assignmentReleaseBlockedReason;
+  final String? reassignmentPriority;
+}
+
 class BookingSummary {
   const BookingSummary({
     required this.bookingNumber,
     required this.status,
     required this.assignmentStatus,
+    required this.acceptedAt,
+    required this.scheduledPickupAt,
+    required this.standbyReferenceTimeType,
+    required this.standbyReferenceTime,
+    required this.standbyAllowedAt,
+    required this.standbyConfirmed,
+    required this.standbyConfirmedAt,
+    required this.canConfirmStandby,
+    required this.allowedActions,
     required this.pickupDate,
     required this.pickupTime,
     required this.origin,
     required this.destination,
+    required this.pickupLocation,
+    required this.destinationLocation,
+    required this.originLatitude,
+    required this.originLongitude,
+    required this.destinationLatitude,
+    required this.destinationLongitude,
     required this.passengerCount,
     required this.vehicleType,
     required this.customerDisplayName,
@@ -173,10 +256,29 @@ class BookingSummary {
       bookingNumber: bookingNumber,
       status: BookingStatus.parse(rawStatus),
       assignmentStatus: AssignmentStatus.parse(json['assignmentStatus']),
+      acceptedAt: _optionalString(json['acceptedAt']),
+      scheduledPickupAt: _optionalString(json['scheduledPickupAt']),
+      standbyReferenceTimeType: _optionalString(
+        json['standbyReferenceTimeType'],
+      ),
+      standbyReferenceTime: _optionalString(json['standbyReferenceTime']),
+      standbyAllowedAt: _optionalString(json['standbyAllowedAt']),
+      standbyConfirmed: json['standbyConfirmed'] == true,
+      standbyConfirmedAt: _optionalString(json['standbyConfirmedAt']),
+      canConfirmStandby: json['canConfirmStandby'] == true,
+      allowedActions: _stringList(json['allowedActions']),
       pickupDate: pickupDate,
       pickupTime: pickupTime,
       origin: origin,
       destination: destination,
+      pickupLocation: BookingLocation.fromJson(json['pickupLocation']),
+      destinationLocation: BookingLocation.fromJson(
+        json['destinationLocation'],
+      ),
+      originLatitude: _optionalDouble(json['originLatitude']),
+      originLongitude: _optionalDouble(json['originLongitude']),
+      destinationLatitude: _optionalDouble(json['destinationLatitude']),
+      destinationLongitude: _optionalDouble(json['destinationLongitude']),
       passengerCount: passengerCount?.toInt(),
       vehicleType: BookingType.fromJson(json['vehicleType']),
       customerDisplayName: _optionalString(json['customerDisplayName']),
@@ -191,19 +293,34 @@ class BookingSummary {
   final String bookingNumber;
   final BookingStatus status;
   final AssignmentStatus assignmentStatus;
+  final String? acceptedAt;
+  final String? scheduledPickupAt;
+  final String? standbyReferenceTimeType;
+  final String? standbyReferenceTime;
+  final String? standbyAllowedAt;
+  final bool standbyConfirmed;
+  final String? standbyConfirmedAt;
+  final bool canConfirmStandby;
+  final List<String> allowedActions;
   final String pickupDate;
   final String pickupTime;
   final String origin;
   final String destination;
+  final BookingLocation pickupLocation;
+  final BookingLocation destinationLocation;
+  final double? originLatitude;
+  final double? originLongitude;
+  final double? destinationLatitude;
+  final double? destinationLongitude;
   final int? passengerCount;
   final BookingType vehicleType;
   final String? customerDisplayName;
   final String? flightNumber;
   final BookingMoney driverExpectedIncome;
 
-  bool get canAccept =>
-      status.code == BookingStatusCode.driverAssigned &&
-      assignmentStatus.isAssigned;
+  bool get canAccept => canConfirmStandby && standbyAllowedAt != null;
+
+  bool allowsAction(String action) => allowedActions.contains(action);
 
   BookingSummary copyWith({
     BookingStatus? status,
@@ -212,10 +329,25 @@ class BookingSummary {
     bookingNumber: bookingNumber,
     status: status ?? this.status,
     assignmentStatus: assignmentStatus ?? this.assignmentStatus,
+    acceptedAt: acceptedAt,
+    scheduledPickupAt: scheduledPickupAt,
+    standbyReferenceTimeType: standbyReferenceTimeType,
+    standbyReferenceTime: standbyReferenceTime,
+    standbyAllowedAt: standbyAllowedAt,
+    standbyConfirmed: standbyConfirmed,
+    standbyConfirmedAt: standbyConfirmedAt,
+    canConfirmStandby: canConfirmStandby,
+    allowedActions: allowedActions,
     pickupDate: pickupDate,
     pickupTime: pickupTime,
     origin: origin,
     destination: destination,
+    pickupLocation: pickupLocation,
+    destinationLocation: destinationLocation,
+    originLatitude: originLatitude,
+    originLongitude: originLongitude,
+    destinationLatitude: destinationLatitude,
+    destinationLongitude: destinationLongitude,
     passengerCount: passengerCount,
     vehicleType: vehicleType,
     customerDisplayName: customerDisplayName,
@@ -347,6 +479,8 @@ class BookingDetail {
     required this.specialInstructions,
     required this.customerPayment,
     required this.companyCommission,
+    required this.capabilities,
+    required this.nameSignRequested,
   });
 
   factory BookingDetail.fromEnvelope(Map<String, dynamic> envelope) {
@@ -368,6 +502,8 @@ class BookingDetail {
         data['companyCommissionAmount'],
         data['companyCommissionCurrency'],
       ),
+      capabilities: BookingCapabilities.fromJson(data['capabilities']),
+      nameSignRequested: data['nameSignRequested'] == true,
     );
   }
 
@@ -378,6 +514,8 @@ class BookingDetail {
   final String? specialInstructions;
   final BookingMoney customerPayment;
   final BookingMoney companyCommission;
+  final BookingCapabilities capabilities;
+  final bool nameSignRequested;
 
   bool get canAccept => summary.canAccept;
 
@@ -389,6 +527,8 @@ class BookingDetail {
     specialInstructions: specialInstructions,
     customerPayment: customerPayment,
     companyCommission: companyCommission,
+    capabilities: capabilities,
+    nameSignRequested: nameSignRequested,
   );
 }
 
@@ -462,6 +602,14 @@ String? _optionalString(Object? value) {
 }
 
 int? _optionalInt(Object? value) => value is num ? value.toInt() : null;
+
+double? _optionalDouble(Object? value) =>
+    value is num ? value.toDouble() : null;
+
+List<String> _stringList(Object? value) {
+  if (value is! List) return const [];
+  return List.unmodifiable(value.whereType<String>());
+}
 
 bool _isServiceDate(String value) {
   if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) return false;

@@ -6,7 +6,7 @@ import 'test_fakes.dart';
 
 void main() {
   group('booking list parsing', () {
-    test('parses the exact today response envelope', () {
+    test('parses the scheduled response envelope and contract fields', () {
       final result = BookingList.fromEnvelope({
         'success': true,
         'message': 'OK',
@@ -25,6 +25,16 @@ void main() {
         result.items.single.assignmentStatus.code,
         AssignmentStatusCode.assigned,
       );
+      expect(result.items.single.scheduledPickupAt, isNotNull);
+      expect(result.items.single.standbyReferenceTimeType, 'VEHICLE_DEPARTURE');
+      expect(result.items.single.standbyAllowedAt, isNotNull);
+      expect(result.items.single.canConfirmStandby, isTrue);
+      expect(result.items.single.standbyConfirmed, isFalse);
+      expect(result.items.single.allowedActions, contains('ACCEPT_BOOKING'));
+      expect(result.items.single.pickupLocation.placeId, 'pickup-place-id');
+      expect(result.items.single.pickupLocation.latitude, 13.69);
+      expect(result.items.single.destinationLocation.longitude, 100.5018);
+      expect(result.items.single.originLongitude, 100.7501);
     });
 
     test('rejects an invalid service date', () {
@@ -95,8 +105,10 @@ void main() {
   });
 
   group('canAccept', () {
-    test('true only for DRIVER_ASSIGNED + ASSIGNED', () {
+    test('uses the server standby decision and allowed time', () {
       expect(bookingSummary().canAccept, isTrue);
+      expect(bookingSummary(canConfirmStandby: false).canAccept, isFalse);
+      expect(bookingSummary(standbyAllowedAt: null).canAccept, isFalse);
       expect(bookingSummary(assignmentStatus: 'ACCEPTED').canAccept, isFalse);
       expect(bookingSummary(assignmentStatus: null).canAccept, isFalse);
       expect(
@@ -129,6 +141,10 @@ void main() {
       expect(detail.flight.flightNumber, 'TG100');
       expect(detail.flight.latestEstimatedArrival, '2026-07-18 08:30:00');
       expect(detail.specialInstructions, 'Synthetic fixture note');
+      expect(detail.nameSignRequested, isTrue);
+      expect(detail.capabilities.releaseAssignmentAvailable, isTrue);
+      expect(detail.capabilities.releaseAssignmentEmergencyOnly, isFalse);
+      expect(detail.capabilities.reassignmentPriority, 'NORMAL');
       expect(detail.canAccept, isTrue);
     });
 
@@ -146,6 +162,8 @@ void main() {
           'luggage': null,
           'flight': null,
           'specialInstructions': null,
+          'capabilities': null,
+          'nameSignRequested': null,
         },
       });
 
@@ -154,6 +172,38 @@ void main() {
       expect(detail.passengers.display, isNull);
       expect(detail.luggage.display, isNull);
       expect(formatMoney(detail.summary.driverExpectedIncome), '금액 정보 없음');
+      expect(detail.capabilities.releaseAssignmentAvailable, isFalse);
+      expect(detail.capabilities.assignmentReleaseDeadline, isNull);
+      expect(detail.nameSignRequested, isFalse);
+    });
+
+    test('handles nullable contract location and standby fields', () {
+      final data = bookingJson()
+        ..['acceptedAt'] = null
+        ..['scheduledPickupAt'] = null
+        ..['standbyReferenceTime'] = null
+        ..['standbyAllowedAt'] = null
+        ..['standbyConfirmedAt'] = null
+        ..['pickupLocation'] = null
+        ..['destinationLocation'] = null
+        ..['originLatitude'] = null
+        ..['originLongitude'] = null
+        ..['destinationLatitude'] = null
+        ..['destinationLongitude'] = null
+        ..['allowedActions'] = null;
+
+      final summary = BookingSummary.fromJson(data);
+
+      expect(summary.acceptedAt, isNull);
+      expect(summary.scheduledPickupAt, isNull);
+      expect(summary.standbyReferenceTime, isNull);
+      expect(summary.standbyAllowedAt, isNull);
+      expect(summary.standbyConfirmedAt, isNull);
+      expect(summary.pickupLocation.name, isNull);
+      expect(summary.destinationLocation.latitude, isNull);
+      expect(summary.originLatitude, isNull);
+      expect(summary.allowedActions, isEmpty);
+      expect(summary.canAccept, isFalse);
     });
   });
 
