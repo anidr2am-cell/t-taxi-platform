@@ -38,6 +38,8 @@ Future<void> pumpDetail(
   FakeBookingReader reader, {
   BookingAcceptController? acceptController,
   Future<void> Function()? onUnauthorized,
+  ExternalUrlLauncher? externalUrlLauncher,
+  DateTime Function()? now,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -46,6 +48,8 @@ Future<void> pumpDetail(
         repository: reader,
         onUnauthorized: onUnauthorized ?? () async {},
         acceptController: acceptController,
+        externalUrlLauncher: externalUrlLauncher,
+        now: now,
       ),
     ),
   );
@@ -624,6 +628,379 @@ void main() {
     expect(popped, isTrue);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+  });
+
+  final tripCases =
+      <
+        ({
+          String status,
+          Object? assignment,
+          String action,
+          String buttonLabel,
+          String nextStatus,
+          List<String> nextActions,
+          int Function(FakeBookingReader) count,
+        })
+      >[
+        (
+          status: 'DRIVER_ASSIGNED',
+          assignment: 'ACCEPTED',
+          action: 'START_ON_ROUTE',
+          buttonLabel: '운행 시작',
+          nextStatus: 'ON_ROUTE',
+          nextActions: const ['VIEW_DETAILS', 'MARK_ARRIVED'],
+          count: (reader) => reader.startRouteCount,
+        ),
+        (
+          status: 'ON_ROUTE',
+          assignment: 'ACCEPTED',
+          action: 'MARK_ARRIVED',
+          buttonLabel: '도착 확인',
+          nextStatus: 'DRIVER_ARRIVED',
+          nextActions: const ['VIEW_DETAILS', 'MARK_PICKED_UP'],
+          count: (reader) => reader.arriveCount,
+        ),
+        (
+          status: 'DRIVER_ARRIVED',
+          assignment: 'ACCEPTED',
+          action: 'MARK_PICKED_UP',
+          buttonLabel: '탑승 확인',
+          nextStatus: 'PICKED_UP',
+          nextActions: const ['VIEW_DETAILS', 'END_TRIP'],
+          count: (reader) => reader.pickedUpCount,
+        ),
+      ];
+
+  for (final tripCase in tripCases) {
+    testWidgets(
+      '${tripCase.action} is action-gated and refreshes to the next button',
+      (tester) async {
+        final reader = FakeBookingReader()
+          ..detailResult = bookingDetail(
+            status: tripCase.status,
+            assignmentStatus: tripCase.assignment,
+            canConfirmStandby: false,
+            allowedActions: ['VIEW_DETAILS', tripCase.action],
+          );
+        await pumpDetail(tester, reader);
+        reader.detailResult = bookingDetail(
+          status: tripCase.nextStatus,
+          assignmentStatus: 'ACCEPTED',
+          canConfirmStandby: false,
+          allowedActions: tripCase.nextActions,
+        );
+
+        await tester.tap(find.byKey(Key('tripAction-${tripCase.action}')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('tripActionConfirmDialog')),
+          findsOneWidget,
+        );
+        expect(tripCase.count(reader), 0);
+        await tester.tap(find.byKey(const Key('tripActionConfirmButton')));
+        await tester.pumpAndSettle();
+
+        expect(tripCase.count(reader), 1);
+        expect(
+          find.text('${tripCase.buttonLabel} 처리가 완료되었습니다.'),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(Key('tripAction-${tripCase.nextActions.last}')),
+          findsOneWidget,
+        );
+      },
+    );
+  }
+
+  testWidgets('trip action is hidden without the matching allowedAction', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'ON_ROUTE',
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS'],
+      );
+    await pumpDetail(tester, reader);
+    expect(find.byKey(const Key('tripAction-MARK_ARRIVED')), findsNothing);
+  });
+
+  testWidgets('trip action loading prevents a duplicate POST', (tester) async {
+    final actionCompleter = Completer<void>();
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'ON_ROUTE',
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'MARK_ARRIVED'],
+      )
+      ..actionCompleter = actionCompleter;
+    await pumpDetail(tester, reader);
+    await tester.tap(find.byKey(const Key('tripAction-MARK_ARRIVED')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('tripActionConfirmButton')));
+    await tester.pump();
+
+    expect(reader.arriveCount, 1);
+    expect(find.byKey(const Key('tripActionLoading')), findsOneWidget);
+    actionCompleter.complete();
+    reader.detailResult = bookingDetail(
+      status: 'DRIVER_ARRIVED',
+      assignmentStatus: 'ACCEPTED',
+      canConfirmStandby: false,
+      allowedActions: const ['VIEW_DETAILS', 'MARK_PICKED_UP'],
+    );
+    await tester.pumpAndSettle();
+    expect(reader.arriveCount, 1);
+  });
+
+  testWidgets('trip action failure keeps detail and shows guidance', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'ON_ROUTE',
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'MARK_ARRIVED'],
+      )
+      ..actionError = const ApiException(
+        ApiFailureKind.invalidStatusTransition,
+        statusCode: 409,
+        errorCode: 'INVALID_STATUS_TRANSITION',
+      );
+    await pumpDetail(tester, reader);
+    await tester.tap(find.byKey(const Key('tripAction-MARK_ARRIVED')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('tripActionConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(reader.arriveCount, 1);
+    expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
+    expect(find.textContaining('운행 상태가 이미 변경되었습니다.'), findsOneWidget);
+  });
+
+  testWidgets('end trip succeeds and returns to the previous screen', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'PICKED_UP',
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'END_TRIP'],
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        initialRoute: '/detail',
+        routes: {
+          '/': (_) => const Scaffold(body: Text('내 운행 목록')),
+          '/detail': (_) => BookingDetailScreen(
+            bookingNumber: 'TX209912319999',
+            repository: reader,
+            onUnauthorized: () async {},
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('tripAction-END_TRIP')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('tripActionConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(reader.endTripCount, 1);
+    expect(find.text('내 운행 목록'), findsOneWidget);
+  });
+
+  testWidgets('release dialog shows all reasons and requires OTHER detail', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+      );
+    await pumpDetail(tester, reader);
+    await tester.ensureVisible(
+      find.byKey(const Key('releaseAssignmentButton')),
+    );
+    await tester.tap(find.byKey(const Key('releaseAssignmentButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('releaseReason-OTHER')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('releaseReason-OTHER')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('releaseConfirmButton')))
+          .onPressed,
+      isNull,
+    );
+    await tester.enterText(
+      find.byKey(const Key('releaseReasonDetail')),
+      '개인 긴급 사유',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('releaseConfirmButton')))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('emergency-only release hides normal reasons', (tester) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: false,
+        releaseAssignmentEmergencyOnly: true,
+        assignmentReleaseDeadline: '2026-07-18T07:30:00.000+07:00',
+        assignmentReleaseBlockedReason: 'WITHIN_TWO_HOURS',
+      );
+    await pumpDetail(
+      tester,
+      reader,
+      now: () => DateTime.parse('2026-07-18T08:00:00.000+07:00'),
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('releaseAssignmentButton')),
+    );
+    await tester.tap(find.byKey(const Key('releaseAssignmentButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('emergencyOnlyNotice')), findsOneWidget);
+    expect(find.byKey(const Key('releaseReason-ACCIDENT')), findsOneWidget);
+    expect(
+      find.byKey(const Key('releaseReason-SCHEDULE_CONFLICT')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('releaseReason-OTHER')), findsNothing);
+  });
+
+  testWidgets('release success submits selected reason and returns to list', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        initialRoute: '/detail',
+        routes: {
+          '/': (_) => const Scaffold(body: Text('내 운행 목록')),
+          '/detail': (_) => BookingDetailScreen(
+            bookingNumber: 'TX209912319999',
+            repository: reader,
+            onUnauthorized: () async {},
+          ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('releaseAssignmentButton')),
+    );
+    await tester.tap(find.byKey(const Key('releaseAssignmentButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('releaseReason-SCHEDULE_CONFLICT')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('releaseConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(reader.releaseCount, 1);
+    expect(reader.releasedReasonCode, 'SCHEDULE_CONFLICT');
+    expect(find.text('내 운행 목록'), findsOneWidget);
+  });
+
+  testWidgets('past deadline disables non-emergency release', (tester) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: true,
+        assignmentReleaseDeadline: '2026-07-18T07:30:00.000+07:00',
+      );
+    await pumpDetail(
+      tester,
+      reader,
+      now: () => DateTime.parse('2026-07-18T08:00:00.000+07:00'),
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('releaseAssignmentButton')),
+    );
+
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const Key('releaseAssignmentButton')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(find.byKey(const Key('releaseDeadlineNotice')), findsOneWidget);
+  });
+
+  testWidgets('blocked release is disabled and explains the reason', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+        releaseAssignmentAvailable: false,
+        assignmentReleaseBlockedReason: 'TRIP_ALREADY_STARTED',
+      );
+    await pumpDetail(tester, reader);
+    await tester.ensureVisible(
+      find.byKey(const Key('releaseAssignmentButton')),
+    );
+    final button = tester.widget<OutlinedButton>(
+      find.byKey(const Key('releaseAssignmentButton')),
+    );
+    expect(button.onPressed, isNull);
+    expect(find.text('운행이 시작되어 배정을 반납할 수 없습니다.'), findsOneWidget);
+  });
+
+  testWidgets('map links appear for coordinates and launch Google Maps URL', (
+    tester,
+  ) async {
+    Uri? launched;
+    await pumpDetail(
+      tester,
+      FakeBookingReader(),
+      externalUrlLauncher: (url) async {
+        launched = url;
+        return true;
+      },
+    );
+    await tester.ensureVisible(find.byKey(const Key('pickupMapLink')));
+    await tester.tap(find.byKey(const Key('pickupMapLink')));
+    await tester.pump();
+
+    expect(launched?.host, 'www.google.com');
+    expect(launched?.path, '/maps/search/');
+    expect(launched?.queryParameters['query'], '13.69,100.7501');
+  });
+
+  testWidgets('map links are hidden when coordinates are absent', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(includeCoordinates: false);
+    await pumpDetail(tester, reader);
+    expect(find.byKey(const Key('pickupMapLink')), findsNothing);
+    expect(find.byKey(const Key('destinationMapLink')), findsNothing);
   });
 
   testWidgets('dispose during accept does not throw', (tester) async {

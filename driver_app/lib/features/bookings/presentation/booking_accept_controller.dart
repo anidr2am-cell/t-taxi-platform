@@ -169,6 +169,10 @@ class BookingAcceptController {
         );
       case ApiFailureKind.bookingTimeConflict:
       case ApiFailureKind.alreadyClaimed:
+      case ApiFailureKind.invalidStatusTransition:
+      case ApiFailureKind.releaseNotAllowed:
+      case ApiFailureKind.assignmentAlreadyReleased:
+      case ApiFailureKind.bookingNotAssigned:
       case ApiFailureKind.conflict:
         return _recoverAfterConflict(
           bookingNumber: bookingNumber,

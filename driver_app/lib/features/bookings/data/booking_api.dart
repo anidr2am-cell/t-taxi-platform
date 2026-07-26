@@ -6,6 +6,15 @@ abstract interface class BookingDataSource {
   Future<Map<String, dynamic>> getTodayBookings();
   Future<Map<String, dynamic>> getBookingDetail(String bookingNumber);
   Future<Map<String, dynamic>> acceptBooking(String bookingNumber);
+  Future<Map<String, dynamic>> startOnRoute(String bookingNumber);
+  Future<Map<String, dynamic>> markArrived(String bookingNumber);
+  Future<Map<String, dynamic>> markPickedUp(String bookingNumber);
+  Future<Map<String, dynamic>> endTrip(String bookingNumber);
+  Future<Map<String, dynamic>> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  });
 }
 
 class BookingApi implements BookingDataSource {
@@ -41,6 +50,50 @@ class BookingApi implements BookingDataSource {
       bearerToken: await _accessToken(),
     );
   }
+
+  Future<Map<String, dynamic>> _postBookingAction(
+    String bookingNumber,
+    String action, {
+    Map<String, dynamic>? body,
+  }) async {
+    final safeNumber = _validatedBookingNumber(bookingNumber);
+    return _client.postJson(
+      '/api/v1/driver/bookings/${Uri.encodeComponent(safeNumber)}/$action',
+      bearerToken: await _accessToken(),
+      body: body,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> startOnRoute(String bookingNumber) =>
+      _postBookingAction(bookingNumber, 'start-route');
+
+  @override
+  Future<Map<String, dynamic>> markArrived(String bookingNumber) =>
+      _postBookingAction(bookingNumber, 'arrive');
+
+  @override
+  Future<Map<String, dynamic>> markPickedUp(String bookingNumber) =>
+      _postBookingAction(bookingNumber, 'mark-picked-up');
+
+  @override
+  Future<Map<String, dynamic>> endTrip(String bookingNumber) =>
+      _postBookingAction(bookingNumber, 'end-trip');
+
+  @override
+  Future<Map<String, dynamic>> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  }) => _postBookingAction(
+    bookingNumber,
+    'release',
+    body: {
+      'reasonCode': reasonCode,
+      if (reasonDetail != null && reasonDetail.trim().isNotEmpty)
+        'reasonDetail': reasonDetail.trim(),
+    },
+  );
 
   String _validatedBookingNumber(String bookingNumber) {
     if (!RegExp(r'^TX\d{12}$').hasMatch(bookingNumber)) {

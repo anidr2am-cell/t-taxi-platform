@@ -580,6 +580,44 @@ class BookingAcceptance {
   final bool idempotent;
 }
 
+class BookingReleaseResult {
+  const BookingReleaseResult({
+    required this.bookingNumber,
+    required this.released,
+    required this.status,
+    required this.reasonCode,
+  });
+
+  factory BookingReleaseResult.fromEnvelope(Map<String, dynamic> envelope) {
+    final data = envelope['data'];
+    if (envelope['success'] != true || data is! Map<String, dynamic>) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    final bookingNumber = data['bookingNumber'];
+    final released = data['released'];
+    final status = data['status'];
+    final reasonCode = data['reasonCode'];
+    if (bookingNumber is! String ||
+        !RegExp(r'^TX\d{12}$').hasMatch(bookingNumber) ||
+        released is! bool ||
+        status is! String ||
+        reasonCode is! String) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    return BookingReleaseResult(
+      bookingNumber: bookingNumber,
+      released: released,
+      status: BookingStatus.parse(status),
+      reasonCode: reasonCode,
+    );
+  }
+
+  final String bookingNumber;
+  final bool released;
+  final BookingStatus status;
+  final String reasonCode;
+}
+
 String formatMoney(BookingMoney money) {
   if (!money.isAvailable) return '금액 정보 없음';
   final amount = money.amount!;

@@ -1,3 +1,4 @@
+import '../../../core/network/api_exception.dart';
 import 'booking_api.dart';
 import 'booking_models.dart';
 
@@ -5,6 +6,15 @@ abstract interface class BookingReader {
   Future<BookingList> getTodayBookings();
   Future<BookingDetail> getBookingDetail(String bookingNumber);
   Future<BookingAcceptance> acceptBooking(String bookingNumber);
+  Future<void> startOnRoute(String bookingNumber);
+  Future<void> markArrived(String bookingNumber);
+  Future<void> markPickedUp(String bookingNumber);
+  Future<void> endTrip(String bookingNumber);
+  Future<BookingReleaseResult> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  });
 }
 
 class BookingRepository implements BookingReader {
@@ -23,4 +33,44 @@ class BookingRepository implements BookingReader {
   @override
   Future<BookingAcceptance> acceptBooking(String bookingNumber) async =>
       BookingAcceptance.fromEnvelope(await _api.acceptBooking(bookingNumber));
+
+  @override
+  Future<void> startOnRoute(String bookingNumber) async {
+    _requireSuccess(await _api.startOnRoute(bookingNumber));
+  }
+
+  @override
+  Future<void> markArrived(String bookingNumber) async {
+    _requireSuccess(await _api.markArrived(bookingNumber));
+  }
+
+  @override
+  Future<void> markPickedUp(String bookingNumber) async {
+    _requireSuccess(await _api.markPickedUp(bookingNumber));
+  }
+
+  @override
+  Future<void> endTrip(String bookingNumber) async {
+    _requireSuccess(await _api.endTrip(bookingNumber));
+  }
+
+  @override
+  Future<BookingReleaseResult> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  }) async => BookingReleaseResult.fromEnvelope(
+    await _api.releaseAssignment(
+      bookingNumber,
+      reasonCode: reasonCode,
+      reasonDetail: reasonDetail,
+    ),
+  );
+
+  void _requireSuccess(Map<String, dynamic> envelope) {
+    if (envelope['success'] != true ||
+        envelope['data'] is! Map<String, dynamic>) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+  }
 }

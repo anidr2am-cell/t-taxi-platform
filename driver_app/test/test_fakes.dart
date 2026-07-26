@@ -91,6 +91,7 @@ Map<String, dynamic> bookingJson({
   List<String>? allowedActions,
   String? scheduledPickupAt = '2026-07-18T09:30:00.000+07:00',
   String? standbyReferenceTime = '2026-07-18T09:30:00.000+07:00',
+  bool includeCoordinates = true,
 }) {
   final canConfirm =
       canConfirmStandby ??
@@ -121,15 +122,15 @@ Map<String, dynamic> bookingJson({
     'pickupLocation': {
       'name': 'Suvarnabhumi Airport',
       'address': '999 Nong Prue, Bang Phli',
-      'latitude': 13.6900,
-      'longitude': 100.7501,
+      'latitude': includeCoordinates ? 13.6900 : null,
+      'longitude': includeCoordinates ? 100.7501 : null,
       'placeId': 'pickup-place-id',
     },
     'destinationLocation': {
       'name': 'Test Hotel',
       'address': 'Bangkok',
-      'latitude': 13.7563,
-      'longitude': 100.5018,
+      'latitude': includeCoordinates ? 13.7563 : null,
+      'longitude': includeCoordinates ? 100.5018 : null,
       'placeId': 'destination-place-id',
     },
     'originLatitude': 13.6900,
@@ -159,6 +160,7 @@ BookingSummary bookingSummary({
   List<String>? allowedActions,
   String? scheduledPickupAt = '2026-07-18T09:30:00.000+07:00',
   String? standbyReferenceTime = '2026-07-18T09:30:00.000+07:00',
+  bool includeCoordinates = true,
 }) => BookingSummary.fromJson(
   bookingJson(
     bookingNumber: bookingNumber,
@@ -170,6 +172,7 @@ BookingSummary bookingSummary({
     allowedActions: allowedActions,
     scheduledPickupAt: scheduledPickupAt,
     standbyReferenceTime: standbyReferenceTime,
+    includeCoordinates: includeCoordinates,
   ),
 );
 
@@ -185,6 +188,11 @@ BookingDetail bookingDetail({
   Object? standbyAllowedAt = '2026-07-18T08:30:00.000+07:00',
   List<String>? allowedActions,
   bool nameSignRequested = true,
+  bool releaseAssignmentAvailable = true,
+  bool releaseAssignmentEmergencyOnly = false,
+  String? assignmentReleaseDeadline = '2099-12-31T07:30:00.000+07:00',
+  String? assignmentReleaseBlockedReason,
+  bool includeCoordinates = true,
 }) => BookingDetail.fromEnvelope({
   'success': true,
   'data': {
@@ -196,6 +204,7 @@ BookingDetail bookingDetail({
       canConfirmStandby: canConfirmStandby,
       standbyAllowedAt: standbyAllowedAt,
       allowedActions: allowedActions,
+      includeCoordinates: includeCoordinates,
     ),
     'passengers': {'adults': 2, 'children': 0, 'infants': 0},
     'luggage': {
@@ -217,10 +226,10 @@ BookingDetail bookingDetail({
     'companyCommissionCurrency': 'THB',
     'nameSignRequested': nameSignRequested,
     'capabilities': {
-      'releaseAssignmentAvailable': true,
-      'releaseAssignmentEmergencyOnly': false,
-      'assignmentReleaseDeadline': '2026-07-18T07:30:00.000+07:00',
-      'assignmentReleaseBlockedReason': null,
+      'releaseAssignmentAvailable': releaseAssignmentAvailable,
+      'releaseAssignmentEmergencyOnly': releaseAssignmentEmergencyOnly,
+      'assignmentReleaseDeadline': assignmentReleaseDeadline,
+      'assignmentReleaseBlockedReason': assignmentReleaseBlockedReason,
       'reassignmentPriority': 'NORMAL',
     },
   },
@@ -254,12 +263,22 @@ class FakeBookingReader implements BookingReader {
   Object? listError;
   Object? detailError;
   Object? acceptError;
+  Object? actionError;
+  Object? releaseError;
   Completer<BookingList>? listCompleter;
   Completer<BookingDetail>? detailCompleter;
   Completer<BookingAcceptance>? acceptCompleter;
+  Completer<void>? actionCompleter;
   int listCount = 0;
   int detailCount = 0;
   int acceptCount = 0;
+  int startRouteCount = 0;
+  int arriveCount = 0;
+  int pickedUpCount = 0;
+  int endTripCount = 0;
+  int releaseCount = 0;
+  String? releasedReasonCode;
+  String? releasedReasonDetail;
   String? requestedBookingNumber;
   String? acceptedBookingNumber;
   List<BookingDetail> detailQueue = [];
@@ -291,6 +310,46 @@ class FakeBookingReader implements BookingReader {
     if (acceptCompleter case final completer?) return completer.future;
     if (acceptError case final error?) throw error;
     return acceptResult;
+  }
+
+  Future<void> _runAction(void Function() increment) async {
+    increment();
+    if (actionCompleter case final completer?) await completer.future;
+    if (actionError case final error?) throw error;
+  }
+
+  @override
+  Future<void> startOnRoute(String bookingNumber) =>
+      _runAction(() => startRouteCount++);
+
+  @override
+  Future<void> markArrived(String bookingNumber) =>
+      _runAction(() => arriveCount++);
+
+  @override
+  Future<void> markPickedUp(String bookingNumber) =>
+      _runAction(() => pickedUpCount++);
+
+  @override
+  Future<void> endTrip(String bookingNumber) =>
+      _runAction(() => endTripCount++);
+
+  @override
+  Future<BookingReleaseResult> releaseAssignment(
+    String bookingNumber, {
+    required String reasonCode,
+    String? reasonDetail,
+  }) async {
+    releaseCount++;
+    releasedReasonCode = reasonCode;
+    releasedReasonDetail = reasonDetail;
+    if (releaseError case final error?) throw error;
+    return BookingReleaseResult(
+      bookingNumber: bookingNumber,
+      released: true,
+      status: BookingStatus.parse('OPEN'),
+      reasonCode: reasonCode,
+    );
   }
 }
 

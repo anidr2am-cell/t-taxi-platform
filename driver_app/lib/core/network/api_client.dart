@@ -96,6 +96,11 @@ class ApiClient {
             ApiFailureKind.standbyReferenceTimeMissing,
           'DRIVER_BOOKING_TIME_CONFLICT' => ApiFailureKind.bookingTimeConflict,
           'ALREADY_ASSIGNED' => ApiFailureKind.alreadyClaimed,
+          'INVALID_STATUS_TRANSITION' => ApiFailureKind.invalidStatusTransition,
+          'BOOKING_RELEASE_NOT_ALLOWED' => ApiFailureKind.releaseNotAllowed,
+          'ASSIGNMENT_ALREADY_RELEASED' =>
+            ApiFailureKind.assignmentAlreadyReleased,
+          'BOOKING_NOT_ASSIGNED_TO_DRIVER' => ApiFailureKind.bookingNotAssigned,
           _ => ApiFailureKind.conflict,
         };
         throw ApiException(

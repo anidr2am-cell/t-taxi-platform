@@ -5,6 +5,22 @@ import 'package:tride_driver/features/bookings/data/booking_models.dart';
 import 'test_fakes.dart';
 
 void main() {
+  test('parses assignment release response', () {
+    final result = BookingReleaseResult.fromEnvelope({
+      'success': true,
+      'data': {
+        'bookingNumber': 'TX209912319999',
+        'released': true,
+        'status': 'OPEN',
+        'reasonCode': 'VEHICLE_BREAKDOWN',
+      },
+    });
+
+    expect(result.released, isTrue);
+    expect(result.status.code, BookingStatusCode.open);
+    expect(result.reasonCode, 'VEHICLE_BREAKDOWN');
+  });
+
   group('booking list parsing', () {
     test('parses the scheduled response envelope and contract fields', () {
       final result = BookingList.fromEnvelope({

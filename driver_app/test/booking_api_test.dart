@@ -141,6 +141,100 @@ void main() {
     expect(requestCount, 1);
   });
 
+  test('trip action APIs post to their exact backend paths', () async {
+    final paths = <String>[];
+    final api = BookingApi(
+      client: client(
+        MockClient((request) async {
+          paths.add(request.url.path);
+          expect(request.method, 'POST');
+          expect(request.headers['authorization'], 'Bearer fixture-token');
+          return http.Response('{"success":true,"data":{}}', 200);
+        }),
+      ),
+      storage: storage(),
+    );
+
+    await api.startOnRoute('TX209912319999');
+    await api.markArrived('TX209912319999');
+    await api.markPickedUp('TX209912319999');
+    await api.endTrip('TX209912319999');
+
+    expect(paths, [
+      '/api/v1/driver/bookings/TX209912319999/start-route',
+      '/api/v1/driver/bookings/TX209912319999/arrive',
+      '/api/v1/driver/bookings/TX209912319999/mark-picked-up',
+      '/api/v1/driver/bookings/TX209912319999/end-trip',
+    ]);
+  });
+
+  test('release API posts reason code and optional detail', () async {
+    late http.Request request;
+    final api = BookingApi(
+      client: client(
+        MockClient((incoming) async {
+          request = incoming;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'bookingNumber': 'TX209912319999',
+                'released': true,
+                'status': 'OPEN',
+                'reasonCode': 'OTHER',
+              },
+            }),
+            200,
+          );
+        }),
+      ),
+      storage: storage(),
+    );
+
+    await api.releaseAssignment(
+      'TX209912319999',
+      reasonCode: 'OTHER',
+      reasonDetail: '  상세 사유  ',
+    );
+
+    expect(request.url.path, '/api/v1/driver/bookings/TX209912319999/release');
+    expect(jsonDecode(request.body), {
+      'reasonCode': 'OTHER',
+      'reasonDetail': '상세 사유',
+    });
+  });
+
+  for (final entry in {
+    'INVALID_STATUS_TRANSITION': ApiFailureKind.invalidStatusTransition,
+    'BOOKING_RELEASE_NOT_ALLOWED': ApiFailureKind.releaseNotAllowed,
+    'ASSIGNMENT_ALREADY_RELEASED': ApiFailureKind.assignmentAlreadyReleased,
+    'BOOKING_NOT_ASSIGNED_TO_DRIVER': ApiFailureKind.bookingNotAssigned,
+  }.entries) {
+    test('trip/release classifies ${entry.key}', () async {
+      final api = BookingApi(
+        client: client(
+          MockClient(
+            (_) async => http.Response(
+              jsonEncode({'success': false, 'error_code': entry.key}),
+              409,
+            ),
+          ),
+        ),
+        storage: storage(),
+      );
+      await expectLater(
+        api.startOnRoute('TX209912319999'),
+        throwsA(
+          isA<ApiException>().having(
+            (error) => error.kind,
+            'kind',
+            entry.value,
+          ),
+        ),
+      );
+    });
+  }
+
   for (final entry in {
     'DRIVER_STANDBY_TOO_EARLY': ApiFailureKind.standbyTooEarly,
     'DRIVER_STANDBY_REFERENCE_TIME_MISSING':

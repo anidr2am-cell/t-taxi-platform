@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../data/booking_models.dart';
@@ -6,6 +7,21 @@ import '../data/booking_repository.dart';
 import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
 import 'booking_status_label.dart';
+import 'release_assignment_dialog.dart';
+
+typedef ExternalUrlLauncher = Future<bool> Function(Uri url);
+
+enum _TripAction {
+  startRoute('START_ON_ROUTE', '운행 시작', '운행을 시작하시겠습니까?'),
+  arrive('MARK_ARRIVED', '도착 확인', '픽업 장소 도착을 확인하시겠습니까?'),
+  pickedUp('MARK_PICKED_UP', '탑승 확인', '고객 탑승을 확인하시겠습니까?'),
+  endTrip('END_TRIP', '운행 종료', '운행을 종료하시겠습니까?');
+
+  const _TripAction(this.serverAction, this.label, this.confirmMessage);
+  final String serverAction;
+  final String label;
+  final String confirmMessage;
+}
 
 class BookingDetailScreen extends StatefulWidget {
   const BookingDetailScreen({
@@ -14,12 +30,16 @@ class BookingDetailScreen extends StatefulWidget {
     required this.repository,
     required this.onUnauthorized,
     this.acceptController,
+    this.externalUrlLauncher,
+    this.now,
   });
 
   final String bookingNumber;
   final BookingReader repository;
   final Future<void> Function() onUnauthorized;
   final BookingAcceptController? acceptController;
+  final ExternalUrlLauncher? externalUrlLauncher;
+  final DateTime Function()? now;
 
   @override
   State<BookingDetailScreen> createState() => _BookingDetailScreenState();
@@ -31,6 +51,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   ApiException? _error;
   bool _loading = true;
   bool _accepting = false;
+  bool _performingAction = false;
   bool _listRefreshRequested = false;
 
   @override
@@ -157,6 +178,145 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     _showMessage(outcome.message);
   }
 
+  _TripAction? _availableTripAction(BookingDetail detail) {
+    final booking = detail.summary;
+    return switch (booking.status.code) {
+      BookingStatusCode.driverAssigned
+          when booking.assignmentStatus.isAccepted &&
+              booking.allowsAction('START_ON_ROUTE') =>
+        _TripAction.startRoute,
+      BookingStatusCode.onRoute when booking.allowsAction('MARK_ARRIVED') =>
+        _TripAction.arrive,
+      BookingStatusCode.driverArrived
+          when booking.allowsAction('MARK_PICKED_UP') =>
+        _TripAction.pickedUp,
+      BookingStatusCode.pickedUp when booking.allowsAction('END_TRIP') =>
+        _TripAction.endTrip,
+      _ => null,
+    };
+  }
+
+  Future<void> _confirmTripAction(_TripAction action) async {
+    if (_performingAction) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('tripActionConfirmDialog'),
+        title: Text(action.label),
+        content: Text(action.confirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const Key('tripActionConfirmButton'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(action.label),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) await _runTripAction(action);
+  }
+
+  Future<void> _runTripAction(_TripAction action) async {
+    if (_performingAction) return;
+    setState(() => _performingAction = true);
+    try {
+      switch (action) {
+        case _TripAction.startRoute:
+          await widget.repository.startOnRoute(widget.bookingNumber);
+        case _TripAction.arrive:
+          await widget.repository.markArrived(widget.bookingNumber);
+        case _TripAction.pickedUp:
+          await widget.repository.markPickedUp(widget.bookingNumber);
+        case _TripAction.endTrip:
+          await widget.repository.endTrip(widget.bookingNumber);
+      }
+      if (!mounted) return;
+      _listRefreshRequested = true;
+      if (action == _TripAction.endTrip) {
+        _showMessage('운행이 종료되었습니다.');
+        Navigator.of(context).pop(true);
+        return;
+      }
+      final refreshed = await widget.repository.getBookingDetail(
+        widget.bookingNumber,
+      );
+      if (!mounted) return;
+      setState(() {
+        _detail = refreshed;
+        _performingAction = false;
+      });
+      _showMessage('${action.label} 처리가 완료되었습니다.');
+    } on ApiException catch (error) {
+      await _handleActionError(error);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _performingAction = false);
+      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+    }
+  }
+
+  Future<void> _handleActionError(ApiException error) async {
+    if (error.kind == ApiFailureKind.unauthorized) {
+      await widget.onUnauthorized();
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _performingAction = false);
+    _showMessage(error.userMessage);
+    if (error.kind == ApiFailureKind.invalidStatusTransition ||
+        error.kind == ApiFailureKind.bookingNotAssigned ||
+        error.kind == ApiFailureKind.assignmentAlreadyReleased) {
+      await _load();
+    }
+  }
+
+  Future<void> _confirmRelease(bool emergencyOnly) async {
+    if (_performingAction) return;
+    final input = await showDialog<ReleaseAssignmentInput>(
+      context: context,
+      builder: (_) => ReleaseAssignmentDialog(emergencyOnly: emergencyOnly),
+    );
+    if (input == null || !mounted) return;
+    setState(() => _performingAction = true);
+    try {
+      await widget.repository.releaseAssignment(
+        widget.bookingNumber,
+        reasonCode: input.reasonCode,
+        reasonDetail: input.reasonDetail,
+      );
+      if (!mounted) return;
+      _showMessage('배정을 반납했습니다.');
+      Navigator.of(context).pop(true);
+    } on ApiException catch (error) {
+      await _handleActionError(error);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _performingAction = false);
+      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+    }
+  }
+
+  Future<void> _openMap(BookingLocation location) async {
+    final latitude = location.latitude;
+    final longitude = location.longitude;
+    if (latitude == null || longitude == null) return;
+    final url = Uri.https('www.google.com', '/maps/search/', {
+      'api': '1',
+      'query': '$latitude,$longitude',
+    });
+    try {
+      final opened = await (widget.externalUrlLauncher ?? launchUrl)(url);
+      if (!opened) _showMessage('지도 앱을 열 수 없습니다.');
+    } catch (_) {
+      _showMessage('지도 앱을 열 수 없습니다.');
+    }
+  }
+
   void _showMessage(String message) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -194,7 +354,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           (false, final detail?, _) => _DetailBody(
             detail: detail,
             accepting: _accepting,
+            performingAction: _performingAction,
+            tripAction: _availableTripAction(detail),
             onAcceptPressed: _confirmAccept,
+            onTripActionPressed: _confirmTripAction,
+            onReleasePressed: _confirmRelease,
+            onOpenMap: _openMap,
+            now: (widget.now ?? DateTime.now)(),
           ),
           _ => const SizedBox.shrink(),
         },
@@ -258,12 +424,24 @@ class _DetailBody extends StatelessWidget {
   const _DetailBody({
     required this.detail,
     required this.accepting,
+    required this.performingAction,
+    required this.tripAction,
     required this.onAcceptPressed,
+    required this.onTripActionPressed,
+    required this.onReleasePressed,
+    required this.onOpenMap,
+    required this.now,
   });
 
   final BookingDetail detail;
   final bool accepting;
+  final bool performingAction;
+  final _TripAction? tripAction;
   final VoidCallback onAcceptPressed;
+  final ValueChanged<_TripAction> onTripActionPressed;
+  final ValueChanged<bool> onReleasePressed;
+  final ValueChanged<BookingLocation> onOpenMap;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
@@ -278,6 +456,24 @@ class _DetailBody extends StatelessWidget {
         booking.assignmentStatus.isAssigned &&
         booking.standbyAllowedAt != null &&
         !booking.canConfirmStandby;
+    final capabilities = detail.capabilities;
+    final deadline = DateTime.tryParse(
+      capabilities.assignmentReleaseDeadline ?? '',
+    );
+    final deadlinePassed = deadline != null && !now.isBefore(deadline);
+    final emergencyOnly = capabilities.releaseAssignmentEmergencyOnly;
+    final releaseActionAllowed = booking.allowsAction('RELEASE_ASSIGNMENT');
+    final releaseEnabled =
+        releaseActionAllowed &&
+        (capabilities.releaseAssignmentAvailable || emergencyOnly) &&
+        (!deadlinePassed || emergencyOnly) &&
+        (capabilities.assignmentReleaseBlockedReason == null ||
+            capabilities.assignmentReleaseBlockedReason == 'WITHIN_TWO_HOURS');
+    final releaseRelevant =
+        releaseActionAllowed &&
+        (releaseEnabled ||
+            deadlinePassed ||
+            capabilities.assignmentReleaseBlockedReason != null);
     return ListView(
       key: const Key('detailSuccess'),
       padding: const EdgeInsets.all(16),
@@ -321,6 +517,53 @@ class _DetailBody extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+        if (tripAction case final action?) ...[
+          const SizedBox(height: 12),
+          FilledButton(
+            key: Key('tripAction-${action.serverAction}'),
+            onPressed: performingAction
+                ? null
+                : () => onTripActionPressed(action),
+            child: performingAction
+                ? const SizedBox(
+                    key: Key('tripActionLoading'),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(action.label),
+          ),
+        ],
+        if (releaseRelevant) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('releaseAssignmentButton'),
+            onPressed: releaseEnabled && !performingAction
+                ? () => onReleasePressed(emergencyOnly)
+                : null,
+            icon: const Icon(Icons.assignment_return_outlined),
+            label: const Text('배정 반납'),
+          ),
+          if (emergencyOnly)
+            const Text(
+              '일반 반납 가능 시간이 지났습니다. 긴급 사유로만 반납할 수 있습니다.',
+              key: Key('releaseEmergencyOnlyNotice'),
+              textAlign: TextAlign.center,
+            )
+          else if (capabilities.assignmentReleaseBlockedReason
+              case final reason?)
+            Text(
+              _releaseBlockedMessage(reason),
+              key: const Key('releaseBlockedNotice'),
+              textAlign: TextAlign.center,
+            )
+          else if (deadlinePassed)
+            const Text(
+              '배정 반납 가능 시간이 지났습니다.',
+              key: Key('releaseDeadlineNotice'),
+              textAlign: TextAlign.center,
+            ),
+        ],
         const SizedBox(height: 16),
         _Section(
           title: '운행 정보',
@@ -329,8 +572,20 @@ class _DetailBody extends StatelessWidget {
               label: '픽업',
               value: '${booking.pickupDate} ${booking.pickupTime}',
             ),
-            _Info(label: '출발지', value: booking.origin),
-            _Info(label: '목적지', value: booking.destination),
+            _LocationInfo(
+              label: '출발지',
+              location: booking.pickupLocation,
+              fallback: booking.origin,
+              onOpenMap: onOpenMap,
+              mapKey: const Key('pickupMapLink'),
+            ),
+            _LocationInfo(
+              label: '목적지',
+              location: booking.destinationLocation,
+              fallback: booking.destination,
+              onOpenMap: onOpenMap,
+              mapKey: const Key('destinationMapLink'),
+            ),
           ],
         ),
         _Section(
@@ -390,6 +645,73 @@ class _DetailBody extends StatelessWidget {
             children: [_Info(label: '고객 요청', value: instructions)],
           ),
       ],
+    );
+  }
+}
+
+String _releaseBlockedMessage(String reason) => switch (reason) {
+  'TRIP_ALREADY_STARTED' => '운행이 시작되어 배정을 반납할 수 없습니다.',
+  'NO_ACTIVE_ASSIGNMENT' => '활성 배정이 없어 반납할 수 없습니다.',
+  'NOT_ASSIGNED_DRIVER' => '현재 기사에게 배정된 예약이 아닙니다.',
+  'BOOKING_TERMINAL_STATUS' => '종료된 예약은 반납할 수 없습니다.',
+  'INVALID_PICKUP_TIME' => '픽업 시간을 확인할 수 없어 반납할 수 없습니다.',
+  'WITHIN_TWO_HOURS' => '일반 반납 가능 시간이 지났습니다.',
+  _ => '현재 이 배정을 반납할 수 없습니다.',
+};
+
+class _LocationInfo extends StatelessWidget {
+  const _LocationInfo({
+    required this.label,
+    required this.location,
+    required this.fallback,
+    required this.onOpenMap,
+    required this.mapKey,
+  });
+
+  final String label;
+  final BookingLocation location;
+  final String fallback;
+  final ValueChanged<BookingLocation> onOpenMap;
+  final Key mapKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = location.name;
+    final address = location.address;
+    final parts = <String>[
+      ?name,
+      if (address != null && address != name) address,
+    ];
+    final value = parts.isEmpty ? fallback : parts.join('\n');
+    final hasCoordinates =
+        location.latitude != null && location.longitude != null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 104, child: Text(label)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value),
+                if (hasCoordinates)
+                  TextButton.icon(
+                    key: mapKey,
+                    onPressed: () => onOpenMap(location),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(48, 36),
+                    ),
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: const Text('지도에서 보기'),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
