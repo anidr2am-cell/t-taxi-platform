@@ -4,6 +4,8 @@ import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/auth/data/auth_api.dart';
 import 'package:tride_driver/features/auth/data/auth_models.dart';
+import 'package:tride_driver/features/account/data/account_api.dart';
+import 'package:tride_driver/features/account/data/account_models.dart';
 import 'package:tride_driver/features/bookings/data/booking_models.dart';
 import 'package:tride_driver/features/bookings/data/booking_repository.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
@@ -534,4 +536,146 @@ class FakeDriverSocketConnection implements DriverSocketConnection {
   void emit(DriverSocketEventType type, [Map<String, dynamic>? payload]) {
     _controller.add(DriverSocketEvent(type, payload ?? const {}));
   }
+}
+
+DriverProfile driverProfile({
+  String name = 'Somchai',
+  String phone = '+66812345678',
+  String email = 'driver@example.com',
+  String? avatarUrl,
+  DriverProfileVehicle? vehicle = const DriverProfileVehicle(
+    typeCode: 'SEDAN',
+    typeName: 'Sedan',
+    modelName: 'Camry',
+    plateNumber: 'กข 1234',
+    color: 'White',
+    year: 2022,
+  ),
+}) => DriverProfile(
+  name: name,
+  phone: phone,
+  email: email,
+  avatarUrl: avatarUrl,
+  vehicle: vehicle,
+);
+
+DriverVehicle driverVehicle({
+  int id = 11,
+  String approvalStatus = 'APPROVED',
+  bool isPrimary = true,
+  String? rejectionReason,
+}) => DriverVehicle(
+  id: id,
+  vehicleTypeId: 1,
+  vehicleTypeCode: 'SEDAN',
+  vehicleTypeName: 'Sedan',
+  plateNumber: 'กข 1234',
+  modelName: 'Camry',
+  color: 'White',
+  isPrimary: isPrimary,
+  isActive: approvalStatus == 'APPROVED',
+  approvalStatus: approvalStatus,
+  rejectionReason: rejectionReason,
+  documentCounts: const VehicleDocumentCounts(
+    vehiclePhotos: 3,
+    insuranceCertificate: 1,
+    vehicleRegistration: 1,
+    taxCertificate: 0,
+  ),
+);
+
+class FakeAccountApi implements AccountDataSource {
+  DriverProfile profile = driverProfile();
+  RatingSummary rating = const RatingSummary(
+    averageRating: 4.8,
+    reviewCount: 12,
+  );
+  List<DriverVehicle> vehicles = [driverVehicle()];
+  List<VehicleTypeOption> vehicleTypes = const [
+    VehicleTypeOption(id: 1, code: 'SEDAN', name: 'Sedan'),
+    VehicleTypeOption(id: 2, code: 'SUV', name: 'SUV'),
+  ];
+  Object? error;
+  Object? vehicleCreateError;
+  Object? vehiclePhotoError;
+  int profileCount = 0;
+  int ratingCount = 0;
+  int vehiclesCount = 0;
+  int updateCount = 0;
+  int avatarCount = 0;
+  int vehiclePhotoCount = 0;
+  int createVehicleCount = 0;
+  Map<String, dynamic>? lastChanges;
+  VehicleCreateRequest? lastVehicleRequest;
+
+  void _throwIfNeeded([Object? specific]) {
+    final value = specific ?? error;
+    if (value != null) throw value;
+  }
+
+  @override
+  Future<DriverProfile> getProfile() async {
+    profileCount++;
+    _throwIfNeeded();
+    return profile;
+  }
+
+  @override
+  Future<RatingSummary> getRatingSummary() async {
+    ratingCount++;
+    _throwIfNeeded();
+    return rating;
+  }
+
+  @override
+  Future<List<DriverVehicle>> getVehicles() async {
+    vehiclesCount++;
+    _throwIfNeeded();
+    return vehicles;
+  }
+
+  @override
+  Future<List<VehicleTypeOption>> getVehicleTypes() async {
+    _throwIfNeeded();
+    return vehicleTypes;
+  }
+
+  @override
+  Future<DriverProfile> updateProfile(Map<String, dynamic> changes) async {
+    updateCount++;
+    lastChanges = Map.of(changes);
+    _throwIfNeeded();
+    profile = DriverProfile(
+      name: changes['name'] as String? ?? profile.name,
+      phone: changes['phone'] as String? ?? profile.phone,
+      email: profile.email,
+      avatarUrl: profile.avatarUrl,
+      vehicle: profile.vehicle,
+    );
+    return profile;
+  }
+
+  @override
+  Future<void> uploadAvatar(AccountUploadFile file) async {
+    avatarCount++;
+    _throwIfNeeded();
+  }
+
+  @override
+  Future<void> uploadVehiclePhoto(AccountUploadFile file) async {
+    vehiclePhotoCount++;
+    _throwIfNeeded(vehiclePhotoError);
+  }
+
+  @override
+  Future<DriverVehicle> createVehicle(VehicleCreateRequest request) async {
+    createVehicleCount++;
+    lastVehicleRequest = request;
+    _throwIfNeeded(vehicleCreateError);
+    return driverVehicle(id: 99, approvalStatus: 'PENDING', isPrimary: false);
+  }
+
+  @override
+  String resolveAssetUrl(String path) =>
+      path.startsWith('http') ? path : 'https://api.example.com$path';
 }

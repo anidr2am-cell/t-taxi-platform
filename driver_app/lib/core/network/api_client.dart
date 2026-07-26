@@ -41,6 +41,56 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    required Map<String, dynamic> body,
+    required String bearerToken,
+  }) async {
+    return _request(
+      () => _httpClient.patch(
+        _endpoint(path),
+        headers: _headers(bearerToken),
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> postMultipart(
+    String path, {
+    required String bearerToken,
+    Map<String, String> fields = const {},
+    List<ApiMultipartFile> files = const [],
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', _endpoint(path))
+        ..headers['Accept'] = 'application/json'
+        ..headers['Authorization'] = 'Bearer $bearerToken'
+        ..fields.addAll(fields);
+      for (final file in files) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            file.field,
+            file.bytes,
+            filename: file.filename,
+          ),
+        );
+      }
+      final streamed = await _httpClient.send(request).timeout(timeout);
+      final response = await http.Response.fromStream(streamed);
+      return _decodeResponse(response);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException(ApiFailureKind.timeout);
+    } on http.ClientException {
+      throw const ApiException(ApiFailureKind.unavailable);
+    } on FormatException {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    } catch (_) {
+      throw const ApiException(ApiFailureKind.unknown);
+    }
+  }
+
   Uri _endpoint(String path) {
     try {
       return _config.endpoint(path);
@@ -60,67 +110,7 @@ class ApiClient {
   ) async {
     try {
       final response = await send().timeout(timeout);
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map<String, dynamic>) {
-        throw const ApiException(ApiFailureKind.invalidResponse);
-      }
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return decoded;
-      }
-      final errorCode = decoded['error_code'] as String?;
-      if (response.statusCode == 401) {
-        throw ApiException(
-          ApiFailureKind.unauthorized,
-          statusCode: response.statusCode,
-          errorCode: errorCode,
-        );
-      }
-      if (response.statusCode == 403) {
-        throw ApiException(
-          ApiFailureKind.forbidden,
-          statusCode: response.statusCode,
-          errorCode: errorCode,
-        );
-      }
-      if (response.statusCode == 404) {
-        throw ApiException(
-          ApiFailureKind.notFound,
-          statusCode: response.statusCode,
-          errorCode: errorCode,
-        );
-      }
-      if (response.statusCode == 409) {
-        final kind = switch (errorCode) {
-          'DRIVER_STANDBY_TOO_EARLY' => ApiFailureKind.standbyTooEarly,
-          'DRIVER_STANDBY_REFERENCE_TIME_MISSING' =>
-            ApiFailureKind.standbyReferenceTimeMissing,
-          'DRIVER_BOOKING_TIME_CONFLICT' => ApiFailureKind.bookingTimeConflict,
-          'ALREADY_ASSIGNED' => ApiFailureKind.alreadyClaimed,
-          'INVALID_STATUS_TRANSITION' => ApiFailureKind.invalidStatusTransition,
-          'BOOKING_RELEASE_NOT_ALLOWED' => ApiFailureKind.releaseNotAllowed,
-          'ASSIGNMENT_ALREADY_RELEASED' =>
-            ApiFailureKind.assignmentAlreadyReleased,
-          'BOOKING_NOT_ASSIGNED_TO_DRIVER' => ApiFailureKind.bookingNotAssigned,
-          _ => ApiFailureKind.conflict,
-        };
-        throw ApiException(
-          kind,
-          statusCode: response.statusCode,
-          errorCode: errorCode,
-        );
-      }
-      if (response.statusCode >= 500) {
-        throw ApiException(
-          ApiFailureKind.server,
-          statusCode: response.statusCode,
-          errorCode: errorCode,
-        );
-      }
-      throw ApiException(
-        ApiFailureKind.unknown,
-        statusCode: response.statusCode,
-        errorCode: errorCode,
-      );
+      return _decodeResponse(response);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -133,4 +123,97 @@ class ApiClient {
       throw const ApiException(ApiFailureKind.unknown);
     }
   }
+
+  String absoluteUrl(String path) => _endpoint(path).toString();
+
+  Map<String, dynamic> _decodeResponse(http.Response response) {
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return decoded;
+    }
+    final errorCode = decoded['error_code'] as String?;
+    final accountKind = switch (errorCode) {
+      'VALIDATION_ERROR' => ApiFailureKind.validation,
+      'INVALID_FILE_TYPE' => ApiFailureKind.invalidFileType,
+      'FILE_TOO_LARGE' => ApiFailureKind.fileTooLarge,
+      'VEHICLE_PLATE_ALREADY_REGISTERED' =>
+        ApiFailureKind.vehiclePlateAlreadyRegistered,
+      _ => null,
+    };
+    if (accountKind != null) {
+      throw ApiException(
+        accountKind,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+      );
+    }
+    if (response.statusCode == 401) {
+      throw ApiException(
+        ApiFailureKind.unauthorized,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+      );
+    }
+    if (response.statusCode == 403) {
+      throw ApiException(
+        ApiFailureKind.forbidden,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+      );
+    }
+    if (response.statusCode == 404) {
+      throw ApiException(
+        ApiFailureKind.notFound,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+      );
+    }
+    if (response.statusCode == 409) {
+      final kind = switch (errorCode) {
+        'DRIVER_STANDBY_TOO_EARLY' => ApiFailureKind.standbyTooEarly,
+        'DRIVER_STANDBY_REFERENCE_TIME_MISSING' =>
+          ApiFailureKind.standbyReferenceTimeMissing,
+        'DRIVER_BOOKING_TIME_CONFLICT' => ApiFailureKind.bookingTimeConflict,
+        'ALREADY_ASSIGNED' => ApiFailureKind.alreadyClaimed,
+        'INVALID_STATUS_TRANSITION' => ApiFailureKind.invalidStatusTransition,
+        'BOOKING_RELEASE_NOT_ALLOWED' => ApiFailureKind.releaseNotAllowed,
+        'ASSIGNMENT_ALREADY_RELEASED' =>
+          ApiFailureKind.assignmentAlreadyReleased,
+        'BOOKING_NOT_ASSIGNED_TO_DRIVER' => ApiFailureKind.bookingNotAssigned,
+        _ => ApiFailureKind.conflict,
+      };
+      throw ApiException(
+        kind,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+      );
+    }
+    if (response.statusCode >= 500) {
+      throw ApiException(
+        ApiFailureKind.server,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+      );
+    }
+    throw ApiException(
+      ApiFailureKind.unknown,
+      statusCode: response.statusCode,
+      errorCode: errorCode,
+    );
+  }
+}
+
+class ApiMultipartFile {
+  const ApiMultipartFile({
+    required this.field,
+    required this.filename,
+    required this.bytes,
+  });
+
+  final String field;
+  final String filename;
+  final List<int> bytes;
 }

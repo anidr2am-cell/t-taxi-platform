@@ -187,6 +187,10 @@ class BookingAcceptController {
       case ApiFailureKind.server:
       case ApiFailureKind.invalidResponse:
       case ApiFailureKind.invalidCredentials:
+      case ApiFailureKind.validation:
+      case ApiFailureKind.invalidFileType:
+      case ApiFailureKind.fileTooLarge:
+      case ApiFailureKind.vehiclePlateAlreadyRegistered:
       case ApiFailureKind.configuration:
       case ApiFailureKind.unknown:
         return BookingAcceptOutcome(

@@ -6,6 +6,7 @@ import '../config/app_environment.dart';
 import '../core/network/api_client.dart';
 import '../core/storage/secure_token_storage.dart';
 import '../features/auth/data/auth_api.dart';
+import '../features/account/data/account_api.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/bookings/data/booking_api.dart';
@@ -31,6 +32,7 @@ void runDriverApp(AppEnvironment environment) {
       dispatchRepository: DispatchRepository(
         DispatchApi(client: apiClient, storage: storage),
       ),
+      accountApi: AccountApi(client: apiClient, storage: storage),
       driverSocket: DriverSocketService(config: config, storage: storage),
     ),
   );

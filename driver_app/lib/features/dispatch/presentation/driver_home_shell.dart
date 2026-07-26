@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../account/data/account_api.dart';
+import '../../account/presentation/account_page.dart';
 import '../../bookings/data/booking_repository.dart';
 import '../../bookings/presentation/booking_list_screen.dart';
 import '../data/dispatch_repository.dart';
@@ -13,6 +15,7 @@ class DriverHomeShell extends StatefulWidget {
     required this.dispatchRepository,
     required this.onUnauthorized,
     required this.onLogout,
+    this.accountApi,
     this.driverSocket,
   });
 
@@ -21,6 +24,7 @@ class DriverHomeShell extends StatefulWidget {
   final Future<void> Function() onUnauthorized;
   final Future<void> Function() onLogout;
   final DriverSocketConnection? driverSocket;
+  final AccountDataSource? accountApi;
 
   @override
   State<DriverHomeShell> createState() => _DriverHomeShellState();
@@ -29,11 +33,13 @@ class DriverHomeShell extends StatefulWidget {
 class _DriverHomeShellState extends State<DriverHomeShell> {
   int _selectedIndex = 0;
   bool _tripsVisited = false;
+  bool _accountVisited = false;
 
   void _selectTab(int index) {
     setState(() {
       _selectedIndex = index;
       if (index == 1) _tripsVisited = true;
+      if (index == 2) _accountVisited = true;
     });
   }
 
@@ -61,22 +67,37 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
                 socketEvents: widget.driverSocket?.events,
               ),
             ),
+          if (_accountVisited && widget.accountApi != null)
+            Offstage(
+              offstage: _selectedIndex != 2,
+              child: AccountPage(
+                accountApi: widget.accountApi!,
+                dispatchRepository: widget.dispatchRepository,
+                onUnauthorized: widget.onUnauthorized,
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectTab,
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.campaign_outlined),
             selectedIcon: Icon(Icons.campaign),
             label: '새 콜',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.route_outlined),
             selectedIcon: Icon(Icons.route),
             label: '내 운행',
           ),
+          if (widget.accountApi != null)
+            const NavigationDestination(
+              icon: Icon(Icons.account_circle_outlined),
+              selectedIcon: Icon(Icons.account_circle),
+              label: '계정',
+            ),
         ],
       ),
     );

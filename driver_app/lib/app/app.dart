@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
 import '../features/auth/presentation/auth_controller.dart';
+import '../features/account/data/account_api.dart';
 import '../features/auth/presentation/auth_gate.dart';
 import '../features/bookings/data/booking_repository.dart';
 import '../features/dispatch/data/dispatch_repository.dart';
@@ -14,6 +15,7 @@ class DriverApp extends StatelessWidget {
     required this.authController,
     required this.bookingRepository,
     required this.dispatchRepository,
+    this.accountApi,
     this.driverSocket,
   });
 
@@ -21,6 +23,7 @@ class DriverApp extends StatelessWidget {
   final AuthController authController;
   final BookingReader bookingRepository;
   final DispatchReader dispatchRepository;
+  final AccountDataSource? accountApi;
   final DriverSocketConnection? driverSocket;
 
   @override
@@ -37,6 +40,7 @@ class DriverApp extends StatelessWidget {
         config: config,
         bookingRepository: bookingRepository,
         dispatchRepository: dispatchRepository,
+        accountApi: accountApi,
         driverSocket: driverSocket,
       ),
     );
