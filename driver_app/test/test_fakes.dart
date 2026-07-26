@@ -8,6 +8,7 @@ import 'package:tride_driver/features/bookings/data/booking_models.dart';
 import 'package:tride_driver/features/bookings/data/booking_repository.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_repository.dart';
+import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 
 DriverUser driverUser({int id = 7, String? name = 'Somchai'}) =>
     DriverUser(id: id, role: 'DRIVER', isActive: true, name: name);
@@ -501,5 +502,36 @@ class FakeDispatchReader implements DispatchReader {
     claimedVehicleId = driverVehicleId;
     if (claimError case final error?) throw error;
     return claimResultValue;
+  }
+}
+
+class FakeDriverSocketConnection implements DriverSocketConnection {
+  final StreamController<DriverSocketEvent> _controller =
+      StreamController<DriverSocketEvent>.broadcast();
+
+  int connectCount = 0;
+  int disconnectCount = 0;
+  bool connected = false;
+
+  @override
+  Stream<DriverSocketEvent> get events => _controller.stream;
+
+  @override
+  bool get isConnected => connected;
+
+  @override
+  Future<void> connect() async {
+    connectCount++;
+    connected = true;
+  }
+
+  @override
+  void disconnect() {
+    disconnectCount++;
+    connected = false;
+  }
+
+  void emit(DriverSocketEventType type, [Map<String, dynamic>? payload]) {
+    _controller.add(DriverSocketEvent(type, payload ?? const {}));
   }
 }

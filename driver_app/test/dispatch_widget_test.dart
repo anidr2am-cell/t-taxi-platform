@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
+import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 import 'package:tride_driver/features/dispatch/presentation/driver_home_shell.dart';
 import 'package:tride_driver/features/dispatch/presentation/open_calls_screen.dart';
 
@@ -11,6 +12,7 @@ Future<void> pumpOpenCalls(
   WidgetTester tester,
   FakeDispatchReader reader, {
   VoidCallback? onClaimed,
+  DriverSocketConnection? driverSocket,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -18,6 +20,7 @@ Future<void> pumpOpenCalls(
         repository: reader,
         onUnauthorized: () async {},
         onClaimed: onClaimed ?? () {},
+        driverSocket: driverSocket,
       ),
     ),
   );
@@ -48,11 +51,13 @@ void main() {
     tester,
   ) async {
     final reader = FakeDispatchReader();
-    await pumpOpenCalls(tester, reader);
+    final socket = FakeDriverSocketConnection();
+    await pumpOpenCalls(tester, reader, driverSocket: socket);
 
     expect(find.text('온라인으로 전환하면 새 콜을 볼 수 있습니다'), findsOneWidget);
     expect(reader.statusCount, 1);
     expect(reader.openCallsCount, 0);
+    expect(socket.connectCount, 0);
   });
 
   testWidgets('online toggle loads calls and offline toggle hides them', (
@@ -76,6 +81,77 @@ void main() {
     await tester.pumpAndSettle();
     expect(reader.offlineCount, 1);
     expect(find.byKey(const Key('offlineOpenCallsNotice')), findsOneWidget);
+  });
+
+  testWidgets('socket call events trigger REST refresh and visual notice', (
+    tester,
+  ) async {
+    final reader = onlineReader();
+    final socket = FakeDriverSocketConnection();
+    await pumpOpenCalls(tester, reader, driverSocket: socket);
+    final initialLoads = reader.openCallsCount;
+
+    socket.emit(DriverSocketEventType.newCall, {
+      'bookingNumber': 'TX209912319997',
+    });
+    await tester.pumpAndSettle();
+
+    expect(reader.openCallsCount, initialLoads + 1);
+    expect(find.byKey(const Key('newCallSocketNotice')), findsOneWidget);
+
+    socket.emit(DriverSocketEventType.callClaimed);
+    await tester.pumpAndSettle();
+    socket.emit(DriverSocketEventType.callConfirmed);
+    await tester.pumpAndSettle();
+    socket.emit(DriverSocketEventType.assignmentReleased, {
+      'bookingNumber': 'TX209912319996',
+    });
+    await tester.pumpAndSettle();
+    expect(reader.openCallsCount, initialLoads + 4);
+  });
+
+  testWidgets('socket reconnect forces REST refresh', (tester) async {
+    final reader = onlineReader();
+    final socket = FakeDriverSocketConnection();
+    await pumpOpenCalls(tester, reader, driverSocket: socket);
+    final initialLoads = reader.openCallsCount;
+
+    socket.emit(DriverSocketEventType.reconnected);
+    await tester.pumpAndSettle();
+
+    expect(reader.openCallsCount, initialLoads + 1);
+  });
+
+  testWidgets('offline transition disconnects foreground socket', (
+    tester,
+  ) async {
+    final reader = onlineReader();
+    final socket = FakeDriverSocketConnection();
+    await pumpOpenCalls(tester, reader, driverSocket: socket);
+    expect(socket.connectCount, 1);
+
+    await tester.tap(find.byKey(const Key('onlineToggle')));
+    await tester.pumpAndSettle();
+
+    expect(reader.offlineCount, 1);
+    expect(socket.disconnectCount, 1);
+    expect(socket.isConnected, isFalse);
+  });
+
+  testWidgets('background disconnects and foreground reconnects socket', (
+    tester,
+  ) async {
+    final socket = FakeDriverSocketConnection();
+    await pumpOpenCalls(tester, onlineReader(), driverSocket: socket);
+    expect(socket.connectCount, 1);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(socket.disconnectCount, 1);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(socket.connectCount, 2);
   });
 
   testWidgets('online list shows airport label, time, and match badge', (

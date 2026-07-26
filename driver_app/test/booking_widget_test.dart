@@ -13,6 +13,7 @@ import 'package:tride_driver/features/bookings/data/booking_models.dart';
 import 'package:tride_driver/features/bookings/presentation/booking_accept_controller.dart';
 import 'package:tride_driver/features/bookings/presentation/booking_detail_screen.dart';
 import 'package:tride_driver/features/bookings/presentation/booking_list_screen.dart';
+import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 
 import 'test_fakes.dart';
 
@@ -21,6 +22,7 @@ Future<void> pumpBookingList(
   FakeBookingReader reader, {
   Future<void> Function()? onUnauthorized,
   Future<void> Function()? onLogout,
+  Stream<DriverSocketEvent>? socketEvents,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -28,6 +30,7 @@ Future<void> pumpBookingList(
         repository: reader,
         onUnauthorized: onUnauthorized ?? () async {},
         onLogout: onLogout ?? () async {},
+        socketEvents: socketEvents,
       ),
     ),
   );
@@ -40,6 +43,7 @@ Future<void> pumpDetail(
   Future<void> Function()? onUnauthorized,
   ExternalUrlLauncher? externalUrlLauncher,
   DateTime Function()? now,
+  Stream<DriverSocketEvent>? socketEvents,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -50,6 +54,7 @@ Future<void> pumpDetail(
         acceptController: acceptController,
         externalUrlLauncher: externalUrlLauncher,
         now: now,
+        socketEvents: socketEvents,
       ),
     ),
   );
@@ -629,6 +634,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
   });
+
+  testWidgets(
+    'assignment released socket event closes matching detail and refreshes list',
+    (tester) async {
+      final reader = FakeBookingReader();
+      final socket = FakeDriverSocketConnection();
+      await pumpBookingList(tester, reader, socketEvents: socket.events);
+      await tester.pumpAndSettle();
+      final initialListLoads = reader.listCount;
+      await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
+
+      socket.emit(DriverSocketEventType.assignmentReleased, {
+        'bookingNumber': 'TX209912319999',
+        'reasonCode': 'ADMIN_REASSIGNED',
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+      expect(reader.listCount, initialListLoads + 1);
+      expect(find.textContaining('배정이 종료되어 목록으로 돌아갑니다.'), findsOneWidget);
+    },
+  );
 
   final tripCases =
       <

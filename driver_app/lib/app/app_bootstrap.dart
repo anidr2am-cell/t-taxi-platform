@@ -12,6 +12,7 @@ import '../features/bookings/data/booking_api.dart';
 import '../features/bookings/data/booking_repository.dart';
 import '../features/dispatch/data/dispatch_api.dart';
 import '../features/dispatch/data/dispatch_repository.dart';
+import '../features/dispatch/data/driver_socket_service.dart';
 import 'app.dart';
 
 void runDriverApp(AppEnvironment environment) {
@@ -30,6 +31,7 @@ void runDriverApp(AppEnvironment environment) {
       dispatchRepository: DispatchRepository(
         DispatchApi(client: apiClient, storage: storage),
       ),
+      driverSocket: DriverSocketService(config: config, storage: storage),
     ),
   );
 }

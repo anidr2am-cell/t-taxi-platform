@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../data/airport_label_resolver.dart';
 import '../data/dispatch_models.dart';
 import '../data/dispatch_repository.dart';
+import '../data/driver_socket_service.dart';
 import 'vehicle_select_sheet.dart';
 
 class OpenCallsScreen extends StatefulWidget {
@@ -12,17 +15,20 @@ class OpenCallsScreen extends StatefulWidget {
     required this.repository,
     required this.onUnauthorized,
     required this.onClaimed,
+    this.driverSocket,
   });
 
   final DispatchReader repository;
   final Future<void> Function() onUnauthorized;
   final VoidCallback onClaimed;
+  final DriverSocketConnection? driverSocket;
 
   @override
   State<OpenCallsScreen> createState() => _OpenCallsScreenState();
 }
 
-class _OpenCallsScreenState extends State<OpenCallsScreen> {
+class _OpenCallsScreenState extends State<OpenCallsScreen>
+    with WidgetsBindingObserver {
   DriverDispatchStatus? _status;
   OpenCallList? _calls;
   ApiException? _statusError;
@@ -31,11 +37,71 @@ class _OpenCallsScreenState extends State<OpenCallsScreen> {
   bool _loadingCalls = false;
   bool _changingOnline = false;
   final Set<String> _claiming = {};
+  StreamSubscription<DriverSocketEvent>? _socketSubscription;
+  bool _foreground = true;
+  bool _showNewCallNotice = false;
 
   @override
   void initState() {
     super.initState();
+    _foreground =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    WidgetsBinding.instance.addObserver(this);
+    _socketSubscription = widget.driverSocket?.events.listen(
+      _handleSocketEvent,
+    );
     _loadStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _socketSubscription?.cancel();
+    widget.driverSocket?.disconnect();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final foreground = state == AppLifecycleState.resumed;
+    if (_foreground == foreground) return;
+    _foreground = foreground;
+    if (foreground && _status?.online == true) {
+      unawaited(_connectSocket());
+    } else {
+      widget.driverSocket?.disconnect();
+    }
+  }
+
+  Future<void> _connectSocket() async {
+    try {
+      await widget.driverSocket?.connect();
+    } catch (_) {
+      // REST remains the source of truth if the foreground socket is unavailable.
+    }
+  }
+
+  void _syncSocket(DriverDispatchStatus status) {
+    if (status.online && _foreground) {
+      unawaited(_connectSocket());
+    } else {
+      widget.driverSocket?.disconnect();
+    }
+  }
+
+  void _handleSocketEvent(DriverSocketEvent event) {
+    if (!mounted || _status?.online != true || !_foreground) return;
+    switch (event.type) {
+      case DriverSocketEventType.newCall:
+        setState(() => _showNewCallNotice = true);
+        unawaited(_loadCalls());
+      case DriverSocketEventType.callClaimed:
+      case DriverSocketEventType.callConfirmed:
+      case DriverSocketEventType.assignmentReleased:
+      case DriverSocketEventType.reconnected:
+        unawaited(_loadCalls());
+    }
   }
 
   Future<void> _loadStatus() async {
@@ -50,6 +116,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen> {
         _status = status;
         _loadingStatus = false;
       });
+      _syncSocket(status);
       if (status.online) {
         await _loadCalls();
       } else {
@@ -75,6 +142,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen> {
       _statusError = error;
       _loadingStatus = false;
     });
+    widget.driverSocket?.disconnect();
   }
 
   Future<void> _loadCalls() async {
@@ -129,8 +197,10 @@ class _OpenCallsScreenState extends State<OpenCallsScreen> {
         if (!status.online) {
           _calls = null;
           _callsError = null;
+          _showNewCallNotice = false;
         }
       });
+      _syncSocket(status);
       if (status.online) await _loadCalls();
     } on ApiException catch (error) {
       if (error.kind == ApiFailureKind.unauthorized) {
@@ -293,6 +363,21 @@ class _OpenCallsScreenState extends State<OpenCallsScreen> {
                     ),
                   ),
                 ),
+                if (_showNewCallNotice && _status!.online)
+                  Material(
+                    key: const Key('newCallSocketNotice'),
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: ListTile(
+                      leading: const Icon(Icons.campaign_outlined),
+                      title: const Text('새 콜이 도착해 목록을 갱신했습니다.'),
+                      trailing: IconButton(
+                        key: const Key('dismissNewCallSocketNotice'),
+                        onPressed: () =>
+                            setState(() => _showNewCallNotice = false),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ),
+                  ),
                 Expanded(
                   child: _status!.online
                       ? _buildOnlineContent()

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_config.dart';
 import '../../bookings/data/booking_repository.dart';
 import '../../dispatch/data/dispatch_repository.dart';
+import '../../dispatch/data/driver_socket_service.dart';
 import '../../dispatch/presentation/driver_home_shell.dart';
 import 'auth_controller.dart';
 import 'login_screen.dart';
@@ -14,12 +15,14 @@ class AuthGate extends StatefulWidget {
     required this.config,
     required this.bookingRepository,
     required this.dispatchRepository,
+    this.driverSocket,
   });
 
   final AuthController controller;
   final AppConfig config;
   final BookingReader bookingRepository;
   final DispatchReader dispatchRepository;
+  final DriverSocketConnection? driverSocket;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -71,6 +74,7 @@ class _AuthGateState extends State<AuthGate> {
           AuthStatus.signedIn => DriverHomeShell(
             bookingRepository: widget.bookingRepository,
             dispatchRepository: widget.dispatchRepository,
+            driverSocket: widget.driverSocket,
             onUnauthorized: widget.controller.expireSession,
             onLogout: widget.controller.logout,
           ),

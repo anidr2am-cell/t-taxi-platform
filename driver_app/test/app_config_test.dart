@@ -25,6 +25,7 @@ void main() {
     final config = AppConfig.forEnvironment(AppEnvironment.stg);
     expect(config.environment, AppEnvironment.stg);
     expect(config.appName, 'TRide Driver STG');
+    expect(config.socketBaseUrl, 'https://trider.taxi');
     expect(
       config.endpoint('/api/v1/auth/login').toString(),
       'https://trider.taxi/api/v1/auth/login',

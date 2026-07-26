@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
+import '../../dispatch/data/driver_socket_service.dart';
 import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
 import 'booking_status_label.dart';
@@ -32,6 +35,7 @@ class BookingDetailScreen extends StatefulWidget {
     this.acceptController,
     this.externalUrlLauncher,
     this.now,
+    this.socketEvents,
   });
 
   final String bookingNumber;
@@ -40,6 +44,7 @@ class BookingDetailScreen extends StatefulWidget {
   final BookingAcceptController? acceptController;
   final ExternalUrlLauncher? externalUrlLauncher;
   final DateTime Function()? now;
+  final Stream<DriverSocketEvent>? socketEvents;
 
   @override
   State<BookingDetailScreen> createState() => _BookingDetailScreenState();
@@ -53,13 +58,35 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   bool _accepting = false;
   bool _performingAction = false;
   bool _listRefreshRequested = false;
+  bool _handlingSocketRelease = false;
+  StreamSubscription<DriverSocketEvent>? _socketSubscription;
 
   @override
   void initState() {
     super.initState();
     _acceptController =
         widget.acceptController ?? BookingAcceptController(widget.repository);
+    _listenToSocketEvents();
     _load();
+  }
+
+  void _listenToSocketEvents() {
+    _socketSubscription?.cancel();
+    _socketSubscription = widget.socketEvents?.listen(_handleSocketEvent);
+  }
+
+  void _handleSocketEvent(DriverSocketEvent event) {
+    if (!mounted ||
+        _handlingSocketRelease ||
+        event.type != DriverSocketEventType.assignmentReleased) {
+      return;
+    }
+    final bookingNumber = event.payload['bookingNumber']?.toString();
+    if (bookingNumber != widget.bookingNumber) return;
+    _handlingSocketRelease = true;
+    _listRefreshRequested = true;
+    _showMessage('이 예약의 배정이 종료되어 목록으로 돌아갑니다.');
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -69,6 +96,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         oldWidget.repository != widget.repository) {
       _load();
     }
+    if (oldWidget.socketEvents != widget.socketEvents) {
+      _listenToSocketEvents();
+    }
+  }
+
+  @override
+  void dispose() {
+    _socketSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {

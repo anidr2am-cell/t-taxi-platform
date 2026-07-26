@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../dispatch/data/driver_socket_service.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
 import 'booking_detail_screen.dart';
@@ -12,11 +13,13 @@ class BookingListScreen extends StatefulWidget {
     required this.repository,
     required this.onUnauthorized,
     required this.onLogout,
+    this.socketEvents,
   });
 
   final BookingReader repository;
   final Future<void> Function() onUnauthorized;
   final Future<void> Function() onLogout;
+  final Stream<DriverSocketEvent>? socketEvents;
 
   @override
   State<BookingListScreen> createState() => _BookingListScreenState();
@@ -141,6 +144,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
                         bookingNumber: booking.bookingNumber,
                         repository: widget.repository,
                         onUnauthorized: widget.onUnauthorized,
+                        socketEvents: widget.socketEvents,
                       ),
                     ),
                   );

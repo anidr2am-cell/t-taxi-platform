@@ -31,6 +31,11 @@ class AppConfig {
   final String appName;
   final String apiBaseUrl;
 
+  String get socketBaseUrl {
+    final uri = _validatedBaseUri();
+    return uri.replace(path: '', query: null, fragment: null).toString();
+  }
+
   Uri endpoint(String path) {
     final baseUri = _validatedBaseUri();
     final basePath = baseUri.path.replaceFirst(RegExp(r'/$'), '');
