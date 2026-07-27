@@ -178,6 +178,20 @@ test('OPEN booking derives total from charge items and notifies eligible drivers
     assert.equal(calls.socket[0].room, driverUserRoom(42));
     assert.equal(calls.socket[0].event, 'driver:call:new');
     assert.equal(Object.hasOwn(calls.socket[0].payload, 'customer'), false);
+    assert.deepEqual(calls.socket[0].payload.pickupLocation, {
+      name: null,
+      address: 'BKK Airport',
+      latitude: null,
+      longitude: null,
+      placeId: null,
+    });
+    assert.deepEqual(calls.socket[0].payload.destinationLocation, {
+      name: null,
+      address: 'Pattaya Hotel',
+      latitude: null,
+      longitude: null,
+      placeId: null,
+    });
   } finally {
     setRealtimeIo(null);
   }

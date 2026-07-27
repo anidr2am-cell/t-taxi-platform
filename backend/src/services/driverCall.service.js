@@ -100,6 +100,9 @@ class DriverCallService {
       driverVehicles,
       row.vehicle_type_code,
     );
+    const metadata = this.driverJobService.metadata(row);
+    const originLocation = metadata.originLocation ?? {};
+    const destinationLocation = metadata.destinationLocation ?? {};
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -108,6 +111,20 @@ class DriverCallService {
       pickupTime: row.pickup_time,
       origin: row.origin_address,
       destination: row.destination_address,
+      pickupLocation: this.driverJobService.locationDetails({
+        name: originLocation.name,
+        address: row.origin_address,
+        placeId: row.origin_place_id,
+        latitude: row.origin_lat,
+        longitude: row.origin_lng,
+      }),
+      destinationLocation: this.driverJobService.locationDetails({
+        name: destinationLocation.name,
+        address: row.destination_address,
+        placeId: row.destination_place_id,
+        latitude: row.destination_lat,
+        longitude: row.destination_lng,
+      }),
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,

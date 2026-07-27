@@ -780,6 +780,7 @@ class BookingRepository {
         DATE_FORMAT(b.scheduled_pickup_at, '%H:%i') AS pickup_time,
         b.origin_address,
         b.destination_address,
+        b.metadata,
         b.total_amount,
         b.currency,
         b.commission_amount,

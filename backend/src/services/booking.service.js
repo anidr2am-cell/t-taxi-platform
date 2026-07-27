@@ -72,17 +72,29 @@ class BookingService {
     scheduledPickupAt,
     originAddress,
     destinationAddress,
+    metadata = null,
     serviceType,
     vehicleType,
     pricing,
     luggage,
   }) {
+    const parsedMetadata = this.parseBookingMetadata(metadata);
+    const originLocation = parsedMetadata.originLocation ?? {};
+    const destinationLocation = parsedMetadata.destinationLocation ?? {};
     return {
       bookingNumber,
       status: BOOKING_STATUS.OPEN,
       scheduledPickupAt,
       origin: originAddress,
       destination: destinationAddress,
+      pickupLocation: this.locationDetails({
+        name: originLocation.name,
+        address: originAddress,
+      }),
+      destinationLocation: this.locationDetails({
+        name: destinationLocation.name,
+        address: destinationAddress,
+      }),
       serviceType: {
         code: serviceType.code,
         name: serviceType.name,
@@ -168,6 +180,38 @@ class BookingService {
     if (place.address) return place.address;
     if (place.name) return place.name;
     return null;
+  }
+
+  parseBookingMetadata(metadata) {
+    if (!metadata) return {};
+    if (typeof metadata === 'object') return metadata;
+    try {
+      const parsed = JSON.parse(metadata);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  location(value) {
+    if (value == null) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  locationDetails({ name, address, placeId, latitude, longitude }) {
+    const normalizedName = typeof name === 'string' && name.trim() ? name.trim() : null;
+    const normalizedAddress =
+      typeof address === 'string' && address.trim() ? address.trim() : null;
+    const displayName =
+      normalizedName && normalizedName !== normalizedAddress ? normalizedName : null;
+    return {
+      name: displayName,
+      address: normalizedAddress,
+      latitude: this.location(latitude),
+      longitude: this.location(longitude),
+      placeId: typeof placeId === 'string' && placeId.trim() ? placeId.trim() : null,
+    };
   }
 
   addHours(date, hours) {
@@ -447,6 +491,7 @@ class BookingService {
         scheduledPickupAt,
         originAddress,
         destinationAddress,
+        metadata: Object.keys(metadata).length ? metadata : null,
         serviceType,
         vehicleType,
         pricing,
