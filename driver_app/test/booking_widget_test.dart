@@ -626,6 +626,64 @@ void main() {
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
   });
 
+  testWidgets('BKK airport pickup with name sign shows Gate 3 meeting place', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(nameSignRequested: true);
+    await pumpDetail(tester, reader);
+
+    expect(find.byKey(const Key('bkkMeetingGateBanner')), findsOneWidget);
+    expect(find.text('미팅 장소: 3번 게이트 (피켓 요청됨)'), findsOneWidget);
+    expect(find.textContaining('7번 게이트'), findsNothing);
+  });
+
+  testWidgets(
+    'BKK airport pickup without name sign shows Gate 7 meeting place',
+    (tester) async {
+      final reader = FakeBookingReader()
+        ..detailResult = bookingDetail(nameSignRequested: false);
+      await pumpDetail(tester, reader);
+
+      expect(find.byKey(const Key('bkkMeetingGateBanner')), findsOneWidget);
+      expect(find.text('미팅 장소: 7번 게이트'), findsOneWidget);
+      expect(find.textContaining('3번 게이트'), findsNothing);
+    },
+  );
+
+  testWidgets('non-airport pickup does not show meeting gate banner', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        serviceTypeCode: 'CITY_TRANSFER',
+        serviceTypeName: 'City transfer',
+        origin: 'Bangkok Hotel',
+        pickupLocationName: 'Bangkok Hotel',
+        pickupLocationAddress: 'Sukhumvit Road',
+      );
+    await pumpDetail(tester, reader);
+
+    expect(find.byKey(const Key('bkkMeetingGateBanner')), findsNothing);
+    expect(find.textContaining('게이트'), findsNothing);
+  });
+
+  testWidgets('airport pickup outside BKK does not show meeting gate banner', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        nameSignRequested: true,
+        origin: 'DMK Airport',
+        pickupLocationName: 'DMK Airport',
+        pickupLocationAddress: 'Don Mueang International Airport',
+      );
+    await pumpDetail(tester, reader);
+
+    expect(find.byKey(const Key('bkkMeetingGateBanner')), findsNothing);
+    expect(find.textContaining('게이트'), findsNothing);
+  });
+
   testWidgets(
     'assignment released socket event closes matching detail and refreshes list',
     (tester) async {

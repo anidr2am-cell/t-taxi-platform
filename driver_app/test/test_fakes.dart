@@ -97,6 +97,11 @@ Map<String, dynamic> bookingJson({
   String? scheduledPickupAt = '2026-07-18T09:30:00.000+07:00',
   String? standbyReferenceTime = '2026-07-18T09:30:00.000+07:00',
   bool includeCoordinates = true,
+  String serviceTypeCode = 'AIRPORT_PICKUP',
+  String serviceTypeName = '공항 픽업',
+  String origin = 'Suvarnabhumi Airport',
+  String pickupLocationName = 'Suvarnabhumi Airport',
+  String pickupLocationAddress = '999 Nong Prue, Bang Phli',
 }) {
   final canConfirm =
       canConfirmStandby ??
@@ -119,14 +124,14 @@ Map<String, dynamic> bookingJson({
         (canConfirm
             ? ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING']
             : ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT']),
-    'serviceType': {'code': 'AIRPORT_PICKUP', 'name': '공항 픽업'},
+    'serviceType': {'code': serviceTypeCode, 'name': serviceTypeName},
     'pickupDate': pickupDate,
     'pickupTime': pickupTime,
-    'origin': 'Suvarnabhumi Airport',
+    'origin': origin,
     'destination': 'Test Hotel',
     'pickupLocation': {
-      'name': 'Suvarnabhumi Airport',
-      'address': '999 Nong Prue, Bang Phli',
+      'name': pickupLocationName,
+      'address': pickupLocationAddress,
       'latitude': includeCoordinates ? 13.6900 : null,
       'longitude': includeCoordinates ? 100.7501 : null,
       'placeId': 'pickup-place-id',
@@ -166,6 +171,11 @@ BookingSummary bookingSummary({
   String? scheduledPickupAt = '2026-07-18T09:30:00.000+07:00',
   String? standbyReferenceTime = '2026-07-18T09:30:00.000+07:00',
   bool includeCoordinates = true,
+  String serviceTypeCode = 'AIRPORT_PICKUP',
+  String serviceTypeName = '공항 픽업',
+  String origin = 'Suvarnabhumi Airport',
+  String pickupLocationName = 'Suvarnabhumi Airport',
+  String pickupLocationAddress = '999 Nong Prue, Bang Phli',
 }) => BookingSummary.fromJson(
   bookingJson(
     bookingNumber: bookingNumber,
@@ -178,6 +188,11 @@ BookingSummary bookingSummary({
     scheduledPickupAt: scheduledPickupAt,
     standbyReferenceTime: standbyReferenceTime,
     includeCoordinates: includeCoordinates,
+    serviceTypeCode: serviceTypeCode,
+    serviceTypeName: serviceTypeName,
+    origin: origin,
+    pickupLocationName: pickupLocationName,
+    pickupLocationAddress: pickupLocationAddress,
   ),
 );
 
@@ -198,6 +213,11 @@ BookingDetail bookingDetail({
   String? assignmentReleaseDeadline = '2099-12-31T07:30:00.000+07:00',
   String? assignmentReleaseBlockedReason,
   bool includeCoordinates = true,
+  String serviceTypeCode = 'AIRPORT_PICKUP',
+  String serviceTypeName = '공항 픽업',
+  String origin = 'Suvarnabhumi Airport',
+  String pickupLocationName = 'Suvarnabhumi Airport',
+  String pickupLocationAddress = '999 Nong Prue, Bang Phli',
 }) => BookingDetail.fromEnvelope({
   'success': true,
   'data': {
@@ -210,6 +230,11 @@ BookingDetail bookingDetail({
       standbyAllowedAt: standbyAllowedAt,
       allowedActions: allowedActions,
       includeCoordinates: includeCoordinates,
+      serviceTypeCode: serviceTypeCode,
+      serviceTypeName: serviceTypeName,
+      origin: origin,
+      pickupLocationName: pickupLocationName,
+      pickupLocationAddress: pickupLocationAddress,
     ),
     'passengers': {'adults': 2, 'children': 0, 'infants': 0},
     'luggage': {

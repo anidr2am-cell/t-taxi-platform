@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/api_exception.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
+import '../../dispatch/data/airport_label_resolver.dart';
 import '../../dispatch/data/driver_socket_service.dart';
 import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
@@ -509,6 +510,7 @@ class _DetailBody extends StatelessWidget {
         (releaseEnabled ||
             deadlinePassed ||
             capabilities.assignmentReleaseBlockedReason != null);
+    final meetingGate = _bkkAirportPickupMeetingGate(detail);
     return ListView(
       key: const Key('detailSuccess'),
       padding: const EdgeInsets.all(16),
@@ -600,6 +602,13 @@ class _DetailBody extends StatelessWidget {
             ),
         ],
         const SizedBox(height: 16),
+        if (meetingGate != null) ...[
+          _MeetingGateBanner(
+            gateNumber: meetingGate,
+            nameSignRequested: detail.nameSignRequested,
+          ),
+          const SizedBox(height: 12),
+        ],
         _Section(
           title: '운행 정보',
           children: [
@@ -680,6 +689,81 @@ class _DetailBody extends StatelessWidget {
             children: [_Info(label: '고객 요청', value: instructions)],
           ),
       ],
+    );
+  }
+}
+
+String? _bkkAirportPickupMeetingGate(BookingDetail detail) {
+  final booking = detail.summary;
+  if (booking.serviceType.code.toUpperCase() != 'AIRPORT_PICKUP') {
+    return null;
+  }
+  final pickupCandidates = [
+    booking.pickupLocation.name,
+    booking.pickupLocation.address,
+    booking.origin,
+  ];
+  final isBkk = pickupCandidates
+      .whereType<String>()
+      .map(AirportLabelResolver.displayLabelFor)
+      .any((label) => label.toUpperCase().startsWith('BKK'));
+  if (!isBkk) return null;
+  return detail.nameSignRequested ? '3' : '7';
+}
+
+class _MeetingGateBanner extends StatelessWidget {
+  const _MeetingGateBanner({
+    required this.gateNumber,
+    required this.nameSignRequested,
+  });
+
+  final String gateNumber;
+  final bool nameSignRequested;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = nameSignRequested ? '미팅 장소: 3번 게이트 (피켓 요청됨)' : '미팅 장소: 7번 게이트';
+    return Container(
+      key: const Key('bkkMeetingGateBanner'),
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: nameSignRequested
+            ? colors.primaryContainer
+            : colors.tertiaryContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: nameSignRequested ? colors.primary : colors.tertiary,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            backgroundColor: colors.surface,
+            foregroundColor: nameSignRequested
+                ? colors.primary
+                : colors.tertiary,
+            child: Text(
+              gateNumber,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: nameSignRequested
+                    ? colors.onPrimaryContainer
+                    : colors.onTertiaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -224,6 +224,7 @@ class BookingSummary {
     required this.destinationLatitude,
     required this.destinationLongitude,
     required this.passengerCount,
+    required this.serviceType,
     required this.vehicleType,
     required this.customerDisplayName,
     required this.flightNumber,
@@ -280,6 +281,7 @@ class BookingSummary {
       destinationLatitude: _optionalDouble(json['destinationLatitude']),
       destinationLongitude: _optionalDouble(json['destinationLongitude']),
       passengerCount: passengerCount?.toInt(),
+      serviceType: BookingType.fromJson(json['serviceType']),
       vehicleType: BookingType.fromJson(json['vehicleType']),
       customerDisplayName: _optionalString(json['customerDisplayName']),
       flightNumber: _optionalString(json['flightNumber']),
@@ -313,6 +315,7 @@ class BookingSummary {
   final double? destinationLatitude;
   final double? destinationLongitude;
   final int? passengerCount;
+  final BookingType serviceType;
   final BookingType vehicleType;
   final String? customerDisplayName;
   final String? flightNumber;
@@ -352,6 +355,7 @@ class BookingSummary {
     destinationLatitude: destinationLatitude,
     destinationLongitude: destinationLongitude,
     passengerCount: passengerCount,
+    serviceType: serviceType,
     vehicleType: vehicleType,
     customerDisplayName: customerDisplayName,
     flightNumber: flightNumber,
