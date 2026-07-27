@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
-import 'package:frontend/features/booking/services/recent_locations_storage.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
-import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/utils/pickup_time_format.dart';
 import 'package:frontend/features/booking/widgets/name_sign_info_card.dart';
 import 'package:frontend/features/booking/widgets/pickup_time_picker_sheet.dart';
+import 'package:frontend/features/booking/widgets/step_confirmation.dart';
 import 'package:frontend/features/booking/widgets/step_origin_select.dart';
 import 'package:frontend/features/booking/widgets/step_destination_select.dart';
+import 'package:frontend/features/booking/widgets/step_passengers_luggage.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:provider/provider.dart';
@@ -25,14 +25,6 @@ class _NoopStorage extends BookingStateStorage {
 
   @override
   Future<void> save(BookingWizardState state) async {}
-}
-
-class _MemoryRecentLocationsRepository implements RecentLocationsRepository {
-  @override
-  Future<void> add(LocationOption location) async {}
-
-  @override
-  Future<List<LocationOption>> load() async => [];
 }
 
 void main() {
@@ -70,7 +62,11 @@ void main() {
 
     test('rejects invalid manual input', () {
       expect(
-        PickupTimeFormat.parseManualInput('99:99 AM', amLabel: 'AM', pmLabel: 'PM'),
+        PickupTimeFormat.parseManualInput(
+          '99:99 AM',
+          amLabel: 'AM',
+          pmLabel: 'PM',
+        ),
         isNull,
       );
     });
@@ -84,10 +80,7 @@ void main() {
     });
 
     test('requires name and phone but not email or country', () async {
-      await controller.updateCustomerInfo(
-        name: 'Jane',
-        phone: '+66123456789',
-      );
+      await controller.updateCustomerInfo(name: 'Jane', phone: '+66123456789');
       expect(controller.canProceedFromStep(6), isTrue);
 
       await controller.updateCustomerInfo(
@@ -169,14 +162,37 @@ void main() {
   });
 
   group('name sign info card', () {
-    testWidgets('hidden when disabled and visible when enabled', (tester) async {
+    Future<void> pumpPassengerStep(
+      WidgetTester tester, {
+      required BookingWizardState state,
+      BookingWizardController? controller,
+    }) async {
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(),
+          child: MaterialApp(
+            home: Scaffold(
+              body: StepPassengersLuggage(
+                state: state,
+                controller:
+                    controller ??
+                    BookingWizardController(storage: _NoopStorage()),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('hidden when disabled and visible when enabled', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ChangeNotifierProvider(
           create: (_) => LocaleState(),
           child: const MaterialApp(
-            home: Scaffold(
-              body: NameSignInfoCard(visible: true),
-            ),
+            home: Scaffold(body: NameSignInfoCard(visible: true)),
           ),
         ),
       );
@@ -191,6 +207,64 @@ void main() {
       expect(description, contains('100 THB'));
       expect(description, contains('Gate 3'));
     });
+
+    testWidgets('name sign text field is hidden until name sign is enabled', (
+      tester,
+    ) async {
+      await pumpPassengerStep(tester, state: const BookingWizardState());
+
+      expect(find.text('Name to display on the name sign'), findsNothing);
+
+      await pumpPassengerStep(
+        tester,
+        state: const BookingWizardState(nameSign: true),
+      );
+
+      expect(find.text('Name to display on the name sign'), findsOneWidget);
+    });
+
+    testWidgets('blank name sign text blocks the passenger step', (
+      tester,
+    ) async {
+      final controller = BookingWizardController(storage: _NoopStorage());
+
+      await controller.updatePassengersAndLuggage(nameSign: true);
+      expect(controller.canProceedFromStep(4), isFalse);
+      expect(
+        controller.stepValidationMessageKey(4),
+        'wizard_required_name_sign_text',
+      );
+
+      await controller.updatePassengersAndLuggage(nameSignText: '   ');
+      expect(controller.canProceedFromStep(4), isFalse);
+
+      await controller.updatePassengersAndLuggage(
+        nameSignText: '  KIM FAMILY  ',
+      );
+      expect(controller.canProceedFromStep(4), isTrue);
+    });
+
+    testWidgets('confirmation shows entered name sign text', (tester) async {
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(),
+          child: const MaterialApp(
+            home: Scaffold(
+              body: StepConfirmation(
+                state: BookingWizardState(
+                  nameSign: true,
+                  nameSignText: '  KIM FAMILY  ',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Name to display on the name sign'), findsOneWidget);
+      expect(find.text('KIM FAMILY'), findsOneWidget);
+    });
   });
 
   group('pickup time picker sheet', () {
@@ -200,10 +274,7 @@ void main() {
           create: (_) => LocaleState(),
           child: MaterialApp(
             home: Scaffold(
-              body: PickupTimePickerSheet(
-                initialHour24: 9,
-                initialMinute: 30,
-              ),
+              body: PickupTimePickerSheet(initialHour24: 9, initialMinute: 30),
             ),
           ),
         ),

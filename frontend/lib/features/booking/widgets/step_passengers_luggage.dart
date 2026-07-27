@@ -163,6 +163,17 @@ class StepPassengersLuggage extends StatelessWidget {
                 controller.updatePassengersAndLuggage(nameSign: v),
           ),
         ),
+        if (state.nameSign) ...[
+          SizedBox(
+            height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm,
+          ),
+          _NameSignTextField(
+            initialValue: state.nameSignText ?? '',
+            embedded: embedded,
+            onChanged: (value) =>
+                controller.updatePassengersAndLuggage(nameSignText: value),
+          ),
+        ],
         NameSignInfoCard(visible: state.nameSign),
         if (!embedded) ...[
           SizedBox(height: gap),
@@ -184,6 +195,80 @@ class StepPassengersLuggage extends StatelessWidget {
     return SingleChildScrollView(
       padding: AppUi.pagePadding(context),
       child: content,
+    );
+  }
+}
+
+class _NameSignTextField extends StatefulWidget {
+  final String initialValue;
+  final bool embedded;
+  final ValueChanged<String> onChanged;
+
+  const _NameSignTextField({
+    required this.initialValue,
+    required this.embedded,
+    required this.onChanged,
+  });
+
+  @override
+  State<_NameSignTextField> createState() => _NameSignTextFieldState();
+}
+
+class _NameSignTextFieldState extends State<_NameSignTextField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void didUpdateWidget(covariant _NameSignTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue != oldWidget.initialValue &&
+        widget.initialValue != _controller.text) {
+      _controller.text = widget.initialValue;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final trimmed = _controller.text.trim();
+    final showRequiredError = trimmed.isEmpty;
+    final showLengthError = trimmed.length > 100;
+
+    return AppUi.surfaceCard(
+      padding: widget.embedded
+          ? const EdgeInsets.symmetric(
+              horizontal: WizardCompact.cardPadding,
+              vertical: 8,
+            )
+          : const EdgeInsets.all(AppTokens.spaceMd),
+      child: TextField(
+        controller: _controller,
+        maxLength: 100,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(
+          labelText: l10n.t('name_sign_text_label'),
+          hintText: l10n.t('name_sign_text_hint'),
+          errorText: showRequiredError || showLengthError
+              ? l10n.t('wizard_required_name_sign_text')
+              : null,
+          counterText: '',
+        ),
+        onChanged: (value) {
+          setState(() {});
+          widget.onChanged(value);
+        },
+      ),
     );
   }
 }

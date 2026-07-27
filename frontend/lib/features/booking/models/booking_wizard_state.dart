@@ -18,6 +18,7 @@ class BookingWizardState {
   final int golfBags;
   final int specialLuggageCount;
   final bool nameSign;
+  final String? nameSignText;
   final VehicleRecommendation? recommendation;
   final String? selectedVehicle;
   final PricingResult? pricing;
@@ -46,6 +47,7 @@ class BookingWizardState {
     this.golfBags = 0,
     this.specialLuggageCount = 0,
     this.nameSign = false,
+    this.nameSignText,
     this.recommendation,
     this.selectedVehicle,
     this.pricing,
@@ -80,6 +82,7 @@ class BookingWizardState {
     int? golfBags,
     int? specialLuggageCount,
     bool? nameSign,
+    String? nameSignText,
     VehicleRecommendation? recommendation,
     bool clearRecommendation = false,
     bool clearSelectedVehicle = false,
@@ -112,6 +115,7 @@ class BookingWizardState {
       golfBags: golfBags ?? this.golfBags,
       specialLuggageCount: specialLuggageCount ?? this.specialLuggageCount,
       nameSign: nameSign ?? this.nameSign,
+      nameSignText: nameSignText ?? this.nameSignText,
       recommendation: clearRecommendation
           ? null
           : (recommendation ?? this.recommendation),
@@ -146,6 +150,7 @@ class BookingWizardState {
     'golfBags': golfBags,
     'specialLuggageCount': specialLuggageCount,
     'nameSign': nameSign,
+    'nameSignText': nameSignText,
     'selectedVehicle': selectedVehicle,
     'customerName': customerName,
     'customerEmail': customerEmail,
@@ -183,6 +188,7 @@ class BookingWizardState {
       golfBags: json['golfBags'] as int? ?? 0,
       specialLuggageCount: json['specialLuggageCount'] as int? ?? 0,
       nameSign: json['nameSign'] as bool? ?? false,
+      nameSignText: json['nameSignText'] as String?,
       selectedVehicle: json['selectedVehicle'] as String?,
       customerName: json['customerName'] as String? ?? '',
       customerEmail: json['customerEmail'] as String? ?? '',

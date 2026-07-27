@@ -105,6 +105,12 @@ class StepConfirmation extends StatelessWidget {
                 label: l10n.t('name_sign'),
                 value: l10n.t('yes'),
               ),
+            if (state.nameSign &&
+                (state.nameSignText?.trim().isNotEmpty ?? false))
+              AppUi.summaryRow(
+                label: l10n.t('name_sign_text_label'),
+                value: state.nameSignText!.trim(),
+              ),
           ],
         ),
         const SizedBox(height: 12),

@@ -396,7 +396,17 @@ class BookingWizardController extends ChangeNotifier {
     int? golfBags,
     int? specialLuggageCount,
     bool? nameSign,
+    String? nameSignText,
   }) async {
+    final affectsRecommendationOrPricing =
+        adults != null ||
+        children != null ||
+        infants != null ||
+        luggage20 != null ||
+        luggage24 != null ||
+        golfBags != null ||
+        specialLuggageCount != null ||
+        nameSign != null;
     _state = _state.copyWith(
       adults: adults,
       children: children,
@@ -406,18 +416,21 @@ class BookingWizardController extends ChangeNotifier {
       golfBags: golfBags,
       specialLuggageCount: specialLuggageCount,
       nameSign: nameSign,
-      clearRecommendation: true,
-      clearPricing: true,
+      nameSignText: nameSignText,
+      clearRecommendation: affectsRecommendationOrPricing,
+      clearPricing: affectsRecommendationOrPricing,
       clearError: true,
     );
-    _recommendationGeneration += 1;
-    _pricingGeneration += 1;
+    if (affectsRecommendationOrPricing) {
+      _recommendationGeneration += 1;
+      _pricingGeneration += 1;
+    }
     await _persist();
-    if (canLoadRecommendation()) {
+    if (affectsRecommendationOrPricing && canLoadRecommendation()) {
       _setLoading(true);
     }
     notifyListeners();
-    if (canLoadRecommendation()) {
+    if (affectsRecommendationOrPricing && canLoadRecommendation()) {
       await loadRecommendation();
     }
   }
@@ -514,7 +527,10 @@ class BookingWizardController extends ChangeNotifier {
         'golfBags': _state.golfBags,
         'specialLuggageCount': _state.specialLuggageCount,
       },
-      'options': {'nameSign': _state.nameSign},
+      'options': {
+        'nameSign': _state.nameSign,
+        if (_state.nameSign) 'nameSignText': _state.nameSignText?.trim(),
+      },
       if (airportIata != null)
         'transfer': {
           'airportIata': airportIata,
@@ -575,11 +591,17 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<BookingCreateResult?> submitBooking() async {
-    return _submitBooking(bookingMode: 'STANDARD', validatePickup: isStandardPickupAllowed);
+    return _submitBooking(
+      bookingMode: 'STANDARD',
+      validatePickup: isStandardPickupAllowed,
+    );
   }
 
   Future<BookingCreateResult?> submitUrgentBooking() async {
-    return _submitBooking(bookingMode: 'URGENT', validatePickup: isUrgentPickupWindow);
+    return _submitBooking(
+      bookingMode: 'URGENT',
+      validatePickup: isUrgentPickupWindow,
+    );
   }
 
   Future<BookingCreateResult?> _submitBooking({
@@ -653,6 +675,9 @@ class BookingWizardController extends ChangeNotifier {
     }
     if (field.startsWith('passengers.') || field.startsWith('luggage.')) {
       return (step: 4, messageKey: 'wizard_required_passengers');
+    }
+    if (field == 'options.nameSignText') {
+      return (step: 4, messageKey: 'wizard_required_name_sign_text');
     }
     if (field == 'vehicleTypeCode' || field == 'vehicleCount') {
       return (step: 5, messageKey: 'wizard_required_vehicle');
@@ -948,6 +973,15 @@ class BookingWizardController extends ChangeNotifier {
 
   Future<bool> goNext() async {
     if (_state.step == 4) {
+      if (!canProceedFromStep(4)) {
+        _state = _state.copyWith(
+          errorMessage: stepValidationMessageKey(4),
+          clearRecommendation: true,
+        );
+        await _persist();
+        notifyListeners();
+        return false;
+      }
       await loadRecommendation();
       if (_state.recommendation == null && _state.errorMessage != null) {
         return false;
@@ -1007,6 +1041,12 @@ class BookingWizardController extends ChangeNotifier {
     return true;
   }
 
+  bool _isNameSignTextValid() {
+    if (!_state.nameSign) return true;
+    final text = _state.nameSignText?.trim() ?? '';
+    return text.isNotEmpty && text.length <= 100;
+  }
+
   bool canProceedFromStep(int step) {
     switch (step) {
       case 0:
@@ -1019,7 +1059,7 @@ class BookingWizardController extends ChangeNotifier {
         final selected = selectedPickupDateTime();
         return selected != null && isPickupSelectable(selected);
       case 4:
-        return _state.adults >= 1;
+        return _state.adults >= 1 && _isNameSignTextValid();
       case 5:
         return _state.selectedVehicle != null && _state.pricing != null;
       case 6:
@@ -1102,7 +1142,8 @@ class BookingWizardController extends ChangeNotifier {
     return true;
   }
 
-  bool canSubmitStandard() => canSubmitAll(validatePickup: isStandardPickupAllowed);
+  bool canSubmitStandard() =>
+      canSubmitAll(validatePickup: isStandardPickupAllowed);
 
   bool canSubmitUrgent() => canSubmitAll(validatePickup: isUrgentPickupWindow);
 
@@ -1131,6 +1172,9 @@ class BookingWizardController extends ChangeNotifier {
         }
         return _state.errorMessage ?? 'pickup_time_minimum';
       case 4:
+        if (!_isNameSignTextValid()) {
+          return 'wizard_required_name_sign_text';
+        }
         return 'wizard_required_passengers';
       case 5:
         if (_state.selectedVehicle == null) {
