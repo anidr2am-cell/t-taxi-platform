@@ -785,7 +785,14 @@ class BookingRepository {
         b.currency,
         b.commission_amount,
         b.payment_method,
-        b.name_sign_requested,
+        EXISTS (
+          SELECT 1
+          FROM booking_charge_items bci
+          WHERE bci.booking_id = b.id
+            AND bci.charge_type = 'NAME_SIGN'
+            AND bci.deleted_at IS NULL
+          LIMIT 1
+        ) AS name_sign_requested,
         b.name_sign_text,
         st.code AS service_type_code,
         st.name AS service_type_name,
