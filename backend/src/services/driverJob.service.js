@@ -253,6 +253,7 @@ class DriverJobService {
       destinationLatitude: this.location(row.destination_lat),
       destinationLongitude: this.location(row.destination_lng),
       passengerCount: this.passengerCount(row),
+      nameSignRequested: Boolean(row.name_sign_requested),
       vehicleType: {
         code: row.vehicle_type_code,
         name: row.vehicle_type_name,
@@ -325,7 +326,6 @@ class DriverJobService {
       },
       specialInstructions: row.special_requests,
       paymentMethod: row.payment_method,
-      nameSignRequested: Boolean(row.name_sign_requested),
       capabilities: this.releaseCapabilities(row),
       qr: {
         boarding: {

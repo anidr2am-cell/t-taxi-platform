@@ -707,6 +707,7 @@ class BookingRepository {
         b.currency,
         b.commission_amount,
         b.payment_method,
+        b.name_sign_requested,
         st.code AS service_type_code,
         st.name AS service_type_name,
         vt.code AS vehicle_type_code,
