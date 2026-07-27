@@ -26,3 +26,17 @@ String formatBookingLocation(BookingLocation location) {
   ];
   return parts.isEmpty ? '위치 정보 없음' : parts.join('\n');
 }
+
+const assignmentReleasedDefaultCloseMessage =
+    '이 예약의 배정이 종료되어 목록으로 돌아갑니다.';
+
+const assignmentReleasedAdminCloseMessage =
+    '관리자에 의해 배정이 취소되어 목록으로 돌아갑니다. 자세한 사항은 고객센터로 문의해주세요.';
+
+String assignmentReleasedCloseMessage(Map<String, dynamic> payload) {
+  final reasonCode = payload['reasonCode']?.toString().trim();
+  if (reasonCode == 'ADMIN_RELEASED') {
+    return assignmentReleasedAdminCloseMessage;
+  }
+  return assignmentReleasedDefaultCloseMessage;
+}

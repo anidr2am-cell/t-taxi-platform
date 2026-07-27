@@ -123,6 +123,29 @@ void main() {
     );
     await subscription.cancel();
   });
+
+  test('forwards assignment released payload including reasonCode', () async {
+    late _FakeSocketTransport transport;
+    final service = DriverSocketService(
+      config: AppConfig.forEnvironment(AppEnvironment.stg),
+      storage: FakeTokenStorage(const AuthTokens(accessToken: 'socket-jwt')),
+      transportFactory: (_, _) => transport = _FakeSocketTransport(),
+    );
+    final received = <DriverSocketEvent>[];
+    final subscription = service.events.listen(received.add);
+    await service.connect();
+
+    transport.trigger('driver:assignment:released', {
+      'bookingNumber': 'TX209912319999',
+      'reasonCode': 'ADMIN_RELEASED',
+    });
+    await Future<void>.delayed(Duration.zero);
+
+    expect(received.single.type, DriverSocketEventType.assignmentReleased);
+    expect(received.single.payload['bookingNumber'], 'TX209912319999');
+    expect(received.single.payload['reasonCode'], 'ADMIN_RELEASED');
+    await subscription.cancel();
+  });
 }
 
 class _FakeSocketTransport implements DriverSocketTransport {

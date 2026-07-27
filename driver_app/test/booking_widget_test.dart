@@ -926,6 +926,53 @@ void main() {
     },
   );
 
+  testWidgets(
+    'assignment released with ADMIN_RELEASED shows admin cancel message',
+    (tester) async {
+      final reader = FakeBookingReader();
+      final socket = FakeDriverSocketConnection();
+      await pumpBookingList(tester, reader, socketEvents: socket.events);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('detailSuccess')), findsOneWidget);
+
+      socket.emit(DriverSocketEventType.assignmentReleased, {
+        'bookingNumber': 'TX209912319999',
+        'reasonCode': 'ADMIN_RELEASED',
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+      expect(find.textContaining('관리자에 의해 배정이 취소되어'), findsOneWidget);
+      expect(find.textContaining('고객센터로 문의해주세요'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'assignment released with DRIVER_RELEASED keeps default close message',
+    (tester) async {
+      final reader = FakeBookingReader();
+      final socket = FakeDriverSocketConnection();
+      await pumpBookingList(tester, reader, socketEvents: socket.events);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+      await tester.pumpAndSettle();
+
+      socket.emit(DriverSocketEventType.assignmentReleased, {
+        'bookingNumber': 'TX209912319999',
+        'reasonCode': 'DRIVER_RELEASED',
+      });
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('이 예약의 배정이 종료되어 목록으로 돌아갑니다.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('관리자에 의해 배정이 취소되어'), findsNothing);
+    },
+  );
+
   final tripCases =
       <
         ({

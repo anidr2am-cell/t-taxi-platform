@@ -93,7 +93,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     }
     final bookingNumber = event.payload['bookingNumber']?.toString();
     if (bookingNumber != widget.bookingNumber) return;
-    _closeDetail(refreshList: true, message: '이 예약의 배정이 종료되어 목록으로 돌아갑니다.');
+    _closeDetail(
+      refreshList: true,
+      message: assignmentReleasedCloseMessage(event.payload),
+    );
   }
 
   @override
