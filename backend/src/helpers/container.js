@@ -25,6 +25,8 @@ const BookingNumberService = require("../services/bookingNumber.service");
 const BookingService = require("../services/booking.service");
 const GuestBookingLookupService = require("../services/guestBookingLookup.service");
 const GuestVehiclePhotoService = require("../services/guestVehiclePhoto.service");
+const GuestNameSignPhotoService = require("../services/guestNameSignPhoto.service");
+const BookingNameSignPhotoService = require("../services/bookingNameSignPhoto.service");
 const BookingStatusService = require("../services/bookingStatus.service");
 const AdminDashboardService = require("../services/adminDashboard.service");
 const FlightService = require("../services/flight.service");
@@ -227,6 +229,10 @@ container.register(
   (c) => new GuestVehiclePhotoService(c.get("bookingRepository")),
 );
 container.register(
+  "guestNameSignPhotoService",
+  (c) => new GuestNameSignPhotoService(c.get("bookingRepository")),
+);
+container.register(
   "guestBookingLookupService",
   (c) =>
     new GuestBookingLookupService(
@@ -259,6 +265,15 @@ container.register(
 container.register(
   "driverJobService",
   (c) => new DriverJobService(c.get("bookingRepository")),
+);
+container.register(
+  "bookingNameSignPhotoService",
+  (c) =>
+    new BookingNameSignPhotoService(
+      database.pool,
+      c.get("bookingRepository"),
+      c.get("fileRepository"),
+    ),
 );
 container.register(
   "driverCallService",

@@ -58,4 +58,11 @@ router.get(
   bookingController.getGuestAssignedDriverVehiclePhoto,
 );
 
+router.get(
+  '/bookings/:bookingId/name-sign-photo',
+  bookingLookupRateLimit,
+  validate({ params: bookingIdParamsSchema }),
+  require('../controllers/bookingNameSignPhoto.controller').getGuestNameSignPhoto,
+);
+
 module.exports = router;

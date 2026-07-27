@@ -3,6 +3,7 @@ const driverController = require('../controllers/driver.controller');
 const driverProfileController = require('../controllers/driverProfile.controller');
 const driverVehicleController = require('../controllers/driverVehicle.controller');
 const driverLocationController = require('../controllers/driverLocation.controller');
+const bookingNameSignPhotoController = require('../controllers/bookingNameSignPhoto.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
 const validate = require('../middlewares/validate.middleware');
@@ -88,6 +89,16 @@ router.post('/bookings/:bookingNumber/arrive', driverController.markArrived);
 router.post('/bookings/:bookingNumber/mark-picked-up', driverController.markPickedUp);
 router.post('/bookings/:bookingNumber/end-trip', driverController.endTrip);
 router.post('/bookings/:bookingNumber/complete', driverController.completeTrip);
+router.post(
+  '/bookings/:bookingNumber/name-sign-photo',
+  single,
+  bookingNameSignPhotoController.handleUploadError,
+  bookingNameSignPhotoController.uploadDriverNameSignPhoto,
+);
+router.get(
+  '/bookings/:bookingNumber/name-sign-photo',
+  bookingNameSignPhotoController.getDriverNameSignPhoto,
+);
 router.post(
   '/bookings/:bookingNumber/release',
   validate({ body: releaseAssignmentSchema }),

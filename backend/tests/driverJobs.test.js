@@ -67,6 +67,7 @@ function row(overrides = {}) {
     delay_minutes: 10,
     name_sign_requested: 1,
     name_sign_text: 'KIM FAMILY',
+    name_sign_photo_file_id: null,
     ...overrides,
   };
 }
@@ -286,7 +287,7 @@ test('driver can access assigned booking detail', async () => {
     async findActiveDriverBookingByNumber(driverUserId, bookingNumber) {
       assert.equal(driverUserId, 44);
       assert.equal(bookingNumber, 'TX202607010001');
-      return row();
+      return row({ name_sign_photo_file_id: 501 });
     },
   });
 
@@ -301,6 +302,10 @@ test('driver can access assigned booking detail', async () => {
   assert.equal(detail.destinationLongitude, 100.8825);
   assert.equal(detail.nameSignRequested, true);
   assert.equal(detail.nameSignText, 'KIM FAMILY');
+  assert.equal(
+    detail.nameSignPhotoUrl,
+    '/api/v1/driver/bookings/TX202607010001/name-sign-photo',
+  );
   assert.equal(detail.standbyReferenceTimeType, 'AIRPORT_ARRIVAL');
   assert.equal(detail.standbyReferenceTime, '2026-07-01 09:30:00');
   assert.equal(detail.standbyAllowedAt, '2026-07-01T01:30:00.000Z');

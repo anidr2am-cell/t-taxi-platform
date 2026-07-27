@@ -163,6 +163,11 @@ class DriverJobService {
     };
   }
 
+  nameSignPhotoUrl(row) {
+    if (!row.name_sign_photo_file_id) return null;
+    return `/api/v1/driver/bookings/${row.booking_number}/name-sign-photo`;
+  }
+
   location(value) {
     if (value == null) return null;
     const parsed = Number(value);
@@ -255,6 +260,7 @@ class DriverJobService {
       passengerCount: this.passengerCount(row),
       nameSignRequested: Boolean(row.name_sign_requested),
       nameSignText: row.name_sign_text || null,
+      nameSignPhotoUrl: this.nameSignPhotoUrl(row),
       vehicleType: {
         code: row.vehicle_type_code,
         name: row.vehicle_type_name,

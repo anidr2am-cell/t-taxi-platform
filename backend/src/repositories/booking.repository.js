@@ -486,6 +486,38 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  async findGuestNameSignPhotoFile(bookingId, tokenHash) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          f.file_path,
+          f.mime_type,
+          f.original_filename
+        FROM bookings b
+        INNER JOIN guest_access_tokens gat ON gat.booking_id = b.id
+          AND gat.token_hash = ?
+          AND gat.revoked_at IS NULL
+          AND gat.expires_at > CURRENT_TIMESTAMP
+        INNER JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+        INNER JOIN drivers d ON d.id = bda.driver_id
+          AND d.deleted_at IS NULL
+        INNER JOIN files f ON f.id = b.name_sign_photo_file_id
+          AND f.entity_type = 'BOOKING_NAME_SIGN_PHOTO'
+          AND f.entity_id = b.id
+          AND f.uploaded_by_user_id = d.user_id
+          AND f.deleted_at IS NULL
+        WHERE b.id = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+        LIMIT 1
+      `,
+      [tokenHash, bookingId],
+    );
+    return rows[0] || null;
+  }
+
   driverJobSelectCoreSql() {
     return `
       SELECT
@@ -508,6 +540,7 @@ class BookingRepository {
         b.metadata,
         b.customer_name,
         b.name_sign_text,
+        b.name_sign_photo_file_id,
         b.customer_phone,
         b.special_requests,
         b.total_amount,
@@ -689,6 +722,47 @@ class BookingRepository {
         AND b.booking_number = ?
         LIMIT 1
         FOR UPDATE
+      `,
+      [driverUserId, bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  async updateNameSignPhotoFile(conn, bookingId, fileId, updatedBy) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET name_sign_photo_file_id = ?,
+            updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [fileId, updatedBy, bookingId],
+    );
+  }
+
+  async findNameSignPhotoFileForDriver(driverUserId, bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          f.file_path,
+          f.mime_type,
+          f.original_filename
+        FROM bookings b
+        INNER JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+          AND bda.deleted_at IS NULL
+          AND bda.is_active = 1
+        INNER JOIN drivers d ON d.id = bda.driver_id
+          AND d.deleted_at IS NULL
+          AND d.user_id = ?
+        INNER JOIN files f ON f.id = b.name_sign_photo_file_id
+          AND f.entity_type = 'BOOKING_NAME_SIGN_PHOTO'
+          AND f.entity_id = b.id
+          AND f.deleted_at IS NULL
+        WHERE b.booking_number = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+        LIMIT 1
       `,
       [driverUserId, bookingNumber],
     );
