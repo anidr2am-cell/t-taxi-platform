@@ -57,6 +57,32 @@ test('booking validator accepts valid email', () => {
   assert.equal(value.customer.email, 'kim@example.com');
 });
 
+test('booking validator requires name sign text only when name sign is selected', () => {
+  const missingText = createBookingSchema.validate(validPayload({
+    options: { nameSign: true },
+  }));
+  assert.ok(missingText.error);
+  assert.equal(missingText.error.details[0].path.join('.'), 'options.nameSignText');
+
+  const blankText = createBookingSchema.validate(validPayload({
+    options: { nameSign: true, nameSignText: '   ' },
+  }));
+  assert.ok(blankText.error);
+  assert.equal(blankText.error.details[0].path.join('.'), 'options.nameSignText');
+
+  const withText = createBookingSchema.validate(validPayload({
+    options: { nameSign: true, nameSignText: '  KIM FAMILY  ' },
+  }));
+  assert.equal(withText.error, undefined);
+  assert.equal(withText.value.options.nameSignText, 'KIM FAMILY');
+
+  const withoutNameSign = createBookingSchema.validate(validPayload({
+    options: { nameSign: false, nameSignText: '' },
+  }));
+  assert.equal(withoutNameSign.error, undefined);
+  assert.equal(withoutNameSign.value.options.nameSignText, null);
+});
+
 test('booking validator accepts missing customer email', () => {
   const payload = validPayload({
     customer: {

@@ -66,6 +66,7 @@ function row(overrides = {}) {
     delay_status: 'Delayed 10 min',
     delay_minutes: 10,
     name_sign_requested: 1,
+    name_sign_text: 'KIM FAMILY',
     ...overrides,
   };
 }
@@ -82,6 +83,7 @@ test('DRIVER can access today endpoint', async () => {
             status: 'DRIVER_ASSIGNED',
             assignmentStatus: 'ASSIGNED',
             nameSignRequested: true,
+            nameSignText: 'KIM FAMILY',
           },
         ],
       };
@@ -97,6 +99,7 @@ test('DRIVER can access today endpoint', async () => {
   assert.equal(res.body.data.items[0].status, 'DRIVER_ASSIGNED');
   assert.equal(res.body.data.items[0].assignmentStatus, 'ASSIGNED');
   assert.equal(res.body.data.items[0].nameSignRequested, true);
+  assert.equal(res.body.data.items[0].nameSignText, 'KIM FAMILY');
 });
 
 test('DRIVER can access scheduled endpoint', async () => {
@@ -105,7 +108,12 @@ test('DRIVER can access scheduled endpoint', async () => {
       assert.equal(driverUserId, 44);
       return {
         date: '2026-07-01',
-        items: [{ bookingNumber: 'TX209901010002', status: 'ON_ROUTE', nameSignRequested: false }],
+        items: [{
+          bookingNumber: 'TX209901010002',
+          status: 'ON_ROUTE',
+          nameSignRequested: false,
+          nameSignText: null,
+        }],
       };
     },
   }));
@@ -117,6 +125,7 @@ test('DRIVER can access scheduled endpoint', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.data.items[0].bookingNumber, 'TX209901010002');
   assert.equal(res.body.data.items[0].nameSignRequested, false);
+  assert.equal(res.body.data.items[0].nameSignText, null);
 });
 
 test('DRIVER detail endpoint returns accepted assignment status', async () => {
@@ -291,6 +300,7 @@ test('driver can access assigned booking detail', async () => {
   assert.equal(detail.destinationLatitude, 12.9236);
   assert.equal(detail.destinationLongitude, 100.8825);
   assert.equal(detail.nameSignRequested, true);
+  assert.equal(detail.nameSignText, 'KIM FAMILY');
   assert.equal(detail.standbyReferenceTimeType, 'AIRPORT_ARRIVAL');
   assert.equal(detail.standbyReferenceTime, '2026-07-01 09:30:00');
   assert.equal(detail.standbyAllowedAt, '2026-07-01T01:30:00.000Z');
@@ -515,7 +525,9 @@ test('driver assigned booking requires acceptance before start route action', ()
   const service = new DriverJobService({});
 
   assert.equal(service.mapBase(row({ name_sign_requested: 1 })).nameSignRequested, true);
+  assert.equal(service.mapBase(row({ name_sign_text: 'KIM FAMILY' })).nameSignText, 'KIM FAMILY');
   assert.equal(service.mapBase(row({ name_sign_requested: 0 })).nameSignRequested, false);
+  assert.equal(service.mapBase(row({ name_sign_text: '' })).nameSignText, null);
   assert.deepEqual(
     service.mapBase(row({ assignment_status: 'ASSIGNED' })).allowedActions,
     ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT', 'ACCEPT_BOOKING'],

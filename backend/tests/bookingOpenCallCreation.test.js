@@ -43,6 +43,7 @@ const BOOKING_INPUT = {
   destination: { name: 'Pattaya Hotel', placeId: 'destination-place' },
   passengers: { adults: 2, children: 0, infants: 0 },
   luggage: { carriers20Inch: 1, carriers24InchPlus: 0, golfBags: 0 },
+  options: { nameSign: true, nameSignText: 'KIM FAMILY' },
   customer: { name: 'Test Customer', phone: '0800000000' },
 };
 
@@ -160,6 +161,7 @@ test('OPEN booking derives total from charge items and notifies eligible drivers
 
     assert.equal(calls.booking.totalAmount, 0);
     assert.equal(calls.booking.status, BOOKING_STATUS.OPEN);
+    assert.equal(calls.booking.nameSignText, 'KIM FAMILY');
     assert.deepEqual(calls.chargeItems.map((item) => item.amount), [1000, 200]);
     assert.equal(state.totalAmount, PRICE.totalAmount);
     assert.equal(result.totalAmount, PRICE.totalAmount);

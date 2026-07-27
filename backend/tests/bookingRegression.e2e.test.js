@@ -65,7 +65,7 @@ function scenarioPayload({
     destinationLocationCode: 'PATTAYA',
     passengers: { adults: 2, children: 0, infants: 0 },
     luggage: { carriers20Inch: 1, carriers24InchPlus: 1, golfBags: 0 },
-    options: { nameSign: true },
+    options: { nameSign: true, nameSignText: 'John Regression' },
     transfer: { airportIata: 'BKK', flightNumber },
     customer: {
       name: customerName,

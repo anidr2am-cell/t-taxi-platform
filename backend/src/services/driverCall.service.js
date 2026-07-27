@@ -113,6 +113,7 @@ class DriverCallService {
         name: row.service_type_name,
       },
       nameSignRequested: Boolean(row.name_sign_requested),
+      nameSignText: row.name_sign_text || null,
       vehicleType: {
         code: row.vehicle_type_code,
         name: row.vehicle_type_name,

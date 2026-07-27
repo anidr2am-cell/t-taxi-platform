@@ -49,7 +49,8 @@ class BookingRepository {
           destination_address, destination_place_id, destination_lat, destination_lng,
           scheduled_pickup_at, vehicle_type_id, recommended_vehicle_type_id, vehicle_count,
           route_id, total_amount, currency, payment_status, payment_method, commission_status,
-          customer_user_id, customer_name, customer_email, customer_phone, customer_country_code,
+          customer_user_id, customer_name, name_sign_text,
+          customer_email, customer_phone, customer_country_code,
           special_requests, metadata, boarding_qr_token_hash, boarding_qr_expires_at,
           is_urgent_request,
           created_by, updated_by
@@ -59,7 +60,7 @@ class BookingRepository {
           ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?
         )
@@ -88,6 +89,7 @@ class BookingRepository {
         row.commissionStatus,
         row.customerUserId,
         row.customerName,
+        row.nameSignText ?? null,
         row.customerEmail,
         row.customerPhone,
         row.customerCountryCode,
@@ -505,6 +507,7 @@ class BookingRepository {
         b.destination_lng,
         b.metadata,
         b.customer_name,
+        b.name_sign_text,
         b.customer_phone,
         b.special_requests,
         b.total_amount,
@@ -708,6 +711,7 @@ class BookingRepository {
         b.commission_amount,
         b.payment_method,
         b.name_sign_requested,
+        b.name_sign_text,
         st.code AS service_type_code,
         st.name AS service_type_name,
         vt.code AS vehicle_type_code,

@@ -13,6 +13,7 @@ const {
 } = require('../utils/flightNumber.util');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
+const nameSignTextField = Joi.string().trim().min(1).max(100);
 
 function normalizeOptionalEmail(value) {
   if (value == null) return null;
@@ -123,6 +124,11 @@ const createBookingSchema = Joi.object({
   }).default({}),
   options: Joi.object({
     nameSign: Joi.boolean().default(false),
+    nameSignText: Joi.when('nameSign', {
+      is: true,
+      then: nameSignTextField.required(),
+      otherwise: Joi.string().trim().max(100).allow(null, '').empty('').default(null),
+    }),
   }).default({}),
   transfer: Joi.object({
     airportIata: Joi.string().length(3).uppercase().allow(null),

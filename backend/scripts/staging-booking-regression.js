@@ -126,6 +126,7 @@ function bookingPayload({
   customerName,
   flightNumber,
 }) {
+  const nameSign = serviceTypeCode === 'AIRPORT_PICKUP';
   const common = {
     serviceTypeCode,
     vehicleTypeCode: 'SUV',
@@ -133,7 +134,9 @@ function bookingPayload({
     scheduledPickupAt: futurePickup(),
     passengers: { adults: 2, children: 0, infants: 0 },
     luggage: { carriers20Inch: 1, carriers24InchPlus: 1, golfBags: 0 },
-    options: { nameSign: serviceTypeCode === 'AIRPORT_PICKUP' },
+    options: nameSign
+      ? { nameSign: true, nameSignText: 'E2E Guest' }
+      : { nameSign: false },
     customer: {
       name: customerName,
       phone: '+66000000001',

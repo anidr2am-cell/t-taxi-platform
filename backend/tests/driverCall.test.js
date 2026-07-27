@@ -60,6 +60,7 @@ function openCallRow(overrides = {}) {
     golf_bags: 1,
     special_items: 'folding stroller',
     name_sign_requested: 1,
+    name_sign_text: 'KIM FAMILY',
     is_exact_vehicle_match: 1,
     ...overrides,
   };
@@ -344,6 +345,7 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(result.items[0].driverExpectedIncomeAmount, 2200);
   assert.equal(result.items[0].driverExpectedIncomeCurrency, 'THB');
   assert.equal(result.items[0].nameSignRequested, true);
+  assert.equal(result.items[0].nameSignText, 'KIM FAMILY');
   assert.equal(result.items[0].luggage.golfBags, 1);
   assert.equal(result.items[0].isExactVehicleMatch, true);
   assert.equal(result.items[0].vehicleMatchType, 'EXACT');

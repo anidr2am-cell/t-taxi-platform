@@ -345,6 +345,7 @@ class BookingService {
         commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
         customerUserId,
         customerName: input.customer.name,
+        nameSignText: input.options?.nameSign ? input.options.nameSignText : null,
         customerEmail: input.customer?.email ?? null,
         customerPhone: input.customer.phone,
         customerCountryCode: input.customer.countryCode?.trim() || null,
