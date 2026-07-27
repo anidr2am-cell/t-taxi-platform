@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../account/data/account_api.dart';
 import '../../account/presentation/account_page.dart';
 import '../../bookings/data/booking_repository.dart';
 import '../../bookings/presentation/booking_list_screen.dart';
+import '../../settlement/data/settlement_api.dart';
+import '../../settlement/presentation/settlement_list_page.dart';
 import '../data/dispatch_repository.dart';
 import '../data/driver_socket_service.dart';
 import 'open_calls_screen.dart';
@@ -17,6 +21,7 @@ class DriverHomeShell extends StatefulWidget {
     required this.onUnauthorized,
     required this.onLogout,
     this.accountApi,
+    this.settlementApi,
     this.driverSocket,
   });
 
@@ -26,6 +31,7 @@ class DriverHomeShell extends StatefulWidget {
   final Future<void> Function() onLogout;
   final DriverSocketConnection? driverSocket;
   final AccountDataSource? accountApi;
+  final SettlementDataSource? settlementApi;
 
   @override
   State<DriverHomeShell> createState() => _DriverHomeShellState();
@@ -34,9 +40,38 @@ class DriverHomeShell extends StatefulWidget {
 class _DriverHomeShellState extends State<DriverHomeShell> {
   int _selectedIndex = 0;
   bool _tripsVisited = false;
+  bool _settlementVisited = false;
   bool _accountVisited = false;
   bool _hasUrgentActivity = false;
   int _tripsRefreshRequest = 0;
+  int _settlementRefreshRequest = 0;
+  int _settlementBadge = 0;
+
+  int? get _settlementIndex => widget.settlementApi == null ? null : 2;
+  int? get _accountIndex {
+    if (widget.accountApi == null) return null;
+    return widget.settlementApi == null ? 2 : 3;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshSettlementBadge());
+  }
+
+  Future<void> _refreshSettlementBadge() async {
+    final api = widget.settlementApi;
+    if (api == null) return;
+    try {
+      final items = await api.listSettlements();
+      if (!mounted) return;
+      setState(() {
+        _settlementBadge = items.where((item) => item.countsForBadge).length;
+      });
+    } catch (_) {
+      // Badge refresh failure must not block the main driver workflow.
+    }
+  }
 
   Future<void> _selectTab(int index, {bool force = false}) async {
     if (!force &&
@@ -54,8 +89,18 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
         _tripsVisited = true;
         _tripsRefreshRequest++;
       }
-      if (index == 2) _accountVisited = true;
+      if (index == _settlementIndex) {
+        _settlementVisited = true;
+        _settlementRefreshRequest++;
+      }
+      if (index == _accountIndex) _accountVisited = true;
     });
+    if (index == _settlementIndex) unawaited(_refreshSettlementBadge());
+  }
+
+  void _openSettlementTab() {
+    final index = _settlementIndex;
+    if (index != null) unawaited(_selectTab(index, force: true));
   }
 
   @override
@@ -69,6 +114,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
               repository: widget.dispatchRepository,
               onUnauthorized: widget.onUnauthorized,
               onClaimed: () => _selectTab(1, force: true),
+              onOpenSettlement: _openSettlementTab,
               driverSocket: widget.driverSocket,
               onUrgentActivityChanged: (active) {
                 _hasUrgentActivity = active;
@@ -85,9 +131,19 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
                 refreshRequest: _tripsRefreshRequest,
               ),
             ),
+          if (_settlementVisited && widget.settlementApi != null)
+            Offstage(
+              offstage: _selectedIndex != _settlementIndex,
+              child: SettlementListPage(
+                api: widget.settlementApi!,
+                onUnauthorized: widget.onUnauthorized,
+                refreshRequest: _settlementRefreshRequest,
+                onChanged: _refreshSettlementBadge,
+              ),
+            ),
           if (_accountVisited && widget.accountApi != null)
             Offstage(
-              offstage: _selectedIndex != 2,
+              offstage: _selectedIndex != _accountIndex,
               child: AccountPage(
                 accountApi: widget.accountApi!,
                 dispatchRepository: widget.dispatchRepository,
@@ -111,6 +167,20 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
             selectedIcon: Icon(Icons.route),
             label: '내 운행',
           ),
+          if (widget.settlementApi != null)
+            NavigationDestination(
+              icon: Badge(
+                isLabelVisible: _settlementBadge > 0,
+                label: Text('$_settlementBadge'),
+                child: const Icon(Icons.payments_outlined),
+              ),
+              selectedIcon: Badge(
+                isLabelVisible: _settlementBadge > 0,
+                label: Text('$_settlementBadge'),
+                child: const Icon(Icons.payments),
+              ),
+              label: '정산',
+            ),
           if (widget.accountApi != null)
             const NavigationDestination(
               icon: Icon(Icons.account_circle_outlined),

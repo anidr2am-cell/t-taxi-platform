@@ -17,6 +17,7 @@ class OpenCallsScreen extends StatefulWidget {
     required this.repository,
     required this.onUnauthorized,
     required this.onClaimed,
+    this.onOpenSettlement,
     this.driverSocket,
     this.onUrgentActivityChanged,
   });
@@ -24,6 +25,7 @@ class OpenCallsScreen extends StatefulWidget {
   final DispatchReader repository;
   final Future<void> Function() onUnauthorized;
   final VoidCallback onClaimed;
+  final VoidCallback? onOpenSettlement;
   final DriverSocketConnection? driverSocket;
   final ValueChanged<bool>? onUrgentActivityChanged;
 
@@ -297,7 +299,11 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
       }
       if (!mounted) return;
       setState(() => _changingOnline = false);
-      _showMessage(error.userMessage);
+      _showMessage(
+        error.errorCode == 'DRIVER_NOT_ELIGIBLE'
+            ? '미해결 정산이 있어 새 콜을 받을 수 없습니다.'
+            : error.userMessage,
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _changingOnline = false);
@@ -622,6 +628,11 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
           key: const Key('openCallsEmpty'),
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
+            if (calls?.blockedReason == 'UNPAID_SETTLEMENT')
+              _SettlementBlockedCard(
+                message: calls?.message ?? '미해결 정산이 있어 새 콜을 받을 수 없습니다.',
+                onOpenSettlement: widget.onOpenSettlement,
+              ),
             const SizedBox(height: 140),
             const Icon(Icons.campaign_outlined, size: 52),
             const SizedBox(height: 12),
@@ -641,6 +652,11 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         key: const Key('openCallsList'),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          if (calls.blockedReason == 'UNPAID_SETTLEMENT')
+            _SettlementBlockedCard(
+              message: calls.message ?? '미해결 정산이 있어 새 콜을 받을 수 없습니다.',
+              onOpenSettlement: widget.onOpenSettlement,
+            ),
           if (urgentCalls.isNotEmpty)
             _UrgentCallsSection(
               calls: urgentCalls,
@@ -656,6 +672,57 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettlementBlockedCard extends StatelessWidget {
+  const _SettlementBlockedCard({
+    required this.message,
+    required this.onOpenSettlement,
+  });
+
+  final String message;
+  final VoidCallback? onOpenSettlement;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      key: const Key('settlementBlockedBanner'),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      color: colors.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: colors.error),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '미해결 정산 확인 필요',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(message),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                key: const Key('openSettlementFromBlockedBanner'),
+                onPressed: onOpenSettlement,
+                child: const Text('정산 확인하기'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

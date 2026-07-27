@@ -7,6 +7,7 @@ import '../features/auth/presentation/auth_gate.dart';
 import '../features/bookings/data/booking_repository.dart';
 import '../features/dispatch/data/dispatch_repository.dart';
 import '../features/dispatch/data/driver_socket_service.dart';
+import '../features/settlement/data/settlement_api.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({
@@ -16,6 +17,7 @@ class DriverApp extends StatelessWidget {
     required this.bookingRepository,
     required this.dispatchRepository,
     this.accountApi,
+    this.settlementApi,
     this.driverSocket,
   });
 
@@ -24,6 +26,7 @@ class DriverApp extends StatelessWidget {
   final BookingReader bookingRepository;
   final DispatchReader dispatchRepository;
   final AccountDataSource? accountApi;
+  final SettlementDataSource? settlementApi;
   final DriverSocketConnection? driverSocket;
 
   @override
@@ -41,6 +44,7 @@ class DriverApp extends StatelessWidget {
         bookingRepository: bookingRepository,
         dispatchRepository: dispatchRepository,
         accountApi: accountApi,
+        settlementApi: settlementApi,
         driverSocket: driverSocket,
       ),
     );

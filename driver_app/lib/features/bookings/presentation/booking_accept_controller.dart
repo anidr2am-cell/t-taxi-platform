@@ -190,6 +190,9 @@ class BookingAcceptController {
       case ApiFailureKind.validation:
       case ApiFailureKind.invalidFileType:
       case ApiFailureKind.fileTooLarge:
+      case ApiFailureKind.settlementNotFound:
+      case ApiFailureKind.receiptAlreadyApproved:
+      case ApiFailureKind.driverNotEligible:
       case ApiFailureKind.vehiclePlateAlreadyRegistered:
       case ApiFailureKind.urgentAlreadyLocked:
       case ApiFailureKind.urgentNotUrgentBooking:

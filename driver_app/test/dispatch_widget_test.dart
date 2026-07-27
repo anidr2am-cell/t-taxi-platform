@@ -12,6 +12,7 @@ Future<void> pumpOpenCalls(
   WidgetTester tester,
   FakeDispatchReader reader, {
   VoidCallback? onClaimed,
+  VoidCallback? onOpenSettlement,
   DriverSocketConnection? driverSocket,
 }) async {
   await tester.pumpWidget(
@@ -20,6 +21,7 @@ Future<void> pumpOpenCalls(
         repository: reader,
         onUnauthorized: () async {},
         onClaimed: onClaimed ?? () {},
+        onOpenSettlement: onOpenSettlement,
         driverSocket: driverSocket,
       ),
     ),
@@ -387,5 +389,77 @@ void main() {
     expect(find.text('오늘의 배정 예약'), findsOneWidget);
     expect(find.byKey(const Key('booking-TX209912319999')), findsOneWidget);
     expect(bookings.listCount, 2);
+  });
+
+  testWidgets('home shell exposes four tabs and pending settlement badge', (
+    tester,
+  ) async {
+    final settlement = FakeSettlementApi()
+      ..items = [
+        settlementItem(bookingNumber: 'TX-DUE', commissionStatus: 'DUE'),
+        settlementItem(
+          bookingNumber: 'TX-BLOCKED',
+          commissionStatus: 'APPROVED',
+          blocksNewCalls: true,
+        ),
+        settlementItem(bookingNumber: 'TX-OK', commissionStatus: 'APPROVED'),
+      ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverHomeShell(
+          bookingRepository: FakeBookingReader(),
+          dispatchRepository: FakeDispatchReader(),
+          accountApi: FakeAccountApi(),
+          settlementApi: settlement,
+          onUnauthorized: () async {},
+          onLogout: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('새 콜'), findsWidgets);
+    expect(find.text('내 운행'), findsOneWidget);
+    expect(find.text('정산'), findsOneWidget);
+    expect(find.text('계정'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+
+    await tester.tap(find.text('정산'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settlementListSuccess')), findsOneWidget);
+    expect(settlement.listCount, greaterThanOrEqualTo(2));
+  });
+
+  testWidgets('unpaid settlement block banner opens settlement tab', (
+    tester,
+  ) async {
+    final dispatch = onlineReader(calls: const [])
+      ..openCallsResult = const OpenCallList(
+        items: [],
+        blockedReason: 'UNPAID_SETTLEMENT',
+        message: 'unpaid',
+      );
+    final settlement = FakeSettlementApi()
+      ..items = [settlementItem(bookingNumber: 'TX-DUE')];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverHomeShell(
+          bookingRepository: FakeBookingReader(),
+          dispatchRepository: dispatch,
+          accountApi: FakeAccountApi(),
+          settlementApi: settlement,
+          onUnauthorized: () async {},
+          onLogout: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settlementBlockedBanner')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('openSettlementFromBlockedBanner')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settlementListSuccess')), findsOneWidget);
   });
 }

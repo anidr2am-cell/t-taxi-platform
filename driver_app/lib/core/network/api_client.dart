@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../../config/app_config.dart';
 import 'api_exception.dart';
@@ -95,6 +96,9 @@ class ApiClient {
             file.field,
             file.bytes,
             filename: file.filename,
+            contentType: file.contentType == null
+                ? null
+                : MediaType.parse(file.contentType!),
           ),
         );
       }
@@ -195,6 +199,8 @@ class ApiClient {
       'VALIDATION_ERROR' => ApiFailureKind.validation,
       'INVALID_FILE_TYPE' => ApiFailureKind.invalidFileType,
       'FILE_TOO_LARGE' => ApiFailureKind.fileTooLarge,
+      'SETTLEMENT_NOT_FOUND' => ApiFailureKind.settlementNotFound,
+      'RECEIPT_ALREADY_APPROVED' => ApiFailureKind.receiptAlreadyApproved,
       'VEHICLE_PLATE_ALREADY_REGISTERED' =>
         ApiFailureKind.vehiclePlateAlreadyRegistered,
       _ => null,
@@ -243,6 +249,8 @@ class ApiClient {
         'ASSIGNMENT_ALREADY_RELEASED' =>
           ApiFailureKind.assignmentAlreadyReleased,
         'BOOKING_NOT_ASSIGNED_TO_DRIVER' => ApiFailureKind.bookingNotAssigned,
+        'DRIVER_NOT_ELIGIBLE' => ApiFailureKind.driverNotEligible,
+        'RECEIPT_ALREADY_APPROVED' => ApiFailureKind.receiptAlreadyApproved,
         _ => ApiFailureKind.conflict,
       };
       throw ApiException(
@@ -281,9 +289,11 @@ class ApiMultipartFile {
     required this.field,
     required this.filename,
     required this.bytes,
+    this.contentType,
   });
 
   final String field;
   final String filename;
   final List<int> bytes;
+  final String? contentType;
 }

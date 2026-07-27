@@ -5,6 +5,7 @@ import '../../account/data/account_api.dart';
 import '../../bookings/data/booking_repository.dart';
 import '../../dispatch/data/dispatch_repository.dart';
 import '../../dispatch/data/driver_socket_service.dart';
+import '../../settlement/data/settlement_api.dart';
 import '../../dispatch/presentation/driver_home_shell.dart';
 import 'auth_controller.dart';
 import 'login_screen.dart';
@@ -17,6 +18,7 @@ class AuthGate extends StatefulWidget {
     required this.bookingRepository,
     required this.dispatchRepository,
     this.accountApi,
+    this.settlementApi,
     this.driverSocket,
   });
 
@@ -25,6 +27,7 @@ class AuthGate extends StatefulWidget {
   final BookingReader bookingRepository;
   final DispatchReader dispatchRepository;
   final AccountDataSource? accountApi;
+  final SettlementDataSource? settlementApi;
   final DriverSocketConnection? driverSocket;
 
   @override
@@ -78,6 +81,7 @@ class _AuthGateState extends State<AuthGate> {
             bookingRepository: widget.bookingRepository,
             dispatchRepository: widget.dispatchRepository,
             accountApi: widget.accountApi,
+            settlementApi: widget.settlementApi,
             driverSocket: widget.driverSocket,
             onUnauthorized: widget.controller.expireSession,
             onLogout: widget.controller.logout,

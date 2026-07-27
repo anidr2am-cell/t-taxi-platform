@@ -14,6 +14,7 @@ import '../features/bookings/data/booking_repository.dart';
 import '../features/dispatch/data/dispatch_api.dart';
 import '../features/dispatch/data/dispatch_repository.dart';
 import '../features/dispatch/data/driver_socket_service.dart';
+import '../features/settlement/data/settlement_api.dart';
 import 'app.dart';
 
 void runDriverApp(AppEnvironment environment) {
@@ -33,6 +34,7 @@ void runDriverApp(AppEnvironment environment) {
         DispatchApi(client: apiClient, storage: storage),
       ),
       accountApi: AccountApi(client: apiClient, storage: storage),
+      settlementApi: SettlementApi(client: apiClient, storage: storage),
       driverSocket: DriverSocketService(config: config, storage: storage),
     ),
   );

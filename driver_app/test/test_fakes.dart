@@ -11,6 +11,8 @@ import 'package:tride_driver/features/bookings/data/booking_repository.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_repository.dart';
 import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
+import 'package:tride_driver/features/settlement/data/settlement_api.dart';
+import 'package:tride_driver/features/settlement/data/settlement_models.dart';
 
 DriverUser driverUser({int id = 7, String? name = 'Somchai'}) =>
     DriverUser(id: id, role: 'DRIVER', isActive: true, name: name);
@@ -734,5 +736,140 @@ class FakeAccountApi implements AccountDataSource {
     loadedAssetPath = path;
     _throwIfNeeded();
     return assetBytes;
+  }
+}
+
+Map<String, dynamic> settlementJson({
+  String bookingNumber = 'TX209912310001',
+  String status = 'SETTLEMENT_PENDING',
+  String commissionStatus = 'DUE',
+  bool blocksNewCalls = false,
+  String? dueAt = '2026-07-30T23:59:00.000+07:00',
+  String? receiptStatus,
+  String? receiptUrl,
+  String? rejectionReason,
+  Map<String, dynamic>? paymentInstructions,
+}) => {
+  'bookingNumber': bookingNumber,
+  'status': status,
+  'pickupDate': '2026-07-27',
+  'pickupTime': '09:30',
+  'origin': 'BKK',
+  'destination': 'Pattaya',
+  'completedAt': '2026-07-27T12:30:00.000+07:00',
+  'commissionAmount': 300,
+  'commissionCurrency': 'THB',
+  'customerPaymentAmount': 1200,
+  'customerPaymentCurrency': 'THB',
+  'customerTotalAmount': 1200,
+  'customerTotalCurrency': 'THB',
+  'companyCommissionAmount': 300,
+  'companyCommissionCurrency': 'THB',
+  'driverExpectedIncomeAmount': 900,
+  'driverExpectedIncomeCurrency': 'THB',
+  'currency': 'THB',
+  'commissionStatus': commissionStatus,
+  'blocksNewCalls': blocksNewCalls,
+  'dueAt': dueAt,
+  'receiptStatus': receiptStatus,
+  'receiptSubmittedAt': null,
+  'receiptUploadedAt': null,
+  'rejectionReason': rejectionReason,
+  'approvalMode': null,
+  'approvalNote': null,
+  'approvedByUserId': null,
+  'approvalRecordedAt': null,
+  'receiptMissingAtApproval': false,
+  'receiptFileId': receiptUrl == null ? null : 99,
+  'receiptUrl': receiptUrl,
+  'paymentInstructions': paymentInstructions,
+};
+
+SettlementItem settlementItem({
+  String bookingNumber = 'TX209912310001',
+  String commissionStatus = 'DUE',
+  bool blocksNewCalls = false,
+  String? receiptUrl,
+  String? rejectionReason,
+  Map<String, dynamic>? paymentInstructions,
+}) => SettlementItem.fromJson(
+  settlementJson(
+    bookingNumber: bookingNumber,
+    commissionStatus: commissionStatus,
+    blocksNewCalls: blocksNewCalls,
+    receiptUrl: receiptUrl,
+    rejectionReason: rejectionReason,
+    paymentInstructions: paymentInstructions,
+  ),
+);
+
+class FakeSettlementApi implements SettlementDataSource {
+  List<SettlementItem> items = [settlementItem()];
+  SettlementItem detail = settlementItem(
+    paymentInstructions: const {
+      'bankName': 'Kasikorn',
+      'accountName': 'T-Ride Co.',
+      'accountNumber': '123-4-56789-0',
+      'promptPayNumber': '0999999999',
+      'promptPayQrImageUrl': '/api/v1/files/promptpay.png',
+    },
+  );
+  Object? listError;
+  Object? detailError;
+  Object? uploadError;
+  Object? downloadError;
+  int listCount = 0;
+  int detailCount = 0;
+  int uploadCount = 0;
+  int downloadCount = 0;
+  String? requestedBookingNumber;
+  String? uploadedBookingNumber;
+  SettlementUploadFile? uploadedFile;
+  String? downloadedPath;
+  List<int> downloadBytes = const [0x89, 0x50, 0x4e, 0x47];
+
+  @override
+  Future<List<SettlementItem>> listSettlements() async {
+    listCount++;
+    if (listError case final error?) throw error;
+    return items;
+  }
+
+  @override
+  Future<SettlementItem> getSettlement(String bookingNumber) async {
+    detailCount++;
+    requestedBookingNumber = bookingNumber;
+    if (detailError case final error?) throw error;
+    return detail;
+  }
+
+  @override
+  Future<SettlementItem> uploadReceipt(
+    String bookingNumber,
+    SettlementUploadFile file,
+  ) async {
+    uploadCount++;
+    uploadedBookingNumber = bookingNumber;
+    uploadedFile = file;
+    if (uploadError case final error?) throw error;
+    detail = settlementItem(
+      bookingNumber: bookingNumber,
+      commissionStatus: 'RECEIPT_SUBMITTED',
+      receiptUrl: '/api/v1/driver/settlements/$bookingNumber/receipt',
+      paymentInstructions: const {
+        'bankName': 'Kasikorn',
+        'accountName': 'T-Ride Co.',
+        'accountNumber': '123-4-56789-0',
+      },
+    );
+    return detail;
+  }
+
+  @override
+  Future<List<int>> downloadReceipt(String path) async {
+    downloadCount++;
+    downloadedPath = path;
+    if (downloadError case final error?) throw error;
+    return downloadBytes;
   }
 }
