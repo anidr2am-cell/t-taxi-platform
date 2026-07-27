@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_token_storage.dart';
+import 'booking_models.dart';
 
 abstract interface class BookingDataSource {
   Future<Map<String, dynamic>> getTodayBookings();
@@ -15,6 +16,11 @@ abstract interface class BookingDataSource {
     required String reasonCode,
     String? reasonDetail,
   });
+  Future<Map<String, dynamic>> uploadNameSignPhoto(
+    String bookingNumber,
+    NameSignPhotoFile file,
+  );
+  Future<List<int>> getNameSignPhoto(String bookingNumber);
 }
 
 class BookingApi implements BookingDataSource {
@@ -94,6 +100,39 @@ class BookingApi implements BookingDataSource {
         'reasonDetail': reasonDetail.trim(),
     },
   );
+
+  @override
+  Future<Map<String, dynamic>> uploadNameSignPhoto(
+    String bookingNumber,
+    NameSignPhotoFile file,
+  ) async {
+    final safeNumber = _validatedBookingNumber(bookingNumber);
+    final lowerName = file.filename.toLowerCase();
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    if (file.bytes.isEmpty || !allowedExtensions.any(lowerName.endsWith)) {
+      throw const ApiException(ApiFailureKind.invalidFileType);
+    }
+    return _client.postMultipart(
+      '/api/v1/driver/bookings/${Uri.encodeComponent(safeNumber)}/name-sign-photo',
+      bearerToken: await _accessToken(),
+      files: [
+        ApiMultipartFile(
+          field: 'file',
+          filename: file.filename,
+          bytes: file.bytes,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<List<int>> getNameSignPhoto(String bookingNumber) async {
+    final safeNumber = _validatedBookingNumber(bookingNumber);
+    return _client.getBytes(
+      '/api/v1/driver/bookings/${Uri.encodeComponent(safeNumber)}/name-sign-photo',
+      bearerToken: await _accessToken(),
+    );
+  }
 
   String _validatedBookingNumber(String bookingNumber) {
     if (!RegExp(r'^TX\d{12}$').hasMatch(bookingNumber)) {

@@ -51,6 +51,9 @@ void main() {
       expect(result.items.single.pickupLocation.latitude, 13.69);
       expect(result.items.single.destinationLocation.longitude, 100.5018);
       expect(result.items.single.originLongitude, 100.7501);
+      expect(result.items.single.nameSignRequested, isTrue);
+      expect(result.items.single.nameSignText, 'KIM FAMILY');
+      expect(result.items.single.nameSignPhotoUrl, isNull);
     });
 
     test('rejects an invalid service date', () {
@@ -162,6 +165,8 @@ void main() {
       expect(detail.flight.latestEstimatedArrival, '2026-07-18 08:30:00');
       expect(detail.specialInstructions, 'Synthetic fixture note');
       expect(detail.nameSignRequested, isTrue);
+      expect(detail.nameSignText, 'KIM FAMILY');
+      expect(detail.nameSignPhotoUrl, isNull);
       expect(detail.capabilities.releaseAssignmentAvailable, isTrue);
       expect(detail.capabilities.releaseAssignmentEmergencyOnly, isFalse);
       expect(detail.capabilities.reassignmentPriority, 'NORMAL');
@@ -184,6 +189,8 @@ void main() {
           'specialInstructions': null,
           'capabilities': null,
           'nameSignRequested': null,
+          'nameSignText': null,
+          'nameSignPhotoUrl': null,
         },
       });
 
@@ -195,6 +202,8 @@ void main() {
       expect(detail.capabilities.releaseAssignmentAvailable, isFalse);
       expect(detail.capabilities.assignmentReleaseDeadline, isNull);
       expect(detail.nameSignRequested, isFalse);
+      expect(detail.nameSignText, isNull);
+      expect(detail.nameSignPhotoUrl, isNull);
     });
 
     test('handles nullable contract location and standby fields', () {

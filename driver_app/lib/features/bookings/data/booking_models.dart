@@ -229,6 +229,9 @@ class BookingSummary {
     required this.customerDisplayName,
     required this.flightNumber,
     required this.driverExpectedIncome,
+    required this.nameSignRequested,
+    required this.nameSignText,
+    required this.nameSignPhotoUrl,
   });
 
   factory BookingSummary.fromJson(Map<String, dynamic> json) {
@@ -289,6 +292,9 @@ class BookingSummary {
         json['driverExpectedIncomeAmount'],
         json['driverExpectedIncomeCurrency'],
       ),
+      nameSignRequested: json['nameSignRequested'] == true,
+      nameSignText: _optionalString(json['nameSignText']),
+      nameSignPhotoUrl: _optionalString(json['nameSignPhotoUrl']),
     );
   }
 
@@ -320,6 +326,9 @@ class BookingSummary {
   final String? customerDisplayName;
   final String? flightNumber;
   final BookingMoney driverExpectedIncome;
+  final bool nameSignRequested;
+  final String? nameSignText;
+  final String? nameSignPhotoUrl;
 
   bool get canAccept =>
       canConfirmStandby &&
@@ -360,6 +369,9 @@ class BookingSummary {
     customerDisplayName: customerDisplayName,
     flightNumber: flightNumber,
     driverExpectedIncome: driverExpectedIncome,
+    nameSignRequested: nameSignRequested,
+    nameSignText: nameSignText,
+    nameSignPhotoUrl: nameSignPhotoUrl,
   );
 }
 
@@ -488,6 +500,8 @@ class BookingDetail {
     required this.companyCommission,
     required this.capabilities,
     required this.nameSignRequested,
+    required this.nameSignText,
+    required this.nameSignPhotoUrl,
   });
 
   factory BookingDetail.fromEnvelope(Map<String, dynamic> envelope) {
@@ -511,6 +525,8 @@ class BookingDetail {
       ),
       capabilities: BookingCapabilities.fromJson(data['capabilities']),
       nameSignRequested: data['nameSignRequested'] == true,
+      nameSignText: _optionalString(data['nameSignText']),
+      nameSignPhotoUrl: _optionalString(data['nameSignPhotoUrl']),
     );
   }
 
@@ -523,6 +539,8 @@ class BookingDetail {
   final BookingMoney companyCommission;
   final BookingCapabilities capabilities;
   final bool nameSignRequested;
+  final String? nameSignText;
+  final String? nameSignPhotoUrl;
 
   bool get canAccept => summary.canAccept;
 
@@ -536,7 +554,68 @@ class BookingDetail {
     companyCommission: companyCommission,
     capabilities: capabilities,
     nameSignRequested: nameSignRequested,
+    nameSignText: nameSignText,
+    nameSignPhotoUrl: nameSignPhotoUrl,
   );
+
+  BookingDetail copyWithNameSignPhotoUrl(String nameSignPhotoUrl) =>
+      BookingDetail(
+        summary: summary,
+        passengers: passengers,
+        luggage: luggage,
+        flight: flight,
+        specialInstructions: specialInstructions,
+        customerPayment: customerPayment,
+        companyCommission: companyCommission,
+        capabilities: capabilities,
+        nameSignRequested: nameSignRequested,
+        nameSignText: nameSignText,
+        nameSignPhotoUrl: nameSignPhotoUrl,
+      );
+}
+
+class NameSignPhotoFile {
+  const NameSignPhotoFile({required this.filename, required this.bytes});
+
+  final String filename;
+  final List<int> bytes;
+}
+
+class NameSignPhotoUploadResult {
+  const NameSignPhotoUploadResult({
+    required this.bookingNumber,
+    required this.nameSignPhotoFileId,
+    required this.nameSignPhotoUrl,
+  });
+
+  factory NameSignPhotoUploadResult.fromEnvelope(
+    Map<String, dynamic> envelope,
+  ) {
+    final data = envelope['data'];
+    if (envelope['success'] != true || data is! Map<String, dynamic>) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    final bookingNumber = data['bookingNumber'];
+    final fileId = data['nameSignPhotoFileId'];
+    final photoUrl = data['nameSignPhotoUrl'];
+    if (bookingNumber is! String ||
+        !RegExp(r'^TX\d{12}$').hasMatch(bookingNumber) ||
+        fileId is! num ||
+        fileId.toInt() <= 0 ||
+        photoUrl is! String ||
+        photoUrl.trim().isEmpty) {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    }
+    return NameSignPhotoUploadResult(
+      bookingNumber: bookingNumber,
+      nameSignPhotoFileId: fileId.toInt(),
+      nameSignPhotoUrl: photoUrl.trim(),
+    );
+  }
+
+  final String bookingNumber;
+  final int nameSignPhotoFileId;
+  final String nameSignPhotoUrl;
 }
 
 class BookingAcceptance {

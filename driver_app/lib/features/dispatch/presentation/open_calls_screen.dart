@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../data/airport_label_resolver.dart';
+import '../../bookings/presentation/booking_meeting_gate.dart';
 import '../data/dispatch_models.dart';
 import '../data/dispatch_repository.dart';
 import '../data/driver_socket_service.dart';
@@ -796,6 +797,11 @@ class _UrgentCallCard extends StatelessWidget {
     final scheduled =
         _formatDateTime(call.scheduledPickupAt) ??
         '${call.pickupDate} ${call.pickupTime}';
+    final meetingGate = resolveBkkAirportPickupMeetingGate(
+      serviceTypeCode: call.serviceTypeCode,
+      nameSignRequested: call.nameSignRequested,
+      pickupCandidates: [call.origin],
+    );
     final amount = call.customerPaymentAmount ?? call.amount;
     final currency = call.customerPaymentCurrency ?? call.currency;
     final luggage = <String>[
@@ -826,6 +832,16 @@ class _UrgentCallCard extends StatelessWidget {
                 const Chip(label: Text('긴급')),
               ],
             ),
+            if (meetingGate != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Chip(
+                  key: Key('openCallGate-${call.bookingNumber}'),
+                  visualDensity: VisualDensity.compact,
+                  avatar: const Icon(Icons.meeting_room_outlined, size: 16),
+                  label: Text('$meetingGate번 게이트'),
+                ),
+              ),
             Text(
               '${AirportLabelResolver.displayLabelFor(call.origin)} → '
               '${AirportLabelResolver.displayLabelFor(call.destination)}',
@@ -904,6 +920,11 @@ class _OpenCallCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheduled = _formatDateTime(call.scheduledPickupAt);
+    final meetingGate = resolveBkkAirportPickupMeetingGate(
+      serviceTypeCode: call.serviceTypeCode,
+      nameSignRequested: call.nameSignRequested,
+      pickupCandidates: [call.origin],
+    );
     final matchLabel = call.isExactVehicleMatch
         ? '${call.vehicleMatchType} · 정확 일치'
         : '${call.vehicleMatchType} · 호환 업그레이드';
@@ -934,6 +955,16 @@ class _OpenCallCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (meetingGate != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Chip(
+                    key: Key('openCallGate-${call.bookingNumber}'),
+                    visualDensity: VisualDensity.compact,
+                    avatar: const Icon(Icons.meeting_room_outlined, size: 16),
+                    label: Text('$meetingGate번 게이트'),
+                  ),
+                ),
               const SizedBox(height: 10),
               Text(
                 AirportLabelResolver.displayLabelFor(call.origin),

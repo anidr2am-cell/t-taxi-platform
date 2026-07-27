@@ -165,6 +165,24 @@ void main() {
     expect(find.text('Pattaya Hotel'), findsOneWidget);
     expect(find.text('2026-07-27 10:30'), findsOneWidget);
     expect(find.text('EXACT · 정확 일치'), findsOneWidget);
+    expect(
+      find.byKey(const Key('openCallGate-TX209912319998')),
+      findsOneWidget,
+    );
+    expect(find.text('3번 게이트'), findsOneWidget);
+  });
+
+  testWidgets('open-call gate badge hides outside BKK airport pickup', (
+    tester,
+  ) async {
+    await pumpOpenCalls(
+      tester,
+      onlineReader(
+        calls: [openCall(origin: 'DMK Airport', nameSignRequested: true)],
+      ),
+    );
+
+    expect(find.byKey(const Key('openCallGate-TX209912319998')), findsNothing);
   });
 
   testWidgets('online empty list supports empty state', (tester) async {
@@ -187,6 +205,8 @@ void main() {
         destination: 'Pattaya Hotel',
         serviceTypeCode: 'AIRPORT_PICKUP',
         serviceTypeName: 'Airport pickup',
+        nameSignRequested: true,
+        nameSignText: 'KIM FAMILY',
         vehicleTypeCode: 'SEDAN',
         vehicleTypeName: 'Sedan',
         vehicleMatchType: 'EXACT',

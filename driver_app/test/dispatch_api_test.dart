@@ -100,6 +100,8 @@ void main() {
                         'code': 'AIRPORT_PICKUP',
                         'name': 'Airport pickup',
                       },
+                      'nameSignRequested': true,
+                      'nameSignText': 'KIM FAMILY',
                       'vehicleType': {'code': 'SEDAN', 'name': 'Sedan'},
                       'vehicleMatchType': 'COMPATIBLE_UPGRADE',
                       'isExactVehicleMatch': false,
@@ -147,6 +149,8 @@ void main() {
 
     expect(result.items.single.origin, 'BKK');
     expect(result.items.single.destination, 'Pattaya Hotel');
+    expect(result.items.single.nameSignRequested, isTrue);
+    expect(result.items.single.nameSignText, 'KIM FAMILY');
     expect(result.items.single.vehicleMatchType, 'COMPATIBLE_UPGRADE');
     expect(result.items.single.isExactVehicleMatch, isFalse);
     expect(result.items.single.compatibleVehicles.single.driverVehicleId, 22);

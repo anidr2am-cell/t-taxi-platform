@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:tride_driver/app/app.dart';
 import 'package:tride_driver/config/app_config.dart';
 import 'package:tride_driver/config/app_environment.dart';
@@ -42,6 +43,7 @@ Future<void> pumpDetail(
   ExternalUrlLauncher? externalUrlLauncher,
   DateTime Function()? now,
   Stream<DriverSocketEvent>? socketEvents,
+  NameSignPhotoPicker? nameSignPhotoPicker,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -53,6 +55,7 @@ Future<void> pumpDetail(
         externalUrlLauncher: externalUrlLauncher,
         now: now,
         socketEvents: socketEvents,
+        nameSignPhotoPicker: nameSignPhotoPicker,
       ),
     ),
   );
@@ -63,6 +66,13 @@ Future<void> confirmAccept(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('acceptBookingButton')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('acceptConfirmButton')));
+  await tester.pumpAndSettle();
+}
+
+Future<void> selectNameSignPhotoFromGallery(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('uploadNameSignPhotoButton')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('nameSignPhotoGallery')));
   await tester.pumpAndSettle();
 }
 
@@ -682,6 +692,207 @@ void main() {
 
     expect(find.byKey(const Key('bkkMeetingGateBanner')), findsNothing);
     expect(find.textContaining('게이트'), findsNothing);
+  });
+
+  testWidgets('DRIVER_ARRIVED emphasizes name-sign photo upload', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'DRIVER_ARRIVED',
+        assignmentStatus: 'ACCEPTED',
+        allowedActions: const ['MARK_PICKED_UP'],
+      );
+    await pumpDetail(tester, reader);
+
+    final button = find.byKey(const Key('uploadNameSignPhotoButton'));
+    expect(button, findsOneWidget);
+    expect(tester.widget(button), isA<FilledButton>());
+    expect(find.text('피켓 사진 업로드'), findsOneWidget);
+  });
+
+  testWidgets('ON_ROUTE allows weaker upload with airport-arrival guidance', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'ON_ROUTE',
+        assignmentStatus: 'ACCEPTED',
+        allowedActions: const ['MARK_ARRIVED'],
+      );
+    await pumpDetail(tester, reader);
+
+    final button = find.byKey(const Key('uploadNameSignPhotoButton'));
+    expect(button, findsOneWidget);
+    expect(tester.widget(button), isA<OutlinedButton>());
+    expect(find.byKey(const Key('nameSignPhotoOnRouteNotice')), findsOneWidget);
+  });
+
+  testWidgets('PICKED_UP hides upload and shows existing photo as view-only', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'PICKED_UP',
+        assignmentStatus: 'ACCEPTED',
+        allowedActions: const ['END_TRIP'],
+        nameSignPhotoUrl:
+            '/api/v1/driver/bookings/TX209912319999/name-sign-photo',
+      );
+    await pumpDetail(tester, reader);
+
+    expect(find.byKey(const Key('uploadNameSignPhotoButton')), findsNothing);
+    expect(find.byKey(const Key('nameSignPhotoViewOnly')), findsOneWidget);
+    expect(find.byKey(const Key('nameSignPhotoPreview')), findsOneWidget);
+  });
+
+  testWidgets(
+    'name-sign photo upload updates preview and marks detail changed',
+    (tester) async {
+      final reader = FakeBookingReader()
+        ..detailResult = bookingDetail(
+          status: 'DRIVER_ARRIVED',
+          assignmentStatus: 'ACCEPTED',
+          allowedActions: const ['MARK_PICKED_UP'],
+        );
+      await pumpDetail(
+        tester,
+        reader,
+        nameSignPhotoPicker: (source) async {
+          expect(source, ImageSource.gallery);
+          return const NameSignPhotoFile(
+            filename: 'gate-sign.jpg',
+            bytes: [1, 2, 3],
+          );
+        },
+      );
+
+      await selectNameSignPhotoFromGallery(tester);
+
+      expect(reader.nameSignPhotoUploadCount, 1);
+      expect(reader.nameSignPhotoLoadCount, 1);
+      expect(find.byKey(const Key('nameSignPhotoPreview')), findsOneWidget);
+      expect(find.text('피켓 사진이 업로드되었습니다.'), findsOneWidget);
+      expect(find.text('다시 촬영/교체'), findsOneWidget);
+    },
+  );
+
+  testWidgets('existing name-sign photo can be replaced', (tester) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        status: 'DRIVER_ARRIVED',
+        assignmentStatus: 'ACCEPTED',
+        allowedActions: const ['MARK_PICKED_UP'],
+        nameSignPhotoUrl:
+            '/api/v1/driver/bookings/TX209912319999/name-sign-photo',
+      );
+    await pumpDetail(
+      tester,
+      reader,
+      nameSignPhotoPicker: (_) async => const NameSignPhotoFile(
+        filename: 'replacement.webp',
+        bytes: [4, 5, 6],
+      ),
+    );
+
+    expect(find.text('다시 촬영/교체'), findsOneWidget);
+    await selectNameSignPhotoFromGallery(tester);
+
+    expect(reader.nameSignPhotoUploadCount, 1);
+    expect(find.text('피켓 사진이 교체되었습니다.'), findsOneWidget);
+  });
+
+  for (final scenario in [
+    (
+      ApiException(
+        ApiFailureKind.validation,
+        statusCode: 400,
+        errorCode: 'VALIDATION_ERROR',
+      ),
+      '피켓 사진과 현재 예약 상태를 다시 확인해 주세요.',
+    ),
+    (
+      ApiException(
+        ApiFailureKind.invalidFileType,
+        statusCode: 400,
+        errorCode: 'INVALID_FILE_TYPE',
+      ),
+      'JPG, JPEG, PNG, WEBP 사진만 업로드할 수 있습니다.',
+    ),
+    (
+      ApiException(
+        ApiFailureKind.fileTooLarge,
+        statusCode: 400,
+        errorCode: 'FILE_TOO_LARGE',
+      ),
+      '파일 크기가 너무 큽니다. 더 작은 사진을 선택해 주세요.',
+    ),
+    (
+      ApiException(
+        ApiFailureKind.notFound,
+        statusCode: 404,
+        errorCode: 'BOOKING_NOT_FOUND',
+      ),
+      '예약 정보를 찾을 수 없습니다.',
+    ),
+    (
+      ApiException(
+        ApiFailureKind.forbidden,
+        statusCode: 403,
+        errorCode: 'FORBIDDEN',
+      ),
+      '이 예약의 피켓 사진을 업로드할 권한이 없습니다.',
+    ),
+  ]) {
+    testWidgets('name-sign upload explains ${scenario.$1.errorCode}', (
+      tester,
+    ) async {
+      final reader = FakeBookingReader()
+        ..detailResult = bookingDetail(
+          status: 'DRIVER_ARRIVED',
+          assignmentStatus: 'ACCEPTED',
+          allowedActions: const ['MARK_PICKED_UP'],
+        )
+        ..nameSignPhotoError = scenario.$1;
+      await pumpDetail(
+        tester,
+        reader,
+        nameSignPhotoPicker: (_) async =>
+            const NameSignPhotoFile(filename: 'sign.jpg', bytes: [1]),
+      );
+
+      await selectNameSignPhotoFromGallery(tester);
+
+      expect(find.text(scenario.$2), findsOneWidget);
+      expect(
+        find.byKey(const Key('uploadNameSignPhotoButton')),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('trip list gate badge shares detail gate condition', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..listResult = bookingList(
+        items: [
+          bookingSummary(nameSignRequested: true),
+          bookingSummary(
+            bookingNumber: 'TX209912319998',
+            origin: 'DMK Airport',
+            pickupLocationName: 'Don Mueang International Airport',
+            pickupLocationAddress: 'Don Mueang',
+            nameSignRequested: true,
+          ),
+        ],
+      );
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('bookingGate-TX209912319999')), findsOneWidget);
+    expect(find.text('3번 게이트'), findsOneWidget);
+    expect(find.byKey(const Key('bookingGate-TX209912319998')), findsNothing);
   });
 
   testWidgets(

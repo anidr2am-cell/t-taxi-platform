@@ -1,19 +1,23 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
-import '../../dispatch/data/airport_label_resolver.dart';
 import '../../dispatch/data/driver_socket_service.dart';
 import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
+import 'booking_meeting_gate.dart';
 import 'booking_status_label.dart';
 import 'release_assignment_dialog.dart';
 
 typedef ExternalUrlLauncher = Future<bool> Function(Uri url);
+typedef NameSignPhotoPicker =
+    Future<NameSignPhotoFile?> Function(ImageSource source);
 
 enum _TripAction {
   startRoute('START_ON_ROUTE', '운행 시작', '운행을 시작하시겠습니까?'),
@@ -37,6 +41,7 @@ class BookingDetailScreen extends StatefulWidget {
     this.externalUrlLauncher,
     this.now,
     this.socketEvents,
+    this.nameSignPhotoPicker,
   });
 
   final String bookingNumber;
@@ -46,6 +51,7 @@ class BookingDetailScreen extends StatefulWidget {
   final ExternalUrlLauncher? externalUrlLauncher;
   final DateTime Function()? now;
   final Stream<DriverSocketEvent>? socketEvents;
+  final NameSignPhotoPicker? nameSignPhotoPicker;
 
   @override
   State<BookingDetailScreen> createState() => _BookingDetailScreenState();
@@ -58,9 +64,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   bool _loading = true;
   bool _accepting = false;
   bool _performingAction = false;
+  bool _uploadingNameSignPhoto = false;
   bool _listRefreshRequested = false;
   bool _closingDetail = false;
   StreamSubscription<DriverSocketEvent>? _socketSubscription;
+  Future<List<int>>? _nameSignPhotoLoad;
 
   @override
   void initState() {
@@ -117,6 +125,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       if (!mounted) return;
       setState(() {
         _detail = detail;
+        _nameSignPhotoLoad = detail.nameSignPhotoUrl == null
+            ? null
+            : widget.repository.getNameSignPhoto(widget.bookingNumber);
         _loading = false;
       });
     } on ApiException catch (error) {
@@ -346,6 +357,88 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     }
   }
 
+  Future<void> _chooseNameSignPhoto() async {
+    if (_uploadingNameSignPhoto) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              key: const Key('nameSignPhotoCamera'),
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('사진 촬영'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+            ),
+            ListTile(
+              key: const Key('nameSignPhotoGallery'),
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('갤러리에서 선택'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    final file = await _pickNameSignPhoto(source);
+    if (file == null || !mounted) return;
+    await _uploadNameSignPhoto(file);
+  }
+
+  Future<NameSignPhotoFile?> _pickNameSignPhoto(ImageSource source) async {
+    if (widget.nameSignPhotoPicker case final picker?) {
+      return picker(source);
+    }
+    final file = await ImagePicker().pickImage(source: source);
+    if (file == null) return null;
+    return NameSignPhotoFile(
+      filename: file.name,
+      bytes: await file.readAsBytes(),
+    );
+  }
+
+  Future<void> _uploadNameSignPhoto(NameSignPhotoFile file) async {
+    if (_uploadingNameSignPhoto) return;
+    setState(() => _uploadingNameSignPhoto = true);
+    try {
+      final result = await widget.repository.uploadNameSignPhoto(
+        widget.bookingNumber,
+        file,
+      );
+      if (!mounted) return;
+      final current = _detail;
+      setState(() {
+        if (current != null) {
+          _detail = current.copyWithNameSignPhotoUrl(result.nameSignPhotoUrl);
+        }
+        _nameSignPhotoLoad = widget.repository.getNameSignPhoto(
+          widget.bookingNumber,
+        );
+        _uploadingNameSignPhoto = false;
+        _listRefreshRequested = true;
+      });
+      _showMessage(
+        current?.nameSignPhotoUrl == null
+            ? '피켓 사진이 업로드되었습니다.'
+            : '피켓 사진이 교체되었습니다.',
+      );
+    } on ApiException catch (error) {
+      if (error.kind == ApiFailureKind.unauthorized) {
+        await widget.onUnauthorized();
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _uploadingNameSignPhoto = false);
+      _showMessage(_nameSignPhotoErrorMessage(error));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _uploadingNameSignPhoto = false);
+      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+    }
+  }
+
   void _showMessage(String message) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -396,6 +489,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             onTripActionPressed: _confirmTripAction,
             onReleasePressed: _confirmRelease,
             onOpenMap: _openMap,
+            uploadingNameSignPhoto: _uploadingNameSignPhoto,
+            nameSignPhotoLoad: _nameSignPhotoLoad,
+            onNameSignPhotoPressed: _chooseNameSignPhoto,
             now: (widget.now ?? DateTime.now)(),
           ),
           _ => const SizedBox.shrink(),
@@ -466,6 +562,9 @@ class _DetailBody extends StatelessWidget {
     required this.onTripActionPressed,
     required this.onReleasePressed,
     required this.onOpenMap,
+    required this.uploadingNameSignPhoto,
+    required this.nameSignPhotoLoad,
+    required this.onNameSignPhotoPressed,
     required this.now,
   });
 
@@ -477,6 +576,9 @@ class _DetailBody extends StatelessWidget {
   final ValueChanged<_TripAction> onTripActionPressed;
   final ValueChanged<bool> onReleasePressed;
   final ValueChanged<BookingLocation> onOpenMap;
+  final bool uploadingNameSignPhoto;
+  final Future<List<int>>? nameSignPhotoLoad;
+  final VoidCallback onNameSignPhotoPressed;
   final DateTime now;
 
   @override
@@ -510,7 +612,15 @@ class _DetailBody extends StatelessWidget {
         (releaseEnabled ||
             deadlinePassed ||
             capabilities.assignmentReleaseBlockedReason != null);
-    final meetingGate = _bkkAirportPickupMeetingGate(detail);
+    final meetingGate = resolveBkkAirportPickupMeetingGate(
+      serviceTypeCode: booking.serviceType.code,
+      nameSignRequested: detail.nameSignRequested,
+      pickupCandidates: [
+        booking.pickupLocation.name,
+        booking.pickupLocation.address,
+        booking.origin,
+      ],
+    );
     return ListView(
       key: const Key('detailSuccess'),
       padding: const EdgeInsets.all(16),
@@ -609,6 +719,17 @@ class _DetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
+        if (meetingGate == '3' &&
+            _showsNameSignPhotoSection(booking.status.code, detail)) ...[
+          _NameSignPhotoSection(
+            detail: detail,
+            status: booking.status.code,
+            uploading: uploadingNameSignPhoto,
+            photoLoad: nameSignPhotoLoad,
+            onUploadPressed: onNameSignPhotoPressed,
+          ),
+          const SizedBox(height: 12),
+        ],
         _Section(
           title: '운행 정보',
           children: [
@@ -693,24 +814,6 @@ class _DetailBody extends StatelessWidget {
   }
 }
 
-String? _bkkAirportPickupMeetingGate(BookingDetail detail) {
-  final booking = detail.summary;
-  if (booking.serviceType.code.toUpperCase() != 'AIRPORT_PICKUP') {
-    return null;
-  }
-  final pickupCandidates = [
-    booking.pickupLocation.name,
-    booking.pickupLocation.address,
-    booking.origin,
-  ];
-  final isBkk = pickupCandidates
-      .whereType<String>()
-      .map(AirportLabelResolver.displayLabelFor)
-      .any((label) => label.toUpperCase().startsWith('BKK'));
-  if (!isBkk) return null;
-  return detail.nameSignRequested ? '3' : '7';
-}
-
 class _MeetingGateBanner extends StatelessWidget {
   const _MeetingGateBanner({
     required this.gateNumber,
@@ -763,6 +866,152 @@ class _MeetingGateBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+bool _showsNameSignPhotoSection(
+  BookingStatusCode status,
+  BookingDetail detail,
+) =>
+    status == BookingStatusCode.onRoute ||
+    status == BookingStatusCode.driverArrived ||
+    ((status == BookingStatusCode.pickedUp ||
+            status == BookingStatusCode.settlementPending ||
+            status == BookingStatusCode.completed) &&
+        detail.nameSignPhotoUrl != null);
+
+String _nameSignPhotoErrorMessage(ApiException error) =>
+    switch (error.errorCode) {
+      'VALIDATION_ERROR' => '피켓 사진과 현재 예약 상태를 다시 확인해 주세요.',
+      'INVALID_FILE_TYPE' => 'JPG, JPEG, PNG, WEBP 사진만 업로드할 수 있습니다.',
+      'FILE_TOO_LARGE' => '파일 크기가 너무 큽니다. 더 작은 사진을 선택해 주세요.',
+      'BOOKING_NOT_FOUND' => '예약 정보를 찾을 수 없습니다.',
+      'FORBIDDEN' => '이 예약의 피켓 사진을 업로드할 권한이 없습니다.',
+      _ when error.kind == ApiFailureKind.forbidden =>
+        '이 예약의 피켓 사진을 업로드할 권한이 없습니다.',
+      _ => error.userMessage,
+    };
+
+class _NameSignPhotoSection extends StatelessWidget {
+  const _NameSignPhotoSection({
+    required this.detail,
+    required this.status,
+    required this.uploading,
+    required this.photoLoad,
+    required this.onUploadPressed,
+  });
+
+  final BookingDetail detail;
+  final BookingStatusCode status;
+  final bool uploading;
+  final Future<List<int>>? photoLoad;
+  final VoidCallback onUploadPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = detail.nameSignPhotoUrl != null;
+    final arrived = status == BookingStatusCode.driverArrived;
+    final onRoute = status == BookingStatusCode.onRoute;
+    final canUpload = arrived || onRoute;
+    return Card(
+      key: const Key('nameSignPhotoSection'),
+      color: arrived
+          ? Theme.of(context).colorScheme.primaryContainer
+          : Theme.of(context).colorScheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              hasPhoto ? '제출된 피켓 사진' : '피켓 사진 제출',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            if (detail.nameSignText case final text?) ...[
+              const SizedBox(height: 4),
+              Text('피켓 문구: $text'),
+            ],
+            if (onRoute) ...[
+              const SizedBox(height: 8),
+              const Text(
+                '공항 도착 후 촬영을 권장합니다.',
+                key: Key('nameSignPhotoOnRouteNotice'),
+              ),
+            ],
+            if (hasPhoto) ...[
+              const SizedBox(height: 12),
+              FutureBuilder<List<int>>(
+                future: photoLoad,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const SizedBox(
+                      height: 120,
+                      child: Center(
+                        child: Icon(Icons.broken_image_outlined, size: 40),
+                      ),
+                    );
+                  }
+                  final bytes = snapshot.data;
+                  if (bytes == null) {
+                    return const SizedBox(
+                      height: 120,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.memory(
+                      Uint8List.fromList(bytes),
+                      key: const Key('nameSignPhotoPreview'),
+                      height: 180,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.broken_image_outlined, size: 40),
+                    ),
+                  );
+                },
+              ),
+            ],
+            if (canUpload) ...[
+              const SizedBox(height: 12),
+              if (arrived)
+                FilledButton.icon(
+                  key: const Key('uploadNameSignPhotoButton'),
+                  onPressed: uploading ? null : onUploadPressed,
+                  icon: uploading
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_a_photo_outlined),
+                  label: Text(hasPhoto ? '다시 촬영/교체' : '피켓 사진 업로드'),
+                )
+              else
+                OutlinedButton.icon(
+                  key: const Key('uploadNameSignPhotoButton'),
+                  onPressed: uploading ? null : onUploadPressed,
+                  icon: uploading
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_a_photo_outlined),
+                  label: Text(hasPhoto ? '다시 촬영/교체' : '피켓 사진 업로드'),
+                ),
+            ] else if (hasPhoto) ...[
+              const SizedBox(height: 8),
+              const Text(
+                '제출된 피켓 사진 보기',
+                key: Key('nameSignPhotoViewOnly'),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

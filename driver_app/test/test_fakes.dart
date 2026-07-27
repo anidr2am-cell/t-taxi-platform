@@ -102,6 +102,9 @@ Map<String, dynamic> bookingJson({
   String origin = 'Suvarnabhumi Airport',
   String pickupLocationName = 'Suvarnabhumi Airport',
   String pickupLocationAddress = '999 Nong Prue, Bang Phli',
+  bool nameSignRequested = true,
+  String? nameSignText = 'KIM FAMILY',
+  String? nameSignPhotoUrl,
 }) {
   final canConfirm =
       canConfirmStandby ??
@@ -153,6 +156,9 @@ Map<String, dynamic> bookingJson({
     'flightNumber': 'TG100',
     'driverExpectedIncomeAmount': '900.00',
     'driverExpectedIncomeCurrency': 'THB',
+    'nameSignRequested': nameSignRequested,
+    'nameSignText': nameSignText,
+    'nameSignPhotoUrl': nameSignPhotoUrl,
   };
   if (includeAssignmentStatus) {
     json['assignmentStatus'] = assignmentStatus;
@@ -176,6 +182,9 @@ BookingSummary bookingSummary({
   String origin = 'Suvarnabhumi Airport',
   String pickupLocationName = 'Suvarnabhumi Airport',
   String pickupLocationAddress = '999 Nong Prue, Bang Phli',
+  bool nameSignRequested = true,
+  String? nameSignText = 'KIM FAMILY',
+  String? nameSignPhotoUrl,
 }) => BookingSummary.fromJson(
   bookingJson(
     bookingNumber: bookingNumber,
@@ -193,6 +202,9 @@ BookingSummary bookingSummary({
     origin: origin,
     pickupLocationName: pickupLocationName,
     pickupLocationAddress: pickupLocationAddress,
+    nameSignRequested: nameSignRequested,
+    nameSignText: nameSignText,
+    nameSignPhotoUrl: nameSignPhotoUrl,
   ),
 );
 
@@ -208,6 +220,8 @@ BookingDetail bookingDetail({
   Object? standbyAllowedAt = '2026-07-18T08:30:00.000+07:00',
   List<String>? allowedActions,
   bool nameSignRequested = true,
+  String? nameSignText = 'KIM FAMILY',
+  String? nameSignPhotoUrl,
   bool releaseAssignmentAvailable = true,
   bool releaseAssignmentEmergencyOnly = false,
   String? assignmentReleaseDeadline = '2099-12-31T07:30:00.000+07:00',
@@ -235,6 +249,9 @@ BookingDetail bookingDetail({
       origin: origin,
       pickupLocationName: pickupLocationName,
       pickupLocationAddress: pickupLocationAddress,
+      nameSignRequested: nameSignRequested,
+      nameSignText: nameSignText,
+      nameSignPhotoUrl: nameSignPhotoUrl,
     ),
     'passengers': {'adults': 2, 'children': 0, 'infants': 0},
     'luggage': {
@@ -255,6 +272,8 @@ BookingDetail bookingDetail({
     'companyCommissionAmount': 300,
     'companyCommissionCurrency': 'THB',
     'nameSignRequested': nameSignRequested,
+    'nameSignText': nameSignText,
+    'nameSignPhotoUrl': nameSignPhotoUrl,
     'capabilities': {
       'releaseAssignmentAvailable': releaseAssignmentAvailable,
       'releaseAssignmentEmergencyOnly': releaseAssignmentEmergencyOnly,
@@ -295,6 +314,7 @@ class FakeBookingReader implements BookingReader {
   Object? acceptError;
   Object? actionError;
   Object? releaseError;
+  Object? nameSignPhotoError;
   Completer<BookingList>? listCompleter;
   Completer<BookingDetail>? detailCompleter;
   Completer<BookingAcceptance>? acceptCompleter;
@@ -308,11 +328,30 @@ class FakeBookingReader implements BookingReader {
   int pickedUpCount = 0;
   int endTripCount = 0;
   int releaseCount = 0;
+  int nameSignPhotoUploadCount = 0;
+  int nameSignPhotoLoadCount = 0;
   String? releasedReasonCode;
   String? releasedReasonDetail;
   String? requestedBookingNumber;
   String? acceptedBookingNumber;
   List<BookingDetail> detailQueue = [];
+  NameSignPhotoUploadResult nameSignPhotoResult =
+      const NameSignPhotoUploadResult(
+        bookingNumber: 'TX209912319999',
+        nameSignPhotoFileId: 501,
+        nameSignPhotoUrl:
+            '/api/v1/driver/bookings/TX209912319999/name-sign-photo',
+      );
+  List<int> nameSignPhotoBytes = const [
+    0x89,
+    0x50,
+    0x4E,
+    0x47,
+    0x0D,
+    0x0A,
+    0x1A,
+    0x0A,
+  ];
 
   @override
   Future<BookingDetail> getBookingDetail(String bookingNumber) async {
@@ -383,6 +422,25 @@ class FakeBookingReader implements BookingReader {
       reasonCode: reasonCode,
     );
   }
+
+  @override
+  Future<NameSignPhotoUploadResult> uploadNameSignPhoto(
+    String bookingNumber,
+    NameSignPhotoFile file,
+  ) async {
+    nameSignPhotoUploadCount++;
+    requestedBookingNumber = bookingNumber;
+    if (nameSignPhotoError case final error?) throw error;
+    return nameSignPhotoResult;
+  }
+
+  @override
+  Future<List<int>> getNameSignPhoto(String bookingNumber) async {
+    nameSignPhotoLoadCount++;
+    requestedBookingNumber = bookingNumber;
+    if (nameSignPhotoError case final error?) throw error;
+    return nameSignPhotoBytes;
+  }
 }
 
 DriverDispatchStatus dispatchStatus({
@@ -426,6 +484,8 @@ OpenCall openCall({
   bool isUrgentRequest = false,
   int? negotiationId,
   int? minRequiredEtaMinutes,
+  bool nameSignRequested = true,
+  String? nameSignText = 'KIM FAMILY',
 }) => OpenCall(
   bookingNumber: bookingNumber,
   status: 'OPEN',
@@ -436,6 +496,8 @@ OpenCall openCall({
   destination: destination,
   serviceTypeCode: 'AIRPORT_PICKUP',
   serviceTypeName: 'Airport pickup',
+  nameSignRequested: nameSignRequested,
+  nameSignText: nameSignText,
   vehicleTypeCode: 'SEDAN',
   vehicleTypeName: 'Sedan',
   vehicleMatchType: vehicleMatchType,

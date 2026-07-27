@@ -15,6 +15,11 @@ abstract interface class BookingReader {
     required String reasonCode,
     String? reasonDetail,
   });
+  Future<NameSignPhotoUploadResult> uploadNameSignPhoto(
+    String bookingNumber,
+    NameSignPhotoFile file,
+  );
+  Future<List<int>> getNameSignPhoto(String bookingNumber);
 }
 
 class BookingRepository implements BookingReader {
@@ -66,6 +71,18 @@ class BookingRepository implements BookingReader {
       reasonDetail: reasonDetail,
     ),
   );
+
+  @override
+  Future<NameSignPhotoUploadResult> uploadNameSignPhoto(
+    String bookingNumber,
+    NameSignPhotoFile file,
+  ) async => NameSignPhotoUploadResult.fromEnvelope(
+    await _api.uploadNameSignPhoto(bookingNumber, file),
+  );
+
+  @override
+  Future<List<int>> getNameSignPhoto(String bookingNumber) =>
+      _api.getNameSignPhoto(bookingNumber);
 
   void _requireSuccess(Map<String, dynamic> envelope) {
     if (envelope['success'] != true ||

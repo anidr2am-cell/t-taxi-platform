@@ -110,6 +110,8 @@ class OpenCall {
     required this.destination,
     required this.serviceTypeCode,
     required this.serviceTypeName,
+    required this.nameSignRequested,
+    required this.nameSignText,
     required this.vehicleTypeCode,
     required this.vehicleTypeName,
     required this.vehicleMatchType,
@@ -159,6 +161,8 @@ class OpenCall {
       destination: destination,
       serviceTypeCode: _optionalString(serviceType['code']) ?? '',
       serviceTypeName: _optionalString(serviceType['name']) ?? '',
+      nameSignRequested: json['nameSignRequested'] == true,
+      nameSignText: _optionalString(json['nameSignText']),
       vehicleTypeCode: _optionalString(vehicleType['code']) ?? '',
       vehicleTypeName: _optionalString(vehicleType['name']) ?? '',
       vehicleMatchType: matchType,
@@ -203,6 +207,8 @@ class OpenCall {
   final String destination;
   final String serviceTypeCode;
   final String serviceTypeName;
+  final bool nameSignRequested;
+  final String? nameSignText;
   final String vehicleTypeCode;
   final String vehicleTypeName;
   final String vehicleMatchType;

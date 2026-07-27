@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/booking_models.dart';
 import 'booking_display_formatters.dart';
+import 'booking_meeting_gate.dart';
 import 'booking_status_label.dart';
 
 class BookingListItem extends StatelessWidget {
@@ -22,6 +23,15 @@ class BookingListItem extends StatelessWidget {
     final scheduledPickup = formatBookingDateTime(booking.scheduledPickupAt);
     final standbyReference = formatBookingDateTime(
       booking.standbyReferenceTime,
+    );
+    final meetingGate = resolveBkkAirportPickupMeetingGate(
+      serviceTypeCode: booking.serviceType.code,
+      nameSignRequested: booking.nameSignRequested,
+      pickupCandidates: [
+        booking.pickupLocation.name,
+        booking.pickupLocation.address,
+        booking.origin,
+      ],
     );
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -47,6 +57,18 @@ class BookingListItem extends StatelessWidget {
                   BookingStatusLabel(status: booking.status),
                 ],
               ),
+              if (meetingGate != null) ...[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Chip(
+                    key: Key('bookingGate-${booking.bookingNumber}'),
+                    visualDensity: VisualDensity.compact,
+                    avatar: const Icon(Icons.meeting_room_outlined, size: 16),
+                    label: Text('$meetingGate번 게이트'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 6),
               Text(
                 booking.bookingNumber,

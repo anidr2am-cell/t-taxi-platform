@@ -10,6 +10,7 @@ import 'package:tride_driver/core/network/api_client.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/bookings/data/booking_api.dart';
+import 'package:tride_driver/features/bookings/data/booking_models.dart';
 import 'package:tride_driver/features/bookings/data/booking_repository.dart';
 
 import 'test_fakes.dart';
@@ -203,6 +204,118 @@ void main() {
       'reasonDetail': '상세 사유',
     });
   });
+
+  test(
+    'name-sign photo upload uses exact multipart field and parses result',
+    () async {
+      late http.Request request;
+      final repository = BookingRepository(
+        BookingApi(
+          client: client(
+            MockClient((incoming) async {
+              request = incoming;
+              return http.Response(
+                jsonEncode({
+                  'success': true,
+                  'data': {
+                    'bookingNumber': 'TX209912319999',
+                    'nameSignPhotoFileId': 501,
+                    'nameSignPhotoUrl':
+                        '/api/v1/driver/bookings/TX209912319999/name-sign-photo',
+                  },
+                }),
+                200,
+              );
+            }),
+          ),
+          storage: storage(),
+        ),
+      );
+
+      final result = await repository.uploadNameSignPhoto(
+        'TX209912319999',
+        const NameSignPhotoFile(filename: 'sign.webp', bytes: [1, 2, 3]),
+      );
+
+      expect(request.method, 'POST');
+      expect(
+        request.url.path,
+        '/api/v1/driver/bookings/TX209912319999/name-sign-photo',
+      );
+      expect(request.headers['authorization'], 'Bearer fixture-token');
+      expect(request.body, contains('name="file"'));
+      expect(request.body, contains('filename="sign.webp"'));
+      expect(result.nameSignPhotoFileId, 501);
+      expect(
+        result.nameSignPhotoUrl,
+        '/api/v1/driver/bookings/TX209912319999/name-sign-photo',
+      );
+    },
+  );
+
+  test('name-sign photo GET loads authenticated binary response', () async {
+    late http.Request request;
+    final repository = BookingRepository(
+      BookingApi(
+        client: client(
+          MockClient((incoming) async {
+            request = incoming;
+            return http.Response.bytes([1, 2, 3], 200);
+          }),
+        ),
+        storage: storage(),
+      ),
+    );
+
+    final bytes = await repository.getNameSignPhoto('TX209912319999');
+
+    expect(request.method, 'GET');
+    expect(
+      request.url.path,
+      '/api/v1/driver/bookings/TX209912319999/name-sign-photo',
+    );
+    expect(request.headers['authorization'], 'Bearer fixture-token');
+    expect(bytes, [1, 2, 3]);
+  });
+
+  for (final entry in {
+    'VALIDATION_ERROR': ApiFailureKind.validation,
+    'INVALID_FILE_TYPE': ApiFailureKind.invalidFileType,
+    'FILE_TOO_LARGE': ApiFailureKind.fileTooLarge,
+    'BOOKING_NOT_FOUND': ApiFailureKind.notFound,
+    'FORBIDDEN': ApiFailureKind.forbidden,
+  }.entries) {
+    test('name-sign photo upload classifies ${entry.key}', () async {
+      final statusCode = switch (entry.key) {
+        'BOOKING_NOT_FOUND' => 404,
+        'FORBIDDEN' => 403,
+        _ => 400,
+      };
+      final api = BookingApi(
+        client: client(
+          MockClient(
+            (_) async => http.Response(
+              jsonEncode({'success': false, 'error_code': entry.key}),
+              statusCode,
+            ),
+          ),
+        ),
+        storage: storage(),
+      );
+
+      await expectLater(
+        api.uploadNameSignPhoto(
+          'TX209912319999',
+          const NameSignPhotoFile(filename: 'sign.jpg', bytes: [1]),
+        ),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.kind, 'kind', entry.value)
+              .having((error) => error.errorCode, 'errorCode', entry.key),
+        ),
+      );
+    });
+  }
 
   for (final entry in {
     'INVALID_STATUS_TRANSITION': ApiFailureKind.invalidStatusTransition,
