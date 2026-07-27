@@ -118,3 +118,7 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
   - `nameSignRequested`가 이제 목록 API에도 포함되므로 가능
 
 > ⚠️ 아직 실제 서버(staging/production)에 이 backend 변경들이 배포되지 않은 상태. UI 작업 전 배포 여부 확인 필요.
+
+## 9. 기술 부채: locationDetails() 로직 중복
+
+`locationDetails()` 로직이 `driverJob.service.js`와 `booking.service.js` 두 곳에 복제되어 있음. 향후 장소명 표시 로직 변경 시 두 곳 모두 수정 필요. 리팩터링 우선순위 낮음.
