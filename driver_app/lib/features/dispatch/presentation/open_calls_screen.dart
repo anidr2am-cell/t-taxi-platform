@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../data/airport_label_resolver.dart';
+import '../../bookings/data/booking_models.dart';
+import '../../bookings/presentation/booking_display_formatters.dart';
 import '../../bookings/presentation/booking_meeting_gate.dart';
 import '../data/dispatch_models.dart';
 import '../data/dispatch_repository.dart';
@@ -843,8 +845,8 @@ class _UrgentCallCard extends StatelessWidget {
                 ),
               ),
             Text(
-              '${AirportLabelResolver.displayLabelFor(call.origin)} → '
-              '${AirportLabelResolver.displayLabelFor(call.destination)}',
+              '${_formatOpenCallEndpoint(location: call.pickupLocation, fallbackAddress: call.origin)} → '
+              '${_formatOpenCallEndpoint(location: call.destinationLocation, fallbackAddress: call.destination)}',
             ),
             const SizedBox(height: 8),
             Text(
@@ -967,12 +969,18 @@ class _OpenCallCard extends StatelessWidget {
                 ),
               const SizedBox(height: 10),
               Text(
-                AirportLabelResolver.displayLabelFor(call.origin),
+                _formatOpenCallEndpoint(
+                  location: call.pickupLocation,
+                  fallbackAddress: call.origin,
+                ),
                 key: Key('openCallOrigin-${call.bookingNumber}'),
               ),
               const SizedBox(height: 6),
               Text(
-                AirportLabelResolver.displayLabelFor(call.destination),
+                _formatOpenCallEndpoint(
+                  location: call.destinationLocation,
+                  fallbackAddress: call.destination,
+                ),
                 key: Key('openCallDestination-${call.bookingNumber}'),
               ),
               const SizedBox(height: 10),
@@ -1003,4 +1011,15 @@ String? _formatDateTime(String? value) {
       '${bangkok.day.toString().padLeft(2, '0')} '
       '${bangkok.hour.toString().padLeft(2, '0')}:'
       '${bangkok.minute.toString().padLeft(2, '0')}';
+}
+
+String _formatOpenCallEndpoint({
+  required BookingLocation? location,
+  required String fallbackAddress,
+}) {
+  final name = location?.name?.trim();
+  if (location != null && name != null && name.isNotEmpty) {
+    return formatBookingLocation(location);
+  }
+  return AirportLabelResolver.displayLabelFor(fallbackAddress);
 }

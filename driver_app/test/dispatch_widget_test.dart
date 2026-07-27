@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
+import 'package:tride_driver/features/bookings/data/booking_models.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
 import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 import 'package:tride_driver/features/dispatch/presentation/driver_home_shell.dart';
@@ -481,5 +482,67 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('settlementListSuccess')), findsOneWidget);
+  });
+
+  testWidgets('open call shows structured pickup name and address when available', (
+    tester,
+  ) async {
+    await pumpOpenCalls(
+      tester,
+      onlineReader(
+        calls: [
+          openCall(
+            origin: '999 Nong Prue, Bang Phli',
+            destination: '333 Moo 9, Pattaya Beach Road',
+            pickupLocation: const BookingLocation(
+              name: 'Suvarnabhumi Airport',
+              address: '999 Nong Prue, Bang Phli',
+            ),
+            destinationLocation: const BookingLocation(
+              name: 'Hilton Pattaya',
+              address: '333 Moo 9, Pattaya Beach Road',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      find.text('Suvarnabhumi Airport\n999 Nong Prue, Bang Phli'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Hilton Pattaya\n333 Moo 9, Pattaya Beach Road'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('open call falls back to airport label when pickup name is absent', (
+    tester,
+  ) async {
+    await pumpOpenCalls(tester, onlineReader());
+
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
+    expect(find.text('Pattaya Hotel'), findsOneWidget);
+  });
+
+  testWidgets('open call falls back when pickupLocation has address only', (
+    tester,
+  ) async {
+    await pumpOpenCalls(
+      tester,
+      onlineReader(
+        calls: [
+          openCall(
+            origin: 'BKK',
+            pickupLocation: const BookingLocation(
+              address: '999 Nong Prue, Bang Phli',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
   });
 }

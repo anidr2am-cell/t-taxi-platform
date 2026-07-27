@@ -1,4 +1,5 @@
 import '../../../core/network/api_exception.dart';
+import '../../bookings/data/booking_models.dart';
 
 class DriverCallEligibility {
   const DriverCallEligibility({
@@ -108,6 +109,8 @@ class OpenCall {
     required this.pickupTime,
     required this.origin,
     required this.destination,
+    this.pickupLocation,
+    this.destinationLocation,
     required this.serviceTypeCode,
     required this.serviceTypeName,
     required this.nameSignRequested,
@@ -159,6 +162,12 @@ class OpenCall {
       pickupTime: _optionalString(json['pickupTime']) ?? '',
       origin: origin,
       destination: destination,
+      pickupLocation: json['pickupLocation'] == null
+          ? null
+          : BookingLocation.fromJson(json['pickupLocation']),
+      destinationLocation: json['destinationLocation'] == null
+          ? null
+          : BookingLocation.fromJson(json['destinationLocation']),
       serviceTypeCode: _optionalString(serviceType['code']) ?? '',
       serviceTypeName: _optionalString(serviceType['name']) ?? '',
       nameSignRequested: json['nameSignRequested'] == true,
@@ -205,6 +214,8 @@ class OpenCall {
   final String pickupTime;
   final String origin;
   final String destination;
+  final BookingLocation? pickupLocation;
+  final BookingLocation? destinationLocation;
   final String serviceTypeCode;
   final String serviceTypeName;
   final bool nameSignRequested;
