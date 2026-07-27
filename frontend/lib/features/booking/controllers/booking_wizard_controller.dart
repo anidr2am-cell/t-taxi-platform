@@ -148,16 +148,28 @@ class BookingWizardController extends ChangeNotifier {
         pickupTime: _normalizePickupTime(restored.pickupTime),
       );
       _sanitizeCustomerVehicleSelection();
+      if (!_hasSelectablePickupDateTime()) {
+        await _seedDefaultPickupDateTime();
+      }
     } else {
-      final initialPickup = defaultPickupDateTime();
-      _state = _state.copyWith(
-        pickupDate: formatDate(initialPickup),
-        pickupTime: formatTime(initialPickup),
-      );
-      await _persist();
+      await _seedDefaultPickupDateTime();
     }
     _isInitialized = true;
     notifyListeners();
+  }
+
+  bool _hasSelectablePickupDateTime() {
+    final selected = selectedPickupDateTime();
+    return selected != null && isPickupSelectable(selected);
+  }
+
+  Future<void> _seedDefaultPickupDateTime() async {
+    final initialPickup = defaultPickupDateTime();
+    _state = _state.copyWith(
+      pickupDate: formatDate(initialPickup),
+      pickupTime: formatTime(initialPickup),
+    );
+    await _persist();
   }
 
   Future<void> _persist() async {
@@ -1199,6 +1211,7 @@ class BookingWizardController extends ChangeNotifier {
   Future<void> reset() async {
     _state = const BookingWizardState();
     await _storage.clear();
+    await _seedDefaultPickupDateTime();
     notifyListeners();
   }
 }

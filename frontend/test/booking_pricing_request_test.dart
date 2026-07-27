@@ -563,6 +563,73 @@ void main() {
     expect(restored.scheduledPickupAtIso(), '2026-07-01T09:30:00+07:00');
   });
 
+  test('initialize reseeds past stored pickup to defaultPickupDateTime', () async {
+    final storage = _MemoryBookingStateStorage()
+      ..value = const BookingWizardState(
+        pickupDate: '2026-06-01',
+        pickupTime: '09:30',
+      );
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: storage,
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.initialize();
+
+    final defaultPickup = controller.defaultPickupDateTime();
+    expect(controller.state.pickupDate, controller.formatDate(defaultPickup));
+    expect(controller.state.pickupTime, controller.formatTime(defaultPickup));
+    expect(storage.value?.pickupDate, controller.state.pickupDate);
+    expect(storage.value?.pickupTime, controller.state.pickupTime);
+  });
+
+  test('initialize seeds default pickup when storage is empty', () async {
+    final storage = _MemoryBookingStateStorage();
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: storage,
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.initialize();
+
+    final defaultPickup = controller.defaultPickupDateTime();
+    expect(controller.state.pickupDate, controller.formatDate(defaultPickup));
+    expect(controller.state.pickupTime, controller.formatTime(defaultPickup));
+  });
+
+  test('reset reseeds default pickup after clearing storage', () async {
+    final storage = _MemoryBookingStateStorage()
+      ..value = const BookingWizardState(
+        pickupDate: '2026-06-01',
+        pickupTime: '09:30',
+        serviceType: BookingServiceType.cityTransfer,
+      );
+    final controller = BookingWizardController(
+      apiService: _CapturingBookingApi(),
+      storage: storage,
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _MemoryRecentLocationsRepository(),
+      ),
+      now: () => DateTime.utc(2026, 6, 29, 3),
+    );
+
+    await controller.reset();
+
+    expect(controller.state.serviceType, isNull);
+    final defaultPickup = controller.defaultPickupDateTime();
+    expect(controller.state.pickupDate, controller.formatDate(defaultPickup));
+    expect(controller.state.pickupTime, controller.formatTime(defaultPickup));
+    expect(storage.value?.pickupDate, controller.state.pickupDate);
+  });
+
   test(
     'restored localized pickup time is normalized for recommendation validation',
     () async {
