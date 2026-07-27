@@ -58,7 +58,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   bool _accepting = false;
   bool _performingAction = false;
   bool _listRefreshRequested = false;
-  bool _handlingSocketRelease = false;
+  bool _closingDetail = false;
   StreamSubscription<DriverSocketEvent>? _socketSubscription;
 
   @override
@@ -77,16 +77,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   void _handleSocketEvent(DriverSocketEvent event) {
     if (!mounted ||
-        _handlingSocketRelease ||
+        _closingDetail ||
         event.type != DriverSocketEventType.assignmentReleased) {
       return;
     }
     final bookingNumber = event.payload['bookingNumber']?.toString();
     if (bookingNumber != widget.bookingNumber) return;
-    _handlingSocketRelease = true;
-    _listRefreshRequested = true;
-    _showMessage('이 예약의 배정이 종료되어 목록으로 돌아갑니다.');
-    Navigator.of(context).pop(true);
+    _closeDetail(refreshList: true, message: '이 예약의 배정이 종료되어 목록으로 돌아갑니다.');
   }
 
   @override
@@ -195,10 +192,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     }
 
     if (outcome.closeDetail) {
-      _showMessage(outcome.message);
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
+      _closeDetail(refreshList: true, message: outcome.message);
       return;
     }
 
@@ -273,8 +267,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       if (!mounted) return;
       _listRefreshRequested = true;
       if (action == _TripAction.endTrip) {
-        _showMessage('운행이 종료되었습니다.');
-        Navigator.of(context).pop(true);
+        _closeDetail(refreshList: true, message: '운행이 종료되었습니다.');
         return;
       }
       final refreshed = await widget.repository.getBookingDetail(
@@ -326,8 +319,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         reasonDetail: input.reasonDetail,
       );
       if (!mounted) return;
-      _showMessage('배정을 반납했습니다.');
-      Navigator.of(context).pop(true);
+      _closeDetail(refreshList: true, message: '배정을 반납했습니다.');
     } on ApiException catch (error) {
       await _handleActionError(error);
     } catch (_) {
@@ -361,9 +353,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _popWithRefreshFlag() {
+  void _closeDetail({required bool refreshList, String? message}) {
+    if (!mounted || _closingDetail) return;
+    _closingDetail = true;
+    if (refreshList) _listRefreshRequested = true;
+    if (message != null) _showMessage(message);
     Navigator.of(context).pop(_listRefreshRequested);
   }
+
+  void _popWithRefreshFlag() =>
+      _closeDetail(refreshList: _listRefreshRequested);
 
   @override
   Widget build(BuildContext context) {

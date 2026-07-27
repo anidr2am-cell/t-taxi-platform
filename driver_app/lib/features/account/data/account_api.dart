@@ -12,7 +12,7 @@ abstract interface class AccountDataSource {
   Future<DriverVehicle> createVehicle(VehicleCreateRequest request);
   Future<RatingSummary> getRatingSummary();
   Future<List<VehicleTypeOption>> getVehicleTypes();
-  String resolveAssetUrl(String path);
+  Future<List<int>> loadAsset(String path);
 }
 
 class AccountApi implements AccountDataSource {
@@ -24,9 +24,14 @@ class AccountApi implements AccountDataSource {
   final TokenStorage _storage;
 
   @override
-  String resolveAssetUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return _client.absoluteUrl(path);
+  Future<List<int>> loadAsset(String path) async {
+    final supplied = Uri.tryParse(path);
+    final isAbsolute =
+        supplied != null && supplied.hasScheme && supplied.host.isNotEmpty;
+    return _client.getBytes(
+      path,
+      bearerToken: isAbsolute ? null : await _token(),
+    );
   }
 
   @override

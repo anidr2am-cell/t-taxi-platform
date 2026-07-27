@@ -353,4 +353,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('오늘의 배정 예약'), findsOneWidget);
   });
+
+  testWidgets('claim switches to trips and reloads an already visited list', (
+    tester,
+  ) async {
+    final bookings = FakeBookingReader()
+      ..listResult = bookingList(items: const []);
+    final dispatch = onlineReader();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverHomeShell(
+          bookingRepository: bookings,
+          dispatchRepository: dispatch,
+          onUnauthorized: () async {},
+          onLogout: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('내 운행'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bookingListEmpty')), findsOneWidget);
+    expect(bookings.listCount, 1);
+
+    await tester.tap(find.text('새 콜'));
+    await tester.pumpAndSettle();
+    bookings.listResult = bookingList();
+    await tester.tap(find.byKey(const Key('openCall-TX209912319998')));
+    await tester.pumpAndSettle();
+    await confirmClaim(tester);
+
+    expect(find.text('오늘의 배정 예약'), findsOneWidget);
+    expect(find.byKey(const Key('booking-TX209912319999')), findsOneWidget);
+    expect(bookings.listCount, 2);
+  });
 }

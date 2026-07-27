@@ -14,12 +14,14 @@ class BookingListScreen extends StatefulWidget {
     required this.onUnauthorized,
     required this.onLogout,
     this.socketEvents,
+    this.refreshRequest = 0,
   });
 
   final BookingReader repository;
   final Future<void> Function() onUnauthorized;
   final Future<void> Function() onLogout;
   final Stream<DriverSocketEvent>? socketEvents;
+  final int refreshRequest;
 
   @override
   State<BookingListScreen> createState() => _BookingListScreenState();
@@ -29,6 +31,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
   BookingList? _bookings;
   ApiException? _error;
   bool _loading = true;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -36,19 +39,29 @@ class _BookingListScreenState extends State<BookingListScreen> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant BookingListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshRequest != widget.refreshRequest) {
+      _load();
+    }
+  }
+
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final bookings = await widget.repository.getTodayBookings();
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _bookings = bookings;
         _loading = false;
       });
     } on ApiException catch (error) {
+      if (generation != _loadGeneration) return;
       if (error.kind == ApiFailureKind.unauthorized) {
         await widget.onUnauthorized();
         return;
@@ -60,7 +73,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _error = const ApiException(ApiFailureKind.unknown);
         _bookings = null;

@@ -272,6 +272,7 @@ class FakeBookingReader implements BookingReader {
   Completer<BookingDetail>? detailCompleter;
   Completer<BookingAcceptance>? acceptCompleter;
   Completer<void>? actionCompleter;
+  Completer<void>? releaseCompleter;
   int listCount = 0;
   int detailCount = 0;
   int acceptCount = 0;
@@ -346,6 +347,7 @@ class FakeBookingReader implements BookingReader {
     releaseCount++;
     releasedReasonCode = reasonCode;
     releasedReasonDetail = reasonDetail;
+    if (releaseCompleter case final completer?) await completer.future;
     if (releaseError case final error?) throw error;
     return BookingReleaseResult(
       bookingNumber: bookingNumber,
@@ -653,6 +655,9 @@ class FakeAccountApi implements AccountDataSource {
   int avatarCount = 0;
   int vehiclePhotoCount = 0;
   int createVehicleCount = 0;
+  int assetLoadCount = 0;
+  String? loadedAssetPath;
+  List<int> assetBytes = const [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
   Map<String, dynamic>? lastChanges;
   VehicleCreateRequest? lastVehicleRequest;
 
@@ -724,6 +729,10 @@ class FakeAccountApi implements AccountDataSource {
   }
 
   @override
-  String resolveAssetUrl(String path) =>
-      path.startsWith('http') ? path : 'https://api.example.com$path';
+  Future<List<int>> loadAsset(String path) async {
+    assetLoadCount++;
+    loadedAssetPath = path;
+    _throwIfNeeded();
+    return assetBytes;
+  }
 }

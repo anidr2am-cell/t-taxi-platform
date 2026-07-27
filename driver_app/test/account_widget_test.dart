@@ -78,6 +78,69 @@ void main() {
     expect(api.vehiclePhotoCount, 1);
   });
 
+  testWidgets('profile previews request protected images through account API', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final api = FakeAccountApi()
+      ..profile = driverProfile(
+        avatarUrl: '/api/v1/driver/profile/avatar',
+        vehicle: const DriverProfileVehicle(
+          typeCode: 'SEDAN',
+          plateNumber: 'ABC 123',
+          photoUrl: '/api/v1/driver/profile/vehicle-photo',
+        ),
+      );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileEditPage(api: api, initialProfile: api.profile),
+      ),
+    );
+    await tester.pump();
+
+    expect(api.assetLoadCount, 2);
+    expect(find.byKey(const Key('avatarImage')), findsOneWidget);
+    expect(find.byKey(const Key('vehiclePhotoImage')), findsOneWidget);
+  });
+
+  testWidgets('profile form protects its save action with bottom SafeArea', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final api = FakeAccountApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileEditPage(api: api, initialProfile: api.profile),
+      ),
+    );
+
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('saveProfile')),
+        matching: find.byType(SafeArea),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('vehicle form protects its submit action with bottom SafeArea', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final api = FakeAccountApi();
+    await tester.pumpWidget(MaterialApp(home: VehicleAddPage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('submitVehicle')),
+        matching: find.byType(SafeArea),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('profile explains unavailable vehicle photo approval', (
     tester,
   ) async {

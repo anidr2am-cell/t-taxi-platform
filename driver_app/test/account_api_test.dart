@@ -59,6 +59,21 @@ void main() {
     expect(result.avatarUrl, '/api/v1/driver/profile/avatar');
   });
 
+  test('protected profile image GET includes the bearer token', () async {
+    late http.Request request;
+    final bytes = await api(
+      MockClient((incoming) async {
+        request = incoming;
+        return http.Response.bytes(const [1, 2, 3], 200);
+      }),
+    ).loadAsset('/api/v1/driver/profile/vehicle-photo');
+
+    expect(request.method, 'GET');
+    expect(request.url.path, '/api/v1/driver/profile/vehicle-photo');
+    expect(request.headers['authorization'], 'Bearer account-token');
+    expect(bytes, [1, 2, 3]);
+  });
+
   test('profile PATCH sends only supplied changes', () async {
     late http.Request request;
     await api(

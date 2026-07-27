@@ -1,10 +1,10 @@
 name: tride_driver
-description: "T-Ride driver Android application."
+description: "T-Ride driver mobile application."
 publish_to: 'none'
 version: 0.1.0+1
 
 environment:
-  sdk: ^3.11.5
+  sdk: ^3.11.4
 
 dependencies:
   flutter:

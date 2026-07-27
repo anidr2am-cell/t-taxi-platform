@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -51,6 +53,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   late DriverProfile _profile = widget.initialProfile;
   bool _saving = false;
   bool _uploading = false;
+  final Map<String, Future<List<int>>> _imageLoads = {};
 
   @override
   void dispose() {
@@ -160,7 +163,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       }
       _profile = await widget.api.getProfile();
       if (!mounted) return;
-      setState(() {});
+      setState(_imageLoads.clear);
       _message(avatar ? '프로필 사진이 변경되었습니다.' : '차량 사진이 변경되었습니다.');
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -185,13 +188,29 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   Widget _networkImage(String? path, {required bool avatar}) {
     final hasImage = path != null && path.isNotEmpty;
     final child = hasImage
-        ? Image.network(
-            widget.api.resolveAssetUrl(path),
+        ? FutureBuilder<List<int>>(
             key: Key(avatar ? 'avatarImage' : 'vehiclePhotoImage'),
-            height: avatar ? 100 : 150,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
+            future: _imageLoads.putIfAbsent(
+              path,
+              () => widget.api.loadAsset(path),
+            ),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Icon(Icons.broken_image_outlined);
+              }
+              final bytes = snapshot.data;
+              if (bytes == null) {
+                return const CircularProgressIndicator();
+              }
+              return Image.memory(
+                Uint8List.fromList(bytes),
+                height: avatar ? 100 : 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    const Icon(Icons.broken_image_outlined),
+              );
+            },
           )
         : Icon(avatar ? Icons.person : Icons.directions_car_outlined, size: 54);
     return SizedBox(
@@ -205,85 +224,89 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     final vehicle = _profile.vehicle;
     return Scaffold(
       appBar: AppBar(title: const Text('프로필 수정')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _networkImage(_profile.avatarUrl, avatar: true),
-          OutlinedButton(
-            key: const Key('replaceAvatar'),
-            onPressed: _uploading ? null : () => _upload(avatar: true),
-            child: const Text('프로필 사진 교체'),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            key: const Key('profileName'),
-            controller: _name,
-            decoration: const InputDecoration(labelText: '이름'),
-          ),
-          TextField(
-            key: const Key('profilePhone'),
-            controller: _phone,
-            decoration: const InputDecoration(labelText: '전화번호'),
-            keyboardType: TextInputType.phone,
-          ),
-          TextFormField(
-            initialValue: _profile.email,
-            enabled: false,
-            decoration: const InputDecoration(labelText: '이메일 (읽기 전용)'),
-          ),
-          const SizedBox(height: 20),
-          DropdownButtonFormField<String>(
-            key: const Key('profileVehicleType'),
-            initialValue: _vehicleTypes.contains(_vehicleType)
-                ? _vehicleType
-                : null,
-            decoration: const InputDecoration(labelText: '차종'),
-            items: _vehicleTypes
-                .map(
-                  (value) => DropdownMenuItem(value: value, child: Text(value)),
-                )
-                .toList(),
-            onChanged: (value) => setState(() => _vehicleType = value),
-          ),
-          TextField(
-            controller: _model,
-            decoration: const InputDecoration(labelText: '모델'),
-          ),
-          TextField(
-            controller: _plate,
-            decoration: const InputDecoration(labelText: '차량 번호'),
-          ),
-          TextField(
-            controller: _color,
-            decoration: const InputDecoration(labelText: '색상'),
-          ),
-          TextField(
-            controller: _year,
-            decoration: const InputDecoration(labelText: '연식'),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 16),
-          _networkImage(vehicle?.photoUrl, avatar: false),
-          if (vehicle?.photoUrl == null)
-            const Text(
-              '등록된 차량 사진이 없거나 아직 승인되지 않았습니다.',
-              key: Key('vehiclePhotoUnavailableNotice'),
-              textAlign: TextAlign.center,
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _networkImage(_profile.avatarUrl, avatar: true),
+            OutlinedButton(
+              key: const Key('replaceAvatar'),
+              onPressed: _uploading ? null : () => _upload(avatar: true),
+              child: const Text('프로필 사진 교체'),
             ),
-          OutlinedButton(
-            key: const Key('replaceVehiclePhoto'),
-            onPressed: _uploading ? null : () => _upload(avatar: false),
-            child: const Text('차량 사진 교체'),
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            key: const Key('saveProfile'),
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const CircularProgressIndicator()
-                : const Text('저장'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            TextField(
+              key: const Key('profileName'),
+              controller: _name,
+              decoration: const InputDecoration(labelText: '이름'),
+            ),
+            TextField(
+              key: const Key('profilePhone'),
+              controller: _phone,
+              decoration: const InputDecoration(labelText: '전화번호'),
+              keyboardType: TextInputType.phone,
+            ),
+            TextFormField(
+              initialValue: _profile.email,
+              enabled: false,
+              decoration: const InputDecoration(labelText: '이메일 (읽기 전용)'),
+            ),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              key: const Key('profileVehicleType'),
+              initialValue: _vehicleTypes.contains(_vehicleType)
+                  ? _vehicleType
+                  : null,
+              decoration: const InputDecoration(labelText: '차종'),
+              items: _vehicleTypes
+                  .map(
+                    (value) =>
+                        DropdownMenuItem(value: value, child: Text(value)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _vehicleType = value),
+            ),
+            TextField(
+              controller: _model,
+              decoration: const InputDecoration(labelText: '모델'),
+            ),
+            TextField(
+              controller: _plate,
+              decoration: const InputDecoration(labelText: '차량 번호'),
+            ),
+            TextField(
+              controller: _color,
+              decoration: const InputDecoration(labelText: '색상'),
+            ),
+            TextField(
+              controller: _year,
+              decoration: const InputDecoration(labelText: '연식'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            _networkImage(vehicle?.photoUrl, avatar: false),
+            if (vehicle?.photoUrl == null)
+              const Text(
+                '등록된 차량 사진이 없거나 아직 승인되지 않았습니다.',
+                key: Key('vehiclePhotoUnavailableNotice'),
+                textAlign: TextAlign.center,
+              ),
+            OutlinedButton(
+              key: const Key('replaceVehiclePhoto'),
+              onPressed: _uploading ? null : () => _upload(avatar: false),
+              child: const Text('차량 사진 교체'),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              key: const Key('saveProfile'),
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const CircularProgressIndicator()
+                  : const Text('저장'),
+            ),
+          ],
+        ),
       ),
     );
   }

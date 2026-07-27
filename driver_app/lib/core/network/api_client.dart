@@ -41,6 +41,29 @@ class ApiClient {
     );
   }
 
+  Future<List<int>> getBytes(String path, {String? bearerToken}) async {
+    try {
+      final response = await _httpClient
+          .get(_assetEndpoint(path), headers: _headers(bearerToken))
+          .timeout(timeout);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+      _decodeResponse(response);
+      throw const ApiException(ApiFailureKind.unknown);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException(ApiFailureKind.timeout);
+    } on http.ClientException {
+      throw const ApiException(ApiFailureKind.unavailable);
+    } on FormatException {
+      throw const ApiException(ApiFailureKind.invalidResponse);
+    } catch (_) {
+      throw const ApiException(ApiFailureKind.unknown);
+    }
+  }
+
   Future<Map<String, dynamic>> patchJson(
     String path, {
     required Map<String, dynamic> body,
@@ -97,6 +120,14 @@ class ApiClient {
     } on StateError {
       throw const ApiException(ApiFailureKind.configuration);
     }
+  }
+
+  Uri _assetEndpoint(String path) {
+    final supplied = Uri.tryParse(path);
+    if (supplied != null && supplied.hasScheme && supplied.host.isNotEmpty) {
+      return supplied;
+    }
+    return _endpoint(path);
   }
 
   Map<String, String> _headers(String? bearerToken) => {

@@ -36,6 +36,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   bool _tripsVisited = false;
   bool _accountVisited = false;
   bool _hasUrgentActivity = false;
+  int _tripsRefreshRequest = 0;
 
   Future<void> _selectTab(int index, {bool force = false}) async {
     if (!force &&
@@ -49,7 +50,10 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
     if (!mounted) return;
     setState(() {
       _selectedIndex = index;
-      if (index == 1) _tripsVisited = true;
+      if (index == 1) {
+        _tripsVisited = true;
+        _tripsRefreshRequest++;
+      }
       if (index == 2) _accountVisited = true;
     });
   }
@@ -79,6 +83,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
                 onUnauthorized: widget.onUnauthorized,
                 onLogout: widget.onLogout,
                 socketEvents: widget.driverSocket?.events,
+                refreshRequest: _tripsRefreshRequest,
               ),
             ),
           if (_accountVisited && widget.accountApi != null)

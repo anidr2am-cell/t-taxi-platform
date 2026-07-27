@@ -950,6 +950,45 @@ void main() {
     expect(find.text('내 운행 목록'), findsOneWidget);
   });
 
+  testWidgets('release response and socket echo close detail exactly once', (
+    tester,
+  ) async {
+    final socket = FakeDriverSocketConnection();
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ACCEPTED',
+        canConfirmStandby: false,
+        allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+      )
+      ..releaseCompleter = Completer<void>();
+    await pumpBookingList(tester, reader, socketEvents: socket.events);
+    await tester.pumpAndSettle();
+    final listLoadsBefore = reader.listCount;
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const Key('releaseAssignmentButton')),
+    );
+    await tester.tap(find.byKey(const Key('releaseAssignmentButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('releaseReason-SCHEDULE_CONFLICT')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('releaseConfirmButton')));
+    await tester.pump();
+
+    socket.emit(DriverSocketEventType.assignmentReleased, {
+      'bookingNumber': 'TX209912319999',
+      'reasonCode': 'SCHEDULE_CONFLICT',
+    });
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+
+    reader.releaseCompleter!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
+    expect(reader.listCount, listLoadsBefore + 1);
+  });
+
   testWidgets('past deadline disables non-emergency release', (tester) async {
     final reader = FakeBookingReader()
       ..detailResult = bookingDetail(

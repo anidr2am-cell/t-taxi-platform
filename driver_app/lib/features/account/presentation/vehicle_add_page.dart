@@ -156,101 +156,104 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
           ? Center(child: Text(_loadError!))
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                DropdownButtonFormField<int>(
-                  key: const Key('vehicleType'),
-                  initialValue: _typeId,
-                  decoration: const InputDecoration(labelText: '차종'),
-                  items: _types!
-                      .map(
-                        (type) => DropdownMenuItem(
-                          value: type.id,
-                          child: Text(
-                            type.name.isEmpty ? type.code : type.name,
+          : SafeArea(
+              top: false,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  DropdownButtonFormField<int>(
+                    key: const Key('vehicleType'),
+                    initialValue: _typeId,
+                    decoration: const InputDecoration(labelText: '차종'),
+                    items: _types!
+                        .map(
+                          (type) => DropdownMenuItem(
+                            value: type.id,
+                            child: Text(
+                              type.name.isEmpty ? type.code : type.name,
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _submitting
-                      ? null
-                      : (value) => setState(() => _typeId = value),
-                ),
-                TextField(
-                  key: const Key('vehiclePlate'),
-                  controller: _plate,
-                  enabled: !_submitting,
-                  maxLength: 20,
-                  decoration: const InputDecoration(labelText: '차량 번호'),
-                  onChanged: (_) => setState(() {}),
-                ),
-                TextField(
-                  controller: _model,
-                  enabled: !_submitting,
-                  maxLength: 100,
-                  decoration: const InputDecoration(labelText: '모델명 (선택)'),
-                  onChanged: (_) => setState(() {}),
-                ),
-                TextField(
-                  controller: _color,
-                  enabled: !_submitting,
-                  maxLength: 30,
-                  decoration: const InputDecoration(labelText: '색상 (선택)'),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 12),
-                Text('차량 사진 (${_photos.length}/3~6)'),
-                OutlinedButton(
-                  key: const Key('pickVehiclePhotos'),
-                  onPressed: _submitting || _photos.length >= 6
-                      ? null
-                      : _addPhotos,
-                  child: const Text('차량 사진 선택'),
-                ),
-                if (_photos.isNotEmpty)
-                  TextButton(
-                    onPressed: _submitting
+                        )
+                        .toList(),
+                    onChanged: _submitting
                         ? null
-                        : () => setState(() => _photos.clear()),
-                    child: const Text('차량 사진 전체 삭제'),
+                        : (value) => setState(() => _typeId = value),
                   ),
-                const SizedBox(height: 12),
-                _DocumentSelector(
-                  key: const Key('insuranceSelector'),
-                  label: '보험증서',
-                  file: _insurance,
-                  onPick: _submitting
-                      ? null
-                      : () async {
-                          final file = await _pickDocument();
-                          if (file != null && mounted) {
-                            setState(() => _insurance = file);
-                          }
-                        },
-                ),
-                _DocumentSelector(
-                  key: const Key('registrationSelector'),
-                  label: '차량등록증',
-                  file: _registration,
-                  onPick: _submitting
-                      ? null
-                      : () async {
-                          final file = await _pickDocument();
-                          if (file != null && mounted) {
-                            setState(() => _registration = file);
-                          }
-                        },
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  key: const Key('submitVehicle'),
-                  onPressed: !_submitting && _ready ? _submit : null,
-                  child: _submitting
-                      ? const CircularProgressIndicator()
-                      : const Text('등록 신청'),
-                ),
-              ],
+                  TextField(
+                    key: const Key('vehiclePlate'),
+                    controller: _plate,
+                    enabled: !_submitting,
+                    maxLength: 20,
+                    decoration: const InputDecoration(labelText: '차량 번호'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  TextField(
+                    controller: _model,
+                    enabled: !_submitting,
+                    maxLength: 100,
+                    decoration: const InputDecoration(labelText: '모델명 (선택)'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  TextField(
+                    controller: _color,
+                    enabled: !_submitting,
+                    maxLength: 30,
+                    decoration: const InputDecoration(labelText: '색상 (선택)'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('차량 사진 (${_photos.length}/3~6)'),
+                  OutlinedButton(
+                    key: const Key('pickVehiclePhotos'),
+                    onPressed: _submitting || _photos.length >= 6
+                        ? null
+                        : _addPhotos,
+                    child: const Text('차량 사진 선택'),
+                  ),
+                  if (_photos.isNotEmpty)
+                    TextButton(
+                      onPressed: _submitting
+                          ? null
+                          : () => setState(() => _photos.clear()),
+                      child: const Text('차량 사진 전체 삭제'),
+                    ),
+                  const SizedBox(height: 12),
+                  _DocumentSelector(
+                    key: const Key('insuranceSelector'),
+                    label: '보험증서',
+                    file: _insurance,
+                    onPick: _submitting
+                        ? null
+                        : () async {
+                            final file = await _pickDocument();
+                            if (file != null && mounted) {
+                              setState(() => _insurance = file);
+                            }
+                          },
+                  ),
+                  _DocumentSelector(
+                    key: const Key('registrationSelector'),
+                    label: '차량등록증',
+                    file: _registration,
+                    onPick: _submitting
+                        ? null
+                        : () async {
+                            final file = await _pickDocument();
+                            if (file != null && mounted) {
+                              setState(() => _registration = file);
+                            }
+                          },
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    key: const Key('submitVehicle'),
+                    onPressed: !_submitting && _ready ? _submit : null,
+                    child: _submitting
+                        ? const CircularProgressIndicator()
+                        : const Text('등록 신청'),
+                  ),
+                ],
+              ),
             ),
     );
   }
