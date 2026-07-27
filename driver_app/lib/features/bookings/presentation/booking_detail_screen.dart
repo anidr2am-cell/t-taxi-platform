@@ -13,7 +13,8 @@ import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
 import 'booking_meeting_gate.dart';
 import 'booking_status_label.dart';
-import 'release_assignment_dialog.dart';
+import 'release_assignment_actions.dart';
+import 'release_assignment_ui.dart';
 
 typedef ExternalUrlLauncher = Future<bool> Function(Uri url);
 typedef NameSignPhotoPicker =
@@ -318,22 +319,30 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Future<void> _confirmRelease(bool emergencyOnly) async {
     if (_performingAction) return;
-    final input = await showDialog<ReleaseAssignmentInput>(
-      context: context,
-      builder: (_) => ReleaseAssignmentDialog(emergencyOnly: emergencyOnly),
-    );
-    if (input == null || !mounted) return;
     setState(() => _performingAction = true);
     try {
-      await widget.repository.releaseAssignment(
-        widget.bookingNumber,
-        reasonCode: input.reasonCode,
-        reasonDetail: input.reasonDetail,
+      final released = await confirmReleaseAssignment(
+        context: context,
+        repository: widget.repository,
+        bookingNumber: widget.bookingNumber,
+        emergencyOnly: emergencyOnly,
       );
       if (!mounted) return;
+      if (!released) {
+        setState(() => _performingAction = false);
+        return;
+      }
       _closeDetail(refreshList: true, message: '배정을 반납했습니다.');
     } on ApiException catch (error) {
-      await _handleActionError(error);
+      await handleReleaseAssignmentError(
+        context: context,
+        error: error,
+        onUnauthorized: widget.onUnauthorized,
+        onReload: _load,
+        showMessage: _showMessage,
+      );
+      if (!mounted) return;
+      setState(() => _performingAction = false);
     } catch (_) {
       if (!mounted) return;
       setState(() => _performingAction = false);
@@ -594,24 +603,12 @@ class _DetailBody extends StatelessWidget {
         booking.assignmentStatus.isAssigned &&
         booking.standbyAllowedAt != null &&
         !booking.canConfirmStandby;
-    final capabilities = detail.capabilities;
-    final deadline = DateTime.tryParse(
-      capabilities.assignmentReleaseDeadline ?? '',
+    final releaseUi = ReleaseAssignmentUiState.evaluate(
+      booking: booking,
+      capabilities: detail.capabilities,
+      now: now,
     );
-    final deadlinePassed = deadline != null && !now.isBefore(deadline);
-    final emergencyOnly = capabilities.releaseAssignmentEmergencyOnly;
-    final releaseActionAllowed = booking.allowsAction('RELEASE_ASSIGNMENT');
-    final releaseEnabled =
-        releaseActionAllowed &&
-        (capabilities.releaseAssignmentAvailable || emergencyOnly) &&
-        (!deadlinePassed || emergencyOnly) &&
-        (capabilities.assignmentReleaseBlockedReason == null ||
-            capabilities.assignmentReleaseBlockedReason == 'WITHIN_TWO_HOURS');
-    final releaseRelevant =
-        releaseActionAllowed &&
-        (releaseEnabled ||
-            deadlinePassed ||
-            capabilities.assignmentReleaseBlockedReason != null);
+    final showPreAcceptChoice = detail.canAccept && releaseUi.releaseRelevant;
     final meetingGate = resolveBkkAirportPickupMeetingGate(
       serviceTypeCode: booking.serviceType.code,
       nameSignRequested: detail.nameSignRequested,
@@ -636,33 +633,54 @@ class _DetailBody extends StatelessWidget {
             BookingStatusLabel(status: booking.status),
           ],
         ),
-        if (detail.canAccept) ...[
+        if (showPreAcceptChoice) ...[
           const SizedBox(height: 16),
-          FilledButton(
-            key: const Key('acceptBookingButton'),
-            onPressed: accepting ? null : onAcceptPressed,
-            child: accepting
-                ? const SizedBox(
-                    key: Key('acceptBookingLoading'),
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('예약 수락'),
+          PreAcceptReleaseActionCard(
+            uiState: releaseUi,
+            accepting: accepting,
+            performingAction: performingAction,
+            onAcceptPressed: onAcceptPressed,
+            onReleasePressed: () => onReleasePressed(releaseUi.emergencyOnly),
           ),
-        ] else if (waitingForStandby) ...[
-          const SizedBox(height: 16),
-          const FilledButton(
-            key: Key('standbyPendingButton'),
-            onPressed: null,
-            child: Text('대기 확정 대기'),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '$standbyAllowedAt부터 대기 확정 가능',
-            key: const Key('standbyAllowedAtNotice'),
-            textAlign: TextAlign.center,
-          ),
+        ] else ...[
+          if (releaseUi.releaseRelevant) ...[
+            const SizedBox(height: 16),
+            ReleaseAssignmentDetailSection(
+              uiState: releaseUi,
+              performingAction: performingAction,
+              onReleasePressed: () => onReleasePressed(releaseUi.emergencyOnly),
+              prominent:
+                  booking.assignmentStatus.isAssigned && !detail.canAccept,
+            ),
+          ],
+          if (detail.canAccept) ...[
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const Key('acceptBookingButton'),
+              onPressed: accepting ? null : onAcceptPressed,
+              child: accepting
+                  ? const SizedBox(
+                      key: Key('acceptBookingLoading'),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('예약 수락'),
+            ),
+          ] else if (waitingForStandby) ...[
+            const SizedBox(height: 16),
+            const FilledButton(
+              key: Key('standbyPendingButton'),
+              onPressed: null,
+              child: Text('대기 확정 대기'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$standbyAllowedAt부터 대기 확정 가능',
+              key: const Key('standbyAllowedAtNotice'),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ],
         if (tripAction case final action?) ...[
           const SizedBox(height: 12),
@@ -680,36 +698,6 @@ class _DetailBody extends StatelessWidget {
                   )
                 : Text(action.label),
           ),
-        ],
-        if (releaseRelevant) ...[
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            key: const Key('releaseAssignmentButton'),
-            onPressed: releaseEnabled && !performingAction
-                ? () => onReleasePressed(emergencyOnly)
-                : null,
-            icon: const Icon(Icons.assignment_return_outlined),
-            label: const Text('배정 반납'),
-          ),
-          if (emergencyOnly)
-            const Text(
-              '일반 반납 가능 시간이 지났습니다. 긴급 사유로만 반납할 수 있습니다.',
-              key: Key('releaseEmergencyOnlyNotice'),
-              textAlign: TextAlign.center,
-            )
-          else if (capabilities.assignmentReleaseBlockedReason
-              case final reason?)
-            Text(
-              _releaseBlockedMessage(reason),
-              key: const Key('releaseBlockedNotice'),
-              textAlign: TextAlign.center,
-            )
-          else if (deadlinePassed)
-            const Text(
-              '배정 반납 가능 시간이 지났습니다.',
-              key: Key('releaseDeadlineNotice'),
-              textAlign: TextAlign.center,
-            ),
         ],
         const SizedBox(height: 16),
         if (meetingGate != null) ...[
@@ -1016,16 +1004,6 @@ class _NameSignPhotoSection extends StatelessWidget {
     );
   }
 }
-
-String _releaseBlockedMessage(String reason) => switch (reason) {
-  'TRIP_ALREADY_STARTED' => '운행이 시작되어 배정을 반납할 수 없습니다.',
-  'NO_ACTIVE_ASSIGNMENT' => '활성 배정이 없어 반납할 수 없습니다.',
-  'NOT_ASSIGNED_DRIVER' => '현재 기사에게 배정된 예약이 아닙니다.',
-  'BOOKING_TERMINAL_STATUS' => '종료된 예약은 반납할 수 없습니다.',
-  'INVALID_PICKUP_TIME' => '픽업 시간을 확인할 수 없어 반납할 수 없습니다.',
-  'WITHIN_TWO_HOURS' => '일반 반납 가능 시간이 지났습니다.',
-  _ => '현재 이 배정을 반납할 수 없습니다.',
-};
 
 class _LocationInfo extends StatelessWidget {
   const _LocationInfo({

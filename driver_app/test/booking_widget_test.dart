@@ -208,6 +208,13 @@ void main() {
 
   testWidgets('detail error retries successfully', (tester) async {
     final reader = FakeBookingReader()
+      ..listResult = bookingList(
+        items: [
+          bookingSummary(
+            allowedActions: const ['VIEW_DETAILS', 'ACCEPT_BOOKING'],
+          ),
+        ],
+      )
       ..detailError = const ApiException(ApiFailureKind.server);
     await pumpBookingList(tester, reader);
     await tester.pumpAndSettle();
@@ -1343,5 +1350,118 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     completer.complete(BookingAcceptance.fromEnvelope(acceptanceEnvelope()));
     await tester.pump();
+  });
+
+  testWidgets('shows release choice before accept when assignment is ASSIGNED', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ASSIGNED',
+        allowedActions: const [
+          'VIEW_DETAILS',
+          'RELEASE_ASSIGNMENT',
+          'ACCEPT_BOOKING',
+        ],
+      );
+    await pumpDetail(tester, reader);
+
+    expect(find.byKey(const Key('preAcceptReleaseActionCard')), findsOneWidget);
+    expect(find.byKey(const Key('releaseAssignmentButton')), findsOneWidget);
+    expect(find.byKey(const Key('acceptBookingButton')), findsOneWidget);
+  });
+
+  testWidgets('shows prominent release card while waiting for standby', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ASSIGNED',
+        canConfirmStandby: false,
+        standbyAllowedAt: '2099-12-31T08:30:00.000+07:00',
+        allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
+      );
+    await pumpDetail(tester, reader);
+
+    expect(find.byKey(const Key('releaseAssignmentProminentCard')), findsOneWidget);
+    expect(find.byKey(const Key('releaseAssignmentButton')), findsOneWidget);
+    expect(find.byKey(const Key('acceptBookingButton')), findsNothing);
+  });
+
+  testWidgets('list shows release icon after capabilities prefetch', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..listResult = bookingList(
+        items: [
+          bookingSummary(
+            allowedActions: const [
+              'VIEW_DETAILS',
+              'RELEASE_ASSIGNMENT',
+              'ACCEPT_BOOKING',
+            ],
+            assignmentStatus: 'ASSIGNED',
+          ),
+        ],
+      )
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ASSIGNED',
+        allowedActions: const [
+          'VIEW_DETAILS',
+          'RELEASE_ASSIGNMENT',
+          'ACCEPT_BOOKING',
+        ],
+      );
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('releaseAssignmentListButton-TX209912319999')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('list release icon opens dialog and refreshes list on success', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..listResult = bookingList(
+        items: [
+          bookingSummary(
+            allowedActions: const [
+              'VIEW_DETAILS',
+              'RELEASE_ASSIGNMENT',
+              'ACCEPT_BOOKING',
+            ],
+            assignmentStatus: 'ASSIGNED',
+          ),
+        ],
+      )
+      ..detailResult = bookingDetail(
+        assignmentStatus: 'ASSIGNED',
+        allowedActions: const [
+          'VIEW_DETAILS',
+          'RELEASE_ASSIGNMENT',
+          'ACCEPT_BOOKING',
+        ],
+      );
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    final initialListLoads = reader.listCount;
+
+    await tester.tap(
+      find.byKey(const Key('releaseAssignmentListButton-TX209912319999')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('releaseAssignmentDialog')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('releaseReason-SCHEDULE_CONFLICT')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('releaseConfirmButton')));
+    await tester.pumpAndSettle();
+
+    expect(reader.releaseCount, 1);
+    expect(reader.listCount, greaterThan(initialListLoads));
+    expect(find.text('배정을 반납했습니다.'), findsOneWidget);
   });
 }
