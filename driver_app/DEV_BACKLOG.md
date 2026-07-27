@@ -94,23 +94,27 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
 
 로컬 iOS 플랫폼 파일 존재. 실 빌드/서명은 미착수.
 
-## 7. 수완나품 공항 게이트 안내 - 2단계 (backend 확장 필요)
-
-### 배경
-
-1단계(driver_app 상세화면 게이트 3/7번 표시)는 완료.
-단, backend에 `nameSignRequested`가 예약 목록(`scheduled`/`today`)과 새 콜(`open calls`) 응답에는 빠져 있어서 그 화면들에는 게이트 표시를 못 넣은 상태.
-
-### 남은 작업
-
-모두 backend + 고객웹 변경 필요, Edward 승인 후 진행.
-
-a. backend driver 목록/새콜 API 응답에 `nameSignRequested` 포함 또는 명시적 `meetingGate` 필드 신설
-
-b. 고객 예약 시 피켓 선택하면 "피켓용 이름"을 한 번 더 입력받는 예약 폼 필드 추가
-
-c. 기사가 피켓 사진을 업로드할 수 있는 신규 API + driver_app 화면
+## 7. 수완나품 공항 게이트 안내 - 2단계
 
 ### 상태
 
-1단계만 완료, 2단계 전체 보류. backend/고객웹 변경 범위라 별도 승인 및 계획 필요.
+진행 중
+
+### 완료
+
+- backend: `nameSignRequested` 목록/새콜 API 노출 (커밋 `9c26d39`)
+- backend: `nameSignText` 컬럼 + 검증 + 저장 + 응답 노출 (커밋 `b81238b`)
+- 고객웹: 피켓 이름 입력 UI (커밋 `c57a2ad`)
+- backend: 피켓 사진 업로드/조회 API - 기사용 + 게스트용 (커밋 `f173e83`)
+
+### 남은 것
+
+- 고객웹: 피켓 사진 표시 화면
+  - guest API는 이미 완성됨: `GET /public/bookings/:bookingId/name-sign-photo`
+- driver_app: 피켓 사진 업로드 화면
+  - `DRIVER_ARRIVED` 상태에서 강하게 노출
+  - API는 이미 완성됨: `POST/GET /driver/bookings/:bookingNumber/name-sign-photo`
+- driver_app: 목록 화면(내 운행, 새 콜)에 게이트 3/7번 표시
+  - `nameSignRequested`가 이제 목록 API에도 포함되므로 가능
+
+> ⚠️ 아직 실제 서버(staging/production)에 이 backend 변경들이 배포되지 않은 상태. UI 작업 전 배포 여부 확인 필요.
