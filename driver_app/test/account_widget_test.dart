@@ -22,6 +22,7 @@ void main() {
             accountApi: account,
             dispatchRepository: dispatch,
             onUnauthorized: () async {},
+            onLogout: () async {},
           ),
         ),
       );

@@ -16,6 +16,7 @@ Future<(FakeAuthApi, FakeTokenStorage, AuthController)> pumpApp(
   WidgetTester tester, {
   FakeAuthApi? api,
   FakeTokenStorage? storage,
+  FakeAccountApi? accountApi,
 }) async {
   final fakeApi = api ?? FakeAuthApi();
   final fakeStorage = storage ?? FakeTokenStorage();
@@ -29,6 +30,7 @@ Future<(FakeAuthApi, FakeTokenStorage, AuthController)> pumpApp(
       bookingRepository: FakeBookingReader()
         ..listResult = bookingList(items: const []),
       dispatchRepository: FakeDispatchReader(),
+      accountApi: accountApi,
     ),
   );
   await tester.pumpAndSettle();
@@ -125,9 +127,15 @@ void main() {
     final storage = FakeTokenStorage(
       const AuthTokens(accessToken: 'saved', refreshToken: 'refresh'),
     );
-    await pumpApp(tester, storage: storage);
-    await tester.tap(find.text('내 운행'));
+    await pumpApp(tester, storage: storage, accountApi: FakeAccountApi());
+    await tester.tap(find.text('계정'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('logoutButton')),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.byKey(const Key('logoutButton')), findsOneWidget);
     await tester.tap(find.byKey(const Key('logoutButton')));
     await tester.pumpAndSettle();
     expect(find.text('기사 로그인'), findsOneWidget);

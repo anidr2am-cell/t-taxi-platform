@@ -81,7 +81,6 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
               child: BookingListScreen(
                 repository: widget.bookingRepository,
                 onUnauthorized: widget.onUnauthorized,
-                onLogout: widget.onLogout,
                 socketEvents: widget.driverSocket?.events,
                 refreshRequest: _tripsRefreshRequest,
               ),
@@ -93,6 +92,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
                 accountApi: widget.accountApi!,
                 dispatchRepository: widget.dispatchRepository,
                 onUnauthorized: widget.onUnauthorized,
+                onLogout: widget.onLogout,
               ),
             ),
         ],

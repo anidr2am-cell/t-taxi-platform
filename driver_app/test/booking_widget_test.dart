@@ -21,7 +21,6 @@ Future<void> pumpBookingList(
   WidgetTester tester,
   FakeBookingReader reader, {
   Future<void> Function()? onUnauthorized,
-  Future<void> Function()? onLogout,
   Stream<DriverSocketEvent>? socketEvents,
 }) async {
   await tester.pumpWidget(
@@ -29,7 +28,6 @@ Future<void> pumpBookingList(
       home: BookingListScreen(
         repository: reader,
         onUnauthorized: onUnauthorized ?? () async {},
-        onLogout: onLogout ?? () async {},
         socketEvents: socketEvents,
       ),
     ),
@@ -338,17 +336,10 @@ void main() {
     expect(storage.clearCount, 1);
   });
 
-  testWidgets('logout action remains connected to auth flow', (tester) async {
-    var logoutCount = 0;
-    await pumpBookingList(
-      tester,
-      FakeBookingReader(),
-      onLogout: () async => logoutCount++,
-    );
+  testWidgets('booking list does not expose logout action', (tester) async {
+    await pumpBookingList(tester, FakeBookingReader());
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('logoutButton')));
-    await tester.pump();
-    expect(logoutCount, 1);
+    expect(find.byKey(const Key('logoutButton')), findsNothing);
   });
 
   testWidgets('shows accept button only for DRIVER_ASSIGNED + ASSIGNED', (

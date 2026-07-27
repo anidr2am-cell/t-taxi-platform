@@ -14,11 +14,13 @@ class AccountPage extends StatefulWidget {
     required this.accountApi,
     required this.dispatchRepository,
     required this.onUnauthorized,
+    required this.onLogout,
   });
 
   final AccountDataSource accountApi;
   final DispatchReader dispatchRepository;
   final Future<void> Function() onUnauthorized;
+  final Future<void> Function() onLogout;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -199,6 +201,13 @@ class _AccountPageState extends State<AccountPage> {
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    key: const Key('logoutButton'),
+                    leading: const Icon(Icons.logout),
+                    title: const Text('로그아웃'),
+                    onTap: widget.onLogout,
                   ),
                 ],
               ),

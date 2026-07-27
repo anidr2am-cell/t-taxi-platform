@@ -12,14 +12,12 @@ class BookingListScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.onUnauthorized,
-    required this.onLogout,
     this.socketEvents,
     this.refreshRequest = 0,
   });
 
   final BookingReader repository;
   final Future<void> Function() onUnauthorized;
-  final Future<void> Function() onLogout;
   final Stream<DriverSocketEvent>? socketEvents;
   final int refreshRequest;
 
@@ -93,11 +91,6 @@ class _BookingListScreenState extends State<BookingListScreen> {
             tooltip: '새로고침',
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
-          ),
-          TextButton(
-            key: const Key('logoutButton'),
-            onPressed: widget.onLogout,
-            child: const Text('로그아웃'),
           ),
         ],
       ),
