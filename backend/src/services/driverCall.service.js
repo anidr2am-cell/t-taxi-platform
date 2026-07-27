@@ -1,5 +1,4 @@
 const AppError = require('../utils/AppError');
-const { randomUUID } = require('node:crypto');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
@@ -7,12 +6,7 @@ const ROLES = require('../constants/roles');
 const {
   emitDriverCallClaimed,
   emitDriverCallConfirmed,
-  emitDriverCallAvailable,
-  emitDriverAssignmentReleased,
-  emitDriverUrgentCallNew,
 } = require('../socket/realtime');
-const NOTIFICATION_TYPES = require('../constants/notificationTypes');
-const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
 const {
   assertNoPickupTimeConflict,
 } = require('../policies/driverBookingConflictPolicy');
@@ -56,6 +50,7 @@ class DriverCallService {
     chatRepository = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
+    bookingAssignmentReopenService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -65,6 +60,7 @@ class DriverCallService {
     this.chatRepository = chatRepository;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
+    this.bookingAssignmentReopenService = bookingAssignmentReopenService;
   }
 
   validateBookingNumber(bookingNumber) {
@@ -258,30 +254,20 @@ class DriverCallService {
   }
 
   async restartUrgentNegotiationAfterRelease(conn, booking, evaluation) {
-    if (!this.urgentNegotiationRepository) {
-      throw new AppError('Urgent negotiation service is unavailable', {
+    return this.bookingAssignmentReopenService.restartUrgentNegotiationAfterRelease(
+      conn,
+      booking,
+      evaluation,
+    );
+  }
+
+  assertBookingAssignmentReopenService() {
+    if (!this.bookingAssignmentReopenService) {
+      throw new AppError('Assignment reopen service is unavailable', {
         statusCode: HTTP_STATUS.CONFLICT,
-        errorCode: ERROR_CODES.URGENT_NEGOTIATION_NOT_FOUND,
+        errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
       });
     }
-
-    const negotiationId = await this.urgentNegotiationRepository.insertNegotiation(conn, {
-      bookingId: booking.id,
-    });
-    await this.bookingRepository.updateUrgentNegotiationId(
-      conn,
-      booking.id,
-      negotiationId,
-    );
-
-    return {
-      bookingNumber: booking.booking_number,
-      negotiationId,
-      attemptCount: 0,
-      minRequiredEtaMinutes: null,
-      reassignmentPriority: evaluation.reassignmentPriority,
-      releasedByDriver: true,
-    };
   }
 
   async claimOpenCall(driverUserId, bookingNumber, input = {}) {
@@ -464,61 +450,17 @@ class DriverCallService {
     };
   }
 
-  async notifyEligibleDriversForReopenedBooking(conn, {
-    booking,
-    openCallPayload,
-    releasedAssignmentId,
-  }) {
-    const candidates = await this.driverRepository.listEligibleForOpenBooking(
+  async notifyEligibleDriversForReopenedBooking(conn, params) {
+    return this.bookingAssignmentReopenService.notifyEligibleDriversForReopenedBooking(
       conn,
-      booking.vehicle_type_id,
-      { excludeReleasedBookingId: booking.id },
+      params,
     );
-    const drivers = [];
-    for (const driver of candidates) {
-      const blocked = this.commissionSettlementService
-        ? await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)
-        : false;
-      if (!blocked) drivers.push(driver);
-    }
-
-    const eventId = randomUUID();
-    if (this.notificationRepository) {
-      for (const driver of drivers) {
-        await this.notificationRepository.insert(conn, {
-          recipientType: RECIPIENT_TYPES.USER,
-          userId: driver.user_id,
-          recipientDriverId: driver.id,
-          bookingId: booking.id,
-          audienceRole: ROLES.DRIVER,
-          eventId,
-          eventName: 'driver.call.available',
-          idempotencyKey: `driver-call-reopened:${booking.id}:${driver.id}:${releasedAssignmentId}`,
-          notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
-          title: '새 예약이 도착했습니다',
-          body: `${openCallPayload.origin} → ${openCallPayload.destination}`,
-          payload: openCallPayload,
-        });
-      }
-    }
-
-    return drivers.map((driver) => ({
-      driverId: driver.id,
-      userId: driver.user_id,
-    }));
   }
 
   async deactivateReleasedDriverChatParticipant(conn, booking, driverUserId) {
-    if (!this.chatRepository) return;
-    const room = await this.chatRepository.findRoomByBookingIdForUpdate(
+    return this.bookingAssignmentReopenService.deactivateReleasedDriverChatParticipant(
       conn,
-      booking.id,
-    );
-    if (!room) return;
-    await this.chatRepository.deactivateParticipant(
-      conn,
-      room.id,
-      'DRIVER',
+      booking,
       driverUserId,
     );
   }
@@ -593,87 +535,41 @@ class DriverCallService {
         nowMs,
       });
       this.assertReleaseAllowed(evaluation);
+      this.assertBookingAssignmentReopenService();
 
-      const deactivated = await this.bookingRepository.deactivateAssignment(
+      const reopenEffects = await this.bookingAssignmentReopenService.reopenAssignedBookingInTransaction(
         conn,
-        active.id,
-        ASSIGNMENT_RELEASE_MARKER,
-      );
-      if (!deactivated) {
-        throw new AppError('Assignment already released', {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.ASSIGNMENT_ALREADY_RELEASED,
-        });
-      }
-
-      await this.bookingRepository.reopenAfterDriverRelease(
-        conn,
-        booking.id,
-        driver.user_id,
-      );
-      await this.bookingRepository.insertStatusLog(conn, booking.id, {
-        fromStatus: BOOKING_STATUS.DRIVER_ASSIGNED,
-        toStatus: BOOKING_STATUS.OPEN,
-        changedByUserId: driver.user_id,
-        changedByRole: ROLES.DRIVER,
-        reason: ASSIGNMENT_RELEASE_MARKER,
-        memo: evaluation.reasonCode,
-      });
-      await this.bookingRepository.insertActivityLog(conn, booking.id, {
-        activityType: ASSIGNMENT_RELEASE_MARKER,
-        actorUserId: driver.user_id,
-        actorRole: ROLES.DRIVER,
-        description: evaluation.emergency
-          ? 'Driver released assignment as emergency reassignment'
-          : 'Driver released assignment before trip start',
-        payload: {
-          bookingNumber: normalizedBookingNumber,
-          driverId: driver.id,
-          assignmentId: active.id,
-          reasonCode: evaluation.reasonCode,
-          reasonDetail: evaluation.reasonDetail,
-          reassignmentPriority: evaluation.reassignmentPriority,
-          remainingMs: evaluation.remainingMs,
-          emergency: evaluation.emergency,
-          // Single reopen event; urgency is carried by reassignmentPriority.
-          eventName: 'BOOKING_REOPENED_FOR_DISPATCH',
-        },
-      });
-      await this.deactivateReleasedDriverChatParticipant(
-        conn,
-        booking,
-        driver.user_id,
-      );
-
-      const openRow = await this.bookingRepository.findOpenDriverCallByBookingId(
-        conn,
-        booking.id,
-      );
-      if (!openRow) {
-        throw new AppError('Booking not found', {
-          statusCode: HTTP_STATUS.NOT_FOUND,
-          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
-        });
-      }
-      openCallPayload = {
-        ...this.mapOpenCall(openRow),
-        reassignmentPriority: evaluation.reassignmentPriority,
-        releasedByDriver: true,
-      };
-
-      if (Number(booking.is_urgent_request)) {
-        urgentRebroadcastPayload = await this.restartUrgentNegotiationAfterRelease(
-          conn,
-          { ...booking, booking_number: normalizedBookingNumber },
-          evaluation,
-        );
-      } else {
-        openCallTargets = await this.notifyEligibleDriversForReopenedBooking(conn, {
+        {
           booking,
-          openCallPayload,
-          releasedAssignmentId: active.id,
-        });
-      }
+          bookingNumber: normalizedBookingNumber,
+          activeAssignment: active,
+          actorUserId: driver.user_id,
+          actorRole: ROLES.DRIVER,
+          assignmentReleaseMarker: ASSIGNMENT_RELEASE_MARKER,
+          assignmentSocketReasonCode: 'DRIVER_RELEASED',
+          statusLogMemo: evaluation.reasonCode,
+          activityType: ASSIGNMENT_RELEASE_MARKER,
+          activityDescription: evaluation.emergency
+            ? 'Driver released assignment as emergency reassignment'
+            : 'Driver released assignment before trip start',
+          activityPayload: {
+            bookingNumber: normalizedBookingNumber,
+            driverId: driver.id,
+            assignmentId: active.id,
+            reasonCode: evaluation.reasonCode,
+            reasonDetail: evaluation.reasonDetail,
+            reassignmentPriority: evaluation.reassignmentPriority,
+            remainingMs: evaluation.remainingMs,
+            emergency: evaluation.emergency,
+            eventName: 'BOOKING_REOPENED_FOR_DISPATCH',
+          },
+          reassignmentPriority: evaluation.reassignmentPriority,
+          releasedByDriver: true,
+          releasedDriverUserId: driver.user_id,
+          mapOpenCall: (row) => this.mapOpenCall(row),
+          urgentEvaluation: evaluation,
+        },
+      );
 
       await conn.commit();
       releasedDriverUserId = driver.user_id;
@@ -688,6 +584,9 @@ class DriverCallService {
         reasonCode: evaluation.reasonCode,
         message: 'Assignment released and booking reopened for dispatch.',
       };
+      openCallPayload = reopenEffects.openCallPayload;
+      openCallTargets = reopenEffects.openCallTargets;
+      urgentRebroadcastPayload = reopenEffects.urgentRebroadcastPayload;
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -695,23 +594,15 @@ class DriverCallService {
       conn.release();
     }
 
-    emitDriverAssignmentReleased(releasedDriverUserId, {
+    this.bookingAssignmentReopenService.emitReopenEvents({
       bookingNumber: normalizedBookingNumber,
-      status: BOOKING_STATUS.OPEN,
-      reason: 'DRIVER_RELEASED',
-      reasonCode: 'DRIVER_RELEASED',
-      bookingStatus: BOOKING_STATUS.OPEN,
+      releasedDriverUserId,
+      assignmentSocketReasonCode: 'DRIVER_RELEASED',
       reassignmentPriority: releaseResult?.reassignmentPriority,
-      releasedAt: new Date().toISOString(),
+      openCallPayload,
+      openCallTargets,
+      urgentRebroadcastPayload,
     });
-    if (urgentRebroadcastPayload) {
-      emitDriverUrgentCallNew(urgentRebroadcastPayload);
-    } else {
-      emitDriverCallClaimed({ bookingNumber: normalizedBookingNumber });
-      for (const target of openCallTargets) {
-        emitDriverCallAvailable(target.userId, openCallPayload);
-      }
-    }
 
     return releaseResult;
   }

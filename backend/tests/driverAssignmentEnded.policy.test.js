@@ -36,6 +36,16 @@ test('driver release reason maps correctly', () => {
   );
 });
 
+test('admin unassign reason maps correctly', () => {
+  assert.equal(
+    resolveAssignmentEndedReason({
+      bookingStatus: 'OPEN',
+      assignmentReason: 'ADMIN_RELEASED_ASSIGNMENT',
+    }),
+    ASSIGNMENT_ENDED_REASON.ADMIN_RELEASED,
+  );
+});
+
 test('other active assignment wins as reassigned', () => {
   assert.equal(
     resolveAssignmentEndedReason({

@@ -39,6 +39,8 @@ const TRANSITIONS = {
   [BOOKING_STATUS.DRIVER_ASSIGNED]: {
     [BOOKING_STATUS.ON_ROUTE]: [ROLES.DRIVER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
     [BOOKING_STATUS.CONFIRMED]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    // Admin-only unassign to OPEN; only via POST .../unassign-driver (guarded below).
+    [BOOKING_STATUS.OPEN]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
     // Customer may cancel until 2h before pickup (policy enforced separately).
     [BOOKING_STATUS.CANCELLED]: [ROLES.CUSTOMER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
     [BOOKING_STATUS.NO_SHOW]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
@@ -106,7 +108,15 @@ class BookingStatusService {
     this.outboxProcessor = outboxProcessor;
   }
 
-  validateTransition(fromStatus, toStatus, actorRole) {
+  validateTransition(fromStatus, toStatus, actorRole, options = {}) {
+    if (
+      fromStatus === BOOKING_STATUS.DRIVER_ASSIGNED
+      && toStatus === BOOKING_STATUS.OPEN
+      && !options.allowAdminUnassignToOpen
+    ) {
+      this.throwInvalidTransition(fromStatus, toStatus, actorRole);
+    }
+
     if (TERMINAL_STATUSES.has(fromStatus)) {
       this.throwInvalidTransition(fromStatus, toStatus, actorRole);
     }
@@ -285,7 +295,7 @@ class BookingStatusService {
       this.assertCustomerCancellationAllowed(booking, options.nowMs);
     }
 
-    this.validateTransition(fromStatus, toStatus, actor.role);
+    this.validateTransition(fromStatus, toStatus, actor.role, options);
     const occurredAt = new Date().toISOString();
     let releasedDriverUserId = booking.driver_user_id ?? null;
     let releaseReasonCode = null;

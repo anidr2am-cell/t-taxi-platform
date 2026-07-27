@@ -33,6 +33,7 @@ const FlightService = require("../services/flight.service");
 const PlacesService = require("../services/places.service");
 const DriverJobService = require("../services/driverJob.service");
 const DriverCallService = require("../services/driverCall.service");
+const BookingAssignmentReopenService = require("../services/bookingAssignmentReopen.service");
 const DriverStatusService = require("../services/driverStatus.service");
 const DriverRepository = require("../repositories/driver.repository");
 const DriverLocationRepository = require("../repositories/driverLocation.repository");
@@ -276,6 +277,18 @@ container.register(
     ),
 );
 container.register(
+  "bookingAssignmentReopenService",
+  (c) =>
+    new BookingAssignmentReopenService(
+      c.get("bookingRepository"),
+      c.get("driverRepository"),
+      c.get("notificationRepository"),
+      c.get("chatRepository"),
+      c.get("commissionSettlementService"),
+      c.get("urgentNegotiationRepository"),
+    ),
+);
+container.register(
   "driverCallService",
   (c) =>
     new DriverCallService(
@@ -287,6 +300,7 @@ container.register(
       c.get("chatRepository"),
       c.get("commissionSettlementService"),
       c.get("urgentNegotiationRepository"),
+      c.get("bookingAssignmentReopenService"),
     ),
 );
 container.register(
@@ -365,6 +379,8 @@ container.register(
       c.get("adminQrReissueService"),
       c.get("chatService"),
       c.get("reviewRepository"),
+      c.get("bookingAssignmentReopenService"),
+      c.get("driverCallService"),
     ),
 );
 container.register(

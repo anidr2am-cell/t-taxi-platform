@@ -8,6 +8,7 @@ process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-se
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret';
 
 const DriverCallService = require('../src/services/driverCall.service');
+const BookingAssignmentReopenService = require('../src/services/bookingAssignmentReopen.service');
 const DriverJobService = require('../src/services/driverJob.service');
 const BookingService = require('../src/services/booking.service');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
@@ -322,6 +323,14 @@ function createHarness(overrides = {}) {
       return overrides.newNegotiationId ?? 500;
     },
   };
+  const bookingAssignmentReopenService = new BookingAssignmentReopenService(
+    bookingRepository,
+    driverRepository,
+    notificationRepository,
+    chatRepository,
+    commissionSettlementService,
+    urgentNegotiationRepository,
+  );
   return {
     conn,
     calls,
@@ -334,6 +343,7 @@ function createHarness(overrides = {}) {
       chatRepository,
       commissionSettlementService,
       urgentNegotiationRepository,
+      bookingAssignmentReopenService,
     ),
   };
 }
@@ -805,6 +815,10 @@ test('releaseAssignment reopens booking, clears active assignment, and notifies 
     emitted.some((row) => row.room === driverUserRoom(42) && row.event === 'driver:assignment:released'),
     true,
   );
+  const releaseEvent = emitted.find(
+    (row) => row.room === driverUserRoom(42) && row.event === 'driver:assignment:released',
+  );
+  assert.equal(releaseEvent.payload.reasonCode, 'DRIVER_RELEASED');
   assert.equal(
     emitted.filter((row) => row.event === 'driver:call:new').length,
     2,

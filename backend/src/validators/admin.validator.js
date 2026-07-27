@@ -88,6 +88,10 @@ const reassignDriverSchema = Joi.object({
   assignmentReason: unicodeText({ max: 255, allowEmpty: true }).default(null),
 });
 
+const unassignDriverSchema = Joi.object({
+  reason: unicodeText({ max: 255 }),
+});
+
 const autoAssignDriverSchema = Joi.object({
   driverId: Joi.number().integer().positive().optional(),
   useTopCandidate: Joi.boolean().optional(),
@@ -135,6 +139,7 @@ module.exports = {
   bookingNumberParamsSchema,
   assignDriverSchema,
   reassignDriverSchema,
+  unassignDriverSchema,
   autoAssignDriverSchema,
   qrReissueSchema,
   adminBookingNotesQuerySchema,

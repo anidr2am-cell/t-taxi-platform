@@ -2,9 +2,14 @@
  * Safe reason codes shown to a previously assigned driver when their
  * assignment is no longer active. Never invent booking existence for strangers.
  */
+const {
+  ADMIN_ASSIGNMENT_RELEASE_MARKER,
+} = require('../constants/bookingAssignmentRelease.constants');
+
 const ASSIGNMENT_ENDED_REASON = {
   CUSTOMER_CANCELLED: 'CUSTOMER_CANCELLED',
   ADMIN_CANCELLED: 'ADMIN_CANCELLED',
+  ADMIN_RELEASED: 'ADMIN_RELEASED',
   DRIVER_RELEASED: 'DRIVER_RELEASED',
   REASSIGNED_TO_ANOTHER_DRIVER: 'REASSIGNED_TO_ANOTHER_DRIVER',
   TRIP_COMPLETED: 'TRIP_COMPLETED',
@@ -32,6 +37,9 @@ function resolveAssignmentEndedReason({
   if (reason === DRIVER_RELEASE_ASSIGNMENT_REASON) {
     return ASSIGNMENT_ENDED_REASON.DRIVER_RELEASED;
   }
+  if (reason === ADMIN_ASSIGNMENT_RELEASE_MARKER) {
+    return ASSIGNMENT_ENDED_REASON.ADMIN_RELEASED;
+  }
 
   const status = String(bookingStatus || '').trim().toUpperCase();
   if (status === 'CANCELLED') {
@@ -57,6 +65,8 @@ function safeMessageForEndedReason(reasonCode) {
       return 'An admin cancelled the booking and your assignment was released.';
     case ASSIGNMENT_ENDED_REASON.DRIVER_RELEASED:
       return 'Assignment release completed. The booking is open for other drivers.';
+    case ASSIGNMENT_ENDED_REASON.ADMIN_RELEASED:
+      return 'An admin unassigned you from this booking. It is open for other drivers.';
     case ASSIGNMENT_ENDED_REASON.REASSIGNED_TO_ANOTHER_DRIVER:
       return 'This booking was assigned to another driver.';
     case ASSIGNMENT_ENDED_REASON.TRIP_COMPLETED:

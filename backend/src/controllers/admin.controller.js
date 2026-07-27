@@ -68,6 +68,15 @@ const reassignDriver = asyncHandler(async (req, res) => {
   return success(res, data, 'Driver reassigned');
 });
 
+const unassignDriver = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().unassignDriver(
+    req.params.bookingNumber,
+    req.body,
+    req.user,
+  );
+  return success(res, data, 'Driver unassigned');
+});
+
 const getDriverCandidates = asyncHandler(async (req, res) => {
   const data = await getAdminDispatchService().getDriverCandidates(req.params.bookingNumber);
   return success(res, data, 'OK');
@@ -129,6 +138,7 @@ module.exports = {
   getDriverDeletionPreview,
   assignDriver,
   reassignDriver,
+  unassignDriver,
   getDriverCandidates,
   autoAssignDriver,
   reissueQr,

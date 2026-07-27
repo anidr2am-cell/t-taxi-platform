@@ -476,3 +476,20 @@ test('customer cannot cancel ON_ROUTE even with ample time', async () => {
       && err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
   );
 });
+
+test('admin cannot PATCH DRIVER_ASSIGNED to OPEN without dedicated unassign API', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.DRIVER_ASSIGNED }),
+  });
+
+  await assert.rejects(
+    () => harness.service.transition(
+      'TX202607010001',
+      { status: BOOKING_STATUS.OPEN },
+      { id: 7, role: ROLES.ADMIN },
+    ),
+    (err) => err instanceof AppError
+      && err.errorCode === ERROR_CODES.INVALID_STATUS_TRANSITION,
+  );
+  assert.equal(harness.calls.updateStatus, 0);
+});

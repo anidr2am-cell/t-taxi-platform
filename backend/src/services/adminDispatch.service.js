@@ -10,6 +10,11 @@ const AdminOperationsService = require("./adminOperations.service");
 const {
   ADMIN_BOOKING_VIEWS,
 } = require("../constants/adminOperations.constants");
+const {
+  ADMIN_ASSIGNMENT_RELEASE_MARKER,
+  ADMIN_UNASSIGN_ACTIVITY_TYPE,
+  ADMIN_RELEASED_REASON_CODE,
+} = require("../constants/bookingAssignmentRelease.constants");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -50,6 +55,8 @@ class AdminDispatchService {
     adminQrReissueService = null,
     chatService = null,
     reviewRepository = null,
+    bookingAssignmentReopenService = null,
+    driverCallService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -62,6 +69,8 @@ class AdminDispatchService {
     this.adminQrReissueService = adminQrReissueService;
     this.chatService = chatService;
     this.reviewRepository = reviewRepository;
+    this.bookingAssignmentReopenService = bookingAssignmentReopenService;
+    this.driverCallService = driverCallService;
     this.adminOperationsService = new AdminOperationsService();
   }
 
@@ -1423,6 +1432,118 @@ class AdminDispatchService {
 
     if (outboxId && this.outboxProcessor) {
       await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+    }
+
+    return response;
+  }
+
+  assertBookingAssignmentReopenService() {
+    if (!this.bookingAssignmentReopenService || !this.driverCallService) {
+      throw new AppError("Assignment reopen service is unavailable", {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
+
+  async unassignDriver(bookingNumber, input, user) {
+    const actor = this.actorFromUser(user);
+    this.assertBookingAssignmentReopenService();
+
+    const conn = await this.pool.getConnection();
+    let reopenEffects = null;
+    let releasedDriverUserId = null;
+    let previousDriverId = null;
+    let response;
+
+    try {
+      await conn.beginTransaction();
+
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
+      if (!booking) {
+        throw new AppError("Booking not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      if (booking.status !== BOOKING_STATUS.DRIVER_ASSIGNED) {
+        throw new AppError(
+          "Booking must be in DRIVER_ASSIGNED status to unassign the driver",
+          {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.INVALID_STATUS_FOR_UNASSIGN,
+          },
+        );
+      }
+
+      const active = await this.bookingRepository.findActiveAssignmentForUpdate(
+        conn,
+        booking.id,
+      );
+      if (!active) {
+        throw new AppError("Booking has no active driver assignment", {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
+        });
+      }
+
+      previousDriverId = active.driver_id;
+      const previousDriver = await this.driverRepository.findById(active.driver_id);
+      releasedDriverUserId = previousDriver?.user_id ?? booking.driver_user_id ?? null;
+
+      reopenEffects = await this.bookingAssignmentReopenService.reopenAssignedBookingInTransaction(
+        conn,
+        {
+          booking,
+          bookingNumber,
+          activeAssignment: active,
+          actorUserId: actor.id,
+          actorRole: actor.role,
+          assignmentReleaseMarker: ADMIN_ASSIGNMENT_RELEASE_MARKER,
+          assignmentSocketReasonCode: ADMIN_RELEASED_REASON_CODE,
+          statusLogMemo: input.reason,
+          activityType: ADMIN_UNASSIGN_ACTIVITY_TYPE,
+          activityDescription: "Admin unassigned driver and reopened booking for dispatch",
+          activityPayload: {
+            bookingNumber,
+            driverId: active.driver_id,
+            assignmentId: active.id,
+            reason: input.reason,
+            eventName: "BOOKING_REOPENED_FOR_DISPATCH",
+          },
+          reassignmentPriority: "NORMAL",
+          releasedByDriver: false,
+          releasedDriverUserId,
+          mapOpenCall: (row) => this.driverCallService.mapOpenCall(row),
+        },
+      );
+
+      await conn.commit();
+      response = {
+        bookingNumber,
+        status: BOOKING_STATUS.OPEN,
+        bookingStatus: BOOKING_STATUS.OPEN,
+        unassigned: true,
+        previousDriverId,
+        reason: input.reason,
+        message: "Driver unassigned and booking reopened for dispatch.",
+      };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    if (reopenEffects) {
+      this.bookingAssignmentReopenService.emitReopenEvents({
+        ...reopenEffects,
+        releasedDriverUserId,
+      });
     }
 
     return response;

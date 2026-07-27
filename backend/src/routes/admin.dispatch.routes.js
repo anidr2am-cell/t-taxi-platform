@@ -10,6 +10,7 @@ const {
   bookingNumberParamsSchema,
   assignDriverSchema,
   reassignDriverSchema,
+  unassignDriverSchema,
   autoAssignDriverSchema,
   qrReissueSchema,
   adminBookingNotesQuerySchema,
@@ -83,6 +84,13 @@ router.post(
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: reassignDriverSchema }),
   adminController.reassignDriver,
+);
+
+router.post(
+  '/bookings/:bookingNumber/unassign-driver',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: unassignDriverSchema }),
+  adminController.unassignDriver,
 );
 
 router.get(
