@@ -520,6 +520,23 @@ class AppLocalizations {
       'admin_dispatch_login': 'Sign in',
       'admin_dispatch_assign_driver': 'Assign driver',
       'admin_dispatch_reassign_driver': 'Reassign driver',
+      'admin_dispatch_unassign_driver': 'Unassign driver (reopen)',
+      'admin_dispatch_unassign_driver_title': 'Unassign driver and reopen booking',
+      'admin_dispatch_unassign_driver_message':
+          'The booking will return to OPEN and become available to other drivers.',
+      'admin_dispatch_unassign_driver_warning':
+          'This action cannot be undone. The assigned driver will be notified immediately.',
+      'admin_dispatch_unassign_driver_reason': 'Reason for unassigning',
+      'admin_dispatch_unassign_driver_confirm': 'Unassign and reopen',
+      'admin_dispatch_unassign_success':
+          'Driver unassigned. The booking is open for dispatch again.',
+      'admin_dispatch_unassign_failed': 'Could not unassign the driver.',
+      'admin_dispatch_unassign_error_invalid_status':
+          'This booking cannot be unassigned in its current status. Refresh and try again.',
+      'admin_dispatch_unassign_error_no_assignment':
+          'This booking has no active driver assignment.',
+      'admin_dispatch_unassign_error_validation':
+          'Please enter a valid reason for unassigning the driver.',
       'admin_dispatch_assigned_driver': 'Assigned driver',
       'admin_dispatch_reassign_reason': 'Reassignment reason',
       'admin_dispatch_no_drivers': 'No drivers available',
@@ -1866,6 +1883,23 @@ class AppLocalizations {
       'admin_dispatch_existing_bookings': '기존 예약',
       'admin_dispatch_new_sort_hint': '최근 접수순',
       'admin_dispatch_existing_sort_hint': '최근 예약일순',
+      'admin_dispatch_unassign_driver': '기사 배정 해제(재오픈)',
+      'admin_dispatch_unassign_driver_title': '기사 배정 해제 및 예약 재오픈',
+      'admin_dispatch_unassign_driver_message':
+          '예약이 OPEN 상태로 돌아가 다른 기사에게 다시 노출됩니다.',
+      'admin_dispatch_unassign_driver_warning':
+          '이 작업은 되돌릴 수 없으며, 배정된 기사에게 즉시 알림이 전송됩니다.',
+      'admin_dispatch_unassign_driver_reason': '배정 해제 사유',
+      'admin_dispatch_unassign_driver_confirm': '배정 해제 및 재오픈',
+      'admin_dispatch_unassign_success':
+          '기사 배정이 해제되었습니다. 예약이 다시 배차 대기 상태입니다.',
+      'admin_dispatch_unassign_failed': '기사 배정을 해제하지 못했습니다.',
+      'admin_dispatch_unassign_error_invalid_status':
+          '현재 상태에서는 배정을 해제할 수 없습니다. 새로고침 후 다시 시도해 주세요.',
+      'admin_dispatch_unassign_error_no_assignment':
+          '활성 기사 배정이 없습니다.',
+      'admin_dispatch_unassign_error_validation':
+          '배정 해제 사유를 올바르게 입력해 주세요.',
       'admin_ops_search': '예약번호, 고객, 전화번호, 기사, 차량번호 검색',
       'admin_ops_filters': '필터',
       'admin_ops_filter_apply': '적용',

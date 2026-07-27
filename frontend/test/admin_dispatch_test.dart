@@ -21,6 +21,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
     this.detailResponse,
     this.detailResponses,
     this.candidatesError,
+    this.unassignError,
   });
 
   final String? token;
@@ -31,6 +32,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
   int detailCalls = 0;
   int assignCalls = 0;
   int reassignCalls = 0;
+  int unassignCalls = 0;
   int autoAssignCalls = 0;
   int addNoteCalls = 0;
   int archiveCalls = 0;
@@ -39,6 +41,8 @@ class _FakeAdminApi extends AdminDispatchApiService {
   List<String> lastArchivedBookings = [];
   List<String> lastRestoredBookings = [];
   Object? addNoteError;
+  Object? unassignError;
+  String? lastUnassignReason;
   String? lastAssignmentState;
   String? lastStatus;
   String? lastView;
@@ -217,6 +221,21 @@ class _FakeAdminApi extends AdminDispatchApiService {
     return {
       'assignmentId': 2,
       'driver': {'driverId': driverId},
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> unassignDriver(
+    String bookingNumber,
+    String reason,
+  ) async {
+    unassignCalls += 1;
+    lastUnassignReason = reason;
+    if (unassignError != null) throw unassignError!;
+    return {
+      'bookingNumber': bookingNumber,
+      'status': 'OPEN',
+      'unassigned': true,
     };
   }
 
@@ -1015,6 +1034,207 @@ void main() {
     await tester.tap(find.text('Confirm Booking'));
     await tester.pumpAndSettle();
     expect(api.reassignCalls, 1);
+  });
+
+  testWidgets('unassign button shows only for DRIVER_ASSIGNED with active assignment', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'DRIVER_ASSIGNED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': ['REASSIGN_DRIVER'],
+              'activeAssignment': {
+                'driverDisplayName': 'Old Driver',
+                'status': 'ASSIGNED',
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Unassign driver (reopen)'), findsOneWidget);
+    expect(find.text('Reassign driver'), findsOneWidget);
+  });
+
+  testWidgets('unassign button hidden when booking is not DRIVER_ASSIGNED', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'OPEN',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': ['ASSIGN_DRIVER'],
+              'activeAssignment': null,
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Unassign driver (reopen)'), findsNothing);
+  });
+
+  testWidgets('unassign button hidden for ON_ROUTE even when reassign is allowed', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'ON_ROUTE',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': ['REASSIGN_DRIVER'],
+              'activeAssignment': {
+                'driverDisplayName': 'Old Driver',
+                'status': 'ASSIGNED',
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Reassign driver'), findsOneWidget);
+    expect(find.text('Unassign driver (reopen)'), findsNothing);
+  });
+
+  testWidgets('unassign flow requires reason and calls API once', (tester) async {
+    final api = _FakeAdminApi(
+      detailResponse: {
+        'bookingNumber': 'TX202607010001',
+        'status': 'DRIVER_ASSIGNED',
+        'route': {
+          'origin': {'address': 'BKK'},
+          'destination': {'address': 'Pattaya'},
+        },
+        'customer': {'name': 'Kim', 'phone': '+66123456789'},
+        'pricing': {
+          'totalAmount': 1200,
+          'currency': 'THB',
+          'paymentMethod': 'PAY_DRIVER',
+        },
+        'allowedActions': ['REASSIGN_DRIVER'],
+        'activeAssignment': {'driverDisplayName': 'Old Driver'},
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unassign driver (reopen)'));
+    await tester.pumpAndSettle();
+    final confirm = find.widgetWithText(FilledButton, 'Unassign and reopen');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.enterText(
+      find.byKey(const ValueKey('admin_unassign_reason')),
+      'Driver unavailable',
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(api.unassignCalls, 1);
+    expect(api.lastUnassignReason, 'Driver unavailable');
+  });
+
+  testWidgets('unassign failure shows invalid status message', (tester) async {
+    final api = _FakeAdminApi(
+      unassignError: const AdminDispatchApiException(
+        'Invalid status',
+        errorCode: 'INVALID_STATUS_FOR_UNASSIGN',
+      ),
+      detailResponse: {
+        'bookingNumber': 'TX202607010001',
+        'status': 'DRIVER_ASSIGNED',
+        'route': {
+          'origin': {'address': 'BKK'},
+          'destination': {'address': 'Pattaya'},
+        },
+        'customer': {'name': 'Kim', 'phone': '+66123456789'},
+        'pricing': {
+          'totalAmount': 1200,
+          'currency': 'THB',
+          'paymentMethod': 'PAY_DRIVER',
+        },
+        'allowedActions': ['REASSIGN_DRIVER'],
+        'activeAssignment': {'driverDisplayName': 'Old Driver'},
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unassign driver (reopen)'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('admin_unassign_reason')),
+      'Too late',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Unassign and reopen'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('cannot be unassigned in its current status'),
+      findsOneWidget,
+    );
+    expect(api.unassignCalls, 1);
   });
 
   testWidgets('reassignment refresh updates displayed driver', (tester) async {

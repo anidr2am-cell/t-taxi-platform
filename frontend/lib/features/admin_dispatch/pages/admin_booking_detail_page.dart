@@ -13,6 +13,7 @@ import '../../admin_settlement/services/admin_settlement_api_service.dart';
 import '../../settlement/utils/settlement_receipt.dart';
 import '../widgets/assign_driver_dialog.dart';
 import '../widgets/recommend_drivers_dialog.dart';
+import '../widgets/unassign_driver_dialog.dart';
 import '../utils/admin_operations_ux.dart';
 
 class AdminBookingDetailPage extends StatefulWidget {
@@ -155,6 +156,40 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   List<String> _allowedActions() {
     final actions = _detail?['allowedActions'] as List<dynamic>? ?? [];
     return actions.map((e) => e as String).toList();
+  }
+
+  bool _hasActiveAssignment(Map<String, dynamic> detail) {
+    final assignment = detail['activeAssignment'];
+    return assignment is Map && assignment.isNotEmpty;
+  }
+
+  bool _canUnassignDriver(Map<String, dynamic>? detail) {
+    if (detail == null) return false;
+    if (_allowedActions().contains('UNASSIGN_DRIVER')) return true;
+    return detail['status'] == 'DRIVER_ASSIGNED' && _hasActiveAssignment(detail);
+  }
+
+  String _unassignDriverErrorMessage(Object err, AppLocalizations l10n) {
+    if (err is AdminDispatchApiException) {
+      switch (err.errorCode) {
+        case 'INVALID_STATUS_FOR_UNASSIGN':
+          return l10n.t('admin_dispatch_unassign_error_invalid_status');
+        case 'NO_ACTIVE_ASSIGNMENT':
+          return l10n.t('admin_dispatch_unassign_error_no_assignment');
+        case 'VALIDATION_ERROR':
+          return validationErrorMessage(
+                err,
+                languageCode: l10n.languageCode,
+              ) ??
+              l10n.t('admin_dispatch_unassign_error_validation');
+        default:
+          break;
+      }
+    }
+    return userFacingError(
+      err,
+      fallback: l10n.t('admin_dispatch_unassign_failed'),
+    );
   }
 
   bool get _hasTransferSlip => settlementReceiptPresent(_settlement);
@@ -397,6 +432,34 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     }
   }
 
+  Future<void> _unassignDriver() async {
+    final l10n = context.l10n;
+    final reason = await showUnassignDriverDialog(
+      context: context,
+      bookingNumber: widget.bookingNumber,
+    );
+    if (reason == null) return;
+    setState(() => _submitting = true);
+    try {
+      await widget.api.unassignDriver(widget.bookingNumber, reason);
+      widget.onChanged();
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('admin_dispatch_unassign_success'))),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_unassignDriverErrorMessage(err, l10n))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   Future<void> _confirmSettlement() async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
@@ -569,7 +632,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       appBar: AppBar(title: Text(widget.bookingNumber)),
       bottomNavigationBar: detail == null || _loading || _error != null
           ? null
-          : _secondaryActionBar(l10n, actions),
+          : _secondaryActionBar(l10n, actions, detail),
       body: _loading
           ? AppUi.loadingState()
           : _error != null
@@ -725,7 +788,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     );
   }
 
-  Widget? _secondaryActionBar(AppLocalizations l10n, List<String> actions) {
+  Widget? _secondaryActionBar(
+    AppLocalizations l10n,
+    List<String> actions,
+    Map<String, dynamic> detail,
+  ) {
     final buttons = <Widget>[];
     if (actions.contains('RECOMMEND_DRIVERS')) {
       buttons.add(
@@ -744,6 +811,23 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           icon: Icons.swap_horiz,
           onPressed: _submitting ? null : _reassign,
           fullWidth: true,
+        ),
+      );
+    }
+    if (_canUnassignDriver(detail)) {
+      buttons.add(
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTokens.error,
+              side: const BorderSide(color: AppTokens.error),
+            ),
+            onPressed: _submitting ? null : _unassignDriver,
+            icon: const Icon(Icons.link_off_outlined),
+            label: Text(l10n.t('admin_dispatch_unassign_driver')),
+          ),
         ),
       );
     }

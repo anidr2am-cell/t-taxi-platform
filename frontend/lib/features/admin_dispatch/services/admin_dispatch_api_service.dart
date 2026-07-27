@@ -289,6 +289,18 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<Map<String, dynamic>> unassignDriver(
+    String bookingNumber,
+    String reason,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/bookings/$bookingNumber/unassign-driver',
+      body: {'reason': reason},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<Map<String, dynamic>> getDriverCandidates(String bookingNumber) async {
     final data = await _request(
       'GET',
