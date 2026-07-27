@@ -94,31 +94,82 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
 
 로컬 iOS 플랫폼 파일 존재. 실 빌드/서명은 미착수.
 
-## 7. 수완나품 공항 게이트 안내 - 2단계
+## 7. 수완나품 공항 게이트 안내
 
 ### 상태
 
-진행 중
+완료. 1~6단계 전부 배포 완료.
 
-### 완료
+### 완료 요약
 
 - backend: `nameSignRequested` 목록/새콜 API 노출 (커밋 `9c26d39`)
 - backend: `nameSignText` 컬럼 + 검증 + 저장 + 응답 노출 (커밋 `b81238b`)
-- 고객웹: 피켓 이름 입력 UI (커밋 `c57a2ad`)
 - backend: 피켓 사진 업로드/조회 API - 기사용 + 게스트용 (커밋 `f173e83`)
-
-### 남은 것
-
+- 고객웹: 피켓 이름 입력 UI (커밋 `c57a2ad`)
 - 고객웹: 피켓 사진 표시 화면
-  - guest API는 이미 완성됨: `GET /public/bookings/:bookingId/name-sign-photo`
-- driver_app: 피켓 사진 업로드 화면
-  - `DRIVER_ARRIVED` 상태에서 강하게 노출
-  - API는 이미 완성됨: `POST/GET /driver/bookings/:bookingNumber/name-sign-photo`
-- driver_app: 목록 화면(내 운행, 새 콜)에 게이트 3/7번 표시
-  - `nameSignRequested`가 이제 목록 API에도 포함되므로 가능
-
-> ⚠️ 아직 실제 서버(staging/production)에 이 backend 변경들이 배포되지 않은 상태. UI 작업 전 배포 여부 확인 필요.
+- driver_app: 피켓 사진 업로드 화면 (`DRIVER_ARRIVED` 상태 강조 노출)
+- driver_app: 목록/상세 화면 게이트 3/7번 안내 및 피켓 관련 UI
 
 ## 9. 기술 부채: locationDetails() 로직 중복
 
 `locationDetails()` 로직이 `driverJob.service.js`와 `booking.service.js` 두 곳에 복제되어 있음. 향후 장소명 표시 로직 변경 시 두 곳 모두 수정 필요. 리팩터링 우선순위 낮음.
+
+## 10. 관리자 강제 배정취소 (unassign-driver)
+
+### 상태
+
+완료. 배포 완료. 실사용 검증 완료.
+
+### 완료 요약
+
+- backend: admin unassign-driver API (커밋 `ab32215`)
+- frontend: 관리자 웹 버튼/dialog (커밋 `a0c2335`)
+- driver_app: `ADMIN_RELEASED` vs `DRIVER_RELEASED` 구분 안내 메시지 (커밋 `829fc99`)
+- backend: 배포 중 발견된 `openDriverCallSelectSql()`의 `name_sign_requested` SQL 버그 수정 (커밋 `3d5baf8`)
+
+## 11. 예약 시간 기본값 과거값 버그
+
+### 상태
+
+완료. 배포 완료.
+
+### 완료 요약
+
+- frontend: `BookingWizardController.initialize()` 시 SharedPreferences에 저장된 과거 `pickupDate`/`pickupTime`이 더 이상 유효하지 않으면 `defaultPickupDateTime()`(현재+2시간)으로 재설정 (커밋 `dfba80f`)
+- `reset()`에서도 기본 pickup 시간 재설정
+
+## 12. 고객웹: 피켓 이름 입력창 나라별 언어 예시 표기
+
+### 배경
+
+'피켓에 표시할 이름' 입력창에 예시 텍스트를 나라별 언어로 보여달라는 요청 (예: 태국어 사용자에게는 태국어 예시).
+
+### 위치
+
+`frontend/lib/features/booking/widgets/step_passengers_luggage.dart`의 `nameSignText` 입력 필드 근처.
+
+### 상태
+
+미착수.
+
+## 13. 전 화면 장소명 강조 표시 확장 (고객웹/기사웹/관리자)
+
+### 배경
+
+출발지/도착지 주소만으로는 기사가 위치를 파악하기 어려움.
+driver_app의 새 콜 목록에는 이미 장소명(수완나품공항, 힐튼파타야 등)을 주소 위에 강조 표시하도록 완료함.
+backend가 `pickupLocation`/`destinationLocation`을 open calls에도 노출하도록 이미 확장됨 (커밋 `8da62ba`, `984c479` 참고).
+
+### 남은 작업
+
+- a) 고객웹 예약 완료/조회 화면에 동일하게 장소명 강조 표시
+- b) 기사 웹 (`frontend/lib/features/driver/`)에도 동일 적용
+- c) 관리자 화면 (`admin_dispatch`)의 예약 목록/상세에도 동일 적용
+
+### 참고
+
+backend 데이터는 이미 존재 (`metadata` 기반). 각 화면 UI 표시 작업만 남음.
+
+### 상태
+
+부분 완료. driver_app만 완료, 나머지 3곳(고객웹/기사웹/관리자) 미착수.
