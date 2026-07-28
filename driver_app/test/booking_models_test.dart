@@ -123,6 +123,20 @@ void main() {
     });
   });
 
+  group('BookingLocation parsing', () {
+    test('parses nameTh from pickupLocation payload', () {
+      final location = BookingLocation.fromJson({
+        'name': 'BKK — Suvarnabhumi Airport',
+        'nameTh': 'ท่าอากาศยานสุวรรณภูมิ',
+        'address': '999 Nong Prue, Bang Phli',
+      });
+
+      expect(location.name, 'BKK — Suvarnabhumi Airport');
+      expect(location.nameTh, 'ท่าอากาศยานสุวรรณภูมิ');
+      expect(location.address, '999 Nong Prue, Bang Phli');
+    });
+  });
+
   group('canAccept', () {
     test('uses the server standby decision and allowed time', () {
       expect(bookingSummary().canAccept, isTrue);

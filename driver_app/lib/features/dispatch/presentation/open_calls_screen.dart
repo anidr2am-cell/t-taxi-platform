@@ -1017,8 +1017,11 @@ String _formatOpenCallEndpoint({
   required BookingLocation? location,
   required String fallbackAddress,
 }) {
+  final nameTh = location?.nameTh?.trim();
   final name = location?.name?.trim();
-  if (location != null && name != null && name.isNotEmpty) {
+  if (location != null &&
+      ((nameTh != null && nameTh.isNotEmpty) ||
+          (name != null && name.isNotEmpty))) {
     return formatBookingLocation(location);
   }
   return AirportLabelResolver.displayLabelFor(fallbackAddress);

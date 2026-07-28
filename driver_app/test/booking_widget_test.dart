@@ -109,6 +109,31 @@ void main() {
     expect(find.text('예상 수입 THB 900'), findsOneWidget);
   });
 
+  testWidgets('list prefers nameTh over name for pickup and destination', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..listResult = bookingList(
+        items: [
+          bookingSummary(
+            scheduledPickupAt: '2026-07-18T10:15:00.000+07:00',
+            pickupLocationName: 'BKK — Suvarnabhumi Airport',
+            pickupLocationNameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+            destinationLocationName: 'Test Hotel',
+            destinationLocationNameTh: 'โรงแรมทดสอบ',
+          ),
+        ],
+      );
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('ท่าอากาศยานสุวรรณภูมิ\n999 Nong Prue, Bang Phli'),
+      findsOneWidget,
+    );
+    expect(find.text('โรงแรมทดสอบ\nBangkok'), findsOneWidget);
+  });
+
   testWidgets('shows empty list state', (tester) async {
     final reader = FakeBookingReader()
       ..listResult = bookingList(items: const []);
@@ -204,6 +229,29 @@ void main() {
     expect(find.text('Synthetic fixture note'), findsOneWidget);
     expect(find.text('THB 900'), findsOneWidget);
     expect(find.textContaining('전화'), findsNothing);
+  });
+
+  testWidgets('detail prefers nameTh over name for pickup and destination', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..listResult = bookingList(items: [bookingSummary()])
+      ..detailResult = bookingDetail(
+        pickupLocationName: 'BKK — Suvarnabhumi Airport',
+        pickupLocationNameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+        destinationLocationName: 'Test Hotel',
+        destinationLocationNameTh: 'โรงแรมทดสอบ',
+      );
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('ท่าอากาศยานสุวรรณภูมิ\n999 Nong Prue, Bang Phli'),
+      findsOneWidget,
+    );
+    expect(find.text('โรงแรมทดสอบ\nBangkok'), findsOneWidget);
   });
 
   testWidgets('detail error retries successfully', (tester) async {

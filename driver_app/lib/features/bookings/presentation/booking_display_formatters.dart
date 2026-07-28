@@ -19,12 +19,20 @@ String? formatBookingDateTime(String? value) {
 }
 
 String formatBookingLocation(BookingLocation location) {
+  final primaryName = _trimmedLocationLabel(location.nameTh)
+      ?? _trimmedLocationLabel(location.name);
+  final address = _trimmedLocationLabel(location.address);
   final parts = <String>[
-    ?location.name,
-    if (location.address != null && location.address != location.name)
-      location.address!,
+    ?primaryName,
+    if (address != null && address != primaryName) address,
   ];
   return parts.isEmpty ? '위치 정보 없음' : parts.join('\n');
+}
+
+String? _trimmedLocationLabel(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed;
 }
 
 const assignmentReleasedDefaultCloseMessage =

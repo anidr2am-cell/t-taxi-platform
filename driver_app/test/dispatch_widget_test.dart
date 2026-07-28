@@ -517,6 +517,41 @@ void main() {
     );
   });
 
+  testWidgets('open call prefers nameTh over name when available', (
+    tester,
+  ) async {
+    await pumpOpenCalls(
+      tester,
+      onlineReader(
+        calls: [
+          openCall(
+            origin: '999 Nong Prue, Bang Phli',
+            destination: '333 Moo 9, Pattaya Beach Road',
+            pickupLocation: const BookingLocation(
+              name: 'BKK — Suvarnabhumi Airport',
+              nameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+              address: '999 Nong Prue, Bang Phli',
+            ),
+            destinationLocation: const BookingLocation(
+              name: 'Hilton Pattaya',
+              nameTh: 'โรงแรมฮilton พัทยา',
+              address: '333 Moo 9, Pattaya Beach Road',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    expect(
+      find.text('ท่าอากาศยานสุวรรณภูมิ\n999 Nong Prue, Bang Phli'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('โรงแรมฮilton พัทยา\n333 Moo 9, Pattaya Beach Road'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('open call falls back to airport label when pickup name is absent', (
     tester,
   ) async {

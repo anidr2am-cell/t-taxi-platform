@@ -1025,13 +1025,11 @@ class _LocationInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = location.name;
-    final address = location.address;
-    final parts = <String>[
-      ?name,
-      if (address != null && address != name) address,
-    ];
-    final value = parts.isEmpty ? fallback : parts.join('\n');
+    final formatted = formatBookingLocation(location);
+    final fallbackText = fallback.trim();
+    final value = formatted == '위치 정보 없음' && fallbackText.isNotEmpty
+        ? fallbackText
+        : formatted;
     final hasCoordinates =
         location.latitude != null && location.longitude != null;
     return Padding(

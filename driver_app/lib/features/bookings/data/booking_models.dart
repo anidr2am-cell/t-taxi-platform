@@ -134,6 +134,7 @@ class BookingMoney {
 class BookingLocation {
   const BookingLocation({
     this.name,
+    this.nameTh,
     this.address,
     this.latitude,
     this.longitude,
@@ -144,6 +145,7 @@ class BookingLocation {
     if (value is! Map<String, dynamic>) return const BookingLocation();
     return BookingLocation(
       name: _optionalString(value['name']),
+      nameTh: _optionalString(value['nameTh']),
       address: _optionalString(value['address']),
       latitude: _optionalDouble(value['latitude']),
       longitude: _optionalDouble(value['longitude']),
@@ -152,6 +154,7 @@ class BookingLocation {
   }
 
   final String? name;
+  final String? nameTh;
   final String? address;
   final double? latitude;
   final double? longitude;
