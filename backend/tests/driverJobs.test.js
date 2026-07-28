@@ -543,6 +543,20 @@ test('driver assigned booking requires acceptance before start route action', ()
   );
 });
 
+test('mapBase includes createdAt as ISO string from Bangkok wall clock', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapBase(row({
+    created_at: '2026-07-12 15:30:00',
+  }));
+
+  assert.equal(mapped.createdAt, '2026-07-12T08:30:00.000Z');
+});
+
+test('mapBase returns null createdAt when missing', () => {
+  const service = new DriverJobService({});
+  assert.equal(service.mapBase(row()).createdAt, null);
+});
+
 test('standby action is hidden before allowed time and exposed when eligible', () => {
   const service = new DriverJobService({});
   const future = service.allowedActions(

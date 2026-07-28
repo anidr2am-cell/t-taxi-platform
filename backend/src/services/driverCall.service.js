@@ -105,6 +105,7 @@ class DriverCallService {
       scheduledPickupAt: row.scheduled_pickup_at,
       pickupDate: row.pickup_date,
       pickupTime: row.pickup_time,
+      createdAt: this.driverJobService.serviceDateTimeIso(row.created_at),
       origin: row.origin_address,
       destination: row.destination_address,
       pickupLocation: this.driverJobService.locationDetails({

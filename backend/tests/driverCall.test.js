@@ -265,6 +265,9 @@ function createHarness(overrides = {}) {
     locationDetails(params) {
       return sharedDriverJobService.locationDetails(params);
     },
+    serviceDateTimeIso(value) {
+      return sharedDriverJobService.serviceDateTimeIso(value);
+    },
     async getDetail(userId, bookingNumber) {
       calls.getDetailCalls.push({ userId, bookingNumber });
       return {
@@ -477,6 +480,20 @@ test('open call list returns address-only locations when metadata has no names',
   assert.equal(result.items[0].pickupLocation.address, 'BKK Airport');
   assert.equal(result.items[0].destinationLocation.name, null);
   assert.equal(result.items[0].destinationLocation.address, 'Pattaya Hotel');
+});
+
+test('mapOpenCall includes createdAt as ISO string from Bangkok wall clock', () => {
+  const { service } = createHarness();
+  const mapped = service.mapOpenCall(openCallRow({
+    created_at: '2026-07-12 15:30:00',
+  }));
+
+  assert.equal(mapped.createdAt, '2026-07-12T08:30:00.000Z');
+});
+
+test('mapOpenCall returns null createdAt when missing', () => {
+  const { service } = createHarness();
+  assert.equal(service.mapOpenCall(openCallRow()).createdAt, null);
 });
 
 test('buildOpenCallPayload includes structured locations from metadata', () => {

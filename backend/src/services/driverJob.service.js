@@ -63,6 +63,13 @@ class DriverJobService {
     return value;
   }
 
+  serviceDateTimeIso(value) {
+    if (value == null || value === '') return null;
+    const parsedMs = parseServiceDateTimeToMs(value);
+    if (parsedMs != null) return new Date(parsedMs).toISOString();
+    return null;
+  }
+
   canConfirmStandby(row, now = new Date()) {
     if (row.status !== 'DRIVER_ASSIGNED') return false;
     if (row.assignment_status !== 'ASSIGNED') return false;
@@ -225,6 +232,7 @@ class DriverJobService {
       assignmentStatus: row.assignment_status ?? null,
       acceptedAt: row.accepted_at ?? null,
       scheduledPickupAt: row.scheduled_pickup_at ?? null,
+      createdAt: this.serviceDateTimeIso(row.created_at),
       standbyReferenceTimeType: standbyReference.referenceTimeType,
       standbyReferenceTime: standbyReference.referenceTime,
       standbyAllowedAt,
