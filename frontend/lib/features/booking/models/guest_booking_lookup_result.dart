@@ -7,6 +7,8 @@ class GuestBookingLookupResult {
     required this.serviceTypeName,
     required this.originAddress,
     required this.destinationAddress,
+    this.originName,
+    this.destinationName,
     required this.totalAmount,
     required this.currency,
     required this.paymentMethod,
@@ -38,6 +40,8 @@ class GuestBookingLookupResult {
   final String serviceTypeName;
   final String originAddress;
   final String destinationAddress;
+  final String? originName;
+  final String? destinationName;
   final num totalAmount;
   final String currency;
   final String paymentMethod;
@@ -101,6 +105,8 @@ class GuestBookingLookupResult {
       serviceTypeName: serviceType['name'] as String? ?? '',
       originAddress: origin['address'] as String? ?? '',
       destinationAddress: destination['address'] as String? ?? '',
+      originName: origin['name'] as String?,
+      destinationName: destination['name'] as String?,
       totalAmount: pricing['totalAmount'] as num? ?? 0,
       currency: pricing['currency'] as String? ?? 'THB',
       paymentMethod: pricing['paymentMethod'] as String? ?? 'PAY_DRIVER',
@@ -180,6 +186,8 @@ class GuestBookingLookupResult {
       serviceTypeName: serviceTypeName,
       originAddress: originAddress,
       destinationAddress: destinationAddress,
+      originName: originName,
+      destinationName: destinationName,
       totalAmount: totalAmount,
       currency: currency,
       paymentMethod: paymentMethod,
@@ -220,6 +228,8 @@ class GuestBookingLookupResult {
     required String serviceTypeName,
     required String originAddress,
     required String destinationAddress,
+    String? originName,
+    String? destinationName,
     String? serviceTypeCode,
     String? originAirportCode,
     bool nameSignRequested = false,
@@ -244,6 +254,8 @@ class GuestBookingLookupResult {
       serviceTypeName: serviceTypeName,
       originAddress: originAddress,
       destinationAddress: destinationAddress,
+      originName: originName,
+      destinationName: destinationName,
       totalAmount: totalAmount,
       currency: currency,
       paymentMethod: paymentMethod,
@@ -277,8 +289,15 @@ class GuestBookingLookupResult {
     'scheduledPickupAt': scheduledPickupAt,
     'serviceType': {'code': serviceTypeCode, 'name': serviceTypeName},
     'route': {
-      'origin': {'address': originAddress, 'code': originAirportCode},
-      'destination': {'address': destinationAddress},
+      'origin': {
+        'address': originAddress,
+        'code': originAirportCode,
+        if (originName != null) 'name': originName,
+      },
+      'destination': {
+        'address': destinationAddress,
+        if (destinationName != null) 'name': destinationName,
+      },
     },
     'options': {'nameSignRequested': nameSignRequested},
     'vehicle': {

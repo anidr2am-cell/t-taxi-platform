@@ -14,6 +14,8 @@ import 'package:frontend/features/booking/models/urgent_negotiation_status.dart'
 import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/pages/booking_wizard_page.dart';
+
+import 'support/booking_location_test_data.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
@@ -61,8 +63,8 @@ void main() {
               trustMessage: '',
             ),
             serviceLabel: 'Airport Pickup',
-            originLabel: 'BKK',
-            destinationLabel: 'Pattaya',
+            origin: testBookingLocation(name: 'BKK'),
+            destination: testBookingLocation(name: 'Pattaya'),
           ),
         ),
       );
@@ -241,8 +243,8 @@ void main() {
                 trustMessage: '',
               ),
               serviceLabel: 'Airport Pickup',
-              originLabel: 'BKK Airport',
-              destinationLabel: 'Pattaya Hotel',
+              origin: testBookingLocation(name: 'BKK Airport', address: 'BKK Airport'),
+              destination: testBookingLocation(name: 'Pattaya Hotel', address: 'Pattaya Hotel'),
               review: const BookingCompleteReview(
                 pickupDate: '2026-07-01',
                 pickupTime: '09:30',
@@ -287,8 +289,8 @@ void main() {
               trustMessage: '',
             ),
             serviceLabel: 'City Transfer',
-            originLabel: 'Bangkok',
-            destinationLabel: 'Pattaya',
+            origin: testBookingLocation(name: 'Bangkok'),
+            destination: testBookingLocation(name: 'Pattaya'),
             review: const BookingCompleteReview(
               pickupDate: '2026-07-01',
               pickupTime: '09:30',
@@ -332,8 +334,8 @@ void main() {
               trustMessage: '',
             ),
             serviceLabel: 'Airport Pickup',
-            originLabel: 'BKK Airport',
-            destinationLabel: 'Pattaya Hotel',
+            origin: testBookingLocation(name: 'BKK Airport', address: 'BKK Airport'),
+            destination: testBookingLocation(name: 'Pattaya Hotel', address: 'Pattaya Hotel'),
             review: const BookingCompleteReview(
               pickupDate: '2026-07-01',
               pickupTime: '09:30',

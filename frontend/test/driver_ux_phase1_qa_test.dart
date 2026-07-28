@@ -13,6 +13,8 @@ import 'package:frontend/features/driver/models/driver_booking.dart';
 import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/pages/driver_jobs_page.dart';
 import 'package:frontend/features/driver/pages/driver_today_page.dart';
+
+import 'support/booking_location_test_data.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver_settlement/pages/driver_settlement_list_page.dart';
 import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
@@ -580,8 +582,8 @@ void main() {
               trustMessage: 'Booking received',
             ),
             serviceLabel: 'Airport Pickup',
-            originLabel: 'BKK Airport',
-            destinationLabel: 'Pattaya Hotel',
+            origin: testBookingLocation(name: 'BKK Airport', address: 'BKK Airport'),
+            destination: testBookingLocation(name: 'Pattaya Hotel', address: 'Pattaya Hotel'),
             enableCustomerTools: true,
             chatApi: _StubBookingChatApi(),
           ),

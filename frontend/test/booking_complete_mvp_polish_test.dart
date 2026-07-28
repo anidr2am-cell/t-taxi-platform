@@ -4,6 +4,8 @@ import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 
+import 'support/booking_location_test_data.dart';
+
 void main() {
   test('booking complete trust copy is QR-free in every customer locale', () {
     for (final languageCode in AppLocalizations.supportedLanguages) {
@@ -20,8 +22,8 @@ void main() {
         home: BookingCompletePage(
           result: _result(),
           serviceLabel: 'Airport Pickup',
-          originLabel: 'BKK Airport',
-          destinationLabel: 'Pattaya',
+          origin: testBookingLocation(name: 'BKK Airport'),
+          destination: testBookingLocation(name: 'Pattaya'),
         ),
       ),
     );
@@ -42,8 +44,8 @@ void main() {
         home: BookingCompletePage(
           result: _result(trustMessage: 'Show the boarding QR to the driver.'),
           serviceLabel: 'Airport Pickup',
-          originLabel: 'BKK Airport',
-          destinationLabel: 'Pattaya',
+          origin: testBookingLocation(name: 'BKK Airport'),
+          destination: testBookingLocation(name: 'Pattaya'),
         ),
       ),
     );

@@ -6,10 +6,12 @@ import '../../../widgets/app_ui.dart';
 import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
 import '../models/guest_booking_lookup_result.dart';
+import '../models/location_option.dart';
 import '../services/booking_chat_api.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
+import '../utils/location_display.dart';
 import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
@@ -24,8 +26,8 @@ import 'guest_booking_lookup_page.dart';
 class BookingCompletePage extends StatefulWidget {
   final BookingCreateResult result;
   final String serviceLabel;
-  final String originLabel;
-  final String destinationLabel;
+  final LocationOption? origin;
+  final LocationOption? destination;
   final BookingCompleteReview? review;
   final Future<DropoffQrIssueResult> Function()? issueDropoffQr;
   final BookingChatApi? chatApi;
@@ -44,8 +46,8 @@ class BookingCompletePage extends StatefulWidget {
     super.key,
     required this.result,
     required this.serviceLabel,
-    required this.originLabel,
-    required this.destinationLabel,
+    required this.origin,
+    required this.destination,
     this.review,
     this.issueDropoffQr,
     this.chatApi,
@@ -107,8 +109,10 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       guestAccessToken: token,
       customerPhone: phone,
       serviceTypeName: widget.serviceLabel,
-      originAddress: widget.originLabel,
-      destinationAddress: widget.destinationLabel,
+      originName: _locationStoredName(widget.origin),
+      originAddress: _locationStoredAddress(widget.origin),
+      destinationName: _locationStoredName(widget.destination),
+      destinationAddress: _locationStoredAddress(widget.destination),
       serviceTypeCode: widget.serviceTypeCode,
       originAirportCode: widget.originAirportCode,
       nameSignRequested: widget.nameSignRequested,
@@ -132,8 +136,10 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       guestAccessToken: widget.result.guestAccessToken ?? '',
       customerPhone: widget.customerPhone ?? '',
       serviceTypeName: widget.serviceLabel,
-      originAddress: widget.originLabel,
-      destinationAddress: widget.destinationLabel,
+      originName: _locationStoredName(widget.origin),
+      originAddress: _locationStoredAddress(widget.origin),
+      destinationName: _locationStoredName(widget.destination),
+      destinationAddress: _locationStoredAddress(widget.destination),
       serviceTypeCode: widget.serviceTypeCode,
       originAirportCode: widget.originAirportCode,
       nameSignRequested: widget.nameSignRequested,
@@ -256,8 +262,8 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   l10n,
                   widget.scheduledPickupAt,
                 ),
-                origin: widget.originLabel,
-                destination: widget.destinationLabel,
+                origin: widget.origin,
+                destination: widget.destination,
                 vehicle: widget.selectedVehicle,
                 total: CustomerBookingFormat.money(
                   result.totalAmount,
@@ -336,13 +342,13 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                       label: l10n.t('service_type'),
                       value: widget.serviceLabel,
                     ),
-                    AppUi.summaryRow(
+                    bookingLocationOptionSummaryRow(
                       label: l10n.t('origin'),
-                      value: widget.originLabel,
+                      location: widget.origin,
                     ),
-                    AppUi.summaryRow(
+                    bookingLocationOptionSummaryRow(
                       label: l10n.t('destination'),
-                      value: widget.destinationLabel,
+                      location: widget.destination,
                     ),
                     AppUi.summaryRow(
                       label: l10n.t('pickup_datetime'),
@@ -471,6 +477,19 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       ),
     );
   }
+
+  String? _locationStoredName(LocationOption? location) {
+    final name = location?.name?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return null;
+  }
+
+  String _locationStoredAddress(LocationOption? location) {
+    if (location == null) return '';
+    final address = location.address?.trim();
+    if (address != null && address.isNotEmpty) return address;
+    return location.displayName;
+  }
 }
 
 class _SuccessHero extends StatelessWidget {
@@ -537,8 +556,8 @@ class _BookingNumberCard extends StatelessWidget {
   final String bookingNumber;
   final String statusLabel;
   final String pickupDateTime;
-  final String origin;
-  final String destination;
+  final LocationOption? origin;
+  final LocationOption? destination;
   final String? vehicle;
   final String total;
   final String paymentLabel;
@@ -609,8 +628,14 @@ class _BookingNumberCard extends StatelessWidget {
             label: l10n.t('pickup_datetime'),
             value: pickupDateTime,
           ),
-          AppUi.summaryRow(label: l10n.t('origin'), value: origin),
-          AppUi.summaryRow(label: l10n.t('destination'), value: destination),
+          bookingLocationOptionSummaryRow(
+            label: l10n.t('origin'),
+            location: origin,
+          ),
+          bookingLocationOptionSummaryRow(
+            label: l10n.t('destination'),
+            location: destination,
+          ),
           if (vehicle?.trim().isNotEmpty == true)
             AppUi.summaryRow(label: l10n.t('vehicle'), value: vehicle!.trim()),
           AppUi.summaryRow(

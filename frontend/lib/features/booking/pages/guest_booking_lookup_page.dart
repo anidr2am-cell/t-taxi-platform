@@ -10,6 +10,7 @@ import '../services/booking_chat_api.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
+import '../utils/location_display.dart';
 import '../widgets/booking_chat_section.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
@@ -508,13 +509,15 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                 label: l10n.t('guest_lookup_service'),
                 value: result.serviceTypeName,
               ),
-              AppUi.summaryRow(
+              bookingLocationSummaryRow(
                 label: l10n.t('guest_lookup_from'),
-                value: result.originAddress,
+                name: result.originName,
+                address: result.originAddress,
               ),
-              AppUi.summaryRow(
+              bookingLocationSummaryRow(
                 label: l10n.t('guest_lookup_to'),
-                value: result.destinationAddress,
+                name: result.destinationName,
+                address: result.destinationAddress,
               ),
               if (result.driverName != null) ...[
                 const Divider(height: 24),

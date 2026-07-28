@@ -3,9 +3,10 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../utils/customer_booking_format.dart';
-import '../utils/pricing_display.dart';
+import '../utils/location_display.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/location_option.dart';
+import '../utils/pricing_display.dart';
 import '../models/service_type_option.dart';
 
 class StepConfirmation extends StatelessWidget {
@@ -45,13 +46,13 @@ class StepConfirmation extends StatelessWidget {
               label: l10n.t('service_type'),
               value: l10n.t(state.serviceType?.labelKey ?? ''),
             ),
-            AppUi.summaryRow(
+            bookingLocationOptionSummaryRow(
               label: l10n.t('origin'),
-              value: _formatLocation(state.origin),
+              location: state.origin,
             ),
-            AppUi.summaryRow(
+            bookingLocationOptionSummaryRow(
               label: l10n.t('destination'),
-              value: _formatLocation(state.destination),
+              location: state.destination,
             ),
             AppUi.summaryRow(
               label: l10n.t('pickup_datetime'),
@@ -196,15 +197,6 @@ class StepConfirmation extends StatelessWidget {
       padding: AppUi.pagePadding(context),
       child: content,
     );
-  }
-
-  String _formatLocation(LocationOption? location) {
-    if (location == null) return '-';
-    final name = location.name ?? location.displayName;
-    if (location.address != null && location.address!.isNotEmpty) {
-      return '$name — ${location.address}';
-    }
-    return name;
   }
 
   Widget _section(

@@ -13,6 +13,8 @@ import 'package:frontend/features/chat/services/chat_socket_service.dart';
 import 'package:frontend/theme/app_tokens.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+import 'support/booking_location_test_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
@@ -275,8 +277,8 @@ void main() {
         BookingCompletePage(
           result: _bookingResult(),
           serviceLabel: 'Airport Pickup',
-          originLabel: 'BKK Airport',
-          destinationLabel: 'Pattaya',
+          origin: testBookingLocation(name: 'BKK Airport'),
+          destination: testBookingLocation(name: 'Pattaya'),
           serviceTypeCode: 'AIRPORT_PICKUP',
           originAirportCode: 'BKK',
           nameSignRequested: false,
@@ -300,8 +302,8 @@ void main() {
         BookingCompletePage(
           result: _bookingResult(status: 'DRIVER_ASSIGNED'),
           serviceLabel: 'Airport Pickup',
-          originLabel: 'BKK Airport',
-          destinationLabel: 'Pattaya',
+          origin: testBookingLocation(name: 'BKK Airport'),
+          destination: testBookingLocation(name: 'Pattaya'),
           serviceTypeCode: 'AIRPORT_PICKUP',
           originAirportCode: 'BKK',
           nameSignRequested: false,
@@ -328,8 +330,8 @@ void main() {
           BookingCompletePage(
             result: _bookingResult(),
             serviceLabel: 'Airport Pickup',
-            originLabel: 'BKK Airport',
-            destinationLabel: 'Pattaya',
+            origin: testBookingLocation(name: 'BKK Airport'),
+            destination: testBookingLocation(name: 'Pattaya'),
             serviceTypeCode: 'AIRPORT_PICKUP',
             originAirportCode: 'BKK',
             nameSignRequested: false,

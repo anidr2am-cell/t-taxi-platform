@@ -185,10 +185,6 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final snapshot = _controller.state;
     final review = _controller.buildCompleteReview();
     final serviceLabel = l10n.t(snapshot.serviceType?.labelKey ?? '');
-    final originLabel = _controller.formatLocationLabel(snapshot.origin);
-    final destinationLabel = _controller.formatLocationLabel(
-      snapshot.destination,
-    );
 
     final result = bookingMode == 'URGENT'
         ? await _controller.submitUrgentBooking()
@@ -228,8 +224,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         builder: (_) => BookingCompletePage(
           result: result,
           serviceLabel: serviceLabel,
-          originLabel: originLabel,
-          destinationLabel: destinationLabel,
+          origin: snapshot.origin,
+          destination: snapshot.destination,
           review: review,
           serviceTypeCode: snapshot.serviceType?.apiCode,
           originAirportCode: snapshot.origin?.kind == LocationKind.airport

@@ -8,6 +8,8 @@ import 'package:frontend/features/chat/models/chat_connection_state.dart';
 import 'package:frontend/features/chat/services/chat_socket_service.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
+import 'support/booking_location_test_data.dart';
+
 class _FakeBookingChatApi extends BookingChatApi {
   @override
   Future<Map<String, dynamic>> getRoom({
@@ -138,8 +140,8 @@ BookingCompletePage _page({
   return BookingCompletePage(
     result: result ?? _result(),
     serviceLabel: 'Airport Pickup',
-    originLabel: 'BKK Airport',
-    destinationLabel: 'Pattaya Hotel',
+    origin: testBookingLocation(name: 'BKK Airport', address: 'BKK Airport'),
+    destination: testBookingLocation(name: 'Pattaya Hotel', address: 'Pattaya Hotel'),
     review: review,
     chatApi: _FakeBookingChatApi(),
     chatSocketService: _FakeChatSocketService(),
