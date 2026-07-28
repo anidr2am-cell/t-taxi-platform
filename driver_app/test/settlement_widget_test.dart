@@ -91,6 +91,94 @@ void main() {
     expect(find.textContaining('TX-DUE'), findsOneWidget);
   });
 
+  testWidgets('list card shows customer payment and driver income on the left', (
+    tester,
+  ) async {
+    final api = FakeSettlementApi()
+      ..items = [
+        settlementItem(
+          bookingNumber: 'TX-PAY',
+          customerPaymentAmount: 1300,
+          companyCommissionAmount: 200,
+          driverExpectedIncomeAmount: 1100,
+        ),
+      ];
+    await pumpSettlementList(tester, api);
+
+    expect(find.text('고객 결제액'), findsOneWidget);
+    expect(find.text('기사 수입'), findsOneWidget);
+    expect(find.text('수수료'), findsOneWidget);
+    expect(find.text('THB 1,300'), findsOneWidget);
+    expect(find.text('THB 1,100'), findsOneWidget);
+    expect(find.text('THB 200'), findsOneWidget);
+    expect(find.byKey(const Key('settlementNameSignNote-TX-PAY')), findsNothing);
+  });
+
+  testWidgets('list card shows name sign note when amount is positive', (
+    tester,
+  ) async {
+    final api = FakeSettlementApi()
+      ..items = [
+        settlementItem(
+          bookingNumber: 'TX-SIGN',
+          customerPaymentAmount: 1300,
+          companyCommissionAmount: 200,
+          driverExpectedIncomeAmount: 1000,
+          nameSignAmount: 100,
+        ),
+      ];
+    await pumpSettlementList(tester, api);
+
+    expect(find.text('THB 1,000'), findsOneWidget);
+    expect(find.text('(피켓 비용 -100바트 포함)'), findsOneWidget);
+    expect(find.byKey(const Key('settlementNameSignNote-TX-SIGN')), findsOneWidget);
+  });
+
+  testWidgets('list card hides name sign note when amount is absent or zero', (
+    tester,
+  ) async {
+    final api = FakeSettlementApi()
+      ..items = [
+        settlementItem(bookingNumber: 'TX-NONE', nameSignAmount: null),
+        settlementItem(bookingNumber: 'TX-ZERO', nameSignAmount: 0),
+      ];
+    await pumpSettlementList(tester, api);
+
+    expect(find.textContaining('피켓 비용'), findsNothing);
+  });
+
+  testWidgets('list card keeps due date and status chip', (tester) async {
+    final api = FakeSettlementApi()
+      ..items = [
+        settlementItem(
+          bookingNumber: 'TX-DUE-DATE',
+          commissionStatus: 'DUE',
+          dueAt: '2026-07-30T23:59:00.000+07:00',
+        ),
+      ];
+    await pumpSettlementList(tester, api);
+
+    expect(find.byKey(const Key('settlementStatus-DUE')), findsOneWidget);
+    expect(find.textContaining('마감: 2026-07-30T23:59:00.000+07:00'), findsOneWidget);
+  });
+
+  testWidgets('list card shows fallback when payment amounts are missing', (
+    tester,
+  ) async {
+    final api = FakeSettlementApi()
+      ..items = [
+        settlementItem(
+          bookingNumber: 'TX-NULL',
+          customerPaymentAmount: null,
+          companyCommissionAmount: null,
+          driverExpectedIncomeAmount: null,
+        ),
+      ];
+    await pumpSettlementList(tester, api);
+
+    expect(find.text('금액 정보 없음'), findsNWidgets(3));
+  });
+
   testWidgets('detail shows blocked banner, rejection reason, and upload CTA', (
     tester,
   ) async {

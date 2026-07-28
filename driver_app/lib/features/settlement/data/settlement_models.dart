@@ -120,6 +120,7 @@ class SettlementItem {
     required this.customerTotalCurrency,
     required this.companyCommissionAmount,
     required this.companyCommissionCurrency,
+    required this.nameSignAmount,
     required this.driverExpectedIncomeAmount,
     required this.driverExpectedIncomeCurrency,
     required this.currency,
@@ -162,6 +163,7 @@ class SettlementItem {
       companyCommissionCurrency: _optionalString(
         json['companyCommissionCurrency'],
       ),
+      nameSignAmount: _optionalNum(json['nameSignAmount']),
       driverExpectedIncomeAmount: _optionalNum(
         json['driverExpectedIncomeAmount'],
       ),
@@ -203,6 +205,7 @@ class SettlementItem {
   final String? customerTotalCurrency;
   final num? companyCommissionAmount;
   final String? companyCommissionCurrency;
+  final num? nameSignAmount;
   final num? driverExpectedIncomeAmount;
   final String? driverExpectedIncomeCurrency;
   final String? currency;

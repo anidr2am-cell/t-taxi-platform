@@ -59,6 +59,30 @@ void main() {
     expect(result.single.blocksNewCalls, isTrue);
   });
 
+  test('list item parses nameSignAmount from API payload', () async {
+    final result = await api(
+      MockClient(
+        (_) async => http.Response(
+          jsonEncode(
+            envelope({
+              'items': [
+                settlementJson(
+                  bookingNumber: 'TX-SIGN',
+                  nameSignAmount: 150,
+                  driverExpectedIncomeAmount: 1000,
+                ),
+              ],
+            }),
+          ),
+          200,
+        ),
+      ),
+    ).listSettlements();
+
+    expect(result.single.nameSignAmount, 150);
+    expect(result.single.driverExpectedIncomeAmount, 1000);
+  });
+
   test('detail parses payment instructions', () async {
     final result = await api(
       MockClient(

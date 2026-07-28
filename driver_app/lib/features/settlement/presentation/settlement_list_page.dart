@@ -151,34 +151,166 @@ class _SettlementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final customerCurrency =
+        item.customerPaymentCurrency ??
+        item.customerTotalCurrency ??
+        item.currency;
+    final commissionAmount =
+        item.companyCommissionAmount ?? item.commissionAmount;
+    final commissionCurrency =
+        item.companyCommissionCurrency ?? item.currency;
+    final driverIncomeCurrency =
+        item.driverExpectedIncomeCurrency ?? item.currency;
+    final nameSignAmount = item.nameSignAmount;
+    final showNameSignNote =
+        nameSignAmount != null && nameSignAmount > 0;
+
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: ListTile(
+      child: InkWell(
         key: Key('settlement-${item.bookingNumber}'),
         onTap: onTap,
-        leading: const Icon(Icons.receipt_long_outlined),
-        title: Text(item.bookingNumber),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              formatSettlementMoney(
-                item.companyCommissionAmount ?? item.commissionAmount,
-                item.companyCommissionCurrency ?? item.currency,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(Icons.receipt_long_outlined, color: colors.primary),
               ),
-            ),
-            if (item.dueAt != null) Text('마감: ${item.dueAt}'),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _StatusChip(status: item.commissionStatus),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right, color: colors.outline),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.bookingNumber,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SettlementAmountLine(
+                                key: Key(
+                                  'settlementCustomerPayment-${item.bookingNumber}',
+                                ),
+                                label: '고객 결제액',
+                                amount:
+                                    item.customerPaymentAmount ??
+                                    item.customerTotalAmount,
+                                currency: customerCurrency,
+                              ),
+                              const SizedBox(height: 8),
+                              _SettlementAmountLine(
+                                key: Key(
+                                  'settlementDriverIncome-${item.bookingNumber}',
+                                ),
+                                label: '기사 수입',
+                                amount: item.driverExpectedIncomeAmount,
+                                currency: driverIncomeCurrency,
+                                emphasized: true,
+                              ),
+                              if (showNameSignNote) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '(피켓 비용 -${formatSettlementMoney(nameSignAmount, null)}바트 포함)',
+                                  key: Key(
+                                    'settlementNameSignNote-${item.bookingNumber}',
+                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: colors.outline),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _SettlementAmountLine(
+                          key: Key(
+                            'settlementCommission-${item.bookingNumber}',
+                          ),
+                          label: '수수료',
+                          amount: commissionAmount,
+                          currency: commissionCurrency,
+                          alignEnd: true,
+                        ),
+                      ],
+                    ),
+                    if (item.dueAt != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '마감: ${item.dueAt}',
+                        key: Key('settlementDueAt-${item.bookingNumber}'),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Column(
+                children: [
+                  _StatusChip(status: item.commissionStatus),
+                  Icon(Icons.chevron_right, color: colors.outline),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _SettlementAmountLine extends StatelessWidget {
+  const _SettlementAmountLine({
+    super.key,
+    required this.label,
+    required this.amount,
+    required this.currency,
+    this.emphasized = false,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final num? amount;
+  final String? currency;
+  final bool emphasized;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context).textTheme;
+    final crossAxis = alignEnd
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
+    final valueStyle = emphasized
+        ? theme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colors.primary,
+          )
+        : theme.bodyLarge?.copyWith(fontWeight: FontWeight.w600);
+
+    return Column(
+      crossAxisAlignment: crossAxis,
+      children: [
+        Text(
+          label,
+          style: theme.bodySmall?.copyWith(color: colors.outline),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          formatSettlementMoney(amount, currency),
+          style: valueStyle,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+        ),
+      ],
     );
   }
 }
