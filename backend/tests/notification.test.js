@@ -6,6 +6,9 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 const NotificationRepository = require('../src/repositories/notification.repository');
@@ -235,19 +238,116 @@ test('disabled FCM adapter records SKIPPED', async () => {
   assert.equal(result.status, DELIVERY_STATUS.SKIPPED);
 });
 
+test('FCM adapter isConfigured accepts serviceAccountPath only', () => {
+  const adapter = new FcmNotificationAdapter({
+    firebase: { serviceAccountPath: '/secrets/firebase-service-account.json' },
+  });
+  assert.equal(adapter.isConfigured(), true);
+});
+
+test('FCM adapter isConfigured accepts projectId clientEmail privateKey trio', () => {
+  const adapter = new FcmNotificationAdapter({
+    firebase: {
+      projectId: 'ttaxi-test',
+      clientEmail: 'firebase@example.com',
+      privateKey: 'private-key',
+    },
+  });
+  assert.equal(adapter.isConfigured(), true);
+});
+
+test('FCM adapter isConfigured rejects missing credentials', () => {
+  const adapter = new FcmNotificationAdapter({ firebase: {} });
+  assert.equal(adapter.isConfigured(), false);
+});
+
+test('FCM adapter isConfigured rejects projectId without other credentials', () => {
+  const adapter = new FcmNotificationAdapter({
+    firebase: { projectId: 'ttaxi-test' },
+  });
+  assert.equal(adapter.isConfigured(), false);
+});
+
 test('configured FCM adapter skips safely when no device token exists', async () => {
   const adapter = new FcmNotificationAdapter({
-    firebase: { projectId: 'ttaxi-test', clientEmail: 'firebase@example.com' },
+    firebase: {
+      projectId: 'ttaxi-test',
+      clientEmail: 'firebase@example.com',
+      privateKey: 'private-key',
+    },
   });
   const result = await adapter.send({ id: 1, title: 'Title', body: 'Body' }, {});
   assert.equal(result.status, DELIVERY_STATUS.SKIPPED);
 });
 
+test('FCM adapter delivers when only serviceAccountPath is configured', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fcm-service-account-'));
+  const serviceAccountPath = path.join(tmpDir, 'service-account.json');
+  fs.writeFileSync(serviceAccountPath, JSON.stringify({
+    project_id: 'ttaxi-staging',
+    client_email: 'firebase-adminsdk@ttaxi-staging.iam.gserviceaccount.com',
+    private_key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+  }));
+
+  let initializeArgs = null;
+  let sendCalled = false;
+  const admin = {
+    apps: [],
+    credential: {
+      cert(serviceAccount) {
+        return { serviceAccount };
+      },
+    },
+    initializeApp(options) {
+      initializeArgs = options;
+      this.apps.push({});
+      return {};
+    },
+    messaging() {
+      return {
+        async send() {
+          sendCalled = true;
+          return 'message-id';
+        },
+      };
+    },
+  };
+  const adapter = new FcmNotificationAdapter({
+    firebase: { serviceAccountPath },
+    admin,
+  });
+
+  try {
+    const result = await adapter.send({
+      id: 1,
+      title: 'Title',
+      body: 'Body',
+      fcmToken: 'fcm-token-value-for-test',
+    }, {});
+
+    assert.equal(result.status, DELIVERY_STATUS.DELIVERED);
+    assert.equal(sendCalled, true);
+    assert.deepEqual(Object.keys(initializeArgs), ['credential']);
+    assert.equal(initializeArgs.projectId, undefined);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test('FCM adapter marks invalid registration token as permanent failure', async () => {
   const adapter = new FcmNotificationAdapter({
-    firebase: { projectId: 'ttaxi-test', clientEmail: 'firebase@example.com' },
+    firebase: {
+      projectId: 'ttaxi-test',
+      clientEmail: 'firebase@example.com',
+      privateKey: 'private-key',
+    },
     admin: {
       apps: [{}],
+      credential: {
+        cert() {
+          return {};
+        },
+      },
       messaging: () => ({
         async send() {
           const err = new Error('Requested entity was not found.');

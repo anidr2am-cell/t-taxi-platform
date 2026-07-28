@@ -149,7 +149,8 @@ class FcmNotificationAdapter {
   isConfigured() {
     const fb = this.firebase;
     return Boolean(
-      fb.projectId && (fb.clientEmail || fb.serviceAccountPath),
+      fb.serviceAccountPath
+      || (fb.projectId && fb.clientEmail && fb.privateKey),
     );
   }
 
@@ -219,12 +220,10 @@ class FcmNotificationAdapter {
     const admin = await this.getAdmin();
     if (!admin.apps?.length) {
       const credential = this.buildFirebaseCredential(admin);
-      admin.initializeApp(credential ? {
-        credential,
-        projectId: this.firebase.projectId,
-      } : {
-        projectId: this.firebase.projectId,
-      });
+      if (!credential) {
+        return { status: DELIVERY_STATUS.SKIPPED, error: CONFIG_MISSING };
+      }
+      admin.initializeApp({ credential });
     }
 
     try {
