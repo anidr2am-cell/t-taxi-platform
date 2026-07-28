@@ -218,4 +218,9 @@ backend가 `pickupLocation`/`destinationLocation`을 open calls에도 노출하�
 
 ### 상태
 
-미착수. FCM 작업 완료 후 진행 예정.
+완료. backend 계산 버그(피켓 요금 미차감)까지 발견해서 함께 수정, driver_app UI 개선 및 배포 완료.
+
+### 완료 요약
+
+- backend: driverExpectedIncomeAmount가 NAME_SIGN 요금을 차감하지 않던 계산 오류 발견 및 수정 (하드코딩이 아닌 booking_charge_items.amount 실제값 반영)
+- driver_app: 정산 목록 카드에 고객결제액/기사수입(왼쪽)/수수료(오른쪽) 구조로 표시, 피켓비용 있으면 부가설명 표시
