@@ -239,6 +239,7 @@ void main() {
 
       expect(summary.acceptedAt, isNull);
       expect(summary.scheduledPickupAt, isNull);
+      expect(summary.createdAt, isNull);
       expect(summary.standbyReferenceTime, isNull);
       expect(summary.standbyAllowedAt, isNull);
       expect(summary.standbyConfirmedAt, isNull);

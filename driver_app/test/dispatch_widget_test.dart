@@ -653,6 +653,39 @@ void main() {
     _expectOpenCallPlaceNameStyle(tester, 'Pattaya Hotel');
   });
 
+  testWidgets('open call shows createdAt as muted label when available', (
+    tester,
+  ) async {
+    await pumpOpenCalls(
+      tester,
+      onlineReader(
+        calls: [
+          openCall(
+            createdAt: '2026-07-12T08:30:00.000Z',
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('예약: 7월 12일 15시 30분'), findsOneWidget);
+    expect(
+      find.byKey(const Key('openCallCreatedAt-TX209912319998')),
+      findsOneWidget,
+    );
+    _expectOpenCallPickupTimeStyle(tester, '2026-07-27 10:30');
+  });
+
+  testWidgets('open call hides createdAt label when missing', (tester) async {
+    await pumpOpenCalls(tester, onlineReader());
+
+    expect(find.textContaining('예약:'), findsNothing);
+    expect(
+      find.byKey(const Key('openCallCreatedAt-TX209912319998')),
+      findsOneWidget,
+    );
+    _expectOpenCallPickupTimeStyle(tester, '2026-07-27 10:30');
+  });
+
   testWidgets('open call falls back when pickupLocation has address only', (
     tester,
   ) async {
@@ -690,6 +723,17 @@ void _expectOpenCallAddressStyle(WidgetTester tester, String text) {
   final widget = tester.widget<Text>(finder);
   expect(widget.style?.fontWeight, isNull);
   expect(widget.style?.color, isNull);
+}
+
+void _expectOpenCallPickupTimeStyle(WidgetTester tester, String text) {
+  final finder = find.text(text);
+  expect(finder, findsOneWidget);
+  final widget = tester.widget<Text>(finder);
+  expect(widget.style?.fontWeight, FontWeight.bold);
+  expect(
+    widget.style?.fontSize,
+    Theme.of(tester.element(finder)).textTheme.titleMedium?.fontSize,
+  );
 }
 
 class _OpenCallsRefreshHarness extends StatefulWidget {

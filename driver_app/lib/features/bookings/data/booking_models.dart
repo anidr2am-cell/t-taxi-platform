@@ -209,6 +209,7 @@ class BookingSummary {
     required this.assignmentStatus,
     required this.acceptedAt,
     required this.scheduledPickupAt,
+    this.createdAt,
     required this.standbyReferenceTimeType,
     required this.standbyReferenceTime,
     required this.standbyAllowedAt,
@@ -265,6 +266,7 @@ class BookingSummary {
       assignmentStatus: AssignmentStatus.parse(json['assignmentStatus']),
       acceptedAt: _optionalString(json['acceptedAt']),
       scheduledPickupAt: _optionalString(json['scheduledPickupAt']),
+      createdAt: _optionalString(json['createdAt']),
       standbyReferenceTimeType: _optionalString(
         json['standbyReferenceTimeType'],
       ),
@@ -306,6 +308,7 @@ class BookingSummary {
   final AssignmentStatus assignmentStatus;
   final String? acceptedAt;
   final String? scheduledPickupAt;
+  final String? createdAt;
   final String? standbyReferenceTimeType;
   final String? standbyReferenceTime;
   final String? standbyAllowedAt;
@@ -349,6 +352,7 @@ class BookingSummary {
     assignmentStatus: assignmentStatus ?? this.assignmentStatus,
     acceptedAt: acceptedAt,
     scheduledPickupAt: scheduledPickupAt,
+    createdAt: createdAt,
     standbyReferenceTimeType: standbyReferenceTimeType,
     standbyReferenceTime: standbyReferenceTime,
     standbyAllowedAt: standbyAllowedAt,

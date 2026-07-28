@@ -107,6 +107,7 @@ class OpenCall {
     required this.scheduledPickupAt,
     required this.pickupDate,
     required this.pickupTime,
+    this.createdAt,
     required this.origin,
     required this.destination,
     this.pickupLocation,
@@ -160,6 +161,7 @@ class OpenCall {
       scheduledPickupAt: _optionalString(json['scheduledPickupAt']),
       pickupDate: _optionalString(json['pickupDate']) ?? '',
       pickupTime: _optionalString(json['pickupTime']) ?? '',
+      createdAt: _optionalString(json['createdAt']),
       origin: origin,
       destination: destination,
       pickupLocation: json['pickupLocation'] == null
@@ -212,6 +214,7 @@ class OpenCall {
   final String? scheduledPickupAt;
   final String pickupDate;
   final String pickupTime;
+  final String? createdAt;
   final String origin;
   final String destination;
   final BookingLocation? pickupLocation;

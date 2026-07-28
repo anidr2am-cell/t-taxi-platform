@@ -231,6 +231,34 @@ void main() {
     expect(find.textContaining('전화'), findsNothing);
   });
 
+  testWidgets('detail shows createdAt below pickup when available', (
+    tester,
+  ) async {
+    final reader = FakeBookingReader()
+      ..detailResult = bookingDetail(
+        createdAt: '2026-07-12T08:30:00.000Z',
+      );
+    await pumpBookingList(tester, reader);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-07-18 09:30'), findsOneWidget);
+    expect(find.text('예약: 7월 12일 15시 30분'), findsOneWidget);
+    expect(find.byKey(const Key('bookingCreatedAtLabel')), findsOneWidget);
+  });
+
+  testWidgets('detail hides createdAt label when missing', (tester) async {
+    await pumpBookingList(tester, FakeBookingReader());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('booking-TX209912319999')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-07-18 09:30'), findsOneWidget);
+    expect(find.textContaining('예약:'), findsNothing);
+    expect(find.byKey(const Key('bookingCreatedAtLabel')), findsNothing);
+  });
+
   testWidgets('detail prefers nameTh over name for pickup and destination', (
     tester,
   ) async {

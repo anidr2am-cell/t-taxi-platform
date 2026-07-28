@@ -18,6 +18,22 @@ String? formatBookingDateTime(String? value) {
       '${bangkokTime.minute.toString().padLeft(2, '0')}';
 }
 
+String? formatBookingCreatedAtLabel(String? value) {
+  final raw = value?.trim();
+  if (raw == null || raw.isEmpty) return null;
+
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return null;
+
+  final hasTimeZone = RegExp(r'(?:Z|[+-]\d{2}:?\d{2})$').hasMatch(raw);
+  final bangkokTime = hasTimeZone
+      ? parsed.toUtc().add(const Duration(hours: 7))
+      : parsed;
+  final minuteText = bangkokTime.minute.toString().padLeft(2, '0');
+  return '예약: ${bangkokTime.month}월 ${bangkokTime.day}일 '
+      '${bangkokTime.hour}시 $minuteText분';
+}
+
 String formatBookingLocation(BookingLocation location) {
   final lines = parseBookingLocation(location);
   if (!lines.hasPlaceName && !lines.hasAddressLine) {

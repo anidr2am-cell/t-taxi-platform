@@ -728,6 +728,20 @@ class _DetailBody extends StatelessWidget {
               label: '픽업',
               value: '${booking.pickupDate} ${booking.pickupTime}',
             ),
+            if (formatBookingCreatedAtLabel(booking.createdAt) case final label?)
+              Padding(
+                padding: const EdgeInsets.only(left: 104, bottom: 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    key: const Key('bookingCreatedAtLabel'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
             _LocationInfo(
               label: '출발지',
               location: booking.pickupLocation,

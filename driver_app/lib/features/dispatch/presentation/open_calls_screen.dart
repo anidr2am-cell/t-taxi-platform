@@ -890,6 +890,10 @@ class _UrgentCallCard extends StatelessWidget {
                 key: Key('urgentMinEta-${call.bookingNumber}'),
               ),
             ],
+            _BookingCreatedAtText(
+              key: Key('openCallCreatedAt-${call.bookingNumber}'),
+              createdAt: call.createdAt,
+            ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -1008,12 +1012,37 @@ class _OpenCallCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text('${call.vehicleTypeName} · ${call.passengerCount}명'),
+              _BookingCreatedAtText(
+                key: Key('openCallCreatedAt-${call.bookingNumber}'),
+                createdAt: call.createdAt,
+              ),
               if (claiming) ...[
                 const SizedBox(height: 10),
                 const LinearProgressIndicator(),
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingCreatedAtText extends StatelessWidget {
+  const _BookingCreatedAtText({super.key, required this.createdAt});
+
+  final String? createdAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = formatBookingCreatedAtLabel(createdAt);
+    if (label == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );

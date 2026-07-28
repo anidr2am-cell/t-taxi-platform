@@ -43,6 +43,20 @@ void main() {
     });
   });
 
+  group('formatBookingCreatedAtLabel', () {
+    test('formats ISO UTC timestamps in Bangkok wall clock', () {
+      expect(
+        formatBookingCreatedAtLabel('2026-07-12T08:30:00.000Z'),
+        '예약: 7월 12일 15시 30분',
+      );
+    });
+
+    test('returns null when createdAt is missing', () {
+      expect(formatBookingCreatedAtLabel(null), isNull);
+      expect(formatBookingCreatedAtLabel(''), isNull);
+    });
+  });
+
   group('parseBookingLocation', () {
     test('splits place name and address lines', () {
       final lines = parseBookingLocation(
