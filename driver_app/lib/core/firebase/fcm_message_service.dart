@@ -81,6 +81,10 @@ class FcmMessageService {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
+    if (shouldHandleSettlementApprovedInForeground(message.data)) {
+      _handleOpenedMessage(message);
+      return;
+    }
     if (kDebugMode) {
       debugPrint(
         'FCM foreground message ignored: id=${message.messageId}, '

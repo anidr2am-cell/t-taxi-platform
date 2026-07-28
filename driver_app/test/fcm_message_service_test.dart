@@ -63,6 +63,23 @@ void main() {
     await streams.close();
   });
 
+  test('foreground SETTLEMENT_APPROVED navigates to open calls tab', () async {
+    final streams = FakeFcmMessageStreams();
+    final service = FcmMessageService(messaging: streams);
+    var selectedTab = -1;
+
+    await service.attachShellNavigator((index) => selectedTab = index);
+    streams.foregroundController.add(
+      fcmMessage(notificationType: 'SETTLEMENT_APPROVED'),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(selectedTab, 0);
+
+    service.dispose();
+    await streams.close();
+  });
+
   test('onMessageOpenedApp navigates to mapped tab', () async {
     final streams = FakeFcmMessageStreams();
     final service = FcmMessageService(messaging: streams);

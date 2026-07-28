@@ -23,6 +23,13 @@ void main() {
     );
   });
 
+  test('SETTLEMENT_APPROVED maps to tab 0', () {
+    expect(
+      tabIndexForNotificationType(settlementApprovedNotificationType),
+      0,
+    );
+  });
+
   test('unknown notification types return null', () {
     expect(tabIndexForNotificationType('BOOKING_CONFIRMED'), isNull);
     expect(tabIndexForNotificationType(''), isNull);
@@ -37,6 +44,10 @@ void main() {
     expect(
       tabIndexForFcmData({'notificationType': 'ADMIN_RELEASED'}),
       1,
+    );
+    expect(
+      tabIndexForFcmData({'notificationType': 'SETTLEMENT_APPROVED'}),
+      0,
     );
     expect(tabIndexForFcmData({'notificationType': 'UNKNOWN'}), isNull);
     expect(tabIndexForFcmData(const {}), isNull);

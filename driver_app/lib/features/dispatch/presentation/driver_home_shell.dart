@@ -78,6 +78,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
       await widget.fcmTokenService?.registerIfNeeded();
       await widget.fcmMessageService?.attachShellNavigator((index) {
         if (!mounted) return;
+        unawaited(_refreshSettlementBadge());
         unawaited(_selectTab(index, force: true));
       });
     } catch (_) {

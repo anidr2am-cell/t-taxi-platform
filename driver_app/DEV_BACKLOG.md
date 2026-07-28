@@ -224,3 +224,16 @@ backend가 `pickupLocation`/`destinationLocation`을 open calls에도 노출하�
 
 - backend: driverExpectedIncomeAmount가 NAME_SIGN 요금을 차감하지 않던 계산 오류 발견 및 수정 (하드코딩이 아닌 booking_charge_items.amount 실제값 반영)
 - driver_app: 정산 목록 카드에 고객결제액/기사수입(왼쪽)/수수료(오른쪽) 구조로 표시, 피켓비용 있으면 부가설명 표시
+
+## 15. 정산 송금증 업로드 UX 개선 (선택, 우선순위 낮음)
+
+### 배경
+
+실기기 확인 결과 이미지 미리보기는 정상 작동 확인됨. 다만 조사 중 발견된 개선 여지:
+
+1. 업로드 성공 시 명시적 SnackBar 안내 없음
+2. PDF 업로드 시 이미지 미리보기 불가 (문서 아이콘 fallback만 표시, 의도된 동작이나 사용자가 헷갈릴 수 있음)
+
+### 상태
+
+보류. 우선순위 낮음, 필요 시 진행.
