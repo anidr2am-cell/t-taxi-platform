@@ -223,6 +223,7 @@ container.register(
       c.get("notificationRepository"),
       c.get("commissionSettlementService"),
       c.get("urgentNegotiationRepository"),
+      c.get("placesService"),
     ),
 );
 container.register(

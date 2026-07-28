@@ -18,6 +18,11 @@ const { emitDriverCallAvailable, emitDriverUrgentCallNew } = require('../socket/
 const {
   evaluateCustomerCancellation,
 } = require('../policies/customerBookingCancellation.policy');
+const {
+  getThailandAirportNameTh,
+  normalizeAirportIata,
+} = require('../constants/thailandAirports.constants');
+const logger = require('../utils/logger');
 
 const TRUST_MESSAGE = 'Keep your booking number. You can check driver assignment and trip status on the booking lookup page.';
 
@@ -50,6 +55,7 @@ class BookingService {
     notificationRepository = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
+    placesService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -65,6 +71,7 @@ class BookingService {
     this.notificationRepository = notificationRepository;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
+    this.placesService = placesService;
   }
 
   buildOpenCallPayload({
@@ -180,6 +187,65 @@ class BookingService {
     if (place.address) return place.address;
     if (place.name) return place.name;
     return null;
+  }
+
+  resolveAirportIataCode(airportIata, locationCode) {
+    const fromAirportIata = normalizeAirportIata(airportIata);
+    if (fromAirportIata && getThailandAirportNameTh(fromAirportIata)) {
+      return fromAirportIata;
+    }
+    const fromLocationCode = normalizeAirportIata(locationCode);
+    if (fromLocationCode && getThailandAirportNameTh(fromLocationCode)) {
+      return fromLocationCode;
+    }
+    return null;
+  }
+
+  async resolveLocationNameTh({ airportIata, locationCode, placeId }) {
+    const mappedIata = this.resolveAirportIataCode(airportIata, locationCode);
+    if (mappedIata) {
+      return getThailandAirportNameTh(mappedIata);
+    }
+
+    const normalizedPlaceId = typeof placeId === 'string' ? placeId.trim() : '';
+    if (!normalizedPlaceId || !this.placesService) {
+      return null;
+    }
+
+    try {
+      const details = await this.placesService.details({
+        placeId: normalizedPlaceId,
+        language: 'th',
+      });
+      const nameTh = typeof details?.name === 'string' ? details.name.trim() : '';
+      return nameTh || null;
+    } catch (err) {
+      logger.warn('Failed to resolve Thai place name from Google Places', {
+        placeId: normalizedPlaceId,
+        error: err instanceof Error ? err.message : String(err),
+        errorCode: err?.errorCode ?? null,
+      });
+      return null;
+    }
+  }
+
+  async buildLocationMetadata({
+    name,
+    airportIata,
+    locationCode,
+    placeId,
+  }) {
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const nameTh = await this.resolveLocationNameTh({ airportIata, locationCode, placeId });
+
+    const locationMetadata = {};
+    if (normalizedName) {
+      locationMetadata.name = normalizedName;
+    }
+    if (nameTh) {
+      locationMetadata.nameTh = nameTh;
+    }
+    return Object.keys(locationMetadata).length ? locationMetadata : null;
   }
 
   parseBookingMetadata(metadata) {
@@ -349,14 +415,25 @@ class BookingService {
 
       const origin = input.origin ?? {};
       const destination = input.destination ?? {};
-      const originName = typeof origin.name === 'string' ? origin.name.trim() : '';
-      const destinationName =
-        typeof destination.name === 'string' ? destination.name.trim() : '';
-      if (originName) {
-        metadata.originLocation = { name: originName };
+      const [originLocationMetadata, destinationLocationMetadata] = await Promise.all([
+        this.buildLocationMetadata({
+          name: origin.name,
+          airportIata: input.originAirportIata,
+          locationCode: input.originLocationCode,
+          placeId: origin.placeId,
+        }),
+        this.buildLocationMetadata({
+          name: destination.name,
+          airportIata: input.destinationAirportIata,
+          locationCode: input.destinationLocationCode,
+          placeId: destination.placeId,
+        }),
+      ]);
+      if (originLocationMetadata) {
+        metadata.originLocation = originLocationMetadata;
       }
-      if (destinationName) {
-        metadata.destinationLocation = { name: destinationName };
+      if (destinationLocationMetadata) {
+        metadata.destinationLocation = destinationLocationMetadata;
       }
 
       const originAddress = this.resolvePlaceAddress(origin);
