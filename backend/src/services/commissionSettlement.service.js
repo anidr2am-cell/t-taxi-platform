@@ -211,6 +211,12 @@ class CommissionSettlementService {
     return Number.isFinite(amount) ? amount : null;
   }
 
+  normalizedNameSignAmount(value) {
+    const amount = this.moneyAmount(value);
+    if (amount == null || amount < 0) return 0;
+    return amount;
+  }
+
   driverExpectedIncome(row) {
     const customerPaymentAmount = this.moneyAmount(row.total_amount);
     const companyCommissionAmount = this.moneyAmount(row.commission_amount);
@@ -220,10 +226,11 @@ class CommissionSettlementService {
     if (customerPaymentAmount < 0 || companyCommissionAmount < 0) {
       return null;
     }
-    if (companyCommissionAmount > customerPaymentAmount) {
+    const nameSignAmount = this.normalizedNameSignAmount(row.name_sign_amount);
+    if (companyCommissionAmount + nameSignAmount > customerPaymentAmount) {
       return null;
     }
-    return customerPaymentAmount - companyCommissionAmount;
+    return customerPaymentAmount - companyCommissionAmount - nameSignAmount;
   }
 
   mapSettlementListItem(row, apiBasePath, role) {
@@ -234,6 +241,7 @@ class CommissionSettlementService {
     const blocksNewCalls = this.isSettlementBlocking(row, metadata, now);
     const customerPaymentAmount = this.moneyAmount(row.total_amount);
     const companyCommissionAmount = this.moneyAmount(row.commission_amount);
+    const nameSignAmount = this.normalizedNameSignAmount(row.name_sign_amount);
     const driverExpectedIncomeAmount = this.driverExpectedIncome(row);
     const item = {
       bookingNumber: row.booking_number,
@@ -250,6 +258,7 @@ class CommissionSettlementService {
       customerTotalCurrency: customerPaymentAmount == null ? null : row.currency,
       companyCommissionAmount,
       companyCommissionCurrency: companyCommissionAmount == null ? null : row.currency,
+      nameSignAmount,
       driverExpectedIncomeAmount,
       driverExpectedIncomeCurrency: driverExpectedIncomeAmount == null ? null : row.currency,
       currency: row.currency,

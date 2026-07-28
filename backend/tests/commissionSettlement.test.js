@@ -755,6 +755,51 @@ test('driverExpectedIncome never returns unsafe negative income', () => {
   })), null);
 });
 
+test('driverExpectedIncome subtracts stored NAME_SIGN charge amount', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: 200,
+    name_sign_amount: 100,
+  })), 1000);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1350,
+    commission_amount: 200,
+    name_sign_amount: 150,
+  })), 1000);
+});
+
+test('driverExpectedIncome keeps legacy result when NAME_SIGN amount is absent', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: 200,
+  })), 1100);
+  assert.equal(service.driverExpectedIncome(settlementRow({
+    total_amount: 1300,
+    commission_amount: 200,
+    name_sign_amount: 0,
+  })), 1100);
+});
+
+test('mapSettlementListItem exposes nameSignAmount and adjusted driverExpectedIncomeAmount', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      total_amount: 1300,
+      commission_amount: 200,
+      name_sign_amount: 100,
+    }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+
+  assert.equal(item.nameSignAmount, 100);
+  assert.equal(item.driverExpectedIncomeAmount, 1000);
+});
+
 test('admin settlement list item keeps driver summary fields', () => {
   const service = new CommissionSettlementService({}, {}, {}, {}, {});
   const item = service.mapSettlementListItem(

@@ -286,27 +286,7 @@ function createHarness(overrides = {}) {
       };
     },
     paymentSummary(row) {
-      const customerPaymentAmount = Number(row.total_amount);
-      const companyCommissionAmount =
-        row.commission_amount == null ? null : Number(row.commission_amount);
-      const safeExpectedIncome =
-        Number.isFinite(customerPaymentAmount)
-        && Number.isFinite(companyCommissionAmount)
-        && customerPaymentAmount >= 0
-        && companyCommissionAmount >= 0
-        && companyCommissionAmount <= customerPaymentAmount
-          ? customerPaymentAmount - companyCommissionAmount
-          : null;
-      return {
-        customerPaymentAmount,
-        customerPaymentCurrency: row.currency,
-        customerPaymentMethod: row.payment_method,
-        companyCommissionAmount,
-        companyCommissionCurrency:
-          companyCommissionAmount == null ? null : row.currency,
-        driverExpectedIncomeAmount: safeExpectedIncome,
-        driverExpectedIncomeCurrency: safeExpectedIncome == null ? null : row.currency,
-      };
+      return sharedDriverJobService.paymentSummary(row);
     },
   };
   const commissionSettlementService = {
@@ -361,11 +341,12 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(result.items[0].amount, 2500);
   assert.equal(result.items[0].customerPaymentAmount, 2500);
   assert.equal(result.items[0].customerPaymentCurrency, 'THB');
-  assert.equal(result.items[0].customerPaymentMethod, 'PAY_DRIVER');
+  assert.equal(result.items[0].customerPaymentMethod, 'PAY_DRIVER_AT_DESTINATION');
   assert.equal(result.items[0].companyCommissionAmount, 300);
   assert.equal(result.items[0].companyCommissionCurrency, 'THB');
   assert.equal(result.items[0].driverExpectedIncomeAmount, 2200);
   assert.equal(result.items[0].driverExpectedIncomeCurrency, 'THB');
+  assert.equal(result.items[0].nameSignAmount, 0);
   assert.equal(result.items[0].nameSignRequested, true);
   assert.equal(result.items[0].nameSignText, 'KIM FAMILY');
   assert.equal(result.items[0].luggage.golfBags, 1);
@@ -376,6 +357,38 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
   assert.equal(Object.hasOwn(result.items[0], 'customerEmail'), false);
   assert.equal(Object.hasOwn(result.items[0], 'specialInstructions'), false);
+});
+
+test('open call list subtracts stored NAME_SIGN amount from expected income', async () => {
+  const { service } = createHarness({
+    openRows: [
+      openCallRow({
+        total_amount: 1300,
+        commission_amount: 200,
+        name_sign_amount: 100,
+      }),
+    ],
+  });
+  const result = await service.listOpenCalls(42);
+
+  assert.equal(result.items[0].nameSignAmount, 100);
+  assert.equal(result.items[0].driverExpectedIncomeAmount, 1000);
+});
+
+test('open call list subtracts non-default NAME_SIGN amount from expected income', async () => {
+  const { service } = createHarness({
+    openRows: [
+      openCallRow({
+        total_amount: 1350,
+        commission_amount: 200,
+        name_sign_amount: 150,
+      }),
+    ],
+  });
+  const result = await service.listOpenCalls(42);
+
+  assert.equal(result.items[0].nameSignAmount, 150);
+  assert.equal(result.items[0].driverExpectedIncomeAmount, 1000);
 });
 
 test('open call list includes pickupLocation and destinationLocation from metadata', async () => {

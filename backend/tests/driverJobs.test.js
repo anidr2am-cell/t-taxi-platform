@@ -724,6 +724,55 @@ test('driver job payment summary keeps unsafe expected income nullable', () => {
   assert.equal(summary.driverExpectedIncomeCurrency, null);
 });
 
+test('driver job payment summary subtracts stored NAME_SIGN charge amount', () => {
+  const service = new DriverJobService({});
+
+  const summary = service.paymentSummary({
+    total_amount: 1300,
+    commission_amount: 200,
+    name_sign_amount: 100,
+    currency: 'THB',
+    payment_method: 'PAY_DRIVER',
+  });
+  assert.equal(summary.nameSignAmount, 100);
+  assert.equal(summary.driverExpectedIncomeAmount, 1000);
+
+  const customSummary = service.paymentSummary({
+    total_amount: 1350,
+    commission_amount: 200,
+    name_sign_amount: 150,
+    currency: 'THB',
+    payment_method: 'PAY_DRIVER',
+  });
+  assert.equal(customSummary.nameSignAmount, 150);
+  assert.equal(customSummary.driverExpectedIncomeAmount, 1000);
+});
+
+test('driver job payment summary keeps legacy income when NAME_SIGN amount is absent', () => {
+  const service = new DriverJobService({});
+
+  const summary = service.paymentSummary({
+    total_amount: 1300,
+    commission_amount: 200,
+    currency: 'THB',
+    payment_method: 'PAY_DRIVER',
+  });
+  assert.equal(summary.nameSignAmount, 0);
+  assert.equal(summary.driverExpectedIncomeAmount, 1100);
+});
+
+test('mapBase exposes nameSignAmount from payment summary', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapBase(row({
+    total_amount: 1300,
+    commission_amount: 200,
+    name_sign_amount: 100,
+  }));
+
+  assert.equal(mapped.nameSignAmount, 100);
+  assert.equal(mapped.driverExpectedIncomeAmount, 1000);
+});
+
 test('driver job mapping preserves assignment status without guessing', () => {
   const service = new DriverJobService({});
 

@@ -17,6 +17,13 @@ function assertNameSignRequestedUsesExistsSubquery(sql) {
   );
 }
 
+function assertNameSignAmountUsesSumSubquery(sql) {
+  assert.match(
+    sql,
+    /SELECT COALESCE\(SUM\(bci\.amount\), 0\)[\s\S]*FROM booking_charge_items bci[\s\S]*charge_type = 'NAME_SIGN'[\s\S]*\) AS name_sign_amount/,
+  );
+}
+
 test('findOpenDriverCallByBookingId selects name_sign_requested via charge item EXISTS', async () => {
   let capturedSql = '';
   let capturedParams = [];
@@ -34,6 +41,7 @@ test('findOpenDriverCallByBookingId selects name_sign_requested via charge item 
   assert.equal(row.booking_number, 'TX202607010001');
   assert.deepEqual(capturedParams, [42]);
   assertNameSignRequestedUsesExistsSubquery(capturedSql);
+  assertNameSignAmountUsesSumSubquery(capturedSql);
   assert.match(capturedSql, /WHERE b\.id = \?/);
   assert.match(capturedSql, /AND b\.status = 'OPEN'/);
 });
@@ -51,5 +59,6 @@ test('findOpenDriverCallsForDriver shares the same name_sign_requested EXISTS se
   await repository.findOpenDriverCallsForDriver(99);
 
   assertNameSignRequestedUsesExistsSubquery(capturedSql);
+  assertNameSignAmountUsesSumSubquery(capturedSql);
   assert.match(capturedSql, /d\.user_id = \?/);
 });

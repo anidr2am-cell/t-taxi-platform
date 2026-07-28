@@ -136,7 +136,13 @@ class DriverJobService {
     return Number.isFinite(amount) ? amount : null;
   }
 
-  driverExpectedIncome(totalAmount, commissionAmount) {
+  normalizedNameSignAmount(value) {
+    const amount = this.moneyAmount(value);
+    if (amount == null || amount < 0) return 0;
+    return amount;
+  }
+
+  driverExpectedIncome(totalAmount, commissionAmount, nameSignAmount = 0) {
     const customerPaymentAmount = this.moneyAmount(totalAmount);
     const companyCommissionAmount = this.moneyAmount(commissionAmount);
     if (customerPaymentAmount == null || companyCommissionAmount == null) {
@@ -145,18 +151,21 @@ class DriverJobService {
     if (customerPaymentAmount < 0 || companyCommissionAmount < 0) {
       return null;
     }
-    if (companyCommissionAmount > customerPaymentAmount) {
+    const normalizedNameSignAmount = this.normalizedNameSignAmount(nameSignAmount);
+    if (companyCommissionAmount + normalizedNameSignAmount > customerPaymentAmount) {
       return null;
     }
-    return customerPaymentAmount - companyCommissionAmount;
+    return customerPaymentAmount - companyCommissionAmount - normalizedNameSignAmount;
   }
 
   paymentSummary(row) {
     const customerPaymentAmount = this.moneyAmount(row.total_amount);
     const companyCommissionAmount = this.moneyAmount(row.commission_amount);
+    const nameSignAmount = this.normalizedNameSignAmount(row.name_sign_amount);
     const driverExpectedIncomeAmount = this.driverExpectedIncome(
       row.total_amount,
       row.commission_amount,
+      row.name_sign_amount,
     );
     const currency = row.currency ?? null;
     return {
@@ -165,6 +174,7 @@ class DriverJobService {
       customerPaymentMethod: this.paymentMethodLabel(row.payment_method),
       companyCommissionAmount,
       companyCommissionCurrency: companyCommissionAmount == null ? null : currency,
+      nameSignAmount,
       driverExpectedIncomeAmount,
       driverExpectedIncomeCurrency: driverExpectedIncomeAmount == null ? null : currency,
     };

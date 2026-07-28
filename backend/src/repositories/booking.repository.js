@@ -40,6 +40,17 @@ class BookingRepository {
     `;
   }
 
+  nameSignAmountSelectSql() {
+    return `
+        (
+          SELECT COALESCE(SUM(bci.amount), 0)
+          FROM booking_charge_items bci
+          WHERE bci.booking_id = b.id
+            AND bci.charge_type = 'NAME_SIGN'
+            AND bci.deleted_at IS NULL
+        ) AS name_sign_amount`;
+  }
+
   async insertBooking(conn, row) {
     const [result] = await conn.query(
       `
@@ -580,7 +591,8 @@ class BookingRepository {
             AND bci.charge_type = 'NAME_SIGN'
             AND bci.deleted_at IS NULL
           LIMIT 1
-        ) AS name_sign_requested
+        ) AS name_sign_requested,
+        ${this.nameSignAmountSelectSql()}
       FROM booking_driver_assignments bda
       INNER JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
       INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0
@@ -796,6 +808,7 @@ class BookingRepository {
             AND bci.deleted_at IS NULL
           LIMIT 1
         ) AS name_sign_requested,
+        ${this.nameSignAmountSelectSql()},
         b.name_sign_text,
         st.code AS service_type_code,
         st.name AS service_type_name,
@@ -1889,6 +1902,7 @@ class BookingRepository {
         b.currency,
         b.commission_status,
         b.commission_amount,
+        ${this.nameSignAmountSelectSql()},
         b.commission_due_at,
         b.commission_paid_at,
         b.commission_receipt_file_id,
