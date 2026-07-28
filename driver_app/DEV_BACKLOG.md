@@ -58,11 +58,29 @@ FCM(4-B) 작업과 함께 묶어서 처리하는 것이 효율적일 수 있다.
 
 ### 처리 방향
 
-backend에서 새콜/긴급콜 이벤트를 FCM으로 발송하는 파이프라인을 확장하고, driver_app에서는 토큰 등록, 권한 요청, foreground/background 처리, 알림 탭 이동 흐름을 구현한다.
+backend FCM 발송 파이프라인(새콜/긴급콜신규/관리자강제취소)은 완료. driver_app에서는 토큰 등록, 권한 요청, foreground/background/terminated 처리, 알림 탭 이동 흐름을 구현한다.
 
 ### 상태
 
-미착수. backend 확장 필요, 별도 논의 예정.
+진행 중 (backend 완료, driver_app 남음)
+
+### 완료 요약 (backend)
+
+- Firebase 프로젝트 생성, Android 앱 3개 등록 (com.trider.driver.dev/staging/prod — 패키지명 tride→trider로 통일, 커밋 `bb35d3c`)
+- driver_app 기반 설정: firebase_core/messaging 패키지, Gradle 설정, 앱 초기화 (커밋 `bb35d3c`)
+- staging 서버에 Firebase 서비스 계정 안전 배치 (권한 600, git 추적 제외)
+- docker-compose에 서비스계정 마운트 연결 (커밋 `80c5216`)
+- backend: 새콜/긴급콜신규/관리자강제취소를 FCM 파이프라인에 연결 (커밋 `723b873`)
+- ⚠️ 배포 중 DI 순환참조로 서버 크래시 발생 → 즉시 진단 및 수정 (커밋 `0f4608c`, lazy resolver 패턴 적용) → 재배포 확인 완료
+
+### 남은 작업 (driver_app)
+
+- firebase_messaging 토큰 획득 및 POST /notifications/devices 등록
+- foreground 메시지 수신 처리 (이미 Socket.IO로 실시간 처리 중, FCM은 백그라운드/종료 상태 보완용)
+- background 메시지 핸들러 (백그라운드 상태에서 수신)
+- terminated 상태 메시지 핸들러 (앱 완전 종료 상태에서 수신)
+- 알림 탭 시 앱 실행 + 해당 화면(새콜/내운행 등) 이동 처리
+- Android 13+ 알림 권한 요청 UI
 
 ## 5. 지도 렌더링 (3-B)
 
