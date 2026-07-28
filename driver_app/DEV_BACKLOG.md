@@ -74,9 +74,14 @@ backend FCM 발송 파이프라인(새콜/긴급콜신규/관리자강제취소)
 - driver_app: 로그인 시 토큰 등록, 로그아웃 시 비활성화 (커밋 `b3a3f5a`)
 - driver_app: foreground(무시)/background/terminated 메시지 처리 + 탭 딥링크 (커밋 `63161f5`)
 
-### 남은 확인 사항
+### 실사용 검증 완료
 
-- 실기기에서 앱 완전 종료 상태 + 새 콜 생성 시 실제 푸시 알림 수신 확인 필요 (staging APK 재빌드 후 테스트)
+staging 실기기 테스트로 다음 확인됨:
+- 앱 완전 종료 상태에서 관리자 강제취소(ADMIN_RELEASED) FCM 알림 정상 수신
+- 알림 탭 시 앱 실행 + "내 운행" 탭으로 정상 이동
+- 테스트 중 FcmNotificationAdapter.isConfigured() 버그 발견 (serviceAccountPath-only 배포에서 projectId 필수 요구하던 버그) → 즉시 수정 및 재배포 (커밋 `4dfa8f5`)
+
+§4 전체 작업 완료. 새콜/긴급콜신규 알림도 동일 파이프라인이므로 정상 작동 예상 (관리자강제취소로 검증된 것과 동일 경로).
 
 ## 5. 지도 렌더링 (3-B)
 
