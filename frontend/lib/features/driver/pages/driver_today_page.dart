@@ -414,9 +414,6 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                     DriverTodayCurrentTripCard(
                       booking: current,
                       settlement: settlements[current.bookingNumber],
-                      customerPhone: DriverUx.canContactCustomer(current.status)
-                          ? _phoneCache[current.bookingNumber]
-                          : null,
                       onOpenPrimary: () => _openPrimary(current),
                     ),
                     const SizedBox(height: AppTokens.spaceMd),

@@ -5277,7 +5277,7 @@ class AppLocalizations {
     'driver_today_greeting_generic': '안녕하세요\n(สวัสดี)',
     'driver_today_greeting_named': '안녕하세요, {name} 기사님\n(สวัสดี คุณ{name})',
     'driver_today_trip_count':
-        '오늘 예약이 {count}건 있습니다\n(วันนี้มีงาน {count} งาน)',
+        '미운행 예약이 {count}건 있습니다\n(มีงานที่ยังไม่ดำเนินการ {count} งาน)',
     'driver_today_current_trip': '지금 할 일\n(งานปัจจุบัน)',
     'driver_today_cta_continue': '운행 계속하기 / ดำเนินงานต่อ',
     'driver_today_cta_settlement': '정산 확인 / ตรวจสอบการชำระเงิน',
@@ -5293,7 +5293,7 @@ class AppLocalizations {
     'driver_quick_call': '전화 / โทร',
     'driver_quick_chat': '채팅 / แชต',
     'driver_status_guidance_assigned':
-        '배차가 확정되었습니다. 픽업 장소로 이동을 시작하세요.\n(ยืนยันงานแล้ว เริ่มเดินทางไปยังจุดรับ)',
+        '고객의 픽업요청 시간과 출발지를 확인하시고, 시간에 맞춰 이동하시기 바랍니다.\n(กรุณาตรวจสอบเวลาที่ลูกค้าขอรับและจุดต้นทาง แล้วออกเดินทางให้ตรงเวลา)',
     'driver_status_guidance_on_route':
         '픽업 장소로 이동 중입니다. 도착하면 도착 버튼을 눌러 주세요.\n(กำลังเดินทางไปจุดรับ เมื่อถึงแล้วให้กดปุ่มถึงจุดรับ)',
     'driver_status_guidance_arrived':

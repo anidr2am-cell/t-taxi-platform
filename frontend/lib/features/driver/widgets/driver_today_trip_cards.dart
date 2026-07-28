@@ -3,19 +3,24 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../driver_today_trip_formatters.dart';
 import '../driver_trip_contact.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 
 String _routeLabel(DriverBooking booking, {required bool origin}) {
   final location = origin
-      ? (booking.pickupLocation ??
-            DriverBookingLocation(address: booking.origin))
-      : (booking.destinationLocation ??
-            DriverBookingLocation(address: booking.destination));
-  final labeled = DriverTripContact.displayLabelFor(location);
-  if (labeled.isNotEmpty) return labeled;
-  return origin ? booking.origin : booking.destination;
+      ? booking.pickupLocation
+      : booking.destinationLocation;
+  final fallback = origin ? booking.origin : booking.destination;
+  return formatDriverRouteLineLabel(
+    prefix: origin ? '출발지' : '도착지',
+    location: location ??
+        (fallback.trim().isNotEmpty
+            ? DriverBookingLocation(address: fallback)
+            : null),
+    fallbackAddress: fallback,
+  );
 }
 
 class DriverTodayCurrentTripCard extends StatelessWidget {
@@ -23,13 +28,11 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
     super.key,
     required this.booking,
     required this.onOpenPrimary,
-    this.customerPhone,
     this.settlement,
   });
 
   final DriverBooking booking;
   final VoidCallback onOpenPrimary;
-  final String? customerPhone;
   final Map<String, dynamic>? settlement;
 
   @override
@@ -38,10 +41,11 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
     final guidanceKey = DriverUx.statusGuidanceKey(booking.status);
     final navigateLocation = DriverUx.navigateTargetLocation(booking);
     final canNavigate = DriverTripContact.hasNavigableLocation(navigateLocation);
-    final canContact = DriverUx.canContactCustomer(booking.status);
-    final phone = canContact ? customerPhone ?? booking.customerPhone : null;
-    final canCall = DriverTripContact.hasCallablePhone(phone);
     final luggageCount = _luggageCount(booking);
+    final pickupRequestTime = formatDriverPickupRequestTime(
+      pickupDate: booking.pickupDate,
+      pickupTime: booking.pickupTime,
+    );
 
     return AppUi.surfaceCard(
       backgroundColor: AppTokens.primaryLight,
@@ -49,22 +53,12 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.t('driver_today_current_trip'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppTokens.primaryDark,
-                  ),
-                ),
-              ),
-              AppUi.statusBadge(
-                l10n.t(DriverUx.statusLabelKey(booking.status)),
-                tone: AppUi.toneForBookingStatus(booking.status),
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppUi.statusBadge(
+              l10n.t(DriverUx.statusLabelKey(booking.status)),
+              tone: AppUi.toneForBookingStatus(booking.status),
+            ),
           ),
           if (guidanceKey != null) ...[
             const SizedBox(height: AppTokens.spaceSm),
@@ -78,13 +72,19 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
           ],
           const SizedBox(height: AppTokens.spaceMd),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.schedule, size: 18, color: AppTokens.primary),
+              const Padding(
+                padding: EdgeInsets.only(top: 2),
+                child: Icon(Icons.schedule, size: 18, color: AppTokens.primary),
+              ),
               const SizedBox(width: 6),
-              Text(
-                booking.pickupTime,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  pickupRequestTime,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -141,34 +141,16 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
             style: const TextStyle(color: AppTokens.textMuted, fontSize: 12),
           ),
           const SizedBox(height: AppTokens.spaceMd),
-          Row(
-            children: [
-              Expanded(
-                child: _QuickActionButton(
-                  icon: Icons.navigation_outlined,
-                  label: l10n.t('driver_quick_navigate'),
-                  enabled: canNavigate,
-                  onPressed: canNavigate
-                      ? () => DriverTripContact.openMapsForLocation(
-                            navigateLocation,
-                          )
-                      : null,
-                ),
-              ),
-              if (canContact) ...[
-                const SizedBox(width: AppTokens.spaceSm),
-                Expanded(
-                  child: _QuickActionButton(
-                    icon: Icons.phone_outlined,
-                    label: l10n.t('driver_call_customer'),
-                    enabled: canCall,
-                    onPressed: canCall && phone != null
-                        ? () => DriverTripContact.callPhone(phone)
-                        : null,
-                  ),
-                ),
-              ],
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: _QuickActionButton(
+              icon: Icons.navigation_outlined,
+              label: l10n.t('driver_quick_navigate'),
+              enabled: canNavigate,
+              onPressed: canNavigate
+                  ? () => DriverTripContact.openMapsForLocation(navigateLocation)
+                  : null,
+            ),
           ),
           const SizedBox(height: AppTokens.spaceMd),
           SizedBox(

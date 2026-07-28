@@ -257,10 +257,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.textContaining('지금 할 일'), findsOneWidget);
-      expect(find.text('09:30'), findsWidgets);
-      expect(find.textContaining('BKK — Suvarnabhumi Airport'), findsWidgets);
-      expect(find.text('Pattaya Hotel'), findsWidgets);
+      expect(find.textContaining('지금 할 일'), findsNothing);
+      expect(
+        find.textContaining('고객 픽업 요청 시간 (เวลารับที่ลูกค้าขอ) 7월 1일 9시 30분'),
+        findsWidgets,
+      );
+      expect(find.textContaining('출발지 -'), findsWidgets);
+      expect(find.textContaining('도착지 -'), findsWidgets);
+      expect(find.textContaining('고객에게 전화'), findsNothing);
       expect(find.text('운행 계속하기 / ดำเนินงานต่อ'), findsOneWidget);
       expect(
         find.widgetWithText(FilledButton, '운행 계속하기 / ดำเนินงานต่อ'),
