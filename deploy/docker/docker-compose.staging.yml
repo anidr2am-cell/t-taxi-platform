@@ -66,11 +66,13 @@ services:
       UPLOAD_DIR: /srv/tride/uploads
       LOG_DIR: /srv/tride/logs
       TZ: ${TZ:-Asia/Bangkok}
+      FIREBASE_SERVICE_ACCOUNT_PATH: /srv/tride/secrets/firebase-service-account.json
     ports:
       - "${TRIDE_BACKEND_HOST_PORT:-3100}:3000"
     volumes:
       - tride_uploads:/srv/tride/uploads
       - tride_logs:/srv/tride/logs
+      - ${FIREBASE_SERVICE_ACCOUNT_HOST_PATH:-/opt/t-ride/firebase-service-account.json}:/srv/tride/secrets/firebase-service-account.json:ro
     networks:
       - tride-net
 
