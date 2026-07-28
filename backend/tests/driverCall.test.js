@@ -411,6 +411,42 @@ test('open call list includes pickupLocation and destinationLocation from metada
   );
 });
 
+test('open call list includes nameTh in pickup and destination locations', async () => {
+  const { service } = createHarness({
+    openRows: [openCallRow({
+      metadata: JSON.stringify({
+        originLocation: {
+          name: 'BKK — Suvarnabhumi Airport',
+          nameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+        },
+        destinationLocation: {
+          name: 'Hilton Pattaya',
+          nameTh: 'โรงแรมฮilton พัทยา',
+        },
+      }),
+    })],
+  });
+  const result = await service.listOpenCalls(42);
+
+  assert.equal(result.items[0].pickupLocation.nameTh, 'ท่าอากาศยานสุวรรณภูมิ');
+  assert.equal(result.items[0].destinationLocation.nameTh, 'โรงแรมฮilton พัทยา');
+});
+
+test('open call list omits nameTh when metadata has no Thai place names', async () => {
+  const { service } = createHarness({
+    openRows: [openCallRow({
+      metadata: JSON.stringify({
+        originLocation: { name: 'Suvarnabhumi Airport' },
+        destinationLocation: { name: 'Hilton Pattaya' },
+      }),
+    })],
+  });
+  const result = await service.listOpenCalls(42);
+
+  assert.equal(Object.hasOwn(result.items[0].pickupLocation, 'nameTh'), false);
+  assert.equal(Object.hasOwn(result.items[0].destinationLocation, 'nameTh'), false);
+});
+
 test('open call list omits duplicate location names when metadata matches address', async () => {
   const { service } = createHarness({
     openRows: [openCallRow({
@@ -494,6 +530,52 @@ test('buildOpenCallPayload includes structured locations from metadata', () => {
   });
   assert.equal(payload.origin, '999 Nong Prue, Bang Phli');
   assert.equal(payload.destination, 'Pattaya Beach Road');
+});
+
+test('buildOpenCallPayload includes nameTh from metadata', () => {
+  const service = new BookingService(
+    null,
+    {},
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  );
+  const payload = service.buildOpenCallPayload({
+    bookingNumber: 'TX202607130001',
+    scheduledPickupAt: '2026-07-13T03:30:00.000Z',
+    originAddress: '999 Nong Prue, Bang Phli',
+    destinationAddress: 'Pattaya Beach Road',
+    metadata: {
+      originLocation: {
+        name: 'Suvarnabhumi Airport',
+        nameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+      },
+      destinationLocation: {
+        name: 'Hilton Pattaya',
+        nameTh: 'โรงแรมฮilton พัทยา',
+      },
+    },
+    serviceType: { code: 'AIRPORT_PICKUP', name: 'Airport pickup' },
+    vehicleType: { code: 'VAN', name: 'Van' },
+    pricing: { totalAmount: 2500, currency: 'THB' },
+    luggage: {
+      carriers20Inch: 0,
+      carriers24InchPlus: 0,
+      golfBags: 0,
+      specialItems: null,
+    },
+  });
+
+  assert.equal(payload.pickupLocation.nameTh, 'ท่าอากาศยานสุวรรณภูมิ');
+  assert.equal(payload.destinationLocation.nameTh, 'โรงแรมฮilton พัทยา');
 });
 
 test('open call list marks hierarchy downgrade calls as COMPATIBLE_UPGRADE', async () => {

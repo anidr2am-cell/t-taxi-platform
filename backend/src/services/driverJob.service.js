@@ -241,6 +241,7 @@ class DriverJobService {
       destination: row.destination_address,
       pickupLocation: this.locationDetails({
         name: originLocation.name,
+        nameTh: originLocation.nameTh,
         address: row.origin_address,
         placeId: row.origin_place_id,
         latitude: row.origin_lat,
@@ -248,6 +249,7 @@ class DriverJobService {
       }),
       destinationLocation: this.locationDetails({
         name: destinationLocation.name,
+        nameTh: destinationLocation.nameTh,
         address: row.destination_address,
         placeId: row.destination_place_id,
         latitude: row.destination_lat,
@@ -276,19 +278,24 @@ class DriverJobService {
     };
   }
 
-  locationDetails({ name, address, placeId, latitude, longitude }) {
+  locationDetails({ name, nameTh, address, placeId, latitude, longitude }) {
     const normalizedName = typeof name === 'string' && name.trim() ? name.trim() : null;
+    const normalizedNameTh = typeof nameTh === 'string' && nameTh.trim() ? nameTh.trim() : null;
     const normalizedAddress =
       typeof address === 'string' && address.trim() ? address.trim() : null;
     const displayName =
       normalizedName && normalizedName !== normalizedAddress ? normalizedName : null;
-    return {
+    const location = {
       name: displayName,
       address: normalizedAddress,
       latitude: this.location(latitude),
       longitude: this.location(longitude),
       placeId: typeof placeId === 'string' && placeId.trim() ? placeId.trim() : null,
     };
+    if (normalizedNameTh) {
+      location.nameTh = normalizedNameTh;
+    }
+    return location;
   }
 
   releaseCapabilities(row, now = new Date()) {

@@ -586,6 +586,38 @@ test('driver detail maps structured pickup and destination locations', () => {
   });
 });
 
+test('driver detail includes nameTh when metadata provides Thai place names', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapDetail(row({
+    metadata: JSON.stringify({
+      originLocation: {
+        name: 'BKK — Suvarnabhumi Airport',
+        nameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+      },
+      destinationLocation: {
+        name: 'Hilton Pattaya',
+        nameTh: 'โรงแรมฮilton พัทยา',
+      },
+    }),
+  }));
+
+  assert.equal(mapped.pickupLocation.nameTh, 'ท่าอากาศยานสุวรรณภูมิ');
+  assert.equal(mapped.destinationLocation.nameTh, 'โรงแรมฮilton พัทยา');
+});
+
+test('driver detail omits nameTh when metadata has no Thai place names', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapDetail(row({
+    metadata: JSON.stringify({
+      originLocation: { name: 'Suvarnabhumi Airport' },
+      destinationLocation: { name: 'Hilton Pattaya' },
+    }),
+  }));
+
+  assert.equal(Object.hasOwn(mapped.pickupLocation, 'nameTh'), false);
+  assert.equal(Object.hasOwn(mapped.destinationLocation, 'nameTh'), false);
+});
+
 test('driver detail location falls back to address without duplicate name', () => {
   const service = new DriverJobService({});
   const mapped = service.mapDetail(row({

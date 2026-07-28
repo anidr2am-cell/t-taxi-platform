@@ -96,10 +96,12 @@ class BookingService {
       destination: destinationAddress,
       pickupLocation: this.locationDetails({
         name: originLocation.name,
+        nameTh: originLocation.nameTh,
         address: originAddress,
       }),
       destinationLocation: this.locationDetails({
         name: destinationLocation.name,
+        nameTh: destinationLocation.nameTh,
         address: destinationAddress,
       }),
       serviceType: {
@@ -265,19 +267,24 @@ class BookingService {
     return Number.isFinite(parsed) ? parsed : null;
   }
 
-  locationDetails({ name, address, placeId, latitude, longitude }) {
+  locationDetails({ name, nameTh, address, placeId, latitude, longitude }) {
     const normalizedName = typeof name === 'string' && name.trim() ? name.trim() : null;
+    const normalizedNameTh = typeof nameTh === 'string' && nameTh.trim() ? nameTh.trim() : null;
     const normalizedAddress =
       typeof address === 'string' && address.trim() ? address.trim() : null;
     const displayName =
       normalizedName && normalizedName !== normalizedAddress ? normalizedName : null;
-    return {
+    const location = {
       name: displayName,
       address: normalizedAddress,
       latitude: this.location(latitude),
       longitude: this.location(longitude),
       placeId: typeof placeId === 'string' && placeId.trim() ? placeId.trim() : null,
     };
+    if (normalizedNameTh) {
+      location.nameTh = normalizedNameTh;
+    }
+    return location;
   }
 
   addHours(date, hours) {

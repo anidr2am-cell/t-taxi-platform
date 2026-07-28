@@ -109,6 +109,7 @@ class DriverCallService {
       destination: row.destination_address,
       pickupLocation: this.driverJobService.locationDetails({
         name: originLocation.name,
+        nameTh: originLocation.nameTh,
         address: row.origin_address,
         placeId: row.origin_place_id,
         latitude: row.origin_lat,
@@ -116,6 +117,7 @@ class DriverCallService {
       }),
       destinationLocation: this.driverJobService.locationDetails({
         name: destinationLocation.name,
+        nameTh: destinationLocation.nameTh,
         address: row.destination_address,
         placeId: row.destination_place_id,
         latitude: row.destination_lat,
