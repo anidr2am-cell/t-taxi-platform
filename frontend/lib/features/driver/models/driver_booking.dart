@@ -207,6 +207,7 @@ class DriverBooking {
 class DriverBookingLocation {
   const DriverBookingLocation({
     this.name,
+    this.nameTh,
     this.address,
     this.latitude,
     this.longitude,
@@ -214,6 +215,7 @@ class DriverBookingLocation {
   });
 
   final String? name;
+  final String? nameTh;
   final String? address;
   final double? latitude;
   final double? longitude;
@@ -222,6 +224,10 @@ class DriverBookingLocation {
   bool get hasCoordinates => latitude != null && longitude != null;
 
   String get displayName {
+    final trimmedNameTh = nameTh?.trim();
+    if (trimmedNameTh != null && trimmedNameTh.isNotEmpty) {
+      return trimmedNameTh;
+    }
     final trimmedName = name?.trim();
     if (trimmedName != null && trimmedName.isNotEmpty) return trimmedName;
     final trimmedAddress = address?.trim();
@@ -232,11 +238,13 @@ class DriverBookingLocation {
   }
 
   String? get secondaryAddress {
-    final trimmedName = name?.trim();
+    final primary = nameTh?.trim().isNotEmpty == true
+        ? nameTh!.trim()
+        : name?.trim();
     final trimmedAddress = address?.trim();
     if (trimmedAddress == null || trimmedAddress.isEmpty) return null;
-    if (trimmedName != null && trimmedName.isNotEmpty) {
-      if (trimmedName == trimmedAddress) return null;
+    if (primary != null && primary.isNotEmpty) {
+      if (primary == trimmedAddress) return null;
       return trimmedAddress;
     }
     return null;
@@ -247,6 +255,7 @@ class DriverBookingLocation {
     final json = Map<String, dynamic>.from(raw);
     return DriverBookingLocation(
       name: json['name'] as String?,
+      nameTh: json['nameTh'] as String?,
       address: json['address'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
@@ -308,6 +317,8 @@ class DriverOpenCall {
     required this.pickupTime,
     required this.origin,
     required this.destination,
+    this.pickupLocation,
+    this.destinationLocation,
     required this.serviceTypeName,
     required this.vehicleTypeName,
     required this.amount,
@@ -333,6 +344,8 @@ class DriverOpenCall {
   final String pickupTime;
   final String origin;
   final String destination;
+  final DriverBookingLocation? pickupLocation;
+  final DriverBookingLocation? destinationLocation;
   final String serviceTypeName;
   final String vehicleTypeName;
   final double amount;
@@ -364,6 +377,8 @@ class DriverOpenCall {
       pickupTime: pickupTime,
       origin: origin,
       destination: destination,
+      pickupLocation: pickupLocation,
+      destinationLocation: destinationLocation,
       serviceTypeName: serviceTypeName,
       vehicleTypeName: vehicleTypeName,
       amount: amount,
@@ -399,6 +414,12 @@ class DriverOpenCall {
       pickupTime: json['pickupTime'] as String? ?? '',
       origin: json['origin'] as String? ?? '',
       destination: json['destination'] as String? ?? '',
+      pickupLocation: DriverBookingLocation.fromJsonOrNull(
+        json['pickupLocation'],
+      ),
+      destinationLocation: DriverBookingLocation.fromJsonOrNull(
+        json['destinationLocation'],
+      ),
       serviceTypeName:
           serviceType['name'] as String? ??
           serviceType['code'] as String? ??

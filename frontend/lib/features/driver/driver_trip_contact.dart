@@ -95,7 +95,9 @@ class DriverTripContact {
       return knownAirport.displayName;
     }
 
-    final name = location.name?.trim();
+    final name = location.nameTh?.trim().isNotEmpty == true
+        ? location.nameTh!.trim()
+        : location.name?.trim();
     final address = location.address?.trim();
     final hasName = name != null && name.isNotEmpty;
     final hasAddress = address != null && address.isNotEmpty;
@@ -140,9 +142,10 @@ class DriverTripContact {
   ///
   /// Does not treat city-only strings or unrelated "BKK Hotel" text as airports.
   static LocationOption? resolveKnownAirport(DriverBookingLocation location) {
+    final nameTh = location.nameTh?.trim() ?? '';
     final name = location.name?.trim() ?? '';
     final address = location.address?.trim() ?? '';
-    final haystack = '$name $address'.trim().toUpperCase();
+    final haystack = '$nameTh $name $address'.trim().toUpperCase();
     if (haystack.isEmpty) return null;
 
     final compact = haystack.replaceAll(RegExp(r'[^A-Z0-9]'), '');
@@ -206,8 +209,12 @@ class DriverTripContact {
     return null;
   }
 
-  /// Driver-facing label: prefer `BKK — Suvarnabhumi Airport` when matched.
+  /// Driver-facing label: prefer Thai place name, then airport shortcut label.
   static String displayLabelFor(DriverBookingLocation location) {
+    final nameTh = location.nameTh?.trim();
+    if (nameTh != null && nameTh.isNotEmpty) {
+      return nameTh;
+    }
     final known = resolveKnownAirport(location);
     if (known != null) return known.displayName;
     return location.displayName;

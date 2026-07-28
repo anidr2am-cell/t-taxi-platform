@@ -479,6 +479,42 @@ void main() {
     expect(find.textContaining('Google Maps'), findsWidgets);
   });
 
+  testWidgets('detail prefers nameTh over English pickup and destination names', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            status: 'DRIVER_ASSIGNED',
+            actions: ['VIEW_DETAILS'],
+            pickupLocation: const DriverBookingLocation(
+              name: 'BKK — Suvarnabhumi Airport',
+              nameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+              address: '999 Moo 1 Nong Prue, Bang Phli, Samut Prakan 10540',
+              latitude: 13.69,
+              longitude: 100.7501,
+            ),
+            destinationLocation: const DriverBookingLocation(
+              name: 'Hilton Pattaya',
+              nameTh: 'โรงแรมฮilton พัทยา',
+              address: '333/101 Beach Road, Pattaya City, Chon Buri 20260',
+              latitude: 12.934,
+              longitude: 100.883,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('ท่าอากาศยานสุวรรณภูมิ'), findsOneWidget);
+    expect(find.text('โรงแรมฮilton พัทยา'), findsOneWidget);
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsNothing);
+    expect(find.text('Hilton Pattaya'), findsNothing);
+  });
+
   testWidgets(
     'detail map still renders when only one endpoint has coordinates',
     (tester) async {

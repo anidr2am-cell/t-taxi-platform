@@ -710,7 +710,7 @@ class _UrgentCallsSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.destination))}',
+                      '${DriverTripContact.displayLabelFor(call.pickupLocation ?? DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(call.destinationLocation ?? DriverBookingLocation(address: call.destination))}',
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -881,7 +881,7 @@ class _OpenCallsSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(DriverBookingLocation(address: call.destination))}',
+                        '${DriverTripContact.displayLabelFor(call.pickupLocation ?? DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(call.destinationLocation ?? DriverBookingLocation(address: call.destination))}',
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),

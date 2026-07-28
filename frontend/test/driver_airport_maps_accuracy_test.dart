@@ -175,6 +175,40 @@ void main() {
       }
     });
 
+    test('displayLabelFor prefers nameTh over English airport label', () {
+      final label = DriverTripContact.displayLabelFor(
+        const DriverBookingLocation(
+          name: 'BKK — Suvarnabhumi Airport',
+          nameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+          address: '999 Moo 1, Nong Prue, Bang Phli, Samut Prakan 10540',
+        ),
+      );
+
+      expect(label, 'ท่าอากาศยานสุวรรณภูมิ');
+    });
+
+    test('displayLabelFor keeps airport label when nameTh is absent', () {
+      final label = DriverTripContact.displayLabelFor(
+        DriverBookingLocation(
+          name: ThailandRegisteredAirports.byCode('BKK')!.name,
+          address: ThailandRegisteredAirports.byCode('BKK')!.address,
+        ),
+      );
+
+      expect(label, contains('BKK'));
+      expect(label.toLowerCase(), contains('airport'));
+    });
+
+    test('displayLabelFor falls back to address when name and nameTh are absent', () {
+      final label = DriverTripContact.displayLabelFor(
+        const DriverBookingLocation(
+          address: '74/100 Moo 5, Pattaya City',
+        ),
+      );
+
+      expect(label, '74/100 Moo 5, Pattaya City');
+    });
+
     test('falls back to precise address when no coords/place id/airport', () {
       final uri = DriverTripContact.googleMapsUriForLocation(
         const DriverBookingLocation(
