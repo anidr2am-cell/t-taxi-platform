@@ -19,14 +19,41 @@ String? formatBookingDateTime(String? value) {
 }
 
 String formatBookingLocation(BookingLocation location) {
-  final primaryName = _trimmedLocationLabel(location.nameTh)
-      ?? _trimmedLocationLabel(location.name);
+  final lines = parseBookingLocation(location);
+  if (!lines.hasPlaceName && !lines.hasAddressLine) {
+    return '위치 정보 없음';
+  }
+  return [
+    ?lines.placeName,
+    if (lines.hasAddressLine) lines.addressLine,
+  ].join('\n');
+}
+
+class BookingLocationLines {
+  const BookingLocationLines({this.placeName, this.addressLine});
+
+  final String? placeName;
+  final String? addressLine;
+
+  bool get hasPlaceName => placeName != null && placeName!.isNotEmpty;
+  bool get hasAddressLine => addressLine != null && addressLine!.isNotEmpty;
+  bool get hasSeparateAddress => hasPlaceName && hasAddressLine;
+}
+
+BookingLocationLines parseBookingLocation(BookingLocation location) {
+  final primaryName = _trimmedLocationLabel(location.nameTh) ??
+      _trimmedLocationLabel(location.name);
   final address = _trimmedLocationLabel(location.address);
-  final parts = <String>[
-    ?primaryName,
-    if (address != null && address != primaryName) address,
-  ];
-  return parts.isEmpty ? '위치 정보 없음' : parts.join('\n');
+  if (primaryName == null && address == null) {
+    return const BookingLocationLines();
+  }
+  if (primaryName == null) {
+    return BookingLocationLines(addressLine: address);
+  }
+  if (address == null || address == primaryName) {
+    return BookingLocationLines(placeName: primaryName);
+  }
+  return BookingLocationLines(placeName: primaryName, addressLine: address);
 }
 
 String? _trimmedLocationLabel(String? value) {

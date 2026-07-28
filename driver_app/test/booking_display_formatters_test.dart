@@ -43,6 +43,29 @@ void main() {
     });
   });
 
+  group('parseBookingLocation', () {
+    test('splits place name and address lines', () {
+      final lines = parseBookingLocation(
+        const BookingLocation(
+          name: 'Hilton Pattaya',
+          address: '333 Moo 9, Pattaya Beach Road',
+        ),
+      );
+      expect(lines.placeName, 'Hilton Pattaya');
+      expect(lines.addressLine, '333 Moo 9, Pattaya Beach Road');
+      expect(lines.hasSeparateAddress, isTrue);
+    });
+
+    test('returns address only when names are missing', () {
+      final lines = parseBookingLocation(
+        const BookingLocation(address: '999 Nong Prue, Bang Phli'),
+      );
+      expect(lines.placeName, isNull);
+      expect(lines.addressLine, '999 Nong Prue, Bang Phli');
+      expect(lines.hasSeparateAddress, isFalse);
+    });
+  });
+
   group('assignmentReleasedCloseMessage', () {
     test('shows admin message for ADMIN_RELEASED', () {
       expect(

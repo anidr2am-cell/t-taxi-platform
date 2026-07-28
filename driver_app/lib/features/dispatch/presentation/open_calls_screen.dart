@@ -854,9 +854,26 @@ class _UrgentCallCard extends StatelessWidget {
                   label: Text('$meetingGate번 게이트'),
                 ),
               ),
-            Text(
-              '${_formatOpenCallEndpoint(location: call.pickupLocation, fallbackAddress: call.origin)} → '
-              '${_formatOpenCallEndpoint(location: call.destinationLocation, fallbackAddress: call.destination)}',
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _OpenCallLocationText(
+                    location: call.pickupLocation,
+                    fallbackAddress: call.origin,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('→'),
+                ),
+                Expanded(
+                  child: _OpenCallLocationText(
+                    location: call.destinationLocation,
+                    fallbackAddress: call.destination,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -978,19 +995,15 @@ class _OpenCallCard extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 10),
-              Text(
-                _formatOpenCallEndpoint(
-                  location: call.pickupLocation,
-                  fallbackAddress: call.origin,
-                ),
+              _OpenCallLocationText(
+                location: call.pickupLocation,
+                fallbackAddress: call.origin,
                 key: Key('openCallOrigin-${call.bookingNumber}'),
               ),
               const SizedBox(height: 6),
-              Text(
-                _formatOpenCallEndpoint(
-                  location: call.destinationLocation,
-                  fallbackAddress: call.destination,
-                ),
+              _OpenCallLocationText(
+                location: call.destinationLocation,
+                fallbackAddress: call.destination,
                 key: Key('openCallDestination-${call.bookingNumber}'),
               ),
               const SizedBox(height: 10),
@@ -1023,16 +1036,51 @@ String? _formatDateTime(String? value) {
       '${bangkok.minute.toString().padLeft(2, '0')}';
 }
 
-String _formatOpenCallEndpoint({
-  required BookingLocation? location,
-  required String fallbackAddress,
-}) {
-  final nameTh = location?.nameTh?.trim();
-  final name = location?.name?.trim();
-  if (location != null &&
-      ((nameTh != null && nameTh.isNotEmpty) ||
-          (name != null && name.isNotEmpty))) {
-    return formatBookingLocation(location);
+class _OpenCallLocationText extends StatelessWidget {
+  const _OpenCallLocationText({
+    super.key,
+    required this.location,
+    required this.fallbackAddress,
+  });
+
+  final BookingLocation? location;
+  final String fallbackAddress;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeStyle = TextStyle(
+      fontWeight: FontWeight.bold,
+      color: Theme.of(context).colorScheme.primary,
+    );
+    final nameTh = location?.nameTh?.trim();
+    final name = location?.name?.trim();
+    final hasStructuredName = location != null &&
+        ((nameTh != null && nameTh.isNotEmpty) ||
+            (name != null && name.isNotEmpty));
+
+    if (hasStructuredName) {
+      final lines = parseBookingLocation(location!);
+      if (lines.hasSeparateAddress) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(lines.placeName!, style: placeStyle),
+            Text(lines.addressLine!),
+          ],
+        );
+      }
+      if (lines.hasPlaceName) {
+        return Text(lines.placeName!, style: placeStyle);
+      }
+      if (lines.hasAddressLine) {
+        return Text(lines.addressLine!);
+      }
+      return const Text('위치 정보 없음');
+    }
+
+    return Text(
+      AirportLabelResolver.displayLabelFor(fallbackAddress),
+      style: placeStyle,
+    );
   }
-  return AirportLabelResolver.displayLabelFor(fallbackAddress);
 }

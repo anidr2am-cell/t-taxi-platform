@@ -96,10 +96,9 @@ void main() {
     await pumpUrgentScreen(tester, urgentReader());
 
     expect(find.byKey(const Key('urgentCallsSection')), findsOneWidget);
-    expect(
-      find.text('BKK — Suvarnabhumi Airport → Pattaya Hotel'),
-      findsOneWidget,
-    );
+    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
+    expect(find.text('Pattaya Hotel'), findsOneWidget);
+    expect(find.text('→'), findsOneWidget);
     expect(find.text('Airport pickup · Sedan · 2명'), findsOneWidget);
     expect(find.text('1200 THB'), findsOneWidget);
     expect(find.text('20″ 1'), findsOneWidget);

@@ -15,9 +15,17 @@ Future<void> pumpOpenCalls(
   VoidCallback? onClaimed,
   VoidCallback? onOpenSettlement,
   DriverSocketConnection? driverSocket,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme:
+          theme ??
+          ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF006A60),
+            ),
+          ),
       home: OpenCallsScreen(
         repository: reader,
         onUnauthorized: () async {},
@@ -570,13 +578,25 @@ void main() {
     );
 
     expect(
-      find.text('Suvarnabhumi Airport\n999 Nong Prue, Bang Phli'),
+      find.text('Suvarnabhumi Airport'),
       findsOneWidget,
     );
     expect(
-      find.text('Hilton Pattaya\n333 Moo 9, Pattaya Beach Road'),
+      find.text('999 Nong Prue, Bang Phli'),
       findsOneWidget,
     );
+    expect(
+      find.text('Hilton Pattaya'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('333 Moo 9, Pattaya Beach Road'),
+      findsOneWidget,
+    );
+    _expectOpenCallPlaceNameStyle(tester, 'Suvarnabhumi Airport');
+    _expectOpenCallPlaceNameStyle(tester, 'Hilton Pattaya');
+    _expectOpenCallAddressStyle(tester, '999 Nong Prue, Bang Phli');
+    _expectOpenCallAddressStyle(tester, '333 Moo 9, Pattaya Beach Road');
   });
 
   testWidgets('open call prefers nameTh over name when available', (
@@ -605,22 +625,32 @@ void main() {
     );
 
     expect(
-      find.text('ท่าอากาศยานสุวรรณภูมิ\n999 Nong Prue, Bang Phli'),
+      find.text('ท่าอากาศยานสุวรรณภูมิ'),
       findsOneWidget,
     );
     expect(
-      find.text('โรงแรมฮilton พัทยา\n333 Moo 9, Pattaya Beach Road'),
+      find.text('999 Nong Prue, Bang Phli'),
       findsOneWidget,
     );
+    expect(
+      find.text('โรงแรมฮilton พัทยา'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('333 Moo 9, Pattaya Beach Road'),
+      findsOneWidget,
+    );
+    _expectOpenCallPlaceNameStyle(tester, 'ท่าอากาศยานสุวรรณภูมิ');
+    _expectOpenCallAddressStyle(tester, '999 Nong Prue, Bang Phli');
   });
 
-  testWidgets('open call falls back to airport label when pickup name is absent', (
+  testWidgets('open call styles airport fallback label as bold primary', (
     tester,
   ) async {
     await pumpOpenCalls(tester, onlineReader());
 
-    expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
-    expect(find.text('Pattaya Hotel'), findsOneWidget);
+    _expectOpenCallPlaceNameStyle(tester, 'BKK — Suvarnabhumi Airport');
+    _expectOpenCallPlaceNameStyle(tester, 'Pattaya Hotel');
   });
 
   testWidgets('open call falls back when pickupLocation has address only', (
@@ -641,7 +671,25 @@ void main() {
     );
 
     expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
+    _expectOpenCallPlaceNameStyle(tester, 'BKK — Suvarnabhumi Airport');
   });
+}
+
+void _expectOpenCallPlaceNameStyle(WidgetTester tester, String text) {
+  final finder = find.text(text);
+  expect(finder, findsOneWidget);
+  final widget = tester.widget<Text>(finder);
+  expect(widget.style?.fontWeight, FontWeight.bold);
+  final context = tester.element(finder);
+  expect(widget.style?.color, Theme.of(context).colorScheme.primary);
+}
+
+void _expectOpenCallAddressStyle(WidgetTester tester, String text) {
+  final finder = find.text(text);
+  expect(finder, findsOneWidget);
+  final widget = tester.widget<Text>(finder);
+  expect(widget.style?.fontWeight, isNull);
+  expect(widget.style?.color, isNull);
 }
 
 class _OpenCallsRefreshHarness extends StatefulWidget {
