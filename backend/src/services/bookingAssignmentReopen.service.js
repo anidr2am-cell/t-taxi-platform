@@ -16,14 +16,14 @@ class BookingAssignmentReopenService {
   constructor(
     bookingRepository,
     driverRepository,
-    notificationService = null,
+    notificationServiceResolver = null,
     chatRepository = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
   ) {
     this.bookingRepository = bookingRepository;
     this.driverRepository = driverRepository;
-    this.notificationService = notificationService;
+    this.notificationServiceResolver = notificationServiceResolver;
     this.chatRepository = chatRepository;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
@@ -63,6 +63,10 @@ class BookingAssignmentReopenService {
     };
   }
 
+  getNotificationService() {
+    return this.notificationServiceResolver ? this.notificationServiceResolver() : null;
+  }
+
   async dispatchOpenCallNotifications({
     drivers,
     bookingId,
@@ -70,7 +74,8 @@ class BookingAssignmentReopenService {
     openCallPayload,
     releasedAssignmentId,
   }) {
-    if (!this.notificationService || !drivers.length) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !drivers.length) {
       return;
     }
 
@@ -81,7 +86,7 @@ class BookingAssignmentReopenService {
     );
     for (const driver of drivers) {
       try {
-        await this.notificationService.sendDirectNotification({
+        await notificationService.sendDirectNotification({
           recipientUserId: driver.user_id,
           recipientDriverId: driver.id,
           bookingId,
@@ -107,7 +112,8 @@ class BookingAssignmentReopenService {
     urgentPayload,
     releasedAssignmentId,
   }) {
-    if (!this.notificationService || !drivers.length) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !drivers.length) {
       return;
     }
 
@@ -118,7 +124,7 @@ class BookingAssignmentReopenService {
     );
     for (const driver of drivers) {
       try {
-        await this.notificationService.sendDirectNotification({
+        await notificationService.sendDirectNotification({
           recipientUserId: driver.user_id,
           recipientDriverId: driver.id,
           bookingId,
@@ -316,25 +322,28 @@ class BookingAssignmentReopenService {
         releasedAt: new Date().toISOString(),
       });
 
-      if (this.notificationService && assignmentSocketReasonCode === ADMIN_RELEASED_REASON_CODE) {
-        try {
-          await this.notificationService.sendDirectNotification({
-            recipientUserId: releasedDriverUserId,
-            bookingId,
-            notificationType: NOTIFICATION_TYPES.ADMIN_RELEASED,
-            payload: {
-              bookingNumber,
-              targetScreen: 'assignments',
-            },
-            idempotencyKey: `admin-released:${bookingId}:${releasedDriverUserId}:${releasedAssignmentId ?? 'none'}`,
-            eventName: 'driver.assignment.released',
-          });
-        } catch (err) {
-          logger.warn('Admin released notification failed', {
-            bookingId,
-            releasedDriverUserId,
-            error: err.message,
-          });
+      if (assignmentSocketReasonCode === ADMIN_RELEASED_REASON_CODE) {
+        const notificationService = this.getNotificationService();
+        if (notificationService) {
+          try {
+            await notificationService.sendDirectNotification({
+              recipientUserId: releasedDriverUserId,
+              bookingId,
+              notificationType: NOTIFICATION_TYPES.ADMIN_RELEASED,
+              payload: {
+                bookingNumber,
+                targetScreen: 'assignments',
+              },
+              idempotencyKey: `admin-released:${bookingId}:${releasedDriverUserId}:${releasedAssignmentId ?? 'none'}`,
+              eventName: 'driver.assignment.released',
+            });
+          } catch (err) {
+            logger.warn('Admin released notification failed', {
+              bookingId,
+              releasedDriverUserId,
+              error: err.message,
+            });
+          }
         }
       }
     }

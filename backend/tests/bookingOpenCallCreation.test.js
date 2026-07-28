@@ -133,12 +133,12 @@ function createHarness({ failSecondChargeItem = false } = {}) {
         return [{ id: 7, user_id: 42 }];
       },
     },
-    {
+    () => ({
       async sendDirectNotification(notification) {
         calls.notifications.push(notification);
         calls.sequence.push('notify');
       },
-    },
+    }),
   );
 
   setRealtimeIo({

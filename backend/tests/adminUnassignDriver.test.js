@@ -147,6 +147,7 @@ function createServiceHarness(overrides = {}) {
       calls.notifications.push(params);
     },
   };
+  const notificationServiceResolver = () => notificationService;
   const chatRepository = {
     async findRoomByBookingIdForUpdate() {
       return { id: 123 };
@@ -168,14 +169,14 @@ function createServiceHarness(overrides = {}) {
     new BookingAssignmentReopenService(
       bookingRepository,
       driverRepository,
-      notificationService,
+      notificationServiceResolver,
       chatRepository,
     ),
   );
   const bookingAssignmentReopenService = new BookingAssignmentReopenService(
     bookingRepository,
     driverRepository,
-    notificationService,
+    notificationServiceResolver,
     chatRepository,
   );
   const service = new AdminDispatchService(

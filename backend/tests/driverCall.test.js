@@ -240,6 +240,7 @@ function createHarness(overrides = {}) {
       calls.notifications.push(params);
     },
   };
+  const notificationServiceResolver = () => notificationService;
   const chatRepository = {
     async findRoomByBookingIdForUpdate() {
       return overrides.chatRoom === false ? null : { id: 123 };
@@ -326,7 +327,7 @@ function createHarness(overrides = {}) {
   const bookingAssignmentReopenService = new BookingAssignmentReopenService(
     bookingRepository,
     driverRepository,
-    notificationService,
+    notificationServiceResolver,
     chatRepository,
     commissionSettlementService,
     urgentNegotiationRepository,
@@ -1236,11 +1237,11 @@ test('dispatchOpenCallNotifications sends DRIVER_CALL_AVAILABLE to each eligible
     null,
     null,
     null,
-    {
+    () => ({
       async sendDirectNotification(params) {
         sent.push(params);
       },
-    },
+    }),
   );
 
   await service.dispatchOpenCallNotifications({
@@ -1312,14 +1313,14 @@ test('dispatchOpenCallNotifications continues when one driver notification fails
     null,
     null,
     null,
-    {
+    () => ({
       async sendDirectNotification(params) {
         if (params.recipientUserId === 43) {
           throw new Error('fcm failed');
         }
         sent.push(params);
       },
-    },
+    }),
   );
 
   await service.dispatchOpenCallNotifications({

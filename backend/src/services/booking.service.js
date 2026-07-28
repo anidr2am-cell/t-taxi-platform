@@ -51,7 +51,7 @@ class BookingService {
     outboxProcessor,
     flightService = null,
     driverRepository = null,
-    notificationService = null,
+    notificationServiceResolver = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
     placesService = null,
@@ -67,7 +67,7 @@ class BookingService {
     this.outboxProcessor = outboxProcessor;
     this.flightService = flightService;
     this.driverRepository = driverRepository;
-    this.notificationService = notificationService;
+    this.notificationServiceResolver = notificationServiceResolver;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
     this.placesService = placesService;
@@ -148,6 +148,10 @@ class BookingService {
     }));
   }
 
+  getNotificationService() {
+    return this.notificationServiceResolver ? this.notificationServiceResolver() : null;
+  }
+
   buildDriverNotificationPayload(bookingNumber, payload, targetScreen) {
     return {
       ...payload,
@@ -163,7 +167,8 @@ class BookingService {
     openCallPayload,
     idempotencyKeyPrefix = 'driver-call-open',
   }) {
-    if (!this.notificationService || !drivers.length) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !drivers.length) {
       return;
     }
 
@@ -174,7 +179,7 @@ class BookingService {
     );
     for (const driver of drivers) {
       try {
-        await this.notificationService.sendDirectNotification({
+        await notificationService.sendDirectNotification({
           recipientUserId: driver.user_id,
           recipientDriverId: driver.id,
           bookingId,
@@ -200,7 +205,8 @@ class BookingService {
     urgentPayload,
     idempotencyKeyPrefix = 'driver-urgent-call-new',
   }) {
-    if (!this.notificationService || !drivers.length) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !drivers.length) {
       return;
     }
 
@@ -211,7 +217,7 @@ class BookingService {
     );
     for (const driver of drivers) {
       try {
-        await this.notificationService.sendDirectNotification({
+        await notificationService.sendDirectNotification({
           recipientUserId: driver.user_id,
           recipientDriverId: driver.id,
           bookingId,
