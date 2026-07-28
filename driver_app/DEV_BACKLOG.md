@@ -160,18 +160,17 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
 driver_app의 새 콜 목록에는 이미 장소명(수완나품공항, 힐튼파타야 등)을 주소 위에 강조 표시하도록 완료함.
 backend가 `pickupLocation`/`destinationLocation`을 open calls에도 노출하도록 이미 확장됨 (커밋 `8da62ba`, `984c479` 참고).
 
-### 남은 작업
+### 완료 요약
 
-- a) 고객웹 예약 완료/조회 화면에 동일하게 장소명 강조 표시
-- b) 기사 웹 (`frontend/lib/features/driver/`)에도 동일 적용
-- c) 관리자 화면 (`admin_dispatch`)의 예약 목록/상세에도 동일 적용
+- **고객웹** — open calls·예약 화면 장소명 강조 표시 (`8da62ba`, `984c479`, `956960e`)
+- **driver_app** — 태국어 장소명(`nameTh`) 우선 표시 (`96877d9`)
+- **기사웹** (`frontend/lib/features/driver/`) — 태국어 장소명 우선 표시 (`f8bdd3e`)
+- **태국어 명칭 확보** — 예약 생성 시 `nameTh` 저장 + 기사 API 노출 (`a2b8b90`, `226fe38`)
 
 ### 참고
-
-backend 데이터는 이미 존재 (`metadata` 기반). 각 화면 UI 표시 작업만 남음.
 
 §13 참고: 국내선 공항 확장은 현재 범위 아님. 현재 앱에 등록된 공항은 BKK/DMK/CNX/HKT/UTP 5개뿐(frontend의 `thailand_registered_airports.dart`, `airport_shortcuts.dart`). 국내선 공항을 나중에 추가하려면: (1) frontend에 LocationOption 추가, (2) 태국어 공식명칭 확보, (3) backend `thailandAirports.constants.js`에 매핑 추가, (4) 관련 DB seed 파일(`15_pricing_architecture.sql` 등, 파일 상단 주석에 명시된 동기화 대상)도 함께 갱신 필요.
 
 ### 상태
 
-부분 완료. driver_app만 완료, 나머지 3곳(고객웹/기사웹/관리자) 미착수.
+완료.
