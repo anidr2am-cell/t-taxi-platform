@@ -20,7 +20,17 @@ void main() {
     await storage.write(
       const AuthTokens(accessToken: 'access', refreshToken: 'refresh'),
     );
+    await storage.writeNotificationDeviceId(42);
     await storage.clear();
     expect(await storage.read(), isNull);
+    expect(await storage.readNotificationDeviceId(), isNull);
+  });
+
+  test('writes and reads notification device id securely', () async {
+    final storage = SecureTokenStorage();
+    await storage.writeNotificationDeviceId(99);
+    expect(await storage.readNotificationDeviceId(), 99);
+    await storage.clearNotificationDeviceId();
+    expect(await storage.readNotificationDeviceId(), isNull);
   });
 }

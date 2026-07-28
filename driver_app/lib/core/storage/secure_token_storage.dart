@@ -11,6 +11,9 @@ abstract interface class TokenStorage {
   Future<AuthTokens?> read();
   Future<void> write(AuthTokens tokens);
   Future<void> clear();
+  Future<int?> readNotificationDeviceId();
+  Future<void> writeNotificationDeviceId(int deviceId);
+  Future<void> clearNotificationDeviceId();
 }
 
 class SecureTokenStorage implements TokenStorage {
@@ -19,6 +22,7 @@ class SecureTokenStorage implements TokenStorage {
 
   static const accessTokenKey = 'auth_access_token';
   static const refreshTokenKey = 'auth_refresh_token';
+  static const notificationDeviceIdKey = 'notification_device_id';
 
   final FlutterSecureStorage _storage;
 
@@ -47,5 +51,30 @@ class SecureTokenStorage implements TokenStorage {
   Future<void> clear() async {
     await _storage.delete(key: accessTokenKey);
     await _storage.delete(key: refreshTokenKey);
+    await clearNotificationDeviceId();
+  }
+
+  @override
+  Future<int?> readNotificationDeviceId() async {
+    final raw = await _storage.read(key: notificationDeviceIdKey);
+    if (raw == null || raw.isEmpty) return null;
+    return int.tryParse(raw);
+  }
+
+  @override
+  Future<void> writeNotificationDeviceId(int deviceId) async {
+    if (deviceId <= 0) {
+      await clearNotificationDeviceId();
+      return;
+    }
+    await _storage.write(
+      key: notificationDeviceIdKey,
+      value: deviceId.toString(),
+    );
+  }
+
+  @override
+  Future<void> clearNotificationDeviceId() async {
+    await _storage.delete(key: notificationDeviceIdKey);
   }
 }

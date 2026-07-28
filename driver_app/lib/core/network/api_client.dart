@@ -79,6 +79,18 @@ class ApiClient {
     );
   }
 
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    required String bearerToken,
+  }) async {
+    return _request(
+      () => _httpClient.delete(
+        _endpoint(path),
+        headers: _headers(bearerToken),
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> postMultipart(
     String path, {
     required String bearerToken,

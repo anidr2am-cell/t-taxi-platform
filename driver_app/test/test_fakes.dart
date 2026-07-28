@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:tride_driver/core/firebase/fcm_token_service.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/auth/data/auth_api.dart';
@@ -11,6 +13,7 @@ import 'package:tride_driver/features/bookings/data/booking_repository.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
 import 'package:tride_driver/features/dispatch/data/dispatch_repository.dart';
 import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
+import 'package:tride_driver/features/notifications/data/notification_api.dart';
 import 'package:tride_driver/features/settlement/data/settlement_api.dart';
 import 'package:tride_driver/features/settlement/data/settlement_models.dart';
 
@@ -28,14 +31,24 @@ class FakeTokenStorage implements TokenStorage {
   FakeTokenStorage([this.tokens]);
 
   AuthTokens? tokens;
+  int? notificationDeviceId;
   int readCount = 0;
   int writeCount = 0;
   int clearCount = 0;
+  int notificationDeviceIdWriteCount = 0;
+  int notificationDeviceIdClearCount = 0;
 
   @override
   Future<void> clear() async {
     clearCount++;
     tokens = null;
+    notificationDeviceId = null;
+  }
+
+  @override
+  Future<void> clearNotificationDeviceId() async {
+    notificationDeviceIdClearCount++;
+    notificationDeviceId = null;
   }
 
   @override
@@ -45,11 +58,105 @@ class FakeTokenStorage implements TokenStorage {
   }
 
   @override
+  Future<int?> readNotificationDeviceId() async {
+    return notificationDeviceId;
+  }
+
+  @override
   Future<void> write(AuthTokens value) async {
     writeCount++;
     tokens = value;
   }
+
+  @override
+  Future<void> writeNotificationDeviceId(int deviceId) async {
+    notificationDeviceIdWriteCount++;
+    notificationDeviceId = deviceId;
+  }
 }
+
+class FakeFcmMessagingClient implements FcmMessagingClient {
+  FakeFcmMessagingClient({
+    this.token = 'fake-fcm-token',
+    this.requestPermissionError,
+    this.getTokenError,
+  });
+
+  String? token;
+  Object? requestPermissionError;
+  Object? getTokenError;
+  int requestPermissionCount = 0;
+  int getTokenCount = 0;
+  final StreamController<String> _refreshController =
+      StreamController<String>.broadcast();
+
+  @override
+  Future<String?> getToken() async {
+    getTokenCount++;
+    if (getTokenError case final error?) throw error;
+    return token;
+  }
+
+  @override
+  Stream<String> get onTokenRefresh => _refreshController.stream;
+
+  @override
+  Future<void> requestPermission() async {
+    requestPermissionCount++;
+    if (requestPermissionError case final error?) throw error;
+  }
+
+  void emitTokenRefresh(String token) {
+    _refreshController.add(token);
+  }
+
+  Future<void> close() => _refreshController.close();
+}
+
+class FakeNotificationDataSource implements NotificationDataSource {
+  FakeNotificationDataSource({
+    this.registerResult = const RegisteredNotificationDevice(
+      deviceId: 7,
+      platform: 'ANDROID',
+    ),
+  });
+
+  RegisteredNotificationDevice registerResult;
+  ApiException? registerError;
+  ApiException? deactivateError;
+  int registerCount = 0;
+  int deactivateCount = 0;
+  String? lastRegisteredToken;
+  String? lastRegisteredAppVersion;
+  int? lastDeactivatedDeviceId;
+
+  @override
+  Future<void> deactivateDevice(int deviceId) async {
+    deactivateCount++;
+    lastDeactivatedDeviceId = deviceId;
+    if (deactivateError case final error?) throw error;
+  }
+
+  @override
+  Future<RegisteredNotificationDevice> registerDevice({
+    required String token,
+    String? deviceName,
+    String? appVersion,
+  }) async {
+    registerCount++;
+    lastRegisteredToken = token;
+    lastRegisteredAppVersion = appVersion;
+    if (registerError case final error?) throw error;
+    return registerResult;
+  }
+}
+
+PackageInfo fakePackageInfo({String version = '1.0.0'}) => PackageInfo(
+  appName: 'Tride Driver',
+  packageName: 'com.trider.driver',
+  version: version,
+  buildNumber: '1',
+);
 
 class FakeAuthApi implements AuthDataSource {
   AuthSession loginResult = driverSession();

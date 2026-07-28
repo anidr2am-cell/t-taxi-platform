@@ -177,4 +177,22 @@ void main() {
       ),
     );
   });
+
+  test('deleteJson sends DELETE with bearer token', () async {
+    late http.Request request;
+    final client = ApiClient(
+      config: config,
+      httpClient: MockClient((incoming) async {
+        request = incoming;
+        return http.Response('{"success":true,"data":{}}', 200);
+      }),
+    );
+    await client.deleteJson(
+      '/api/v1/notifications/devices/42',
+      bearerToken: 'token',
+    );
+    expect(request.method, 'DELETE');
+    expect(request.url.path, '/api/v1/notifications/devices/42');
+    expect(request.headers['authorization'], 'Bearer token');
+  });
 }

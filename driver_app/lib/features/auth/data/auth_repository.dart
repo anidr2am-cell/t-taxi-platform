@@ -1,5 +1,6 @@
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_token_storage.dart';
+import '../../../core/firebase/fcm_token_service.dart';
 import 'auth_api.dart';
 import 'auth_models.dart';
 
@@ -7,11 +8,14 @@ class AuthRepository {
   const AuthRepository({
     required AuthDataSource api,
     required TokenStorage storage,
+    FcmTokenService? fcmTokenService,
   }) : _api = api,
-       _storage = storage;
+       _storage = storage,
+       _fcmTokenService = fcmTokenService;
 
   final AuthDataSource _api;
   final TokenStorage _storage;
+  final FcmTokenService? _fcmTokenService;
 
   Future<AuthSession> login(String loginId, String password) async {
     final session = await _api.login(loginId, password);
@@ -51,6 +55,11 @@ class AuthRepository {
       if (tokens != null) await _api.logout(tokens);
     } catch (_) {
       // Server logout is best effort. Local credentials must always be removed.
+    }
+    try {
+      await _fcmTokenService?.deactivateStoredDevice(clearStoredId: true);
+    } catch (_) {
+      // Device deactivation is best effort. Logout must continue.
     } finally {
       await _storage.clear();
     }

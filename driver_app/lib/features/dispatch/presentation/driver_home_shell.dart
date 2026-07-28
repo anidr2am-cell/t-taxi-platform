@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/firebase/fcm_token_service.dart';
 import '../../account/data/account_api.dart';
 import '../../account/presentation/account_page.dart';
 import '../../bookings/data/booking_repository.dart';
@@ -23,6 +24,7 @@ class DriverHomeShell extends StatefulWidget {
     this.accountApi,
     this.settlementApi,
     this.driverSocket,
+    this.fcmTokenService,
   });
 
   final BookingReader bookingRepository;
@@ -32,6 +34,7 @@ class DriverHomeShell extends StatefulWidget {
   final DriverSocketConnection? driverSocket;
   final AccountDataSource? accountApi;
   final SettlementDataSource? settlementApi;
+  final FcmTokenService? fcmTokenService;
 
   @override
   State<DriverHomeShell> createState() => _DriverHomeShellState();
@@ -57,6 +60,15 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   void initState() {
     super.initState();
     unawaited(_refreshSettlementBadge());
+    unawaited(_registerFcmToken());
+  }
+
+  Future<void> _registerFcmToken() async {
+    try {
+      await widget.fcmTokenService?.registerIfNeeded();
+    } catch (_) {
+      // FCM registration must not block the main driver workflow.
+    }
   }
 
   Future<void> _refreshSettlementBadge() async {

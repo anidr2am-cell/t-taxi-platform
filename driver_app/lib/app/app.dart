@@ -8,6 +8,7 @@ import '../features/bookings/data/booking_repository.dart';
 import '../features/dispatch/data/dispatch_repository.dart';
 import '../features/dispatch/data/driver_socket_service.dart';
 import '../features/settlement/data/settlement_api.dart';
+import '../core/firebase/fcm_token_service.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({
@@ -19,6 +20,7 @@ class DriverApp extends StatelessWidget {
     this.accountApi,
     this.settlementApi,
     this.driverSocket,
+    this.fcmTokenService,
   });
 
   final AppConfig config;
@@ -28,6 +30,7 @@ class DriverApp extends StatelessWidget {
   final AccountDataSource? accountApi;
   final SettlementDataSource? settlementApi;
   final DriverSocketConnection? driverSocket;
+  final FcmTokenService? fcmTokenService;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +49,7 @@ class DriverApp extends StatelessWidget {
         accountApi: accountApi,
         settlementApi: settlementApi,
         driverSocket: driverSocket,
+        fcmTokenService: fcmTokenService,
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/core/storage/secure_token_storage.dart';
+import 'package:tride_driver/core/firebase/fcm_token_service.dart';
 import 'package:tride_driver/features/auth/data/auth_repository.dart';
 
 import 'test_fakes.dart';
@@ -62,5 +63,63 @@ void main() {
     expect(api.logoutCount, 1);
     expect(storage.clearCount, 1);
     expect(storage.tokens, isNull);
+  });
+
+  test('logout deactivates stored notification device before clearing storage',
+      () async {
+    final api = FakeAuthApi();
+    final storage = FakeTokenStorage(
+      const AuthTokens(accessToken: 'saved', refreshToken: 'refresh'),
+    )..notificationDeviceId = 55;
+    final notificationApi = FakeNotificationDataSource();
+    final fcmTokenService = FcmTokenService(
+      messaging: FakeFcmMessagingClient(),
+      notificationApi: notificationApi,
+      storage: storage,
+      packageInfoProvider: () async => fakePackageInfo(),
+    );
+    final repository = AuthRepository(
+      api: api,
+      storage: storage,
+      fcmTokenService: fcmTokenService,
+    );
+
+    await repository.logout();
+
+    expect(notificationApi.deactivateCount, 1);
+    expect(notificationApi.lastDeactivatedDeviceId, 55);
+    expect(storage.clearCount, 1);
+    expect(storage.tokens, isNull);
+    expect(storage.notificationDeviceId, isNull);
+
+    fcmTokenService.dispose();
+  });
+
+  test('logout continues when notification deactivation fails', () async {
+    final api = FakeAuthApi();
+    final storage = FakeTokenStorage(
+      const AuthTokens(accessToken: 'saved', refreshToken: 'refresh'),
+    )..notificationDeviceId = 55;
+    final notificationApi = FakeNotificationDataSource()
+      ..deactivateError = const ApiException(ApiFailureKind.unavailable);
+    final fcmTokenService = FcmTokenService(
+      messaging: FakeFcmMessagingClient(),
+      notificationApi: notificationApi,
+      storage: storage,
+      packageInfoProvider: () async => fakePackageInfo(),
+    );
+    final repository = AuthRepository(
+      api: api,
+      storage: storage,
+      fcmTokenService: fcmTokenService,
+    );
+
+    await repository.logout();
+
+    expect(notificationApi.deactivateCount, 1);
+    expect(storage.clearCount, 1);
+    expect(storage.tokens, isNull);
+
+    fcmTokenService.dispose();
   });
 }

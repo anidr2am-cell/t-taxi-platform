@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../config/app_environment.dart';
 import '../core/firebase/firebase_app_initializer.dart';
+import '../core/firebase/fcm_token_service.dart';
 import '../core/network/api_client.dart';
 import '../core/storage/secure_token_storage.dart';
 import '../features/auth/data/auth_api.dart';
@@ -16,6 +17,7 @@ import '../features/dispatch/data/dispatch_api.dart';
 import '../features/dispatch/data/dispatch_repository.dart';
 import '../features/dispatch/data/driver_socket_service.dart';
 import '../features/settlement/data/settlement_api.dart';
+import '../features/notifications/data/notification_api.dart';
 import 'app.dart';
 
 Future<void> runDriverApp(AppEnvironment environment) async {
@@ -24,7 +26,17 @@ Future<void> runDriverApp(AppEnvironment environment) async {
   final config = AppConfig.forEnvironment(environment);
   final apiClient = ApiClient(config: config, httpClient: http.Client());
   final storage = SecureTokenStorage();
-  final repository = AuthRepository(api: AuthApi(apiClient), storage: storage);
+  final notificationApi = NotificationApi(client: apiClient, storage: storage);
+  final fcmTokenService = FcmTokenService(
+    messaging: FirebaseFcmMessagingClient(),
+    notificationApi: notificationApi,
+    storage: storage,
+  );
+  final repository = AuthRepository(
+    api: AuthApi(apiClient),
+    storage: storage,
+    fcmTokenService: fcmTokenService,
+  );
   runApp(
     DriverApp(
       config: config,
@@ -38,6 +50,7 @@ Future<void> runDriverApp(AppEnvironment environment) async {
       accountApi: AccountApi(client: apiClient, storage: storage),
       settlementApi: SettlementApi(client: apiClient, storage: storage),
       driverSocket: DriverSocketService(config: config, storage: storage),
+      fcmTokenService: fcmTokenService,
     ),
   );
 }
