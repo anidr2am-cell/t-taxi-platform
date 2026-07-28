@@ -51,6 +51,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   bool _hasUrgentActivity = false;
   int _tripsRefreshRequest = 0;
   int _settlementRefreshRequest = 0;
+  int _openCallsRefreshRequest = 0;
   int _settlementBadge = 0;
 
   int? get _settlementIndex => widget.settlementApi == null ? null : 2;
@@ -110,6 +111,9 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
     if (!mounted) return;
     setState(() {
       _selectedIndex = index;
+      if (index == 0) {
+        _openCallsRefreshRequest++;
+      }
       if (index == 1) {
         _tripsVisited = true;
         _tripsRefreshRequest++;
@@ -144,6 +148,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
               onUrgentActivityChanged: (active) {
                 _hasUrgentActivity = active;
               },
+              refreshRequest: _openCallsRefreshRequest,
             ),
           ),
           if (_tripsVisited)

@@ -484,6 +484,68 @@ void main() {
     expect(find.byKey(const Key('settlementListSuccess')), findsOneWidget);
   });
 
+  testWidgets('refreshRequest change reloads status and open calls', (
+    tester,
+  ) async {
+    final reader = onlineReader();
+    await tester.pumpWidget(
+      MaterialApp(home: _OpenCallsRefreshHarness(reader: reader)),
+    );
+    await tester.pumpAndSettle();
+    expect(reader.statusCount, 1);
+    expect(reader.openCallsCount, 1);
+
+    await tester.tap(find.byKey(const Key('incrementOpenCallsRefresh')));
+    await tester.pumpAndSettle();
+
+    expect(reader.statusCount, 2);
+    expect(reader.openCallsCount, 2);
+  });
+
+  testWidgets('returning to open calls tab refreshes settlement block state', (
+    tester,
+  ) async {
+    final dispatch = onlineReader(calls: const [])
+      ..openCallsResult = const OpenCallList(
+        items: [],
+        blockedReason: 'UNPAID_SETTLEMENT',
+        message: 'unpaid',
+      );
+    final settlement = FakeSettlementApi()
+      ..items = [settlementItem(bookingNumber: 'TX-DUE')];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DriverHomeShell(
+          bookingRepository: FakeBookingReader(),
+          dispatchRepository: dispatch,
+          accountApi: FakeAccountApi(),
+          settlementApi: settlement,
+          onUnauthorized: () async {},
+          onLogout: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settlementBlockedBanner')), findsOneWidget);
+    final initialOpenCallsCount = dispatch.openCallsCount;
+
+    dispatch.openCallsResult = const OpenCallList(
+      items: [],
+      blockedReason: null,
+      message: null,
+    );
+
+    await tester.tap(find.text('정산'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('새 콜'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('settlementBlockedBanner')), findsNothing);
+    expect(dispatch.openCallsCount, greaterThan(initialOpenCallsCount));
+  });
+
   testWidgets('open call shows structured pickup name and address when available', (
     tester,
   ) async {
@@ -580,4 +642,39 @@ void main() {
 
     expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
   });
+}
+
+class _OpenCallsRefreshHarness extends StatefulWidget {
+  const _OpenCallsRefreshHarness({required this.reader});
+
+  final FakeDispatchReader reader;
+
+  @override
+  State<_OpenCallsRefreshHarness> createState() =>
+      _OpenCallsRefreshHarnessState();
+}
+
+class _OpenCallsRefreshHarnessState extends State<_OpenCallsRefreshHarness> {
+  int _refreshRequest = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextButton(
+          key: const Key('incrementOpenCallsRefresh'),
+          onPressed: () => setState(() => _refreshRequest++),
+          child: const Text('refresh'),
+        ),
+        Expanded(
+          child: OpenCallsScreen(
+            repository: widget.reader,
+            onUnauthorized: () async {},
+            onClaimed: () {},
+            refreshRequest: _refreshRequest,
+          ),
+        ),
+      ],
+    );
+  }
 }

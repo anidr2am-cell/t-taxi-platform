@@ -23,6 +23,7 @@ class OpenCallsScreen extends StatefulWidget {
     this.onOpenSettlement,
     this.driverSocket,
     this.onUrgentActivityChanged,
+    this.refreshRequest = 0,
   });
 
   final DispatchReader repository;
@@ -31,6 +32,7 @@ class OpenCallsScreen extends StatefulWidget {
   final VoidCallback? onOpenSettlement;
   final DriverSocketConnection? driverSocket;
   final ValueChanged<bool>? onUrgentActivityChanged;
+  final int refreshRequest;
 
   @override
   State<OpenCallsScreen> createState() => _OpenCallsScreenState();
@@ -76,6 +78,14 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     _socketSubscription?.cancel();
     widget.driverSocket?.disconnect();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant OpenCallsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshRequest != widget.refreshRequest) {
+      unawaited(_loadStatus());
+    }
   }
 
   @override
