@@ -62,25 +62,21 @@ backend FCM 발송 파이프라인(새콜/긴급콜신규/관리자강제취소)
 
 ### 상태
 
-진행 중 (backend 완료, driver_app 남음)
+완료. backend+driver_app 전체 구현 완료, staging 배포 완료.
 
-### 완료 요약 (backend)
+### 완료 요약
 
-- Firebase 프로젝트 생성, Android 앱 3개 등록 (com.trider.driver.dev/staging/prod — 패키지명 tride→trider로 통일, 커밋 `bb35d3c`)
-- driver_app 기반 설정: firebase_core/messaging 패키지, Gradle 설정, 앱 초기화 (커밋 `bb35d3c`)
-- staging 서버에 Firebase 서비스 계정 안전 배치 (권한 600, git 추적 제외)
-- docker-compose에 서비스계정 마운트 연결 (커밋 `80c5216`)
-- backend: 새콜/긴급콜신규/관리자강제취소를 FCM 파이프라인에 연결 (커밋 `723b873`)
-- ⚠️ 배포 중 DI 순환참조로 서버 크래시 발생 → 즉시 진단 및 수정 (커밋 `0f4608c`, lazy resolver 패턴 적용) → 재배포 확인 완료
+- Firebase 프로젝트 생성, Android 앱 3개 등록 (dev/staging/prod, 패키지명 com.trider.driver.*)
+- driver_app: firebase_core/messaging 추가, Gradle 설정, 초기화 (커밋 `bb35d3c`)
+- staging 서버: 서비스 계정 안전 배치 + docker-compose 마운트 (커밋 `80c5216`)
+- backend: 새콜/긴급콜신규/관리자강제취소 FCM 파이프라인 연결 (커밋 `723b873`)
+- backend: 배포 중 발견된 DI 순환참조 크래시 긴급 수정 (커밋 `0f4608c`)
+- driver_app: 로그인 시 토큰 등록, 로그아웃 시 비활성화 (커밋 `b3a3f5a`)
+- driver_app: foreground(무시)/background/terminated 메시지 처리 + 탭 딥링크 (커밋 `63161f5`)
 
-### 남은 작업 (driver_app)
+### 남은 확인 사항
 
-- firebase_messaging 토큰 획득 및 POST /notifications/devices 등록
-- foreground 메시지 수신 처리 (이미 Socket.IO로 실시간 처리 중, FCM은 백그라운드/종료 상태 보완용)
-- background 메시지 핸들러 (백그라운드 상태에서 수신)
-- terminated 상태 메시지 핸들러 (앱 완전 종료 상태에서 수신)
-- 알림 탭 시 앱 실행 + 해당 화면(새콜/내운행 등) 이동 처리
-- Android 13+ 알림 권한 요청 UI
+- 실기기에서 앱 완전 종료 상태 + 새 콜 생성 시 실제 푸시 알림 수신 확인 필요 (staging APK 재빌드 후 테스트)
 
 ## 5. 지도 렌더링 (3-B)
 
