@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../config/app_environment.dart';
 import '../core/firebase/firebase_app_initializer.dart';
+import '../core/firebase/fcm_message_handler.dart';
+import '../core/firebase/fcm_message_service.dart';
 import '../core/firebase/fcm_token_service.dart';
 import '../core/network/api_client.dart';
 import '../core/storage/secure_token_storage.dart';
@@ -23,6 +25,7 @@ import 'app.dart';
 Future<void> runDriverApp(AppEnvironment environment) async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeFirebaseApp();
+  registerFcmBackgroundHandler();
   final config = AppConfig.forEnvironment(environment);
   final apiClient = ApiClient(config: config, httpClient: http.Client());
   final storage = SecureTokenStorage();
@@ -31,6 +34,9 @@ Future<void> runDriverApp(AppEnvironment environment) async {
     messaging: FirebaseFcmMessagingClient(),
     notificationApi: notificationApi,
     storage: storage,
+  );
+  final fcmMessageService = FcmMessageService(
+    messaging: FirebaseFcmMessageStreams(),
   );
   final repository = AuthRepository(
     api: AuthApi(apiClient),
@@ -51,6 +57,7 @@ Future<void> runDriverApp(AppEnvironment environment) async {
       settlementApi: SettlementApi(client: apiClient, storage: storage),
       driverSocket: DriverSocketService(config: config, storage: storage),
       fcmTokenService: fcmTokenService,
+      fcmMessageService: fcmMessageService,
     ),
   );
 }

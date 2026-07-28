@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/firebase/fcm_token_service.dart';
+import '../../../core/firebase/fcm_message_service.dart';
 import '../../account/data/account_api.dart';
 import '../../account/presentation/account_page.dart';
 import '../../bookings/data/booking_repository.dart';
@@ -25,6 +26,7 @@ class DriverHomeShell extends StatefulWidget {
     this.settlementApi,
     this.driverSocket,
     this.fcmTokenService,
+    this.fcmMessageService,
   });
 
   final BookingReader bookingRepository;
@@ -35,6 +37,7 @@ class DriverHomeShell extends StatefulWidget {
   final AccountDataSource? accountApi;
   final SettlementDataSource? settlementApi;
   final FcmTokenService? fcmTokenService;
+  final FcmMessageService? fcmMessageService;
 
   @override
   State<DriverHomeShell> createState() => _DriverHomeShellState();
@@ -60,14 +63,24 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   void initState() {
     super.initState();
     unawaited(_refreshSettlementBadge());
-    unawaited(_registerFcmToken());
+    unawaited(_initializeFcm());
   }
 
-  Future<void> _registerFcmToken() async {
+  @override
+  void dispose() {
+    widget.fcmMessageService?.detachShellNavigator();
+    super.dispose();
+  }
+
+  Future<void> _initializeFcm() async {
     try {
       await widget.fcmTokenService?.registerIfNeeded();
+      await widget.fcmMessageService?.attachShellNavigator((index) {
+        if (!mounted) return;
+        unawaited(_selectTab(index, force: true));
+      });
     } catch (_) {
-      // FCM registration must not block the main driver workflow.
+      // FCM setup must not block the main driver workflow.
     }
   }
 

@@ -7,6 +7,7 @@ import '../../dispatch/data/dispatch_repository.dart';
 import '../../dispatch/data/driver_socket_service.dart';
 import '../../settlement/data/settlement_api.dart';
 import '../../../core/firebase/fcm_token_service.dart';
+import '../../../core/firebase/fcm_message_service.dart';
 import '../../dispatch/presentation/driver_home_shell.dart';
 import 'auth_controller.dart';
 import 'login_screen.dart';
@@ -22,6 +23,7 @@ class AuthGate extends StatefulWidget {
     this.settlementApi,
     this.driverSocket,
     this.fcmTokenService,
+    this.fcmMessageService,
   });
 
   final AuthController controller;
@@ -32,6 +34,7 @@ class AuthGate extends StatefulWidget {
   final SettlementDataSource? settlementApi;
   final DriverSocketConnection? driverSocket;
   final FcmTokenService? fcmTokenService;
+  final FcmMessageService? fcmMessageService;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -87,6 +90,7 @@ class _AuthGateState extends State<AuthGate> {
             settlementApi: widget.settlementApi,
             driverSocket: widget.driverSocket,
             fcmTokenService: widget.fcmTokenService,
+            fcmMessageService: widget.fcmMessageService,
             onUnauthorized: widget.controller.expireSession,
             onLogout: widget.controller.logout,
           ),
