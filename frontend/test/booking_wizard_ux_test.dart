@@ -198,7 +198,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.badge_outlined), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
 
       final description = tester
           .widgetList<RichText>(find.byType(RichText))

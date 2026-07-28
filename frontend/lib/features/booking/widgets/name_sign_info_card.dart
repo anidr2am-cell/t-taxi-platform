@@ -8,7 +8,7 @@ import '../../../theme/app_tokens.dart';
 class NameSignInfoAssets {
   NameSignInfoAssets._();
 
-  static const String? assetPath = null;
+  static const String assetPath = 'assets/images/name_sign_example.png';
 }
 
 class NameSignInfoCard extends StatelessWidget {
@@ -65,7 +65,7 @@ class _NameSignInfoCardBody extends StatelessWidget {
           : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(width: width * 0.4 - 26, child: image),
+                SizedBox(width: width * 0.4 - 26, height: 72, child: image),
                 const SizedBox(width: 10),
                 Expanded(child: text),
               ],
@@ -77,25 +77,16 @@ class _NameSignInfoCardBody extends StatelessWidget {
 class _ImagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final assetPath = NameSignInfoAssets.assetPath;
     return ClipRRect(
       borderRadius: AppTokens.borderRadiusSm,
       child: Container(
         color: AppTokens.surfaceMuted,
-        child: assetPath == null
-            ? const Center(
-                child: Icon(
-                  Icons.badge_outlined,
-                  color: AppTokens.textSecondary,
-                  size: 28,
-                ),
-              )
-            : Image.asset(
-                assetPath,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-              ),
+        child: Image.asset(
+          NameSignInfoAssets.assetPath,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        ),
       ),
     );
   }
