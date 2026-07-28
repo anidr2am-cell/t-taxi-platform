@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/account_api.dart';
 import '../data/account_models.dart';
 import 'vehicle_add_page.dart';
@@ -45,8 +47,9 @@ class _VehicleListPageState extends State<VehicleListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('차량 관리')),
+      appBar: AppBar(title: Text(l10n.vehicleManagementTitle)),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('addVehicleFab'),
         onPressed: () async {
@@ -56,13 +59,13 @@ class _VehicleListPageState extends State<VehicleListPage> {
           if (created == true) await _load();
         },
         icon: const Icon(Icons.add),
-        label: const Text('차량 추가'),
+        label: Text(l10n.addVehicle),
       ),
       body: _items == null && _error == null
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? Center(
-              child: FilledButton(onPressed: _load, child: const Text('다시 시도')),
+              child: FilledButton(onPressed: _load, child: Text(l10n.retry)),
             )
           : RefreshIndicator(
               onRefresh: _load,
@@ -70,9 +73,9 @@ class _VehicleListPageState extends State<VehicleListPage> {
                   ? ListView(
                       key: const Key('vehicleEmpty'),
                       physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 180),
-                        Center(child: Text('등록된 차량이 없습니다.')),
+                      children: [
+                        const SizedBox(height: 180),
+                        Center(child: Text(l10n.noRegisteredVehicles)),
                       ],
                     )
                   : ListView.separated(
@@ -100,14 +103,13 @@ class _VehicleCard extends StatelessWidget {
     _ => Colors.green,
   };
 
-  String get _statusLabel => switch (vehicle.approvalStatus) {
-    'PENDING' => '승인 대기',
-    'REJECTED' => '승인 거절',
-    _ => '승인 완료',
-  };
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final statusLabel = vehicleApprovalStatusLabel(
+      l10n,
+      vehicle.approvalStatus,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -135,7 +137,7 @@ class _VehicleCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _statusLabel,
+                    statusLabel,
                     style: TextStyle(
                       color: _statusColor(context),
                       fontWeight: FontWeight.w700,
@@ -158,16 +160,16 @@ class _VehicleCard extends StatelessWidget {
                     .join(' · '),
               ),
             if (vehicle.isPrimary)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Chip(label: Text('주 차량')),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Chip(label: Text(l10n.primaryVehicleChip)),
               ),
             if (vehicle.approvalStatus == 'REJECTED' &&
                 vehicle.rejectionReason?.isNotEmpty == true)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  '거절 사유: ${vehicle.rejectionReason}',
+                  l10n.vehicleRejectionReason(vehicle.rejectionReason!),
                   key: const Key('vehicleRejectionReason'),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),

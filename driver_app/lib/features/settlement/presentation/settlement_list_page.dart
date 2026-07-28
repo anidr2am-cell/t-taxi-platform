@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../../../core/network/api_exception.dart';
 import '../data/settlement_api.dart';
 import '../data/settlement_models.dart';
@@ -90,8 +92,9 @@ class _SettlementListPageState extends State<SettlementListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('정산')),
+      appBar: AppBar(title: Text(l10n.settlementTitle)),
       body: switch ((_loading, _items, _error)) {
         (true, _, _) => const Center(
           key: Key('settlementListLoading'),
@@ -104,9 +107,9 @@ class _SettlementListPageState extends State<SettlementListPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(error.userMessage, textAlign: TextAlign.center),
+                Text(error.localizedMessage(l10n), textAlign: TextAlign.center),
                 const SizedBox(height: 12),
-                FilledButton(onPressed: _load, child: const Text('다시 시도')),
+                FilledButton(onPressed: _load, child: Text(l10n.retry)),
               ],
             ),
           ),
@@ -116,11 +119,11 @@ class _SettlementListPageState extends State<SettlementListPage> {
           child: ListView(
             key: const Key('settlementListEmpty'),
             physics: const AlwaysScrollableScrollPhysics(),
-            children: const [
+            children: [
               SizedBox(height: 180),
               Icon(Icons.receipt_long_outlined, size: 56),
               SizedBox(height: 12),
-              Center(child: Text('정산 내역이 없습니다.')),
+              Center(child: Text(l10n.settlementListEmpty)),
             ],
           ),
         ),
@@ -150,6 +153,7 @@ class _SettlementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final customerCurrency =
         item.customerPaymentCurrency ??
@@ -200,7 +204,7 @@ class _SettlementCard extends StatelessWidget {
                                 key: Key(
                                   'settlementCustomerPayment-${item.bookingNumber}',
                                 ),
-                                label: '고객 결제액',
+                                label: l10n.customerPaymentAmount,
                                 amount:
                                     item.customerPaymentAmount ??
                                     item.customerTotalAmount,
@@ -211,7 +215,7 @@ class _SettlementCard extends StatelessWidget {
                                 key: Key(
                                   'settlementDriverIncome-${item.bookingNumber}',
                                 ),
-                                label: '기사 수입',
+                                label: l10n.driverIncome,
                                 amount: item.driverExpectedIncomeAmount,
                                 currency: driverIncomeCurrency,
                                 emphasized: true,
@@ -219,7 +223,13 @@ class _SettlementCard extends StatelessWidget {
                               if (showNameSignNote) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  '(피켓 비용 -${formatSettlementMoney(nameSignAmount, null)}바트 포함)',
+                                  l10n.nameSignCostIncluded(
+                                    formatSettlementMoneyLocalized(
+                                      l10n,
+                                      nameSignAmount,
+                                      null,
+                                    ),
+                                  ),
                                   key: Key(
                                     'settlementNameSignNote-${item.bookingNumber}',
                                   ),
@@ -235,7 +245,7 @@ class _SettlementCard extends StatelessWidget {
                           key: Key(
                             'settlementCommission-${item.bookingNumber}',
                           ),
-                          label: '수수료',
+                          label: l10n.commissionFee,
                           amount: commissionAmount,
                           currency: commissionCurrency,
                           alignEnd: true,
@@ -245,7 +255,7 @@ class _SettlementCard extends StatelessWidget {
                     if (item.dueAt != null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        '마감: ${item.dueAt}',
+                        l10n.dueAtLabel(item.dueAt!),
                         key: Key('settlementDueAt-${item.bookingNumber}'),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
@@ -285,6 +295,7 @@ class _SettlementAmountLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final theme = Theme.of(context).textTheme;
     final crossAxis = alignEnd
@@ -306,7 +317,7 @@ class _SettlementAmountLine extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          formatSettlementMoney(amount, currency),
+          formatSettlementMoneyLocalized(l10n, amount, currency),
           style: valueStyle,
           textAlign: alignEnd ? TextAlign.end : TextAlign.start,
         ),
@@ -322,6 +333,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final color = switch (status.code) {
       SettlementStatusCode.due => Colors.orange,
@@ -334,7 +346,7 @@ class _StatusChip extends StatelessWidget {
     };
     return Chip(
       key: Key('settlementStatus-${status.raw}'),
-      label: Text(status.label),
+      label: Text(status.localizedLabel(l10n)),
       side: BorderSide(color: color),
       labelStyle: TextStyle(color: color, fontWeight: FontWeight.w700),
     );

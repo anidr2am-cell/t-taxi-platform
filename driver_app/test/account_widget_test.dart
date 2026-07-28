@@ -7,6 +7,7 @@ import 'package:tride_driver/features/account/presentation/profile_edit_page.dar
 import 'package:tride_driver/features/account/presentation/vehicle_add_page.dart';
 import 'package:tride_driver/features/account/presentation/vehicle_list_page.dart';
 
+import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
 
 void main() {
@@ -17,7 +18,7 @@ void main() {
         ..rating = const RatingSummary(averageRating: null, reviewCount: 0);
       final dispatch = FakeDispatchReader();
       await tester.pumpWidget(
-        MaterialApp(
+        localizedMaterialApp(
           home: AccountPage(
             accountApi: account,
             dispatchRepository: dispatch,
@@ -39,7 +40,7 @@ void main() {
     _useTallView(tester);
     final api = FakeAccountApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: ProfileEditPage(api: api, initialProfile: api.profile),
       ),
     );
@@ -57,7 +58,7 @@ void main() {
     final api = FakeAccountApi();
     var pickCount = 0;
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: ProfileEditPage(
           api: api,
           initialProfile: api.profile,
@@ -94,7 +95,7 @@ void main() {
       );
 
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: ProfileEditPage(api: api, initialProfile: api.profile),
       ),
     );
@@ -111,7 +112,7 @@ void main() {
     _useTallView(tester);
     final api = FakeAccountApi();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: ProfileEditPage(api: api, initialProfile: api.profile),
       ),
     );
@@ -130,7 +131,7 @@ void main() {
   ) async {
     _useTallView(tester);
     final api = FakeAccountApi();
-    await tester.pumpWidget(MaterialApp(home: VehicleAddPage(api: api)));
+    await tester.pumpWidget(localizedMaterialApp(home: VehicleAddPage(api: api)));
     await tester.pumpAndSettle();
 
     expect(
@@ -154,7 +155,7 @@ void main() {
         errorCode: 'VALIDATION_ERROR',
       );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: ProfileEditPage(
           api: api,
           initialProfile: api.profile,
@@ -180,7 +181,7 @@ void main() {
   testWidgets('vehicle list shows empty state', (tester) async {
     final api = FakeAccountApi()..vehicles = const [];
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: VehicleListPage(api: api, onUnauthorized: () async {}),
       ),
     );
@@ -204,7 +205,7 @@ void main() {
         ),
       ];
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: VehicleListPage(api: api, onUnauthorized: () async {}),
       ),
     );
@@ -225,7 +226,7 @@ void main() {
       const AccountUploadFile(filename: 'registration.jpg', bytes: [1]),
     ];
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: VehicleAddPage(
           api: api,
           pickPhotos: (_) async => const [
@@ -311,7 +312,7 @@ Future<void> _readyVehicleForm(WidgetTester tester, FakeAccountApi api) async {
     const AccountUploadFile(filename: 'registration.pdf', bytes: [1]),
   ];
   await tester.pumpWidget(
-    MaterialApp(
+    localizedMaterialApp(
       home: VehicleAddPage(
         api: api,
         pickPhotos: (_) async => const [

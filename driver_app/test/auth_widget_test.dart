@@ -10,6 +10,7 @@ import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/auth/data/auth_repository.dart';
 import 'package:tride_driver/features/auth/presentation/auth_controller.dart';
 
+import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
 
 Future<(FakeAuthApi, FakeTokenStorage, AuthController)> pumpApp(
@@ -23,10 +24,12 @@ Future<(FakeAuthApi, FakeTokenStorage, AuthController)> pumpApp(
   final controller = AuthController(
     AuthRepository(api: fakeApi, storage: fakeStorage),
   );
+  final localeController = await createTestLocaleController();
   await tester.pumpWidget(
     DriverApp(
       config: AppConfig.forEnvironment(AppEnvironment.stg),
       authController: controller,
+      localeController: localeController,
       bookingRepository: FakeBookingReader()
         ..listResult = bookingList(items: const []),
       dispatchRepository: FakeDispatchReader(),

@@ -1,4 +1,5 @@
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum SettlementStatusCode {
   notDueYet,
@@ -50,16 +51,8 @@ class SettlementStatus {
     _ => false,
   };
 
-  String get label => switch (code) {
-    SettlementStatusCode.notDueYet => '정산 대상 아님',
-    SettlementStatusCode.due => '송금 필요',
-    SettlementStatusCode.receiptSubmitted => '승인 대기 중',
-    SettlementStatusCode.overdue => '기한 초과',
-    SettlementStatusCode.rejected => '반려됨',
-    SettlementStatusCode.approved => '정산 완료',
-    SettlementStatusCode.waived => '면제',
-    SettlementStatusCode.unknown => '상태 확인 필요',
-  };
+  @Deprecated('Use localizedLabel(AppLocalizations) from app_localizations_extensions')
+  String get label => raw;
 }
 
 class PaymentInstructions {
@@ -237,8 +230,18 @@ class SettlementUploadFile {
   final List<int> bytes;
 }
 
+String formatSettlementMoneyLocalized(AppLocalizations l10n, num? amount, String? currency) {
+  if (amount == null) return l10n.amountUnavailable;
+  return _formatSettlementMoneyValue(amount, currency);
+}
+
+@Deprecated('Use formatSettlementMoneyLocalized instead')
 String formatSettlementMoney(num? amount, String? currency) {
-  if (amount == null) return '금액 정보 없음';
+  if (amount == null) return 'Amount unavailable';
+  return _formatSettlementMoneyValue(amount, currency);
+}
+
+String _formatSettlementMoneyValue(num amount, String? currency) {
   final fixed = amount % 1 == 0
       ? amount.toStringAsFixed(0)
       : amount.toStringAsFixed(2);

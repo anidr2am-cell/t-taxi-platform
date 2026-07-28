@@ -58,7 +58,7 @@ void main() {
       currentDetail: current,
     );
 
-    expect(second.kind, BookingAcceptOutcomeKind.uncertain);
+    expect(second.kind, BookingAcceptOutcomeKind.alreadyAccepting);
     expect(reader.acceptCount, 1);
 
     completer.complete(BookingAcceptance.fromEnvelope(acceptanceEnvelope()));
@@ -195,7 +195,7 @@ void main() {
     );
 
     expect(outcome.kind, isNot(BookingAcceptOutcomeKind.success));
-    expect(outcome.message.contains('예약을 수락했습니다.'), isFalse);
+    expect(outcome.kind, isNot(BookingAcceptOutcomeKind.alreadyAccepting));
     expect(reader.acceptCount, 1);
     expect(reader.detailCount, 1);
   });

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/airport_label_resolver.dart';
 import '../../bookings/data/booking_models.dart';
 import '../../bookings/presentation/booking_display_formatters.dart';
@@ -156,7 +158,9 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         }
         if (bookingNumber == _activeUrgentBooking) {
           _clearUrgentActivity();
-          _showMessage('고객이 거절했거나 라운드가 종료되었습니다.');
+          _showMessage(
+            AppLocalizations.of(context).customerRejectedOrRoundEnded,
+          );
         }
         unawaited(_loadCalls());
       case DriverSocketEventType.urgentCallConfirmed:
@@ -177,7 +181,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         }
         if (bookingNumber == _activeUrgentBooking) {
           _clearUrgentActivity();
-          _showMessage('협상이 취소되었습니다.');
+          _showMessage(AppLocalizations.of(context).negotiationCancelled);
         }
         unawaited(_loadCalls());
       case DriverSocketEventType.urgentCallUnlocked:
@@ -312,15 +316,19 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
       }
       if (!mounted) return;
       setState(() => _changingOnline = false);
+      final l10n = AppLocalizations.of(context);
       _showMessage(
         error.errorCode == 'DRIVER_NOT_ELIGIBLE'
-            ? '미해결 정산이 있어 새 콜을 받을 수 없습니다.'
-            : error.userMessage,
+            ? l10n.errorDriverNotEligible
+            : error.localizedMessage(l10n),
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _changingOnline = false);
-      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+      final l10n = AppLocalizations.of(context);
+      _showMessage(
+        const ApiException(ApiFailureKind.unknown).localizedMessage(l10n),
+      );
     }
   }
 
@@ -328,7 +336,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     if (_claiming.contains(call.bookingNumber)) return;
     final vehicles = call.compatibleVehicles;
     if (vehicles.isEmpty) {
-      _showMessage('이 콜에 사용할 수 있는 승인 차량이 없습니다.');
+      _showMessage(AppLocalizations.of(context).noApprovedVehicleForCall);
       return;
     }
 
@@ -337,22 +345,23 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         : await showVehicleSelectSheet(context, vehicles);
     if (vehicle == null || !mounted) return;
 
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         key: const Key('claimConfirmDialog'),
-        title: const Text('새 콜 받기'),
-        content: Text('${vehicle.displayName} 차량으로 이 콜을 받으시겠습니까?'),
+        title: Text(l10n.acceptNewCallTitle),
+        content: Text(l10n.acceptNewCallWithVehicle(vehicle.displayName)),
         actions: [
           TextButton(
             key: const Key('claimCancelButton'),
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             key: const Key('claimConfirmButton'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('콜 받기'),
+            child: Text(l10n.acceptCall),
           ),
         ],
       ),
@@ -388,11 +397,11 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
           });
         case UrgentEtaDialogOutcome.timedOut:
           _clearUrgentActivity();
-          _showMessage('ETA 입력 시간이 만료되었습니다.');
+          _showMessage(AppLocalizations.of(context).etaInputExpired);
           unawaited(_loadCalls());
         case UrgentEtaDialogOutcome.lostLock:
           _clearUrgentActivity();
-          _showMessage('다른 기사에게 넘어간 요청입니다.');
+          _showMessage(AppLocalizations.of(context).requestPassedToOtherDriver);
           unawaited(_loadCalls());
         case UrgentEtaDialogOutcome.leaveRequested:
           widget.onUrgentActivityChanged?.call(false);
@@ -412,17 +421,21 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
       setState(() {
         if (unavailable) _hiddenUrgent.add(call.bookingNumber);
       });
+      final l10n = AppLocalizations.of(context);
       _showMessage(
         error.kind == ApiFailureKind.urgentAlreadyLocked
-            ? '다른 기사가 이미 수락한 콜입니다.'
+            ? l10n.otherDriverAlreadyAcceptedCall
             : error.kind == ApiFailureKind.urgentNotBroadcasting
-            ? '더 이상 수락할 수 없는 긴급콜입니다.'
-            : error.userMessage,
+            ? l10n.urgentCallNoLongerAcceptable
+            : error.localizedMessage(l10n),
       );
       if (unavailable) unawaited(_loadCalls());
     } catch (_) {
       if (!mounted) return;
-      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+      final l10n = AppLocalizations.of(context);
+      _showMessage(
+        const ApiException(ApiFailureKind.unknown).localizedMessage(l10n),
+      );
     } finally {
       if (mounted) {
         setState(() => _lockingUrgent.remove(call.bookingNumber));
@@ -451,7 +464,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
           );
         }
       });
-      _showMessage('콜 배정이 완료되었습니다.');
+      _showMessage(AppLocalizations.of(context).callAssignmentCompleted);
       widget.onClaimed();
     } on ApiException catch (error) {
       if (error.kind == ApiFailureKind.unauthorized) {
@@ -476,18 +489,22 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
           );
         }
       });
+      final l10n = AppLocalizations.of(context);
       _showMessage(
         alreadyClaimed
-            ? '다른 기사가 먼저 이 콜을 배정받았습니다.'
+            ? l10n.otherDriverClaimedCallFirst
             : error.kind == ApiFailureKind.bookingTimeConflict ||
                   error.errorCode == 'DRIVER_BOOKING_TIME_CONFLICT'
-            ? '기존 운행과 시간이 겹쳐 이 콜을 받을 수 없습니다.'
-            : error.userMessage,
+            ? l10n.errorBookingTimeConflict
+            : error.localizedMessage(l10n),
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _claiming.remove(call.bookingNumber));
-      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+      final l10n = AppLocalizations.of(context);
+      _showMessage(
+        const ApiException(ApiFailureKind.unknown).localizedMessage(l10n),
+      );
     }
   }
 
@@ -512,13 +529,14 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: !_hasUrgentActivity,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(_handleScreenBack());
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('새 콜')),
+        appBar: AppBar(title: Text(l10n.newCallsTitle)),
         body: _loadingStatus
             ? const Center(
                 key: Key('dispatchStatusLoading'),
@@ -548,13 +566,13 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
                           vertical: 10,
                         ),
                         title: Text(
-                          _status!.online ? '온라인' : '오프라인',
+                          _status!.online ? l10n.online : l10n.offline,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         subtitle: Text(
                           _status!.online
-                              ? '새 콜을 받을 수 있습니다.'
-                              : '새 콜 수신이 중지되어 있습니다.',
+                              ? l10n.canReceiveNewCalls
+                              : l10n.newCallReceivingStopped,
                         ),
                         value: _status!.online,
                         onChanged: _changingOnline ? null : _setOnline,
@@ -567,7 +585,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
                       color: Theme.of(context).colorScheme.primaryContainer,
                       child: ListTile(
                         leading: const Icon(Icons.campaign_outlined),
-                        title: const Text('새 콜이 도착해 목록을 갱신했습니다.'),
+                        title: Text(l10n.newCallsArrivedListRefreshed),
                         trailing: IconButton(
                           key: const Key('dismissNewCallSocketNotice'),
                           onPressed: () =>
@@ -579,12 +597,12 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
                   Expanded(
                     child: _status!.online
                         ? _buildOnlineContent()
-                        : const Center(
-                            key: Key('offlineOpenCallsNotice'),
+                        : Center(
+                            key: const Key('offlineOpenCallsNotice'),
                             child: Padding(
-                              padding: EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(24),
                               child: Text(
-                                '온라인으로 전환하면 새 콜을 볼 수 있습니다',
+                                l10n.goOnlineToSeeNewCalls,
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -597,6 +615,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
   }
 
   Widget _buildOnlineContent() {
+    final l10n = AppLocalizations.of(context);
     if (_loadingCalls && _calls == null) {
       return const Center(
         key: Key('openCallsLoading'),
@@ -611,9 +630,9 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(error.userMessage, textAlign: TextAlign.center),
+              Text(error.localizedMessage(l10n), textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              FilledButton(onPressed: _loadCalls, child: const Text('다시 시도')),
+              FilledButton(onPressed: _loadCalls, child: Text(l10n.retry)),
             ],
           ),
         ),
@@ -643,7 +662,8 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
           children: [
             if (calls?.blockedReason == 'UNPAID_SETTLEMENT')
               _SettlementBlockedCard(
-                message: calls?.message ?? '미해결 정산이 있어 새 콜을 받을 수 없습니다.',
+                message:
+                    calls?.message ?? l10n.unresolvedSettlementBlocksNewCalls,
                 onOpenSettlement: widget.onOpenSettlement,
               ),
             const SizedBox(height: 140),
@@ -651,7 +671,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
             const SizedBox(height: 12),
             Center(
               child: Text(
-                calls?.message ?? '현재 받을 수 있는 새 콜이 없습니다.',
+                calls?.message ?? l10n.noNewCallsAvailable,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -667,7 +687,8 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         children: [
           if (calls.blockedReason == 'UNPAID_SETTLEMENT')
             _SettlementBlockedCard(
-              message: calls.message ?? '미해결 정산이 있어 새 콜을 받을 수 없습니다.',
+              message:
+                  calls.message ?? l10n.unresolvedSettlementBlocksNewCalls,
               onOpenSettlement: widget.onOpenSettlement,
             ),
           if (urgentCalls.isNotEmpty)
@@ -701,6 +722,7 @@ class _SettlementBlockedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     return Card(
       key: const Key('settlementBlockedBanner'),
@@ -717,7 +739,7 @@ class _SettlementBlockedCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '미해결 정산 확인 필요',
+                    l10n.unresolvedSettlementCheckRequired,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -731,7 +753,7 @@ class _SettlementBlockedCard extends StatelessWidget {
               child: FilledButton(
                 key: const Key('openSettlementFromBlockedBanner'),
                 onPressed: onOpenSettlement,
-                child: const Text('정산 확인하기'),
+                child: Text(l10n.checkSettlement),
               ),
             ),
           ],
@@ -754,6 +776,7 @@ class _UrgentCallsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     return Container(
       key: const Key('urgentCallsSection'),
@@ -767,15 +790,18 @@ class _UrgentCallsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                Icon(Icons.priority_high),
-                SizedBox(width: 6),
+                const Icon(Icons.priority_high),
+                const SizedBox(width: 6),
                 Text(
-                  '긴급콜',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  l10n.urgentCallLabel,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -806,6 +832,7 @@ class _UrgentCallCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final scheduled =
         _formatDateTime(call.scheduledPickupAt) ??
         '${call.pickupDate} ${call.pickupTime}';
@@ -817,10 +844,11 @@ class _UrgentCallCard extends StatelessWidget {
     final amount = call.customerPaymentAmount ?? call.amount;
     final currency = call.customerPaymentCurrency ?? call.currency;
     final luggage = <String>[
-      if (call.luggage.carriers20Inch > 0) '20″ ${call.luggage.carriers20Inch}',
+      if (call.luggage.carriers20Inch > 0)
+        l10n.carriers20InchCount(call.luggage.carriers20Inch),
       if (call.luggage.carriers24InchPlus > 0)
-        '24″+ ${call.luggage.carriers24InchPlus}',
-      if (call.luggage.golfBags > 0) '골프백 ${call.luggage.golfBags}',
+        l10n.carriers24InchPlusCount(call.luggage.carriers24InchPlus),
+      if (call.luggage.golfBags > 0) l10n.golfBagCount(call.luggage.golfBags),
       ?call.luggage.specialItems,
     ].join(' · ');
     return Card(
@@ -841,7 +869,7 @@ class _UrgentCallCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Chip(label: Text('긴급')),
+                Chip(label: Text(l10n.urgentChip)),
               ],
             ),
             if (meetingGate != null)
@@ -851,7 +879,7 @@ class _UrgentCallCard extends StatelessWidget {
                   key: Key('openCallGate-${call.bookingNumber}'),
                   visualDensity: VisualDensity.compact,
                   avatar: const Icon(Icons.meeting_room_outlined, size: 16),
-                  label: Text('$meetingGate번 게이트'),
+                  label: Text(l10n.meetingGateNumber(int.parse(meetingGate))),
                 ),
               ),
             Row(
@@ -878,7 +906,7 @@ class _UrgentCallCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '${call.serviceTypeName} · ${call.vehicleTypeName} · '
-              '${call.passengerCount}명',
+              '${l10n.passengersCount(call.passengerCount)}',
             ),
             const SizedBox(height: 6),
             Text('$amount $currency'),
@@ -886,7 +914,7 @@ class _UrgentCallCard extends StatelessWidget {
             if (call.minRequiredEtaMinutes case final minimum?) ...[
               const SizedBox(height: 8),
               Text(
-                '이전 거절로 $minimum분 미만 ETA 필요',
+                l10n.previousRejectionRequiresEtaUnder(minimum),
                 key: Key('urgentMinEta-${call.bookingNumber}'),
               ),
             ],
@@ -906,7 +934,7 @@ class _UrgentCallCard extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check_circle_outline),
-                label: const Text('수락'),
+                label: Text(l10n.accept),
               ),
             ),
           ],
@@ -923,20 +951,23 @@ class _StatusError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-    key: const Key('dispatchStatusError'),
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(error.userMessage, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          FilledButton(onPressed: onRetry, child: const Text('다시 시도')),
-        ],
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      key: const Key('dispatchStatusError'),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(error.localizedMessage(l10n), textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onRetry, child: Text(l10n.retry)),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _OpenCallCard extends StatelessWidget {
@@ -952,6 +983,7 @@ class _OpenCallCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final scheduled = _formatDateTime(call.scheduledPickupAt);
     final meetingGate = resolveBkkAirportPickupMeetingGate(
       serviceTypeCode: call.serviceTypeCode,
@@ -959,8 +991,8 @@ class _OpenCallCard extends StatelessWidget {
       pickupCandidates: [call.origin],
     );
     final matchLabel = call.isExactVehicleMatch
-        ? '${call.vehicleMatchType} · 정확 일치'
-        : '${call.vehicleMatchType} · 호환 업그레이드';
+        ? l10n.vehicleExactMatch(call.vehicleMatchType)
+        : l10n.vehicleCompatibleUpgrade(call.vehicleMatchType);
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 6, 16, 10),
       clipBehavior: Clip.antiAlias,
@@ -995,7 +1027,7 @@ class _OpenCallCard extends StatelessWidget {
                     key: Key('openCallGate-${call.bookingNumber}'),
                     visualDensity: VisualDensity.compact,
                     avatar: const Icon(Icons.meeting_room_outlined, size: 16),
-                    label: Text('$meetingGate번 게이트'),
+                    label: Text(l10n.meetingGateNumber(int.parse(meetingGate))),
                   ),
                 ),
               const SizedBox(height: 10),
@@ -1011,7 +1043,12 @@ class _OpenCallCard extends StatelessWidget {
                 key: Key('openCallDestination-${call.bookingNumber}'),
               ),
               const SizedBox(height: 10),
-              Text('${call.vehicleTypeName} · ${call.passengerCount}명'),
+              Text(
+                l10n.vehicleTypeAndPassengers(
+                  call.vehicleTypeName,
+                  call.passengerCount,
+                ),
+              ),
               _BookingCreatedAtText(
                 key: Key('openCallCreatedAt-${call.bookingNumber}'),
                 createdAt: call.createdAt,
@@ -1035,7 +1072,8 @@ class _BookingCreatedAtText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = formatBookingCreatedAtLabel(createdAt);
+    final l10n = AppLocalizations.of(context);
+    final label = formatBookingCreatedAtLabel(l10n, createdAt);
     if (label == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 6),
@@ -1077,6 +1115,7 @@ class _OpenCallLocationText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final placeStyle = TextStyle(
       fontWeight: FontWeight.bold,
       color: Theme.of(context).colorScheme.primary,
@@ -1104,7 +1143,7 @@ class _OpenCallLocationText extends StatelessWidget {
       if (lines.hasAddressLine) {
         return Text(lines.addressLine!);
       }
-      return const Text('위치 정보 없음');
+      return Text(l10n.noLocationInfo);
     }
 
     return Text(

@@ -50,6 +50,7 @@ class ApiException implements Exception {
   final String? errorCode;
   final List<Map<String, dynamic>> errors;
 
+  @Deprecated('Use localizedMessage(AppLocalizations.of(context)) instead')
   String get userMessage => switch (kind) {
     ApiFailureKind.invalidCredentials => '계정 또는 비밀번호를 확인해 주세요.',
     ApiFailureKind.unauthorized => '로그인이 만료되었습니다. 다시 로그인해 주세요.',

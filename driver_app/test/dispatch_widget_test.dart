@@ -6,7 +6,9 @@ import 'package:tride_driver/features/dispatch/data/dispatch_models.dart';
 import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 import 'package:tride_driver/features/dispatch/presentation/driver_home_shell.dart';
 import 'package:tride_driver/features/dispatch/presentation/open_calls_screen.dart';
+import 'package:tride_driver/l10n/app_localizations.dart';
 
+import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
 
 Future<void> pumpOpenCalls(
@@ -18,7 +20,7 @@ Future<void> pumpOpenCalls(
   ThemeData? theme,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
+    localizedMaterialApp(
       theme:
           theme ??
           ThemeData(
@@ -57,6 +59,8 @@ Future<void> confirmClaim(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+final _ko = AppLocalizations(const Locale('ko'));
+
 void main() {
   testWidgets('offline shows guidance and does not request open calls', (
     tester,
@@ -65,7 +69,7 @@ void main() {
     final socket = FakeDriverSocketConnection();
     await pumpOpenCalls(tester, reader, driverSocket: socket);
 
-    expect(find.text('온라인으로 전환하면 새 콜을 볼 수 있습니다'), findsOneWidget);
+    expect(find.text(_ko.goOnlineToSeeNewCalls), findsOneWidget);
     expect(reader.statusCount, 1);
     expect(reader.openCallsCount, 0);
     expect(socket.connectCount, 0);
@@ -173,12 +177,12 @@ void main() {
     expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
     expect(find.text('Pattaya Hotel'), findsOneWidget);
     expect(find.text('2026-07-27 10:30'), findsOneWidget);
-    expect(find.text('EXACT · 정확 일치'), findsOneWidget);
+    expect(find.text(_ko.vehicleExactMatch('EXACT')), findsOneWidget);
     expect(
       find.byKey(const Key('openCallGate-TX209912319998')),
       findsOneWidget,
     );
-    expect(find.text('3번 게이트'), findsOneWidget);
+    expect(find.text(_ko.meetingGateNumber(3)), findsOneWidget);
   });
 
   testWidgets('open-call gate badge hides outside BKK airport pickup', (
@@ -198,7 +202,7 @@ void main() {
     await pumpOpenCalls(tester, onlineReader(calls: const []));
 
     expect(find.byKey(const Key('openCallsEmpty')), findsOneWidget);
-    expect(find.text('현재 받을 수 있는 새 콜이 없습니다.'), findsOneWidget);
+    expect(find.text(_ko.noNewCallsAvailable), findsOneWidget);
   });
 
   testWidgets(
@@ -248,9 +252,9 @@ void main() {
         find.byKey(const Key('urgentCall-TX209912319997')),
         findsOneWidget,
       );
-      expect(find.text('긴급콜'), findsOneWidget);
+      expect(find.text(_ko.urgentCallLabel), findsOneWidget);
       expect(find.textContaining('BKK — Suvarnabhumi Airport'), findsOneWidget);
-      expect(find.text('이전 거절로 30분 미만 ETA 필요'), findsOneWidget);
+      expect(find.text(_ko.previousRejectionRequiresEtaUnder(30)), findsOneWidget);
     },
   );
 
@@ -340,7 +344,7 @@ void main() {
 
     await confirmClaim(tester);
 
-    expect(find.textContaining('기존 운행과 시간이 겹쳐'), findsOneWidget);
+    expect(find.textContaining(_ko.errorBookingTimeConflict), findsOneWidget);
     expect(find.byKey(const Key('openCall-TX209912319998')), findsOneWidget);
   });
 
@@ -359,7 +363,7 @@ void main() {
 
     await confirmClaim(tester);
 
-    expect(find.textContaining('다른 기사가 먼저'), findsOneWidget);
+    expect(find.textContaining(_ko.otherDriverClaimedCallFirst), findsOneWidget);
     expect(find.byKey(const Key('openCall-TX209912319998')), findsNothing);
   });
 
@@ -367,7 +371,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: DriverHomeShell(
           bookingRepository: FakeBookingReader()
             ..listResult = bookingList(items: const []),
@@ -378,11 +382,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('온라인으로 전환하면 새 콜을 볼 수 있습니다'), findsOneWidget);
+    expect(find.text(_ko.goOnlineToSeeNewCalls), findsOneWidget);
 
-    await tester.tap(find.text('내 운행'));
+    await tester.tap(find.text(_ko.tabMyTrips));
     await tester.pumpAndSettle();
-    expect(find.text('오늘의 배정 예약'), findsOneWidget);
+    expect(find.text(_ko.todayAssignmentsTitle), findsOneWidget);
   });
 
   testWidgets('claim switches to trips and reloads an already visited list', (
@@ -392,7 +396,7 @@ void main() {
       ..listResult = bookingList(items: const []);
     final dispatch = onlineReader();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: DriverHomeShell(
           bookingRepository: bookings,
           dispatchRepository: dispatch,
@@ -403,19 +407,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('내 운행'));
+    await tester.tap(find.text(_ko.tabMyTrips));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('bookingListEmpty')), findsOneWidget);
     expect(bookings.listCount, 1);
 
-    await tester.tap(find.text('새 콜'));
+    await tester.tap(find.text(_ko.tabNewCalls));
     await tester.pumpAndSettle();
     bookings.listResult = bookingList();
     await tester.tap(find.byKey(const Key('openCall-TX209912319998')));
     await tester.pumpAndSettle();
     await confirmClaim(tester);
 
-    expect(find.text('오늘의 배정 예약'), findsOneWidget);
+    expect(find.text(_ko.todayAssignmentsTitle), findsOneWidget);
     expect(find.byKey(const Key('booking-TX209912319999')), findsOneWidget);
     expect(bookings.listCount, 2);
   });
@@ -434,7 +438,7 @@ void main() {
         settlementItem(bookingNumber: 'TX-OK', commissionStatus: 'APPROVED'),
       ];
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: DriverHomeShell(
           bookingRepository: FakeBookingReader(),
           dispatchRepository: FakeDispatchReader(),
@@ -447,13 +451,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('새 콜'), findsWidgets);
-    expect(find.text('내 운행'), findsOneWidget);
-    expect(find.text('정산'), findsOneWidget);
-    expect(find.text('계정'), findsOneWidget);
+    expect(find.text(_ko.tabNewCalls), findsWidgets);
+    expect(find.text(_ko.tabMyTrips), findsOneWidget);
+    expect(find.text(_ko.tabSettlement), findsOneWidget);
+    expect(find.text(_ko.tabAccount), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
 
-    await tester.tap(find.text('정산'));
+    await tester.tap(find.text(_ko.tabSettlement));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('settlementListSuccess')), findsOneWidget);
@@ -472,7 +476,7 @@ void main() {
     final settlement = FakeSettlementApi()
       ..items = [settlementItem(bookingNumber: 'TX-DUE')];
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: DriverHomeShell(
           bookingRepository: FakeBookingReader(),
           dispatchRepository: dispatch,
@@ -497,7 +501,7 @@ void main() {
   ) async {
     final reader = onlineReader();
     await tester.pumpWidget(
-      MaterialApp(home: _OpenCallsRefreshHarness(reader: reader)),
+      localizedMaterialApp(home: _OpenCallsRefreshHarness(reader: reader)),
     );
     await tester.pumpAndSettle();
     expect(reader.statusCount, 1);
@@ -522,7 +526,7 @@ void main() {
     final settlement = FakeSettlementApi()
       ..items = [settlementItem(bookingNumber: 'TX-DUE')];
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: DriverHomeShell(
           bookingRepository: FakeBookingReader(),
           dispatchRepository: dispatch,
@@ -544,10 +548,10 @@ void main() {
       message: null,
     );
 
-    await tester.tap(find.text('정산'));
+    await tester.tap(find.text(_ko.tabSettlement));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('새 콜'));
+    await tester.tap(find.text(_ko.tabNewCalls));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('settlementBlockedBanner')), findsNothing);
@@ -667,7 +671,7 @@ void main() {
       ),
     );
 
-    expect(find.text('예약: 7월 12일 15시 30분'), findsOneWidget);
+    expect(find.text(_ko.bookingCreatedAt(7, 12, 15, '30')), findsOneWidget);
     expect(
       find.byKey(const Key('openCallCreatedAt-TX209912319998')),
       findsOneWidget,

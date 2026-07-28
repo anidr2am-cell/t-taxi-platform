@@ -2,6 +2,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/settlement_api.dart';
 import '../data/settlement_models.dart';
 
@@ -57,7 +59,7 @@ class ReceiptUploadSheet extends StatefulWidget {
 class _ReceiptUploadSheetState extends State<ReceiptUploadSheet> {
   SettlementUploadFile? _file;
   bool _uploading = false;
-  String? _error;
+  ApiException? _error;
 
   Future<void> _pick() async {
     final picked = await (widget.picker ?? pickSettlementReceipt)();
@@ -82,14 +84,14 @@ class _ReceiptUploadSheetState extends State<ReceiptUploadSheet> {
       if (mounted) {
         setState(() {
           _uploading = false;
-          _error = settlementUploadErrorMessage(error);
+          _error = error;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
           _uploading = false;
-          _error = '송금증 업로드 중 알 수 없는 오류가 발생했습니다.';
+          _error = const ApiException(ApiFailureKind.unknown);
         });
       }
     }
@@ -97,6 +99,15 @@ class _ReceiptUploadSheetState extends State<ReceiptUploadSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final errorMessage = _error == null
+        ? null
+        : _error!.errorCode != null ||
+              _error!.kind == ApiFailureKind.invalidFileType ||
+              _error!.kind == ApiFailureKind.fileTooLarge ||
+              _error!.kind == ApiFailureKind.notFound
+        ? settlementUploadErrorMessage(l10n, _error!)
+        : _error!.localizedMessage(l10n);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -109,24 +120,26 @@ class _ReceiptUploadSheetState extends State<ReceiptUploadSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('송금증 업로드', style: Theme.of(context).textTheme.titleLarge),
+            Text(l10n.receiptUploadTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            const Text('JPG, PNG, PDF 파일을 선택해 주세요.'),
+            Text(l10n.receiptFileTypesHint),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               key: const Key('pickSettlementReceipt'),
               onPressed: _uploading ? null : _pick,
               icon: const Icon(Icons.upload_file),
-              label: Text(_file == null ? '파일 선택' : '다른 파일 선택'),
+              label: Text(
+                _file == null ? l10n.selectFile : l10n.selectDifferentFile,
+              ),
             ),
             if (_file != null) ...[
               const SizedBox(height: 8),
               Text(_file!.filename, key: const Key('selectedReceiptName')),
             ],
-            if (_error != null) ...[
+            if (errorMessage != null) ...[
               const SizedBox(height: 12),
               Text(
-                _error!,
+                errorMessage,
                 key: const Key('receiptUploadError'),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
@@ -140,29 +153,11 @@ class _ReceiptUploadSheetState extends State<ReceiptUploadSheet> {
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('업로드'),
+                  : Text(l10n.upload),
             ),
           ],
         ),
       ),
     );
   }
-}
-
-String settlementUploadErrorMessage(ApiException error) {
-  return switch (error.errorCode) {
-    'VALIDATION_ERROR' => '입력값을 확인해 주세요. 송금증 파일이 필요합니다.',
-    'INVALID_FILE_TYPE' => '지원하지 않는 파일 형식입니다. JPG, PNG, PDF만 업로드할 수 있습니다.',
-    'FILE_TOO_LARGE' => '파일 크기가 너무 큽니다. 더 작은 송금증 파일을 선택해 주세요.',
-    'SETTLEMENT_NOT_FOUND' => '정산 정보를 찾을 수 없습니다. 목록을 새로고침해 주세요.',
-    'RECEIPT_ALREADY_APPROVED' => '이미 승인된 정산은 송금증을 변경할 수 없습니다.',
-    _ => switch (error.kind) {
-      ApiFailureKind.invalidFileType =>
-        '지원하지 않는 파일 형식입니다. JPG, PNG, PDF만 업로드할 수 있습니다.',
-      ApiFailureKind.fileTooLarge => '파일 크기가 너무 큽니다. 더 작은 송금증 파일을 선택해 주세요.',
-      ApiFailureKind.notFound => '정산 정보를 찾을 수 없습니다. 목록을 새로고침해 주세요.',
-      ApiFailureKind.unauthorized => '로그인이 만료되었습니다. 다시 로그인해 주세요.',
-      _ => error.userMessage,
-    },
-  };
 }

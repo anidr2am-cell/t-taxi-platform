@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../data/booking_models.dart';
 import 'booking_display_formatters.dart';
 import 'booking_meeting_gate.dart';
 import 'booking_status_label.dart';
+import 'pickup_schedule.dart';
 import 'release_assignment_ui.dart';
 
 class BookingListItem extends StatelessWidget {
@@ -26,6 +28,7 @@ class BookingListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final vehicle = booking.vehicleType.name.isNotEmpty
         ? booking.vehicleType.name
         : booking.vehicleType.code;
@@ -49,19 +52,37 @@ class BookingListItem extends StatelessWidget {
             capabilities: capabilities!,
             now: now ?? DateTime.now(),
           );
+    final pickupDelay = pickupDelayInfo(
+      scheduledPickupAt: booking.scheduledPickupAt,
+      pickupDate: booking.pickupDate,
+      pickupTime: booking.pickupTime,
+      now: () => now ?? DateTime.now(),
+    );
+    final pickupDelayMessage = pickupDelay == null
+        ? null
+        : pickupDelayBannerMessage(l10n, pickupDelay);
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (pickupDelayMessage case final message?)
+            MaterialBanner(
+              key: Key('pickupDelayBanner-${booking.bookingNumber}'),
+              content: Text(message),
+              leading: const Icon(Icons.info_outline),
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+              actions: const [SizedBox.shrink()],
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
-                    scheduledPickup ?? '운행 시각 정보 없음',
+                    scheduledPickup ?? l10n.noTripScheduleInfo,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -93,7 +114,7 @@ class BookingListItem extends StatelessWidget {
                         key: Key('bookingGate-${booking.bookingNumber}'),
                         visualDensity: VisualDensity.compact,
                         avatar: const Icon(Icons.meeting_room_outlined, size: 16),
-                        label: Text('$meetingGate번 게이트'),
+                        label: Text(l10n.meetingGateNumber(int.parse(meetingGate))),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -105,12 +126,15 @@ class BookingListItem extends StatelessWidget {
                   const SizedBox(height: 14),
                   _RouteLine(
                     icon: Icons.trip_origin,
-                    text: formatBookingLocation(booking.pickupLocation),
+                    text: formatBookingLocation(l10n, booking.pickupLocation),
                   ),
                   const SizedBox(height: 8),
                   _RouteLine(
                     icon: Icons.location_on_outlined,
-                    text: formatBookingLocation(booking.destinationLocation),
+                    text: formatBookingLocation(
+                      l10n,
+                      booking.destinationLocation,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Wrap(
@@ -126,13 +150,17 @@ class BookingListItem extends StatelessWidget {
                       if (standbyReference != null)
                         _Fact(
                           icon: Icons.schedule_outlined,
-                          text: '대기 기준 $standbyReference',
+                          text: l10n.standbyReferenceLabel(standbyReference),
                         ),
                       if (booking.driverExpectedIncome.isAvailable)
                         _Fact(
                           icon: Icons.payments_outlined,
-                          text:
-                              '예상 수입 ${formatMoney(booking.driverExpectedIncome)}',
+                          text: l10n.expectedIncomeLabel(
+                            formatMoneyLocalized(
+                              l10n,
+                              booking.driverExpectedIncome,
+                            ),
+                          ),
                         ),
                     ],
                   ),

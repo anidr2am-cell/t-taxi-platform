@@ -12,6 +12,7 @@ import '../../settlement/data/settlement_api.dart';
 import '../../settlement/presentation/settlement_list_page.dart';
 import '../data/dispatch_repository.dart';
 import '../data/driver_socket_service.dart';
+import '../../../l10n/app_localizations.dart';
 import 'open_calls_screen.dart';
 import 'urgent_eta_dialog.dart';
 
@@ -135,6 +136,7 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -188,15 +190,15 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) => _selectTab(index),
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.campaign_outlined),
-            selectedIcon: Icon(Icons.campaign),
-            label: '새 콜',
+          NavigationDestination(
+            icon: const Icon(Icons.campaign_outlined),
+            selectedIcon: const Icon(Icons.campaign),
+            label: l10n.tabNewCalls,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.route_outlined),
-            selectedIcon: Icon(Icons.route),
-            label: '내 운행',
+          NavigationDestination(
+            icon: const Icon(Icons.route_outlined),
+            selectedIcon: const Icon(Icons.route),
+            label: l10n.tabMyTrips,
           ),
           if (widget.settlementApi != null)
             NavigationDestination(
@@ -210,13 +212,13 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
                 label: Text('$_settlementBadge'),
                 child: const Icon(Icons.payments),
               ),
-              label: '정산',
+              label: l10n.tabSettlement,
             ),
           if (widget.accountApi != null)
-            const NavigationDestination(
-              icon: Icon(Icons.account_circle_outlined),
-              selectedIcon: Icon(Icons.account_circle),
-              label: '계정',
+            NavigationDestination(
+              icon: const Icon(Icons.account_circle_outlined),
+              selectedIcon: const Icon(Icons.account_circle),
+              label: l10n.tabAccount,
             ),
         ],
       ),

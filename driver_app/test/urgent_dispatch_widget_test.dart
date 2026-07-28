@@ -6,7 +6,12 @@ import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 import 'package:tride_driver/features/dispatch/presentation/driver_home_shell.dart';
 import 'package:tride_driver/features/dispatch/presentation/open_calls_screen.dart';
 
+import 'package:tride_driver/l10n/app_localizations.dart';
+
+import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
+
+final _ko = AppLocalizations(const Locale('ko'));
 
 String deadlineAfter(Duration duration) =>
     DateTime.now().toUtc().add(duration).toIso8601String();
@@ -62,7 +67,7 @@ Future<void> pumpUrgentScreen(
   ValueChanged<bool>? onActivity,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
+    localizedMaterialApp(
       home: OpenCallsScreen(
         repository: reader,
         onUnauthorized: () async {},
@@ -99,10 +104,10 @@ void main() {
     expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
     expect(find.text('Pattaya Hotel'), findsOneWidget);
     expect(find.text('→'), findsOneWidget);
-    expect(find.text('Airport pickup · Sedan · 2명'), findsOneWidget);
+    expect(find.text('Airport pickup · Sedan · ${_ko.passengersCount(2)}'), findsOneWidget);
     expect(find.text('1200 THB'), findsOneWidget);
-    expect(find.text('20″ 1'), findsOneWidget);
-    expect(find.text('이전 거절로 30분 미만 ETA 필요'), findsOneWidget);
+    expect(find.text(_ko.carriers20InchCount(1)), findsOneWidget);
+    expect(find.text(_ko.previousRejectionRequiresEtaUnder(30)), findsOneWidget);
   });
 
   testWidgets('lock success opens a non-dismissible ETA dialog', (
@@ -452,7 +457,7 @@ void main() {
   ) async {
     final dispatch = urgentReader();
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: DriverHomeShell(
           bookingRepository: FakeBookingReader(),
           dispatchRepository: dispatch,

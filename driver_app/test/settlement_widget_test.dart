@@ -6,6 +6,7 @@ import 'package:tride_driver/features/settlement/presentation/receipt_upload_she
 import 'package:tride_driver/features/settlement/presentation/settlement_detail_page.dart';
 import 'package:tride_driver/features/settlement/presentation/settlement_list_page.dart';
 
+import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
 
 Future<void> pumpSettlementList(
@@ -13,7 +14,7 @@ Future<void> pumpSettlementList(
   FakeSettlementApi api,
 ) async {
   await tester.pumpWidget(
-    MaterialApp(
+    localizedMaterialApp(
       home: SettlementListPage(api: api, onUnauthorized: () async {}),
     ),
   );
@@ -26,7 +27,7 @@ Future<void> pumpSettlementDetail(
   SettlementReceiptPicker? picker,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
+    localizedMaterialApp(
       home: SettlementDetailPage(
         api: api,
         bookingNumber: api.detail.bookingNumber,

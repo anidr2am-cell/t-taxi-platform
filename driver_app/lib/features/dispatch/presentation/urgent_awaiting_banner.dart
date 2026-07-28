@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import 'urgent_eta_dialog.dart';
 
 enum UrgentAwaitingPhase { awaiting, checking, confirmed }
@@ -73,6 +74,7 @@ class _UrgentAwaitingBannerState extends State<UrgentAwaitingBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final phase = widget.phase;
     final confirmed = phase == UrgentAwaitingPhase.confirmed;
     final checking = phase == UrgentAwaitingPhase.checking || _localChecking;
@@ -81,11 +83,12 @@ class _UrgentAwaitingBannerState extends State<UrgentAwaitingBanner> {
         : Theme.of(context).colorScheme.tertiaryContainer;
     final icon = confirmed ? Icons.check_circle : Icons.schedule;
     final message = confirmed
-        ? '고객이 확인했습니다. 예약이 배정되었습니다.'
+        ? l10n.customerConfirmedAssigned
         : checking
-        ? '라운드 종료 확인 중...'
-        : '고객 확인 대기 중 '
-              '(남은 시간 ${formatUrgentCountdown(_remaining)})';
+        ? l10n.roundEndChecking
+        : l10n.awaitingCustomerConfirmation(
+            formatUrgentCountdown(_remaining),
+          );
 
     return Material(
       key: const Key('urgentAwaitingBanner'),

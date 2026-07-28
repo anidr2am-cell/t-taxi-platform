@@ -1,6 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/features/bookings/data/booking_models.dart';
+import 'package:tride_driver/l10n/app_localizations.dart';
+import 'package:tride_driver/l10n/app_localizations_extensions.dart';
 
 import 'test_fakes.dart';
 
@@ -35,7 +38,7 @@ void main() {
       expect(result.serviceDate, '2026-07-18');
       expect(result.items, hasLength(1));
       expect(result.items.single.bookingNumber, 'TX209912319999');
-      expect(result.items.single.vehicleType.name, '세단');
+      expect(result.items.single.vehicleType.name, '\uc138\ub2e8');
       expect(result.items.single.driverExpectedIncome.amount, 900);
       expect(
         result.items.single.assignmentStatus.code,
@@ -126,13 +129,13 @@ void main() {
   group('BookingLocation parsing', () {
     test('parses nameTh from pickupLocation payload', () {
       final location = BookingLocation.fromJson({
-        'name': 'BKK — Suvarnabhumi Airport',
-        'nameTh': 'ท่าอากาศยานสุวรรณภูมิ',
+        'name': 'BKK - Suvarnabhumi Airport',
+        'nameTh': '\u0e17\u0e48\u0e32\u0e2d\u0e32\u0e01\u0e32\u0e28\u0e22\u0e32\u0e19\u0e2a\u0e38\u0e27\u0e23\u0e23\u0e13\u0e20\u0e39\u0e21\u0e34',
         'address': '999 Nong Prue, Bang Phli',
       });
 
-      expect(location.name, 'BKK — Suvarnabhumi Airport');
-      expect(location.nameTh, 'ท่าอากาศยานสุวรรณภูมิ');
+      expect(location.name, 'BKK - Suvarnabhumi Airport');
+      expect(location.nameTh, '\u0e17\u0e48\u0e32\u0e2d\u0e32\u0e01\u0e32\u0e28\u0e22\u0e32\u0e19\u0e2a\u0e38\u0e27\u0e23\u0e23\u0e13\u0e20\u0e39\u0e21\u0e34');
       expect(location.address, '999 Nong Prue, Bang Phli');
     });
   });
@@ -172,9 +175,16 @@ void main() {
   group('booking detail parsing', () {
     test('parses detail-only passenger, luggage, flight, and note fields', () {
       final detail = bookingDetail();
+      final l10n = AppLocalizations(const Locale('ko'));
 
-      expect(detail.passengers.display, '성인 2명 · 아동 0명 · 유아 0명');
-      expect(detail.luggage.display, '20인치 1개 · 24인치 이상 1개 · 골프백 0개');
+      expect(
+        detail.passengers.displayLocalized(l10n),
+        '\uc131\uc778 2\uba85 \u00b7 \uc544\ub3d9 0\uba85 \u00b7 \uc720\uc544 0\uba85',
+      );
+      expect(
+        detail.luggage.displayLocalized(l10n),
+        '20\uc778\uce58 1\uac1c \u00b7 24\uc778\uce58 \uc774\uc0c1 1\uac1c \u00b7 \uace8\ud504\ubc31 0\uac1c',
+      );
       expect(detail.flight.flightNumber, 'TG100');
       expect(detail.flight.latestEstimatedArrival, '2026-07-18 08:30:00');
       expect(detail.specialInstructions, 'Synthetic fixture note');
@@ -188,6 +198,7 @@ void main() {
     });
 
     test('handles nullable optional fields without synthetic values', () {
+      final l10n = AppLocalizations(const Locale('ko'));
       final data = bookingJson()
         ..['customerDisplayName'] = null
         ..['flightNumber'] = null
@@ -210,9 +221,12 @@ void main() {
 
       expect(detail.summary.customerDisplayName, isNull);
       expect(detail.summary.flightNumber, isNull);
-      expect(detail.passengers.display, isNull);
-      expect(detail.luggage.display, isNull);
-      expect(formatMoney(detail.summary.driverExpectedIncome), '금액 정보 없음');
+      expect(detail.passengers.displayLocalized(l10n), isNull);
+      expect(detail.luggage.displayLocalized(l10n), isNull);
+      expect(
+        formatMoneyLocalized(l10n, detail.summary.driverExpectedIncome),
+        l10n.amountUnavailable,
+      );
       expect(detail.capabilities.releaseAssignmentAvailable, isFalse);
       expect(detail.capabilities.assignmentReleaseDeadline, isNull);
       expect(detail.nameSignRequested, isFalse);
@@ -290,16 +304,21 @@ void main() {
   });
 
   test('unknown status has a crash-safe label', () {
+    final l10n = AppLocalizations(const Locale('ko'));
     final booking = BookingSummary.fromJson(
       bookingJson(status: 'FUTURE_STATUS'),
     );
     expect(booking.status.code, BookingStatusCode.unknown);
-    expect(booking.status.label, '알 수 없는 상태');
+    expect(booking.status.localizedLabel(l10n), l10n.statusUnknown);
   });
 
   test('formats THB like the existing driver web', () {
+    final l10n = AppLocalizations(const Locale('ko'));
     expect(formatMoney(const BookingMoney(1200, 'thb')), 'THB 1,200');
     expect(formatMoney(const BookingMoney(1200.5, 'THB')), 'THB 1,200.50');
-    expect(formatMoney(const BookingMoney(null, 'THB')), '금액 정보 없음');
+    expect(
+      formatMoneyLocalized(l10n, const BookingMoney(null, 'THB')),
+      l10n.amountUnavailable,
+    );
   });
 }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/dispatch_models.dart';
 
 typedef UrgentEtaSubmitter =
@@ -101,14 +103,15 @@ class _UrgentEtaDialogState extends State<_UrgentEtaDialog> {
 
   Future<void> _submit() async {
     if (_submitting || _expired) return;
+    final l10n = AppLocalizations.of(context);
     final eta = int.tryParse(_controller.text);
     if (eta == null || eta < 1) {
-      setState(() => _inlineError = '1분 이상의 정수를 입력해 주세요.');
+      setState(() => _inlineError = l10n.etaMinimumIntegerError);
       return;
     }
     final minimum = widget.minRequiredEtaMinutes;
     if (minimum != null && eta >= minimum) {
-      setState(() => _inlineError = '$minimum분 미만으로 입력해 주세요.');
+      setState(() => _inlineError = l10n.etaMustBeUnderMinutes(minimum));
       return;
     }
 
@@ -146,14 +149,16 @@ class _UrgentEtaDialogState extends State<_UrgentEtaDialog> {
         _inlineError =
             error.kind == ApiFailureKind.urgentEtaNotFastEnough &&
                 serverMinimum != null
-            ? '$serverMinimum분 미만으로 입력해 주세요.'
-            : error.userMessage;
+            ? l10n.etaMustBeUnderMinutes(serverMinimum)
+            : error.localizedMessage(l10n);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _inlineError = const ApiException(ApiFailureKind.unknown).userMessage;
+        _inlineError = const ApiException(
+          ApiFailureKind.unknown,
+        ).localizedMessage(l10n);
       });
     }
   }
@@ -169,6 +174,7 @@ class _UrgentEtaDialogState extends State<_UrgentEtaDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final warning = _remaining <= const Duration(seconds: 30);
     return PopScope(
       canPop: false,
@@ -177,13 +183,13 @@ class _UrgentEtaDialogState extends State<_UrgentEtaDialog> {
       },
       child: AlertDialog(
         key: const Key('urgentEtaDialog'),
-        title: const Text('도착 예상 시간 입력'),
+        title: Text(l10n.etaInputTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '남은 시간 ${formatUrgentCountdown(_remaining)}',
+              l10n.remainingTime(formatUrgentCountdown(_remaining)),
               key: const Key('urgentEtaCountdown'),
               style: TextStyle(
                 color: warning
@@ -195,7 +201,7 @@ class _UrgentEtaDialogState extends State<_UrgentEtaDialog> {
             if (widget.minRequiredEtaMinutes case final minimum?) ...[
               const SizedBox(height: 8),
               Text(
-                '이전 거절로 $minimum분 미만 ETA가 필요합니다.',
+                l10n.previousRejectionEtaRequiredFull(minimum),
                 key: const Key('urgentEtaMinimumHint'),
               ),
             ],
@@ -207,7 +213,7 @@ class _UrgentEtaDialogState extends State<_UrgentEtaDialog> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
-                labelText: 'ETA (분)',
+                labelText: l10n.etaMinutesLabel,
                 errorText: _inlineError,
               ),
               onSubmitted: (_) => _submit(),
@@ -223,7 +229,7 @@ class _UrgentEtaDialogState extends State<_UrgentEtaDialog> {
                     dimension: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('제출'),
+                : Text(l10n.submit),
           ),
         ],
       ),
@@ -271,26 +277,23 @@ String formatUrgentCountdown(Duration duration) {
 }
 
 Future<bool?> showUrgentLeaveConfirmation(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
   return showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       key: const Key('urgentLeaveDialog'),
-      title: const Text('진행 중인 긴급 협상'),
-      content: const Text(
-        '진행 중인 긴급 협상이 있습니다. 그래도 나가시겠습니까?\n'
-        '서버의 잠금은 즉시 해제되지 않으며, ETA를 제출하지 않으면 '
-        '3분 이내 자동으로 취소됩니다.',
-      ),
+      title: Text(l10n.urgentNegotiationInProgressTitle),
+      content: Text(l10n.urgentNegotiationLeaveMessage),
       actions: [
         TextButton(
           key: const Key('urgentLeaveStay'),
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('계속 진행'),
+          child: Text(l10n.continueNegotiation),
         ),
         FilledButton(
           key: const Key('urgentLeaveConfirm'),
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('나가기'),
+          child: Text(l10n.leave),
         ),
       ],
     ),

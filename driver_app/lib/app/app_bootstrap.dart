@@ -7,6 +7,8 @@ import '../core/firebase/firebase_app_initializer.dart';
 import '../core/firebase/fcm_message_handler.dart';
 import '../core/firebase/fcm_message_service.dart';
 import '../core/firebase/fcm_token_service.dart';
+import '../core/locale/locale_controller.dart';
+import '../core/locale/locale_preferences.dart';
 import '../core/network/api_client.dart';
 import '../core/storage/secure_token_storage.dart';
 import '../features/auth/data/auth_api.dart';
@@ -27,6 +29,8 @@ Future<void> runDriverApp(AppEnvironment environment) async {
   await initializeFirebaseApp();
   registerFcmBackgroundHandler();
   final config = AppConfig.forEnvironment(environment);
+  final localePreferences = await LocalePreferences.create();
+  final localeController = LocaleController(localePreferences);
   final apiClient = ApiClient(config: config, httpClient: http.Client());
   final storage = SecureTokenStorage();
   final notificationApi = NotificationApi(client: apiClient, storage: storage);
@@ -47,6 +51,7 @@ Future<void> runDriverApp(AppEnvironment environment) async {
     DriverApp(
       config: config,
       authController: AuthController(repository),
+      localeController: localeController,
       bookingRepository: BookingRepository(
         BookingApi(client: apiClient, storage: storage),
       ),

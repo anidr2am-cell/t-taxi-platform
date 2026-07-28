@@ -1,4 +1,5 @@
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum BookingStatusCode {
   pending,
@@ -39,20 +40,8 @@ class BookingStatus {
   final String raw;
   final BookingStatusCode code;
 
-  String get label => switch (code) {
-    BookingStatusCode.pending => '접수 대기',
-    BookingStatusCode.open => '배차 대기',
-    BookingStatusCode.confirmed => '예약 확정',
-    BookingStatusCode.driverAssigned => '기사 배정',
-    BookingStatusCode.onRoute => '이동 중',
-    BookingStatusCode.driverArrived => '기사 도착',
-    BookingStatusCode.pickedUp => '고객 탑승',
-    BookingStatusCode.settlementPending => '정산 대기',
-    BookingStatusCode.completed => '운행 완료',
-    BookingStatusCode.cancelled => '예약 취소',
-    BookingStatusCode.noShow => '노쇼',
-    BookingStatusCode.unknown => '알 수 없는 상태',
-  };
+  @Deprecated('Use localizedLabel(AppLocalizations) from app_localizations_extensions')
+  String get label => raw;
 }
 
 enum AssignmentStatusCode {
@@ -428,11 +417,11 @@ class PassengerBreakdown {
   final int? children;
   final int? infants;
 
-  String? get display {
+  String? displayLocalized(AppLocalizations l10n) {
     final values = <String>[
-      if (adults != null) '성인 $adults명',
-      if (children != null) '아동 $children명',
-      if (infants != null) '유아 $infants명',
+      if (adults != null) l10n.adultsCount(adults!),
+      if (children != null) l10n.childrenCount(children!),
+      if (infants != null) l10n.infantsCount(infants!),
     ];
     return values.isEmpty ? null : values.join(' · ');
   }
@@ -461,11 +450,12 @@ class LuggageBreakdown {
   final int? golfBags;
   final String? specialItems;
 
-  String? get display {
+  String? displayLocalized(AppLocalizations l10n) {
     final values = <String>[
-      if (carriers20Inch != null) '20인치 $carriers20Inch개',
-      if (carriers24InchPlus != null) '24인치 이상 $carriers24InchPlus개',
-      if (golfBags != null) '골프백 $golfBags개',
+      if (carriers20Inch != null) l10n.carriers20InchCount(carriers20Inch!),
+      if (carriers24InchPlus != null)
+        l10n.carriers24InchPlusCount(carriers24InchPlus!),
+      if (golfBags != null) l10n.golfBagsCount(golfBags!),
       ?specialItems,
     ];
     return values.isEmpty ? null : values.join(' · ');
@@ -708,8 +698,18 @@ class BookingReleaseResult {
   final String reasonCode;
 }
 
+String formatMoneyLocalized(AppLocalizations l10n, BookingMoney money) {
+  if (!money.isAvailable) return l10n.amountUnavailable;
+  return _formatMoneyValue(money);
+}
+
+@Deprecated('Use formatMoneyLocalized(AppLocalizations, BookingMoney) instead')
 String formatMoney(BookingMoney money) {
-  if (!money.isAvailable) return '금액 정보 없음';
+  if (!money.isAvailable) return 'Amount unavailable';
+  return _formatMoneyValue(money);
+}
+
+String _formatMoneyValue(BookingMoney money) {
   final amount = money.amount!;
   final fixed = amount % 1 == 0
       ? amount.toStringAsFixed(0)

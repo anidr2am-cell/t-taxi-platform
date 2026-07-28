@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
 import '../../dispatch/data/driver_socket_service.dart';
@@ -13,6 +15,7 @@ import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
 import 'booking_meeting_gate.dart';
 import 'booking_status_label.dart';
+import 'pickup_schedule.dart';
 import 'release_assignment_actions.dart';
 import 'release_assignment_ui.dart';
 
@@ -21,15 +24,27 @@ typedef NameSignPhotoPicker =
     Future<NameSignPhotoFile?> Function(ImageSource source);
 
 enum _TripAction {
-  startRoute('START_ON_ROUTE', '운행 시작', '운행을 시작하시겠습니까?'),
-  arrive('MARK_ARRIVED', '도착 확인', '픽업 장소 도착을 확인하시겠습니까?'),
-  pickedUp('MARK_PICKED_UP', '탑승 확인', '고객 탑승을 확인하시겠습니까?'),
-  endTrip('END_TRIP', '운행 종료', '운행을 종료하시겠습니까?');
+  startRoute('START_ON_ROUTE'),
+  arrive('MARK_ARRIVED'),
+  pickedUp('MARK_PICKED_UP'),
+  endTrip('END_TRIP');
 
-  const _TripAction(this.serverAction, this.label, this.confirmMessage);
+  const _TripAction(this.serverAction);
   final String serverAction;
-  final String label;
-  final String confirmMessage;
+
+  String label(AppLocalizations l10n) => switch (this) {
+        _TripAction.startRoute => l10n.tripActionStartRouteLabel,
+        _TripAction.arrive => l10n.tripActionArriveLabel,
+        _TripAction.pickedUp => l10n.tripActionPickedUpLabel,
+        _TripAction.endTrip => l10n.tripActionEndTripLabel,
+      };
+
+  String confirmMessage(AppLocalizations l10n) => switch (this) {
+        _TripAction.startRoute => l10n.tripActionStartRouteConfirm,
+        _TripAction.arrive => l10n.tripActionArriveConfirm,
+        _TripAction.pickedUp => l10n.tripActionPickedUpConfirm,
+        _TripAction.endTrip => l10n.tripActionEndTripConfirm,
+      };
 }
 
 class BookingDetailScreen extends StatefulWidget {
@@ -95,7 +110,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     if (bookingNumber != widget.bookingNumber) return;
     _closeDetail(
       refreshList: true,
-      message: assignmentReleasedCloseMessage(event.payload),
+      message: assignmentReleasedCloseMessage(
+        AppLocalizations.of(context),
+        event.payload,
+      ),
     );
   }
 
@@ -159,24 +177,25 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Future<void> _confirmAccept() async {
     final detail = _detail;
     if (detail == null || !detail.canAccept || _accepting) return;
+    final l10n = AppLocalizations.of(context);
 
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: !_accepting,
       builder: (dialogContext) => AlertDialog(
         key: const Key('acceptConfirmDialog'),
-        title: const Text('예약 수락'),
-        content: const Text('이 예약을 수락하시겠습니까?'),
+        title: Text(l10n.acceptBookingTitle),
+        content: Text(l10n.acceptBookingContent),
         actions: [
           TextButton(
             key: const Key('acceptCancelButton'),
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             key: const Key('acceptConfirmButton'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('예약 수락'),
+            child: Text(l10n.acceptBooking),
           ),
         ],
       ),
@@ -207,8 +226,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context);
+
     if (outcome.closeDetail) {
-      _closeDetail(refreshList: true, message: outcome.message);
+      _closeDetail(refreshList: true, message: outcome.localizedMessage(l10n));
       return;
     }
 
@@ -221,7 +242,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       }
     });
 
-    _showMessage(outcome.message);
+    _showMessage(outcome.localizedMessage(l10n));
   }
 
   _TripAction? _availableTripAction(BookingDetail detail) {
@@ -244,21 +265,22 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Future<void> _confirmTripAction(_TripAction action) async {
     if (_performingAction) return;
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         key: const Key('tripActionConfirmDialog'),
-        title: Text(action.label),
-        content: Text(action.confirmMessage),
+        title: Text(action.label(l10n)),
+        content: Text(action.confirmMessage(l10n)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             key: const Key('tripActionConfirmButton'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(action.label),
+            child: Text(action.label(l10n)),
           ),
         ],
       ),
@@ -269,6 +291,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Future<void> _runTripAction(_TripAction action) async {
     if (_performingAction) return;
     setState(() => _performingAction = true);
+    final l10n = AppLocalizations.of(context);
     try {
       switch (action) {
         case _TripAction.startRoute:
@@ -283,7 +306,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       if (!mounted) return;
       _listRefreshRequested = true;
       if (action == _TripAction.endTrip) {
-        _closeDetail(refreshList: true, message: '운행이 종료되었습니다.');
+        _closeDetail(refreshList: true, message: l10n.tripEndedMessage);
         return;
       }
       final refreshed = await widget.repository.getBookingDetail(
@@ -294,13 +317,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         _detail = refreshed;
         _performingAction = false;
       });
-      _showMessage('${action.label} 처리가 완료되었습니다.');
+      _showMessage(l10n.actionCompleted(action.label(l10n)));
     } on ApiException catch (error) {
       await _handleActionError(error);
     } catch (_) {
       if (!mounted) return;
       setState(() => _performingAction = false);
-      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+      _showMessage(
+        const ApiException(ApiFailureKind.unknown).localizedMessage(l10n),
+      );
     }
   }
 
@@ -311,8 +336,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       return;
     }
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
     setState(() => _performingAction = false);
-    _showMessage(error.userMessage);
+    _showMessage(error.localizedMessage(l10n));
     if (error.kind == ApiFailureKind.invalidStatusTransition ||
         error.kind == ApiFailureKind.bookingNotAssigned ||
         error.kind == ApiFailureKind.assignmentAlreadyReleased) {
@@ -335,7 +361,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         setState(() => _performingAction = false);
         return;
       }
-      _closeDetail(refreshList: true, message: '배정을 반납했습니다.');
+      _closeDetail(
+        refreshList: true,
+        message: AppLocalizations.of(context).assignmentReleasedSuccess,
+      );
     } on ApiException catch (error) {
       await handleReleaseAssignmentError(
         context: context,
@@ -349,7 +378,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _performingAction = false);
-      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+      _showMessage(
+        const ApiException(
+          ApiFailureKind.unknown,
+        ).localizedMessage(AppLocalizations.of(context)),
+      );
     }
   }
 
@@ -361,16 +394,18 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       'api': '1',
       'query': '$latitude,$longitude',
     });
+    final l10n = AppLocalizations.of(context);
     try {
       final opened = await (widget.externalUrlLauncher ?? launchUrl)(url);
-      if (!opened) _showMessage('지도 앱을 열 수 없습니다.');
+      if (!opened) _showMessage(l10n.cannotOpenMapsApp);
     } catch (_) {
-      _showMessage('지도 앱을 열 수 없습니다.');
+      _showMessage(l10n.cannotOpenMapsApp);
     }
   }
 
   Future<void> _chooseNameSignPhoto() async {
     if (_uploadingNameSignPhoto) return;
+    final l10n = AppLocalizations.of(context);
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -379,13 +414,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ListTile(
               key: const Key('nameSignPhotoCamera'),
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('사진 촬영'),
+              title: Text(l10n.takePhoto),
               onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
             ),
             ListTile(
               key: const Key('nameSignPhotoGallery'),
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('갤러리에서 선택'),
+              title: Text(l10n.pickFromGallery),
               onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
             ),
           ],
@@ -413,6 +448,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Future<void> _uploadNameSignPhoto(NameSignPhotoFile file) async {
     if (_uploadingNameSignPhoto) return;
     setState(() => _uploadingNameSignPhoto = true);
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await widget.repository.uploadNameSignPhoto(
         widget.bookingNumber,
@@ -432,8 +468,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       });
       _showMessage(
         current?.nameSignPhotoUrl == null
-            ? '피켓 사진이 업로드되었습니다.'
-            : '피켓 사진이 교체되었습니다.',
+            ? l10n.nameSignPhotoUploaded
+            : l10n.nameSignPhotoReplaced,
       );
     } on ApiException catch (error) {
       if (error.kind == ApiFailureKind.unauthorized) {
@@ -443,11 +479,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       }
       if (!mounted) return;
       setState(() => _uploadingNameSignPhoto = false);
-      _showMessage(_nameSignPhotoErrorMessage(error));
+      _showMessage(nameSignUploadErrorMessage(l10n, error.errorCode));
     } catch (_) {
       if (!mounted) return;
       setState(() => _uploadingNameSignPhoto = false);
-      _showMessage(const ApiException(ApiFailureKind.unknown).userMessage);
+      _showMessage(
+        const ApiException(ApiFailureKind.unknown).localizedMessage(l10n),
+      );
     }
   }
 
@@ -480,7 +518,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('예약 상세'),
+          title: Text(AppLocalizations.of(context).bookingDetailTitle),
           leading: BackButton(onPressed: _popWithRefreshFlag),
         ),
         body: switch ((_loading, _detail, _error)) {
@@ -521,6 +559,7 @@ class _DetailError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final unavailable =
         error.kind == ApiFailureKind.notFound ||
         error.errorCode == 'BOOKING_NOT_FOUND';
@@ -540,8 +579,8 @@ class _DetailError extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               unavailable
-                  ? '이 예약은 더 이상 배정 내역에서 확인할 수 없습니다.'
-                  : error.userMessage,
+                  ? l10n.bookingNoLongerVisible
+                  : error.localizedMessage(l10n),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -549,13 +588,13 @@ class _DetailError extends StatelessWidget {
               OutlinedButton(
                 key: const Key('detailBackButton'),
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('목록으로 돌아가기'),
+                child: Text(l10n.backToList),
               )
             else
               FilledButton(
                 key: const Key('detailRetryButton'),
                 onPressed: onRetry,
-                child: const Text('다시 시도'),
+                child: Text(l10n.retry),
               ),
           ],
         ),
@@ -595,6 +634,7 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final booking = detail.summary;
     final vehicle = booking.vehicleType.name.isNotEmpty
         ? booking.vehicleType.name
@@ -621,10 +661,28 @@ class _DetailBody extends StatelessWidget {
         booking.origin,
       ],
     );
+    final pickupDelay = pickupDelayInfo(
+      scheduledPickupAt: booking.scheduledPickupAt,
+      pickupDate: booking.pickupDate,
+      pickupTime: booking.pickupTime,
+      now: () => now,
+    );
+    final pickupDelayMessage = pickupDelay == null
+        ? null
+        : pickupDelayBannerMessage(l10n, pickupDelay);
     return ListView(
       key: const Key('detailSuccess'),
       padding: const EdgeInsets.all(16),
       children: [
+        if (pickupDelayMessage case final message?)
+          MaterialBanner(
+            key: const Key('pickupDelayBanner'),
+            content: Text(message),
+            leading: const Icon(Icons.info_outline),
+            backgroundColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+            actions: const [SizedBox.shrink()],
+          ),
         Row(
           children: [
             Expanded(
@@ -668,18 +726,18 @@ class _DetailBody extends StatelessWidget {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('예약 수락'),
+                  : Text(l10n.acceptBooking),
             ),
           ] else if (waitingForStandby) ...[
             const SizedBox(height: 16),
-            const FilledButton(
-              key: Key('standbyPendingButton'),
+            FilledButton(
+              key: const Key('standbyPendingButton'),
               onPressed: null,
-              child: Text('대기 확정 대기'),
+              child: Text(l10n.standbyConfirmPending),
             ),
             const SizedBox(height: 8),
             Text(
-              '$standbyAllowedAt부터 대기 확정 가능',
+              l10n.standbyAllowedFrom(standbyAllowedAt ?? ''),
               key: const Key('standbyAllowedAtNotice'),
               textAlign: TextAlign.center,
             ),
@@ -699,7 +757,7 @@ class _DetailBody extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(action.label),
+                : Text(action.label(l10n)),
           ),
         ],
         const SizedBox(height: 16),
@@ -722,13 +780,14 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         _Section(
-          title: '운행 정보',
+          title: l10n.sectionTripInfo,
           children: [
             _Info(
-              label: '픽업',
+              label: l10n.labelPickup,
               value: '${booking.pickupDate} ${booking.pickupTime}',
             ),
-            if (formatBookingCreatedAtLabel(booking.createdAt) case final label?)
+            if (formatBookingCreatedAtLabel(l10n, booking.createdAt)
+                case final label?)
               Padding(
                 padding: const EdgeInsets.only(left: 104, bottom: 10),
                 child: Align(
@@ -743,14 +802,14 @@ class _DetailBody extends StatelessWidget {
                 ),
               ),
             _LocationInfo(
-              label: '출발지',
+              label: l10n.labelOrigin,
               location: booking.pickupLocation,
               fallback: booking.origin,
               onOpenMap: onOpenMap,
               mapKey: const Key('pickupMapLink'),
             ),
             _LocationInfo(
-              label: '목적지',
+              label: l10n.labelDestination,
               location: booking.destinationLocation,
               fallback: booking.destination,
               onOpenMap: onOpenMap,
@@ -759,60 +818,71 @@ class _DetailBody extends StatelessWidget {
           ],
         ),
         _Section(
-          title: '고객 및 탑승 정보',
+          title: l10n.sectionCustomerAndPassengers,
           children: [
-            _Info(label: '고객명', value: booking.customerDisplayName),
+            _Info(label: l10n.labelCustomerName, value: booking.customerDisplayName),
             _Info(
-              label: '총 인원',
+              label: l10n.labelTotalPassengers,
               value: booking.passengerCount == null
                   ? null
-                  : '${booking.passengerCount}명',
+                  : l10n.passengersCount(booking.passengerCount!),
             ),
-            _Info(label: '구성', value: detail.passengers.display),
-            _Info(label: '수하물', value: detail.luggage.display),
+            _Info(
+              label: l10n.labelPassengerComposition,
+              value: detail.passengers.displayLocalized(l10n),
+            ),
+            _Info(
+              label: l10n.labelLuggage,
+              value: detail.luggage.displayLocalized(l10n),
+            ),
             if (detail.nameSignRequested)
-              const _Info(label: '네임보드', value: '요청됨'),
+              _Info(label: l10n.labelNameboard, value: l10n.nameboardRequested),
           ],
         ),
         _Section(
-          title: '항공편 및 차량',
+          title: l10n.sectionFlightAndVehicle,
           children: [
             _Info(
-              label: '항공편',
+              label: l10n.labelFlight,
               value: flight.flightNumber ?? booking.flightNumber,
             ),
-            _Info(label: '항공편 상태', value: flight.flightStatus),
-            _Info(label: '도착 예정', value: flight.latestEstimatedArrival),
+            _Info(label: l10n.labelFlightStatus, value: flight.flightStatus),
             _Info(
-              label: '지연',
+              label: l10n.labelEstimatedArrival,
+              value: flight.latestEstimatedArrival,
+            ),
+            _Info(
+              label: l10n.labelDelay,
               value: flight.delayMinutes == null
                   ? null
-                  : '${flight.delayMinutes}분',
+                  : l10n.delayMinutes(flight.delayMinutes!),
             ),
-            _Info(label: '차량', value: vehicle.isEmpty ? null : vehicle),
+            _Info(label: l10n.labelVehicle, value: vehicle.isEmpty ? null : vehicle),
           ],
         ),
         _Section(
-          title: '금액 정보',
+          title: l10n.sectionAmountInfo,
           children: [
             _Info(
-              label: '고객 결제 금액',
-              value: formatMoney(detail.customerPayment),
+              label: l10n.labelCustomerPaymentAmount,
+              value: formatMoneyLocalized(l10n, detail.customerPayment),
             ),
             _Info(
-              label: '회사 수수료',
-              value: formatMoney(detail.companyCommission),
+              label: l10n.labelCompanyCommission,
+              value: formatMoneyLocalized(l10n, detail.companyCommission),
             ),
             _Info(
-              label: '기사 예상 수입',
-              value: formatMoney(booking.driverExpectedIncome),
+              label: l10n.labelDriverExpectedIncome,
+              value: formatMoneyLocalized(l10n, booking.driverExpectedIncome),
             ),
           ],
         ),
         if (detail.specialInstructions case final instructions?)
           _Section(
-            title: '기사 참고 사항',
-            children: [_Info(label: '고객 요청', value: instructions)],
+            title: l10n.sectionDriverNotes,
+            children: [
+              _Info(label: l10n.labelCustomerRequest, value: instructions),
+            ],
           ),
       ],
     );
@@ -830,8 +900,11 @@ class _MeetingGateBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    final text = nameSignRequested ? '미팅 장소: 3번 게이트 (피켓 요청됨)' : '미팅 장소: 7번 게이트';
+    final text = nameSignRequested
+        ? l10n.meetingPlaceGate3WithNameSign
+        : l10n.meetingPlaceGate7;
     return Container(
       key: const Key('bkkMeetingGateBanner'),
       margin: const EdgeInsets.only(top: 4),
@@ -887,18 +960,6 @@ bool _showsNameSignPhotoSection(
             status == BookingStatusCode.completed) &&
         detail.nameSignPhotoUrl != null);
 
-String _nameSignPhotoErrorMessage(ApiException error) =>
-    switch (error.errorCode) {
-      'VALIDATION_ERROR' => '피켓 사진과 현재 예약 상태를 다시 확인해 주세요.',
-      'INVALID_FILE_TYPE' => 'JPG, JPEG, PNG, WEBP 사진만 업로드할 수 있습니다.',
-      'FILE_TOO_LARGE' => '파일 크기가 너무 큽니다. 더 작은 사진을 선택해 주세요.',
-      'BOOKING_NOT_FOUND' => '예약 정보를 찾을 수 없습니다.',
-      'FORBIDDEN' => '이 예약의 피켓 사진을 업로드할 권한이 없습니다.',
-      _ when error.kind == ApiFailureKind.forbidden =>
-        '이 예약의 피켓 사진을 업로드할 권한이 없습니다.',
-      _ => error.userMessage,
-    };
-
 class _NameSignPhotoSection extends StatelessWidget {
   const _NameSignPhotoSection({
     required this.detail,
@@ -916,6 +977,7 @@ class _NameSignPhotoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final hasPhoto = detail.nameSignPhotoUrl != null;
     final arrived = status == BookingStatusCode.driverArrived;
     final onRoute = status == BookingStatusCode.onRoute;
@@ -931,20 +993,20 @@ class _NameSignPhotoSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              hasPhoto ? '제출된 피켓 사진' : '피켓 사진 제출',
+              hasPhoto ? l10n.submittedNameSignPhoto : l10n.submitNameSignPhoto,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (detail.nameSignText case final text?) ...[
               const SizedBox(height: 4),
-              Text('피켓 문구: $text'),
+              Text(l10n.nameSignTextLabel(text)),
             ],
             if (onRoute) ...[
               const SizedBox(height: 8),
-              const Text(
-                '공항 도착 후 촬영을 권장합니다.',
-                key: Key('nameSignPhotoOnRouteNotice'),
+              Text(
+                l10n.recommendPhotoAfterAirportArrival,
+                key: const Key('nameSignPhotoOnRouteNotice'),
               ),
             ],
             if (hasPhoto) ...[
@@ -993,7 +1055,11 @@ class _NameSignPhotoSection extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.add_a_photo_outlined),
-                  label: Text(hasPhoto ? '다시 촬영/교체' : '피켓 사진 업로드'),
+                  label: Text(
+                    hasPhoto
+                        ? l10n.retakeOrReplacePhoto
+                        : l10n.uploadNameSignPhoto,
+                  ),
                 )
               else
                 OutlinedButton.icon(
@@ -1005,13 +1071,17 @@ class _NameSignPhotoSection extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.add_a_photo_outlined),
-                  label: Text(hasPhoto ? '다시 촬영/교체' : '피켓 사진 업로드'),
+                  label: Text(
+                    hasPhoto
+                        ? l10n.retakeOrReplacePhoto
+                        : l10n.uploadNameSignPhoto,
+                  ),
                 ),
             ] else if (hasPhoto) ...[
               const SizedBox(height: 8),
-              const Text(
-                '제출된 피켓 사진 보기',
-                key: Key('nameSignPhotoViewOnly'),
+              Text(
+                l10n.viewSubmittedNameSignPhoto,
+                key: const Key('nameSignPhotoViewOnly'),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -1039,9 +1109,10 @@ class _LocationInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted = formatBookingLocation(location);
+    final l10n = AppLocalizations.of(context);
+    final formatted = formatBookingLocation(l10n, location);
     final fallbackText = fallback.trim();
-    final value = formatted == '위치 정보 없음' && fallbackText.isNotEmpty
+    final value = formatted == l10n.noLocationInfo && fallbackText.isNotEmpty
         ? fallbackText
         : formatted;
     final hasCoordinates =
@@ -1066,7 +1137,7 @@ class _LocationInfo extends StatelessWidget {
                       minimumSize: const Size(48, 36),
                     ),
                     icon: const Icon(Icons.map_outlined, size: 18),
-                    label: const Text('지도에서 보기'),
+                    label: Text(l10n.viewOnMap),
                   ),
               ],
             ),

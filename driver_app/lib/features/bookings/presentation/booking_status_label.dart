@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/booking_models.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 
 class BookingStatusLabel extends StatelessWidget {
   const BookingStatusLabel({super.key, required this.status});
@@ -9,6 +11,8 @@ class BookingStatusLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final label = status.localizedLabel(l10n);
     final colors = switch (status.code) {
       BookingStatusCode.cancelled || BookingStatusCode.noShow => (
         Theme.of(context).colorScheme.errorContainer,
@@ -24,7 +28,7 @@ class BookingStatusLabel extends StatelessWidget {
       ),
     };
     return Semantics(
-      label: '예약 상태 ${status.label}',
+      label: l10n.bookingStatusSemantic(label),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colors.$1,
@@ -33,7 +37,7 @@ class BookingStatusLabel extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           child: Text(
-            status.label,
+            label,
             style: TextStyle(
               color: colors.$2,
               fontWeight: FontWeight.w600,

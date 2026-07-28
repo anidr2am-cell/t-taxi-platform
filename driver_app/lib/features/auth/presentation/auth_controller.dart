@@ -13,21 +13,21 @@ class AuthController extends ChangeNotifier {
 
   AuthStatus status = AuthStatus.checking;
   AuthSession? session;
-  String? errorMessage;
+  ApiException? lastError;
 
   Future<void> initialize() async {
     status = AuthStatus.checking;
-    errorMessage = null;
+    lastError = null;
     notifyListeners();
     try {
       session = await _repository.restoreSession();
       status = session == null ? AuthStatus.signedOut : AuthStatus.signedIn;
     } on ApiException catch (error) {
       status = AuthStatus.restoreError;
-      errorMessage = error.userMessage;
+      lastError = error;
     } catch (_) {
       status = AuthStatus.restoreError;
-      errorMessage = const ApiException(ApiFailureKind.unknown).userMessage;
+      lastError = const ApiException(ApiFailureKind.unknown);
     }
     notifyListeners();
   }
@@ -35,17 +35,17 @@ class AuthController extends ChangeNotifier {
   Future<void> login(String loginId, String password) async {
     if (status == AuthStatus.submitting) return;
     status = AuthStatus.submitting;
-    errorMessage = null;
+    lastError = null;
     notifyListeners();
     try {
       session = await _repository.login(loginId, password);
       status = AuthStatus.signedIn;
     } on ApiException catch (error) {
       status = AuthStatus.signedOut;
-      errorMessage = error.userMessage;
+      lastError = error;
     } catch (_) {
       status = AuthStatus.signedOut;
-      errorMessage = const ApiException(ApiFailureKind.unknown).userMessage;
+      lastError = const ApiException(ApiFailureKind.unknown);
     }
     notifyListeners();
   }
@@ -55,7 +55,7 @@ class AuthController extends ChangeNotifier {
       await _repository.logout();
     } finally {
       session = null;
-      errorMessage = null;
+      lastError = null;
       status = AuthStatus.signedOut;
       notifyListeners();
     }
@@ -64,7 +64,7 @@ class AuthController extends ChangeNotifier {
   Future<void> expireSession() async {
     await _repository.clearLocalSession();
     session = null;
-    errorMessage = const ApiException(ApiFailureKind.unauthorized).userMessage;
+    lastError = const ApiException(ApiFailureKind.unauthorized);
     status = AuthStatus.signedOut;
     notifyListeners();
   }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
+
 const emergencyReleaseReasonCodes = <String>{
   'VEHICLE_BREAKDOWN',
   'ACCIDENT',
@@ -7,15 +10,15 @@ const emergencyReleaseReasonCodes = <String>{
   'FAMILY_EMERGENCY',
 };
 
-const releaseReasonLabels = <String, String>{
-  'VEHICLE_BREAKDOWN': '차량 고장',
-  'ACCIDENT': '사고',
-  'DRIVER_ILLNESS': '기사 질병',
-  'FAMILY_EMERGENCY': '가족 긴급 상황',
-  'SCHEDULE_CONFLICT': '일정 충돌',
-  'LOCATION_TOO_FAR': '거리가 너무 멂',
-  'OTHER': '기타',
-};
+const releaseReasonCodes = <String>[
+  'VEHICLE_BREAKDOWN',
+  'ACCIDENT',
+  'DRIVER_ILLNESS',
+  'FAMILY_EMERGENCY',
+  'SCHEDULE_CONFLICT',
+  'LOCATION_TOO_FAR',
+  'OTHER',
+];
 
 class ReleaseAssignmentInput {
   const ReleaseAssignmentInput({required this.reasonCode, this.reasonDetail});
@@ -46,11 +49,12 @@ class _ReleaseAssignmentDialogState extends State<ReleaseAssignmentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final reasons = releaseReasonLabels.entries
+    final l10n = AppLocalizations.of(context);
+    final reasons = releaseReasonCodes
         .where(
-          (entry) =>
+          (code) =>
               !widget.emergencyOnly ||
-              emergencyReleaseReasonCodes.contains(entry.key),
+              emergencyReleaseReasonCodes.contains(code),
         )
         .toList(growable: false);
     final detailRequired = _reasonCode == 'OTHER';
@@ -59,16 +63,16 @@ class _ReleaseAssignmentDialogState extends State<ReleaseAssignmentDialog> {
 
     return AlertDialog(
       key: const Key('releaseAssignmentDialog'),
-      title: const Text('배정 반납'),
+      title: Text(l10n.releaseAssignmentTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (widget.emergencyOnly) ...[
-              const Text(
-                '일반 반납 가능 시간이 지나 긴급 사유만 선택할 수 있습니다.',
-                key: Key('emergencyOnlyNotice'),
+              Text(
+                l10n.emergencyReleaseOnlyNotice,
+                key: const Key('emergencyOnlyNotice'),
               ),
               const SizedBox(height: 8),
             ],
@@ -79,11 +83,11 @@ class _ReleaseAssignmentDialogState extends State<ReleaseAssignmentDialog> {
                 mainAxisSize: MainAxisSize.min,
                 children: reasons
                     .map(
-                      (reason) => RadioListTile<String>(
-                        key: Key('releaseReason-${reason.key}'),
-                        value: reason.key,
+                      (code) => RadioListTile<String>(
+                        key: Key('releaseReason-$code'),
+                        value: code,
                         contentPadding: EdgeInsets.zero,
-                        title: Text(reason.value),
+                        title: Text(releaseReasonLabel(l10n, code)),
                       ),
                     )
                     .toList(growable: false),
@@ -97,9 +101,9 @@ class _ReleaseAssignmentDialogState extends State<ReleaseAssignmentDialog> {
                 minLines: 2,
                 maxLines: 4,
                 onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  labelText: '상세 사유',
-                  hintText: '3자 이상 입력해 주세요.',
+                decoration: InputDecoration(
+                  labelText: l10n.releaseReasonDetailLabel,
+                  hintText: l10n.releaseReasonDetailHint,
                 ),
               ),
           ],
@@ -108,7 +112,7 @@ class _ReleaseAssignmentDialogState extends State<ReleaseAssignmentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('취소'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           key: const Key('releaseConfirmButton'),
@@ -122,7 +126,7 @@ class _ReleaseAssignmentDialogState extends State<ReleaseAssignmentDialog> {
                   ),
                 )
               : null,
-          child: const Text('반납하기'),
+          child: Text(l10n.releaseConfirm),
         ),
       ],
     );

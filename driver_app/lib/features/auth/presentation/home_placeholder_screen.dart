@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../config/app_config.dart';
+import '../../../l10n/app_localizations.dart';
 import 'auth_controller.dart';
 
 class HomePlaceholderScreen extends StatelessWidget {
@@ -15,18 +16,19 @@ class HomePlaceholderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final user = controller.session!.user;
     final displayName = user.name?.trim().isNotEmpty == true
         ? user.name!
-        : '기사 #${user.id}';
+        : l10n.driverFallbackName(user.id);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('T-Ride 기사'),
+        title: Text(l10n.tRideDriverTitle),
         actions: [
           TextButton(
             key: const Key('logoutButton'),
             onPressed: controller.logout,
-            child: const Text('로그아웃'),
+            child: Text(l10n.logout),
           ),
         ],
       ),
@@ -38,9 +40,12 @@ class HomePlaceholderScreen extends StatelessWidget {
             children: [
               const Icon(Icons.check_circle_outline, size: 64),
               const SizedBox(height: 16),
-              Text('로그인 성공', style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                l10n.loginSuccess,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 12),
-              Text('환경: ${config.environment.label}'),
+              Text(l10n.environmentLabel(config.environment.label)),
               Text(displayName),
             ],
           ),

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/account_api.dart';
 import '../data/account_models.dart';
 
@@ -76,25 +78,26 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  String? _validate() {
+  String? _validate(AppLocalizations l10n) {
     final name = _name.text.trim();
     final phone = _phone.text.trim();
-    if (name.isEmpty || name.length > 100) return '이름은 1~100자로 입력해 주세요.';
+    if (name.isEmpty || name.length > 100) return l10n.nameLengthValidation;
     if (phone.length < 8 || phone.length > 20) {
-      return '전화번호는 8~20자로 입력해 주세요.';
+      return l10n.phoneLengthValidation;
     }
-    if (_model.text.trim().length > 100) return '차량 모델은 100자 이내로 입력해 주세요.';
-    if (_color.text.trim().length > 30) return '차량 색상은 30자 이내로 입력해 주세요.';
+    if (_model.text.trim().length > 100) return l10n.modelLengthValidation;
+    if (_color.text.trim().length > 30) return l10n.colorLengthValidation;
     final originalPlate = widget.initialProfile.vehicle?.plateNumber ?? '';
     if ((_plate.text != originalPlate || _vehicleType != null) &&
         _plate.text.trim().isEmpty) {
-      return '차량 번호를 입력해 주세요.';
+      return l10n.plateRequiredValidation;
     }
-    if (_plate.text.trim().length > 20) return '차량 번호는 20자 이내로 입력해 주세요.';
+    if (_plate.text.trim().length > 20) return l10n.plateLengthValidation;
     if (_year.text.trim().isNotEmpty) {
       final value = int.tryParse(_year.text.trim());
-      if (value == null || value < 1990 || value > DateTime.now().year + 1) {
-        return '연식은 1990년부터 ${DateTime.now().year + 1}년 사이로 입력해 주세요.';
+      final maxYear = DateTime.now().year + 1;
+      if (value == null || value < 1990 || value > maxYear) {
+        return l10n.yearRangeValidation(1990, maxYear);
       }
     }
     return null;
@@ -127,24 +130,25 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   Future<void> _save() async {
-    final error = _validate();
+    final l10n = AppLocalizations.of(context);
+    final error = _validate(l10n);
     if (error != null) {
       _message(error);
       return;
     }
     final changes = _changes();
     if (changes.isEmpty) {
-      _message('변경된 내용이 없습니다.');
+      _message(l10n.noChangesToSave);
       return;
     }
     setState(() => _saving = true);
     try {
       _profile = await widget.api.updateProfile(changes);
       if (!mounted) return;
-      _message('프로필이 저장되었습니다.');
+      _message(l10n.profileSaved);
       Navigator.of(context).pop(true);
     } on ApiException catch (error) {
-      if (mounted) _message(error.userMessage);
+      if (mounted) _message(error.localizedMessage(l10n));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -152,6 +156,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   Future<void> _upload({required bool avatar}) async {
     if (_uploading) return;
+    final l10n = AppLocalizations.of(context);
     final file = await _pick();
     if (file == null || !mounted) return;
     setState(() => _uploading = true);
@@ -164,15 +169,17 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       _profile = await widget.api.getProfile();
       if (!mounted) return;
       setState(_imageLoads.clear);
-      _message(avatar ? '프로필 사진이 변경되었습니다.' : '차량 사진이 변경되었습니다.');
+      _message(
+        avatar ? l10n.profilePhotoChanged : l10n.vehiclePhotoChanged,
+      );
     } on ApiException catch (error) {
       if (!mounted) return;
       final message =
           !avatar &&
               error.statusCode == 409 &&
               error.errorCode == 'VALIDATION_ERROR'
-          ? '승인된 기사 지원서가 없어 차량 사진을 변경할 수 없습니다.'
-          : error.userMessage;
+          ? l10n.noApprovedApplicationForVehiclePhoto
+          : error.localizedMessage(l10n);
       _message(message);
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -221,9 +228,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final vehicle = _profile.vehicle;
     return Scaffold(
-      appBar: AppBar(title: const Text('프로필 수정')),
+      appBar: AppBar(title: Text(l10n.profileEditTitle)),
       body: SafeArea(
         top: false,
         child: ListView(
@@ -233,24 +241,24 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             OutlinedButton(
               key: const Key('replaceAvatar'),
               onPressed: _uploading ? null : () => _upload(avatar: true),
-              child: const Text('프로필 사진 교체'),
+              child: Text(l10n.replaceProfilePhoto),
             ),
             const SizedBox(height: 16),
             TextField(
               key: const Key('profileName'),
               controller: _name,
-              decoration: const InputDecoration(labelText: '이름'),
+              decoration: InputDecoration(labelText: l10n.name),
             ),
             TextField(
               key: const Key('profilePhone'),
               controller: _phone,
-              decoration: const InputDecoration(labelText: '전화번호'),
+              decoration: InputDecoration(labelText: l10n.phone),
               keyboardType: TextInputType.phone,
             ),
             TextFormField(
               initialValue: _profile.email,
               enabled: false,
-              decoration: const InputDecoration(labelText: '이메일 (읽기 전용)'),
+              decoration: InputDecoration(labelText: l10n.emailReadOnly),
             ),
             const SizedBox(height: 20),
             DropdownButtonFormField<String>(
@@ -258,7 +266,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               initialValue: _vehicleTypes.contains(_vehicleType)
                   ? _vehicleType
                   : null,
-              decoration: const InputDecoration(labelText: '차종'),
+              decoration: InputDecoration(labelText: l10n.vehicleType),
               items: _vehicleTypes
                   .map(
                     (value) =>
@@ -269,33 +277,33 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             ),
             TextField(
               controller: _model,
-              decoration: const InputDecoration(labelText: '모델'),
+              decoration: InputDecoration(labelText: l10n.model),
             ),
             TextField(
               controller: _plate,
-              decoration: const InputDecoration(labelText: '차량 번호'),
+              decoration: InputDecoration(labelText: l10n.vehiclePlateNumber),
             ),
             TextField(
               controller: _color,
-              decoration: const InputDecoration(labelText: '색상'),
+              decoration: InputDecoration(labelText: l10n.color),
             ),
             TextField(
               controller: _year,
-              decoration: const InputDecoration(labelText: '연식'),
+              decoration: InputDecoration(labelText: l10n.year),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
             _networkImage(vehicle?.photoUrl, avatar: false),
             if (vehicle?.photoUrl == null)
-              const Text(
-                '등록된 차량 사진이 없거나 아직 승인되지 않았습니다.',
-                key: Key('vehiclePhotoUnavailableNotice'),
+              Text(
+                l10n.vehiclePhotoUnavailable,
+                key: const Key('vehiclePhotoUnavailableNotice'),
                 textAlign: TextAlign.center,
               ),
             OutlinedButton(
               key: const Key('replaceVehiclePhoto'),
               onPressed: _uploading ? null : () => _upload(avatar: false),
-              child: const Text('차량 사진 교체'),
+              child: Text(l10n.replaceVehiclePhoto),
             ),
             const SizedBox(height: 20),
             FilledButton(
@@ -303,7 +311,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               onPressed: _saving ? null : _save,
               child: _saving
                   ? const CircularProgressIndicator()
-                  : const Text('저장'),
+                  : Text(l10n.save),
             ),
           ],
         ),

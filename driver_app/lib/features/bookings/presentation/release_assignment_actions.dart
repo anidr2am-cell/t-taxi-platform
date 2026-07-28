@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/booking_repository.dart';
 import 'release_assignment_dialog.dart';
 
@@ -39,7 +41,8 @@ Future<void> handleReleaseAssignmentError({
     return;
   }
 
-  showMessage(error.userMessage);
+  final l10n = AppLocalizations.of(context);
+  showMessage(error.localizedMessage(l10n));
   if (error.kind == ApiFailureKind.invalidStatusTransition ||
       error.kind == ApiFailureKind.bookingNotAssigned ||
       error.kind == ApiFailureKind.assignmentAlreadyReleased) {

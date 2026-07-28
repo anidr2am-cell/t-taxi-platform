@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
+import '../core/locale/locale_controller.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/account/data/account_api.dart';
 import '../features/auth/presentation/auth_gate.dart';
@@ -10,12 +11,14 @@ import '../features/dispatch/data/driver_socket_service.dart';
 import '../features/settlement/data/settlement_api.dart';
 import '../core/firebase/fcm_token_service.dart';
 import '../core/firebase/fcm_message_service.dart';
+import '../l10n/app_localizations.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({
     super.key,
     required this.config,
     required this.authController,
+    required this.localeController,
     required this.bookingRepository,
     required this.dispatchRepository,
     this.accountApi,
@@ -27,6 +30,7 @@ class DriverApp extends StatelessWidget {
 
   final AppConfig config;
   final AuthController authController;
+  final LocaleController localeController;
   final BookingReader bookingRepository;
   final DispatchReader dispatchRepository;
   final AccountDataSource? accountApi;
@@ -37,24 +41,33 @@ class DriverApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: config.appName,
-      debugShowCheckedModeBanner: config.environment.label != 'PROD',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF006A60)),
-        useMaterial3: true,
-      ),
-      home: AuthGate(
-        controller: authController,
-        config: config,
-        bookingRepository: bookingRepository,
-        dispatchRepository: dispatchRepository,
-        accountApi: accountApi,
-        settlementApi: settlementApi,
-        driverSocket: driverSocket,
-        fcmTokenService: fcmTokenService,
-        fcmMessageService: fcmMessageService,
-      ),
+    return ListenableBuilder(
+      listenable: localeController,
+      builder: (context, _) {
+        return MaterialApp(
+          title: config.appName,
+          locale: localeController.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          debugShowCheckedModeBanner: config.environment.label != 'PROD',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF006A60)),
+            useMaterial3: true,
+          ),
+          home: AuthGate(
+            controller: authController,
+            config: config,
+            localeController: localeController,
+            bookingRepository: bookingRepository,
+            dispatchRepository: dispatchRepository,
+            accountApi: accountApi,
+            settlementApi: settlementApi,
+            driverSocket: driverSocket,
+            fcmTokenService: fcmTokenService,
+            fcmMessageService: fcmMessageService,
+          ),
+        );
+      },
     );
   }
 }

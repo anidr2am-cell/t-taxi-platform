@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../../dispatch/data/dispatch_models.dart';
 import '../../dispatch/data/dispatch_repository.dart';
 import '../data/account_api.dart';
@@ -98,7 +100,7 @@ class _AccountPageState extends State<AccountPage> {
       }
       if (!mounted) return;
       setState(() => _changingOnline = false);
-      _message(error.userMessage);
+      _message(error.localizedMessage(AppLocalizations.of(context)));
     }
   }
 
@@ -110,8 +112,9 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('계정')),
+      appBar: AppBar(title: Text(l10n.accountTitle)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -119,7 +122,7 @@ class _AccountPageState extends State<AccountPage> {
               child: FilledButton(
                 key: const Key('accountRetry'),
                 onPressed: _load,
-                child: const Text('다시 시도'),
+                child: Text(l10n.retry),
               ),
             )
           : RefreshIndicator(
@@ -145,8 +148,11 @@ class _AccountPageState extends State<AccountPage> {
                               const SizedBox(width: 6),
                               Text(
                                 _rating!.averageRating == null
-                                    ? '아직 리뷰 없음'
-                                    : '${_rating!.averageRating} · 리뷰 ${_rating!.reviewCount}개',
+                                    ? l10n.noReviewsYet
+                                    : l10n.ratingSummary(
+                                        '${_rating!.averageRating}',
+                                        _rating!.reviewCount,
+                                      ),
                               ),
                             ],
                           ),
@@ -162,8 +168,10 @@ class _AccountPageState extends State<AccountPage> {
                         horizontal: 18,
                         vertical: 8,
                       ),
-                      title: Text(_status!.online ? '온라인' : '오프라인'),
-                      subtitle: const Text('새 콜 수신 상태'),
+                      title: Text(
+                        _status!.online ? l10n.online : l10n.offline,
+                      ),
+                      subtitle: Text(l10n.newCallReceivingStatus),
                       value: _status!.online,
                       onChanged: _changingOnline ? null : _setOnline,
                     ),
@@ -174,7 +182,7 @@ class _AccountPageState extends State<AccountPage> {
                   ListTile(
                     key: const Key('openProfileEdit'),
                     leading: const Icon(Icons.person_outline),
-                    title: const Text('프로필 수정'),
+                    title: Text(l10n.editProfile),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       final changed = await Navigator.of(context).push<bool>(
@@ -191,7 +199,7 @@ class _AccountPageState extends State<AccountPage> {
                   ListTile(
                     key: const Key('openVehicleList'),
                     leading: const Icon(Icons.directions_car_outlined),
-                    title: const Text('차량 관리'),
+                    title: Text(l10n.manageVehicles),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -206,7 +214,7 @@ class _AccountPageState extends State<AccountPage> {
                   ListTile(
                     key: const Key('logoutButton'),
                     leading: const Icon(Icons.logout),
-                    title: const Text('로그아웃'),
+                    title: Text(l10n.logout),
                     onTap: widget.onLogout,
                   ),
                 ],
@@ -223,6 +231,7 @@ class _PrimaryVehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final value = vehicle;
     return Card(
       child: Padding(
@@ -230,11 +239,11 @@ class _PrimaryVehicleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('주 차량', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.primaryVehicle, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               value == null
-                  ? '등록된 주 차량이 없습니다.'
+                  ? l10n.noPrimaryVehicleRegistered
                   : [
                           value.typeName ?? value.typeCode,
                           value.plateNumber,

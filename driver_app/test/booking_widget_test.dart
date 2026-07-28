@@ -16,6 +16,7 @@ import 'package:tride_driver/features/bookings/presentation/booking_detail_scree
 import 'package:tride_driver/features/bookings/presentation/booking_list_screen.dart';
 import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 
+import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
 
 Future<void> pumpBookingList(
@@ -25,7 +26,7 @@ Future<void> pumpBookingList(
   Stream<DriverSocketEvent>? socketEvents,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
+    localizedMaterialApp(
       home: BookingListScreen(
         repository: reader,
         onUnauthorized: onUnauthorized ?? () async {},
@@ -46,7 +47,7 @@ Future<void> pumpDetail(
   NameSignPhotoPicker? nameSignPhotoPicker,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
+    localizedMaterialApp(
       home: BookingDetailScreen(
         bookingNumber: 'TX209912319999',
         repository: reader,
@@ -331,7 +332,7 @@ void main() {
     const screenKey = Key('detailScreen');
 
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: BookingDetailScreen(
           key: screenKey,
           bookingNumber: 'TX209912319999',
@@ -351,7 +352,7 @@ void main() {
         errorCode: 'BOOKING_NOT_FOUND',
       );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         home: BookingDetailScreen(
           key: screenKey,
           bookingNumber: 'TX209912319999',
@@ -380,10 +381,12 @@ void main() {
     );
     final reader = FakeBookingReader()
       ..listError = const ApiException(ApiFailureKind.unauthorized);
+    final localeController = await createTestLocaleController();
     await tester.pumpWidget(
       DriverApp(
         config: AppConfig.forEnvironment(AppEnvironment.stg),
         authController: authController,
+        localeController: localeController,
         bookingRepository: reader,
         dispatchRepository: FakeDispatchReader(),
       ),
@@ -408,10 +411,12 @@ void main() {
     );
     final reader = FakeBookingReader()
       ..detailError = const ApiException(ApiFailureKind.unauthorized);
+    final localeController = await createTestLocaleController();
     await tester.pumpWidget(
       DriverApp(
         config: AppConfig.forEnvironment(AppEnvironment.stg),
         authController: authController,
+        localeController: localeController,
         bookingRepository: reader,
         dispatchRepository: FakeDispatchReader(),
       ),
@@ -1212,7 +1217,7 @@ void main() {
         allowedActions: const ['VIEW_DETAILS', 'END_TRIP'],
       );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         initialRoute: '/detail',
         routes: {
           '/': (_) => const Scaffold(body: Text('내 운행 목록')),
@@ -1312,7 +1317,7 @@ void main() {
         allowedActions: const ['VIEW_DETAILS', 'RELEASE_ASSIGNMENT'],
       );
     await tester.pumpWidget(
-      MaterialApp(
+      localizedMaterialApp(
         initialRoute: '/detail',
         routes: {
           '/': (_) => const Scaffold(body: Text('내 운행 목록')),

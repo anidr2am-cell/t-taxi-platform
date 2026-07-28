@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/locale/locale_controller.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import 'auth_controller.dart';
+import 'language_selector.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
     super.key,
     required this.controller,
+    required this.localeController,
     required this.appName,
   });
 
   final AuthController controller;
+  final LocaleController localeController;
   final String appName;
 
   @override
@@ -39,9 +45,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final submitting = widget.controller.status == AuthStatus.submitting;
+    final errorMessage =
+        widget.controller.lastError?.localizedMessage(l10n);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.appName)),
+      appBar: AppBar(
+        title: Text(widget.appName),
+        actions: [
+          LanguageSelector(controller: widget.localeController),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -53,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    '기사 로그인',
+                    l10n.driverLogin,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 24),
@@ -65,12 +79,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       AutofillHints.telephoneNumber,
                       AutofillHints.username,
                     ],
-                    decoration: const InputDecoration(
-                      labelText: '기사 계정 (전화번호 또는 이메일)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.driverAccountLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) => value == null || value.trim().isEmpty
-                        ? '기사 계정을 입력해 주세요.'
+                        ? l10n.driverAccountRequired
                         : null,
                   ),
                   const SizedBox(height: 16),
@@ -82,11 +96,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     autofillHints: const [AutofillHints.password],
                     onFieldSubmitted: submitting ? null : (_) => _submit(),
                     decoration: InputDecoration(
-                      labelText: '비밀번호',
+                      labelText: l10n.password,
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         key: const Key('passwordVisibilityButton'),
-                        tooltip: _obscurePassword ? '비밀번호 표시' : '비밀번호 숨기기',
+                        tooltip: _obscurePassword
+                            ? l10n.showPassword
+                            : l10n.hidePassword,
                         onPressed: submitting
                             ? null
                             : () => setState(
@@ -100,10 +116,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (value) => value == null || value.isEmpty
-                        ? '비밀번호를 입력해 주세요.'
+                        ? l10n.passwordRequired
                         : null,
                   ),
-                  if (widget.controller.errorMessage case final message?) ...[
+                  if (errorMessage case final message?) ...[
                     const SizedBox(height: 12),
                     Text(
                       message,
@@ -124,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               dimension: 22,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('로그인'),
+                          : Text(l10n.login),
                     ),
                   ),
                 ],

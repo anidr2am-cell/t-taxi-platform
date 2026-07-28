@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../../dispatch/data/driver_socket_service.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
@@ -148,9 +150,10 @@ class _BookingListScreenState extends State<BookingListScreen> {
         return;
       }
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('배정을 반납했습니다.')));
+      ).showSnackBar(SnackBar(content: Text(l10n.assignmentReleasedSuccess)));
       setState(() => _releasingBookingNumber = null);
       await _load();
     } on ApiException catch (error) {
@@ -171,9 +174,12 @@ class _BookingListScreenState extends State<BookingListScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _releasingBookingNumber = null);
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(const ApiException(ApiFailureKind.unknown).userMessage),
+          content: Text(
+            const ApiException(ApiFailureKind.unknown).localizedMessage(l10n),
+          ),
         ),
       );
     }
@@ -181,13 +187,14 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('오늘의 배정 예약'),
+        title: Text(l10n.todayAssignmentsTitle),
         actions: [
           IconButton(
             key: const Key('refreshButton'),
-            tooltip: '새로고침',
+            tooltip: l10n.refresh,
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -207,12 +214,12 @@ class _BookingListScreenState extends State<BookingListScreen> {
               children: [
                 const Icon(Icons.cloud_off_outlined, size: 48),
                 const SizedBox(height: 12),
-                Text(error.userMessage, textAlign: TextAlign.center),
+                Text(error.localizedMessage(l10n), textAlign: TextAlign.center),
                 const SizedBox(height: 16),
                 FilledButton(
                   key: const Key('bookingListRetryButton'),
                   onPressed: _load,
-                  child: const Text('다시 시도'),
+                  child: Text(l10n.retry),
                 ),
               ],
             ),
@@ -224,11 +231,11 @@ class _BookingListScreenState extends State<BookingListScreen> {
             child: ListView(
               key: const Key('bookingListEmpty'),
               physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
+              children: [
                 SizedBox(height: 180),
                 Icon(Icons.event_available_outlined, size: 56),
                 SizedBox(height: 12),
-                Center(child: Text('오늘 배정된 예약이 없습니다.')),
+                Center(child: Text(l10n.noAssignmentsToday)),
               ],
             ),
           ),

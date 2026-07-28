@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/settlement_api.dart';
 import '../data/settlement_models.dart';
 import 'receipt_upload_sheet.dart';
@@ -93,6 +95,7 @@ class _SettlementDetailPageState extends State<SettlementDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {
@@ -118,11 +121,14 @@ class _SettlementDetailPageState extends State<SettlementDetailPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_error!.userMessage, textAlign: TextAlign.center),
+                      Text(
+                        _error!.localizedMessage(l10n),
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: _load,
-                        child: const Text('다시 시도'),
+                        child: Text(l10n.retry),
                       ),
                     ],
                   ),
@@ -154,6 +160,7 @@ class _SettlementDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final status = detail.commissionStatus;
     return RefreshIndicator(
       onRefresh: () async {},
@@ -165,7 +172,7 @@ class _SettlementDetailBody extends StatelessWidget {
           if (detail.blocksNewCalls)
             _WarningBanner(
               key: const Key('settlementBlockingBanner'),
-              text: '이 정산을 완료해야 새 콜을 받을 수 있습니다.',
+              text: l10n.completeSettlementForNewCalls,
             ),
           Card(
             child: Padding(
@@ -177,23 +184,25 @@ class _SettlementDetailBody extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '정산 상태',
+                          l10n.settlementStatusLabel,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                       ),
-                      Chip(label: Text(status.label)),
+                      Chip(label: Text(status.localizedLabel(l10n))),
                     ],
                   ),
                   _row(
-                    '회사 커미션',
-                    formatSettlementMoney(
+                    l10n.companyCommission,
+                    formatSettlementMoneyLocalized(
+                      l10n,
                       detail.companyCommissionAmount ?? detail.commissionAmount,
                       detail.companyCommissionCurrency ?? detail.currency,
                     ),
                   ),
                   _row(
-                    '고객 결제 총액',
-                    formatSettlementMoney(
+                    l10n.customerPaymentTotal,
+                    formatSettlementMoneyLocalized(
+                      l10n,
                       detail.customerPaymentAmount ??
                           detail.customerTotalAmount,
                       detail.customerPaymentCurrency ??
@@ -202,18 +211,23 @@ class _SettlementDetailBody extends StatelessWidget {
                     ),
                   ),
                   _row(
-                    '기사 예상수입',
-                    formatSettlementMoney(
+                    l10n.driverExpectedIncome,
+                    formatSettlementMoneyLocalized(
+                      l10n,
                       detail.driverExpectedIncomeAmount,
                       detail.driverExpectedIncomeCurrency ?? detail.currency,
                     ),
                   ),
-                  _row('송금증 상태', detail.receiptStatus ?? 'NONE'),
-                  if (detail.dueAt != null) _row('마감', detail.dueAt!),
+                  _row(
+                    l10n.receiptStatusRow(detail.receiptStatus ?? 'NONE'),
+                    detail.receiptStatus ?? 'NONE',
+                  ),
+                  if (detail.dueAt != null)
+                    _row(l10n.dueDateLabel, detail.dueAt!),
                   if (detail.rejectionReason != null)
-                    _row('반려 사유', detail.rejectionReason!),
+                    _row(l10n.rejectionReasonLabel, detail.rejectionReason!),
                   if (detail.approvalMode == 'MANUAL_WITHOUT_RECEIPT')
-                    _row('승인 방식', '관리자 수동 승인'),
+                    _row(l10n.approvalMethodManual, l10n.approvalMethodManual),
                 ],
               ),
             ),
@@ -225,9 +239,10 @@ class _SettlementDetailBody extends StatelessWidget {
             ),
           if (receiptBytes != null)
             _BytesPreview(
-              title: '제출한 송금증',
+              title: l10n.submittedReceiptTitle,
               future: receiptBytes!,
-              emptyText: '송금증 파일을 불러올 수 없습니다.',
+              emptyText: l10n.receiptFileLoadFailed,
+              downloadedText: l10n.fileDownloaded,
             ),
           const SizedBox(height: 12),
           _ActionSection(status: status, onUpload: onUpload),
@@ -264,6 +279,7 @@ class _PaymentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       key: const Key('settlementPaymentInstructions'),
       child: Padding(
@@ -271,16 +287,20 @@ class _PaymentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('입금 안내', style: Theme.of(context).textTheme.titleMedium),
-            _row('은행', instructions.bankName),
-            _row('예금주', instructions.accountName),
-            _row('계좌번호', instructions.accountNumber),
+            Text(
+              l10n.depositInstructionsTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            _row(l10n.bankLabel, instructions.bankName),
+            _row(l10n.accountHolderLabel, instructions.accountName),
+            _row(l10n.accountNumberLabel, instructions.accountNumber),
             _row('PromptPay', instructions.promptPayNumber),
             if (qrBytes != null)
               _BytesPreview(
                 title: 'PromptPay QR',
                 future: qrBytes!,
-                emptyText: 'QR 이미지를 불러올 수 없습니다.',
+                emptyText: l10n.qrImageLoadFailed,
+                downloadedText: l10n.fileDownloaded,
               ),
           ],
         ),
@@ -302,11 +322,13 @@ class _BytesPreview extends StatelessWidget {
     required this.title,
     required this.future,
     required this.emptyText,
+    required this.downloadedText,
   });
 
   final String title;
   final Future<List<int>> future;
   final String emptyText;
+  final String downloadedText;
 
   @override
   Widget build(BuildContext context) {
@@ -332,10 +354,10 @@ class _BytesPreview extends StatelessWidget {
                   height: 220,
                   fit: BoxFit.contain,
                   errorBuilder: (_, _, _) => Row(
-                    children: const [
-                      Icon(Icons.description_outlined),
-                      SizedBox(width: 8),
-                      Text('파일을 다운로드했습니다.'),
+                    children: [
+                      const Icon(Icons.description_outlined),
+                      const SizedBox(width: 8),
+                      Text(downloadedText),
                     ],
                   ),
                 );
@@ -356,13 +378,16 @@ class _ActionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (status.canUpload) {
       return FilledButton.icon(
         key: const Key('uploadReceiptButton'),
         onPressed: onUpload,
         icon: const Icon(Icons.upload_file),
         label: Text(
-          status.code == SettlementStatusCode.rejected ? '송금증 재업로드' : '송금증 업로드',
+          status.code == SettlementStatusCode.rejected
+              ? l10n.receiptReupload
+              : l10n.receiptUpload,
         ),
       );
     }
@@ -371,15 +396,15 @@ class _ActionSection extends StatelessWidget {
         key: const Key('resubmitReceiptButton'),
         onPressed: onUpload,
         icon: const Icon(Icons.pending_actions),
-        label: const Text('승인 대기 중 · 다시 제출'),
+        label: Text(l10n.receiptPendingResubmit),
       );
     }
     return Center(
       child: Text(
         status.code == SettlementStatusCode.approved ||
                 status.code == SettlementStatusCode.waived
-            ? '정산 처리가 완료되었습니다.'
-            : '추가 작업이 필요하지 않습니다.',
+            ? l10n.settlementCompleted
+            : l10n.noFurtherActionRequired,
         key: const Key('settlementNoAction'),
       ),
     );

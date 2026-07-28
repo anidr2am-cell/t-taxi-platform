@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../data/account_api.dart';
 import '../data/account_models.dart';
 
@@ -36,7 +38,7 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
   AccountUploadFile? _insurance;
   AccountUploadFile? _registration;
   bool _submitting = false;
-  String? _loadError;
+  ApiException? _loadError;
 
   bool get _ready =>
       _typeId != null &&
@@ -75,7 +77,7 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
       if (mounted) {
         setState(() {
           _types = const [];
-          _loadError = error.userMessage;
+          _loadError = error;
         });
       }
     }
@@ -115,6 +117,7 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
 
   Future<void> _submit() async {
     if (!_ready || _submitting) return;
+    final l10n = AppLocalizations.of(context);
     setState(() => _submitting = true);
     try {
       await widget.api.createVehicle(
@@ -129,20 +132,18 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
         ),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('차량이 등록되었습니다. 승인 대기 중입니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.vehicleRegisteredPendingApproval)),
+      );
       Navigator.of(context).pop(true);
     } on ApiException catch (error) {
       if (!mounted) return;
       final message = error.kind == ApiFailureKind.vehiclePlateAlreadyRegistered
-          ? '이미 등록된 차량 번호입니다.'
-          : error.kind == ApiFailureKind.server
-          ? '일시적인 오류가 발생했습니다. 다시 시도해 주세요.'
-          : error.userMessage;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+          ? l10n.plateAlreadyRegistered
+          : error.localizedMessage(l10n);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -150,12 +151,13 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('차량 추가')),
+      appBar: AppBar(title: Text(l10n.addVehicleTitle)),
       body: _types == null
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
-          ? Center(child: Text(_loadError!))
+          ? Center(child: Text(_loadError!.localizedMessage(l10n)))
           : SafeArea(
               top: false,
               child: ListView(
@@ -164,7 +166,7 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
                   DropdownButtonFormField<int>(
                     key: const Key('vehicleType'),
                     initialValue: _typeId,
-                    decoration: const InputDecoration(labelText: '차종'),
+                    decoration: InputDecoration(labelText: l10n.vehicleType),
                     items: _types!
                         .map(
                           (type) => DropdownMenuItem(
@@ -184,44 +186,48 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
                     controller: _plate,
                     enabled: !_submitting,
                     maxLength: 20,
-                    decoration: const InputDecoration(labelText: '차량 번호'),
+                    decoration: InputDecoration(
+                      labelText: l10n.vehiclePlateNumber,
+                    ),
                     onChanged: (_) => setState(() {}),
                   ),
                   TextField(
                     controller: _model,
                     enabled: !_submitting,
                     maxLength: 100,
-                    decoration: const InputDecoration(labelText: '모델명 (선택)'),
+                    decoration: InputDecoration(labelText: l10n.modelNameOptional),
                     onChanged: (_) => setState(() {}),
                   ),
                   TextField(
                     controller: _color,
                     enabled: !_submitting,
                     maxLength: 30,
-                    decoration: const InputDecoration(labelText: '색상 (선택)'),
+                    decoration: InputDecoration(labelText: l10n.colorOptional),
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 12),
-                  Text('차량 사진 (${_photos.length}/3~6)'),
+                  Text(l10n.vehiclePhotosProgress(_photos.length)),
                   OutlinedButton(
                     key: const Key('pickVehiclePhotos'),
                     onPressed: _submitting || _photos.length >= 6
                         ? null
                         : _addPhotos,
-                    child: const Text('차량 사진 선택'),
+                    child: Text(l10n.selectVehiclePhotos),
                   ),
                   if (_photos.isNotEmpty)
                     TextButton(
                       onPressed: _submitting
                           ? null
                           : () => setState(() => _photos.clear()),
-                      child: const Text('차량 사진 전체 삭제'),
+                      child: Text(l10n.clearAllVehiclePhotos),
                     ),
                   const SizedBox(height: 12),
                   _DocumentSelector(
                     key: const Key('insuranceSelector'),
-                    label: '보험증서',
+                    label: l10n.insuranceCertificate,
                     file: _insurance,
+                    requiredHint: l10n.requiredFileNotSelected,
+                    selectLabel: l10n.select,
                     onPick: _submitting
                         ? null
                         : () async {
@@ -233,8 +239,10 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
                   ),
                   _DocumentSelector(
                     key: const Key('registrationSelector'),
-                    label: '차량등록증',
+                    label: l10n.vehicleRegistrationDoc,
                     file: _registration,
+                    requiredHint: l10n.requiredFileNotSelected,
+                    selectLabel: l10n.select,
                     onPick: _submitting
                         ? null
                         : () async {
@@ -250,7 +258,7 @@ class _VehicleAddPageState extends State<VehicleAddPage> {
                     onPressed: !_submitting && _ready ? _submit : null,
                     child: _submitting
                         ? const CircularProgressIndicator()
-                        : const Text('등록 신청'),
+                        : Text(l10n.submitRegistration),
                   ),
                 ],
               ),
@@ -264,11 +272,15 @@ class _DocumentSelector extends StatelessWidget {
     super.key,
     required this.label,
     required this.file,
+    required this.requiredHint,
+    required this.selectLabel,
     required this.onPick,
   });
 
   final String label;
   final AccountUploadFile? file;
+  final String requiredHint;
+  final String selectLabel;
   final VoidCallback? onPick;
 
   @override
@@ -276,8 +288,8 @@ class _DocumentSelector extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(label),
-      subtitle: Text(file?.filename ?? '필수 파일을 선택해 주세요.'),
-      trailing: OutlinedButton(onPressed: onPick, child: const Text('선택')),
+      subtitle: Text(file?.filename ?? requiredHint),
+      trailing: OutlinedButton(onPressed: onPick, child: Text(selectLabel)),
     );
   }
 }

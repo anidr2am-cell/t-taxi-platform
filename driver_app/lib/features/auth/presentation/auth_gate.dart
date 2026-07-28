@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../config/app_config.dart';
+import '../../../core/locale/locale_controller.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations_extensions.dart';
 import '../../account/data/account_api.dart';
 import '../../bookings/data/booking_repository.dart';
 import '../../dispatch/data/dispatch_repository.dart';
@@ -17,6 +20,7 @@ class AuthGate extends StatefulWidget {
     super.key,
     required this.controller,
     required this.config,
+    required this.localeController,
     required this.bookingRepository,
     required this.dispatchRepository,
     this.accountApi,
@@ -28,6 +32,7 @@ class AuthGate extends StatefulWidget {
 
   final AuthController controller;
   final AppConfig config;
+  final LocaleController localeController;
   final BookingReader bookingRepository;
   final DispatchReader dispatchRepository;
   final AccountDataSource? accountApi;
@@ -58,31 +63,7 @@ class _AuthGateState extends State<AuthGate> {
           AuthStatus.checking => const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           ),
-          AuthStatus.restoreError => Scaffold(
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.controller.errorMessage ?? '연결에 실패했습니다.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: widget.controller.initialize,
-                      child: const Text('다시 시도'),
-                    ),
-                    TextButton(
-                      onPressed: widget.controller.logout,
-                      child: const Text('이 기기에서 로그아웃'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          AuthStatus.restoreError => _RestoreErrorBody(controller: widget.controller),
           AuthStatus.signedIn => DriverHomeShell(
             bookingRepository: widget.bookingRepository,
             dispatchRepository: widget.dispatchRepository,
@@ -96,10 +77,46 @@ class _AuthGateState extends State<AuthGate> {
           ),
           AuthStatus.signedOut || AuthStatus.submitting => LoginScreen(
             controller: widget.controller,
+            localeController: widget.localeController,
             appName: widget.config.appName,
           ),
         };
       },
+    );
+  }
+}
+
+class _RestoreErrorBody extends StatelessWidget {
+  const _RestoreErrorBody({required this.controller});
+
+  final AuthController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final message = controller.lastError?.localizedMessage(l10n) ??
+        l10n.connectionFailed;
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: controller.initialize,
+                child: Text(l10n.retry),
+              ),
+              TextButton(
+                onPressed: controller.logout,
+                child: Text(l10n.logoutFromThisDevice),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
