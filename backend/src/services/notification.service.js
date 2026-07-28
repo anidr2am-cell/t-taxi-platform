@@ -1,4 +1,4 @@
-const { createHash } = require('node:crypto');
+const { createHash, randomUUID } = require('node:crypto');
 const logger = require('../utils/logger');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
@@ -48,6 +48,18 @@ const CONTENT = {
   [NOTIFICATION_TYPES.DRIVER_ASSIGNED]: {
     title: 'Driver assigned',
     body: 'A driver has been assigned to your trip.',
+  },
+  [NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE]: {
+    title: '새 예약이 도착했습니다',
+    body: '새로운 예약 콜이 도착했습니다.',
+  },
+  [NOTIFICATION_TYPES.DRIVER_URGENT_CALL_NEW]: {
+    title: '긴급 예약 요청',
+    body: '긴급 예약 콜이 도착했습니다. 가능한 빠른 도착 시간을 제출해 주세요.',
+  },
+  [NOTIFICATION_TYPES.ADMIN_RELEASED]: {
+    title: '배정이 취소되었습니다',
+    body: '관리자에 의해 배정이 취소되었습니다. 자세한 사항은 고객센터로 문의해주세요',
   },
   [NOTIFICATION_TYPES.DRIVER_ARRIVED]: {
     title: 'Driver arrived',
@@ -555,9 +567,53 @@ class NotificationService {
   }
 
   async createNotificationIdempotent(spec) {
+    const result = await this._persistNotificationIdempotent(spec);
+    if (result.notificationId && result.created) {
+      await this.processDeliveries(result.notificationId);
+    }
+    return result;
+  }
+
+  async sendDirectNotification({
+    recipientUserId,
+    recipientDriverId = null,
+    bookingId = null,
+    notificationType,
+    payload = {},
+    idempotencyKey = null,
+    eventId = null,
+    eventName = null,
+    audienceRole = ROLES.DRIVER,
+    title = null,
+    body = null,
+  }) {
+    const spec = {
+      eventId: eventId ?? randomUUID(),
+      eventName: eventName ?? `direct.${String(notificationType).toLowerCase()}`,
+      notificationType,
+      recipientType: RECIPIENT_TYPES.USER,
+      userId: recipientUserId,
+      recipientDriverId,
+      bookingId,
+      audienceRole,
+      payload: this.sanitizePayload(payload),
+      idempotencyKey,
+    };
+
+    const contentOverride = title && body ? { title, body } : null;
+    const result = await this._persistNotificationIdempotent(spec, { contentOverride });
+    if (result.notificationId && result.created) {
+      await this.processDeliveries(result.notificationId);
+    }
+    return result;
+  }
+
+  async _persistNotificationIdempotent(spec, options = {}) {
     const recipientKey = this.buildRecipientKey(spec);
-    const idempotencyKey = this.buildIdempotencyKey(spec.eventId, spec.notificationType, recipientKey);
-    const content = this.resolveContent(spec.notificationType, spec.payload?.bookingNumber);
+    const idempotencyKey = spec.idempotencyKey
+      ?? this.buildIdempotencyKey(spec.eventId, spec.notificationType, recipientKey);
+    const content = options.contentOverride
+      ?? this.resolveContent(spec.notificationType, spec.payload?.bookingNumber);
 
     const conn = await this.pool.getConnection();
     let notificationId;
@@ -612,10 +668,6 @@ class NotificationService {
       }
     } finally {
       conn.release();
-    }
-
-    if (notificationId && created) {
-      await this.processDeliveries(notificationId);
     }
 
     return { notificationId, created };

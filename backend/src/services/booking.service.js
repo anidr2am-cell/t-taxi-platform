@@ -5,7 +5,6 @@ const PAYMENT_METHODS = require('../constants/paymentMethods');
 const COMMISSION_STATUS = require('../constants/commissionStatus');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const NOTIFICATION_TYPES = require('../constants/notificationTypes');
-const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
 const ROLES = require('../constants/roles');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
 const {
@@ -52,7 +51,7 @@ class BookingService {
     outboxProcessor,
     flightService = null,
     driverRepository = null,
-    notificationRepository = null,
+    notificationService = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
     placesService = null,
@@ -68,7 +67,7 @@ class BookingService {
     this.outboxProcessor = outboxProcessor;
     this.flightService = flightService;
     this.driverRepository = driverRepository;
-    this.notificationRepository = notificationRepository;
+    this.notificationService = notificationService;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
     this.placesService = placesService;
@@ -123,13 +122,8 @@ class BookingService {
     };
   }
 
-  async notifyEligibleDriversForOpenBooking(conn, {
-    bookingId,
-    bookingNumber,
-    vehicleTypeId,
-    openCallPayload,
-  }) {
-    if (!this.driverRepository || !this.notificationRepository) {
+  async getEligibleDriversForOpenBooking(conn, vehicleTypeId) {
+    if (!this.driverRepository) {
       return [];
     }
 
@@ -144,27 +138,103 @@ class BookingService {
         : false;
       if (!blocked) drivers.push(driver);
     }
-    const eventId = randomUUID();
-    for (const driver of drivers) {
-      await this.notificationRepository.insert(conn, {
-        recipientType: RECIPIENT_TYPES.USER,
-        userId: driver.user_id,
-        recipientDriverId: driver.id,
-        bookingId,
-        audienceRole: ROLES.DRIVER,
-        eventId,
-        eventName: 'driver.call.available',
-        idempotencyKey: `driver-call-open:${bookingId}:${driver.id}`,
-        notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
-        title: '새 예약이 도착했습니다',
-        body: `${openCallPayload.origin} → ${openCallPayload.destination}`,
-        payload: openCallPayload,
-      });
-    }
+    return drivers;
+  }
+
+  mapEligibleDriversToTargets(drivers) {
     return drivers.map((driver) => ({
       driverId: driver.id,
       userId: driver.user_id,
     }));
+  }
+
+  buildDriverNotificationPayload(bookingNumber, payload, targetScreen) {
+    return {
+      ...payload,
+      bookingNumber,
+      targetScreen,
+    };
+  }
+
+  async dispatchOpenCallNotifications({
+    drivers,
+    bookingId,
+    bookingNumber,
+    openCallPayload,
+    idempotencyKeyPrefix = 'driver-call-open',
+  }) {
+    if (!this.notificationService || !drivers.length) {
+      return;
+    }
+
+    const payload = this.buildDriverNotificationPayload(
+      bookingNumber,
+      openCallPayload,
+      'open_calls',
+    );
+    for (const driver of drivers) {
+      try {
+        await this.notificationService.sendDirectNotification({
+          recipientUserId: driver.user_id,
+          recipientDriverId: driver.id,
+          bookingId,
+          notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+          payload,
+          idempotencyKey: `${idempotencyKeyPrefix}:${bookingId}:${driver.id}`,
+          eventName: 'driver.call.available',
+        });
+      } catch (err) {
+        logger.warn('Open call notification failed', {
+          bookingId,
+          driverId: driver.id,
+          error: err.message,
+        });
+      }
+    }
+  }
+
+  async dispatchUrgentCallNotifications({
+    drivers,
+    bookingId,
+    bookingNumber,
+    urgentPayload,
+    idempotencyKeyPrefix = 'driver-urgent-call-new',
+  }) {
+    if (!this.notificationService || !drivers.length) {
+      return;
+    }
+
+    const payload = this.buildDriverNotificationPayload(
+      bookingNumber,
+      urgentPayload,
+      'urgent_calls',
+    );
+    for (const driver of drivers) {
+      try {
+        await this.notificationService.sendDirectNotification({
+          recipientUserId: driver.user_id,
+          recipientDriverId: driver.id,
+          bookingId,
+          notificationType: NOTIFICATION_TYPES.DRIVER_URGENT_CALL_NEW,
+          payload,
+          idempotencyKey: `${idempotencyKeyPrefix}:${bookingId}:${driver.id}`,
+          eventName: 'driver.urgent-call.new',
+        });
+      } catch (err) {
+        logger.warn('Urgent call notification failed', {
+          bookingId,
+          driverId: driver.id,
+          error: err.message,
+        });
+      }
+    }
+  }
+
+  async notifyEligibleDriversForOpenBooking(conn, {
+    vehicleTypeId,
+  }) {
+    const drivers = await this.getEligibleDriversForOpenBooking(conn, vehicleTypeId);
+    return this.mapEligibleDriversToTargets(drivers);
   }
 
   buildPricingInput(input) {
@@ -569,6 +639,7 @@ class BookingService {
 
       let outboxId = null;
       let openCallTargets = [];
+      let eligibleDrivers = [];
       let urgentNegotiationId = null;
       const openCallPayload = this.buildOpenCallPayload({
         bookingNumber,
@@ -587,6 +658,7 @@ class BookingService {
         },
       });
 
+      eligibleDrivers = await this.getEligibleDriversForOpenBooking(conn, vehicleType.id);
       if (isUrgentRequest) {
         if (!this.urgentNegotiationRepository) {
           throw new AppError('Urgent negotiation service is unavailable', {
@@ -603,12 +675,7 @@ class BookingService {
           urgentNegotiationId,
         );
       } else {
-        openCallTargets = await this.notifyEligibleDriversForOpenBooking(conn, {
-          bookingId,
-          bookingNumber,
-          vehicleTypeId: vehicleType.id,
-          openCallPayload,
-        });
+        openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
       }
 
       if (this.outboxRepository) {
@@ -631,13 +698,26 @@ class BookingService {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
       }
       if (isUrgentRequest) {
-        emitDriverUrgentCallNew({
+        const urgentPayload = {
           bookingNumber,
           negotiationId: urgentNegotiationId,
           attemptCount: 0,
           minRequiredEtaMinutes: null,
+        };
+        emitDriverUrgentCallNew(urgentPayload);
+        await this.dispatchUrgentCallNotifications({
+          drivers: eligibleDrivers,
+          bookingId,
+          bookingNumber,
+          urgentPayload,
         });
       } else {
+        await this.dispatchOpenCallNotifications({
+          drivers: eligibleDrivers,
+          bookingId,
+          bookingNumber,
+          openCallPayload,
+        });
         for (const target of openCallTargets) {
           emitDriverCallAvailable(target.userId, openCallPayload);
         }

@@ -1,37 +1,36 @@
 const AppError = require('../utils/AppError');
-const { randomUUID } = require('node:crypto');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
 const NOTIFICATION_TYPES = require('../constants/notificationTypes');
-const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
+const { ADMIN_RELEASED_REASON_CODE } = require('../constants/bookingAssignmentRelease.constants');
 const {
   emitDriverCallClaimed,
   emitDriverCallAvailable,
   emitDriverAssignmentReleased,
   emitDriverUrgentCallNew,
 } = require('../socket/realtime');
+const logger = require('../utils/logger');
 
 class BookingAssignmentReopenService {
   constructor(
     bookingRepository,
     driverRepository,
-    notificationRepository = null,
+    notificationService = null,
     chatRepository = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
   ) {
     this.bookingRepository = bookingRepository;
     this.driverRepository = driverRepository;
-    this.notificationRepository = notificationRepository;
+    this.notificationService = notificationService;
     this.chatRepository = chatRepository;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
   }
 
-  async notifyEligibleDriversForReopenedBooking(conn, {
+  async listEligibleDriversForReopenedBooking(conn, {
     booking,
-    openCallPayload,
     releasedAssignmentId,
   }) {
     const candidates = await this.driverRepository.listEligibleForOpenBooking(
@@ -46,31 +45,101 @@ class BookingAssignmentReopenService {
         : false;
       if (!blocked) drivers.push(candidate);
     }
+    return drivers;
+  }
 
-    const eventId = randomUUID();
-    if (this.notificationRepository) {
-      for (const driver of drivers) {
-        await this.notificationRepository.insert(conn, {
-          recipientType: RECIPIENT_TYPES.USER,
-          userId: driver.user_id,
-          recipientDriverId: driver.id,
-          bookingId: booking.id,
-          audienceRole: 'DRIVER',
-          eventId,
-          eventName: 'driver.call.available',
-          idempotencyKey: `driver-call-reopened:${booking.id}:${driver.id}:${releasedAssignmentId}`,
-          notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
-          title: '새 예약이 도착했습니다',
-          body: `${openCallPayload.origin} → ${openCallPayload.destination}`,
-          payload: openCallPayload,
-        });
-      }
-    }
-
+  mapEligibleDriversToTargets(drivers) {
     return drivers.map((driver) => ({
       driverId: driver.id,
       userId: driver.user_id,
     }));
+  }
+
+  buildDriverNotificationPayload(bookingNumber, payload, targetScreen) {
+    return {
+      ...payload,
+      bookingNumber,
+      targetScreen,
+    };
+  }
+
+  async dispatchOpenCallNotifications({
+    drivers,
+    bookingId,
+    bookingNumber,
+    openCallPayload,
+    releasedAssignmentId,
+  }) {
+    if (!this.notificationService || !drivers.length) {
+      return;
+    }
+
+    const payload = this.buildDriverNotificationPayload(
+      bookingNumber,
+      openCallPayload,
+      'open_calls',
+    );
+    for (const driver of drivers) {
+      try {
+        await this.notificationService.sendDirectNotification({
+          recipientUserId: driver.user_id,
+          recipientDriverId: driver.id,
+          bookingId,
+          notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+          payload,
+          idempotencyKey: `driver-call-reopened:${bookingId}:${driver.id}:${releasedAssignmentId}`,
+          eventName: 'driver.call.available',
+        });
+      } catch (err) {
+        logger.warn('Reopened open call notification failed', {
+          bookingId,
+          driverId: driver.id,
+          error: err.message,
+        });
+      }
+    }
+  }
+
+  async dispatchUrgentCallNotifications({
+    drivers,
+    bookingId,
+    bookingNumber,
+    urgentPayload,
+    releasedAssignmentId,
+  }) {
+    if (!this.notificationService || !drivers.length) {
+      return;
+    }
+
+    const payload = this.buildDriverNotificationPayload(
+      bookingNumber,
+      urgentPayload,
+      'urgent_calls',
+    );
+    for (const driver of drivers) {
+      try {
+        await this.notificationService.sendDirectNotification({
+          recipientUserId: driver.user_id,
+          recipientDriverId: driver.id,
+          bookingId,
+          notificationType: NOTIFICATION_TYPES.DRIVER_URGENT_CALL_NEW,
+          payload,
+          idempotencyKey: `driver-urgent-call-reopened:${bookingId}:${driver.id}:${releasedAssignmentId}`,
+          eventName: 'driver.urgent-call.new',
+        });
+      } catch (err) {
+        logger.warn('Reopened urgent call notification failed', {
+          bookingId,
+          driverId: driver.id,
+          error: err.message,
+        });
+      }
+    }
+  }
+
+  async notifyEligibleDriversForReopenedBooking(conn, params) {
+    const drivers = await this.listEligibleDriversForReopenedBooking(conn, params);
+    return this.mapEligibleDriversToTargets(drivers);
   }
 
   async deactivateReleasedDriverChatParticipant(conn, booking, driverUserId) {
@@ -192,6 +261,10 @@ class BookingAssignmentReopenService {
 
     let urgentRebroadcastPayload = null;
     let openCallTargets = [];
+    const notificationDrivers = await this.listEligibleDriversForReopenedBooking(conn, {
+      booking,
+      releasedAssignmentId: activeAssignment.id,
+    });
 
     if (Number(booking.is_urgent_request)) {
       urgentRebroadcastPayload = await this.restartUrgentNegotiationAfterRelease(
@@ -204,30 +277,32 @@ class BookingAssignmentReopenService {
         },
       );
     } else {
-      openCallTargets = await this.notifyEligibleDriversForReopenedBooking(conn, {
-        booking,
-        openCallPayload,
-        releasedAssignmentId: activeAssignment.id,
-      });
+      openCallTargets = this.mapEligibleDriversToTargets(notificationDrivers);
     }
 
     return {
+      bookingId: booking.id,
       bookingNumber,
+      releasedAssignmentId: activeAssignment.id,
       assignmentSocketReasonCode,
       reassignmentPriority,
       openCallPayload,
       openCallTargets,
+      notificationDrivers,
       urgentRebroadcastPayload,
     };
   }
 
-  emitReopenEvents({
+  async emitReopenEvents({
+    bookingId,
     bookingNumber,
     releasedDriverUserId,
+    releasedAssignmentId,
     assignmentSocketReasonCode,
     reassignmentPriority,
     openCallPayload,
     openCallTargets = [],
+    notificationDrivers = [],
     urgentRebroadcastPayload = null,
   }) {
     if (releasedDriverUserId) {
@@ -240,10 +315,39 @@ class BookingAssignmentReopenService {
         reassignmentPriority,
         releasedAt: new Date().toISOString(),
       });
+
+      if (this.notificationService && assignmentSocketReasonCode === ADMIN_RELEASED_REASON_CODE) {
+        try {
+          await this.notificationService.sendDirectNotification({
+            recipientUserId: releasedDriverUserId,
+            bookingId,
+            notificationType: NOTIFICATION_TYPES.ADMIN_RELEASED,
+            payload: {
+              bookingNumber,
+              targetScreen: 'assignments',
+            },
+            idempotencyKey: `admin-released:${bookingId}:${releasedDriverUserId}:${releasedAssignmentId ?? 'none'}`,
+            eventName: 'driver.assignment.released',
+          });
+        } catch (err) {
+          logger.warn('Admin released notification failed', {
+            bookingId,
+            releasedDriverUserId,
+            error: err.message,
+          });
+        }
+      }
     }
 
     if (urgentRebroadcastPayload) {
       emitDriverUrgentCallNew(urgentRebroadcastPayload);
+      await this.dispatchUrgentCallNotifications({
+        drivers: notificationDrivers,
+        bookingId,
+        bookingNumber,
+        urgentPayload: urgentRebroadcastPayload,
+        releasedAssignmentId,
+      });
       return;
     }
 
@@ -251,6 +355,13 @@ class BookingAssignmentReopenService {
     for (const target of openCallTargets) {
       emitDriverCallAvailable(target.userId, openCallPayload);
     }
+    await this.dispatchOpenCallNotifications({
+      drivers: notificationDrivers,
+      bookingId,
+      bookingNumber,
+      openCallPayload,
+      releasedAssignmentId,
+    });
   }
 }
 

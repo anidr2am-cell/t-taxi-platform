@@ -471,9 +471,7 @@ class DriverCallService {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
     const conn = await this.pool.getConnection();
     let releasedDriverUserId = driverUserId;
-    let openCallPayload = null;
-    let openCallTargets = [];
-    let urgentRebroadcastPayload = null;
+    let reopenEffects = null;
     let releaseResult = null;
     const nowMs = options.nowMs ?? Date.now();
 
@@ -539,7 +537,7 @@ class DriverCallService {
       this.assertReleaseAllowed(evaluation);
       this.assertBookingAssignmentReopenService();
 
-      const reopenEffects = await this.bookingAssignmentReopenService.reopenAssignedBookingInTransaction(
+      reopenEffects = await this.bookingAssignmentReopenService.reopenAssignedBookingInTransaction(
         conn,
         {
           booking,
@@ -586,9 +584,6 @@ class DriverCallService {
         reasonCode: evaluation.reasonCode,
         message: 'Assignment released and booking reopened for dispatch.',
       };
-      openCallPayload = reopenEffects.openCallPayload;
-      openCallTargets = reopenEffects.openCallTargets;
-      urgentRebroadcastPayload = reopenEffects.urgentRebroadcastPayload;
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -596,14 +591,11 @@ class DriverCallService {
       conn.release();
     }
 
-    this.bookingAssignmentReopenService.emitReopenEvents({
-      bookingNumber: normalizedBookingNumber,
+    await this.bookingAssignmentReopenService.emitReopenEvents({
+      ...reopenEffects,
       releasedDriverUserId,
       assignmentSocketReasonCode: 'DRIVER_RELEASED',
       reassignmentPriority: releaseResult?.reassignmentPriority,
-      openCallPayload,
-      openCallTargets,
-      urgentRebroadcastPayload,
     });
 
     return releaseResult;

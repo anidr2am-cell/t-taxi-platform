@@ -235,9 +235,9 @@ function createHarness(overrides = {}) {
       ];
     },
   };
-  const notificationRepository = {
-    async insert(_conn, row) {
-      calls.notifications.push(row);
+  const notificationService = {
+    async sendDirectNotification(params) {
+      calls.notifications.push(params);
     },
   };
   const chatRepository = {
@@ -326,7 +326,7 @@ function createHarness(overrides = {}) {
   const bookingAssignmentReopenService = new BookingAssignmentReopenService(
     bookingRepository,
     driverRepository,
-    notificationRepository,
+    notificationService,
     chatRepository,
     commissionSettlementService,
     urgentNegotiationRepository,
@@ -339,7 +339,7 @@ function createHarness(overrides = {}) {
       bookingRepository,
       driverRepository,
       driverJobService,
-      notificationRepository,
+      notificationService,
       chatRepository,
       commissionSettlementService,
       urgentNegotiationRepository,
@@ -1172,7 +1172,8 @@ test('releaseAssignment on urgent booking restarts negotiation and emits driver:
   assert.equal(conn.committed, true);
   assert.deepEqual(calls.urgentNegotiationsInserted, [{ bookingId: 10 }]);
   assert.deepEqual(calls.urgentNegotiationLinks, [{ bookingId: 10, negotiationId: 501 }]);
-  assert.equal(calls.notifications.length, 0);
+  assert.equal(calls.notifications.length, 2);
+  assert.equal(calls.notifications[0].notificationType, NOTIFICATION_TYPES.DRIVER_URGENT_CALL_NEW);
   assert.equal(
     emitted.some((row) => row.room === DRIVER_ALL_ROOM && row.event === 'driver:urgent-call:new'),
     true,
@@ -1188,8 +1189,7 @@ test('releaseAssignment on urgent booking restarts negotiation and emits driver:
   setRealtimeIo(null);
 });
 
-test('booking creation helper stores notifications for eligible online drivers', async () => {
-  const inserted = [];
+test('booking creation helper returns eligible driver targets', async () => {
   const service = new BookingService(
     null,
     null,
@@ -1209,17 +1209,47 @@ test('booking creation helper stores notifications for eligible online drivers',
         ];
       },
     },
+    null,
+  );
+
+  const targets = await service.notifyEligibleDriversForOpenBooking({}, {
+    vehicleTypeId: 3,
+  });
+
+  assert.deepEqual(targets, [
+    { driverId: 7, userId: 42 },
+    { driverId: 8, userId: 43 },
+  ]);
+});
+
+test('dispatchOpenCallNotifications sends DRIVER_CALL_AVAILABLE to each eligible driver', async () => {
+  const sent = [];
+  const service = new BookingService(
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
     {
-      async insert(_conn, row) {
-        inserted.push(row);
+      async sendDirectNotification(params) {
+        sent.push(params);
       },
     },
   );
 
-  const targets = await service.notifyEligibleDriversForOpenBooking({}, {
+  await service.dispatchOpenCallNotifications({
+    drivers: [
+      { id: 7, user_id: 42 },
+      { id: 8, user_id: 43 },
+    ],
     bookingId: 10,
     bookingNumber: 'TX202607130001',
-    vehicleTypeId: 3,
     openCallPayload: {
       bookingNumber: 'TX202607130001',
       origin: 'BKK',
@@ -1227,18 +1257,13 @@ test('booking creation helper stores notifications for eligible online drivers',
     },
   });
 
-  assert.deepEqual(targets, [
-    { driverId: 7, userId: 42 },
-    { driverId: 8, userId: 43 },
-  ]);
-  assert.equal(inserted.length, 2);
-  assert.equal(inserted[0].notificationType, NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE);
-  assert.equal(inserted[0].recipientDriverId, 7);
-  assert.equal(inserted[0].userId, 42);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].notificationType, NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE);
+  assert.equal(sent[0].recipientDriverId, 7);
+  assert.equal(sent[0].payload.targetScreen, 'open_calls');
 });
 
-test('booking creation helper excludes settlement-blocked drivers from open call notifications', async () => {
-  const inserted = [];
+test('booking creation helper excludes settlement-blocked drivers from open call targets', async () => {
   const service = new BookingService(
     null,
     null,
@@ -1258,11 +1283,7 @@ test('booking creation helper excludes settlement-blocked drivers from open call
         ];
       },
     },
-    {
-      async insert(_conn, row) {
-        inserted.push(row);
-      },
-    },
+    null,
     {
       async driverHasBlockingSettlement(driverId) {
         return Number(driverId) === 8;
@@ -1271,19 +1292,48 @@ test('booking creation helper excludes settlement-blocked drivers from open call
   );
 
   const targets = await service.notifyEligibleDriversForOpenBooking({}, {
-    bookingId: 10,
-    bookingNumber: 'TX202607130001',
     vehicleTypeId: 3,
-    openCallPayload: {
-      bookingNumber: 'TX202607130001',
-      origin: 'BKK',
-      destination: 'Pattaya',
-    },
   });
 
   assert.deepEqual(targets, [{ driverId: 7, userId: 42 }]);
-  assert.equal(inserted.length, 1);
-  assert.equal(inserted[0].recipientDriverId, 7);
+});
+
+test('dispatchOpenCallNotifications continues when one driver notification fails', async () => {
+  const sent = [];
+  const service = new BookingService(
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    {
+      async sendDirectNotification(params) {
+        if (params.recipientUserId === 43) {
+          throw new Error('fcm failed');
+        }
+        sent.push(params);
+      },
+    },
+  );
+
+  await service.dispatchOpenCallNotifications({
+    drivers: [
+      { id: 7, user_id: 42 },
+      { id: 8, user_id: 43 },
+    ],
+    bookingId: 10,
+    bookingNumber: 'TX202607130001',
+    openCallPayload: { bookingNumber: 'TX202607130001' },
+  });
+
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].recipientUserId, 42);
 });
 
 test('driver call socket handler joins driver rooms and rejects non-drivers', async () => {

@@ -751,3 +751,71 @@ test('handler failure propagates to caller for outbox retry', async () => {
     /db fail/,
   );
 });
+
+test('sendDirectNotification creates deliveries and processes FCM channel', async () => {
+  const deliveryInserts = [];
+  const processed = [];
+  const originalProcess = NotificationService.prototype.processDeliveries;
+  NotificationService.prototype.processDeliveries = async function processDeliveries(notificationId) {
+    processed.push(notificationId);
+  };
+
+  try {
+    const service = makeService({
+      notificationRepository: {
+        async findByIdempotencyKey() { return null; },
+        async insert() { return 501; },
+        async insertDelivery(_conn, row) {
+          deliveryInserts.push(row);
+          return deliveryInserts.length;
+        },
+        async findDeliveryByNotificationAndChannel() { return null; },
+      },
+    });
+
+    const result = await service.sendDirectNotification({
+      recipientUserId: 42,
+      recipientDriverId: 7,
+      bookingId: 10,
+      notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+      payload: { bookingNumber: 'TX202607010001', targetScreen: 'open_calls' },
+      idempotencyKey: 'driver-call-open:10:7',
+    });
+
+    assert.equal(result.notificationId, 501);
+    assert.equal(result.created, true);
+    assert.equal(deliveryInserts.length, 3);
+    assert.deepEqual(processed, [501]);
+  } finally {
+    NotificationService.prototype.processDeliveries = originalProcess;
+  }
+});
+
+test('sendDirectNotification uses CONTENT templates for urgent and admin types', async () => {
+  let capturedTitle = null;
+  const service = makeService({
+    notificationRepository: {
+      async findByIdempotencyKey() { return null; },
+      async insert(_conn, row) {
+        capturedTitle = row.title;
+        return 1;
+      },
+      async insertDelivery() { return 1; },
+      async findDeliveryByNotificationAndChannel() { return null; },
+    },
+  });
+
+  await service.sendDirectNotification({
+    recipientUserId: 42,
+    notificationType: NOTIFICATION_TYPES.DRIVER_URGENT_CALL_NEW,
+    payload: { bookingNumber: 'TX202607010001' },
+  });
+  assert.equal(capturedTitle, '긴급 예약 요청');
+
+  await service.sendDirectNotification({
+    recipientUserId: 42,
+    notificationType: NOTIFICATION_TYPES.ADMIN_RELEASED,
+    payload: { bookingNumber: 'TX202607010001' },
+  });
+  assert.equal(capturedTitle, '배정이 취소되었습니다');
+});

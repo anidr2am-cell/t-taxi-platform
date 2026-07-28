@@ -134,8 +134,9 @@ function createHarness({ failSecondChargeItem = false } = {}) {
       },
     },
     {
-      async insert(_conn, notification) {
+      async sendDirectNotification(notification) {
         calls.notifications.push(notification);
+        calls.sequence.push('notify');
       },
     },
   );
@@ -173,8 +174,10 @@ test('OPEN booking derives total from charge items and notifies eligible drivers
       calls.notifications[0].notificationType,
       NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
     );
+    assert.equal(calls.notifications[0].payload.bookingNumber, 'TX202607130001');
+    assert.equal(calls.notifications[0].payload.targetScreen, 'open_calls');
     assert.equal(calls.outbox[0].eventType, EVENTS.BOOKING_CREATED);
-    assert.deepEqual(calls.sequence, ['commit', 'outbox:30', 'socket']);
+    assert.deepEqual(calls.sequence, ['commit', 'outbox:30', 'notify', 'socket']);
     assert.equal(calls.socket[0].room, driverUserRoom(42));
     assert.equal(calls.socket[0].event, 'driver:call:new');
     assert.equal(Object.hasOwn(calls.socket[0].payload, 'customer'), false);

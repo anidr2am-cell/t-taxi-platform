@@ -1540,7 +1540,7 @@ class AdminDispatchService {
     }
 
     if (reopenEffects) {
-      this.bookingAssignmentReopenService.emitReopenEvents({
+      await this.bookingAssignmentReopenService.emitReopenEvents({
         ...reopenEffects,
         releasedDriverUserId,
       });

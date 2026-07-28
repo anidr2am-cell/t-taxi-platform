@@ -16,6 +16,7 @@ const BookingAssignmentReopenService = require('../src/services/bookingAssignmen
 const DriverCallService = require('../src/services/driverCall.service');
 const DriverJobService = require('../src/services/driverJob.service');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
+const NOTIFICATION_TYPES = require('../src/constants/notificationTypes');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const ROLES = require('../src/constants/roles');
 const {
@@ -141,9 +142,9 @@ function createServiceHarness(overrides = {}) {
       ];
     },
   };
-  const notificationRepository = {
-    async insert(_conn, row) {
-      calls.notifications.push(row);
+  const notificationService = {
+    async sendDirectNotification(params) {
+      calls.notifications.push(params);
     },
   };
   const chatRepository = {
@@ -160,21 +161,21 @@ function createServiceHarness(overrides = {}) {
     bookingRepository,
     driverRepository,
     driverJobService,
-    notificationRepository,
+    notificationService,
     chatRepository,
     null,
     null,
     new BookingAssignmentReopenService(
       bookingRepository,
       driverRepository,
-      notificationRepository,
+      notificationService,
       chatRepository,
     ),
   );
   const bookingAssignmentReopenService = new BookingAssignmentReopenService(
     bookingRepository,
     driverRepository,
-    notificationRepository,
+    notificationService,
     chatRepository,
   );
   const service = new AdminDispatchService(
@@ -233,7 +234,15 @@ test('unassignDriver reopens booking, deactivates assignment, and notifies drive
   assert.equal(calls.statusLogs[0].log.reason, ADMIN_ASSIGNMENT_RELEASE_MARKER);
   assert.equal(calls.activityLogs[0].activity.activityType, ADMIN_UNASSIGN_ACTIVITY_TYPE);
   assert.equal(calls.activityLogs[0].activity.actorRole, ROLES.ADMIN);
-  assert.equal(calls.notifications.length, 2);
+  assert.equal(calls.notifications.length, 3);
+  assert.equal(
+    calls.notifications.filter((row) => row.notificationType === NOTIFICATION_TYPES.ADMIN_RELEASED).length,
+    1,
+  );
+  assert.equal(
+    calls.notifications.filter((row) => row.notificationType === NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE).length,
+    2,
+  );
 
   const releaseEvent = emitted.find(
     (row) => row.room === driverUserRoom(99) && row.event === 'driver:assignment:released',

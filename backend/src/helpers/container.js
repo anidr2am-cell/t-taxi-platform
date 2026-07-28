@@ -220,7 +220,7 @@ container.register(
       c.get("outboxProcessor"),
       c.get("flightService"),
       c.get("driverRepository"),
-      c.get("notificationRepository"),
+      c.get("notificationService"),
       c.get("commissionSettlementService"),
       c.get("urgentNegotiationRepository"),
       c.get("placesService"),
@@ -283,7 +283,7 @@ container.register(
     new BookingAssignmentReopenService(
       c.get("bookingRepository"),
       c.get("driverRepository"),
-      c.get("notificationRepository"),
+      c.get("notificationService"),
       c.get("chatRepository"),
       c.get("commissionSettlementService"),
       c.get("urgentNegotiationRepository"),
