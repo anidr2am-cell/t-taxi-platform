@@ -6,9 +6,9 @@
 
 | Flavor | Entrypoint | Application ID | 앱 이름 | API |
 | --- | --- | --- | --- | --- |
-| `dev` | `lib/main_dev.dart` | `com.tride.driver.dev` | `TRide Driver DEV` | Android emulator 개발 주소 |
-| `stg` | `lib/main_stg.dart` | `com.tride.driver.staging` | `TRide Driver STG` | `https://trider.taxi` staging API |
-| `prod` | `lib/main_prod.dart` | `com.tride.driver` | `TRide Driver` | 비활성(주소 확정 전 요청 차단) |
+| `dev` | `lib/main_dev.dart` | `com.trider.driver.dev` | `TRide Driver DEV` | Android emulator 개발 주소 |
+| `stg` | `lib/main_stg.dart` | `com.trider.driver.staging` | `TRide Driver STG` | `https://trider.taxi` staging API |
+| `prod` | `lib/main_prod.dart` | `com.trider.driver` | `TRide Driver` | 비활성(주소 확정 전 요청 차단) |
 
 기본 `lib/main.dart`는 안전하게 DEV 환경을 사용합니다. flavor와 entrypoint를 항상 함께 지정합니다.
 

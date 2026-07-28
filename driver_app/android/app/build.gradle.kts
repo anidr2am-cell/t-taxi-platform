@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -20,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.tride.driver"
+        applicationId = "com.trider.driver"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -34,19 +35,19 @@ android {
     productFlavors {
         create("dev") {
             dimension = "environment"
-            applicationId = "com.tride.driver.dev"
+            applicationId = "com.trider.driver.dev"
             resValue("string", "app_name", "TRide Driver DEV")
             manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
         create("stg") {
             dimension = "environment"
-            applicationId = "com.tride.driver.staging"
+            applicationId = "com.trider.driver.staging"
             resValue("string", "app_name", "TRide Driver STG")
             manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
         create("prod") {
             dimension = "environment"
-            applicationId = "com.tride.driver"
+            applicationId = "com.trider.driver"
             resValue("string", "app_name", "TRide Driver")
             manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
