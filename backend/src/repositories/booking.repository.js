@@ -295,6 +295,7 @@ class BookingRepository {
           DATE_FORMAT(b.scheduled_pickup_at, '%Y-%m-%d %H:%i:%s') AS scheduled_pickup_at_text,
           b.origin_address,
           b.destination_address,
+          b.metadata,
           b.customer_phone,
           b.customer_country_code,
           b.payment_method,

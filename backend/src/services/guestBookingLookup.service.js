@@ -62,6 +62,29 @@ class GuestBookingLookupService {
     return value === true || value === 1 || value === '1';
   }
 
+  parseBookingMetadata(metadata) {
+    if (!metadata) return {};
+    if (typeof metadata === 'object') return metadata;
+    try {
+      const parsed = JSON.parse(metadata);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  locationDetails({ name, address }) {
+    const normalizedName = typeof name === 'string' && name.trim() ? name.trim() : null;
+    const normalizedAddress =
+      typeof address === 'string' && address.trim() ? address.trim() : null;
+    const displayName =
+      normalizedName && normalizedName !== normalizedAddress ? normalizedName : null;
+    return {
+      name: displayName,
+      address: normalizedAddress,
+    };
+  }
+
   isReviewEligible(row) {
     return isBookingReviewEligible(row);
   }
@@ -143,6 +166,18 @@ class GuestBookingLookupService {
         BOOKING_STATUS.CONFIRMED,
       ].includes(row.status);
 
+    const metadata = this.parseBookingMetadata(row.metadata);
+    const originLocationMeta = metadata.originLocation ?? {};
+    const destinationLocationMeta = metadata.destinationLocation ?? {};
+    const pickupLocation = this.locationDetails({
+      name: originLocationMeta.name,
+      address: row.origin_address,
+    });
+    const destinationLocation = this.locationDetails({
+      name: destinationLocationMeta.name,
+      address: row.destination_address,
+    });
+
     return {
       bookingId: row.id,
       bookingNumber: row.booking_number,
@@ -161,10 +196,12 @@ class GuestBookingLookupService {
         origin: {
           code: row.origin_location_code ?? null,
           address: row.origin_address,
+          name: pickupLocation.name,
         },
         destination: {
           code: row.destination_location_code ?? null,
           address: row.destination_address,
+          name: destinationLocation.name,
         },
       },
       options: {

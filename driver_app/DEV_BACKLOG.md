@@ -112,7 +112,7 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
 
 ## 9. 기술 부채: locationDetails() 로직 중복
 
-`locationDetails()` 로직이 `driverJob.service.js`와 `booking.service.js` 두 곳에 복제되어 있음. 향후 장소명 표시 로직 변경 시 두 곳 모두 수정 필요. 리팩터링 우선순위 낮음.
+`locationDetails()` 로직이 `driverJob.service.js`, `booking.service.js`, `guestBookingLookup.service.js` 세 곳에 복제되어 있음. 향후 장소명 표시 로직 변경 시 세 곳 모두 수정 필요. 리팩터링 우선순위 낮음.
 
 ## 10. 관리자 강제 배정취소 (unassign-driver)
 

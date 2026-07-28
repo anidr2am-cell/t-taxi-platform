@@ -424,6 +424,59 @@ test('cancelled booking can be found but active customer actions are disabled', 
   assert.equal(result.capabilities.boardingQrPreviouslyIssued, false);
 });
 
+test('guest lookup exposes route origin/destination name from metadata', async () => {
+  const { service } = buildService(bookingRow({
+    origin_address: '999 Moo 1, Samut Prakan, Thailand',
+    destination_address: '333 Beach Rd, Pattaya, Thailand',
+    metadata: JSON.stringify({
+      originLocation: { name: 'BKK — Suvarnabhumi Airport' },
+      destinationLocation: { name: 'Hilton Pattaya' },
+    }),
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.route.origin.name, 'BKK — Suvarnabhumi Airport');
+  assert.equal(result.route.destination.name, 'Hilton Pattaya');
+  assert.equal(result.route.origin.address, '999 Moo 1, Samut Prakan, Thailand');
+  assert.equal(result.route.destination.address, '333 Beach Rd, Pattaya, Thailand');
+});
+
+test('guest lookup route name is null when metadata is missing', async () => {
+  const { service } = buildService(bookingRow({ metadata: null }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.route.origin.name, null);
+  assert.equal(result.route.destination.name, null);
+});
+
+test('guest lookup omits route name when it matches address', async () => {
+  const shared = 'Hilton Pattaya, 333 Beach Rd, Pattaya, Thailand';
+  const { service } = buildService(bookingRow({
+    origin_address: shared,
+    destination_address: 'Pattaya Hotel',
+    metadata: JSON.stringify({
+      originLocation: { name: shared },
+      destinationLocation: { name: 'Pattaya Hotel' },
+    }),
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.route.origin.name, null);
+  assert.equal(result.route.destination.name, null);
+});
+
 test('guest lookup route validates and returns public envelope', async () => {
   container.register('guestBookingLookupService', () => ({
     async lookup(input) {
