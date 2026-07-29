@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 
 /// Placeholder for a future name-sign reference image.
@@ -9,6 +8,9 @@ class NameSignInfoAssets {
   NameSignInfoAssets._();
 
   static const String assetPath = 'assets/images/name_sign_example.png';
+
+  /// Source asset is 1086×1448 (portrait).
+  static const double aspectRatio = 1086 / 1448;
 }
 
 class NameSignInfoCard extends StatelessWidget {
@@ -23,9 +25,9 @@ class NameSignInfoCard extends StatelessWidget {
       curve: Curves.easeInOut,
       alignment: Alignment.topCenter,
       child: visible
-          ? Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _NameSignInfoCardBody(l10n: context.l10n),
+          ? const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: _NameSignInfoCardBody(),
             )
           : const SizedBox.shrink(),
     );
@@ -33,18 +35,10 @@ class NameSignInfoCard extends StatelessWidget {
 }
 
 class _NameSignInfoCardBody extends StatelessWidget {
-  final AppLocalizations l10n;
-
-  const _NameSignInfoCardBody({required this.l10n});
+  const _NameSignInfoCardBody();
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final stackVertically = width < 360;
-
-    final image = _ImagePlaceholder();
-    final text = _DescriptionText(l10n: l10n);
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(10),
@@ -53,82 +47,46 @@ class _NameSignInfoCardBody extends StatelessWidget {
         borderRadius: AppTokens.borderRadiusMd,
         border: Border.all(color: AppTokens.border),
       ),
-      child: stackVertically
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(height: 72, child: image),
-                const SizedBox(height: 10),
-                text,
-              ],
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(width: width * 0.4 - 26, height: 72, child: image),
-                const SizedBox(width: 10),
-                Expanded(child: text),
-              ],
-            ),
+      child: const _ImagePlaceholder(),
     );
   }
 }
 
 class _ImagePlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: AppTokens.borderRadiusSm,
-      child: Container(
-        color: AppTokens.surfaceMuted,
-        child: Image.asset(
-          NameSignInfoAssets.assetPath,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-        ),
-      ),
-    );
-  }
-}
+  static const _maxDisplayHeight = 180.0;
 
-class _DescriptionText extends StatelessWidget {
-  final AppLocalizations l10n;
-
-  const _DescriptionText({required this.l10n});
+  const _ImagePlaceholder();
 
   @override
   Widget build(BuildContext context) {
-    final price = l10n.t('name_sign_service_price_highlight');
-    final gate = l10n.t('name_sign_service_gate_highlight');
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        var height = _maxDisplayHeight;
+        var width = height * NameSignInfoAssets.aspectRatio;
+        if (width > maxWidth) {
+          width = maxWidth;
+          height = width / NameSignInfoAssets.aspectRatio;
+        }
 
-    return RichText(
-      text: TextSpan(
-        style: const TextStyle(
-          color: AppTokens.textPrimary,
-          fontSize: 13,
-          height: 1.45,
-        ),
-        children: [
-          TextSpan(text: l10n.t('name_sign_info_before_price')),
-          TextSpan(
-            text: price,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppTokens.accent,
+        return Align(
+          alignment: Alignment.center,
+          child: ClipRRect(
+            borderRadius: AppTokens.borderRadiusSm,
+            child: Container(
+              color: AppTokens.surfaceMuted,
+              width: width,
+              height: height,
+              child: Image.asset(
+                NameSignInfoAssets.assetPath,
+                fit: BoxFit.contain,
+                width: width,
+                height: height,
+              ),
             ),
           ),
-          TextSpan(text: l10n.t('name_sign_info_after_price')),
-          TextSpan(
-            text: gate,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppTokens.primaryDark,
-            ),
-          ),
-          TextSpan(text: l10n.t('name_sign_info_after_gate')),
-        ],
-      ),
+        );
+      },
     );
   }
 }

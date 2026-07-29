@@ -192,6 +192,18 @@ void main() {
         ChangeNotifierProvider(
           create: (_) => LocaleState(),
           child: const MaterialApp(
+            home: Scaffold(body: NameSignInfoCard(visible: false)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Image), findsNothing);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(),
+          child: const MaterialApp(
             home: Scaffold(body: NameSignInfoCard(visible: true)),
           ),
         ),
@@ -199,13 +211,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Image), findsOneWidget);
-
-      final description = tester
-          .widgetList<RichText>(find.byType(RichText))
-          .map((richText) => richText.text.toPlainText())
-          .join(' ');
-      expect(description, contains('100 THB'));
-      expect(description, contains('Gate 3'));
     });
 
     testWidgets('name sign text field is hidden until name sign is enabled', (
