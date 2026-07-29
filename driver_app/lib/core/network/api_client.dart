@@ -35,7 +35,7 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getJson(
     String path, {
-    required String bearerToken,
+    String? bearerToken,
   }) async {
     return _request(
       () => _httpClient.get(_endpoint(path), headers: _headers(bearerToken)),
@@ -93,15 +93,17 @@ class ApiClient {
 
   Future<Map<String, dynamic>> postMultipart(
     String path, {
-    required String bearerToken,
+    String? bearerToken,
     Map<String, String> fields = const {},
     List<ApiMultipartFile> files = const [],
   }) async {
     try {
       final request = http.MultipartRequest('POST', _endpoint(path))
         ..headers['Accept'] = 'application/json'
-        ..headers['Authorization'] = 'Bearer $bearerToken'
         ..fields.addAll(fields);
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $bearerToken';
+      }
       for (final file in files) {
         request.files.add(
           http.MultipartFile.fromBytes(

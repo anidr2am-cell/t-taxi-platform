@@ -698,6 +698,110 @@ class AppLocalizations {
   String get plateAlreadyRegistered =>
       _s('이미 등록된 차량 번호입니다.', 'ทะเบียนรถนี้ลงทะเบียนแล้ว');
 
+  // Driver application
+  String get driverApplicationTitle =>
+      _s('기사 등록 신청', 'สมัครคนขับ');
+  String get driverApplicationSectionAccount =>
+      _s('계정 정보', 'ข้อมูลบัญชี');
+  String get driverApplicationSectionDriverInfo =>
+      _s('기사/차량 정보', 'ข้อมูลคนขับและรถ');
+  String get driverApplicationSectionDocuments =>
+      _s('문서 및 동의', 'เอกสารและการยินยอม');
+  String get driverApplicationFullName => _s('이름', 'ชื่อ');
+  String get driverApplicationPhone => _s('전화번호', 'เบอร์โทรศัพท์');
+  String get driverApplicationPasswordConfirm =>
+      _s('비밀번호 확인', 'ยืนยันรหัสผ่าน');
+  String get driverApplicationLicenseNumber =>
+      _s('면허번호', 'เลขที่ใบขับขี่');
+  String get driverApplicationLicenseCountry =>
+      _s('면허 발급국', 'ประเทศที่ออกใบขับขี่');
+  String get driverApplicationLicenseExpiry =>
+      _s('면허 만료일', 'วันหมดอายุใบขับขี่');
+  String get driverApplicationLicenseExpiryPicker =>
+      _s('날짜 선택', 'เลือกวันที่');
+  String get driverApplicationBankName => _s('은행명', 'ชื่อธนาคาร');
+  String get driverApplicationBankAccountNumber =>
+      _s('계좌번호', 'เลขที่บัญชี');
+  String get driverApplicationBankAccountHolder =>
+      _s('예금주', 'ชื่อบัญชี');
+  String get driverApplicationVehicleMake => _s('제조사', 'ยี่ห้อ');
+  String get driverApplicationVehicleModel => _s('모델', 'รุ่น');
+  String get driverApplicationVehicleYear => _s('연식', 'ปีรถ');
+  String get driverApplicationVehicleColor => _s('색상', 'สี');
+  String get driverApplicationServiceAreas =>
+      _s('운행 지역', 'พื้นที่ให้บริการ');
+  String get driverApplicationServiceAreasHint =>
+      _s('방콕, 파타야 (쉼표로 구분)', 'กรุงเทพ, พัทยา (คั่นด้วยจุลภาค)');
+  String get driverApplicationLineId => _s('LINE ID', 'LINE ID');
+  String get driverApplicationLineQr =>
+      _s('LINE QR 코드', 'QR Code LINE');
+  String get driverApplicationTaxCertificate =>
+      _s('세금납부증명서', 'หลักฐานการชำระภาษี');
+  String get driverApplicationPersonalConsent => _s(
+        '개인정보 수집 및 검토에 동의합니다.',
+        'ฉันยินยอมให้เก็บและตรวจสอบข้อมูลส่วนบุคคล',
+      );
+  String get driverApplicationTermsConsent => _s(
+        '기사 심사 및 운영 규정에 동의합니다.',
+        'ฉันยอมรับการคัดกรองคนขับและกฎการให้บริการ',
+      );
+  String get driverApplicationFalseInfoNotice => _s(
+        '허위 정보 제출 시 승인이 취소될 수 있습니다.',
+        'ข้อมูลเท็จอาจทำให้การอนุมัติถูกยกเลิก',
+      );
+  String get driverApplicationSubmit =>
+      _s('가입 요청', 'ส่งคำขอสมัคร');
+  String get driverApplicationPasswordMin =>
+      _s('비밀번호는 6자 이상이어야 합니다.', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+  String get driverApplicationPasswordMismatch =>
+      _s('비밀번호가 일치하지 않습니다.', 'รหัสผ่านไม่ตรงกัน');
+  String get driverApplicationConsentRequired =>
+      _s('필수 동의가 필요합니다.', 'ต้องยินยอมรายการที่จำเป็น');
+  String get driverApplicationServiceAreaRequired => _s(
+        '운행 지역을 하나 이상 입력해 주세요.',
+        'กรุณากรอกพื้นที่ให้บริการอย่างน้อย 1 รายการ',
+      );
+  String get driverApplicationVehicleRequired =>
+      _s('차량 유형을 선택해 주세요.', 'กรุณาเลือกประเภทรถ');
+  String get driverApplicationVehiclePhotoCountError => _s(
+        '차량 사진은 3~6장이 필요합니다.',
+        'ต้องมีรูปรถ 3-6 รูป',
+      );
+  String get driverApplicationLicenseExpiryInvalid => _s(
+        '면허 만료일 형식이 올바르지 않습니다.',
+        'รูปแบบวันหมดอายุใบขับขี่ไม่ถูกต้อง',
+      );
+  String get driverApplicationLicenseExpiryPast => _s(
+        '면허 만료일은 오늘 이후여야 합니다.',
+        'วันหมดอายุใบขับขี่ต้องอยู่หลังวันนี้',
+      );
+  String get driverApplicationVehicleYearInvalid => _s(
+        '연식을 1980년부터 현재 연도까지 입력해 주세요.',
+        'กรอกปีรถตั้งแต่ 1980 ถึงปีปัจจุบัน',
+      );
+  String get driverApplicationVehicleTypesLoadError => _s(
+        '차량 유형을 불러오지 못했습니다.',
+        'โหลดประเภทรถไม่สำเร็จ',
+      );
+  String get driverApplicationSubmitFailed => _s(
+        '가입 신청을 제출하지 못했습니다.',
+        'ส่งคำขอสมัครไม่สำเร็จ',
+      );
+  String get driverApplicationPhoneConflict => _s(
+        '이미 등록되었거나 검토 중인 전화번호입니다.',
+        'เบอร์โทรนี้ลงทะเบียนหรืออยู่ระหว่างตรวจสอบแล้ว',
+      );
+  String get driverApplicationPlateConflict => _s(
+        '이미 등록되었거나 검토 중인 차량번호입니다.',
+        'ทะเบียนรถนี้ลงทะเบียนหรืออยู่ระหว่างตรวจสอบแล้ว',
+      );
+  String get driverApplicationDuplicateConflict => _s(
+        '중복된 가입 신청입니다.',
+        'มีใบสมัครซ้ำอยู่แล้ว',
+      );
+  String get driverApplicationRequiredField =>
+      _s('필수 항목을 입력해 주세요.', 'กรุณากรอกข้อมูลที่จำเป็น');
+
   // API errors
   String get errorInvalidCredentials =>
       _s('계정 또는 비밀번호를 확인해 주세요.', 'ตรวจสอบบัญชีหรือรหัสผ่าน');

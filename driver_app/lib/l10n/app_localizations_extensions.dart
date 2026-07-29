@@ -1,6 +1,7 @@
 import '../../core/network/api_exception.dart';
 import '../../features/bookings/data/booking_models.dart';
 import '../../features/bookings/presentation/booking_accept_controller.dart';
+import '../../features/driver_application/data/driver_application_models.dart';
 import '../../features/settlement/data/settlement_models.dart';
 import 'app_localizations.dart';
 
@@ -182,3 +183,54 @@ String releaseAssignmentBlockedMessage(
   String reason,
 ) =>
     releaseAssignmentErrorMessage(l10n, reason);
+
+extension DriverApplicationApiExceptionLocalization
+    on DriverApplicationApiException {
+  String localizedMessage(AppLocalizations l10n) => switch (kind) {
+        DriverApplicationFailureKind.validation => l10n.errorValidation,
+        DriverApplicationFailureKind.invalidFileType =>
+          l10n.errorInvalidFileType,
+        DriverApplicationFailureKind.fileTooLarge => l10n.errorFileTooLarge,
+        DriverApplicationFailureKind.phoneConflict =>
+          l10n.driverApplicationPhoneConflict,
+        DriverApplicationFailureKind.plateConflict =>
+          l10n.driverApplicationPlateConflict,
+        DriverApplicationFailureKind.duplicateApplication =>
+          l10n.driverApplicationDuplicateConflict,
+        DriverApplicationFailureKind.unavailable => l10n.errorUnavailable,
+        DriverApplicationFailureKind.timeout => l10n.errorTimeout,
+        DriverApplicationFailureKind.server => l10n.errorServer,
+        DriverApplicationFailureKind.invalidResponse =>
+          l10n.errorInvalidResponse,
+        DriverApplicationFailureKind.unknown =>
+          l10n.driverApplicationSubmitFailed,
+      };
+}
+
+extension DriverApplicationValidationLocalization
+    on DriverApplicationValidationIssue {
+  String localizedMessage(AppLocalizations l10n) => switch (this) {
+        DriverApplicationValidationIssue.requiredField =>
+          l10n.driverApplicationRequiredField,
+        DriverApplicationValidationIssue.passwordTooShort =>
+          l10n.driverApplicationPasswordMin,
+        DriverApplicationValidationIssue.passwordMismatch =>
+          l10n.driverApplicationPasswordMismatch,
+        DriverApplicationValidationIssue.vehicleTypeMissing =>
+          l10n.driverApplicationVehicleRequired,
+        DriverApplicationValidationIssue.serviceAreaMissing =>
+          l10n.driverApplicationServiceAreaRequired,
+        DriverApplicationValidationIssue.consentMissing =>
+          l10n.driverApplicationConsentRequired,
+        DriverApplicationValidationIssue.vehiclePhotoCount =>
+          l10n.driverApplicationVehiclePhotoCountError,
+        DriverApplicationValidationIssue.missingFile =>
+          l10n.requiredFileNotSelected,
+        DriverApplicationValidationIssue.licenseExpiryInvalid =>
+          l10n.driverApplicationLicenseExpiryInvalid,
+        DriverApplicationValidationIssue.licenseExpiryPast =>
+          l10n.driverApplicationLicenseExpiryPast,
+        DriverApplicationValidationIssue.vehicleYearInvalid =>
+          l10n.driverApplicationVehicleYearInvalid,
+      };
+}
