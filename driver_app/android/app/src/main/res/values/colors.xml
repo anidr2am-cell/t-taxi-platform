@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sampled from ic_launcher.png top-left gradient (~#0025D9). Edward may tune from design source. -->
+    <color name="ic_launcher_background">#0025D9</color>
+</resources>
