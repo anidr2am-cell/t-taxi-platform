@@ -53,7 +53,7 @@ class _NameSignInfoCardBody extends StatelessWidget {
 }
 
 class _ImagePlaceholder extends StatelessWidget {
-  static const _maxDisplayHeight = 180.0;
+  static const _maxDisplayHeight = 420.0;
 
   const _ImagePlaceholder();
 
@@ -62,11 +62,11 @@ class _ImagePlaceholder extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
-        var height = _maxDisplayHeight;
-        var width = height * NameSignInfoAssets.aspectRatio;
-        if (width > maxWidth) {
-          width = maxWidth;
-          height = width / NameSignInfoAssets.aspectRatio;
+        var width = maxWidth;
+        var height = width / NameSignInfoAssets.aspectRatio;
+        if (height > _maxDisplayHeight) {
+          height = _maxDisplayHeight;
+          width = height * NameSignInfoAssets.aspectRatio;
         }
 
         return Align(
