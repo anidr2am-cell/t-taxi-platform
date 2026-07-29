@@ -1466,6 +1466,17 @@ class AppLocalizations {
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid':
           'Check the flight number. Examples: TG401, 7C2203',
+      'flight_lookup_search': 'Look up',
+      'flight_lookup_not_found':
+          'No flight was found for that number. Please double-check the flight number.',
+      'flight_lookup_invalid_date':
+          'The pickup date is not valid for flight lookup. You can still continue booking with the flight number entered.',
+      'flight_lookup_provider_unavailable':
+          'Flight lookup is temporarily unavailable. You can still continue booking with the flight number entered.',
+      'flight_lookup_departure': 'Departure',
+      'flight_lookup_arrival': 'Arrival',
+      'flight_lookup_estimated_arrival': 'Estimated arrival',
+      'flight_lookup_confirm': 'This is my flight',
       'booking_number_copied': 'Reservation number copied',
       'booking_number_copy_failed': 'Could not copy reservation number',
       'booking_number_copy': 'Copy reservation number',
@@ -1842,6 +1853,17 @@ class AppLocalizations {
       'ui_retry': '다시 시도',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid': '항공편 번호를 확인해 주세요. 예: TG401, 7C2203',
+      'flight_lookup_search': '조회',
+      'flight_lookup_not_found':
+          '해당 편명의 항공편을 찾을 수 없습니다. 편명을 다시 확인해 주세요.',
+      'flight_lookup_invalid_date':
+          '픽업 날짜로 항공편 조회를 할 수 없습니다. 편명은 그대로 입력하셔도 예약 진행에는 문제없습니다.',
+      'flight_lookup_provider_unavailable':
+          '항공편 조회 서비스가 일시적으로 원활하지 않습니다. 편명은 그대로 입력하셔도 예약 진행에는 문제없습니다.',
+      'flight_lookup_departure': '출발',
+      'flight_lookup_arrival': '도착',
+      'flight_lookup_estimated_arrival': '예상 도착',
+      'flight_lookup_confirm': '이 항공편이 맞습니다',
       'booking_number_copied': '예약번호가 복사되었습니다',
       'booking_number_copy_failed': '예약번호를 복사하지 못했습니다',
       'booking_number_copy': '예약번호 복사',
@@ -2993,6 +3015,16 @@ class AppLocalizations {
       'pickup_datetime_required': '请填写接送日期和时间',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid': '请检查航班号。例如：TG401, 7C2203',
+      'flight_lookup_search': '查询',
+      'flight_lookup_not_found': '未找到该航班号。请再次确认航班号。',
+      'flight_lookup_invalid_date':
+          '当前接送日期无法查询航班。您仍可继续预订并保留已输入的航班号。',
+      'flight_lookup_provider_unavailable':
+          '航班查询服务暂时不可用。您仍可继续预订并保留已输入的航班号。',
+      'flight_lookup_departure': '出发',
+      'flight_lookup_arrival': '到达',
+      'flight_lookup_estimated_arrival': '预计到达',
+      'flight_lookup_confirm': '这是我的航班',
       'booking_number_copied': '预订号已复制',
       'booking_number_copy_failed': '无法复制预订号',
       'booking_number_copy': '复制预订号',
@@ -3552,6 +3584,17 @@ class AppLocalizations {
       'pickup_datetime_required': 'ピックアップ日時を入力してください',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid': '便名を確認してください。例: TG401, 7C2203',
+      'flight_lookup_search': '検索',
+      'flight_lookup_not_found':
+          '該当する便名のフライトが見つかりません。便名を再度ご確認ください。',
+      'flight_lookup_invalid_date':
+          'このピックアップ日では便情報を照会できません。便名を入力したまま予約を続行できます。',
+      'flight_lookup_provider_unavailable':
+          '便情報の照会サービスが一時的に利用できません。便名を入力したまま予約を続行できます。',
+      'flight_lookup_departure': '出発',
+      'flight_lookup_arrival': '到着',
+      'flight_lookup_estimated_arrival': '到着予定',
+      'flight_lookup_confirm': 'この便で間違いありません',
       'booking_number_copied': '予約番号をコピーしました',
       'booking_number_copy_failed': '予約番号をコピーできませんでした',
       'booking_number_copy': '予約番号をコピー',
@@ -4204,6 +4247,17 @@ class AppLocalizations {
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid':
           'กรุณาตรวจสอบหมายเลขเที่ยวบิน เช่น TG401 หรือ 7C2203',
+      'flight_lookup_search': 'ค้นหา',
+      'flight_lookup_not_found':
+          'ไม่พบเที่ยวบินสำหรับหมายเลขนี้ กรุณาตรวจสอบหมายเลขเที่ยวบินอีกครั้ง',
+      'flight_lookup_invalid_date':
+          'ไม่สามารถค้นหาเที่ยวบินด้วยวันรับได้ คุณยังสามารถจองต่อโดยใช้หมายเลขเที่ยวบินที่กรอกไว้ได้',
+      'flight_lookup_provider_unavailable':
+          'บริการค้นหาเที่ยวบินไม่พร้อมใช้งานชั่วคราว คุณยังสามารถจองต่อโดยใช้หมายเลขเที่ยวบินที่กรอกไว้ได้',
+      'flight_lookup_departure': 'ออกเดินทาง',
+      'flight_lookup_arrival': 'ถึงที่หมาย',
+      'flight_lookup_estimated_arrival': 'เวลาถึงโดยประมาณ',
+      'flight_lookup_confirm': 'นี่คือเที่ยวบินของฉัน',
       'booking_number_copied': 'คัดลอกหมายเลขจองแล้ว',
       'booking_number_copy_failed': 'ไม่สามารถคัดลอกหมายเลขจองได้',
       'booking_number_copy': 'คัดลอกหมายเลขจอง',

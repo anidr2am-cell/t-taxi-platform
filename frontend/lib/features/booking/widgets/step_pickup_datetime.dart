@@ -4,7 +4,10 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
+import '../models/flight_lookup_models.dart';
 import '../models/service_type_option.dart';
+import '../services/flight_lookup_api_service.dart';
+import '../utils/flight_time_format.dart';
 import '../utils/pickup_time_format.dart';
 import 'pickup_time_picker_sheet.dart';
 import 'wizard_compact.dart';
@@ -15,6 +18,7 @@ class StepPickupDateTime extends StatefulWidget {
     required this.state,
     required this.controller,
     this.onFlightNumberChanged,
+    this.flightLookupApi,
     this.embedded = false,
     this.focusNode,
   });
@@ -22,6 +26,7 @@ class StepPickupDateTime extends StatefulWidget {
   final BookingWizardState state;
   final BookingWizardController controller;
   final ValueChanged<String>? onFlightNumberChanged;
+  final FlightLookupApiService? flightLookupApi;
   final bool embedded;
   final FocusNode? focusNode;
 
@@ -33,12 +38,24 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
   late final TextEditingController _flightController;
   late final TextEditingController _manualTimeController;
   String? _manualTimeErrorKey;
+  bool _isLookingUp = false;
+  FlightSearchResult? _lookupResult;
+  String? _lookupErrorCode;
+  bool _lookupConfirmed = false;
+
+  FlightLookupApiService get _flightLookupApi =>
+      widget.flightLookupApi ?? FlightLookupApiService();
 
   @override
   void initState() {
     super.initState();
     _flightController = TextEditingController(text: widget.state.flightNumber);
     _manualTimeController = TextEditingController();
+    _flightController.addListener(_onFlightControllerChanged);
+  }
+
+  void _onFlightControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -58,6 +75,221 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
         oldWidget.state.pickupDate != widget.state.pickupDate) {
       _syncManualTimeField();
     }
+    if (oldWidget.state.pickupDate != widget.state.pickupDate) {
+      _clearLookup();
+    }
+  }
+
+  void _clearLookup() {
+    if (_lookupResult == null &&
+        _lookupErrorCode == null &&
+        !_isLookingUp &&
+        !_lookupConfirmed) {
+      return;
+    }
+    setState(() {
+      _lookupResult = null;
+      _lookupErrorCode = null;
+      _lookupConfirmed = false;
+      _isLookingUp = false;
+    });
+  }
+
+  void _onFlightNumberChanged(String value) {
+    _clearLookup();
+    widget.onFlightNumberChanged?.call(value);
+  }
+
+  Future<void> _searchFlight() async {
+    final flightNumber = _flightController.text.trim();
+    final flightDate = widget.state.pickupDate;
+    if (flightNumber.isEmpty || flightDate == null || _isLookingUp) return;
+
+    setState(() {
+      _isLookingUp = true;
+      _lookupResult = null;
+      _lookupErrorCode = null;
+      _lookupConfirmed = false;
+    });
+
+    try {
+      final result = await _flightLookupApi.searchFlight(
+        flightNumber,
+        flightDate,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isLookingUp = false;
+        _lookupResult = result;
+      });
+    } on FlightLookupException catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _isLookingUp = false;
+        _lookupErrorCode = err.errorCode;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLookingUp = false;
+        _lookupErrorCode = 'FLIGHT_PROVIDER_ERROR';
+      });
+    }
+  }
+
+  String? _lookupErrorMessage(AppLocalizations l10n) {
+    final code = _lookupErrorCode;
+    if (code == null) return null;
+    switch (code) {
+      case 'FLIGHT_NOT_FOUND':
+        return l10n.t('flight_lookup_not_found');
+      case 'INVALID_FLIGHT_NUMBER':
+        return l10n.t('flight_number_invalid');
+      case 'INVALID_FLIGHT_DATE':
+        return l10n.t('flight_lookup_invalid_date');
+      case 'FLIGHT_PROVIDER_NOT_CONFIGURED':
+      case 'FLIGHT_PROVIDER_TIMEOUT':
+      case 'FLIGHT_PROVIDER_RATE_LIMITED':
+      case 'FLIGHT_PROVIDER_ERROR':
+        return l10n.t('flight_lookup_provider_unavailable');
+      default:
+        return l10n.t('flight_lookup_provider_unavailable');
+    }
+  }
+
+  Widget _buildFlightLookupSection(AppLocalizations l10n) {
+    final canSearch =
+        _flightController.text.trim().isNotEmpty &&
+        widget.state.pickupDate != null &&
+        !_isLookingUp;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                key: const Key('flight_number_field'),
+                controller: _flightController,
+                focusNode: widget.focusNode,
+                decoration: WizardCompact.inputDecoration(
+                  label: l10n.t('flight_number'),
+                  hint: l10n.t('flight_number_hint'),
+                  prefixIcon: const Icon(Icons.flight_outlined, size: 20),
+                ).copyWith(
+                  errorText: widget.state.errorMessage == 'flight_number_invalid'
+                      ? l10n.t('flight_number_invalid')
+                      : null,
+                ),
+                textCapitalization: TextCapitalization.characters,
+                onChanged: _onFlightNumberChanged,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: WizardCompact.minTouchHeight,
+              child: FilledButton.tonal(
+                key: const Key('flight_lookup_search_button'),
+                onPressed: canSearch ? _searchFlight : null,
+                child: _isLookingUp
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        ),
+                      )
+                    : Text(l10n.t('flight_lookup_search')),
+              ),
+            ),
+          ],
+        ),
+        if (_lookupErrorCode != null) ...[
+          const SizedBox(height: WizardCompact.fieldGap),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.warningLight,
+            padding: widget.embedded
+                ? const EdgeInsets.all(WizardCompact.cardPadding)
+                : const EdgeInsets.all(AppTokens.spaceMd),
+            child: Text(
+              _lookupErrorMessage(l10n) ?? '',
+              style: const TextStyle(height: 1.45),
+            ),
+          ),
+        ],
+        if (_lookupResult != null) ...[
+          const SizedBox(height: WizardCompact.fieldGap),
+          _buildLookupResultCard(l10n, _lookupResult!),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildLookupResultCard(
+    AppLocalizations l10n,
+    FlightSearchResult result,
+  ) {
+    final amLabel = l10n.t('pickup_time_am');
+    final pmLabel = l10n.t('pickup_time_pm');
+
+    return AppUi.surfaceCard(
+      padding: widget.embedded
+          ? const EdgeInsets.all(WizardCompact.cardPadding)
+          : const EdgeInsets.all(AppTokens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if ((result.airlineName ?? '').isNotEmpty)
+            Text(
+              result.airlineName!,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          if ((result.airlineName ?? '').isNotEmpty)
+            const SizedBox(height: 6),
+          Text(
+            result.routeLabel(),
+            style: const TextStyle(fontSize: 14, height: 1.4),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${l10n.t('flight_lookup_departure')}: '
+            '${FlightTimeFormat.formatBangkokDisplay(result.departure.scheduledAt, amLabel: amLabel, pmLabel: pmLabel)}',
+            style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${l10n.t('flight_lookup_arrival')}: '
+            '${FlightTimeFormat.formatBangkokDisplay(result.arrival.scheduledAt, amLabel: amLabel, pmLabel: pmLabel)}',
+            style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
+          ),
+          if (result.arrival.estimatedAt != null &&
+              result.arrival.estimatedAt != result.arrival.scheduledAt) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${l10n.t('flight_lookup_estimated_arrival')}: '
+              '${FlightTimeFormat.formatBangkokDisplay(result.arrival.estimatedAt, amLabel: amLabel, pmLabel: pmLabel)}',
+              style: TextStyle(color: AppTokens.textSecondary, height: 1.4),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => setState(() => _lookupConfirmed = true),
+              icon: Icon(
+                _lookupConfirmed ? Icons.check_circle : Icons.check_circle_outline,
+                size: 18,
+                color: _lookupConfirmed ? AppTokens.success : AppTokens.primary,
+              ),
+              label: Text(l10n.t('flight_lookup_confirm')),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _syncManualTimeField() {
@@ -77,6 +309,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
 
   @override
   void dispose() {
+    _flightController.removeListener(_onFlightControllerChanged);
     _flightController.dispose();
     _manualTimeController.dispose();
     super.dispose();
@@ -159,10 +392,6 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
         widget.controller.defaultPickupDateTime();
     final min = widget.controller.earliestSelectablePickupDateTime();
     final showUrgentHint = widget.controller.isUrgentPickupWindowSelected();
-    final flightNumberError =
-        widget.state.errorMessage == 'flight_number_invalid'
-        ? l10n.t('flight_number_invalid')
-        : null;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -269,17 +498,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                 const SizedBox(height: WizardCompact.fieldGap),
                 manualTimeField,
                 const SizedBox(height: WizardCompact.fieldGap),
-                TextField(
-                  controller: _flightController,
-                  focusNode: widget.focusNode,
-                  decoration: WizardCompact.inputDecoration(
-                    label: l10n.t('flight_number'),
-                    hint: l10n.t('flight_number_hint'),
-                    prefixIcon: const Icon(Icons.flight_outlined, size: 20),
-                  ).copyWith(errorText: flightNumberError),
-                  textCapitalization: TextCapitalization.characters,
-                  onChanged: widget.onFlightNumberChanged,
-                ),
+                _buildFlightLookupSection(l10n),
               ],
             );
           },
