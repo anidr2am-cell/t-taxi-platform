@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/features/settlement/data/settlement_models.dart';
@@ -11,14 +12,35 @@ import 'test_fakes.dart';
 
 Future<void> pumpSettlementList(
   WidgetTester tester,
-  FakeSettlementApi api,
-) async {
+  FakeSettlementApi api, {
+  Locale locale = const Locale('ko'),
+  Size surfaceSize = const Size(360, 640),
+}) async {
+  tester.view.physicalSize = surfaceSize;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
   await tester.pumpWidget(
     localizedMaterialApp(
+      locale: locale,
       home: SettlementListPage(api: api, onUnauthorized: () async {}),
     ),
   );
   await tester.pumpAndSettle();
+  expect(tester.takeException(), isNull);
+}
+
+int _paragraphLineCount(Finder finder, WidgetTester tester) {
+  final paragraph = tester.renderObject<RenderParagraph>(finder);
+  final painter = TextPainter(
+    text: paragraph.text,
+    textDirection: paragraph.textDirection,
+    maxLines: paragraph.maxLines,
+    textScaler: paragraph.textScaler,
+    ellipsis: paragraph.overflow == TextOverflow.ellipsis ? '…' : null,
+  )..layout(maxWidth: paragraph.size.width);
+  return painter.computeLineMetrics().length;
 }
 
 Future<void> pumpSettlementDetail(
@@ -178,6 +200,89 @@ void main() {
     await pumpSettlementList(tester, api);
 
     expect(find.text('금액 정보 없음'), findsNWidgets(3));
+  });
+
+  testWidgets(
+    'list card Thai labels wrap horizontally without one character per line',
+    (tester) async {
+      final api = FakeSettlementApi()
+        ..items = [
+          settlementItem(
+            bookingNumber: 'TX-TH',
+            customerPaymentAmount: 1300,
+            companyCommissionAmount: 200,
+            driverExpectedIncomeAmount: 1100,
+            commissionStatus: 'DUE',
+            dueAt: '2026-07-30T23:59:00.000+07:00',
+          ),
+        ];
+      await pumpSettlementList(tester, api, locale: const Locale('th'));
+
+      expect(find.text('ยอดที่ลูกค้าจ่าย'), findsOneWidget);
+      expect(find.text('รายได้คนขับ'), findsOneWidget);
+      expect(find.text('ค่าคอมมิชชัน'), findsOneWidget);
+
+      final customerLabel = find.text('ยอดที่ลูกค้าจ่าย');
+      expect(
+        _paragraphLineCount(customerLabel, tester),
+        inInclusiveRange(1, 2),
+      );
+
+      final commissionLabel = find.text('ค่าคอมมิชชัน');
+      expect(
+        _paragraphLineCount(commissionLabel, tester),
+        inInclusiveRange(1, 2),
+      );
+    },
+  );
+
+  testWidgets('list card Korean labels remain readable after layout change', (
+    tester,
+  ) async {
+    final api = FakeSettlementApi()
+      ..items = [
+        settlementItem(
+          bookingNumber: 'TX-KO',
+          customerPaymentAmount: 1300,
+          companyCommissionAmount: 200,
+          driverExpectedIncomeAmount: 1100,
+        ),
+      ];
+    await pumpSettlementList(tester, api);
+
+    expect(find.text('고객 결제액'), findsOneWidget);
+    expect(find.text('기사 수입'), findsOneWidget);
+    expect(find.text('수수료'), findsOneWidget);
+    expect(_paragraphLineCount(find.text('고객 결제액'), tester), 1);
+    expect(_paragraphLineCount(find.text('수수료'), tester), 1);
+  });
+
+  testWidgets('list card survives narrow width with longest Thai labels', (
+    tester,
+  ) async {
+    final api = FakeSettlementApi()
+      ..items = [
+        settlementItem(
+          bookingNumber: 'TX-NARROW',
+          customerPaymentAmount: 9999999,
+          companyCommissionAmount: 9999999,
+          driverExpectedIncomeAmount: 9999999,
+          nameSignAmount: 100,
+          commissionStatus: 'RECEIPT_SUBMITTED',
+          dueAt: '2026-07-30T23:59:00.000+07:00',
+        ),
+      ];
+    await pumpSettlementList(
+      tester,
+      api,
+      locale: const Locale('th'),
+      surfaceSize: const Size(320, 640),
+    );
+
+    expect(find.byKey(const Key('settlement-TX-NARROW')), findsOneWidget);
+    expect(find.text('ยอดที่ลูกค้าจ่าย'), findsOneWidget);
+    expect(find.text('ค่าคอมมิชชัน'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('detail shows blocked banner, rejection reason, and upload CTA', (

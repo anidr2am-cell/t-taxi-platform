@@ -197,6 +197,7 @@ class _SettlementCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
+                          flex: 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -235,20 +236,25 @@ class _SettlementCard extends StatelessWidget {
                                   ),
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(color: colors.outline),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ],
                           ),
                         ),
                         const SizedBox(width: 12),
-                        _SettlementAmountLine(
-                          key: Key(
-                            'settlementCommission-${item.bookingNumber}',
+                        Expanded(
+                          flex: 2,
+                          child: _SettlementAmountLine(
+                            key: Key(
+                              'settlementCommission-${item.bookingNumber}',
+                            ),
+                            label: l10n.commissionFee,
+                            amount: commissionAmount,
+                            currency: commissionCurrency,
+                            alignEnd: true,
                           ),
-                          label: l10n.commissionFee,
-                          amount: commissionAmount,
-                          currency: commissionCurrency,
-                          alignEnd: true,
                         ),
                       ],
                     ),
@@ -314,12 +320,23 @@ class _SettlementAmountLine extends StatelessWidget {
         Text(
           label,
           style: theme.bodySmall?.copyWith(color: colors.outline),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
         ),
         const SizedBox(height: 2),
-        Text(
-          formatSettlementMoneyLocalized(l10n, amount, currency),
-          style: valueStyle,
-          textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+        SizedBox(
+          width: double.infinity,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+            child: Text(
+              formatSettlementMoneyLocalized(l10n, amount, currency),
+              style: valueStyle,
+              maxLines: 1,
+              softWrap: false,
+            ),
+          ),
         ),
       ],
     );

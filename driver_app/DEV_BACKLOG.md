@@ -237,3 +237,13 @@ backend가 `pickupLocation`/`destinationLocation`을 open calls에도 노출하�
 ### 상태
 
 보류. 우선순위 낮음, 필요 시 진행.
+
+## 16. api_exception.dart deprecated userMessage 정리 (선택)
+
+### 배경
+
+l10n 마이그레이션 완료 확인 결과, `api_exception.dart`의 `@Deprecated` `userMessage` getter(36건 하드코딩 한글)와 `app_config.dart`의 부트스트랩 StateError(4건)가 UI에서 전혀 사용되지 않는 레거시로 확인됨.
+
+### 상태
+
+보류. 우선순위 낮음, 코드 정리 차원에서 필요 시 제거.
