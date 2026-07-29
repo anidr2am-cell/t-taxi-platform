@@ -7,10 +7,12 @@ import 'package:http/testing.dart';
 import 'package:tride_driver/config/app_config.dart';
 import 'package:tride_driver/config/app_environment.dart';
 import 'package:tride_driver/core/network/api_client.dart';
+import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/driver_application/data/driver_application_api.dart';
 import 'package:tride_driver/features/driver_application/data/driver_application_models.dart';
 import 'package:tride_driver/features/driver_application/presentation/driver_application_complete_page.dart';
 import 'package:tride_driver/features/driver_application/presentation/driver_application_form_page.dart';
+import 'package:tride_driver/features/driver_application/presentation/driver_application_status_page.dart';
 
 import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
@@ -373,7 +375,7 @@ void main() {
       tester,
     ) async {
       _useTallView(tester);
-      final fakeApi = _FakeDriverApplicationApi();
+      final fakeApi = FakeDriverApplicationApi();
       await pumpLocalizedWidget(
         tester,
         home: DriverApplicationFormPage(
@@ -415,7 +417,7 @@ void main() {
 
     testWidgets('invokes onSubmitted with receipt', (tester) async {
       _useTallView(tester);
-      final fakeApi = _FakeDriverApplicationApi();
+      final fakeApi = FakeDriverApplicationApi();
       DriverApplicationReceipt? captured;
       await pumpLocalizedWidget(
         tester,
@@ -442,7 +444,7 @@ void main() {
       tester,
     ) async {
       _useTallView(tester);
-      final fakeApi = _FakeDriverApplicationApi();
+      final fakeApi = FakeDriverApplicationApi();
       final storage = FakeTokenStorage();
       await pumpLocalizedWidget(
         tester,
@@ -469,6 +471,205 @@ void main() {
       final saved = await storage.readDriverApplicationInfo();
       expect(saved?.applicationNumber, 'DA-TEST-1');
       expect(saved?.statusToken, 'token');
+    });
+  });
+
+  group('DriverApplicationApi status', () {
+    test('status GET uses query params without bearer token', () async {
+      late Uri url;
+      final result = await api(
+        MockClient((incoming) async {
+          url = incoming.url;
+          return http.Response(
+            jsonEncode(
+              envelope({
+                'applicationNumber': 'DA-1',
+                'status': 'PENDING',
+                'submittedAt': '2026-07-28',
+              }),
+            ),
+            200,
+          );
+        }),
+      ).getApplicationStatus(
+        applicationNumber: 'DA-1',
+        token: 'secret',
+      );
+
+      expect(url.path, '/api/v1/driver-applications/status');
+      expect(url.queryParameters['applicationNumber'], 'DA-1');
+      expect(url.queryParameters['token'], 'secret');
+      expect(result.status, 'PENDING');
+    });
+
+    test('status GET rejects empty credentials before transport', () async {
+      var calls = 0;
+      await expectLater(
+        api(
+          MockClient((_) async {
+            calls++;
+            return http.Response('{}', 404);
+          }),
+        ).getApplicationStatus(applicationNumber: ' ', token: ''),
+        throwsA(
+          isA<DriverApplicationApiException>().having(
+            (error) => error.kind,
+            'kind',
+            DriverApplicationFailureKind.validation,
+          ),
+        ),
+      );
+      expect(calls, 0);
+    });
+
+    test('status GET classifies not found', () async {
+      await expectLater(
+        api(
+          MockClient(
+            (_) async => http.Response(
+              '{"success":false,"error_code":"NOT_FOUND"}',
+              404,
+            ),
+          ),
+        ).getApplicationStatus(
+          applicationNumber: 'DA-404',
+          token: 'missing',
+        ),
+        throwsA(
+          isA<DriverApplicationApiException>().having(
+            (error) => error.kind,
+            'kind',
+            DriverApplicationFailureKind.notFound,
+          ),
+        ),
+      );
+    });
+  });
+
+  group('DriverApplicationStatusPage', () {
+    testWidgets('auto lookup uses saved secure storage info', (tester) async {
+      final storage = FakeTokenStorage()
+        ..driverApplicationInfo = const DriverApplicationStoredInfo(
+          applicationNumber: 'DA-SAVED',
+          statusToken: 'saved-token',
+          submittedAt: '2026-07-28',
+        );
+      final fakeApi = FakeDriverApplicationApi(
+        statusResult: const DriverApplicationStatusResult(
+          applicationNumber: 'DA-SAVED',
+          status: 'PENDING',
+          submittedAt: '2026-07-28',
+        ),
+      );
+
+      await pumpLocalizedWidget(
+        tester,
+        home: DriverApplicationStatusPage(
+          api: fakeApi,
+          tokenStorage: storage,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(fakeApi.statusLookupCount, 1);
+      expect(fakeApi.lastStatusNumber, 'DA-SAVED');
+      expect(find.byKey(const Key('driverApplicationStatusPending')), findsOneWidget);
+      expect(find.textContaining('심사 중입니다'), findsOneWidget);
+    });
+
+    testWidgets('manual lookup shows approved state', (tester) async {
+      final fakeApi = FakeDriverApplicationApi(
+        statusResult: const DriverApplicationStatusResult(
+          applicationNumber: 'DA-APPROVED',
+          status: 'APPROVED',
+          submittedAt: '2026-07-28',
+        ),
+      );
+
+      await pumpLocalizedWidget(
+        tester,
+        home: DriverApplicationStatusPage(api: fakeApi),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('driverApplicationStatusNumberField')),
+        'DA-APPROVED',
+      );
+      await tester.enterText(
+        find.byKey(const Key('driverApplicationStatusTokenField')),
+        'token',
+      );
+      await tester.tap(find.byKey(const Key('driverApplicationStatusLookupButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('driverApplicationStatusApproved')), findsOneWidget);
+      expect(find.text('승인되었습니다! 로그인해 주세요.'), findsOneWidget);
+    });
+
+    testWidgets('manual lookup shows rejected reason', (tester) async {
+      final fakeApi = FakeDriverApplicationApi(
+        statusResult: const DriverApplicationStatusResult(
+          applicationNumber: 'DA-REJECTED',
+          status: 'REJECTED',
+          submittedAt: '2026-07-28',
+          rejectionReason: 'Incomplete documents',
+        ),
+      );
+
+      await pumpLocalizedWidget(
+        tester,
+        home: DriverApplicationStatusPage(api: fakeApi),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('driverApplicationStatusNumberField')),
+        'DA-REJECTED',
+      );
+      await tester.enterText(
+        find.byKey(const Key('driverApplicationStatusTokenField')),
+        'token',
+      );
+      await tester.tap(find.byKey(const Key('driverApplicationStatusLookupButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('driverApplicationStatusRejected')), findsOneWidget);
+      expect(find.textContaining('Incomplete documents'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('driverApplicationResubmitButton')));
+      await tester.pumpAndSettle();
+      expect(find.text('재신청 기능은 준비 중입니다.'), findsOneWidget);
+    });
+
+    testWidgets('shows not found error message', (tester) async {
+      final fakeApi = FakeDriverApplicationApi(
+        statusError: const DriverApplicationApiException(
+          DriverApplicationFailureKind.notFound,
+        ),
+      );
+
+      await pumpLocalizedWidget(
+        tester,
+        home: DriverApplicationStatusPage(api: fakeApi),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('driverApplicationStatusNumberField')),
+        'DA-404',
+      );
+      await tester.enterText(
+        find.byKey(const Key('driverApplicationStatusTokenField')),
+        'bad',
+      );
+      await tester.tap(find.byKey(const Key('driverApplicationStatusLookupButton')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('driverApplicationStatusError')), findsOneWidget);
+      expect(
+        find.text('신청 정보를 찾을 수 없습니다. 신청번호와 토큰을 확인해 주세요.'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -586,30 +787,6 @@ void _useTallView(WidgetTester tester) {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
-}
-
-class _FakeDriverApplicationApi implements DriverApplicationDataSource {
-  int submitCount = 0;
-
-  @override
-  Future<List<DriverApplicationVehicleType>> listVehicleTypes() async {
-    return const [
-      DriverApplicationVehicleType(id: 1, code: 'SEDAN', name: 'Sedan'),
-    ];
-  }
-
-  @override
-  Future<DriverApplicationReceipt> submitApplication(
-    DriverApplicationDraft draft,
-  ) async {
-    submitCount++;
-    return const DriverApplicationReceipt(
-      applicationNumber: 'DA-TEST-1',
-      status: 'PENDING',
-      statusToken: 'token',
-      submittedAt: '2026-07-28',
-    );
-  }
 }
 
 extension on DriverApplicationDraft {

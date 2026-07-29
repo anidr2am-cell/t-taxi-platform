@@ -16,6 +16,8 @@ import 'package:tride_driver/features/dispatch/data/driver_socket_service.dart';
 import 'package:tride_driver/features/notifications/data/notification_api.dart';
 import 'package:tride_driver/features/settlement/data/settlement_api.dart';
 import 'package:tride_driver/features/settlement/data/settlement_models.dart';
+import 'package:tride_driver/features/driver_application/data/driver_application_api.dart';
+import 'package:tride_driver/features/driver_application/data/driver_application_models.dart';
 
 DriverUser driverUser({int id = 7, String? name = 'Somchai'}) =>
     DriverUser(id: id, role: 'DRIVER', isActive: true, name: name);
@@ -100,6 +102,57 @@ class FakeTokenStorage implements TokenStorage {
   Future<void> clearDriverApplicationInfo() async {
     driverApplicationClearCount++;
     driverApplicationInfo = null;
+  }
+}
+
+class FakeDriverApplicationApi implements DriverApplicationDataSource {
+  FakeDriverApplicationApi({
+    this.statusResult,
+    this.statusError,
+  });
+
+  int submitCount = 0;
+  int statusLookupCount = 0;
+  String? lastStatusNumber;
+  String? lastStatusToken;
+  DriverApplicationStatusResult? statusResult;
+  DriverApplicationApiException? statusError;
+
+  @override
+  Future<List<DriverApplicationVehicleType>> listVehicleTypes() async {
+    return const [
+      DriverApplicationVehicleType(id: 1, code: 'SEDAN', name: 'Sedan'),
+    ];
+  }
+
+  @override
+  Future<DriverApplicationReceipt> submitApplication(
+    DriverApplicationDraft draft,
+  ) async {
+    submitCount++;
+    return const DriverApplicationReceipt(
+      applicationNumber: 'DA-TEST-1',
+      status: 'PENDING',
+      statusToken: 'token',
+      submittedAt: '2026-07-28',
+    );
+  }
+
+  @override
+  Future<DriverApplicationStatusResult> getApplicationStatus({
+    required String applicationNumber,
+    required String token,
+  }) async {
+    statusLookupCount++;
+    lastStatusNumber = applicationNumber;
+    lastStatusToken = token;
+    if (statusError != null) throw statusError!;
+    return statusResult ??
+        const DriverApplicationStatusResult(
+          applicationNumber: 'DA-TEST-1',
+          status: 'PENDING',
+          submittedAt: '2026-07-28',
+        );
   }
 }
 

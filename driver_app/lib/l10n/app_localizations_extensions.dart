@@ -197,6 +197,8 @@ extension DriverApplicationApiExceptionLocalization
           l10n.driverApplicationPlateConflict,
         DriverApplicationFailureKind.duplicateApplication =>
           l10n.driverApplicationDuplicateConflict,
+        DriverApplicationFailureKind.notFound =>
+          l10n.driverApplicationStatusNotFound,
         DriverApplicationFailureKind.unavailable => l10n.errorUnavailable,
         DriverApplicationFailureKind.timeout => l10n.errorTimeout,
         DriverApplicationFailureKind.server => l10n.errorServer,

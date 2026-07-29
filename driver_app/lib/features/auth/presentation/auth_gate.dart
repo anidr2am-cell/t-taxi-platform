@@ -11,6 +11,8 @@ import '../../dispatch/data/driver_socket_service.dart';
 import '../../settlement/data/settlement_api.dart';
 import '../../../core/firebase/fcm_token_service.dart';
 import '../../../core/firebase/fcm_message_service.dart';
+import '../../../core/storage/secure_token_storage.dart';
+import '../../driver_application/data/driver_application_api.dart';
 import '../../dispatch/presentation/driver_home_shell.dart';
 import 'auth_controller.dart';
 import 'login_screen.dart';
@@ -28,6 +30,8 @@ class AuthGate extends StatefulWidget {
     this.driverSocket,
     this.fcmTokenService,
     this.fcmMessageService,
+    this.tokenStorage,
+    this.driverApplicationApi,
   });
 
   final AuthController controller;
@@ -40,6 +44,8 @@ class AuthGate extends StatefulWidget {
   final DriverSocketConnection? driverSocket;
   final FcmTokenService? fcmTokenService;
   final FcmMessageService? fcmMessageService;
+  final TokenStorage? tokenStorage;
+  final DriverApplicationDataSource? driverApplicationApi;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -79,6 +85,8 @@ class _AuthGateState extends State<AuthGate> {
             controller: widget.controller,
             localeController: widget.localeController,
             appName: widget.config.appName,
+            tokenStorage: widget.tokenStorage,
+            driverApplicationApi: widget.driverApplicationApi,
           ),
         };
       },

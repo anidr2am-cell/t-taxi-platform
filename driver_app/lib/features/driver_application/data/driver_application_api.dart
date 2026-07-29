@@ -7,6 +7,10 @@ abstract interface class DriverApplicationDataSource {
   Future<DriverApplicationReceipt> submitApplication(
     DriverApplicationDraft draft,
   );
+  Future<DriverApplicationStatusResult> getApplicationStatus({
+    required String applicationNumber,
+    required String token,
+  });
 }
 
 class DriverApplicationApi implements DriverApplicationDataSource {
@@ -88,6 +92,33 @@ class DriverApplicationApi implements DriverApplicationDataSource {
     }
   }
 
+  @override
+  Future<DriverApplicationStatusResult> getApplicationStatus({
+    required String applicationNumber,
+    required String token,
+  }) async {
+    final number = applicationNumber.trim();
+    final statusToken = token.trim();
+    if (number.isEmpty || statusToken.isEmpty) {
+      throw const DriverApplicationApiException(
+        DriverApplicationFailureKind.validation,
+      );
+    }
+
+    try {
+      final envelope = await _client.getJson(
+        '/api/v1/driver-applications/status',
+        queryParameters: {
+          'applicationNumber': number,
+          'token': statusToken,
+        },
+      );
+      return DriverApplicationStatusResult.fromJson(_data(envelope));
+    } on ApiException catch (error) {
+      throw _fromApiException(error);
+    }
+  }
+
   Map<String, dynamic> _data(Map<String, dynamic> envelope) {
     final data = envelope['data'];
     if (data is! Map) {
@@ -113,6 +144,7 @@ class DriverApplicationApi implements DriverApplicationDataSource {
       ApiFailureKind.fileTooLarge => DriverApplicationFailureKind.fileTooLarge,
       ApiFailureKind.vehiclePlateAlreadyRegistered =>
         DriverApplicationFailureKind.plateConflict,
+      ApiFailureKind.notFound => DriverApplicationFailureKind.notFound,
       ApiFailureKind.conflict => _conflictKind(fieldErrors),
       ApiFailureKind.unavailable => DriverApplicationFailureKind.unavailable,
       ApiFailureKind.timeout => DriverApplicationFailureKind.timeout,

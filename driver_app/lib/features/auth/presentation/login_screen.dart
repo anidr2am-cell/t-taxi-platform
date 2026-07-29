@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/locale/locale_controller.dart';
+import '../../../core/storage/secure_token_storage.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/app_localizations_extensions.dart';
+import '../../driver_application/data/driver_application_api.dart';
+import '../../driver_application/presentation/driver_application_form_page.dart';
+import '../../driver_application/presentation/driver_application_status_page.dart';
 import 'auth_controller.dart';
 import 'language_selector.dart';
 
@@ -12,11 +16,15 @@ class LoginScreen extends StatefulWidget {
     required this.controller,
     required this.localeController,
     required this.appName,
+    this.tokenStorage,
+    this.driverApplicationApi,
   });
 
   final AuthController controller;
   final LocaleController localeController;
   final String appName;
+  final TokenStorage? tokenStorage;
+  final DriverApplicationDataSource? driverApplicationApi;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -27,6 +35,25 @@ class _LoginScreenState extends State<LoginScreen> {
   final _loginIdController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _hasSavedApplication = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedApplicationHint();
+  }
+
+  Future<void> _loadSavedApplicationHint() async {
+    final storage = widget.tokenStorage;
+    if (storage == null) return;
+    final saved = await storage.readDriverApplicationInfo();
+    if (!mounted) return;
+    setState(() {
+      _hasSavedApplication = saved != null &&
+          saved.applicationNumber.isNotEmpty &&
+          saved.statusToken.isNotEmpty;
+    });
+  }
 
   @override
   void dispose() {
@@ -40,6 +67,32 @@ class _LoginScreenState extends State<LoginScreen> {
     await widget.controller.login(
       _loginIdController.text.trim(),
       _passwordController.text,
+    );
+  }
+
+  void _openSignUp() {
+    final api = widget.driverApplicationApi;
+    if (api == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => DriverApplicationFormPage(
+          api: api,
+          tokenStorage: widget.tokenStorage,
+        ),
+      ),
+    );
+  }
+
+  void _openApplicationStatus() {
+    final api = widget.driverApplicationApi;
+    if (api == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => DriverApplicationStatusPage(
+          api: api,
+          tokenStorage: widget.tokenStorage,
+        ),
+      ),
     );
   }
 
@@ -146,6 +199,33 @@ class _LoginScreenState extends State<LoginScreen> {
                           : Text(l10n.login),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    key: const Key('loginSignUpButton'),
+                    onPressed:
+                        submitting || widget.driverApplicationApi == null
+                        ? null
+                        : _openSignUp,
+                    child: Text(l10n.loginSignUp),
+                  ),
+                  if (_hasSavedApplication)
+                    FilledButton.tonal(
+                      key: const Key('loginCheckApplicationStatusButton'),
+                      onPressed:
+                          submitting || widget.driverApplicationApi == null
+                          ? null
+                          : _openApplicationStatus,
+                      child: Text(l10n.loginCheckApplicationStatus),
+                    )
+                  else
+                    TextButton(
+                      key: const Key('loginCheckApplicationStatusButton'),
+                      onPressed:
+                          submitting || widget.driverApplicationApi == null
+                          ? null
+                          : _openApplicationStatus,
+                      child: Text(l10n.loginCheckApplicationStatus),
+                    ),
                 ],
               ),
             ),

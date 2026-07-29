@@ -823,6 +823,53 @@ class AppLocalizations {
         'LINE 단체방 QR 코드가 준비되면 여기에 표시됩니다.',
         'QR Code LINE จะปรากฏที่นี่เมื่อพร้อมใช้งาน',
       );
+  String get driverApplicationStatusTitle =>
+      _s('가입 신청 상태', 'สถานะใบสมัคร');
+  String get driverApplicationStatusLoading =>
+      _s('신청 상태를 확인하는 중...', 'กำลังตรวจสอบสถานะใบสมัคร...');
+  String get driverApplicationStatusFailed => _s(
+        '신청 상태를 확인하지 못했습니다.',
+        'ตรวจสอบสถานะใบสมัครไม่สำเร็จ',
+      );
+  String get driverApplicationStatusNotFound => _s(
+        '신청 정보를 찾을 수 없습니다. 신청번호와 토큰을 확인해 주세요.',
+        'ไม่พบข้อมูลใบสมัคร กรุณาตรวจสอบเลขที่ใบสมัครและโทเคน',
+      );
+  String get driverApplicationStatusManual => _s(
+        '신청번호와 상태 토큰 입력',
+        'กรอกเลขที่ใบสมัครและโทเคน',
+      );
+  String get driverApplicationNumberLabelField =>
+      _s('신청번호', 'เลขที่ใบสมัคร');
+  String get driverApplicationStatusToken =>
+      _s('상태 토큰', 'โทเคนสถานะ');
+  String get driverApplicationStatusLookup =>
+      _s('상태 확인', 'ตรวจสอบสถานะ');
+  String get driverApplicationStatusPendingMessage => _s(
+        '심사 중입니다. 승인 결과는 LINE 또는 이 화면에서 확인할 수 있습니다.',
+        'อยู่ระหว่างตรวจสอบ สามารถตรวจผลอนุมัติผ่าน LINE หรือหน้านี้',
+      );
+  String get driverApplicationStatusApprovedMessage => _s(
+        '승인되었습니다! 로그인해 주세요.',
+        'อนุมัติแล้ว! กรุณาเข้าสู่ระบบ',
+      );
+  String get driverApplicationStatusRejectedTitle =>
+      _s('신청이 거절되었습니다', 'ใบสมัครถูกปฏิเสธ');
+  String get driverApplicationRejectionReason =>
+      _s('거절 사유', 'เหตุผลที่ปฏิเสธ');
+  String get driverApplicationResubmit =>
+      _s('다시 신청하기', 'สมัครใหม่');
+  String get driverApplicationResubmitComingSoon => _s(
+        '재신청 기능은 준비 중입니다.',
+        'ฟีเจอร์สมัครใหม่อยู่ระหว่างเตรียมการ',
+      );
+  String get driverApplicationGoToLogin =>
+      _s('로그인 화면으로 이동', 'ไปหน้าเข้าสู่ระบบ');
+  String get driverApplicationUseManualLookup =>
+      _s('다른 정보로 조회', 'ค้นหาด้วยข้อมูลอื่น');
+  String get loginSignUp => _s('회원가입', 'สมัครสมาชิก');
+  String get loginCheckApplicationStatus =>
+      _s('가입 신청 상태 확인', 'ตรวจสอบสถานะใบสมัคร');
 
   // API errors
   String get errorInvalidCredentials =>

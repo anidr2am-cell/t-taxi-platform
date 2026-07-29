@@ -193,6 +193,32 @@ class DriverApplicationReceipt {
   }
 }
 
+class DriverApplicationStatusResult {
+  const DriverApplicationStatusResult({
+    required this.applicationNumber,
+    required this.status,
+    required this.submittedAt,
+    this.reviewedAt,
+    this.rejectionReason,
+  });
+
+  final String applicationNumber;
+  final String status;
+  final String submittedAt;
+  final String? reviewedAt;
+  final String? rejectionReason;
+
+  factory DriverApplicationStatusResult.fromJson(Map<String, dynamic> json) {
+    return DriverApplicationStatusResult(
+      applicationNumber: json['applicationNumber'] as String? ?? '',
+      status: json['status'] as String? ?? 'PENDING',
+      submittedAt: json['submittedAt']?.toString() ?? '',
+      reviewedAt: json['reviewedAt']?.toString(),
+      rejectionReason: json['rejectionReason']?.toString(),
+    );
+  }
+}
+
 class DriverApplicationVehicleType {
   const DriverApplicationVehicleType({
     required this.id,
@@ -220,6 +246,7 @@ enum DriverApplicationFailureKind {
   phoneConflict,
   plateConflict,
   duplicateApplication,
+  notFound,
   unavailable,
   timeout,
   server,

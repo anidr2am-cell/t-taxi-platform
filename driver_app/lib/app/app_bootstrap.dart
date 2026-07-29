@@ -22,6 +22,7 @@ import '../features/dispatch/data/dispatch_repository.dart';
 import '../features/dispatch/data/driver_socket_service.dart';
 import '../features/settlement/data/settlement_api.dart';
 import '../features/notifications/data/notification_api.dart';
+import '../features/driver_application/data/driver_application_api.dart';
 import 'app.dart';
 
 Future<void> runDriverApp(AppEnvironment environment) async {
@@ -63,6 +64,8 @@ Future<void> runDriverApp(AppEnvironment environment) async {
       driverSocket: DriverSocketService(config: config, storage: storage),
       fcmTokenService: fcmTokenService,
       fcmMessageService: fcmMessageService,
+      tokenStorage: storage,
+      driverApplicationApi: DriverApplicationApi(client: apiClient),
     ),
   );
 }

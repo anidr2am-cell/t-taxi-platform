@@ -36,9 +36,13 @@ class ApiClient {
   Future<Map<String, dynamic>> getJson(
     String path, {
     String? bearerToken,
+    Map<String, String>? queryParameters,
   }) async {
     return _request(
-      () => _httpClient.get(_endpoint(path), headers: _headers(bearerToken)),
+      () => _httpClient.get(
+        _endpoint(path).replace(queryParameters: queryParameters),
+        headers: _headers(bearerToken),
+      ),
     );
   }
 

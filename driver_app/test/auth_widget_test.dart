@@ -21,6 +21,7 @@ pumpApp(
   FakeTokenStorage? storage,
   FakeAccountApi? accountApi,
   LocaleController? localeController,
+  FakeDriverApplicationApi? driverApplicationApi,
 }) async {
   final fakeApi = api ?? FakeAuthApi();
   final fakeStorage = storage ?? FakeTokenStorage();
@@ -38,6 +39,8 @@ pumpApp(
         ..listResult = bookingList(items: const []),
       dispatchRepository: FakeDispatchReader(),
       accountApi: accountApi,
+      tokenStorage: fakeStorage,
+      driverApplicationApi: driverApplicationApi ?? FakeDriverApplicationApi(),
     ),
   );
   await tester.pumpAndSettle();
@@ -191,5 +194,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('기사 로그인'), findsOneWidget);
     expect(storage.clearCount, 1);
+  });
+
+  testWidgets('login screen shows signup and status check buttons', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    expect(find.byKey(const Key('loginSignUpButton')), findsOneWidget);
+    expect(find.byKey(const Key('loginCheckApplicationStatusButton')), findsOneWidget);
+    expect(find.text('회원가입'), findsOneWidget);
+    expect(find.text('가입 신청 상태 확인'), findsOneWidget);
+  });
+
+  testWidgets('signup button opens driver application form', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('loginSignUpButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('기사 등록 신청'), findsOneWidget);
+  });
+
+  testWidgets('status check button opens application status page', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.tap(find.byKey(const Key('loginCheckApplicationStatusButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('가입 신청 상태'), findsOneWidget);
+    expect(find.byKey(const Key('driverApplicationStatusManualForm')), findsOneWidget);
+  });
+
+  testWidgets('saved application info highlights status check button', (
+    tester,
+  ) async {
+    final storage = FakeTokenStorage()
+      ..driverApplicationInfo = const DriverApplicationStoredInfo(
+        applicationNumber: 'DA-SAVED',
+        statusToken: 'token',
+        submittedAt: '2026-07-28',
+      );
+    await pumpApp(tester, storage: storage);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is FilledButton &&
+            widget.key == const Key('loginCheckApplicationStatusButton'),
+      ),
+      findsOneWidget,
+    );
   });
 }

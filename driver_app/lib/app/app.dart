@@ -12,6 +12,8 @@ import '../features/settlement/data/settlement_api.dart';
 import '../core/firebase/fcm_token_service.dart';
 import '../core/firebase/fcm_message_service.dart';
 import '../l10n/app_localizations.dart';
+import '../core/storage/secure_token_storage.dart';
+import '../features/driver_application/data/driver_application_api.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({
@@ -26,6 +28,8 @@ class DriverApp extends StatelessWidget {
     this.driverSocket,
     this.fcmTokenService,
     this.fcmMessageService,
+    this.tokenStorage,
+    this.driverApplicationApi,
   });
 
   final AppConfig config;
@@ -38,6 +42,8 @@ class DriverApp extends StatelessWidget {
   final DriverSocketConnection? driverSocket;
   final FcmTokenService? fcmTokenService;
   final FcmMessageService? fcmMessageService;
+  final TokenStorage? tokenStorage;
+  final DriverApplicationDataSource? driverApplicationApi;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +71,8 @@ class DriverApp extends StatelessWidget {
             driverSocket: driverSocket,
             fcmTokenService: fcmTokenService,
             fcmMessageService: fcmMessageService,
+            tokenStorage: tokenStorage,
+            driverApplicationApi: driverApplicationApi,
           ),
         );
       },
