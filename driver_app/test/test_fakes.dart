@@ -32,11 +32,14 @@ class FakeTokenStorage implements TokenStorage {
 
   AuthTokens? tokens;
   int? notificationDeviceId;
+  DriverApplicationStoredInfo? driverApplicationInfo;
   int readCount = 0;
   int writeCount = 0;
   int clearCount = 0;
   int notificationDeviceIdWriteCount = 0;
   int notificationDeviceIdClearCount = 0;
+  int driverApplicationWriteCount = 0;
+  int driverApplicationClearCount = 0;
 
   @override
   Future<void> clear() async {
@@ -72,6 +75,31 @@ class FakeTokenStorage implements TokenStorage {
   Future<void> writeNotificationDeviceId(int deviceId) async {
     notificationDeviceIdWriteCount++;
     notificationDeviceId = deviceId;
+  }
+
+  @override
+  Future<DriverApplicationStoredInfo?> readDriverApplicationInfo() async {
+    return driverApplicationInfo;
+  }
+
+  @override
+  Future<void> writeDriverApplicationInfo({
+    required String applicationNumber,
+    required String statusToken,
+    required String submittedAt,
+  }) async {
+    driverApplicationWriteCount++;
+    driverApplicationInfo = DriverApplicationStoredInfo(
+      applicationNumber: applicationNumber,
+      statusToken: statusToken,
+      submittedAt: submittedAt,
+    );
+  }
+
+  @override
+  Future<void> clearDriverApplicationInfo() async {
+    driverApplicationClearCount++;
+    driverApplicationInfo = null;
   }
 }
 

@@ -801,6 +801,28 @@ class AppLocalizations {
       );
   String get driverApplicationRequiredField =>
       _s('필수 항목을 입력해 주세요.', 'กรุณากรอกข้อมูลที่จำเป็น');
+  String get driverApplicationSubmittedMessage => _s(
+        '관리자에게 승인 요청 했습니다.',
+        'ส่งคำขอให้ผู้ดูแลอนุมัติแล้ว',
+      );
+  String get driverApplicationLineGroupInstruction => _s(
+        '아래 QR 코드를 스캔하여 드라이버 LINE 단체방에 입장하고 가입 신청했다고 알려주세요.',
+        'สแกน QR Code ด้านล่างเพื่อเข้ากลุ่ม LINE คนขับ และแจ้งว่าได้ส่งคำขอสมัครแล้ว',
+      );
+  String driverApplicationNumberLabel(String applicationNumber) => _s(
+        '신청번호: $applicationNumber',
+        'เลขที่ใบสมัคร: $applicationNumber',
+      );
+  String get driverApplicationNumberStatusHint => _s(
+        '이 번호로 나중에 승인 여부를 확인할 수 있습니다.',
+        'คุณสามารถตรวจสอบสถานะการอนุมัติภายหลังด้วยเลขนี้',
+      );
+  String get driverApplicationBackToLogin =>
+      _s('로그인 화면으로 돌아가기', 'กลับไปหน้าเข้าสู่ระบบ');
+  String get driverApplicationLineQrUnavailable => _s(
+        'LINE 단체방 QR 코드가 준비되면 여기에 표시됩니다.',
+        'QR Code LINE จะปรากฏที่นี่เมื่อพร้อมใช้งาน',
+      );
 
   // API errors
   String get errorInvalidCredentials =>

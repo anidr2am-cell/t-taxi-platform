@@ -9,9 +9,11 @@ import 'package:tride_driver/config/app_environment.dart';
 import 'package:tride_driver/core/network/api_client.dart';
 import 'package:tride_driver/features/driver_application/data/driver_application_api.dart';
 import 'package:tride_driver/features/driver_application/data/driver_application_models.dart';
+import 'package:tride_driver/features/driver_application/presentation/driver_application_complete_page.dart';
 import 'package:tride_driver/features/driver_application/presentation/driver_application_form_page.dart';
 
 import 'l10n_test_helpers.dart';
+import 'test_fakes.dart';
 
 void main() {
   DriverApplicationApi api(http.Client client) => DriverApplicationApi(
@@ -434,6 +436,104 @@ void main() {
 
       expect(fakeApi.submitCount, 1);
       expect(captured?.applicationNumber, 'DA-TEST-1');
+    });
+
+    testWidgets('successful submit navigates to complete page and stores info', (
+      tester,
+    ) async {
+      _useTallView(tester);
+      final fakeApi = _FakeDriverApplicationApi();
+      final storage = FakeTokenStorage();
+      await pumpLocalizedWidget(
+        tester,
+        home: DriverApplicationFormPage(
+          api: fakeApi,
+          tokenStorage: storage,
+          pickPhotos: (_) async => List.generate(
+            3,
+            (index) => file('photo$index.jpg'),
+          ),
+          pickDocument: ({required bool imageOnly}) async =>
+              file(imageOnly ? 'line.png' : 'doc.pdf'),
+        ),
+      );
+
+      await _fillValidForm(tester);
+      await tapField(tester, const Key('driverApplySubmit'));
+
+      expect(find.byKey(const Key('driverApplicationCompleteNumber')), findsOneWidget);
+      expect(find.textContaining('DA-TEST-1'), findsOneWidget);
+      expect(find.text('관리자에게 승인 요청 했습니다.'), findsOneWidget);
+      expect(find.byKey(const Key('driverApplicationLineQr')), findsOneWidget);
+      expect(storage.driverApplicationWriteCount, greaterThan(0));
+      final saved = await storage.readDriverApplicationInfo();
+      expect(saved?.applicationNumber, 'DA-TEST-1');
+      expect(saved?.statusToken, 'token');
+    });
+  });
+
+  group('DriverApplicationCompletePage', () {
+    testWidgets('renders application number, guidance, and QR image', (
+      tester,
+    ) async {
+      _useTallView(tester);
+      await pumpLocalizedWidget(
+        tester,
+        home: const DriverApplicationCompletePage(
+          receipt: DriverApplicationReceipt(
+            applicationNumber: 'DA-2026-0001',
+            status: 'PENDING',
+            statusToken: 'secret-token',
+            submittedAt: '2026-07-28T00:00:00.000Z',
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const Key('driverApplicationSubmittedMessage')),
+        findsOneWidget,
+      );
+      expect(find.text('관리자에게 승인 요청 했습니다.'), findsOneWidget);
+      expect(
+        find.byKey(const Key('driverApplicationLineGroupInstruction')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('driverApplicationCompleteNumber')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('DA-2026-0001'), findsOneWidget);
+      expect(
+        find.byKey(const Key('driverApplicationNumberStatusHint')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('driverApplicationLineQr')), findsOneWidget);
+      expect(find.byKey(const Key('driverApplicationBackToLogin')), findsOneWidget);
+    });
+
+    testWidgets('persists receipt through secure storage on entry', (
+      tester,
+    ) async {
+      _useTallView(tester);
+      final storage = FakeTokenStorage();
+      await pumpLocalizedWidget(
+        tester,
+        home: DriverApplicationCompletePage(
+          tokenStorage: storage,
+          receipt: const DriverApplicationReceipt(
+            applicationNumber: 'DA-STORE-1',
+            status: 'PENDING',
+            statusToken: 'stored-token',
+            submittedAt: '2026-07-29',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(storage.driverApplicationWriteCount, 1);
+      final saved = await storage.readDriverApplicationInfo();
+      expect(saved?.applicationNumber, 'DA-STORE-1');
+      expect(saved?.statusToken, 'stored-token');
     });
   });
 }

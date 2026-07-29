@@ -7,6 +7,18 @@ class AuthTokens {
   final String? refreshToken;
 }
 
+class DriverApplicationStoredInfo {
+  const DriverApplicationStoredInfo({
+    required this.applicationNumber,
+    required this.statusToken,
+    required this.submittedAt,
+  });
+
+  final String applicationNumber;
+  final String statusToken;
+  final String submittedAt;
+}
+
 abstract interface class TokenStorage {
   Future<AuthTokens?> read();
   Future<void> write(AuthTokens tokens);
@@ -14,6 +26,13 @@ abstract interface class TokenStorage {
   Future<int?> readNotificationDeviceId();
   Future<void> writeNotificationDeviceId(int deviceId);
   Future<void> clearNotificationDeviceId();
+  Future<DriverApplicationStoredInfo?> readDriverApplicationInfo();
+  Future<void> writeDriverApplicationInfo({
+    required String applicationNumber,
+    required String statusToken,
+    required String submittedAt,
+  });
+  Future<void> clearDriverApplicationInfo();
 }
 
 class SecureTokenStorage implements TokenStorage {
@@ -23,6 +42,11 @@ class SecureTokenStorage implements TokenStorage {
   static const accessTokenKey = 'auth_access_token';
   static const refreshTokenKey = 'auth_refresh_token';
   static const notificationDeviceIdKey = 'notification_device_id';
+  static const driverApplicationNumberKey = 'driver_application_number';
+  static const driverApplicationStatusTokenKey =
+      'driver_application_status_token';
+  static const driverApplicationSubmittedAtKey =
+      'driver_application_submitted_at';
 
   final FlutterSecureStorage _storage;
 
@@ -76,5 +100,47 @@ class SecureTokenStorage implements TokenStorage {
   @override
   Future<void> clearNotificationDeviceId() async {
     await _storage.delete(key: notificationDeviceIdKey);
+  }
+
+  @override
+  Future<DriverApplicationStoredInfo?> readDriverApplicationInfo() async {
+    final applicationNumber = await _storage.read(
+      key: driverApplicationNumberKey,
+    );
+    if (applicationNumber == null || applicationNumber.isEmpty) return null;
+    return DriverApplicationStoredInfo(
+      applicationNumber: applicationNumber,
+      statusToken:
+          await _storage.read(key: driverApplicationStatusTokenKey) ?? '',
+      submittedAt: await _storage.read(key: driverApplicationSubmittedAtKey) ??
+          '',
+    );
+  }
+
+  @override
+  Future<void> writeDriverApplicationInfo({
+    required String applicationNumber,
+    required String statusToken,
+    required String submittedAt,
+  }) async {
+    await _storage.write(
+      key: driverApplicationNumberKey,
+      value: applicationNumber.trim(),
+    );
+    await _storage.write(
+      key: driverApplicationStatusTokenKey,
+      value: statusToken.trim(),
+    );
+    await _storage.write(
+      key: driverApplicationSubmittedAtKey,
+      value: submittedAt.trim(),
+    );
+  }
+
+  @override
+  Future<void> clearDriverApplicationInfo() async {
+    await _storage.delete(key: driverApplicationNumberKey);
+    await _storage.delete(key: driverApplicationStatusTokenKey);
+    await _storage.delete(key: driverApplicationSubmittedAtKey);
   }
 }

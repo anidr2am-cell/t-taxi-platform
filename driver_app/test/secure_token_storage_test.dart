@@ -33,4 +33,20 @@ void main() {
     await storage.clearNotificationDeviceId();
     expect(await storage.readNotificationDeviceId(), isNull);
   });
+
+  test('writes reads and clears driver application info securely', () async {
+    final storage = SecureTokenStorage();
+    await storage.writeDriverApplicationInfo(
+      applicationNumber: 'DA-2026-0001',
+      statusToken: 'secret-token',
+      submittedAt: '2026-07-28T00:00:00.000Z',
+    );
+    final saved = await storage.readDriverApplicationInfo();
+    expect(saved?.applicationNumber, 'DA-2026-0001');
+    expect(saved?.statusToken, 'secret-token');
+    expect(saved?.submittedAt, '2026-07-28T00:00:00.000Z');
+
+    await storage.clearDriverApplicationInfo();
+    expect(await storage.readDriverApplicationInfo(), isNull);
+  });
 }

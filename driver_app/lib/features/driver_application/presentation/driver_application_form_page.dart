@@ -2,10 +2,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/storage/secure_token_storage.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/app_localizations_extensions.dart';
 import '../data/driver_application_api.dart';
 import '../data/driver_application_models.dart';
+import 'driver_application_complete_page.dart';
 
 typedef DriverApplicationSubmitted =
     void Function(DriverApplicationReceipt receipt);
@@ -18,12 +20,14 @@ class DriverApplicationFormPage extends StatefulWidget {
   const DriverApplicationFormPage({
     super.key,
     required this.api,
+    this.tokenStorage,
     this.onSubmitted,
     this.pickPhotos,
     this.pickDocument,
   });
 
   final DriverApplicationDataSource api;
+  final TokenStorage? tokenStorage;
   final DriverApplicationSubmitted? onSubmitted;
   final DriverApplicationPhotoPicker? pickPhotos;
   final DriverApplicationDocumentPicker? pickDocument;
@@ -245,6 +249,31 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     setState(() => _vehiclePhotos.addAll(selected.take(remaining)));
   }
 
+  Future<void> _handleSubmitSuccess(DriverApplicationReceipt receipt) async {
+    if (widget.onSubmitted != null) {
+      widget.onSubmitted!(receipt);
+      return;
+    }
+
+    final storage = widget.tokenStorage;
+    if (storage != null) {
+      await storage.writeDriverApplicationInfo(
+        applicationNumber: receipt.applicationNumber,
+        statusToken: receipt.statusToken,
+        submittedAt: receipt.submittedAt,
+      );
+    }
+    if (!mounted) return;
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (context) => DriverApplicationCompletePage(
+          receipt: receipt,
+          tokenStorage: storage,
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (_submitting) return;
     final l10n = AppLocalizations.of(context);
@@ -259,7 +288,7 @@ class _DriverApplicationFormPageState extends State<DriverApplicationFormPage> {
     try {
       final receipt = await widget.api.submitApplication(draft);
       if (!mounted) return;
-      widget.onSubmitted?.call(receipt);
+      await _handleSubmitSuccess(receipt);
     } on DriverApplicationApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
