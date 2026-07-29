@@ -501,3 +501,50 @@ test('guest lookup route validates and returns public envelope', async () => {
   assert.equal(res.body.data.bookingNumber, 'TX202607010001');
   assert.equal(res.body.data.guestAccess.token, 'guest-token');
 });
+
+test('guest lookup exposes scheduledPickupAt for confirmed post-assignment statuses', async () => {
+  const expectedPickup = '2026-07-01T09:30:00+07:00';
+  for (const status of [
+    'ASSIGNED',
+    'DRIVER_ASSIGNED',
+    'ON_ROUTE',
+    'DRIVER_ARRIVED',
+    'PICKED_UP',
+    'SETTLEMENT_PENDING',
+    'COMPLETED',
+  ]) {
+    const { service } = buildService(bookingRow({ status }));
+    const result = await service.lookup({
+      bookingNumber: 'TX202607010001',
+      phone: '+66 81 234 5678',
+    });
+    assert.equal(result.scheduledPickupAt, expectedPickup, status);
+  }
+});
+
+test('guest lookup hides scheduledPickupAt before assignment and for cancelled bookings', async () => {
+  for (const status of ['PENDING', 'OPEN', 'CONFIRMED', 'CANCELLED', 'NO_SHOW']) {
+    const { service } = buildService(bookingRow({ status }));
+    const result = await service.lookup({
+      bookingNumber: 'TX202607010001',
+      phone: '+66 81 234 5678',
+    });
+    assert.equal(result.scheduledPickupAt, null, status);
+  }
+});
+
+test('guest lookup DRIVER_ASSIGNED cancellation uses pickup time instead of invalid pickup block', async () => {
+  const { service } = buildService(bookingRow({
+    status: 'DRIVER_ASSIGNED',
+    scheduled_pickup_at_text: '2026-12-01 09:30:00',
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.scheduledPickupAt, '2026-12-01T09:30:00+07:00');
+  assert.equal(result.canCancel, true);
+  assert.equal(result.cancellationBlockedReason, null);
+});
