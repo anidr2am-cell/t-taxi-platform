@@ -13,43 +13,51 @@ const ERROR_CODES = require('../src/constants/errorCodes');
 
 const config = {
   apiKey: 'test-key',
-  baseUrl: 'https://example.test',
+  baseUrl: 'https://aerodatabox.p.rapidapi.com',
+  host: 'aerodatabox.p.rapidapi.com',
   timeoutMs: 2000,
 };
 
 function providerFlight(overrides = {}) {
   return {
-    flight_date: '2026-07-01',
-    flight_status: 'scheduled',
+    number: 'TG 409',
+    status: 'Expected',
     airline: {
       name: 'Thai Airways',
       iata: 'TG',
       icao: 'THA',
     },
-    flight: {
-      number: '409',
-      iata: 'TG409',
-      icao: 'THA409',
-    },
     departure: {
-      airport: 'Suvarnabhumi Airport',
-      iata: 'BKK',
-      scheduled: '2026-07-01T09:30:00+00:00',
-      estimated: '2026-07-01T09:40:00+00:00',
-      actual: null,
+      airport: {
+        iata: 'BKK',
+        name: 'Bangkok Suvarnabhumi',
+      },
+      scheduledTime: {
+        utc: '2026-07-01 09:30Z',
+        local: '2026-07-01 16:30+07:00',
+      },
+      predictedTime: {
+        utc: '2026-07-01 09:40Z',
+        local: '2026-07-01 16:40+07:00',
+      },
       terminal: '1',
       gate: 'A1',
-      delay: 10,
     },
     arrival: {
-      airport: 'Singapore Changi Airport',
-      iata: 'SIN',
-      scheduled: '2026-07-01T12:45:00+00:00',
-      estimated: '2026-07-01T13:00:00+00:00',
-      actual: null,
+      airport: {
+        iata: 'SIN',
+        name: 'Singapore Changi',
+      },
+      scheduledTime: {
+        utc: '2026-07-01 12:45Z',
+        local: '2026-07-01 20:45+08:00',
+      },
+      predictedTime: {
+        utc: '2026-07-01 13:00Z',
+        local: '2026-07-01 21:00+08:00',
+      },
       terminal: '2',
       gate: 'B2',
-      delay: 15,
     },
     ...overrides,
   };
@@ -59,7 +67,7 @@ function createHttpClient(data, calls) {
   return {
     async get(url, options) {
       calls.push({ url, options });
-      return { data: { data } };
+      return { data };
     },
   };
 }
@@ -84,6 +92,14 @@ test('invalid date validation uses INVALID_FLIGHT_DATE', () => {
   );
 });
 
+test('normalizes AeroDataBox UTC timestamps to ISO 8601', () => {
+  const service = new FlightService(config, createHttpClient([], []));
+
+  assert.equal(service.normalizeAeroDataBoxUtc('2026-08-01 12:10Z'), '2026-08-01T12:10:00Z');
+  assert.equal(service.normalizeAeroDataBoxUtc('2026-08-01 12:10:30Z'), '2026-08-01T12:10:30Z');
+  assert.equal(service.normalizeAeroDataBoxUtc(null), null);
+});
+
 test('normalizes provider response', async () => {
   const calls = [];
   const service = new FlightService(config, createHttpClient([providerFlight()], calls));
@@ -95,95 +111,113 @@ test('normalizes provider response', async () => {
   assert.equal(result.airlineName, 'Thai Airways');
   assert.equal(result.flightDate, '2026-07-01');
   assert.equal(result.departure.airportCode, 'BKK');
+  assert.equal(result.departure.airportName, 'Bangkok Suvarnabhumi');
+  assert.equal(result.departure.scheduledAt, '2026-07-01T09:30:00Z');
+  assert.equal(result.departure.estimatedAt, '2026-07-01T09:40:00Z');
+  assert.equal(result.departure.actualAt, null);
   assert.equal(result.arrival.airportCode, 'SIN');
   assert.equal(result.status, 'SCHEDULED');
   assert.equal(result.delayMinutes, 15);
-  assert.equal(result.source, 'AVIATIONSTACK');
+  assert.equal(result.source, 'AERODATABOX');
   assert.match(result.retrievedAt, /^\d{4}-\d{2}-\d{2}T/);
-  assert.equal(calls[0].options.params.access_key, 'test-key');
-  assert.equal(calls[0].options.params.flight_iata, 'TG409');
-  assert.equal(calls[0].options.params.flight_date, '2026-07-01');
+  assert.equal(
+    calls[0].url,
+    'https://aerodatabox.p.rapidapi.com/flights/number/TG409/2026-07-01',
+  );
+  assert.equal(calls[0].options.headers['X-RapidAPI-Key'], 'test-key');
+  assert.equal(calls[0].options.headers['X-RapidAPI-Host'], 'aerodatabox.p.rapidapi.com');
 });
 
-test('maps provider flight statuses', () => {
+test('maps AeroDataBox provider flight statuses', () => {
   const service = new FlightService(config, createHttpClient([], []));
 
-  assert.equal(service.mapStatus('active'), 'ACTIVE');
-  assert.equal(service.mapStatus('landed'), 'LANDED');
-  assert.equal(service.mapStatus('cancelled'), 'CANCELLED');
-  assert.equal(service.mapStatus('diverted'), 'DIVERTED');
-  assert.equal(service.mapStatus('delayed'), 'DELAYED');
+  assert.equal(service.mapStatus('Expected'), 'SCHEDULED');
+  assert.equal(service.mapStatus('CheckIn'), 'SCHEDULED');
+  assert.equal(service.mapStatus('Boarding'), 'SCHEDULED');
+  assert.equal(service.mapStatus('GateClosed'), 'SCHEDULED');
+  assert.equal(service.mapStatus('EnRoute'), 'ACTIVE');
+  assert.equal(service.mapStatus('Departed'), 'ACTIVE');
+  assert.equal(service.mapStatus('Approaching'), 'ACTIVE');
+  assert.equal(service.mapStatus('Arrived'), 'LANDED');
+  assert.equal(service.mapStatus('Canceled'), 'CANCELLED');
+  assert.equal(service.mapStatus('Diverted'), 'DIVERTED');
+  assert.equal(service.mapStatus('Delayed'), 'DELAYED');
+  assert.equal(service.mapStatus('Unknown'), 'UNKNOWN');
   assert.equal(service.mapStatus('something-new'), 'UNKNOWN');
 });
 
-test('calculates delay from arrival estimate and never returns negative', () => {
+test('calculates delay from arrival predicted and scheduled times', () => {
   const service = new FlightService(config, createHttpClient([], []));
 
   assert.equal(service.calculateDelayMinutes(providerFlight()), 15);
   assert.equal(service.calculateDelayMinutes(providerFlight({
     arrival: {
-      scheduled: '2026-07-01T12:45:00+00:00',
-      estimated: '2026-07-01T12:30:00+00:00',
+      scheduledTime: { utc: '2026-07-01 12:45Z' },
+      predictedTime: { utc: '2026-07-01 12:30Z' },
     },
   })), 0);
 });
 
-test('uses provider delay when estimated arrival is unavailable', () => {
+test('returns null delay when predicted arrival time is unavailable', () => {
   const service = new FlightService(config, createHttpClient([], []));
 
   assert.equal(service.calculateDelayMinutes(providerFlight({
     arrival: {
-      scheduled: '2026-07-01T12:45:00+00:00',
-      estimated: null,
-      delay: 22,
+      scheduledTime: { utc: '2026-07-01 12:45Z' },
+      predictedTime: undefined,
     },
-  })), 22);
+  })), null);
 });
 
 test('selects deterministic matching result among multiple provider results', async () => {
   const calls = [];
   const items = [
     providerFlight({
-      flight_date: '2026-07-01',
-      departure: { scheduled: '2026-07-01T11:00:00+00:00' },
-      arrival: { scheduled: '2026-07-01T14:00:00+00:00' },
+      departure: { scheduledTime: { utc: '2026-07-01 11:00Z' } },
+      arrival: { scheduledTime: { utc: '2026-07-01 14:00Z' } },
     }),
     providerFlight({
-      flight_date: '2026-07-01',
-      departure: { scheduled: '2026-07-01T08:00:00+00:00' },
-      arrival: { scheduled: '2026-07-01T11:00:00+00:00' },
+      departure: { scheduledTime: { utc: '2026-07-01 08:00Z' } },
+      arrival: { scheduledTime: { utc: '2026-07-01 11:00Z' } },
     }),
     providerFlight({
-      flight_date: '2026-07-01',
-      flight: { iata: 'TG410', number: '410' },
+      number: 'TG 410',
     }),
   ];
   const service = new FlightService(config, createHttpClient(items, calls));
 
   const result = await service.search({ flightNumber: 'TG409', flightDate: '2026-07-01' });
 
-  assert.equal(result.departure.scheduledAt, '2026-07-01T08:00:00+00:00');
+  assert.equal(result.departure.scheduledAt, '2026-07-01T08:00:00Z');
 });
 
-test('date matching uses provider date text without UTC date shift', async () => {
+test('date matching uses scheduled UTC date prefix without timezone shift', async () => {
   const calls = [];
   const service = new FlightService(config, createHttpClient([
     providerFlight({
-      flight_date: '2026-07-01',
-      departure: { scheduled: '2026-07-01T23:50:00-10:00' },
-      arrival: { scheduled: '2026-07-02T01:20:00-10:00' },
+      departure: { scheduledTime: { utc: '2026-07-01 23:50Z' } },
+      arrival: { scheduledTime: { utc: '2026-07-02 01:20Z' } },
     }),
   ], calls));
 
   const result = await service.search({ flightNumber: 'TG409', flightDate: '2026-07-01' });
 
-  assert.equal(result.departure.scheduledAt, '2026-07-01T23:50:00-10:00');
+  assert.equal(result.departure.scheduledAt, '2026-07-01T23:50:00Z');
 });
 
 test('flight not found returns FLIGHT_NOT_FOUND', async () => {
   const service = new FlightService(config, createHttpClient([providerFlight({
-    flight: { iata: 'TG410', number: '410' },
+    number: 'TG 410',
   })], []));
+
+  await assert.rejects(
+    () => service.search({ flightNumber: 'TG409', flightDate: '2026-07-01' }),
+    (err) => err instanceof AppError && err.errorCode === ERROR_CODES.FLIGHT_NOT_FOUND,
+  );
+});
+
+test('empty provider array returns FLIGHT_NOT_FOUND', async () => {
+  const service = new FlightService(config, createHttpClient([], []));
 
   await assert.rejects(
     () => service.search({ flightNumber: 'TG409', flightDate: '2026-07-01' }),
@@ -194,7 +228,7 @@ test('flight not found returns FLIGHT_NOT_FOUND', async () => {
 test('flight not found is not cached', async () => {
   const calls = [];
   const service = new FlightService(config, createHttpClient([providerFlight({
-    flight: { iata: 'TG410', number: '410' },
+    number: 'TG 410',
   })], calls));
 
   await assert.rejects(
@@ -213,6 +247,7 @@ test('missing provider configuration returns FLIGHT_PROVIDER_NOT_CONFIGURED', as
   const service = new FlightService({
     apiKey: '',
     baseUrl: config.baseUrl,
+    host: config.host,
     timeoutMs: config.timeoutMs,
   }, createHttpClient([], []));
 

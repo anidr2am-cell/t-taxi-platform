@@ -55,7 +55,7 @@ JWT_REFRESH_SECRET=replace-with-another-random-string-32-chars
 CORS_ORIGIN=http://localhost:8080
 ```
 
-Optional: `GOOGLE_MAPS_API_KEY`, `AVIATIONSTACK_API_KEY` (wizard Places/flight features).
+Optional: `GOOGLE_MAPS_API_KEY`, `AERODATABOX_API_KEY` (wizard Places/flight features).
 
 Production/staging: use all sections in `.env.example`; never commit real `.env`.
 

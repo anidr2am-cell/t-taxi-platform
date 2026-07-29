@@ -13,7 +13,7 @@ Browser / Flutter Web
 Node.js backend (PM2, one instance)
   -> MySQL 8
   -> local persistent upload directory
-  -> optional SMTP, Firebase Admin, Google Places, Aviationstack
+  -> optional SMTP, Firebase Admin, Google Places, AeroDataBox
 ```
 
 Use one backend instance for staging. The automatic flight sync worker uses a single-process in-memory lock; multi-instance deployment needs a distributed lock or queue first.
@@ -57,7 +57,7 @@ Optional integrations may be blank:
 - `GOOGLE_MAPS_API_KEY`
 - `SMTP_*`
 - `FIREBASE_*`
-- `AVIATIONSTACK_*`
+- `AERODATABOX_*`
 
 Staging-sensitive defaults:
 
@@ -151,7 +151,7 @@ curl -fsS https://<staging-domain>/api/v1/health
 curl -fsS https://<staging-domain>/api/v1/health/readiness
 ```
 
-Readiness fails only required dependencies: database and upload directory writability. SMTP, Firebase, and Aviationstack are reported as booleans but do not fail readiness.
+Readiness fails only required dependencies: database and upload directory writability. SMTP, Firebase, and AeroDataBox are reported as booleans but do not fail readiness.
 
 ## Flutter Web Build
 
@@ -241,7 +241,7 @@ FLIGHT_SYNC_ENABLED=false
 
 When enabling:
 
-- Confirm `AVIATIONSTACK_API_KEY` is configured.
+- Confirm `AERODATABOX_API_KEY` is configured.
 - Run only one backend instance.
 - Verify `GET /api/v1/admin/flights/sync-status`.
 - Use `POST /api/v1/admin/flights/run-sync-cycle` for controlled admin testing.
@@ -313,7 +313,7 @@ Disable optional integrations without stopping bookings:
 
 - SMTP: clear `SMTP_HOST`.
 - Firebase: clear `FIREBASE_PROJECT_ID` or service account settings.
-- Flight provider: clear `AVIATIONSTACK_API_KEY`.
+- Flight provider: clear `AERODATABOX_API_KEY`.
 - Flight worker: set `FLIGHT_SYNC_ENABLED=false`.
 
 ## Troubleshooting
@@ -322,5 +322,5 @@ Disable optional integrations without stopping bookings:
 - `readiness` degraded with upload not writable: check `UPLOAD_DIR` existence, owner, and permissions.
 - Browser CORS error: confirm exact `CORS_ORIGIN` and Nginx HTTPS origin.
 - Socket connection fails: confirm `/socket.io/` Nginx location and WebSocket headers.
-- Flight sync status provider false: configure Aviationstack or keep worker disabled.
+- Flight sync status provider false: configure AeroDataBox or keep worker disabled.
 - Flutter route refresh 404: check Nginx `try_files $uri $uri/ /index.html`.

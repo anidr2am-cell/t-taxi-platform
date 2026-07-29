@@ -37,7 +37,7 @@ test('readiness reports database, upload, and optional integrations without secr
   assert.equal(response.body.data.checks.database, 'connected');
   assert.equal(response.body.data.checks.uploadDirectory, 'writable');
   assert.equal(typeof response.body.data.integrations.flightSyncEnabled, 'boolean');
-  assert.equal(typeof response.body.data.integrations.aviationstackConfigured, 'boolean');
+  assert.equal(typeof response.body.data.integrations.aeroDataBoxConfigured, 'boolean');
 
   const serialized = JSON.stringify(response.body).toLowerCase();
   assert.equal(serialized.includes('api_key'), false);

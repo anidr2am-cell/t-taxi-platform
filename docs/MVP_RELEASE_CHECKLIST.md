@@ -36,7 +36,7 @@ See `backend/.env.example` for full list.
 **Optional (safe to leave empty in MVP):**
 
 - [ ] `GOOGLE_MAPS_API_KEY` — Places proxy disabled without key
-- [ ] `AVIATIONSTACK_API_KEY` — flight lookup returns provider-unavailable safely
+- [ ] `AERODATABOX_API_KEY` — flight lookup returns provider-unavailable safely
 - [ ] `SMTP_*` — email notifications skipped
 - [ ] `FIREBASE_*` — FCM push skipped
 

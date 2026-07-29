@@ -4195,7 +4195,7 @@ components:
                 integrations:
                   type: object
                   properties:
-                    aviationstackConfigured:
+                    aeroDataBoxConfigured:
                       type: boolean
                     flightSyncEnabled:
                       type: boolean
@@ -8053,7 +8053,7 @@ components:
         source:
           type: string
           enum:
-            - AVIATIONSTACK
+            - AERODATABOX
         retrievedAt:
           type: string
           format: date-time

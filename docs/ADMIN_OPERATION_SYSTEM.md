@@ -591,7 +591,7 @@ CRUD: `ADMIN`
 | group | keys (예) |
 |-------|-----------|
 | `google` | maps_api_key (encrypted) |
-| `aviation` | aviationstack_api_key |
+| `aviation` | aerodatabox_api_key |
 | `firebase` | project_id, credentials ref |
 | `smtp` | host, port, user, password, from |
 | `socket` | cors, path |

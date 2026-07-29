@@ -9,17 +9,22 @@ const {
   normalizeFlightNumber,
 } = require('../utils/flightNumber.util');
 
-const SOURCE = 'AVIATIONSTACK';
+const SOURCE = 'AERODATABOX';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const STATUS_MAP = {
-  scheduled: 'SCHEDULED',
-  active: 'ACTIVE',
-  landed: 'LANDED',
-  cancelled: 'CANCELLED',
-  canceled: 'CANCELLED',
-  diverted: 'DIVERTED',
-  delayed: 'DELAYED',
+  Expected: 'SCHEDULED',
+  CheckIn: 'SCHEDULED',
+  Boarding: 'SCHEDULED',
+  GateClosed: 'SCHEDULED',
+  EnRoute: 'ACTIVE',
+  Departed: 'ACTIVE',
+  Approaching: 'ACTIVE',
+  Arrived: 'LANDED',
+  Canceled: 'CANCELLED',
+  Cancelled: 'CANCELLED',
+  Diverted: 'DIVERTED',
+  Delayed: 'DELAYED',
 };
 
 class FlightService {
@@ -98,19 +103,22 @@ class FlightService {
     }
   }
 
+  normalizeAeroDataBoxUtc(value) {
+    if (!value || typeof value !== 'string') return null;
+
+    const trimmed = value.trim();
+    let normalized = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$/i.test(normalized)) {
+      normalized = normalized.replace(/Z$/i, ':00Z');
+    }
+
+    return normalized;
+  }
+
   buildFlightNumberFromProvider(item) {
-    const flightIata = item?.flight?.iata;
-    if (flightIata) {
-      return String(flightIata).replace(/\s+/g, '').toUpperCase();
-    }
-
-    const airlineCode = item?.airline?.iata || item?.airline?.icao;
-    const flightNumber = item?.flight?.number;
-    if (airlineCode && flightNumber) {
-      return `${airlineCode}${flightNumber}`.replace(/\s+/g, '').toUpperCase();
-    }
-
-    return null;
+    if (!item?.number) return null;
+    return String(item.number).replace(/\s+/g, '').toUpperCase();
   }
 
   getDatePart(value) {
@@ -120,9 +128,8 @@ class FlightService {
 
   matchesRequestedDate(item, flightDate) {
     return [
-      item?.flight_date,
-      item?.departure?.scheduled,
-      item?.arrival?.scheduled,
+      item?.departure?.scheduledTime?.utc,
+      item?.arrival?.scheduledTime?.utc,
     ].some((value) => this.getDatePart(value) === flightDate);
   }
 
@@ -133,7 +140,9 @@ class FlightService {
         index,
         providerFlightNumber: this.buildFlightNumberFromProvider(item),
         dateMatches: this.matchesRequestedDate(item, flightDate),
-        scheduledAt: item?.departure?.scheduled || item?.arrival?.scheduled || '',
+        scheduledAt: item?.departure?.scheduledTime?.utc
+          || item?.arrival?.scheduledTime?.utc
+          || '',
       }))
       .filter((candidate) => candidate.providerFlightNumber === flightNumber)
       .filter((candidate) => candidate.dateMatches);
@@ -149,23 +158,26 @@ class FlightService {
 
   mapStatus(providerStatus) {
     if (!providerStatus) return 'UNKNOWN';
-    return STATUS_MAP[String(providerStatus).trim().toLowerCase()] ?? 'UNKNOWN';
+    const trimmed = String(providerStatus).trim();
+    return STATUS_MAP[trimmed] ?? 'UNKNOWN';
   }
 
   calculateDelayMinutes(item) {
-    const scheduled = Date.parse(item?.arrival?.scheduled);
-    const estimated = Date.parse(item?.arrival?.estimated);
+    const scheduledUtc = item?.arrival?.scheduledTime?.utc;
+    const predictedUtc = item?.arrival?.predictedTime?.utc;
 
-    if (!Number.isNaN(scheduled) && !Number.isNaN(estimated)) {
-      return Math.max(0, Math.round((estimated - scheduled) / 60000));
+    if (!scheduledUtc || !predictedUtc) {
+      return null;
     }
 
-    const providerDelay = Number(item?.arrival?.delay ?? item?.departure?.delay);
-    if (Number.isFinite(providerDelay)) {
-      return Math.max(0, Math.round(providerDelay));
+    const scheduled = Date.parse(this.normalizeAeroDataBoxUtc(scheduledUtc));
+    const predicted = Date.parse(this.normalizeAeroDataBoxUtc(predictedUtc));
+
+    if (Number.isNaN(scheduled) || Number.isNaN(predicted)) {
+      return null;
     }
 
-    return 0;
+    return Math.max(0, Math.round((predicted - scheduled) / 60000));
   }
 
   logProviderFailure(errorCode, flightNumber, flightDate) {
@@ -191,24 +203,26 @@ class FlightService {
       airlineName: item?.airline?.name ?? null,
       flightDate,
       departure: {
-        airportCode: item?.departure?.iata ?? null,
-        airportName: item?.departure?.airport ?? null,
-        scheduledAt: item?.departure?.scheduled ?? null,
-        estimatedAt: item?.departure?.estimated ?? null,
-        actualAt: item?.departure?.actual ?? null,
+        airportCode: item?.departure?.airport?.iata ?? null,
+        airportName: item?.departure?.airport?.name ?? null,
+        scheduledAt: this.normalizeAeroDataBoxUtc(item?.departure?.scheduledTime?.utc),
+        estimatedAt: this.normalizeAeroDataBoxUtc(item?.departure?.predictedTime?.utc),
+        // AeroDataBox may add actualTime in future responses.
+        actualAt: null,
         terminal: item?.departure?.terminal ?? null,
         gate: item?.departure?.gate ?? null,
       },
       arrival: {
-        airportCode: item?.arrival?.iata ?? null,
-        airportName: item?.arrival?.airport ?? null,
-        scheduledAt: item?.arrival?.scheduled ?? null,
-        estimatedAt: item?.arrival?.estimated ?? null,
-        actualAt: item?.arrival?.actual ?? null,
+        airportCode: item?.arrival?.airport?.iata ?? null,
+        airportName: item?.arrival?.airport?.name ?? null,
+        scheduledAt: this.normalizeAeroDataBoxUtc(item?.arrival?.scheduledTime?.utc),
+        estimatedAt: this.normalizeAeroDataBoxUtc(item?.arrival?.predictedTime?.utc),
+        // AeroDataBox may add actualTime in future responses.
+        actualAt: null,
         terminal: item?.arrival?.terminal ?? null,
         gate: item?.arrival?.gate ?? null,
       },
-      status: this.mapStatus(item?.flight_status),
+      status: this.mapStatus(item?.status),
       delayMinutes: this.calculateDelayMinutes(item),
       source: SOURCE,
       retrievedAt: new Date().toISOString(),

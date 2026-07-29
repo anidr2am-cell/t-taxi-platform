@@ -252,9 +252,10 @@ container.register(
   "flightService",
   () =>
     new FlightService({
-      apiKey: config.external.aviationStackApiKey,
-      baseUrl: config.external.aviationStackBaseUrl,
-      timeoutMs: config.external.aviationStackTimeoutMs,
+      apiKey: config.external.aeroDataBoxApiKey,
+      baseUrl: config.external.aeroDataBoxBaseUrl,
+      host: config.external.aeroDataBoxHost,
+      timeoutMs: config.external.aeroDataBoxTimeoutMs,
     }),
 );
 container.register(

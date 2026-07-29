@@ -70,7 +70,7 @@ const getReadiness = asyncHandler(async (req, res) => {
         uploadDirectory: uploadWritable ? 'writable' : 'not_writable',
       },
       integrations: {
-        aviationstackConfigured: flightSyncStatus.providerConfigured,
+        aeroDataBoxConfigured: flightSyncStatus.providerConfigured,
         flightSyncEnabled: flightSyncStatus.enabled,
         flightSyncRunning: flightSyncStatus.running,
         smtpConfigured: Boolean(config.smtp.host),

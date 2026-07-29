@@ -154,7 +154,7 @@ validate({ body: createBookingSchema })
 | Server | PORT, NODE_ENV, API_VERSION | |
 | DB | DB_HOST, DB_USER, DB_PASSWORD, DB_NAME | |
 | JWT | JWT_ACCESS_SECRET, JWT_REFRESH_SECRET | 최소 16자 |
-| External | GOOGLE_MAPS_API_KEY, AVIATIONSTACK_API_KEY | 서버만 |
+| External | GOOGLE_MAPS_API_KEY, AERODATABOX_API_KEY | 서버만 |
 | Firebase | FIREBASE_* | FCM |
 | Upload | UPLOAD_DIR, UPLOAD_MAX_FILE_SIZE_MB | |
 | Swagger | SWAGGER_ENABLED, SWAGGER_ROUTE | |
