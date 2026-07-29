@@ -36,19 +36,19 @@ android {
         create("dev") {
             dimension = "environment"
             applicationId = "com.trider.driver.dev"
-            resValue("string", "app_name", "TRide Driver DEV")
+            resValue("string", "app_name", "Driver")
             manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
         create("stg") {
             dimension = "environment"
             applicationId = "com.trider.driver.staging"
-            resValue("string", "app_name", "TRide Driver STG")
+            resValue("string", "app_name", "Driver")
             manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
         create("prod") {
             dimension = "environment"
             applicationId = "com.trider.driver"
-            resValue("string", "app_name", "TRide Driver")
+            resValue("string", "app_name", "Driver")
             manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
     }
