@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tride_driver/app/app.dart';
 import 'package:tride_driver/config/app_config.dart';
 import 'package:tride_driver/config/app_environment.dart';
+import 'package:tride_driver/core/locale/locale_controller.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/core/storage/secure_token_storage.dart';
 import 'package:tride_driver/features/auth/data/auth_repository.dart';
@@ -13,23 +14,26 @@ import 'package:tride_driver/features/auth/presentation/auth_controller.dart';
 import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
 
-Future<(FakeAuthApi, FakeTokenStorage, AuthController)> pumpApp(
+Future<(FakeAuthApi, FakeTokenStorage, AuthController, LocaleController)>
+pumpApp(
   WidgetTester tester, {
   FakeAuthApi? api,
   FakeTokenStorage? storage,
   FakeAccountApi? accountApi,
+  LocaleController? localeController,
 }) async {
   final fakeApi = api ?? FakeAuthApi();
   final fakeStorage = storage ?? FakeTokenStorage();
   final controller = AuthController(
     AuthRepository(api: fakeApi, storage: fakeStorage),
   );
-  final localeController = await createTestLocaleController();
+  final resolvedLocaleController =
+      localeController ?? await createTestLocaleController();
   await tester.pumpWidget(
     DriverApp(
       config: AppConfig.forEnvironment(AppEnvironment.stg),
       authController: controller,
-      localeController: localeController,
+      localeController: resolvedLocaleController,
       bookingRepository: FakeBookingReader()
         ..listResult = bookingList(items: const []),
       dispatchRepository: FakeDispatchReader(),
@@ -37,7 +41,7 @@ Future<(FakeAuthApi, FakeTokenStorage, AuthController)> pumpApp(
     ),
   );
   await tester.pumpAndSettle();
-  return (fakeApi, fakeStorage, controller);
+  return (fakeApi, fakeStorage, controller, resolvedLocaleController);
 }
 
 Future<void> enterCredentials(WidgetTester tester) async {
@@ -51,6 +55,50 @@ void main() {
     expect(find.text('기사 로그인'), findsOneWidget);
     expect(find.byKey(const Key('loginButton')), findsOneWidget);
   });
+
+  testWidgets(
+    'login language selector menu opens and switches locale',
+    (tester) async {
+      final localeController = await createTestLocaleController(
+        localeCode: 'ko',
+      );
+      await pumpApp(tester, localeController: localeController);
+
+      expect(find.byKey(const Key('languageSelectorMenu')), findsOneWidget);
+      expect(find.byIcon(Icons.language), findsOneWidget);
+      expect(localeController.locale.languageCode, 'ko');
+
+      await tester.tap(find.byKey(const Key('languageSelectorMenu')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('한국어'), findsWidgets);
+      expect(find.text('ไทย'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Overlay),
+          matching: find.text('ไทย'),
+        ),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      expect(localeController.locale.languageCode, 'th');
+
+      await tester.tap(find.byKey(const Key('languageSelectorMenu')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(Overlay),
+          matching: find.text('한국어'),
+        ),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      expect(localeController.locale.languageCode, 'ko');
+    },
+  );
 
   testWidgets('validates required login fields', (tester) async {
     await pumpApp(tester);

@@ -53,7 +53,10 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         title: Text(widget.appName),
         actions: [
-          LanguageSelector(controller: widget.localeController),
+          LanguageSelector(
+            controller: widget.localeController,
+            compact: false,
+          ),
         ],
       ),
       body: Center(
