@@ -133,18 +133,14 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
 
 ### 상태
 
-완료로 확인됨 (재조사 결과, 이미 backend/driver_app 양쪽 모두 구현되어 있었음). 신규 작업 불필요.
+완료 + 실사용 검증 완료. 신규 작업 불필요했음(이미 구현되어 있었음), 실기기 테스트로 정상 알림 수신 확인됨.
 
 ### 확인된 사항
 
-- backend: SETTLEMENT_APPROVED Outbox 이벤트 → NotificationService.buildSpecsForEvent()에 매핑 완료, 기사 1명에게 발송
-- driver_app: fcm_navigation_service.dart에 SETTLEMENT_APPROVED → 새콜 탭(0) 이동 매핑 완료
-- 발견: title/body가 영어로 하드코딩됨 ("Settlement approved" / "Your commission settlement has been approved.") - 다국어(한/태) 미적용 상태, 필요시 개선
-
-### 남은 것
-
-실사용 검증 필요 (실제 정산 승인 → 실기기 알림 수신 확인).
-검증 후 영어 문구 다국어화 여부 결정.
+- backend: SETTLEMENT_APPROVED Outbox 이벤트 → NotificationService.buildSpecsForEvent()에 매핑 완료
+- driver_app: fcm_navigation_service.dart에 새콜 탭 이동 매핑 완료
+- 실기기 테스트: 정산 승인 시 실제 알림 정상 수신 확인 (2026-07-29)
+- 남은 개선 여지(선택): title/body가 영어 하드코딩 ("Settlement approved" 등), 필요 시 다국어화
 
 ## 9. 기술 부채: locationDetails() 로직 중복
 
