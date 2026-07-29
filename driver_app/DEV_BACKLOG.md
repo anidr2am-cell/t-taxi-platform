@@ -129,6 +129,23 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
 - driver_app: 피켓 사진 업로드 화면 (`DRIVER_ARRIVED` 상태 강조 노출)
 - driver_app: 목록/상세 화면 게이트 3/7번 안내 및 피켓 관련 UI
 
+## 8. 정산승인 FCM 알림
+
+### 상태
+
+완료로 확인됨 (재조사 결과, 이미 backend/driver_app 양쪽 모두 구현되어 있었음). 신규 작업 불필요.
+
+### 확인된 사항
+
+- backend: SETTLEMENT_APPROVED Outbox 이벤트 → NotificationService.buildSpecsForEvent()에 매핑 완료, 기사 1명에게 발송
+- driver_app: fcm_navigation_service.dart에 SETTLEMENT_APPROVED → 새콜 탭(0) 이동 매핑 완료
+- 발견: title/body가 영어로 하드코딩됨 ("Settlement approved" / "Your commission settlement has been approved.") - 다국어(한/태) 미적용 상태, 필요시 개선
+
+### 남은 것
+
+실사용 검증 필요 (실제 정산 승인 → 실기기 알림 수신 확인).
+검증 후 영어 문구 다국어화 여부 결정.
+
 ## 9. 기술 부채: locationDetails() 로직 중복
 
 `locationDetails()` 로직이 `driverJob.service.js`, `booking.service.js`, `guestBookingLookup.service.js` 세 곳에 복제되어 있음. 향후 장소명 표시 로직 변경 시 세 곳 모두 수정 필요. 리팩터링 우선순위 낮음.
