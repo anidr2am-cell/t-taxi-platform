@@ -734,7 +734,26 @@ void main() {
     expect(find.byKey(const Key('bkkMeetingGateBanner')), findsOneWidget);
     expect(find.text('미팅 장소: 3번 게이트 (피켓 요청됨)'), findsOneWidget);
     expect(find.textContaining('7번 게이트'), findsNothing);
+    expect(find.byKey(const Key('bkkMeetingGateNameSignLabel')), findsOneWidget);
+    expect(find.text('ชื่อป้ายที่ต้องเขียน:'), findsOneWidget);
+    expect(find.text('KIM FAMILY'), findsOneWidget);
   });
+
+  testWidgets(
+    'BKK airport pickup name sign text is shown verbatim without translation',
+    (tester) async {
+      final reader = FakeBookingReader()
+        ..detailResult = bookingDetail(
+          nameSignRequested: true,
+          nameSignText: '김가족',
+        );
+      await pumpDetail(tester, reader);
+
+      expect(find.byKey(const Key('bkkMeetingGateNameSignText')), findsOneWidget);
+      expect(find.text('김가족'), findsOneWidget);
+      expect(find.textContaining('KIM'), findsNothing);
+    },
+  );
 
   testWidgets(
     'BKK airport pickup without name sign shows Gate 7 meeting place',
@@ -746,6 +765,8 @@ void main() {
       expect(find.byKey(const Key('bkkMeetingGateBanner')), findsOneWidget);
       expect(find.text('미팅 장소: 7번 게이트'), findsOneWidget);
       expect(find.textContaining('3번 게이트'), findsNothing);
+      expect(find.byKey(const Key('bkkMeetingGateNameSignLabel')), findsNothing);
+      expect(find.text('ชื่อป้ายที่ต้องเขียน:'), findsNothing);
     },
   );
 
@@ -1448,8 +1469,9 @@ void main() {
       },
     );
     await tester.ensureVisible(find.byKey(const Key('pickupMapLink')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pickupMapLink')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(launched?.host, 'www.google.com');
     expect(launched?.path, '/maps/search/');

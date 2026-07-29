@@ -652,9 +652,10 @@ class _DetailBody extends StatelessWidget {
       now: now,
     );
     final showPreAcceptChoice = detail.canAccept && releaseUi.releaseRelevant;
-    final meetingGate = resolveBkkAirportPickupMeetingGate(
+    final meetingGateInfo = buildMeetingGateInfo(
       serviceTypeCode: booking.serviceType.code,
       nameSignRequested: detail.nameSignRequested,
+      nameSignText: booking.nameSignText,
       pickupCandidates: [
         booking.pickupLocation.name,
         booking.pickupLocation.address,
@@ -761,14 +762,14 @@ class _DetailBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 16),
-        if (meetingGate != null) ...[
+        if (meetingGateInfo != null) ...[
           _MeetingGateBanner(
-            gateNumber: meetingGate,
+            gateInfo: meetingGateInfo,
             nameSignRequested: detail.nameSignRequested,
           ),
           const SizedBox(height: 12),
         ],
-        if (meetingGate == '3' &&
+        if (meetingGateInfo?.gateNumber == '3' &&
             _showsNameSignPhotoSection(booking.status.code, detail)) ...[
           _NameSignPhotoSection(
             detail: detail,
@@ -890,12 +891,14 @@ class _DetailBody extends StatelessWidget {
 }
 
 class _MeetingGateBanner extends StatelessWidget {
+  static const _nameSignTextLabel = 'ชื่อป้ายที่ต้องเขียน:';
+
   const _MeetingGateBanner({
-    required this.gateNumber,
+    required this.gateInfo,
     required this.nameSignRequested,
   });
 
-  final String gateNumber;
+  final MeetingGateInfo gateInfo;
   final bool nameSignRequested;
 
   @override
@@ -905,6 +908,7 @@ class _MeetingGateBanner extends StatelessWidget {
     final text = nameSignRequested
         ? l10n.meetingPlaceGate3WithNameSign
         : l10n.meetingPlaceGate7;
+    final nameSignText = gateInfo.nameSignText;
     return Container(
       key: const Key('bkkMeetingGateBanner'),
       margin: const EdgeInsets.only(top: 4),
@@ -919,7 +923,7 @@ class _MeetingGateBanner extends StatelessWidget {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             backgroundColor: colors.surface,
@@ -927,20 +931,50 @@ class _MeetingGateBanner extends StatelessWidget {
                 ? colors.primary
                 : colors.tertiary,
             child: Text(
-              gateNumber,
+              gateInfo.gateNumber,
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: nameSignRequested
-                    ? colors.onPrimaryContainer
-                    : colors.onTertiaryContainer,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  text,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: nameSignRequested
+                        ? colors.onPrimaryContainer
+                        : colors.onTertiaryContainer,
+                  ),
+                ),
+                if (nameSignText != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _nameSignTextLabel,
+                    key: const Key('bkkMeetingGateNameSignLabel'),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: nameSignRequested
+                          ? colors.onPrimaryContainer
+                          : colors.onTertiaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    nameSignText,
+                    key: const Key('bkkMeetingGateNameSignText'),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      height: 1.15,
+                      color: nameSignRequested
+                          ? colors.onPrimaryContainer
+                          : colors.onTertiaryContainer,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
