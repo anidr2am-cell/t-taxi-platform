@@ -1,3 +1,7 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_token_storage.dart';
@@ -49,11 +53,15 @@ class NotificationApi implements NotificationDataSource {
     String? deviceName,
     String? appVersion,
   }) async {
+    // backend 확인 완료 (2026-07-30): validator/DB ENUM에 'IOS' 포함, 안전
+    final platform = kIsWeb
+        ? 'WEB'
+        : Platform.isIOS
+        ? 'IOS'
+        : 'ANDROID';
     final body = <String, dynamic>{
       'token': token,
-      // TODO(iOS): 서버가 'IOS' 값을 지원하는지 backend 확인 필요.
-      // 확인 전까지 하드코딩 유지
-      'platform': 'ANDROID',
+      'platform': platform,
       if (deviceName != null && deviceName.isNotEmpty) 'deviceName': deviceName,
       if (appVersion != null && appVersion.isNotEmpty) 'appVersion': appVersion,
     };
