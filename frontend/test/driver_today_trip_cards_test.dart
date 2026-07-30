@@ -52,14 +52,10 @@ void main() {
       find.textContaining('고객 픽업 요청 시간 (เวลารับที่ลูกค้าขอ) 7월 29일 22시 23분'),
       findsOneWidget,
     );
-    expect(
-      find.textContaining('출발지 - Hilton Pattaya(ฮิลตัน พัทยา)'),
-      findsOneWidget,
-    );
-    expect(
-      find.textContaining('도착지 - Suvarnabhumi Airport(ท่าอากาศยานสุวรรณภูมิ)'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('출발지 -'), findsOneWidget);
+    expect(find.textContaining('ฮิลตัน พัทยา'), findsOneWidget);
+    expect(find.textContaining('도착지 -'), findsOneWidget);
+    expect(find.textContaining('ท่าอากาศยานสุวรรณภูมิ'), findsOneWidget);
     expect(find.textContaining('지금 할 일'), findsNothing);
     expect(find.textContaining('고객에게 전화'), findsNothing);
     expect(find.text('길찾기 / นำทาง'), findsOneWidget);

@@ -1074,7 +1074,7 @@ class _DriverLocationCard extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: AppTokens.textPrimary,
+                    color: Color(0xFF006A60),
                     fontWeight: FontWeight.w800,
                     height: 1.35,
                   ),

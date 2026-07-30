@@ -8,19 +8,103 @@ import '../driver_trip_contact.dart';
 import '../driver_ux.dart';
 import '../models/driver_booking.dart';
 
-String _routeLabel(DriverBooking booking, {required bool origin}) {
-  final location = origin
-      ? booking.pickupLocation
-      : booking.destinationLocation;
-  final fallback = origin ? booking.origin : booking.destination;
-  return formatDriverRouteLineLabel(
-    prefix: origin ? '출발지' : '도착지',
-    location: location ??
-        (fallback.trim().isNotEmpty
-            ? DriverBookingLocation(address: fallback)
-            : null),
-    fallbackAddress: fallback,
-  );
+class _DriverTodayRouteEndpoint extends StatelessWidget {
+  const _DriverTodayRouteEndpoint({
+    required this.prefix,
+    required this.location,
+    required this.fallbackAddress,
+    this.compact = false,
+  });
+
+  final String prefix;
+  final DriverBookingLocation? location;
+  final String fallbackAddress;
+  final bool compact;
+
+  static const _highlightColor = Color(0xFF006A60);
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = location ??
+        (fallbackAddress.trim().isNotEmpty
+            ? DriverBookingLocation(address: fallbackAddress)
+            : null);
+    final nameTh = resolved?.nameTh?.trim();
+    final name = resolved?.name?.trim();
+    final displayName = (nameTh != null && nameTh.isNotEmpty)
+        ? nameTh
+        : (name != null && name.isNotEmpty
+            ? name
+            : (resolved != null
+                ? DriverTripContact.displayLabelFor(resolved)
+                : null));
+    final hasStructuredName =
+        (nameTh != null && nameTh.isNotEmpty) ||
+        (name != null && name.isNotEmpty);
+    final address = resolved?.secondaryAddress ??
+        (hasStructuredName ? null : fallbackAddress.trim());
+    final showAddress = address != null &&
+        address.isNotEmpty &&
+        address != displayName;
+    final labelStyle = TextStyle(
+      fontSize: compact ? 14 : 15,
+      color: AppTokens.textSecondary,
+      height: 1.35,
+    );
+    final nameStyle = TextStyle(
+      fontSize: compact ? 14 : 15,
+      fontWeight: FontWeight.w700,
+      color: _highlightColor,
+      height: 1.35,
+    );
+
+    if (displayName == null || displayName.isEmpty) {
+      return Text(
+        '$prefix - ${fallbackAddress.trim().isEmpty ? '위치 정보 없음' : fallbackAddress.trim()}',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: labelStyle,
+      );
+    }
+
+    if (!hasStructuredName) {
+      return Text(
+        '$prefix - $displayName',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: nameStyle,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: '$prefix - ', style: labelStyle),
+              TextSpan(text: displayName, style: nameStyle),
+            ],
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (showAddress) ...[
+          const SizedBox(height: 2),
+          Text(
+            address,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: compact ? 13 : 14,
+              height: 1.35,
+              color: compact ? AppTokens.textSecondary : null,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class DriverTodayCurrentTripCard extends StatelessWidget {
@@ -91,8 +175,16 @@ class DriverTodayCurrentTripCard extends StatelessWidget {
           ),
           const SizedBox(height: AppTokens.spaceSm),
           _RouteLine(
-            origin: _routeLabel(booking, origin: true),
-            destination: _routeLabel(booking, origin: false),
+            origin: _DriverTodayRouteEndpoint(
+              prefix: '출발지',
+              location: booking.pickupLocation,
+              fallbackAddress: booking.origin,
+            ),
+            destination: _DriverTodayRouteEndpoint(
+              prefix: '도착지',
+              location: booking.destinationLocation,
+              fallbackAddress: booking.destination,
+            ),
           ),
           const SizedBox(height: AppTokens.spaceSm),
           Wrap(
@@ -217,8 +309,18 @@ class DriverTodayTripListTile extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           _RouteLine(
-            origin: _routeLabel(booking, origin: true),
-            destination: _routeLabel(booking, origin: false),
+            origin: _DriverTodayRouteEndpoint(
+              prefix: '출발지',
+              location: booking.pickupLocation,
+              fallbackAddress: booking.origin,
+              compact: true,
+            ),
+            destination: _DriverTodayRouteEndpoint(
+              prefix: '도착지',
+              location: booking.destinationLocation,
+              fallbackAddress: booking.destination,
+              compact: true,
+            ),
             compact: true,
           ),
           if (booking.customerDisplayName != null) ...[
@@ -241,26 +343,16 @@ class _RouteLine extends StatelessWidget {
     this.compact = false,
   });
 
-  final String origin;
-  final String destination;
+  final Widget origin;
+  final Widget destination;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-      fontSize: compact ? 14 : 15,
-      fontWeight: compact ? FontWeight.w500 : FontWeight.w600,
-      height: 1.35,
-    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          origin,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: style,
-        ),
+        origin,
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(
@@ -281,12 +373,7 @@ class _RouteLine extends StatelessWidget {
             ],
           ),
         ),
-        Text(
-          destination,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: style.copyWith(color: AppTokens.textSecondary),
-        ),
+        destination,
       ],
     );
   }

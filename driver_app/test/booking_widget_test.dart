@@ -276,11 +276,10 @@ void main() {
     await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('ท่าอากาศยานสุวรรณภูมิ\n999 Nong Prue, Bang Phli'),
-      findsOneWidget,
-    );
-    expect(find.text('โรงแรมทดสอบ\nBangkok'), findsOneWidget);
+    expect(find.textContaining('ท่าอากาศยานสุวรรณภูมิ'), findsOneWidget);
+    expect(find.textContaining('999 Nong Prue, Bang Phli'), findsOneWidget);
+    expect(find.textContaining('โรงแรมทดสอบ'), findsOneWidget);
+    expect(find.textContaining('Bangkok'), findsOneWidget);
   });
 
   testWidgets('detail error retries successfully', (tester) async {

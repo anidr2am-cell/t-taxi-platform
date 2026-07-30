@@ -709,16 +709,12 @@ class _UrgentCallsSection extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    _driverJobsRouteText(
+                    _driverJobsRouteLocations(
                       l10n,
-                      DriverTripContact.displayLabelFor(
-                        call.pickupLocation ??
-                            DriverBookingLocation(address: call.origin),
-                      ),
-                      DriverTripContact.displayLabelFor(
-                        call.destinationLocation ??
-                            DriverBookingLocation(address: call.destination),
-                      ),
+                      call.pickupLocation ??
+                          DriverBookingLocation(address: call.origin),
+                      call.destinationLocation ??
+                          DriverBookingLocation(address: call.destination),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -886,16 +882,12 @@ class _OpenCallsSection extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 6),
-                      _driverJobsRouteText(
+                      _driverJobsRouteLocations(
                         l10n,
-                        DriverTripContact.displayLabelFor(
-                          call.pickupLocation ??
-                              DriverBookingLocation(address: call.origin),
-                        ),
-                        DriverTripContact.displayLabelFor(
-                          call.destinationLocation ??
-                              DriverBookingLocation(address: call.destination),
-                        ),
+                        call.pickupLocation ??
+                            DriverBookingLocation(address: call.origin),
+                        call.destinationLocation ??
+                            DriverBookingLocation(address: call.destination),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -1190,54 +1182,18 @@ class _JobCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.trip_origin, size: 16, color: AppTokens.primary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  DriverTripContact.displayLabelFor(
-                    booking.pickupLocation ??
-                        DriverBookingLocation(address: booking.origin),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isCompleted
-                        ? AppTokens.textMuted
-                        : AppTokens.textPrimary,
-                  ),
-                ),
-              ),
-            ],
+          _driverJobsLocationBlock(
+            l10n.t('origin'),
+            booking.pickupLocation ??
+                DriverBookingLocation(address: booking.origin),
+            muted: isCompleted,
           ),
           const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.place_outlined,
-                size: 16,
-                color: AppTokens.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  DriverTripContact.displayLabelFor(
-                    booking.destinationLocation ??
-                        DriverBookingLocation(address: booking.destination),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isCompleted
-                        ? AppTokens.textMuted
-                        : AppTokens.textSecondary,
-                  ),
-                ),
-              ),
-            ],
+          _driverJobsLocationBlock(
+            l10n.t('destination'),
+            booking.destinationLocation ??
+                DriverBookingLocation(address: booking.destination),
+            muted: isCompleted,
           ),
           const SizedBox(height: AppTokens.spaceSm),
           Wrap(
@@ -1326,23 +1282,102 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-Widget _driverJobsRouteText(
+const _driverLocationHighlightColor = Color(0xFF006A60);
+
+String? _driverLocationDisplayName(DriverBookingLocation location) {
+  final nameTh = location.nameTh?.trim();
+  if (nameTh != null && nameTh.isNotEmpty) return nameTh;
+  final name = location.name?.trim();
+  if (name != null && name.isNotEmpty) return name;
+  final known = DriverTripContact.resolveKnownAirport(location);
+  if (known != null) return known.displayName;
+  return null;
+}
+
+String? _driverLocationAddressOnly(DriverBookingLocation location) {
+  final secondary = location.secondaryAddress?.trim();
+  if (secondary != null && secondary.isNotEmpty) return secondary;
+  final address = location.address?.trim();
+  if (address != null && address.isNotEmpty) return address;
+  return null;
+}
+
+Widget _driverJobsRouteLocations(
   AppLocalizations l10n,
-  String origin,
-  String destination,
+  DriverBookingLocation origin,
+  DriverBookingLocation destination,
 ) {
-  const secondary = TextStyle(color: AppTokens.textSecondary);
-  return Text.rich(
-    TextSpan(
-      children: [
-        TextSpan(text: '${l10n.t('origin')} : ', style: secondary),
-        TextSpan(text: origin),
-        const TextSpan(text: ' → ', style: secondary),
-        TextSpan(text: '${l10n.t('destination')} : ', style: secondary),
-        TextSpan(text: destination),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _driverJobsLocationLine(l10n.t('origin'), origin),
+      const SizedBox(height: 4),
+      _driverJobsLocationLine(l10n.t('destination'), destination),
+    ],
+  );
+}
+
+Widget _driverJobsLocationBlock(
+  String label,
+  DriverBookingLocation location, {
+  bool muted = false,
+}) {
+  return _driverJobsLocationLine(label, location, muted: muted);
+}
+
+Widget _driverJobsLocationLine(
+  String label,
+  DriverBookingLocation location, {
+  bool muted = false,
+}) {
+  final name = _driverLocationDisplayName(location);
+  final address = _driverLocationAddressOnly(location);
+  final labelStyle = TextStyle(
+    color: muted ? AppTokens.textMuted : AppTokens.textSecondary,
+  );
+  final nameStyle = TextStyle(
+    color: muted ? AppTokens.textMuted : _driverLocationHighlightColor,
+    fontWeight: FontWeight.w700,
+  );
+
+  if (name == null) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: '$label : ', style: labelStyle),
+          TextSpan(text: address ?? '-'),
+        ],
+      ),
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '$label : ', style: labelStyle),
+            TextSpan(text: name, style: nameStyle),
+          ],
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      if (address != null && address != name) ...[
+        const SizedBox(height: 2),
+        Text(
+          address,
+          style: TextStyle(
+            color: muted ? AppTokens.textMuted : null,
+            height: 1.35,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
-    ),
-    maxLines: 3,
-    overflow: TextOverflow.ellipsis,
+    ],
   );
 }

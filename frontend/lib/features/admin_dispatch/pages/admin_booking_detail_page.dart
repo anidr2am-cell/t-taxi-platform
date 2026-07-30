@@ -2236,27 +2236,54 @@ class _AdminOperationsRouteText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _AdminOperationsRouteEndpoint(
+          label: l10n.t('origin'),
+          location: origin,
+        ),
+        const SizedBox(height: 4),
+        _AdminOperationsRouteEndpoint(
+          label: l10n.t('destination'),
+          location: destination,
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminOperationsRouteEndpoint extends StatelessWidget {
+  const _AdminOperationsRouteEndpoint({
+    required this.label,
+    required this.location,
+  });
+
+  final String label;
+  final Map<String, dynamic> location;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _adminLocationName(location);
+    final address = _adminLocationAddress(location);
+
     return Text.rich(
       TextSpan(
         style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
         children: [
-          TextSpan(text: '${l10n.t('origin')} : '),
-          ..._endpointSpans(origin),
-          const TextSpan(text: ' → '),
-          TextSpan(text: '${l10n.t('destination')} : '),
-          ..._endpointSpans(destination),
+          TextSpan(text: '$label : '),
+          ..._endpointSpans(name, address),
         ],
       ),
     );
   }
 
-  List<InlineSpan> _endpointSpans(Map<String, dynamic> location) {
-    final name = _adminLocationName(location);
-    final address = _adminLocationAddress(location) ?? '-';
+  List<InlineSpan> _endpointSpans(String? name, String? address) {
     if (name == null) {
-      return [TextSpan(text: address)];
+      return [TextSpan(text: address ?? '-')];
     }
-    final showAddress = address != '-' && address != name;
+    final showAddress =
+        address != null && address.isNotEmpty && address != name;
     return [
       TextSpan(
         text: name,
@@ -2265,7 +2292,13 @@ class _AdminOperationsRouteText extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      if (showAddress) TextSpan(text: ' ($address)'),
+      if (showAddress)
+        TextSpan(
+          children: [
+            const TextSpan(text: '\n'),
+            TextSpan(text: address),
+          ],
+        ),
     ];
   }
 }

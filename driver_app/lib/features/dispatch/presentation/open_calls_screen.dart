@@ -1147,9 +1147,9 @@ class _OpenCallLocationText extends StatelessWidget {
       fontWeight: FontWeight.normal,
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
-    final placeStyle = TextStyle(
+    final placeStyle = const TextStyle(
       fontWeight: FontWeight.bold,
-      color: Theme.of(context).colorScheme.primary,
+      color: Color(0xFF006A60),
     );
     final nameTh = location?.nameTh?.trim();
     final name = location?.name?.trim();

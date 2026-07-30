@@ -141,16 +141,13 @@ class BookingListItem extends StatelessWidget {
                   _RouteLine(
                     icon: Icons.trip_origin,
                     label: '출발지',
-                    text: formatBookingLocation(l10n, booking.pickupLocation),
+                    location: booking.pickupLocation,
                   ),
                   const SizedBox(height: 8),
                   _RouteLine(
                     icon: Icons.location_on_outlined,
                     label: '도착지',
-                    text: formatBookingLocation(
-                      l10n,
-                      booking.destinationLocation,
-                    ),
+                    location: booking.destinationLocation,
                   ),
                   const SizedBox(height: 14),
                   Wrap(
@@ -194,36 +191,76 @@ class _RouteLine extends StatelessWidget {
   const _RouteLine({
     required this.icon,
     required this.label,
-    required this.text,
+    required this.location,
   });
 
   final IconData icon;
   final String label;
-  final String text;
+  final BookingLocation location;
+
+  static const _highlightColor = Color(0xFF006A60);
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Icon(icon, size: 18),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text.rich(
-          TextSpan(
-            children: [
+  Widget build(BuildContext context) {
+    final lines = parseBookingLocation(location);
+    final labelStyle = TextStyle(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+
+    if (!lines.hasPlaceName) {
+      final address = lines.hasAddressLine ? lines.addressLine! : '';
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
               TextSpan(
-                text: '$label : ',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                children: [
+                  TextSpan(text: '$label : ', style: labelStyle),
+                  if (address.isNotEmpty) TextSpan(text: address),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: '$label : ', style: labelStyle),
+                    TextSpan(
+                      text: lines.placeName!,
+                      style: const TextStyle(
+                        color: _highlightColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              TextSpan(text: text),
+              if (lines.hasSeparateAddress) ...[
+                const SizedBox(height: 2),
+                Text(lines.addressLine!),
+              ],
             ],
           ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _Fact extends StatelessWidget {

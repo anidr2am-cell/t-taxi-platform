@@ -1144,13 +1144,38 @@ class _LocationInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final formatted = formatBookingLocation(l10n, location);
+    const highlightColor = Color(0xFF006A60);
+    final lines = parseBookingLocation(location);
     final fallbackText = fallback.trim();
-    final value = formatted == l10n.noLocationInfo && fallbackText.isNotEmpty
-        ? fallbackText
-        : formatted;
     final hasCoordinates =
         location.latitude != null && location.longitude != null;
+
+    Widget locationContent;
+    if (lines.hasPlaceName) {
+      locationContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            lines.placeName!,
+            style: const TextStyle(
+              color: highlightColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (lines.hasSeparateAddress) ...[
+            const SizedBox(height: 2),
+            Text(lines.addressLine!),
+          ],
+        ],
+      );
+    } else if (lines.hasAddressLine) {
+      locationContent = Text(lines.addressLine!);
+    } else if (fallbackText.isNotEmpty) {
+      locationContent = Text(fallbackText);
+    } else {
+      locationContent = Text(l10n.noLocationInfo);
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -1161,7 +1186,7 @@ class _LocationInfo extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value),
+                locationContent,
                 if (hasCoordinates)
                   TextButton.icon(
                     key: mapKey,
