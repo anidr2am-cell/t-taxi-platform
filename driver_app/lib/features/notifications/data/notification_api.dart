@@ -51,6 +51,8 @@ class NotificationApi implements NotificationDataSource {
   }) async {
     final body = <String, dynamic>{
       'token': token,
+      // TODO(iOS): 서버가 'IOS' 값을 지원하는지 backend 확인 필요.
+      // 확인 전까지 하드코딩 유지
       'platform': 'ANDROID',
       if (deviceName != null && deviceName.isNotEmpty) 'deviceName': deviceName,
       if (appVersion != null && appVersion.isNotEmpty) 'appVersion': appVersion,

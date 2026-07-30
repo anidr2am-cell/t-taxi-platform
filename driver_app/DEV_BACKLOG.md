@@ -113,6 +113,23 @@ Mac 환경에서 CocoaPods, signing, bundle id, provisioning profile을 구성�
 
 로컬 iOS 플랫폼 파일 존재. 실 빌드/서명은 미착수.
 
+### 1단계 준비 (2026-07-30, Mac 없이 완료)
+
+- Bundle ID를 `com.trider.driver`로 통일 완료 (Runner / RunnerTests)
+- iOS flavor(dev/stg/prod) 분리는 Mac 확보 후 진행 예정 (단일 Runner 유지)
+- 카메라/사진첩 권한 문구(`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`) 추가 완료
+- `UIBackgroundModes`에 `remote-notification` 선언 완료 (Push capability/entitlements는 미적용)
+- lib/ 코드에 iOS 활성화 대비 TODO 주석 추가 완료 (Firebase init/FCM handler/notification platform)
+
+### 남은 작업
+
+- AppIcon 교체 (현재 Flutter 기본 placeholder)
+- `GoogleService-Info.plist` 등록 (Firebase Console)
+- Podfile 생성 및 CocoaPods 설정 (Mac 필요)
+- backend notification platform `IOS` 지원 여부 확인 후 `notification_api.dart` 활성화
+- Apple Developer 계정: App ID, APNs 키, Push capability, provisioning profile
+- Mac 확보 후: signing, 실빌드, FCM 실기기 검증, iOS flavor scheme 분리
+
 ## 7. 수완나품 공항 게이트 안내
 
 ### 상태

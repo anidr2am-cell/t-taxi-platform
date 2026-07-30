@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 /// native Firebase config is unavailable (e.g. flutter test on a host VM).
 Future<void> initializeFirebaseApp() async {
   if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+    // TODO(iOS): GoogleService-Info.plist 및 Push capability 설정 완료 후
+    // iOS 분기 활성화 예정 (Mac 확보 후)
     return;
   }
   if (Firebase.apps.isNotEmpty) {
