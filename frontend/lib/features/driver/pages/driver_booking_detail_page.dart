@@ -576,14 +576,14 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                           const SizedBox(height: AppTokens.spaceSm),
                           _DriverLocationCard(
                             key: const Key('driverPickupLocationCard'),
-                            title: l10n.t('driver_detail_origin'),
+                            title: l10n.t('origin'),
                             location: _pickupLocation(booking),
                             onOpen: _openMapsLocation,
                           ),
                           const SizedBox(height: AppTokens.spaceSm),
                           _DriverLocationCard(
                             key: const Key('driverDestinationLocationCard'),
-                            title: l10n.t('driver_detail_destination'),
+                            title: l10n.t('destination'),
                             location: _destinationLocation(booking),
                             onOpen: _openMapsLocation,
                           ),
@@ -1051,7 +1051,7 @@ class _DriverLocationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            title == l10n.t('driver_detail_origin')
+            title == l10n.t('origin')
                 ? Icons.trip_origin
                 : Icons.location_on_outlined,
             color: AppTokens.primary,

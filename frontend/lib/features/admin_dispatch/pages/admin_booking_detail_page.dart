@@ -2235,12 +2235,15 @@ class _AdminOperationsRouteText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Text.rich(
       TextSpan(
         style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
         children: [
+          TextSpan(text: '${l10n.t('origin')} : '),
           ..._endpointSpans(origin),
           const TextSpan(text: ' → '),
+          TextSpan(text: '${l10n.t('destination')} : '),
           ..._endpointSpans(destination),
         ],
       ),

@@ -1546,6 +1546,7 @@ class _AdminRouteEndpointsText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final parsed = _parseRouteEndpoints(routeText);
     if (parsed == null) {
       return Text(
@@ -1561,6 +1562,13 @@ class _AdminRouteEndpointsText extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w600),
         children: [
           TextSpan(
+            text: '${l10n.t('origin')} : ',
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+          TextSpan(
             text: parsed.origin,
             style: const TextStyle(
               color: _adminLocationHighlightColor,
@@ -1570,6 +1578,13 @@ class _AdminRouteEndpointsText extends StatelessWidget {
           const TextSpan(
             text: ' → ',
             style: TextStyle(
+              color: AppTokens.textSecondary,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+          TextSpan(
+            text: '${l10n.t('destination')} : ',
+            style: const TextStyle(
               color: AppTokens.textSecondary,
               fontWeight: FontWeight.normal,
             ),

@@ -140,11 +140,13 @@ class BookingListItem extends StatelessWidget {
                   const SizedBox(height: 14),
                   _RouteLine(
                     icon: Icons.trip_origin,
+                    label: '출발지',
                     text: formatBookingLocation(l10n, booking.pickupLocation),
                   ),
                   const SizedBox(height: 8),
                   _RouteLine(
                     icon: Icons.location_on_outlined,
+                    label: '도착지',
                     text: formatBookingLocation(
                       l10n,
                       booking.destinationLocation,
@@ -189,9 +191,14 @@ class BookingListItem extends StatelessWidget {
 }
 
 class _RouteLine extends StatelessWidget {
-  const _RouteLine({required this.icon, required this.text});
+  const _RouteLine({
+    required this.icon,
+    required this.label,
+    required this.text,
+  });
 
   final IconData icon;
+  final String label;
   final String text;
 
   @override
@@ -200,7 +207,21 @@ class _RouteLine extends StatelessWidget {
     children: [
       Icon(icon, size: 18),
       const SizedBox(width: 8),
-      Expanded(child: Text(text)),
+      Expanded(
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: '$label : ',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              TextSpan(text: text),
+            ],
+          ),
+        ),
+      ),
     ],
   );
 }

@@ -103,10 +103,10 @@ void main() {
     expect(find.textContaining('출발 요청시간 : 2026-07-18 10:15'), findsOneWidget);
     expect(find.text('대기 기준 2026-07-18 09:45'), findsOneWidget);
     expect(
-      find.text('Suvarnabhumi Airport\n999 Nong Prue, Bang Phli'),
+      find.textContaining('출발지 : Suvarnabhumi Airport'),
       findsOneWidget,
     );
-    expect(find.text('Test Hotel\nBangkok'), findsOneWidget);
+    expect(find.textContaining('도착지 : Test Hotel'), findsOneWidget);
     expect(find.text('예상 수입 THB 900'), findsOneWidget);
   });
 
@@ -129,10 +129,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('ท่าอากาศยานสุวรรณภูมิ\n999 Nong Prue, Bang Phli'),
+      find.textContaining('출발지 : ท่าอากาศยานสุวรรณภูมิ'),
       findsOneWidget,
     );
-    expect(find.text('โรงแรมทดสอบ\nBangkok'), findsOneWidget);
+    expect(find.textContaining('도착지 : โรงแรมทดสอบ'), findsOneWidget);
   });
 
   testWidgets('shows empty list state', (tester) async {

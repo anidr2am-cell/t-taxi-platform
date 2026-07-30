@@ -709,10 +709,16 @@ class _UrgentCallsSection extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      '${DriverTripContact.displayLabelFor(call.pickupLocation ?? DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(call.destinationLocation ?? DriverBookingLocation(address: call.destination))}',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                    _driverJobsRouteText(
+                      l10n,
+                      DriverTripContact.displayLabelFor(
+                        call.pickupLocation ??
+                            DriverBookingLocation(address: call.origin),
+                      ),
+                      DriverTripContact.displayLabelFor(
+                        call.destinationLocation ??
+                            DriverBookingLocation(address: call.destination),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -880,10 +886,16 @@ class _OpenCallsSection extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        '${DriverTripContact.displayLabelFor(call.pickupLocation ?? DriverBookingLocation(address: call.origin))} → ${DriverTripContact.displayLabelFor(call.destinationLocation ?? DriverBookingLocation(address: call.destination))}',
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                      _driverJobsRouteText(
+                        l10n,
+                        DriverTripContact.displayLabelFor(
+                          call.pickupLocation ??
+                              DriverBookingLocation(address: call.origin),
+                        ),
+                        DriverTripContact.displayLabelFor(
+                          call.destinationLocation ??
+                              DriverBookingLocation(address: call.destination),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -1312,4 +1324,25 @@ class _MetaChip extends StatelessWidget {
       ],
     );
   }
+}
+
+Widget _driverJobsRouteText(
+  AppLocalizations l10n,
+  String origin,
+  String destination,
+) {
+  const secondary = TextStyle(color: AppTokens.textSecondary);
+  return Text.rich(
+    TextSpan(
+      children: [
+        TextSpan(text: '${l10n.t('origin')} : ', style: secondary),
+        TextSpan(text: origin),
+        const TextSpan(text: ' → ', style: secondary),
+        TextSpan(text: '${l10n.t('destination')} : ', style: secondary),
+        TextSpan(text: destination),
+      ],
+    ),
+    maxLines: 3,
+    overflow: TextOverflow.ellipsis,
+  );
 }

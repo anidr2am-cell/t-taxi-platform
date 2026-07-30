@@ -467,12 +467,12 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                 value: result.serviceTypeName,
               ),
               bookingLocationSummaryRow(
-                label: l10n.t('guest_lookup_from'),
+                label: l10n.t('origin'),
                 name: result.originName,
                 address: result.originAddress,
               ),
               bookingLocationSummaryRow(
-                label: l10n.t('guest_lookup_to'),
+                label: l10n.t('destination'),
                 name: result.destinationName,
                 address: result.destinationAddress,
               ),

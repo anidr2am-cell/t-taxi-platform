@@ -882,6 +882,7 @@ class _UrgentCallCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: _OpenCallLocationText(
+                    label: '출발지',
                     location: call.pickupLocation,
                     fallbackAddress: call.origin,
                   ),
@@ -892,6 +893,7 @@ class _UrgentCallCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _OpenCallLocationText(
+                    label: '도착지',
                     location: call.destinationLocation,
                     fallbackAddress: call.destination,
                   ),
@@ -1025,12 +1027,14 @@ class _OpenCallCard extends StatelessWidget {
                 ),
               const SizedBox(height: 10),
               _OpenCallLocationText(
+                label: '출발지',
                 location: call.pickupLocation,
                 fallbackAddress: call.origin,
                 key: Key('openCallOrigin-${call.bookingNumber}'),
               ),
               const SizedBox(height: 6),
               _OpenCallLocationText(
+                label: '도착지',
                 location: call.destinationLocation,
                 fallbackAddress: call.destination,
                 key: Key('openCallDestination-${call.bookingNumber}'),
@@ -1129,14 +1133,20 @@ class _OpenCallLocationText extends StatelessWidget {
     super.key,
     required this.location,
     required this.fallbackAddress,
+    this.label,
   });
 
   final BookingLocation? location;
   final String fallbackAddress;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final labelStyle = TextStyle(
+      fontWeight: FontWeight.normal,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
     final placeStyle = TextStyle(
       fontWeight: FontWeight.bold,
       color: Theme.of(context).colorScheme.primary,
@@ -1147,29 +1157,41 @@ class _OpenCallLocationText extends StatelessWidget {
         ((nameTh != null && nameTh.isNotEmpty) ||
             (name != null && name.isNotEmpty));
 
+    Widget content;
     if (hasStructuredName) {
       final lines = parseBookingLocation(location!);
       if (lines.hasSeparateAddress) {
-        return Column(
+        content = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(lines.placeName!, style: placeStyle),
             Text(lines.addressLine!),
           ],
         );
+      } else if (lines.hasPlaceName) {
+        content = Text(lines.placeName!, style: placeStyle);
+      } else if (lines.hasAddressLine) {
+        content = Text(lines.addressLine!);
+      } else {
+        content = Text(l10n.noLocationInfo);
       }
-      if (lines.hasPlaceName) {
-        return Text(lines.placeName!, style: placeStyle);
-      }
-      if (lines.hasAddressLine) {
-        return Text(lines.addressLine!);
-      }
-      return Text(l10n.noLocationInfo);
+    } else {
+      content = Text(
+        AirportLabelResolver.displayLabelFor(fallbackAddress),
+        style: placeStyle,
+      );
     }
 
-    return Text(
-      AirportLabelResolver.displayLabelFor(fallbackAddress),
-      style: placeStyle,
+    if (label == null || label!.isEmpty) {
+      return content;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('$label : ', style: labelStyle),
+        Expanded(child: content),
+      ],
     );
   }
 }
