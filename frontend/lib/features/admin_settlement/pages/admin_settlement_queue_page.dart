@@ -6,6 +6,7 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../settlement/utils/settlement_receipt.dart';
 import '../services/admin_settlement_api_service.dart';
+import '../utils/admin_settlement_test_data_filter.dart';
 
 class AdminSettlementQueuePage extends StatefulWidget {
   const AdminSettlementQueuePage({super.key, this.api});
@@ -24,6 +25,10 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
   String? _error;
   List<dynamic> _items = [];
   String? _statusFilter;
+  bool _includeTestData = false;
+
+  List<dynamic> get _visibleItems =>
+      filterAdminSettlementItems(_items, includeTestData: _includeTestData);
 
   @override
   void initState() {
@@ -79,6 +84,14 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                   _load();
                 },
               ),
+              FilterChip(
+                selected: _includeTestData,
+                avatar: const Icon(Icons.science_outlined, size: 18),
+                label: const Text('테스트 데이터 포함 보기'),
+                onSelected: (selected) {
+                  setState(() => _includeTestData = selected);
+                },
+              ),
               IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
             ],
           ),
@@ -91,7 +104,7 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                     onRetry: _load,
                     retryLabel: context.l10n.t('admin_dispatch_retry'),
                   )
-                : _items.isEmpty
+                : _visibleItems.isEmpty
                 ? AppUi.emptyState(
                     title: 'No settlements',
                     icon: Icons.receipt_long_outlined,
@@ -100,12 +113,12 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                     onRefresh: _load,
                     child: ListView.separated(
                       padding: AppUi.pagePadding(context),
-                      itemCount: _items.length,
+                      itemCount: _visibleItems.length,
                       separatorBuilder: (_, index) =>
                           const SizedBox(height: AppTokens.spaceSm),
                       itemBuilder: (context, index) {
                         final item = Map<String, dynamic>.from(
-                          _items[index] as Map,
+                          _visibleItems[index] as Map,
                         );
                         final status =
                             item['commissionStatus'] as String? ?? '';

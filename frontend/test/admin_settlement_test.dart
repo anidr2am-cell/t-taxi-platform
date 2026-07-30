@@ -3,14 +3,26 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/admin_settlement/pages/admin_settlement_queue_page.dart';
 import 'package:frontend/features/admin_settlement/services/admin_settlement_api_service.dart';
+import 'package:frontend/features/admin_settlement/utils/admin_settlement_test_data_filter.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/main.dart' as app;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAdminSettlementApiService extends AdminSettlementApiService {
-  _FakeAdminSettlementApiService();
+  _FakeAdminSettlementApiService({this.listItems = const []});
 
   bool approved = false;
+  final List<Map<String, dynamic>> listItems;
+
+  @override
+  Future<Map<String, dynamic>> listSettlements({
+    String? status,
+    bool overdueOnly = false,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    return {'items': listItems};
+  }
 
   @override
   Future<Map<String, dynamic>> getSettlement(String bookingNumber) async {
@@ -176,5 +188,74 @@ void main() {
     expect(api.approved, isTrue);
     expect(changed, 1);
     expect(find.text('Status: APPROVED'), findsOneWidget);
+  });
+
+  test('admin settlement test-data filter hides exactly 100 THB commission', () {
+    const testItem = {
+      'bookingNumber': 'TX-TEST-100',
+      'commissionAmount': 100,
+      'currency': 'THB',
+    };
+    const realItem = {
+      'bookingNumber': 'TX-REAL-200',
+      'commissionAmount': 200,
+      'currency': 'THB',
+    };
+    const nearMissAmount = {
+      'bookingNumber': 'TX-NEAR-101',
+      'commissionAmount': 101,
+      'currency': 'THB',
+    };
+    const nearMissCurrency = {
+      'bookingNumber': 'TX-NEAR-USD',
+      'commissionAmount': 100,
+      'currency': 'USD',
+    };
+
+    expect(isAdminSettlementTestDataItem(testItem), isTrue);
+    expect(isAdminSettlementTestDataItem(realItem), isFalse);
+    expect(isAdminSettlementTestDataItem(nearMissAmount), isFalse);
+    expect(isAdminSettlementTestDataItem(nearMissCurrency), isFalse);
+
+    final filtered = filterAdminSettlementItems(
+      [testItem, realItem, nearMissAmount, nearMissCurrency],
+      includeTestData: false,
+    );
+    expect(filtered, [realItem, nearMissAmount, nearMissCurrency]);
+  });
+
+  testWidgets('admin settlement queue hides 100 THB test rows by default', (
+    tester,
+  ) async {
+    final api = _FakeAdminSettlementApiService(
+      listItems: [
+        {
+          'bookingNumber': 'TX-TEST-100',
+          'driverName': 'Test Driver',
+          'commissionAmount': 100,
+          'currency': 'THB',
+          'commissionStatus': 'PENDING',
+        },
+        {
+          'bookingNumber': 'TX-REAL-200',
+          'driverName': 'Real Driver',
+          'commissionAmount': 200,
+          'currency': 'THB',
+          'commissionStatus': 'PENDING',
+        },
+      ],
+    );
+
+    await tester.pumpWidget(_wrap(AdminSettlementQueuePage(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('TX-TEST-100'), findsNothing);
+    expect(find.text('TX-REAL-200'), findsOneWidget);
+
+    await tester.tap(find.text('테스트 데이터 포함 보기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('TX-TEST-100'), findsOneWidget);
+    expect(find.text('TX-REAL-200'), findsOneWidget);
   });
 }
