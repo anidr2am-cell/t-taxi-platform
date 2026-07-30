@@ -1145,10 +1145,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             detail['scheduledPickupAt'] as String? ?? '-',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          Text(
-            '${origin['address'] ?? '-'} → ${destination['address'] ?? '-'}',
-            style: const TextStyle(color: AppTokens.textSecondary),
-          ),
+          _AdminOperationsRouteText(origin: origin, destination: destination),
           if (_primaryAction(l10n, actions) case final action?) ...[
             const SizedBox(height: AppTokens.spaceMd),
             action,
@@ -1429,13 +1426,13 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             label: l10n.t('pickup_datetime'),
             value: detail['scheduledPickupAt'] as String? ?? '-',
           ),
-          AppUi.summaryRow(
+          _LocationSummaryRow(
             label: l10n.t('origin'),
-            value: origin['address'] as String? ?? '',
+            location: origin,
           ),
-          AppUi.summaryRow(
+          _LocationSummaryRow(
             label: l10n.t('destination'),
-            value: destination['address'] as String? ?? '',
+            location: destination,
           ),
           AppUi.summaryRow(
             label: 'Vehicle',
@@ -2172,6 +2169,144 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
   num? _chargeAmount(dynamic raw) {
     return Map<String, dynamic>.from(raw as Map)['amount'] as num?;
+  }
+}
+
+const _adminLocationHighlightColor = Color(0xFF006A60);
+
+String? _adminLocationName(Map<String, dynamic> location) {
+  final nameTh = (location['nameTh'] as String?)?.trim();
+  if (nameTh != null && nameTh.isNotEmpty) {
+    return nameTh;
+  }
+  final name = (location['name'] as String?)?.trim();
+  if (name != null && name.isNotEmpty) {
+    return name;
+  }
+  return null;
+}
+
+String? _adminLocationAddress(Map<String, dynamic> location) {
+  final address = (location['address'] as String?)?.trim();
+  if (address == null || address.isEmpty) {
+    return null;
+  }
+  return address;
+}
+
+class _AdminOperationsRouteText extends StatelessWidget {
+  const _AdminOperationsRouteText({
+    required this.origin,
+    required this.destination,
+  });
+
+  final Map<String, dynamic> origin;
+  final Map<String, dynamic> destination;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+        children: [
+          ..._endpointSpans(origin),
+          const TextSpan(text: ' → '),
+          ..._endpointSpans(destination),
+        ],
+      ),
+    );
+  }
+
+  List<InlineSpan> _endpointSpans(Map<String, dynamic> location) {
+    final name = _adminLocationName(location);
+    final address = _adminLocationAddress(location) ?? '-';
+    if (name == null) {
+      return [TextSpan(text: address)];
+    }
+    final showAddress = address != '-' && address != name;
+    return [
+      TextSpan(
+        text: name,
+        style: const TextStyle(
+          color: _adminLocationHighlightColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      if (showAddress) TextSpan(text: ' ($address)'),
+    ];
+  }
+}
+
+class _LocationSummaryRow extends StatelessWidget {
+  const _LocationSummaryRow({
+    required this.label,
+    required this.location,
+  });
+
+  final String label;
+  final Map<String, dynamic> location;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _adminLocationName(location);
+    final address = _adminLocationAddress(location);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: name != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: _adminLocationHighlightColor,
+                          height: 1.35,
+                        ),
+                      ),
+                      if (address != null && address != name) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          address,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.35,
+                            color: AppTokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  )
+                : Text(
+                    address ?? '',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTokens.textPrimary,
+                      height: 1.35,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

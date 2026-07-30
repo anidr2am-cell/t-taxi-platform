@@ -823,9 +823,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                '${item['origin']} → ${item['destination']}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              _AdminRouteEndpointsText(
+                routeText:
+                    '${item['origin']} → ${item['destination']}',
               ),
               const SizedBox(height: AppTokens.spaceSm),
               Text(item['scheduledPickupAt'] as String? ?? '-'),
@@ -1120,9 +1120,8 @@ class _BookingListCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Text(
-            '${item['origin']} → ${item['destination']}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+          _AdminRouteEndpointsText(
+            routeText: '${item['origin']} → ${item['destination']}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1518,4 +1517,75 @@ class _FilterSheetState extends State<_FilterSheet> {
       ),
     );
   }
+}
+
+const _adminLocationHighlightColor = Color(0xFF006A60);
+
+class _AdminRouteEndpointsText extends StatelessWidget {
+  const _AdminRouteEndpointsText({
+    required this.routeText,
+    this.maxLines,
+    this.overflow,
+  });
+
+  final String routeText;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = _parseRouteEndpoints(routeText);
+    if (parsed == null) {
+      return Text(
+        routeText,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
+
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(fontWeight: FontWeight.w600),
+        children: [
+          TextSpan(
+            text: parsed.origin,
+            style: const TextStyle(
+              color: _adminLocationHighlightColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const TextSpan(
+            text: ' → ',
+            style: TextStyle(
+              color: AppTokens.textSecondary,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+          TextSpan(
+            text: parsed.destination,
+            style: const TextStyle(
+              color: _adminLocationHighlightColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      maxLines: maxLines,
+      overflow: overflow,
+    );
+  }
+}
+
+({String origin, String destination})? _parseRouteEndpoints(String routeText) {
+  final arrowIndex = routeText.indexOf('→');
+  if (arrowIndex <= 0 || arrowIndex >= routeText.length - 1) {
+    return null;
+  }
+  final origin = routeText.substring(0, arrowIndex).trim();
+  final destination = routeText.substring(arrowIndex + 1).trim();
+  if (origin.isEmpty || destination.isEmpty) {
+    return null;
+  }
+  return (origin: origin, destination: destination);
 }
