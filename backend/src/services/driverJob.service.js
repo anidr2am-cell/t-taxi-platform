@@ -241,7 +241,7 @@ class DriverJobService {
       status: row.status,
       assignmentStatus: row.assignment_status ?? null,
       acceptedAt: row.accepted_at ?? null,
-      scheduledPickupAt: row.scheduled_pickup_at ?? null,
+      scheduledPickupAt: this.serviceDateTimeIso(row.scheduled_pickup_at),
       createdAt: this.serviceDateTimeIso(row.created_at),
       standbyReferenceTimeType: standbyReference.referenceTimeType,
       standbyReferenceTime: standbyReference.referenceTime,

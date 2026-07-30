@@ -100,7 +100,7 @@ class DriverCallService {
     return {
       bookingNumber: row.booking_number,
       status: row.status,
-      scheduledPickupAt: row.scheduled_pickup_at,
+      scheduledPickupAt: this.driverJobService.serviceDateTimeIso(row.scheduled_pickup_at),
       pickupDate: row.pickup_date,
       pickupTime: row.pickup_time,
       createdAt: this.driverJobService.serviceDateTimeIso(row.created_at),

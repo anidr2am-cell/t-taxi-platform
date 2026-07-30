@@ -91,11 +91,25 @@ function formatServiceDateTimeForApi(value) {
   return str;
 }
 
+/**
+ * Serialize a service datetime as a UTC ISO-8601 instant for JSON APIs.
+ * Interprets naive MySQL / mysql2 Date digits as Asia/Bangkok wall clock first.
+ *
+ * @returns {string|null}
+ */
+function formatServiceDateTimeIso(value) {
+  if (value == null || value === '') return null;
+  const parsedMs = parseServiceDateTimeToMs(value);
+  if (parsedMs != null) return new Date(parsedMs).toISOString();
+  return null;
+}
+
 module.exports = {
   SERVICE_TIME_ZONE,
   SERVICE_UTC_OFFSET,
   formatMysqlDateTimeFromDate,
   formatServiceDateTimeForApi,
+  formatServiceDateTimeIso,
   parseServiceDateTimeToMs,
   getElapsedMsSinceServiceDateTime,
 };

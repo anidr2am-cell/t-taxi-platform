@@ -15,6 +15,7 @@ const {
   ADMIN_UNASSIGN_ACTIVITY_TYPE,
   ADMIN_RELEASED_REASON_CODE,
 } = require("../constants/bookingAssignmentRelease.constants");
+const { formatServiceDateTimeIso } = require("../utils/serviceDateTime.util");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -149,7 +150,7 @@ class AdminDispatchService {
         code: row.service_type_code,
         name: row.service_type_name,
       },
-      scheduledPickupAt: row.scheduled_pickup_at,
+      scheduledPickupAt: formatServiceDateTimeIso(row.scheduled_pickup_at),
       origin: row.origin_address,
       destination: row.destination_address,
       customerDisplayName: row.customer_name,
@@ -416,7 +417,7 @@ class AdminDispatchService {
         code: row.service_type_code,
         name: row.service_type_name,
       },
-      scheduledPickupAt: row.scheduled_pickup_at,
+      scheduledPickupAt: formatServiceDateTimeIso(row.scheduled_pickup_at),
       route: {
         origin: {
           address: row.origin_address,

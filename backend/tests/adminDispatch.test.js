@@ -203,7 +203,7 @@ test("service maps queue item without secrets", () => {
   );
   const item = service.mapQueueItem(queueRow());
   assert.equal(item.bookingNumber, "TX202607010001");
-  assert.equal(item.scheduledPickupAt, "2026-07-01 09:30:00");
+  assert.equal(item.scheduledPickupAt, "2026-07-01T02:30:00.000Z");
   assert.equal(item.activeAssignment, null);
   assert.equal(item.bookingGroup, "NEW");
   assert.equal(item.passengerCount, 2);
@@ -765,7 +765,7 @@ test("booking detail never includes qr hashes", async () => {
   );
   const detail = await service.getBookingDetail("TX202607010001");
   assert.equal(detail.bookingNumber, "TX202607010001");
-  assert.equal(detail.scheduledPickupAt, "2026-07-01 09:30:00");
+  assert.equal(detail.scheduledPickupAt, "2026-07-01T02:30:00.000Z");
   assert.ok(!("boardingQrTokenHash" in detail));
   assert.ok(!("guestAccessToken" in detail));
 });
