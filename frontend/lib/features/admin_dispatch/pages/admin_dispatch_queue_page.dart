@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../booking/utils/booking_status_display.dart';
+import '../../driver/utils/driver_backend_datetime.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/api_date_format.dart';
@@ -828,7 +829,9 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
                     '${item['origin']} → ${item['destination']}',
               ),
               const SizedBox(height: AppTokens.spaceSm),
-              Text(item['scheduledPickupAt'] as String? ?? '-'),
+              Text(
+                '${l10n.t('admin_pickup_requested_at')} : ${_formatAdminBangkokDateTime(item['scheduledPickupAt'] as String?)}',
+              ),
               const Spacer(),
               AppUi.primaryButton(
                 label: AdminOperationsUx.listCtaLabel(l10n),
@@ -1127,7 +1130,7 @@ class _BookingListCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${item['scheduledPickupAt'] ?? '-'} · ${item['customerDisplayName'] ?? '-'} · ${item['passengerCount'] ?? '-'} pax',
+            '${l10n.t('admin_pickup_requested_at')} : ${_formatAdminBangkokDateTime(item['scheduledPickupAt'] as String?)} · ${item['customerDisplayName'] ?? '-'} · ${item['passengerCount'] ?? '-'} pax',
             style: const TextStyle(
               color: AppTokens.textSecondary,
               fontSize: 13,
@@ -1520,6 +1523,15 @@ class _FilterSheetState extends State<_FilterSheet> {
 }
 
 const _adminLocationHighlightColor = Color(0xFF006A60);
+
+String _formatAdminBangkokDateTime(String? raw) {
+  final parsed = parseBackendServiceDateTime(raw);
+  if (parsed == null) return '-';
+  final bangkok = parsed.toUtc().add(const Duration(hours: 7));
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${bangkok.year}-${two(bangkok.month)}-${two(bangkok.day)} '
+      '${two(bangkok.hour)}:${two(bangkok.minute)}';
+}
 
 class _AdminRouteEndpointsText extends StatelessWidget {
   const _AdminRouteEndpointsText({

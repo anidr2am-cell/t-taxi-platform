@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../booking/utils/booking_status_display.dart';
 import '../../booking/utils/review_tags.dart';
+import '../../driver/utils/driver_backend_datetime.dart';
 import '../../booking/models/country_option.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
@@ -892,6 +893,19 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         '';
   }
 
+  String _formatBangkokServiceDateTime(String? raw) {
+    final parsed = parseBackendServiceDateTime(raw);
+    if (parsed == null) return '-';
+    final bangkok = parsed.toUtc().add(const Duration(hours: 7));
+    return _formatAbsolute(DateTime(
+      bangkok.year,
+      bangkok.month,
+      bangkok.day,
+      bangkok.hour,
+      bangkok.minute,
+    ));
+  }
+
   String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
   String _formatAbsolute(DateTime value) {
@@ -1141,9 +1155,21 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          Text(
-            detail['scheduledPickupAt'] as String? ?? '-',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '${l10n.t('admin_pickup_requested_at')} : ',
+                  style: const TextStyle(color: AppTokens.textSecondary),
+                ),
+                TextSpan(
+                  text: _formatBangkokServiceDateTime(
+                    detail['scheduledPickupAt'] as String?,
+                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
           ),
           _AdminOperationsRouteText(origin: origin, destination: destination),
           if (_primaryAction(l10n, actions) case final action?) ...[
@@ -1423,8 +1449,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             value: (detail['serviceType'] as Map?)?['name'] as String? ?? '-',
           ),
           AppUi.summaryRow(
-            label: l10n.t('pickup_datetime'),
-            value: detail['scheduledPickupAt'] as String? ?? '-',
+            label: l10n.t('admin_pickup_requested_at'),
+            value: _formatBangkokServiceDateTime(
+              detail['scheduledPickupAt'] as String?,
+            ),
           ),
           _LocationSummaryRow(
             label: l10n.t('origin'),
@@ -1442,7 +1470,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           if (detail['createdAt'] != null)
             AppUi.summaryRow(
               label: l10n.t('admin_detail_created'),
-              value: '${detail['createdAt']}',
+              value: _formatBangkokServiceDateTime(
+                detail['createdAt'] as String?,
+              ),
             ),
         ],
       ),
