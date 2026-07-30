@@ -526,7 +526,6 @@ function createCustomerDecisionHarness(overrides = {}) {
     attemptOutcomes: [],
     assignments: [],
     statusUpdates: [],
-    chat: [],
   };
 
   let booking = createBookingState({
@@ -722,22 +721,6 @@ function createCustomerDecisionHarness(overrides = {}) {
     },
   };
 
-  const chatService = {
-    async ensureRoom(_conn, currentBooking) {
-      calls.chat.push({ type: 'ensureRoom', bookingId: currentBooking.id });
-      return { id: 55, booking_id: currentBooking.id };
-    },
-    async ensureDriverParticipant(_conn, room, currentBooking, driverUserId) {
-      calls.chat.push({
-        type: 'ensureDriverParticipant',
-        roomId: room.id,
-        bookingId: currentBooking.id,
-        driverUserId,
-      });
-      return { participantId: 77 };
-    },
-  };
-
   const driverJobService = {
     validateBookingNumber(value) {
       if (!/^TX\d{12}$/.test(String(value || ''))) {
@@ -758,7 +741,6 @@ function createCustomerDecisionHarness(overrides = {}) {
     driverJobService,
     bookingRepository,
     bookingService,
-    chatService,
   );
 
   return {
@@ -795,7 +777,6 @@ test('submitCustomerDecision ACCEPT confirms negotiation and creates assignment'
     assignmentReason: 'URGENT_CUSTOMER_CONFIRMED',
   });
   assert.equal(calls.attemptOutcomes[0].outcome, 'CUSTOMER_ACCEPTED');
-  assert.equal(calls.chat.length, 2);
   assert.equal(
     emitted.some((row) => row.room === driverUserRoom(42)
       && row.event === 'driver:urgent-call:confirmed'),

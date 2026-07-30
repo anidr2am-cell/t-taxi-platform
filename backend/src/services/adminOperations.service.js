@@ -544,8 +544,6 @@ class AdminOperationsService {
       case 'CRITICAL_UNASSIGNED':
       case 'URGENT_UNASSIGNED':
         return OPERATIONS_CTA.ASSIGN_DRIVER;
-      case 'CUSTOMER_INQUIRY':
-        return OPERATIONS_CTA.OPEN_CHAT;
       case 'PICKUP_OVERDUE_STALLED':
       case 'BOARDING_DELAY':
       case 'LONG_TRIP':

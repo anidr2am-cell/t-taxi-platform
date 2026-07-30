@@ -42,10 +42,15 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  Future<List<dynamic>> getAirports() => _get('/api/airports') as Future<List<dynamic>>;
+  Future<List<dynamic>> getAirports() =>
+      _get('/api/airports') as Future<List<dynamic>>;
 
   Future<List<dynamic>> getGolfCourses({String? region}) =>
-      _get('/api/golf-courses', query: region != null ? {'region': region} : null) as Future<List<dynamic>>;
+      _get(
+            '/api/golf-courses',
+            query: region != null ? {'region': region} : null,
+          )
+          as Future<List<dynamic>>;
 
   Future<List<String>> getGolfRegions() async {
     final result = await _get('/api/golf-regions');
@@ -56,19 +61,35 @@ class ApiService {
       _post('/api/vehicle/recommend', data) as Future<Map<String, dynamic>>;
 
   Future<List<dynamic>> getVehiclePrices(String serviceType) =>
-      _get('/api/vehicle/prices', query: {'serviceType': serviceType}) as Future<List<dynamic>>;
+      _get('/api/vehicle/prices', query: {'serviceType': serviceType})
+          as Future<List<dynamic>>;
 
   Future<Map<String, dynamic>> calculatePrice(Map<String, dynamic> data) =>
       _post('/api/price/calculate', data) as Future<Map<String, dynamic>>;
 
-  Future<Map<String, dynamic>> getFlightInfo(String flightNumber, String date) =>
-      _get('/api/flight', query: {'flightNumber': flightNumber, 'date': date}) as Future<Map<String, dynamic>>;
+  Future<Map<String, dynamic>> getFlightInfo(
+    String flightNumber,
+    String date,
+  ) =>
+      _get('/api/flight', query: {'flightNumber': flightNumber, 'date': date})
+          as Future<Map<String, dynamic>>;
 
-  Future<Map<String, dynamic>> placesAutocomplete(String input, String language) =>
-      _get('/api/places/autocomplete', query: {'input': input, 'language': language}) as Future<Map<String, dynamic>>;
+  Future<Map<String, dynamic>> placesAutocomplete(
+    String input,
+    String language,
+  ) =>
+      _get(
+            '/api/places/autocomplete',
+            query: {'input': input, 'language': language},
+          )
+          as Future<Map<String, dynamic>>;
 
   Future<Map<String, dynamic>> placeDetails(String placeId, String language) =>
-      _get('/api/places/details', query: {'placeId': placeId, 'language': language}) as Future<Map<String, dynamic>>;
+      _get(
+            '/api/places/details',
+            query: {'placeId': placeId, 'language': language},
+          )
+          as Future<Map<String, dynamic>>;
 
   Future<Map<String, dynamic>> createReservation(Map<String, dynamic> data) =>
       _post('/api/reservations', data) as Future<Map<String, dynamic>>;
@@ -85,12 +106,8 @@ class ApiService {
   Future<List<dynamic>> getAdminReservations() =>
       _get('/api/admin/reservations') as Future<List<dynamic>>;
 
-  Future<List<dynamic>> getAdminChats() => _get('/api/admin/chats') as Future<List<dynamic>>;
-
-  Future<List<dynamic>> getChatMessages(String roomId) =>
-      _get('/api/admin/chats/$roomId/messages') as Future<List<dynamic>>;
-
-  Future<List<dynamic>> getDrivers() => _get('/api/admin/drivers') as Future<List<dynamic>>;
+  Future<List<dynamic>> getDrivers() =>
+      _get('/api/admin/drivers') as Future<List<dynamic>>;
 
   Future<List<dynamic>> getAdminVehiclePrices() =>
       _get('/api/admin/vehicle-prices') as Future<List<dynamic>>;
@@ -101,6 +118,14 @@ class ApiService {
   Future<List<dynamic>> getAdminAirports() =>
       _get('/api/admin/airports') as Future<List<dynamic>>;
 
-  Future<Map<String, dynamic>> updateReservationStatus(int id, String status, {int? driverId}) =>
-      _patch('/api/admin/reservations/$id', {'status': status, 'driverId': driverId}) as Future<Map<String, dynamic>>;
+  Future<Map<String, dynamic>> updateReservationStatus(
+    int id,
+    String status, {
+    int? driverId,
+  }) =>
+      _patch('/api/admin/reservations/$id', {
+            'status': status,
+            'driverId': driverId,
+          })
+          as Future<Map<String, dynamic>>;
 }

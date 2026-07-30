@@ -419,7 +419,7 @@ class _PickupNotificationActionState extends State<_PickupNotificationAction> {
     final l10n = context.l10n;
     if (widget.onNotifyPickup == null) {
       return _InfoNotice(
-        icon: Icons.chat_bubble_outline,
+        icon: Icons.notifications_none,
         text: l10n.t('airport_meeting_notify_waiting_driver'),
       );
     }
@@ -435,13 +435,11 @@ class _PickupNotificationActionState extends State<_PickupNotificationAction> {
           width: double.infinity,
           child: AppUi.primaryButton(
             label: _sent
-                ? l10n.t('airport_meeting_message_driver')
+                ? l10n.t('airport_meeting_notify_sent')
                 : l10n.t('airport_meeting_notify_button'),
-            icon: _sent
-                ? Icons.chat_bubble_outline
-                : Icons.notifications_active,
+            icon: Icons.notifications_active,
             loading: _sending,
-            onPressed: _sending ? null : _send,
+            onPressed: (_sending || _sent) ? null : _send,
           ),
         ),
         if (_error != null) ...[

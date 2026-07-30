@@ -194,7 +194,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
       builder: (context) => AlertDialog(
         title: const Text('선택한 기사를 테스트 데이터로 숨기시겠습니까?'),
         content: const Text(
-          '숨긴 기사는 기본 기사 목록, 오픈콜 후보, 온라인 상태 처리에서 제외됩니다. 과거 예약/정산/채팅 기록은 삭제하지 않습니다.',
+          '숨긴 기사는 기본 기사 목록, 오픈콜 후보, 온라인 상태 처리에서 제외됩니다. 과거 예약/정산 기록은 삭제하지 않습니다.',
         ),
         actions: [
           TextButton(

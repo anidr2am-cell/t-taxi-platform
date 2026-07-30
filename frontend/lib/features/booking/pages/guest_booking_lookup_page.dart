@@ -6,27 +6,21 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
-import '../services/booking_chat_api.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
 import '../utils/location_display.dart';
-import '../widgets/booking_chat_section.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/assigned_driver_status_card.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
-import '../../chat/services/chat_socket_service.dart';
-import 'customer_booking_chat_page.dart';
 
 class GuestBookingLookupPage extends StatefulWidget {
   const GuestBookingLookupPage({
     super.key,
     this.lookupService,
-    this.bookingChatApi,
-    this.bookingChatSocketService,
     this.enableCustomerTools = false,
     this.reviewApi,
     this.trackingBuilder,
@@ -34,8 +28,6 @@ class GuestBookingLookupPage extends StatefulWidget {
   });
 
   final GuestBookingLookupService? lookupService;
-  final BookingChatApi? bookingChatApi;
-  final ChatSocketService? bookingChatSocketService;
   final bool enableCustomerTools;
   final BookingReviewApi? reviewApi;
   final Widget Function(GuestBookingLookupResult result)? trackingBuilder;
@@ -56,7 +48,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   bool _loading = true;
   bool _refreshing = false;
   String? _error;
-  final Set<String> _pickupAlertSentBookingNumbers = <String>{};
 
   @override
   void initState() {
@@ -146,38 +137,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
   }
 
-  Future<void> _notifyPickupReady(GuestBookingLookupResult result) async {
-    if (_pickupAlertSentBookingNumbers.contains(result.bookingNumber)) {
-      _openCustomerChat(result);
-      return;
-    }
-    await (widget.bookingChatApi ?? const BookingChatApi()).sendPickupAlert(
-      bookingNumber: result.bookingNumber,
-      guestAccessToken: result.guestAccessToken,
-    );
-    if (!mounted) return;
-    setState(() {
-      _pickupAlertSentBookingNumbers.add(result.bookingNumber);
-    });
-    _openCustomerChat(result);
-  }
-
-  void _openCustomerChat(GuestBookingLookupResult result) {
-    if (!mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CustomerBookingChatPage(
-          bookingNumber: result.bookingNumber,
-          guestAccessToken: result.guestAccessToken,
-          api: widget.bookingChatApi,
-          socketService: widget.bookingChatSocketService,
-        ),
-      ),
-    );
-  }
-
-  bool _canSendPickupAlert(GuestBookingLookupResult result) => false;
-
   bool _canShowTracking(GuestBookingLookupResult result) {
     const trackingStatuses = {
       'DRIVER_ASSIGNED',
@@ -197,8 +156,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         result.capabilities.notificationsAvailable &&
         result.guestAccessToken.trim().isNotEmpty;
   }
-
-  bool _canShowChat(GuestBookingLookupResult result) => false;
 
   bool _canShowDriverPhone(GuestBookingLookupResult result) {
     const activeStatuses = {
@@ -543,9 +500,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             serviceTypeCode: result.serviceTypeCode,
             originAirportCode: result.originAirportCode,
             nameSignRequested: result.nameSignRequested,
-            pickupAlertSent: _pickupAlertSentBookingNumbers.contains(
-              result.bookingNumber,
-            ),
             vehicleInfo: AirportMeetingVehicleInfo(
               driverName: result.driverName,
               driverPhone: _canShowDriverPhone(result)
@@ -555,9 +509,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               vehicleColor: result.vehicleColor,
               vehiclePlateNumber: result.vehiclePlateNumber,
             ),
-            onNotifyPickup: _canSendPickupAlert(result)
-                ? () => _notifyPickupReady(result)
-                : null,
           ),
         ],
         const SizedBox(height: AppTokens.spaceMd),
@@ -600,15 +551,6 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               bookingId: result.bookingId,
               guestAccessToken: result.guestAccessToken,
             ),
-          if (_canShowChat(result)) ...[
-            const SizedBox(height: AppTokens.spaceMd),
-            BookingChatSection(
-              bookingNumber: result.bookingNumber,
-              guestAccessToken: result.guestAccessToken,
-              api: widget.bookingChatApi ?? const BookingChatApi(),
-              socketService: widget.bookingChatSocketService,
-            ),
-          ],
         ],
         const SizedBox(height: AppTokens.spaceLg),
         AppUi.secondaryButton(

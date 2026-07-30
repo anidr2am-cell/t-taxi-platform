@@ -116,8 +116,7 @@ class GuestBookingLookupResult {
       canReview:
           json['canReview'] == true ||
           (json['canReview'] == null && capabilities.reviewAvailable),
-      canCancel:
-          json['canCancel'] == true || capabilities.cancelAvailable,
+      canCancel: json['canCancel'] == true || capabilities.cancelAvailable,
       cancellationDeadline: json['cancellationDeadline'] as String?,
       cancellationBlockedReason: json['cancellationBlockedReason'] as String?,
       reassignmentInProgress: json['reassignmentInProgress'] == true,
@@ -196,8 +195,7 @@ class GuestBookingLookupResult {
       capabilities: capabilities ?? this.capabilities,
       canReview: canReview ?? this.canReview,
       canCancel: canCancel ?? this.canCancel,
-      cancellationDeadline:
-          cancellationDeadline ?? this.cancellationDeadline,
+      cancellationDeadline: cancellationDeadline ?? this.cancellationDeadline,
       cancellationBlockedReason:
           cancellationBlockedReason ?? this.cancellationBlockedReason,
       reassignmentInProgress:
@@ -262,7 +260,6 @@ class GuestBookingLookupResult {
       guestAccessToken: guestAccessToken,
       guestAccessExpiresAt: null,
       capabilities: GuestBookingCapabilities(
-        chatAvailable: false,
         notificationsAvailable: false,
         dropoffQrIssueAvailable: false,
         reviewAvailable: false,
@@ -407,7 +404,6 @@ class GuestBookingReviewSnapshot {
 
 class GuestBookingCapabilities {
   const GuestBookingCapabilities({
-    required this.chatAvailable,
     required this.notificationsAvailable,
     required this.dropoffQrIssueAvailable,
     required this.reviewAvailable,
@@ -417,7 +413,6 @@ class GuestBookingCapabilities {
     this.cancelAvailable = false,
   });
 
-  final bool chatAvailable;
   final bool notificationsAvailable;
   final bool dropoffQrIssueAvailable;
   final bool reviewAvailable;
@@ -428,7 +423,6 @@ class GuestBookingCapabilities {
 
   factory GuestBookingCapabilities.fromJson(Map<String, dynamic> json) {
     return GuestBookingCapabilities(
-      chatAvailable: json['chatAvailable'] == true,
       notificationsAvailable: json['notificationsAvailable'] != false,
       dropoffQrIssueAvailable: json['dropoffQrIssueAvailable'] == true,
       reviewAvailable: json['reviewAvailable'] == true,
@@ -440,7 +434,6 @@ class GuestBookingCapabilities {
   }
 
   Map<String, dynamic> toJson() => {
-    'chatAvailable': chatAvailable,
     'notificationsAvailable': notificationsAvailable,
     'dropoffQrIssueAvailable': dropoffQrIssueAvailable,
     'reviewAvailable': reviewAvailable,

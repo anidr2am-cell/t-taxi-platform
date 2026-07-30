@@ -224,8 +224,6 @@ class AdminOperationsUx {
         return l10n.t('admin_ops_cta_settlement_detail');
       case 'REVIEW_RATING':
         return l10n.t('admin_ops_cta_review_rating');
-      case 'OPEN_CHAT':
-        return l10n.t('admin_ops_cta_open_chat');
       case 'CHECK_STATUS':
         return l10n.t('admin_ops_cta_check_status');
       default:

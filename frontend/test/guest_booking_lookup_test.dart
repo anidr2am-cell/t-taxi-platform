@@ -157,7 +157,6 @@ void main() {
     final json = _lookupJson();
     json['status'] = 'DRIVER_ARRIVED';
     json['capabilities'] = {
-      'chatAvailable': true,
       'notificationsAvailable': true,
       'dropoffQrIssueAvailable': false,
       'reviewAvailable': false,
@@ -186,7 +185,6 @@ void main() {
     final json = _lookupJson();
     json['status'] = 'DRIVER_ARRIVED';
     json['capabilities'] = {
-      'chatAvailable': true,
       'notificationsAvailable': true,
       'dropoffQrIssueAvailable': false,
       'reviewAvailable': false,
@@ -492,7 +490,6 @@ void main() {
     final json = _lookupJson();
     json['status'] = 'COMPLETED';
     json['capabilities'] = {
-      'chatAvailable': false,
       'notificationsAvailable': true,
       'dropoffQrIssueAvailable': false,
       'reviewAvailable': false,
@@ -530,7 +527,6 @@ void main() {
     json['status'] = 'COMPLETED';
     json['canReview'] = true;
     json['capabilities'] = {
-      'chatAvailable': false,
       'notificationsAvailable': true,
       'dropoffQrIssueAvailable': false,
       'reviewAvailable': true,
@@ -545,7 +541,6 @@ void main() {
     final json = _lookupJson();
     json['status'] = 'COMPLETED';
     json['capabilities'] = {
-      'chatAvailable': false,
       'notificationsAvailable': true,
       'dropoffQrIssueAvailable': false,
       'reviewAvailable': true,
@@ -563,7 +558,6 @@ void main() {
       json['status'] = 'COMPLETED';
       json['canReview'] = true;
       json['capabilities'] = {
-        'chatAvailable': false,
         'notificationsAvailable': true,
         'dropoffQrIssueAvailable': false,
         'reviewAvailable': true,
@@ -605,7 +599,6 @@ void main() {
       json['status'] = 'COMPLETED';
       json['canReview'] = true;
       json['capabilities'] = {
-        'chatAvailable': false,
         'notificationsAvailable': true,
         'dropoffQrIssueAvailable': false,
         'reviewAvailable': true,
@@ -639,7 +632,6 @@ void main() {
       json['status'] = 'COMPLETED';
       json['canReview'] = true;
       json['capabilities'] = {
-        'chatAvailable': false,
         'notificationsAvailable': true,
         'dropoffQrIssueAvailable': false,
         'reviewAvailable': true,
@@ -702,7 +694,6 @@ void main() {
       pendingJson['status'] = 'COMPLETED';
       pendingJson['canReview'] = true;
       pendingJson['capabilities'] = {
-        'chatAvailable': false,
         'notificationsAvailable': true,
         'dropoffQrIssueAvailable': false,
         'reviewAvailable': true,
@@ -805,10 +796,7 @@ void main() {
     json['canCancel'] = true;
     json['cancellationDeadline'] = '2026-07-01T07:30:00+07:00';
     json['cancellationBlockedReason'] = null;
-    json['capabilities'] = {
-      ..._capabilities(),
-      'cancelAvailable': true,
-    };
+    json['capabilities'] = {..._capabilities(), 'cancelAvailable': true};
 
     final result = GuestBookingLookupResult.fromJson(json);
     expect(result.canCancel, isTrue);
@@ -881,7 +869,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('guest_booking_cancel_button')),
+        findsOneWidget,
+      );
       expect(
         find.text('You can cancel until 2 hours before pickup.'),
         findsOneWidget,
@@ -908,7 +899,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('guest_booking_cancel_button')),
+        findsNothing,
+      );
       expect(
         find.text(
           'Bookings cannot be cancelled within 2 hours of the scheduled pickup time.',
@@ -939,7 +933,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final cancelButton = find.byKey(const ValueKey('guest_booking_cancel_button'));
+    final cancelButton = find.byKey(
+      const ValueKey('guest_booking_cancel_button'),
+    );
     await tester.ensureVisible(cancelButton);
     await tester.pumpAndSettle();
     await tester.tap(cancelButton);
@@ -947,14 +943,22 @@ void main() {
 
     expect(find.text('Cancel this booking?'), findsOneWidget);
     expect(find.text('TX202607010001'), findsWidgets);
-    expect(find.textContaining('Cancellation cannot be undone.'), findsOneWidget);
+    expect(
+      find.textContaining('Cancellation cannot be undone.'),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byKey(const ValueKey('guest_booking_cancel_confirm')));
+    await tester.tap(
+      find.byKey(const ValueKey('guest_booking_cancel_confirm')),
+    );
     await tester.pumpAndSettle();
 
     expect(service.cancelCount, 1);
     expect(find.text('Cancelled'), findsWidgets);
-    expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('guest_booking_cancel_button')),
+      findsNothing,
+    );
   });
 
   testWidgets('cancel failure keeps booking and shows server reason', (
@@ -969,9 +973,7 @@ void main() {
       cancelError: BookingApiException(
         'Bookings cannot be cancelled within 2 hours of the scheduled pickup time',
         'INVALID_STATUS_TRANSITION',
-        const [
-          BookingApiErrorDetail(field: 'WITHIN_TWO_HOURS'),
-        ],
+        const [BookingApiErrorDetail(field: 'WITHIN_TWO_HOURS')],
       ),
     );
 
@@ -986,15 +988,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final cancelButton = find.byKey(const ValueKey('guest_booking_cancel_button'));
+    final cancelButton = find.byKey(
+      const ValueKey('guest_booking_cancel_button'),
+    );
     await tester.ensureVisible(cancelButton);
     await tester.pumpAndSettle();
     await tester.tap(cancelButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('guest_booking_cancel_confirm')));
+    await tester.tap(
+      find.byKey(const ValueKey('guest_booking_cancel_confirm')),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('guest_booking_cancel_button')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('guest_booking_cancel_button')),
+      findsOneWidget,
+    );
     expect(
       find.text(
         'Bookings cannot be cancelled within 2 hours of the scheduled pickup time.',
@@ -1039,7 +1048,6 @@ Map<String, dynamic> _lookupJson() => {
   },
   'assignedDriver': {'name': 'Driver A', 'phone': '+66 80 000 0000'},
   'capabilities': {
-    'chatAvailable': true,
     'notificationsAvailable': true,
     'dropoffQrIssueAvailable': true,
     'reviewAvailable': false,
@@ -1050,7 +1058,6 @@ Map<String, dynamic> _lookupJson() => {
 };
 
 Map<String, dynamic> _capabilities({bool trackingAvailable = false}) => {
-  'chatAvailable': false,
   'notificationsAvailable': false,
   'dropoffQrIssueAvailable': false,
   'reviewAvailable': false,
@@ -1153,7 +1160,6 @@ class _FakeLookupService extends GuestBookingLookupService {
       canCancel: false,
       cancellationBlockedReason: 'ALREADY_CANCELLED',
       capabilities: GuestBookingCapabilities(
-        chatAvailable: booking.capabilities.chatAvailable,
         notificationsAvailable: booking.capabilities.notificationsAvailable,
         dropoffQrIssueAvailable: false,
         reviewAvailable: booking.capabilities.reviewAvailable,

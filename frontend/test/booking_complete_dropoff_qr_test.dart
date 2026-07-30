@@ -3,71 +3,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/booking_complete_review.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
-import 'package:frontend/features/booking/services/booking_chat_api.dart';
-import 'package:frontend/features/chat/models/chat_connection_state.dart';
-import 'package:frontend/features/chat/services/chat_socket_service.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import 'support/booking_location_test_data.dart';
 
-class _FakeBookingChatApi extends BookingChatApi {
-  @override
-  Future<Map<String, dynamic>> getRoom({
-    required String bookingNumber,
-    String? guestAccessToken,
-    String? customerAccessToken,
-  }) async => {'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0};
-
-  @override
-  Future<List<dynamic>> listMessages({
-    required String bookingNumber,
-    String? guestAccessToken,
-    String? customerAccessToken,
-  }) async => [];
-}
-
-class _FakeChatSocketService extends ChatSocketService {
-  @override
-  io.Socket connect({String? accessToken, String? guestAccessToken}) {
-    debugSetConnectionState(ChatConnectionState.connected);
-    return io.io(
-      'http://localhost:0',
-      io.OptionBuilder().disableAutoConnect().build(),
-    );
-  }
-
-  @override
-  void joinRoom(
-    String bookingNumber, {
-    void Function(Map<String, dynamic> room)? onJoined,
-  }) {
-    debugMarkJoined(bookingNumber, 1);
-    onJoined?.call({'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0});
-  }
-}
-
 void main() {
-  testWidgets('customer tools enabled before assignment keeps chat hidden', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_wrap(_page()));
+  testWidgets(
+    'customer tools enabled before assignment keeps removed contact entry hidden',
+    (tester) async {
+      await tester.pumpWidget(_wrap(_page()));
 
-    expect(find.text('Boarding QR'), findsNothing);
-    expect(find.text('Ride completion QR'), findsNothing);
-    expect(find.text('Refresh dropoff QR'), findsNothing);
-    expect(find.text('Issue new dropoff QR'), findsNothing);
-    expect(find.text('Booking chat'), findsNothing);
-  });
+      expect(find.text('Boarding QR'), findsNothing);
+      expect(find.text('Ride completion QR'), findsNothing);
+      expect(find.text('Refresh dropoff QR'), findsNothing);
+      expect(find.text('Issue new dropoff QR'), findsNothing);
+    },
+  );
 
-  testWidgets('customer tools keep driver chat hidden after assignment', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_wrap(_page(result: _result(status: 'ON_ROUTE'))));
+  testWidgets(
+    'customer tools keep removed contact entry hidden after assignment',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(_page(result: _result(status: 'ON_ROUTE'))),
+      );
 
-    expect(find.text('Boarding QR'), findsNothing);
-    expect(find.text('Ride completion QR'), findsNothing);
-    expect(find.text('Booking chat'), findsNothing);
-  });
+      expect(find.text('Boarding QR'), findsNothing);
+      expect(find.text('Ride completion QR'), findsNothing);
+    },
+  );
 
   testWidgets('completed state shows completion message without QR', (
     tester,
@@ -141,10 +103,11 @@ BookingCompletePage _page({
     result: result ?? _result(),
     serviceLabel: 'Airport Pickup',
     origin: testBookingLocation(name: 'BKK Airport', address: 'BKK Airport'),
-    destination: testBookingLocation(name: 'Pattaya Hotel', address: 'Pattaya Hotel'),
+    destination: testBookingLocation(
+      name: 'Pattaya Hotel',
+      address: 'Pattaya Hotel',
+    ),
     review: review,
-    chatApi: _FakeBookingChatApi(),
-    chatSocketService: _FakeChatSocketService(),
     enableCustomerTools: true,
   );
 }
@@ -159,7 +122,6 @@ BookingCreateResult _result({String status = 'PENDING', int? bookingId = 1}) {
     totalAmount: 1500,
     currency: 'THB',
     guestAccessToken: 'guest-token',
-    chatRoomCode: 'CHAT-TX202607010001',
     boardingQrToken: 'boarding-token',
     trustMessage: 'Booking received',
   );

@@ -419,7 +419,6 @@ test('cancelled booking can be found but active customer actions are disabled', 
   });
 
   assert.equal(result.status, 'CANCELLED');
-  assert.equal(result.capabilities.chatAvailable, false);
   assert.equal(result.capabilities.dropoffQrIssueAvailable, false);
   assert.equal(result.capabilities.boardingQrPreviouslyIssued, false);
 });

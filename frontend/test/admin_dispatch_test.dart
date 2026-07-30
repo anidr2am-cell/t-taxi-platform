@@ -1036,42 +1036,43 @@ void main() {
     expect(api.reassignCalls, 1);
   });
 
-  testWidgets('unassign button shows only for DRIVER_ASSIGNED with active assignment', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AdminBookingDetailPage(
-          bookingNumber: 'TX202607010001',
-          api: _FakeAdminApi(
-            detailResponse: {
-              'bookingNumber': 'TX202607010001',
-              'status': 'DRIVER_ASSIGNED',
-              'route': {
-                'origin': {'address': 'BKK'},
-                'destination': {'address': 'Pattaya'},
+  testWidgets(
+    'unassign button shows only for DRIVER_ASSIGNED with active assignment',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'DRIVER_ASSIGNED',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': ['REASSIGN_DRIVER'],
+                'activeAssignment': {
+                  'driverDisplayName': 'Old Driver',
+                  'status': 'ASSIGNED',
+                },
               },
-              'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {
-                'totalAmount': 1200,
-                'currency': 'THB',
-                'paymentMethod': 'PAY_DRIVER',
-              },
-              'allowedActions': ['REASSIGN_DRIVER'],
-              'activeAssignment': {
-                'driverDisplayName': 'Old Driver',
-                'status': 'ASSIGNED',
-              },
-            },
+            ),
+            onChanged: () {},
           ),
-          onChanged: () {},
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Unassign driver (reopen)'), findsOneWidget);
-    expect(find.text('Reassign driver'), findsOneWidget);
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Unassign driver (reopen)'), findsOneWidget);
+      expect(find.text('Reassign driver'), findsOneWidget);
+    },
+  );
 
   testWidgets('unassign button hidden when booking is not DRIVER_ASSIGNED', (
     tester,
@@ -1106,44 +1107,47 @@ void main() {
     expect(find.text('Unassign driver (reopen)'), findsNothing);
   });
 
-  testWidgets('unassign button hidden for ON_ROUTE even when reassign is allowed', (
+  testWidgets(
+    'unassign button hidden for ON_ROUTE even when reassign is allowed',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'ON_ROUTE',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': ['REASSIGN_DRIVER'],
+                'activeAssignment': {
+                  'driverDisplayName': 'Old Driver',
+                  'status': 'ASSIGNED',
+                },
+              },
+            ),
+            onChanged: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Reassign driver'), findsOneWidget);
+      expect(find.text('Unassign driver (reopen)'), findsNothing);
+    },
+  );
+
+  testWidgets('unassign flow requires reason and calls API once', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AdminBookingDetailPage(
-          bookingNumber: 'TX202607010001',
-          api: _FakeAdminApi(
-            detailResponse: {
-              'bookingNumber': 'TX202607010001',
-              'status': 'ON_ROUTE',
-              'route': {
-                'origin': {'address': 'BKK'},
-                'destination': {'address': 'Pattaya'},
-              },
-              'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {
-                'totalAmount': 1200,
-                'currency': 'THB',
-                'paymentMethod': 'PAY_DRIVER',
-              },
-              'allowedActions': ['REASSIGN_DRIVER'],
-              'activeAssignment': {
-                'driverDisplayName': 'Old Driver',
-                'status': 'ASSIGNED',
-              },
-            },
-          ),
-          onChanged: () {},
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Reassign driver'), findsOneWidget);
-    expect(find.text('Unassign driver (reopen)'), findsNothing);
-  });
-
-  testWidgets('unassign flow requires reason and calls API once', (tester) async {
     final api = _FakeAdminApi(
       detailResponse: {
         'bookingNumber': 'TX202607010001',
@@ -1880,7 +1884,9 @@ void main() {
     expect(onRouteY, lessThan(assignedY));
   });
 
-  testWidgets('operations summary shows previous released driver', (tester) async {
+  testWidgets('operations summary shows previous released driver', (
+    tester,
+  ) async {
     final detail = {
       'bookingNumber': 'TX202607250007',
       'status': 'OPEN',
@@ -1937,39 +1943,40 @@ void main() {
     expect(find.text('test3'), findsOneWidget);
   });
 
-  testWidgets('operations summary hides previous driver without release history', (
-    tester,
-  ) async {
-    final detail = {
-      'bookingNumber': 'TX202607010001',
-      'status': 'OPEN',
-      'route': {
-        'origin': {'address': 'BKK'},
-        'destination': {'address': 'Pattaya'},
-      },
-      'customer': {'name': 'Kim', 'phone': '+66123456789'},
-      'pricing': {
-        'totalAmount': 1200,
-        'currency': 'THB',
-        'paymentMethod': 'PAY_DRIVER',
-      },
-      'activeAssignment': null,
-      'allowedActions': ['ASSIGN_DRIVER'],
-    };
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AdminBookingDetailPage(
-          bookingNumber: 'TX202607010001',
-          api: _FakeAdminApi(detailResponse: detail),
-          onChanged: () {},
+  testWidgets(
+    'operations summary hides previous driver without release history',
+    (tester) async {
+      final detail = {
+        'bookingNumber': 'TX202607010001',
+        'status': 'OPEN',
+        'route': {
+          'origin': {'address': 'BKK'},
+          'destination': {'address': 'Pattaya'},
+        },
+        'customer': {'name': 'Kim', 'phone': '+66123456789'},
+        'pricing': {
+          'totalAmount': 1200,
+          'currency': 'THB',
+          'paymentMethod': 'PAY_DRIVER',
+        },
+        'activeAssignment': null,
+        'allowedActions': ['ASSIGN_DRIVER'],
+      };
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(detailResponse: detail),
+            onChanged: () {},
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Operations summary'), findsOneWidget);
-    expect(find.text('Previous driver'), findsNothing);
-  });
+      expect(find.text('Operations summary'), findsOneWidget);
+      expect(find.text('Previous driver'), findsNothing);
+    },
+  );
 
   testWidgets('operations summary reads previousDriver from detail payload', (
     tester,
@@ -1978,10 +1985,7 @@ void main() {
       ..._settlementPendingDetail(),
       'status': 'OPEN',
       'activeAssignment': null,
-      'previousDriver': {
-        'driverId': 6,
-        'driverDisplayName': 'Released Driver',
-      },
+      'previousDriver': {'driverId': 6, 'driverDisplayName': 'Released Driver'},
     };
     await tester.pumpWidget(
       MaterialApp(
@@ -2461,15 +2465,12 @@ void main() {
       'Trip information',
       'Driver and vehicle',
       'Fare and settlement',
-      'Customer and driver chat',
       'Status history',
       'Technical information',
     ];
     for (final label in labels) {
       expect(find.text(label), findsOneWidget);
     }
-    expect(find.text('Customer chat unread'), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
     expect(find.text('Customer review'), findsNothing);
     expect(find.text('Raw booking status'), findsNothing);
   });

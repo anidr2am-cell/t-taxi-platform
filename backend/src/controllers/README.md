@@ -6,5 +6,4 @@
  * - booking.controller.js
  * - driver.controller.js
  * - admin.controller.js
- * - chat.controller.js
  */

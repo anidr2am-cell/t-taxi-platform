@@ -5,18 +5,14 @@ import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
-import 'package:frontend/features/booking/services/booking_chat_api.dart';
 import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
 import 'package:frontend/features/booking/widgets/airport_meeting_guide_card.dart';
-import 'package:frontend/features/chat/models/chat_connection_state.dart';
-import 'package:frontend/features/chat/services/chat_socket_service.dart';
 import 'package:frontend/theme/app_tokens.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'support/booking_location_test_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -151,10 +147,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(sends, 1);
-    expect(find.text('Message driver'), findsOneWidget);
-    await tester.tap(find.text('Message driver'));
+    expect(find.text('Pickup notification sent'), findsOneWidget);
+    await tester.tap(find.text('Pickup notification sent'), warnIfMissed: false);
     await tester.pumpAndSettle();
-    expect(sends, 2);
+    expect(sends, 1);
   });
 
   testWidgets('Gate 7 step 2 shows Korean warning text in error color', (
@@ -176,44 +172,34 @@ void main() {
     expect(warningText.style?.color, AppTokens.error);
   });
 
-  testWidgets('guest lookup hides driver chat and pickup alert actions', (
+  testWidgets('guest lookup hides removed contact and pickup alert actions', (
     tester,
   ) async {
-    final chatApi = _FakeBookingChatApi();
     await tester.pumpWidget(
       _wrapPage(
         GuestBookingLookupPage(
           lookupService: _FakeLookupService(_lookupResult(nameSign: false)),
-          bookingChatApi: chatApi,
-          bookingChatSocketService: _FakeChatSocketService(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Tell driver I’m ready'), findsNothing);
-    expect(find.text('Booking chat'), findsNothing);
-    expect(chatApi.pickupAlertSendCount, 0);
   });
 
   testWidgets('guest lookup does not expose removed pickup alert flow', (
     tester,
   ) async {
-    final chatApi = _FakeBookingChatApi(failPickupAlert: true);
     await tester.pumpWidget(
       _wrapPage(
         GuestBookingLookupPage(
           lookupService: _FakeLookupService(_lookupResult(nameSign: false)),
-          bookingChatApi: chatApi,
-          bookingChatSocketService: _FakeChatSocketService(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Tell driver I’m ready'), findsNothing);
-    expect(find.text('Booking chat'), findsNothing);
-    expect(chatApi.pickupAlertSendCount, 0);
   });
 
   testWidgets('lookup keeps pickup alert disabled in active pickup statuses', (
@@ -226,7 +212,6 @@ void main() {
             lookupService: _FakeLookupService(
               _lookupResult(nameSign: false, status: status),
             ),
-            bookingChatApi: _FakeBookingChatApi(),
             enableCustomerTools: false,
           ),
         ),
@@ -251,7 +236,6 @@ void main() {
                   includeDriver: status != 'PENDING',
                 ),
               ),
-              bookingChatApi: _FakeBookingChatApi(),
             ),
           ),
         );
@@ -282,8 +266,6 @@ void main() {
           serviceTypeCode: 'AIRPORT_PICKUP',
           originAirportCode: 'BKK',
           nameSignRequested: false,
-          chatApi: _FakeBookingChatApi(),
-          chatSocketService: _FakeChatSocketService(),
         ),
       ),
     );
@@ -293,10 +275,9 @@ void main() {
     expect(find.text('Boarding QR'), findsNothing);
   });
 
-  testWidgets('booking complete hides removed customer chat', (
+  testWidgets('booking complete hides removed customer contact entry', (
     tester,
   ) async {
-    final chatApi = _FakeBookingChatApi();
     await tester.pumpWidget(
       _wrapPage(
         BookingCompletePage(
@@ -311,41 +292,33 @@ void main() {
             driverName: 'Driver A',
             vehiclePlateNumber: '1ABC1234',
           ),
-          chatApi: chatApi,
-          chatSocketService: _FakeChatSocketService(),
         ),
       ),
     );
     await tester.pumpAndSettle();
-
-    expect(find.text('Booking chat'), findsNothing);
-    expect(chatApi.pickupAlertSendCount, 0);
   });
 
-  testWidgets(
-    'booking complete screen hides QR when customer tools enabled',
-    (tester) async {
-      await tester.pumpWidget(
-        _wrapPage(
-          BookingCompletePage(
-            result: _bookingResult(),
-            serviceLabel: 'Airport Pickup',
-            origin: testBookingLocation(name: 'BKK Airport'),
-            destination: testBookingLocation(name: 'Pattaya'),
-            serviceTypeCode: 'AIRPORT_PICKUP',
-            originAirportCode: 'BKK',
-            nameSignRequested: false,
-            enableCustomerTools: true,
-            chatApi: _FakeBookingChatApi(),
-            chatSocketService: _FakeChatSocketService(),
-          ),
+  testWidgets('booking complete screen hides QR when customer tools enabled', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrapPage(
+        BookingCompletePage(
+          result: _bookingResult(),
+          serviceLabel: 'Airport Pickup',
+          origin: testBookingLocation(name: 'BKK Airport'),
+          destination: testBookingLocation(name: 'Pattaya'),
+          serviceTypeCode: 'AIRPORT_PICKUP',
+          originAirportCode: 'BKK',
+          nameSignRequested: false,
+          enableCustomerTools: true,
         ),
-      );
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      expect(find.text('Boarding QR'), findsNothing);
-    },
-  );
+    expect(find.text('Boarding QR'), findsNothing);
+  });
 
   testWidgets('guest lookup screen displays BKK name sign meeting guide', (
     tester,
@@ -519,7 +492,6 @@ BookingCreateResult _bookingResult({String status = 'PENDING'}) {
     totalAmount: 1500,
     currency: 'THB',
     guestAccessToken: 'guest-token',
-    chatRoomCode: 'CHAT-TX202607010001',
     boardingQrToken: 'boarding-token',
     trustMessage: 'Booking received',
   );
@@ -560,7 +532,6 @@ GuestBookingLookupResult _lookupResult({
           }
         : null,
     'capabilities': {
-      'chatAvailable': true,
       'notificationsAvailable': true,
       'dropoffQrIssueAvailable': false,
       'reviewAvailable': false,
@@ -585,80 +556,4 @@ class _FakeLookupService extends GuestBookingLookupService {
 
   @override
   Future<GuestBookingLookupResult?> loadCached() async => cached;
-}
-
-class _FakeBookingChatApi extends BookingChatApi {
-  _FakeBookingChatApi({this.failPickupAlert = false});
-
-  final bool failPickupAlert;
-  String? sentGuestToken;
-  String? sentBookingNumber;
-  int pickupAlertSendCount = 0;
-
-  @override
-  Future<Map<String, dynamic>> getRoom({
-    required String bookingNumber,
-    String? guestAccessToken,
-    String? customerAccessToken,
-  }) async => {'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0};
-
-  @override
-  Future<List<dynamic>> listMessages({
-    required String bookingNumber,
-    String? guestAccessToken,
-    String? customerAccessToken,
-  }) async => [];
-
-  @override
-  Future<Map<String, dynamic>> sendMessage({
-    required String bookingNumber,
-    required String text,
-    required String clientMessageId,
-    String? guestAccessToken,
-    String? customerAccessToken,
-  }) async {
-    sentBookingNumber = bookingNumber;
-    sentGuestToken = guestAccessToken;
-    return {
-      'message': {
-        'messageId': 1,
-        'text': text,
-        'clientMessageId': clientMessageId,
-      },
-    };
-  }
-
-  @override
-  Future<Map<String, dynamic>> sendPickupAlert({
-    required String bookingNumber,
-    required String guestAccessToken,
-  }) async {
-    if (failPickupAlert) {
-      throw const BookingChatApiException('Pickup alert failed');
-    }
-    pickupAlertSendCount += 1;
-    sentBookingNumber = bookingNumber;
-    sentGuestToken = guestAccessToken;
-    return {'messageId': 1, 'text': 'pickup alert sent', 'alreadySent': false};
-  }
-}
-
-class _FakeChatSocketService extends ChatSocketService {
-  @override
-  io.Socket connect({String? accessToken, String? guestAccessToken}) {
-    debugSetConnectionState(ChatConnectionState.connected);
-    return io.io(
-      'http://localhost:0',
-      io.OptionBuilder().disableAutoConnect().build(),
-    );
-  }
-
-  @override
-  void joinRoom(
-    String bookingNumber, {
-    void Function(Map<String, dynamic> room)? onJoined,
-  }) {
-    debugMarkJoined(bookingNumber, 1);
-    onJoined?.call({'roomId': 1, 'sendingAllowed': true, 'unreadCount': 0});
-  }
 }

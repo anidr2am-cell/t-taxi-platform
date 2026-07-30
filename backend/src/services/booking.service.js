@@ -42,7 +42,6 @@ class BookingService {
   constructor(
     pool,
     bookingRepository,
-    chatRepository,
     bookingNumberService,
     pricingService,
     vehicleRecommendationService,
@@ -58,7 +57,6 @@ class BookingService {
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
-    this.chatRepository = chatRepository;
     this.bookingNumberService = bookingNumberService;
     this.pricingService = pricingService;
     this.vehicleRecommendationService = vehicleRecommendationService;
@@ -625,14 +623,6 @@ class BookingService {
         },
       });
 
-      const roomCode = `CHAT-${bookingNumber}`;
-      const chatRoomId = await this.chatRepository.insertRoom(conn, bookingId, roomCode);
-      await this.chatRepository.insertParticipant(conn, chatRoomId, {
-        userId: customerUserId,
-        participantRole: 'CUSTOMER',
-        displayName: input.customer.name,
-      });
-
       if (guestAccessToken) {
         const guestExpires = this.addDays(now, GUEST_TOKEN_TTL_DAYS);
         await this.bookingRepository.insertGuestToken(
@@ -744,7 +734,6 @@ class BookingService {
         totalAmount: Number(booking.total_amount),
         currency: booking.currency,
         guestAccessToken,
-        chatRoomCode: roomCode,
         boardingQrToken,
         trustMessage: TRUST_MESSAGE,
         isUrgentRequest,

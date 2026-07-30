@@ -45,23 +45,24 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    testWidgets('renders support landing content without inline chat input', (
-      tester,
-    ) async {
-      final l10n = AppLocalizations('ko');
+    testWidgets(
+      'renders support landing content without inline inquiry input',
+      (tester) async {
+        final l10n = AppLocalizations('ko');
 
-      await tester.pumpWidget(_wrapSupport());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(_wrapSupport());
+        await tester.pumpAndSettle();
 
-      expect(find.text(l10n.t('support_title')), findsWidgets);
-      expect(find.text(l10n.t('support_page_intro')), findsOneWidget);
-      expect(find.text(l10n.t('support_inquiry_button')), findsOneWidget);
-      expect(find.byKey(const Key('support_message_input')), findsNothing);
+        expect(find.text(l10n.t('support_title')), findsWidgets);
+        expect(find.text(l10n.t('support_page_intro')), findsOneWidget);
+        expect(find.text(l10n.t('support_inquiry_button')), findsOneWidget);
+        expect(find.byKey(const Key('support_message_input')), findsNothing);
 
-      await tester.drag(find.byType(ListView), const Offset(0, -500));
-      await tester.pumpAndSettle();
-      expect(find.text(l10n.t('support_faq_placeholder')), findsOneWidget);
-    });
+        await tester.drag(find.byType(ListView), const Offset(0, -500));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.t('support_faq_placeholder')), findsOneWidget);
+      },
+    );
 
     testWidgets('inquiry button opens popup with contact fields and input', (
       tester,
@@ -235,7 +236,7 @@ void main() {
       expect(input.controller?.text, 'Retry this message');
     });
 
-    testWidgets('chat popup can be closed', (tester) async {
+    testWidgets('inquiry popup can be closed', (tester) async {
       final l10n = AppLocalizations('ko');
 
       await tester.pumpWidget(_wrapSupport());

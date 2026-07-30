@@ -7,7 +7,6 @@ class BookingCreateResult {
   final num totalAmount;
   final String currency;
   final String? guestAccessToken;
-  final String chatRoomCode;
   final String boardingQrToken;
   final String trustMessage;
   final bool trackingAvailable;
@@ -25,7 +24,6 @@ class BookingCreateResult {
     required this.totalAmount,
     required this.currency,
     this.guestAccessToken,
-    required this.chatRoomCode,
     required this.boardingQrToken,
     required this.trustMessage,
     this.trackingAvailable = false,
@@ -48,7 +46,6 @@ class BookingCreateResult {
       totalAmount: json['totalAmount'] as num? ?? 0,
       currency: json['currency'] as String? ?? 'THB',
       guestAccessToken: json['guestAccessToken'] as String?,
-      chatRoomCode: json['chatRoomCode'] as String? ?? '',
       boardingQrToken: json['boardingQrToken'] as String? ?? '',
       trustMessage: json['trustMessage'] as String? ?? '',
       trackingAvailable: capabilities['trackingAvailable'] == true,

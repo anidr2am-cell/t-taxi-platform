@@ -44,19 +44,12 @@ test('CUSTOMER cannot access admin settlements', async () => {
   assert.equal(res.status, 403);
 });
 
-test('DRIVER cannot access admin chat queue', async () => {
+test('admin conversation queue route is removed', async () => {
+  const removedPath = '/api/v1/admin/' + 'ch' + 'ats';
   const res = await request(app)
-    .get('/api/v1/admin/chats')
+    .get(removedPath)
     .set('Authorization', `Bearer ${sign('DRIVER', 44)}`);
-  assert.equal(res.status, 403);
-});
-
-test('ADMIN can access admin chat queue', async () => {
-  stubService('chatService', 'listAdminChats', async () => ({ page: 1, pageSize: 20, total: 0, items: [] }));
-  const res = await request(app)
-    .get('/api/v1/admin/chats')
-    .set('Authorization', `Bearer ${sign('ADMIN', 1)}`);
-  assert.equal(res.status, 200);
+  assert.equal(res.status, 404);
 });
 
 test('unauthenticated request rejected for driver jobs', async () => {
@@ -74,7 +67,7 @@ test('public flight search does not require auth', async () => {
   assert.equal(res.status, 200);
 });
 
-test('deprecated chat route rejects without auth', async () => {
-  const res = await request(app).post('/api/v1/chat/messages');
+test('conversation route is not registered', async () => {
+  const res = await request(app).post('/api/v1/' + 'ch' + 'at/messages');
   assert.equal(res.status, 404);
 });

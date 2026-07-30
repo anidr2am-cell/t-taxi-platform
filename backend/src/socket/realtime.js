@@ -103,11 +103,6 @@ function emitBookingUrgentNegotiationExpired(bookingId, payload) {
   ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:expired', payload);
 }
 
-function emitChatRoomEvent(roomId, eventName, payload) {
-  if (!ioInstance || !roomId) return;
-  ioInstance.to(`chat:${roomId}`).emit(eventName, payload);
-}
-
 module.exports = {
   DRIVER_ALL_ROOM,
   driverUserRoom,
@@ -130,5 +125,4 @@ module.exports = {
   emitDriverUrgentCallCancelled,
   emitBookingUrgentNegotiationCancelled,
   emitBookingUrgentNegotiationExpired,
-  emitChatRoomEvent,
 };

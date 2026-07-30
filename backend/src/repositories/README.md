@@ -6,7 +6,6 @@
 - `booking.repository.js`
 - `bookingChargeItem.repository.js`
 - `driver.repository.js`
-- `chat.repository.js`
 - `notification.repository.js`
 - `vehiclePrice.repository.js`
 - `airport.repository.js`

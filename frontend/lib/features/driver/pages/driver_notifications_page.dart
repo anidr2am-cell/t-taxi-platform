@@ -188,9 +188,6 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
       payload['deepLink'] as String? ?? '',
     ].map((value) => value.toUpperCase()).join(' ');
 
-    if (candidates.contains('CHAT') || candidates.contains('MESSAGE')) {
-      return l10n.t('notification_type_chat');
-    }
     if (candidates.contains('COMMISSION') ||
         candidates.contains('RECEIPT') ||
         candidates.contains('SETTLEMENT')) {
@@ -225,7 +222,9 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
               actions: [
                 IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
                 IconButton(
-                  onPressed: _enablingNotifications ? null : _enableNotifications,
+                  onPressed: _enablingNotifications
+                      ? null
+                      : _enableNotifications,
                   icon: const Icon(Icons.notifications_active_outlined),
                   tooltip: l10n.t('driver_notification_enable'),
                 ),

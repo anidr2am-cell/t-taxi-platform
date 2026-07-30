@@ -4,7 +4,6 @@
 const logger = require('../utils/logger');
 const container = require('../helpers/container');
 const ERROR_CODES = require('../constants/errorCodes');
-const { registerChatHandlers } = require('./handlers/chat.handler');
 const { registerDriverLocationHandlers } = require('./handlers/driverLocation.handler');
 const { registerDriverCallHandlers } = require('./handlers/driverCalls.handler');
 const { registerBookingHandlers } = require('./handlers/booking.handler');
@@ -49,7 +48,6 @@ function initSocket(io) {
   io.on('connection', (socket) => {
     logger.info('Socket connected', { id: socket.id });
 
-    registerChatHandlers(io, socket);
     registerDriverLocationHandlers(io, socket);
     registerDriverCallHandlers(io, socket);
     registerBookingHandlers(io, socket);

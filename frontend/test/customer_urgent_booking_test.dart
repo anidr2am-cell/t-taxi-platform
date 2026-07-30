@@ -51,7 +51,6 @@ void main() {
       bookingNumber: 'TX202607230001',
       guestAccessToken: 'guest-token',
       boardingQrToken: 'boarding-token',
-      chatRoomCode: 'CHAT-TX202607230001',
       status: 'OPEN',
       paymentMethod: 'PAY_DRIVER',
       paymentStatus: 'UNPAID',
@@ -274,93 +273,82 @@ void main() {
       socket.simulateCancelled({});
       await tester.pump();
 
-      expect(
-        find.textContaining('가까운 곳에 대기중인 기사가 없습니다'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('가까운 곳에 대기중인 기사가 없습니다'), findsOneWidget);
     });
 
-    testWidgets('confirmed socket navigates to booking detail with driver info', (
-      tester,
-    ) async {
-      final lookup = FakeGuestBookingLookupForUrgent(
-        detail: _urgentAssignedLookupDetail(),
-      );
-      final api = FakeCustomerUrgentApi(
-        status: const UrgentNegotiationStatus(
-          bookingNumber: 'TX202607230001',
-          bookingId: 10,
-          bookingStatus: 'OPEN',
-          negotiationId: 1,
-          status: 'BROADCASTING',
-          attemptCount: 0,
-        ),
-      );
-      final socket = FakeCustomerUrgentSocket();
+    testWidgets(
+      'confirmed socket navigates to booking detail with driver info',
+      (tester) async {
+        final lookup = FakeGuestBookingLookupForUrgent(
+          detail: _urgentAssignedLookupDetail(),
+        );
+        final api = FakeCustomerUrgentApi(
+          status: const UrgentNegotiationStatus(
+            bookingNumber: 'TX202607230001',
+            bookingId: 10,
+            bookingStatus: 'OPEN',
+            negotiationId: 1,
+            status: 'BROADCASTING',
+            attemptCount: 0,
+          ),
+        );
+        final socket = FakeCustomerUrgentSocket();
 
-      await pumpFlow(
-        tester,
-        api: api,
-        socket: socket,
-        lookupService: lookup,
-      );
+        await pumpFlow(tester, api: api, socket: socket, lookupService: lookup);
 
-      socket.simulateConfirmed({});
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
+        socket.simulateConfirmed({});
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(GuestBookingLookupPage), findsOneWidget);
-      expect(find.text('Somchai Driver'), findsWidgets);
-      expect(find.textContaining('1กก 1234'), findsWidgets);
-      expect(lookup.lookupCalls, 1);
-      expect(lookup.lastLookupPhone, '01012345678');
-    });
+        expect(find.byType(GuestBookingLookupPage), findsOneWidget);
+        expect(find.text('Somchai Driver'), findsWidgets);
+        expect(find.textContaining('1กก 1234'), findsWidgets);
+        expect(lookup.lookupCalls, 1);
+        expect(lookup.lastLookupPhone, '01012345678');
+      },
+    );
 
-    testWidgets('accept decision navigates to booking detail with driver info', (
-      tester,
-    ) async {
-      final lookup = FakeGuestBookingLookupForUrgent(
-        detail: _urgentAssignedLookupDetail(),
-      );
-      final api = FakeCustomerUrgentApi(
-        status: const UrgentNegotiationStatus(
-          bookingNumber: 'TX202607230001',
-          bookingId: 10,
-          bookingStatus: 'OPEN',
-          negotiationId: 1,
-          status: 'AWAITING_CUSTOMER',
-          attemptCount: 1,
-          proposedEtaMinutes: 18,
-        ),
-        decisionResult: const UrgentDecisionResult(
-          bookingNumber: 'TX202607230001',
-          decision: 'ACCEPT',
-          status: 'CONFIRMED',
-          bookingStatus: 'DRIVER_ASSIGNED',
-        ),
-      );
-      final socket = FakeCustomerUrgentSocket();
+    testWidgets(
+      'accept decision navigates to booking detail with driver info',
+      (tester) async {
+        final lookup = FakeGuestBookingLookupForUrgent(
+          detail: _urgentAssignedLookupDetail(),
+        );
+        final api = FakeCustomerUrgentApi(
+          status: const UrgentNegotiationStatus(
+            bookingNumber: 'TX202607230001',
+            bookingId: 10,
+            bookingStatus: 'OPEN',
+            negotiationId: 1,
+            status: 'AWAITING_CUSTOMER',
+            attemptCount: 1,
+            proposedEtaMinutes: 18,
+          ),
+          decisionResult: const UrgentDecisionResult(
+            bookingNumber: 'TX202607230001',
+            decision: 'ACCEPT',
+            status: 'CONFIRMED',
+            bookingStatus: 'DRIVER_ASSIGNED',
+          ),
+        );
+        final socket = FakeCustomerUrgentSocket();
 
-      await pumpFlow(
-        tester,
-        api: api,
-        socket: socket,
-        lookupService: lookup,
-      );
+        await pumpFlow(tester, api: api, socket: socket, lookupService: lookup);
 
-      socket.simulateEtaProposed({'etaMinutes': 18});
-      await tester.pump();
+        socket.simulateEtaProposed({'etaMinutes': 18});
+        await tester.pump();
 
-      await tester.tap(find.text('수락'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('수락'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(GuestBookingLookupPage), findsOneWidget);
-      expect(find.text('Somchai Driver'), findsWidgets);
-      expect(lookup.lookupCalls, 1);
-    });
+        expect(find.byType(GuestBookingLookupPage), findsOneWidget);
+        expect(find.text('Somchai Driver'), findsWidgets);
+        expect(lookup.lookupCalls, 1);
+      },
+    );
 
     test('confirmed navigation lookup persists guest access token', () async {
       SharedPreferences.setMockInitialValues({});
@@ -406,8 +394,12 @@ void main() {
                         await showDialog<void>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: Text(l10n.t('customer_urgent_confirm_title')),
-                            content: Text(l10n.t('customer_urgent_confirm_body')),
+                            title: Text(
+                              l10n.t('customer_urgent_confirm_title'),
+                            ),
+                            content: Text(
+                              l10n.t('customer_urgent_confirm_body'),
+                            ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
@@ -415,7 +407,9 @@ void main() {
                               ),
                               FilledButton(
                                 onPressed: () => Navigator.pop(context),
-                                child: Text(l10n.t('customer_urgent_confirm_submit')),
+                                child: Text(
+                                  l10n.t('customer_urgent_confirm_submit'),
+                                ),
                               ),
                             ],
                           ),
@@ -442,10 +436,8 @@ void main() {
 }
 
 class FakeCustomerUrgentApi extends BookingApiService {
-  FakeCustomerUrgentApi({
-    required this.status,
-    this.decisionResult,
-  }) : super.test(client: _FakeHttpClient(), baseUrl: 'http://test');
+  FakeCustomerUrgentApi({required this.status, this.decisionResult})
+    : super.test(client: _FakeHttpClient(), baseUrl: 'http://test');
 
   final UrgentNegotiationStatus status;
   final UrgentDecisionResult? decisionResult;
@@ -531,7 +523,6 @@ GuestBookingLookupResult _urgentAssignedLookupDetail() {
       },
     },
     'capabilities': {
-      'chatAvailable': true,
       'notificationsAvailable': true,
       'dropoffQrIssueAvailable': false,
       'reviewAvailable': false,

@@ -53,7 +53,6 @@ class AdminDispatchService {
     outboxProcessor,
     driverCandidateScoringService,
     adminQrReissueService = null,
-    chatService = null,
     reviewRepository = null,
     bookingAssignmentReopenService = null,
     driverCallService = null,
@@ -67,7 +66,6 @@ class AdminDispatchService {
     this.outboxProcessor = outboxProcessor;
     this.driverCandidateScoringService = driverCandidateScoringService;
     this.adminQrReissueService = adminQrReissueService;
-    this.chatService = chatService;
     this.reviewRepository = reviewRepository;
     this.bookingAssignmentReopenService = bookingAssignmentReopenService;
     this.driverCallService = driverCallService;
@@ -742,9 +740,6 @@ class AdminDispatchService {
     if (Number(row.settlement_count ?? 0) > 0) {
       warnings.push("HAS_SETTLEMENTS");
     }
-    if (Number(row.message_count ?? 0) > 0) {
-      warnings.push("HAS_CHAT_MESSAGES");
-    }
     if (Number(row.review_count ?? 0) > 0) {
       warnings.push("HAS_REVIEWS");
     }
@@ -891,7 +886,6 @@ class AdminDispatchService {
         bookings: Number(row.assignment_count ?? 0),
         completedTrips: Number(row.completed_trip_count ?? 0),
         settlements: Number(row.settlement_count ?? 0),
-        messages: Number(row.message_count ?? 0),
         reviews: Number(row.review_count ?? 0),
         vehicles: Number(row.vehicle_count ?? 0),
         documents: 0,
@@ -1225,17 +1219,6 @@ class AdminDispatchService {
       );
       pendingOutboxIds.push(...statusOutboxIds);
 
-      if (this.chatService) {
-        await this.chatService.syncAssignedParticipants(conn, {
-          booking: {
-            ...booking,
-            status: BOOKING_STATUS.DRIVER_ASSIGNED,
-          },
-          driver,
-          adminUser: user,
-        });
-      }
-
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
         activityType: "DRIVER_ASSIGNED",
         actorUserId: actor.id,
@@ -1358,18 +1341,6 @@ class AdminDispatchService {
           assignmentReason: input.reason ?? input.assignmentReason ?? null,
         },
       );
-
-      if (this.chatService) {
-        const previousDriver = await this.driverRepository.findById(
-          active.driver_id,
-        );
-        await this.chatService.syncAssignedParticipants(conn, {
-          booking,
-          driver,
-          adminUser: user,
-          previousDriverUserId: previousDriver?.user_id ?? null,
-        });
-      }
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
         activityType: "DRIVER_REASSIGNED",

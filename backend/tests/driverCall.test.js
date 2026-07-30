@@ -77,7 +77,6 @@ function createHarness(overrides = {}) {
     statusLogs: [],
     activityLogs: [],
     deactivatedAssignments: [],
-    deactivatedChatParticipants: [],
     reopened: [],
     notifications: [],
     conflictLookups: [],
@@ -241,19 +240,6 @@ function createHarness(overrides = {}) {
     },
   };
   const notificationServiceResolver = () => notificationService;
-  const chatRepository = {
-    async findRoomByBookingIdForUpdate() {
-      return overrides.chatRoom === false ? null : { id: 123 };
-    },
-    async deactivateParticipant(_conn, chatRoomId, participantRole, userId) {
-      calls.deactivatedChatParticipants.push({
-        chatRoomId,
-        participantRole,
-        userId,
-      });
-      return 1;
-    },
-  };
   const sharedDriverJobService = new DriverJobService(null);
   const driverJobService = {
     validateBookingNumber(value) {
@@ -311,7 +297,6 @@ function createHarness(overrides = {}) {
     bookingRepository,
     driverRepository,
     notificationServiceResolver,
-    chatRepository,
     commissionSettlementService,
     urgentNegotiationRepository,
   );
@@ -324,7 +309,6 @@ function createHarness(overrides = {}) {
       driverRepository,
       driverJobService,
       notificationService,
-      chatRepository,
       commissionSettlementService,
       urgentNegotiationRepository,
       bookingAssignmentReopenService,
@@ -929,11 +913,6 @@ test('releaseAssignment reopens booking, clears active assignment, and notifies 
     reason: 'DRIVER_RELEASED_ASSIGNMENT',
   });
   assert.deepEqual(calls.reopened[0], { bookingId: 10, actorUserId: 42 });
-  assert.deepEqual(calls.deactivatedChatParticipants[0], {
-    chatRoomId: 123,
-    participantRole: 'DRIVER',
-    userId: 42,
-  });
   assert.equal(calls.statusLogs[0].log.fromStatus, BOOKING_STATUS.DRIVER_ASSIGNED);
   assert.equal(calls.statusLogs[0].log.toStatus, BOOKING_STATUS.OPEN);
   assert.equal(calls.statusLogs[0].log.reason, 'DRIVER_RELEASED_ASSIGNMENT');
@@ -1247,7 +1226,6 @@ test('booking creation helper returns eligible driver targets', async () => {
     null,
     null,
     null,
-    null,
     {
       async listEligibleForOpenBooking() {
         return [
@@ -1272,7 +1250,6 @@ test('booking creation helper returns eligible driver targets', async () => {
 test('dispatchOpenCallNotifications sends DRIVER_CALL_AVAILABLE to each eligible driver', async () => {
   const sent = [];
   const service = new BookingService(
-    null,
     null,
     null,
     null,
@@ -1321,7 +1298,6 @@ test('booking creation helper excludes settlement-blocked drivers from open call
     null,
     null,
     null,
-    null,
     {
       async listEligibleForOpenBooking() {
         return [
@@ -1348,7 +1324,6 @@ test('booking creation helper excludes settlement-blocked drivers from open call
 test('dispatchOpenCallNotifications continues when one driver notification fails', async () => {
   const sent = [];
   const service = new BookingService(
-    null,
     null,
     null,
     null,

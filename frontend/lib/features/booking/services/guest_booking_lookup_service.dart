@@ -10,8 +10,8 @@ import 'booking_api_service.dart';
 
 class GuestBookingLookupService {
   GuestBookingLookupService({http.Client? client, String? baseUrl})
-      : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+    : _client = client ?? http.Client(),
+      _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
   final http.Client _client;
   final String _baseUrl;
@@ -32,10 +32,7 @@ class GuestBookingLookupService {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: jsonEncode({
-        'bookingNumber': bookingNumber,
-        'phone': phone,
-      }),
+      body: jsonEncode({'bookingNumber': bookingNumber, 'phone': phone}),
     );
     final decoded = jsonDecode(response.body);
 
@@ -204,7 +201,6 @@ class GuestBookingLookupService {
       cancellationBlockedReason:
           data['cancellationBlockedReason'] as String? ?? 'ALREADY_CANCELLED',
       capabilities: GuestBookingCapabilities(
-        chatAvailable: booking.capabilities.chatAvailable,
         notificationsAvailable: booking.capabilities.notificationsAvailable,
         dropoffQrIssueAvailable: false,
         reviewAvailable: booking.capabilities.reviewAvailable,

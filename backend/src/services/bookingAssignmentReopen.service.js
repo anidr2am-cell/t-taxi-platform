@@ -17,14 +17,12 @@ class BookingAssignmentReopenService {
     bookingRepository,
     driverRepository,
     notificationServiceResolver = null,
-    chatRepository = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
   ) {
     this.bookingRepository = bookingRepository;
     this.driverRepository = driverRepository;
     this.notificationServiceResolver = notificationServiceResolver;
-    this.chatRepository = chatRepository;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
   }
@@ -148,21 +146,6 @@ class BookingAssignmentReopenService {
     return this.mapEligibleDriversToTargets(drivers);
   }
 
-  async deactivateReleasedDriverChatParticipant(conn, booking, driverUserId) {
-    if (!this.chatRepository) return;
-    const room = await this.chatRepository.findRoomByBookingIdForUpdate(
-      conn,
-      booking.id,
-    );
-    if (!room) return;
-    await this.chatRepository.deactivateParticipant(
-      conn,
-      room.id,
-      'DRIVER',
-      driverUserId,
-    );
-  }
-
   async restartUrgentNegotiationAfterRelease(conn, booking, evaluation) {
     if (!this.urgentNegotiationRepository) {
       throw new AppError('Urgent negotiation service is unavailable', {
@@ -242,12 +225,6 @@ class BookingAssignmentReopenService {
       description: activityDescription,
       payload: activityPayload,
     });
-    await this.deactivateReleasedDriverChatParticipant(
-      conn,
-      booking,
-      releasedDriverUserId,
-    );
-
     const openRow = await this.bookingRepository.findOpenDriverCallByBookingId(
       conn,
       booking.id,

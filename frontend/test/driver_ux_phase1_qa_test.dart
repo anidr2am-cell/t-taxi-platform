@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
-import 'package:frontend/features/booking/services/booking_chat_api.dart';
 import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
 import 'package:frontend/features/driver/models/driver_status.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
@@ -17,7 +16,6 @@ import 'package:frontend/features/driver/pages/driver_today_page.dart';
 import 'support/booking_location_test_data.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver_settlement/pages/driver_settlement_list_page.dart';
-import 'package:frontend/features/driver_settlement/services/driver_settlement_api_service.dart';
 
 import 'support/driver_ux_qa_harness.dart';
 
@@ -527,7 +525,7 @@ void main() {
       expect(DriverUx.tripStepInfo(qaBooking(status: 'CANCELLED')), isNull);
     });
 
-    testWidgets('detail hides customer chat and shows phone CTA', (
+    testWidgets('detail hides removed customer contact and shows phone CTA', (
       tester,
     ) async {
       await DriverUxQaHarness.configureViewport(
@@ -563,8 +561,8 @@ void main() {
     });
   });
 
-  group('PR72 customer chat removal QA', () {
-    testWidgets('booking complete hides chat entry', (tester) async {
+  group('PR72 customer contact removal QA', () {
+    testWidgets('booking complete hides removed contact entry', (tester) async {
       await DriverUxQaHarness.configureViewport(
         tester,
         size: const Size(360, 800),
@@ -581,25 +579,27 @@ void main() {
               totalAmount: 1500,
               currency: 'THB',
               guestAccessToken: 'guest-token',
-              chatRoomCode: 'CHAT-TX202607010001',
               boardingQrToken: 'boarding-token',
               trustMessage: 'Booking received',
             ),
             serviceLabel: 'Airport Pickup',
-            origin: testBookingLocation(name: 'BKK Airport', address: 'BKK Airport'),
-            destination: testBookingLocation(name: 'Pattaya Hotel', address: 'Pattaya Hotel'),
+            origin: testBookingLocation(
+              name: 'BKK Airport',
+              address: 'BKK Airport',
+            ),
+            destination: testBookingLocation(
+              name: 'Pattaya Hotel',
+              address: 'Pattaya Hotel',
+            ),
             enableCustomerTools: true,
-            chatApi: _StubBookingChatApi(),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Booking chat'), findsNothing);
-      expect(find.textContaining('CHAT_NOT_ACCESSIBLE'), findsNothing);
       DriverUxQaHarness.expectNoOverflow(tester);
     });
 
-    testWidgets('guest lookup hides chat and pickup alert actions', (
+    testWidgets('guest lookup hides removed contact and pickup alert actions', (
       tester,
     ) async {
       await DriverUxQaHarness.configureViewport(
@@ -611,7 +611,6 @@ void main() {
           home: GuestBookingLookupPage(
             lookupService: _StubGuestLookupService(),
             enableCustomerTools: true,
-            bookingChatApi: _StubBookingChatApi(),
           ),
         ),
       );
@@ -627,7 +626,6 @@ void main() {
       await tester.tap(find.text('Find booking'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Booking chat'), findsNothing);
       expect(find.textContaining('conversationId'), findsNothing);
       DriverUxQaHarness.expectNoOverflow(tester);
     });
@@ -652,17 +650,6 @@ class _DetailApi extends DriverApiService {
   );
 }
 
-class _StubBookingChatApi extends BookingChatApi {
-  @override
-  Future<Map<String, dynamic>> getRoom({
-    required String bookingNumber,
-    String? guestAccessToken,
-    String? customerAccessToken,
-  }) async {
-    throw const BookingChatApiException('Chat not accessible', statusCode: 410);
-  }
-}
-
 class _StubGuestLookupService extends GuestBookingLookupService {
   @override
   Future<GuestBookingLookupResult?> loadCached() async => null;
@@ -685,7 +672,6 @@ class _StubGuestLookupService extends GuestBookingLookupService {
       guestAccessToken: 'guest-token',
       guestAccessExpiresAt: null,
       capabilities: const GuestBookingCapabilities(
-        chatAvailable: true,
         notificationsAvailable: true,
         dropoffQrIssueAvailable: false,
         reviewAvailable: false,

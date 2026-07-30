@@ -38,7 +38,9 @@ void main() {
     });
   });
 
-  testWidgets('BookingLocationDisplay renders two-line location', (tester) async {
+  testWidgets('BookingLocationDisplay renders two-line location', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -96,7 +98,6 @@ void main() {
             paymentStatus: 'UNPAID',
             totalAmount: 1500,
             currency: 'THB',
-            chatRoomCode: 'CHAT-TX202607010001',
             boardingQrToken: 'token',
             trustMessage: 'trust',
           ),
@@ -149,7 +150,6 @@ void main() {
               'expiresAt': '2099-07-02T00:00:00Z',
             },
             'capabilities': {
-              'chatAvailable': false,
               'notificationsAvailable': false,
               'dropoffQrIssueAvailable': false,
               'reviewAvailable': false,
@@ -169,26 +169,29 @@ void main() {
     expect(find.text('333 Beach Rd, Pattaya, Thailand'), findsOneWidget);
   });
 
-  test('GuestBookingLookupResult.fromCreateSummary stores split name and address', () {
-    final result = GuestBookingLookupResult.fromCreateSummary(
-      bookingId: 10,
-      bookingNumber: 'TX202607010001',
-      status: 'OPEN',
-      totalAmount: 1500,
-      currency: 'THB',
-      paymentMethod: 'PAY_DRIVER',
-      guestAccessToken: 'guest-token',
-      customerPhone: '+66 81 234 5678',
-      serviceTypeName: 'Airport Pickup',
-      originName: 'BKK — Suvarnabhumi Airport',
-      originAddress: '999 Moo 1, Samut Prakan, Thailand',
-      destinationName: 'Hilton Pattaya',
-      destinationAddress: '333 Beach Rd, Pattaya, Thailand',
-    );
+  test(
+    'GuestBookingLookupResult.fromCreateSummary stores split name and address',
+    () {
+      final result = GuestBookingLookupResult.fromCreateSummary(
+        bookingId: 10,
+        bookingNumber: 'TX202607010001',
+        status: 'OPEN',
+        totalAmount: 1500,
+        currency: 'THB',
+        paymentMethod: 'PAY_DRIVER',
+        guestAccessToken: 'guest-token',
+        customerPhone: '+66 81 234 5678',
+        serviceTypeName: 'Airport Pickup',
+        originName: 'BKK — Suvarnabhumi Airport',
+        originAddress: '999 Moo 1, Samut Prakan, Thailand',
+        destinationName: 'Hilton Pattaya',
+        destinationAddress: '333 Beach Rd, Pattaya, Thailand',
+      );
 
-    expect(result.originName, 'BKK — Suvarnabhumi Airport');
-    expect(result.originAddress, '999 Moo 1, Samut Prakan, Thailand');
-    expect(result.destinationName, 'Hilton Pattaya');
-    expect(result.destinationAddress, '333 Beach Rd, Pattaya, Thailand');
-  });
+      expect(result.originName, 'BKK — Suvarnabhumi Airport');
+      expect(result.originAddress, '999 Moo 1, Samut Prakan, Thailand');
+      expect(result.destinationName, 'Hilton Pattaya');
+      expect(result.destinationAddress, '333 Beach Rd, Pattaya, Thailand');
+    },
+  );
 }

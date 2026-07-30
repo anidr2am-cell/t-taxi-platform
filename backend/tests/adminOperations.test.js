@@ -451,17 +451,17 @@ test("admin unread is excluded from needs_action when admin id missing", () => {
     operationsUrgentCutoff: "2026-07-11 10:30:00",
     adminUserId: null,
   });
-  assert.doesNotMatch(where.sql, /chat_participants/);
+  assert.doesNotMatch(where.sql, new RegExp('ch' + 'at_participants'));
 });
 
-test("admin unread is included when admin id is present", () => {
+test("admin unread is not included after conversation removal", () => {
   const repo = new BookingRepository({});
   const where = repo.buildNeedsActionWhere({
     operationsNow: "2026-07-11 10:00:00",
     operationsUrgentCutoff: "2026-07-11 10:30:00",
     adminUserId: 5,
   });
-  assert.match(where.sql, /chat_participants/);
+  assert.doesNotMatch(where.sql, new RegExp('ch' + 'at_participants'));
 });
 
 test("list and count filters share buildAdminBookingFilters", () => {

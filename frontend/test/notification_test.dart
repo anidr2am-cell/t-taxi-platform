@@ -78,13 +78,13 @@ void main() {
     expect(find.text('Settlement'), findsOneWidget);
   });
 
-  testWidgets('driver chat notification opens booking detail page', (
+  testWidgets('driver booking notification opens booking detail page', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: DriverNotificationsPage(
-          api: _FakeDriverNotificationApi(chatNotification: true),
+          api: _FakeDriverNotificationApi(bookingNotification: true),
           deviceRegistrationService: _FakeDeviceRegistrationService(),
           detailPageBuilder: (bookingNumber) =>
               Scaffold(body: Text('driver-detail:$bookingNumber')),
@@ -93,8 +93,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Chat'), findsOneWidget);
-    await tester.tap(find.text('New customer message'));
+    expect(find.text('Booking'), findsOneWidget);
+    await tester.tap(find.text('Booking assigned'));
     await tester.pumpAndSettle();
 
     expect(find.text('driver-detail:TX202607010001'), findsOneWidget);
@@ -257,20 +257,20 @@ class _FakeBookingNotificationApi extends BookingNotificationApi {
 }
 
 class _FakeDriverNotificationApi extends DriverApiService {
-  _FakeDriverNotificationApi({this.chatNotification = false});
+  _FakeDriverNotificationApi({this.bookingNotification = false});
 
-  final bool chatNotification;
+  final bool bookingNotification;
 
   @override
   Future<Map<String, dynamic>> listNotifications({bool? unreadOnly}) async {
-    if (chatNotification) {
+    if (bookingNotification) {
       return {
         'items': [
           {
             'notificationId': 2,
-            'notificationType': 'CHAT_MESSAGE',
-            'title': 'New customer message',
-            'body': 'Customer sent a message',
+            'notificationType': 'DRIVER_ASSIGNED',
+            'title': 'Booking assigned',
+            'body': 'You have a new booking',
             'read': false,
             'payload': {'bookingNumber': 'TX202607010001'},
           },

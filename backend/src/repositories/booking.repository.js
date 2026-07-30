@@ -1043,27 +1043,8 @@ class BookingRepository {
     return rows[0] || null;
   }
 
-  buildAdminUnreadExistsSql(adminUserId) {
-    if (!adminUserId) return { sql: '0', params: [] };
-    return {
-      sql: `
-        EXISTS (
-          SELECT 1
-          FROM chat_rooms cr
-          INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
-            AND ap.user_id = ?
-            AND ap.participant_role = 'ADMIN'
-            AND ap.deleted_at IS NULL
-          INNER JOIN chat_messages m ON m.chat_room_id = cr.id
-            AND m.deleted_at IS NULL
-            AND m.sender_participant_id <> ap.id
-            AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
-          WHERE cr.booking_id = b.id
-            AND cr.deleted_at IS NULL
-        )
-      `,
-      params: [adminUserId],
-    };
+  buildAdminUnreadExistsSql() {
+    return { sql: '0', params: [] };
   }
 
   buildNeedsActionWhere(filters) {
@@ -1358,7 +1339,7 @@ class BookingRepository {
     return { whereSql: where.join(' AND '), params };
   }
 
-  adminQueueFromSql(adminUserId = null) {
+  adminQueueFromSql() {
     return `
       FROM bookings b
       INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
@@ -1372,24 +1353,10 @@ class BookingRepository {
       LEFT JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
       LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
       LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
-      LEFT JOIN (
-        SELECT cr.booking_id, COUNT(m.id) AS admin_unread_count
-        FROM chat_rooms cr
-        INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
-          AND ap.user_id = ?
-          AND ap.participant_role = 'ADMIN'
-          AND ap.deleted_at IS NULL
-        INNER JOIN chat_messages m ON m.chat_room_id = cr.id
-          AND m.deleted_at IS NULL
-          AND m.sender_participant_id <> ap.id
-          AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
-        WHERE cr.deleted_at IS NULL
-        GROUP BY cr.booking_id
-      ) chat_unread ON chat_unread.booking_id = b.id
     `;
   }
 
-  adminQueueSelectSql(adminUserId = null) {
+  adminQueueSelectSql() {
     return `
       SELECT
         b.id,
@@ -1434,7 +1401,7 @@ class BookingRepository {
           ORDER BY r.id DESC
           LIMIT 1
         ) AS review_rating,
-        COALESCE(chat_unread.admin_unread_count, 0) AS admin_unread_count,
+        0 AS admin_unread_count,
         bda.id AS assignment_id,
         bda.driver_id AS assignment_driver_id,
         bda.status AS assignment_status,
@@ -1474,7 +1441,7 @@ class BookingRepository {
           ORDER BY bal.id DESC
           LIMIT 1
         ) AS last_driver_release_reason_code
-      ${this.adminQueueFromSql(adminUserId)}
+      ${this.adminQueueFromSql()}
     `;
   }
 
@@ -1520,39 +1487,19 @@ class BookingRepository {
     `;
   }
 
-  async countAdminUnreadForBooking(adminUserId, bookingId) {
-    if (!adminUserId) return 0;
-    const [rows] = await this.pool.query(
-      `
-        SELECT COUNT(m.id) AS unread_count
-        FROM chat_rooms cr
-        INNER JOIN chat_participants ap ON ap.chat_room_id = cr.id
-          AND ap.user_id = ?
-          AND ap.participant_role = 'ADMIN'
-          AND ap.deleted_at IS NULL
-        INNER JOIN chat_messages m ON m.chat_room_id = cr.id
-          AND m.deleted_at IS NULL
-          AND m.sender_participant_id <> ap.id
-          AND (ap.last_read_at IS NULL OR m.created_at > ap.last_read_at)
-        WHERE cr.booking_id = ?
-          AND cr.deleted_at IS NULL
-      `,
-      [adminUserId, bookingId],
-    );
-    return Number(rows[0]?.unread_count ?? 0);
+  async countAdminUnreadForBooking() {
+    return 0;
   }
 
   async countAdminBookings(filters) {
     const { whereSql, params } = this.buildAdminBookingFilters(filters);
-    const adminUserId = filters.adminUserId ?? null;
-    const fromParams = adminUserId ? [adminUserId] : [0];
     const [rows] = await this.pool.query(
       `
         SELECT COUNT(DISTINCT b.id) AS total
-        ${this.adminQueueFromSql(adminUserId)}
+        ${this.adminQueueFromSql()}
         WHERE ${whereSql}
       `,
-      [...fromParams, ...params],
+      params,
     );
     return rows[0]?.total ?? 0;
   }
@@ -1561,18 +1508,16 @@ class BookingRepository {
     const { whereSql, params } = this.buildAdminBookingFilters(filters);
     const limit = pagination.limit;
     const offset = pagination.offset;
-    const adminUserId = filters.adminUserId ?? null;
-    const fromParams = adminUserId ? [adminUserId] : [0];
     const orderSql = this.adminQueueOrderSql(filters.view);
 
     const [rows] = await this.pool.query(
       `
-        ${this.adminQueueSelectSql(adminUserId)}
+        ${this.adminQueueSelectSql()}
         WHERE ${whereSql}
         ${orderSql}
         LIMIT ? OFFSET ?
       `,
-      [...fromParams, ...params, limit, offset],
+      [...params, limit, offset],
     );
     return rows;
   }

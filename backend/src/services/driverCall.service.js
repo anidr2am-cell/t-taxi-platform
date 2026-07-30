@@ -47,7 +47,6 @@ class DriverCallService {
     driverRepository,
     driverJobService,
     notificationRepository = null,
-    chatRepository = null,
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
     bookingAssignmentReopenService = null,
@@ -57,7 +56,6 @@ class DriverCallService {
     this.driverRepository = driverRepository;
     this.driverJobService = driverJobService;
     this.notificationRepository = notificationRepository;
-    this.chatRepository = chatRepository;
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
     this.bookingAssignmentReopenService = bookingAssignmentReopenService;
@@ -457,14 +455,6 @@ class DriverCallService {
     return this.bookingAssignmentReopenService.notifyEligibleDriversForReopenedBooking(
       conn,
       params,
-    );
-  }
-
-  async deactivateReleasedDriverChatParticipant(conn, booking, driverUserId) {
-    return this.bookingAssignmentReopenService.deactivateReleasedDriverChatParticipant(
-      conn,
-      booking,
-      driverUserId,
     );
   }
 

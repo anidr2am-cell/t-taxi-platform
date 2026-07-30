@@ -85,7 +85,6 @@ function createServiceHarness(overrides = {}) {
     statusLogs: [],
     activityLogs: [],
     notifications: [],
-    deactivatedChatParticipants: [],
   };
   const booking = {
     id: 10,
@@ -148,14 +147,6 @@ function createServiceHarness(overrides = {}) {
     },
   };
   const notificationServiceResolver = () => notificationService;
-  const chatRepository = {
-    async findRoomByBookingIdForUpdate() {
-      return { id: 123 };
-    },
-    async deactivateParticipant(_conn, chatRoomId, participantRole, userId) {
-      calls.deactivatedChatParticipants.push({ chatRoomId, participantRole, userId });
-    },
-  };
   const driverJobService = new DriverJobService(null);
   const driverCallService = new DriverCallService(
     pool,
@@ -163,27 +154,23 @@ function createServiceHarness(overrides = {}) {
     driverRepository,
     driverJobService,
     notificationService,
-    chatRepository,
     null,
     null,
     new BookingAssignmentReopenService(
       bookingRepository,
       driverRepository,
       notificationServiceResolver,
-      chatRepository,
     ),
   );
   const bookingAssignmentReopenService = new BookingAssignmentReopenService(
     bookingRepository,
     driverRepository,
     notificationServiceResolver,
-    chatRepository,
   );
   const service = new AdminDispatchService(
     pool,
     bookingRepository,
     driverRepository,
-    null,
     null,
     null,
     null,

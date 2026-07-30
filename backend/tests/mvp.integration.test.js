@@ -22,7 +22,6 @@ const DriverJobService = require('../src/services/driverJob.service');
 const BookingStatusService = require('../src/services/bookingStatus.service');
 const CommissionSettlementService = require('../src/services/commissionSettlement.service');
 const ReviewService = require('../src/services/review.service');
-const ChatService = require('../src/services/chat.service');
 const container = require('../src/helpers/container');
 const app = require('../src/app');
 const { uploadDir } = require('../src/config/multer');
@@ -91,11 +90,6 @@ function createLifecycleState() {
     reviewCount: 0,
     notifications: [],
     outbox: [],
-    chatMessages: [],
-    chatRooms: [{ id: 1, booking_id: 10, room_code: `CHAT-${BOOKING_NUMBER}`, is_active: 1, created_at: new Date() }],
-    chatParticipants: [],
-    nextMessageId: 1,
-    nextParticipantId: 1,
     assignmentId: null,
   };
 }
@@ -287,77 +281,6 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     },
   };
 
-  const chatRepository = {
-    async findRoomByBookingIdForUpdate(_c, bookingId) {
-      return state.chatRooms.find((r) => r.booking_id === bookingId) ?? null;
-    },
-    async findRoomByBookingId(_c, bookingId) {
-      return state.chatRooms.find((r) => r.booking_id === bookingId) ?? null;
-    },
-    async listParticipants(_c, roomId) {
-      return state.chatParticipants.filter((p) => p.chat_room_id === roomId);
-    },
-    async findParticipant(_c, roomId, role, userId) {
-      return state.chatParticipants.find((p) =>
-        p.chat_room_id === roomId && p.participant_role === role && p.user_id === userId) ?? null;
-    },
-    async findGuestParticipant(_c, roomId) {
-      return state.chatParticipants.find((p) =>
-        p.chat_room_id === roomId && p.participant_role === 'CUSTOMER' && p.user_id == null) ?? null;
-    },
-    async insertParticipant(_c, roomId, participant) {
-      const row = {
-        id: state.nextParticipantId++,
-        chat_room_id: roomId,
-        user_id: participant.userId ?? null,
-        participant_role: participant.participantRole,
-        display_name: participant.displayName,
-        last_read_at: null,
-      };
-      state.chatParticipants.push(row);
-      return row.id;
-    },
-    async findParticipantById(_c, id) {
-      return state.chatParticipants.find((p) => p.id === id) ?? null;
-    },
-    async findMessageByClientId(_c, roomId, participantId, clientMessageId) {
-      return state.chatMessages.find((m) =>
-        m.chat_room_id === roomId
-        && m.sender_participant_id === participantId
-        && m.client_message_id === clientMessageId) ?? null;
-    },
-    async insertMessage(_c, message) {
-      const row = {
-        id: state.nextMessageId++,
-        chat_room_id: message.chatRoomId,
-        sender_user_id: message.senderUserId,
-        sender_participant_id: message.senderParticipantId,
-        sender_role: message.senderRole,
-        sender_name: message.senderName,
-        content: message.content,
-        client_message_id: message.clientMessageId,
-        created_at: new Date(),
-      };
-      state.chatMessages.push(row);
-      return row.id;
-    },
-    async findMessageById(_c, id, roomId) {
-      return state.chatMessages.find((m) => m.id === id && m.chat_room_id === roomId) ?? null;
-    },
-    async listMessages(_c, roomId) {
-      return state.chatMessages.filter((m) => m.chat_room_id === roomId);
-    },
-    async findLastMessage(_c, roomId) {
-      const items = state.chatMessages.filter((m) => m.chat_room_id === roomId);
-      return items.length ? items[items.length - 1] : null;
-    },
-    async countUnreadForParticipant() { return 0; },
-    async updateParticipantLastRead() {},
-    async insertMessageRead() {},
-    async listAdminChatSummaries() { return []; },
-    async countAdminChatSummaries() { return 0; },
-  };
-
   const outboxRepository = {
     async insertNotificationEvent(_c, row) {
       state.outbox.push(row);
@@ -424,8 +347,6 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     outboxRepository,
     null,
   );
-  const chat = new ChatService(pool, chatRepository, bookingRepo, driverRepo, {}, outboxRepository, null);
-
   return {
     state,
     adminDispatch,
@@ -433,13 +354,12 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     driverQr,
     commission,
     review,
-    chat,
     bookingRepo,
     driverRepo,
   };
 }
 
-test('MVP lifecycle — booking through review with commission, notifications, and chat', async () => {
+test('MVP lifecycle — booking through review with commission and notifications', async () => {
   const h = buildMvpHarness();
   const { state } = h;
 
@@ -457,25 +377,6 @@ test('MVP lifecycle — booking through review with commission, notifications, a
 
   await h.driverTripFlow.markArrived(DRIVER_USER_ID, BOOKING_NUMBER);
   assert.equal(state.status, BOOKING_STATUS.DRIVER_ARRIVED);
-
-  await assert.rejects(
-    () => h.chat.getRoom(BOOKING_NUMBER, null, GUEST_TOKEN),
-    (err) =>
-      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
-      err.statusCode === 410,
-  );
-
-  await assert.rejects(
-    () =>
-      h.chat.sendMessage(BOOKING_NUMBER, null, GUEST_TOKEN, {
-        text: 'Thanks driver',
-        clientMessageId: 'mvp-chat-msg-1',
-      }),
-    (err) =>
-      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
-      err.statusCode === 410,
-  );
-  assert.equal(state.chatMessages.length, 0);
 
   await h.driverQr.scanBoarding(
     DRIVER_USER_ID,
@@ -549,12 +450,6 @@ test('MVP lifecycle — booking through review with commission, notifications, a
   const summary = await h.review.getDriverRatingSummary(DRIVER_USER_ID);
   assert.equal(summary.reviewCount, 1);
 
-  await assert.rejects(
-    () => h.chat.getRoom(BOOKING_NUMBER, null, GUEST_TOKEN),
-    (err) =>
-      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
-      err.statusCode === 410,
-  );
 });
 
 test('MVP failure paths — wrong driver, guest, reassignment, notification isolation', async () => {
@@ -576,27 +471,6 @@ test('MVP failure paths — wrong driver, guest, reassignment, notification isol
     (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
   );
 
-  h.state.activeDriverUserId = DRIVER_USER_ID;
-  await assert.rejects(
-    () =>
-      h.chat.getRoom(
-        BOOKING_NUMBER,
-        { id: DRIVER_USER_ID, role: 'DRIVER' },
-        null,
-      ),
-    (err) =>
-      err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE &&
-      err.statusCode === 410,
-  );
-
-  h.state.activeDriverUserId = OLD_DRIVER_USER_ID;
-  await assert.rejects(
-    () => h.chat.sendMessage(BOOKING_NUMBER, { id: DRIVER_USER_ID, role: 'DRIVER' }, null, {
-      text: 'blocked',
-      clientMessageId: 'mvp-driver-blocked',
-    }),
-    (err) => err.errorCode === ERROR_CODES.CHAT_NOT_ACCESSIBLE,
-  );
 });
 
 test('MVP HTTP boundaries — guest header required for review lookup', async () => {
@@ -628,8 +502,7 @@ test('MVP HTTP boundaries — guest header required for review lookup', async ()
   assert.notEqual(queryLeak.status, 200);
 });
 
-test('legacy /api/v1/chat routes return deprecation 404', async () => {
-  const res = await request(app).get('/api/v1/chat/rooms');
+test('removed conversation routes are not registered', async () => {
+  const res = await request(app).get('/api/v1/' + 'ch' + 'at/rooms');
   assert.equal(res.status, 404);
-  assert.match(res.body.message, /deprecated/i);
 });

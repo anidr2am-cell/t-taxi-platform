@@ -539,13 +539,6 @@ class DriverRepository {
           ) AS settlement_count,
           (
             SELECT COUNT(*)
-            FROM chat_messages cm
-            INNER JOIN chat_participants cp ON cp.id = cm.sender_participant_id
-            WHERE cp.user_id = d.user_id
-              AND cm.deleted_at IS NULL
-          ) AS message_count,
-          (
-            SELECT COUNT(*)
             FROM reviews r
             WHERE r.driver_id = d.id
           ) AS review_count,

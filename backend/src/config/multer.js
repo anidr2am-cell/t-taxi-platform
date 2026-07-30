@@ -1,5 +1,5 @@
 /**
- * config/multer.js — File upload (chat images, etc.)
+ * config/multer.js — File upload handling.
  *
  * Storage: local disk first → S3 adapter in services layer (later phase)
  */

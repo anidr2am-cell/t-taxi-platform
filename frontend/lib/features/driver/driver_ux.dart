@@ -253,15 +253,16 @@ class DriverUx {
         .toList();
     if (prioritized.isNotEmpty) {
       prioritized.sort((a, b) {
-        final priority = _currentTripPriority(
-          a,
-          settlementsByBooking: settlementsByBooking,
-        ).compareTo(
-          _currentTripPriority(
-            b,
-            settlementsByBooking: settlementsByBooking,
-          ),
-        );
+        final priority =
+            _currentTripPriority(
+              a,
+              settlementsByBooking: settlementsByBooking,
+            ).compareTo(
+              _currentTripPriority(
+                b,
+                settlementsByBooking: settlementsByBooking,
+              ),
+            );
         if (priority != 0) return priority;
         final time = a.pickupTime.compareTo(b.pickupTime);
         if (time != 0) return time;
@@ -331,8 +332,10 @@ class DriverUx {
       return 'driver_today_cta_continue';
     }
     return switch (settlementActionHint(settlement)) {
-      SettlementActionHint.actionRequired => 'driver_today_cta_settlement_submit',
-      SettlementActionHint.waitingForAdmin => 'driver_today_cta_settlement_waiting',
+      SettlementActionHint.actionRequired =>
+        'driver_today_cta_settlement_submit',
+      SettlementActionHint.waitingForAdmin =>
+        'driver_today_cta_settlement_waiting',
       SettlementActionHint.unknown => 'driver_today_cta_settlement',
     };
   }
@@ -395,18 +398,15 @@ class DriverUx {
     if (candidates.contains('CHANGE') || candidates.contains('UPDATE')) {
       return 1;
     }
-    if (candidates.contains('CHAT') || candidates.contains('MESSAGE')) {
-      return 2;
-    }
     if (candidates.contains('PICKUP')) {
-      return 3;
+      return 2;
     }
     if (candidates.contains('COMMISSION') ||
         candidates.contains('RECEIPT') ||
         candidates.contains('SETTLEMENT')) {
-      return 4;
+      return 3;
     }
-    return 5;
+    return 4;
   }
 
   static List<Map<String, dynamic>> sortNotifications(List<dynamic> items) {
@@ -417,7 +417,9 @@ class DriverUx {
       final readA = a['read'] == true;
       final readB = b['read'] == true;
       if (readA != readB) return readA ? 1 : -1;
-      final priority = notificationPriority(a).compareTo(notificationPriority(b));
+      final priority = notificationPriority(
+        a,
+      ).compareTo(notificationPriority(b));
       if (priority != 0) return priority;
       final createdA = a['createdAt'] as String? ?? '';
       final createdB = b['createdAt'] as String? ?? '';

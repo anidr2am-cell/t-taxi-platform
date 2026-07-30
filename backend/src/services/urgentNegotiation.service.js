@@ -32,7 +32,6 @@ class UrgentNegotiationService {
     driverJobService,
     bookingRepository,
     bookingService,
-    chatService,
   ) {
     this.pool = pool;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
@@ -40,7 +39,6 @@ class UrgentNegotiationService {
     this.driverJobService = driverJobService;
     this.bookingRepository = bookingRepository;
     this.bookingService = bookingService;
-    this.chatService = chatService;
   }
   throwAppError(message, { statusCode, errorCode, errors } = {}) {
     throw new AppError(message, { statusCode, errorCode, errors });
@@ -620,16 +618,6 @@ class UrgentNegotiationService {
         etaMinutes: latestAttempt.proposed_eta_minutes,
       },
     });
-
-    if (this.chatService) {
-      const room = await this.chatService.ensureRoom(conn, booking);
-      await this.chatService.ensureDriverParticipant(
-        conn,
-        room,
-        { ...booking, status: BOOKING_STATUS.DRIVER_ASSIGNED },
-        lockedDriver.user_id,
-      );
-    }
 
     return {
       bookingNumber: booking.booking_number,

@@ -103,10 +103,6 @@ function createHarness({ failSecondChargeItem = false } = {}) {
   const service = new BookingService(
     { async getConnection() { return conn; } },
     bookingRepository,
-    {
-      async insertRoom() { return 20; },
-      async insertParticipant() {},
-    },
     { async generateNext() { return 'TX202607130001'; } },
     {
       async calculate() { return PRICE; },

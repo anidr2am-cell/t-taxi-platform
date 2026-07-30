@@ -1507,7 +1507,6 @@ test("assign rejects terminal booking status", async () => {
 
 test("assign creates exactly one active assignment", async () => {
   let insertCount = 0;
-  let chatSync = null;
   const bookingRepo = {
     async findByBookingNumberForUpdate() {
       return {
@@ -1559,11 +1558,6 @@ test("assign creates exactly one active assignment", async () => {
       return conn;
     },
   };
-  const chatService = {
-    async syncAssignedParticipants(_conn, input) {
-      chatSync = input;
-    },
-  };
   const service = new AdminDispatchService(
     pool,
     bookingRepo,
@@ -1573,8 +1567,6 @@ test("assign creates exactly one active assignment", async () => {
     null,
     null,
     scoringService,
-    null,
-    chatService,
   );
 
   await service.assignDriver(
@@ -1583,9 +1575,6 @@ test("assign creates exactly one active assignment", async () => {
     { id: 1, role: "ADMIN" },
   );
   assert.equal(insertCount, 1);
-  assert.equal(chatSync.driver.user_id, 66);
-  assert.equal(chatSync.adminUser.id, 1);
-  assert.equal(chatSync.booking.status, BOOKING_STATUS.DRIVER_ASSIGNED);
 });
 
 test("reassign deactivates previous assignment and creates one new active assignment", async () => {

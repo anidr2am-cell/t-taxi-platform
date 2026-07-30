@@ -248,7 +248,6 @@ class GuestBookingLookupService {
       },
       assignedDriver,
       capabilities: {
-        chatAvailable: Boolean(assignedDriver) && !terminalStatus,
         notificationsAvailable: true,
         dropoffQrIssueAvailable: row.status === BOOKING_STATUS.PICKED_UP,
         reviewAvailable: canReview,

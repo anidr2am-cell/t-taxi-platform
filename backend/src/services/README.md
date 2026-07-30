@@ -9,7 +9,6 @@
 | `pricing.service.js` | charge items, price rules |
 | `vehicle.service.js` | 차량 추천 로직 |
 | `driver.service.js` | 배정, 위치, 온라인 상태 |
-| `chat.service.js` | 메시지 저장, 읽음 |
 | `notification.service.js` | FCM / email / sms |
 | `places.service.js` | Google Places 프록시 |
 | `flight.service.js` | AviationStack 프록시 |

@@ -7,7 +7,6 @@ import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../models/location_option.dart';
-import '../services/booking_chat_api.dart';
 import '../services/guest_booking_lookup_service.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
@@ -15,12 +14,9 @@ import '../utils/location_display.dart';
 import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
-import '../../chat/services/chat_socket_service.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
-import '../widgets/booking_chat_section.dart';
 import '../widgets/guest_booking_cancel_section.dart';
-import 'customer_booking_chat_page.dart';
 import 'guest_booking_lookup_page.dart';
 
 class BookingCompletePage extends StatefulWidget {
@@ -30,8 +26,6 @@ class BookingCompletePage extends StatefulWidget {
   final LocationOption? destination;
   final BookingCompleteReview? review;
   final Future<DropoffQrIssueResult> Function()? issueDropoffQr;
-  final BookingChatApi? chatApi;
-  final ChatSocketService? chatSocketService;
   final String? serviceTypeCode;
   final String? originAirportCode;
   final bool nameSignRequested;
@@ -50,8 +44,6 @@ class BookingCompletePage extends StatefulWidget {
     required this.destination,
     this.review,
     this.issueDropoffQr,
-    this.chatApi,
-    this.chatSocketService,
     this.serviceTypeCode,
     this.originAirportCode,
     this.nameSignRequested = false,
@@ -68,12 +60,6 @@ class BookingCompletePage extends StatefulWidget {
 }
 
 class _BookingCompletePageState extends State<BookingCompletePage> {
-  static const _pickupAlertStatuses = {
-    'DRIVER_ASSIGNED',
-    'ON_ROUTE',
-    'DRIVER_ARRIVED',
-  };
-  bool _pickupAlertSent = false;
   late String _status;
   late bool _canCancel;
   String? _cancellationDeadline;
@@ -163,8 +149,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
 
   bool get _isCompleted => _status == 'COMPLETED';
 
-  bool get _canShowChat => false;
-
   bool get _canShowNotifications =>
       widget.enableCustomerTools &&
       widget.result.bookingId != null &&
@@ -190,8 +174,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       widget.result.guestAccessToken?.isNotEmpty == true &&
       widget.review == null;
 
-  bool get _canShowCancel =>
-      widget.result.guestAccessToken?.isNotEmpty == true;
+  bool get _canShowCancel => widget.result.guestAccessToken?.isNotEmpty == true;
 
   Future<void> _copyBookingNumber() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -208,36 +191,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
         SnackBar(content: Text(l10n.t('booking_number_copy_failed'))),
       );
     }
-  }
-
-  Future<void> _notifyPickupReady() async {
-    if (_pickupAlertSent) {
-      _openCustomerChat();
-      return;
-    }
-    await (widget.chatApi ?? const BookingChatApi()).sendPickupAlert(
-      bookingNumber: widget.result.bookingNumber,
-      guestAccessToken: widget.result.guestAccessToken ?? '',
-    );
-    if (!mounted) return;
-    setState(() {
-      _pickupAlertSent = true;
-    });
-    _openCustomerChat();
-  }
-
-  void _openCustomerChat() {
-    if (!mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CustomerBookingChatPage(
-          bookingNumber: widget.result.bookingNumber,
-          guestAccessToken: widget.result.guestAccessToken,
-          api: widget.chatApi,
-          socketService: widget.chatSocketService,
-        ),
-      ),
-    );
   }
 
   @override
@@ -297,10 +250,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          BookingStatusDisplay.customerGuidance(
-                            l10n,
-                            _status,
-                          )!,
+                          BookingStatusDisplay.customerGuidance(l10n, _status)!,
                           style: const TextStyle(
                             color: AppTokens.textSecondary,
                             height: 1.45,
@@ -375,14 +325,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   originAirportCode: widget.originAirportCode,
                   nameSignRequested: widget.nameSignRequested,
                   vehicleInfo: widget.meetingVehicleInfo,
-                  pickupAlertSent: _pickupAlertSent,
-                  onNotifyPickup:
-                      _pickupAlertStatuses.contains(_status) &&
-                          widget.meetingVehicleInfo?.hasAssignedDetails ==
-                              true &&
-                          widget.result.guestAccessToken?.isNotEmpty == true
-                      ? _notifyPickupReady
-                      : null,
                 ),
               ],
               if (widget.review != null) ...[
@@ -451,14 +393,6 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                         'submitted': false,
                       },
                     ),
-                ] else if (_canShowChat) ...[
-                  const SizedBox(height: AppTokens.spaceMd),
-                  BookingChatSection(
-                    bookingNumber: result.bookingNumber,
-                    guestAccessToken: result.guestAccessToken,
-                    api: widget.chatApi,
-                    socketService: widget.chatSocketService,
-                  ),
                 ],
               ],
               const SizedBox(height: AppTokens.spaceLg),

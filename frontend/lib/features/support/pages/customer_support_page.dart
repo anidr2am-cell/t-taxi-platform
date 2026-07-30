@@ -27,7 +27,7 @@ class CustomerSupportPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         builder: (context) => FractionallySizedBox(
           heightFactor: 0.88,
-          child: _SupportChatPanel(
+          child: _SupportInquiryPanel(
             api: api ?? SupportInquiryApiService(),
             onClose: () => Navigator.pop(context),
           ),
@@ -42,7 +42,7 @@ class CustomerSupportPage extends StatelessWidget {
         insetPadding: const EdgeInsets.all(AppTokens.spaceLg),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720, maxHeight: 760),
-          child: _SupportChatPanel(
+          child: _SupportInquiryPanel(
             api: api ?? SupportInquiryApiService(),
             onClose: () => Navigator.pop(context),
           ),
@@ -83,7 +83,7 @@ class CustomerSupportPage extends StatelessWidget {
                         child: FilledButton.icon(
                           key: const Key('support_open_inquiry_button'),
                           onPressed: () => _openInquiry(context),
-                          icon: const Icon(Icons.chat_bubble_outline),
+                          icon: const Icon(Icons.support_agent_outlined),
                           label: Text(l10n.t('support_inquiry_button')),
                         ),
                       ),
@@ -160,17 +160,17 @@ class _LineInquirySection extends StatelessWidget {
   }
 }
 
-class _SupportChatPanel extends StatefulWidget {
-  const _SupportChatPanel({required this.api, required this.onClose});
+class _SupportInquiryPanel extends StatefulWidget {
+  const _SupportInquiryPanel({required this.api, required this.onClose});
 
   final SupportInquiryApiService api;
   final VoidCallback onClose;
 
   @override
-  State<_SupportChatPanel> createState() => _SupportChatPanelState();
+  State<_SupportInquiryPanel> createState() => _SupportInquiryPanelState();
 }
 
-class _SupportChatPanelState extends State<_SupportChatPanel> {
+class _SupportInquiryPanelState extends State<_SupportInquiryPanel> {
   static const _pollInterval = Duration(seconds: 12);
 
   final _messageController = TextEditingController();

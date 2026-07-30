@@ -7,7 +7,6 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
-import '../../admin_chat/pages/admin_chat_queue_page.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../../admin_settlement/services/admin_settlement_api_service.dart';
 import '../../settlement/utils/settlement_receipt.dart';
@@ -47,7 +46,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   final _assignmentSectionKey = GlobalKey();
   final _operationsSummaryKey = GlobalKey();
   final _pricingSectionKey = GlobalKey();
-  final _chatSectionKey = GlobalKey();
   final _reviewSectionKey = GlobalKey();
   final _activitySectionKey = GlobalKey();
   List<Map<String, dynamic>> _notes = [];
@@ -166,7 +164,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   bool _canUnassignDriver(Map<String, dynamic>? detail) {
     if (detail == null) return false;
     if (_allowedActions().contains('UNASSIGN_DRIVER')) return true;
-    return detail['status'] == 'DRIVER_ASSIGNED' && _hasActiveAssignment(detail);
+    return detail['status'] == 'DRIVER_ASSIGNED' &&
+        _hasActiveAssignment(detail);
   }
 
   String _unassignDriverErrorMessage(Object err, AppLocalizations l10n) {
@@ -177,10 +176,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         case 'NO_ACTIVE_ASSIGNMENT':
           return l10n.t('admin_dispatch_unassign_error_no_assignment');
         case 'VALIDATION_ERROR':
-          return validationErrorMessage(
-                err,
-                languageCode: l10n.languageCode,
-              ) ??
+          return validationErrorMessage(err, languageCode: l10n.languageCode) ??
               l10n.t('admin_dispatch_unassign_error_validation');
         default:
           break;
@@ -584,17 +580,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     }
   }
 
-  Future<void> _openChat() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (chatContext) => AdminChatDetailPage(
-          bookingNumber: widget.bookingNumber,
-          onBack: () => Navigator.of(chatContext).pop(),
-        ),
-      ),
-    );
-  }
-
   Future<void> _scrollToSection(GlobalKey key) async {
     final target = key.currentContext;
     if (target == null) return;
@@ -674,11 +659,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                         key: _pricingSectionKey,
                         child: _pricingSection(l10n, detail),
                       ),
-                    ),
-                    const SizedBox(height: AppTokens.spaceMd),
-                    KeyedSubtree(
-                      key: _chatSectionKey,
-                      child: _chatSection(l10n, detail),
                     ),
                     if (detail['customerReview'] is Map) ...[
                       const SizedBox(height: AppTokens.spaceMd),
@@ -906,7 +886,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     AppLocalizations l10n,
     Map<String, dynamic> detail,
   ) {
-    return _previousReleasedDriver(detail)?['driverDisplayName']?.toString().trim() ??
+    return _previousReleasedDriver(
+          detail,
+        )?['driverDisplayName']?.toString().trim() ??
         '';
   }
 
@@ -1243,11 +1225,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       ),
       AppUi.summaryRow(
         label: l10n.t('admin_detail_recommended_action'),
-        value: AdminOperationsUx.nextActionLabel(
-          l10n,
-          operations,
-          detail,
-        ),
+        value: AdminOperationsUx.nextActionLabel(l10n, operations, detail),
       ),
     ];
 
@@ -1351,13 +1329,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         icon: Icons.person_add_alt,
         loading: _submitting,
         onPressed: _submitting ? null : _assign,
-      );
-    }
-    if (primaryCta == 'OPEN_CHAT') {
-      return AppUi.primaryButton(
-        label: l10n.t('admin_ops_cta_open_chat'),
-        icon: Icons.chat_bubble_outline,
-        onPressed: _openChat,
       );
     }
     if (primaryCta == 'CONFIRM_SETTLEMENT' && _canConfirmSettlement) {
@@ -2051,36 +2022,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     );
   }
 
-  Widget _chatSection(AppLocalizations l10n, Map<String, dynamic> detail) {
-    final operations = detail['operations'] as Map?;
-    final unread = operations?['adminUnreadCount'] as int? ?? 0;
-    return AppUi.adminDetailSection(
-      context: context,
-      title: l10n.t('admin_detail_chat'),
-      child: Column(
-        children: [
-          AppUi.summaryRow(
-            label: l10n.t('admin_detail_customer_chat'),
-            value: unread > 0 ? '$unread' : '-',
-          ),
-          AppUi.summaryRow(
-            label: l10n.t('admin_detail_driver_chat'),
-            value: detail['activeAssignment'] is Map
-                ? l10n.t('admin_detail_available')
-                : '-',
-          ),
-          const SizedBox(height: AppTokens.spaceSm),
-          AppUi.secondaryButton(
-            label: l10n.t('admin_ops_cta_open_chat'),
-            icon: Icons.chat_bubble_outline,
-            onPressed: _openChat,
-            fullWidth: true,
-          ),
-        ],
-      ),
-    );
-  }
-
   List<Map<String, dynamic>> _statusHistory(Map<String, dynamic> detail) {
     return (detail['statusHistory'] as List<dynamic>? ?? [])
         .map((e) => Map<String, dynamic>.from(e as Map))
@@ -2215,6 +2156,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     return plate == null || plate.isEmpty ? '-' : plate;
   }
 
+  // ignore: unused_element
   String _vehicleSummary(Map<String, dynamic> vehicle) {
     return [
       vehicle['typeCode'],

@@ -20,7 +20,6 @@ const ChargePolicyAdminService = require("../services/chargePolicyAdmin.service"
 const PricingAdminService = require("../services/pricingAdmin.service");
 const BookingRepository = require("../repositories/booking.repository");
 const AdminDashboardRepository = require("../repositories/adminDashboard.repository");
-const ChatRepository = require("../repositories/chat.repository");
 const BookingNumberService = require("../services/bookingNumber.service");
 const BookingService = require("../services/booking.service");
 const GuestBookingLookupService = require("../services/guestBookingLookup.service");
@@ -60,7 +59,6 @@ const SupportInquiryRepository = require("../repositories/supportInquiry.reposit
 const AdminFlightMonitorService = require("../services/adminFlightMonitor.service");
 const FlightSyncWorker = require("../workers/flightSync.worker");
 const FlightSyncSchedulerService = require("../services/flightSyncScheduler.service");
-const ChatService = require("../services/chat.service");
 const DriverApplicationService = require("../services/driverApplication.service");
 const DriverProfileService = require("../services/driverProfile.service");
 const DriverVehicleService = require("../services/driverVehicle.service");
@@ -193,7 +191,6 @@ container.register(
   "adminDashboardRepository",
   () => new AdminDashboardRepository(),
 );
-container.register("chatRepository", () => new ChatRepository());
 container.register("bookingNumberService", () => new BookingNumberService());
 container.register(
   "bookingStatusService",
@@ -211,7 +208,6 @@ container.register(
     new BookingService(
       database.pool,
       c.get("bookingRepository"),
-      c.get("chatRepository"),
       c.get("bookingNumberService"),
       c.get("pricingService"),
       c.get("vehicleRecommendationService"),
@@ -285,7 +281,6 @@ container.register(
       c.get("bookingRepository"),
       c.get("driverRepository"),
       () => c.get("notificationService"),
-      c.get("chatRepository"),
       c.get("commissionSettlementService"),
       c.get("urgentNegotiationRepository"),
     ),
@@ -299,7 +294,6 @@ container.register(
       c.get("driverRepository"),
       c.get("driverJobService"),
       c.get("notificationRepository"),
-      c.get("chatRepository"),
       c.get("commissionSettlementService"),
       c.get("urgentNegotiationRepository"),
       c.get("bookingAssignmentReopenService"),
@@ -379,7 +373,6 @@ container.register(
       c.get("outboxProcessor"),
       c.get("driverCandidateScoringService"),
       c.get("adminQrReissueService"),
-      c.get("chatService"),
       c.get("reviewRepository"),
       c.get("bookingAssignmentReopenService"),
       c.get("driverCallService"),
@@ -440,19 +433,6 @@ container.register(
   (c) =>
     new OutboxProcessor(c.get("outboxRepository"), () =>
       c.get("notificationService"),
-    ),
-);
-container.register(
-  "chatService",
-  (c) =>
-    new ChatService(
-      database.pool,
-      c.get("chatRepository"),
-      c.get("bookingRepository"),
-      c.get("driverRepository"),
-      c.get("userRepository"),
-      c.get("outboxRepository"),
-      c.get("outboxProcessor"),
     ),
 );
 container.register(
@@ -559,7 +539,6 @@ container.register(
       c.get("driverJobService"),
       c.get("bookingRepository"),
       c.get("bookingService"),
-      c.get("chatService"),
     ),
 );
 container.register(
