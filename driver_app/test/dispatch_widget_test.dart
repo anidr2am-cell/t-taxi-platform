@@ -176,7 +176,7 @@ void main() {
 
     expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
     expect(find.text('Pattaya Hotel'), findsOneWidget);
-    expect(find.text('2026-07-27 10:30'), findsOneWidget);
+    expect(find.textContaining('출발 요청시간 : 2026-07-27 10:30'), findsOneWidget);
     expect(find.text(_ko.vehicleExactMatch('EXACT')), findsOneWidget);
     expect(
       find.byKey(const Key('openCallGate-TX209912319998')),
@@ -671,7 +671,7 @@ void main() {
       ),
     );
 
-    expect(find.text(_ko.bookingCreatedAt(7, 12, 15, '30')), findsOneWidget);
+    expect(find.text('예약시간 : 2026-07-12 15:30'), findsOneWidget);
     expect(
       find.byKey(const Key('openCallCreatedAt-TX209912319998')),
       findsOneWidget,
@@ -682,7 +682,7 @@ void main() {
   testWidgets('open call hides createdAt label when missing', (tester) async {
     await pumpOpenCalls(tester, onlineReader());
 
-    expect(find.textContaining('예약:'), findsNothing);
+    expect(find.textContaining('예약시간 :'), findsNothing);
     expect(
       find.byKey(const Key('openCallCreatedAt-TX209912319998')),
       findsOneWidget,
@@ -729,15 +729,28 @@ void _expectOpenCallAddressStyle(WidgetTester tester, String text) {
   expect(widget.style?.color, isNull);
 }
 
-void _expectOpenCallPickupTimeStyle(WidgetTester tester, String text) {
-  final finder = find.text(text);
-  expect(finder, findsOneWidget);
-  final widget = tester.widget<Text>(finder);
-  expect(widget.style?.fontWeight, FontWeight.bold);
-  expect(
-    widget.style?.fontSize,
-    Theme.of(tester.element(finder)).textTheme.titleMedium?.fontSize,
+void _expectOpenCallPickupTimeStyle(WidgetTester tester, String timeText) {
+  final finder = find.byWidgetPredicate(
+    (widget) =>
+        widget is RichText &&
+        widget.text.toPlainText() == '출발 요청시간 : $timeText',
   );
+  expect(finder, findsOneWidget);
+
+  TextSpan? boldValueSpan;
+  void walk(InlineSpan span) {
+    if (span is! TextSpan) return;
+    if (span.text == timeText && span.style?.fontWeight == FontWeight.bold) {
+      boldValueSpan = span;
+    }
+    for (final child in span.children ?? const <InlineSpan>[]) {
+      walk(child);
+    }
+  }
+
+  walk(tester.widget<RichText>(finder).text);
+  expect(boldValueSpan, isNotNull);
+  expect(boldValueSpan!.style?.fontWeight, FontWeight.bold);
 }
 
 class _OpenCallsRefreshHarness extends StatefulWidget {

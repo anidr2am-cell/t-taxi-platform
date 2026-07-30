@@ -100,7 +100,7 @@ void main() {
     expect(find.byKey(const Key('bookingListSuccess')), findsOneWidget);
     expect(find.text('TX209912319999'), findsOneWidget);
     expect(find.text('기사 배정'), findsOneWidget);
-    expect(find.text('2026-07-18 10:15'), findsOneWidget);
+    expect(find.textContaining('출발 요청시간 : 2026-07-18 10:15'), findsOneWidget);
     expect(find.text('대기 기준 2026-07-18 09:45'), findsOneWidget);
     expect(
       find.text('Suvarnabhumi Airport\n999 Nong Prue, Bang Phli'),

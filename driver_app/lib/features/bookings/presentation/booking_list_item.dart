@@ -81,10 +81,24 @@ class BookingListItem extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    scheduledPickup ?? l10n.noTripScheduleInfo,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  child: Text.rich(
+                    TextSpan(
+                      style: Theme.of(context).textTheme.titleMedium,
+                      children: [
+                        TextSpan(
+                          text: '출발 요청시간 : ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.normal,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                        ),
+                        TextSpan(
+                          text: scheduledPickup ?? l10n.noTripScheduleInfo,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                 ),

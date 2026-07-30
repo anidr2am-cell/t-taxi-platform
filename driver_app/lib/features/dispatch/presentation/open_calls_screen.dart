@@ -862,12 +862,7 @@ class _UrgentCallCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    scheduled,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: _PickupRequestedTimeTitle(timeText: scheduled),
                 ),
                 Chip(label: Text(l10n.urgentChip)),
               ],
@@ -1007,11 +1002,9 @@ class _OpenCallCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      scheduled ?? '${call.pickupDate} ${call.pickupTime}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: _PickupRequestedTimeTitle(
+                      timeText:
+                          scheduled ?? '${call.pickupDate} ${call.pickupTime}',
                     ),
                   ),
                   Chip(
@@ -1065,6 +1058,35 @@ class _OpenCallCard extends StatelessWidget {
   }
 }
 
+class _PickupRequestedTimeTitle extends StatelessWidget {
+  const _PickupRequestedTimeTitle({required this.timeText});
+
+  final String timeText;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text.rich(
+      TextSpan(
+        style: theme.textTheme.titleMedium,
+        children: [
+          TextSpan(
+            text: '출발 요청시간 : ',
+            style: TextStyle(
+              fontWeight: FontWeight.normal,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          TextSpan(
+            text: timeText,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _BookingCreatedAtText extends StatelessWidget {
   const _BookingCreatedAtText({super.key, required this.createdAt});
 
@@ -1072,13 +1094,12 @@ class _BookingCreatedAtText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final label = formatBookingCreatedAtLabel(l10n, createdAt);
-    if (label == null) return const SizedBox.shrink();
+    final formatted = formatBookingDateTime(createdAt);
+    if (formatted == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Text(
-        label,
+        '예약시간 : $formatted',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
