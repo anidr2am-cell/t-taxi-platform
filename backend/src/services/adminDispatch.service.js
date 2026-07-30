@@ -174,7 +174,7 @@ class AdminDispatchService {
         archivedBy: row.archived_by ?? null,
         reason: row.archive_reason ?? null,
       },
-      createdAt: row.created_at,
+      createdAt: formatServiceDateTimeIso(row.created_at),
       operations,
       primaryCta: operations.primaryCta,
       reassignment: row.last_driver_release_at
@@ -269,6 +269,26 @@ class AdminDispatchService {
     } catch {
       return null;
     }
+  }
+
+  normalizeLocationText(value) {
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+  }
+
+  locationNamesFromMetadata(metadata) {
+    const parsed = metadata ?? {};
+    const originLocation = parsed.originLocation ?? {};
+    const destinationLocation = parsed.destinationLocation ?? {};
+    return {
+      origin: {
+        name: this.normalizeLocationText(originLocation.name),
+        nameTh: this.normalizeLocationText(originLocation.nameTh),
+      },
+      destination: {
+        name: this.normalizeLocationText(destinationLocation.name),
+        nameTh: this.normalizeLocationText(destinationLocation.nameTh),
+      },
+    };
   }
 
   mapAssignmentVehicle(row) {
@@ -368,6 +388,7 @@ class AdminDispatchService {
     );
     const activeAssignment = assignments.find((a) => a.is_active === 1) ?? null;
     const metadata = this.parseMetadata(row.metadata);
+    const locationNames = this.locationNamesFromMetadata(metadata);
     const reviewRow = this.reviewRepository
       ? await this.reviewRepository.findByBookingId(row.id)
       : null;
@@ -420,12 +441,16 @@ class AdminDispatchService {
       scheduledPickupAt: formatServiceDateTimeIso(row.scheduled_pickup_at),
       route: {
         origin: {
+          name: locationNames.origin.name,
+          nameTh: locationNames.origin.nameTh,
           address: row.origin_address,
           placeId: row.origin_place_id,
           lat: row.origin_lat,
           lng: row.origin_lng,
         },
         destination: {
+          name: locationNames.destination.name,
+          nameTh: locationNames.destination.nameTh,
           address: row.destination_address,
           placeId: row.destination_place_id,
           lat: row.destination_lat,
@@ -532,8 +557,8 @@ class AdminDispatchService {
           unavailableReason: null,
         },
       },
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: formatServiceDateTimeIso(row.created_at),
+      updatedAt: formatServiceDateTimeIso(row.updated_at),
     };
   }
 
