@@ -57,15 +57,27 @@ class ActiveDriverBooking {
   const ActiveDriverBooking({
     required this.bookingNumber,
     required this.status,
+    this.originName,
+    this.originAddress,
+    this.destinationName,
+    this.destinationAddress,
   });
 
   final String bookingNumber;
   final String status;
+  final String? originName;
+  final String? originAddress;
+  final String? destinationName;
+  final String? destinationAddress;
 
   factory ActiveDriverBooking.fromJson(Map<String, dynamic> json) {
     return ActiveDriverBooking(
       bookingNumber: json['bookingNumber'] as String? ?? '',
       status: json['status'] as String? ?? '',
+      originName: json['originName'] as String?,
+      originAddress: json['originAddress'] as String?,
+      destinationName: json['destinationName'] as String?,
+      destinationAddress: json['destinationAddress'] as String?,
     );
   }
 }

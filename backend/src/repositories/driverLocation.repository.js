@@ -96,7 +96,10 @@ class DriverLocationRepository {
           dv.plate_number AS vehicle_plate,
           dv.model_name AS vehicle_model,
           b.booking_number,
-          b.status AS booking_status
+          b.status AS booking_status,
+          b.origin_address,
+          b.destination_address,
+          b.metadata
         FROM drivers d
         LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id
           AND dv.is_primary = 1

@@ -494,6 +494,26 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                               fontSize: 13,
                                             ),
                                           ),
+                                          const SizedBox(height: 2),
+                                          _MonitorActiveBookingRouteLine(
+                                            label: l10n.t('origin'),
+                                            name: location
+                                                .activeBooking!
+                                                .originName,
+                                            address: location
+                                                .activeBooking!
+                                                .originAddress,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          _MonitorActiveBookingRouteLine(
+                                            label: l10n.t('destination'),
+                                            name: location
+                                                .activeBooking!
+                                                .destinationName,
+                                            address: location
+                                                .activeBooking!
+                                                .destinationAddress,
+                                          ),
                                         ],
                                         if (location?.lastSeenAt != null) ...[
                                           const SizedBox(height: 4),
@@ -552,6 +572,57 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                         ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const _monitorLocationHighlightColor = Color(0xFF006A60);
+
+class _MonitorActiveBookingRouteLine extends StatelessWidget {
+  const _MonitorActiveBookingRouteLine({
+    required this.label,
+    required this.name,
+    required this.address,
+  });
+
+  final String label;
+  final String? name;
+  final String? address;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayName = name?.trim();
+    final displayAddress = address?.trim();
+    final hasName = displayName != null && displayName.isNotEmpty;
+    final value = hasName
+        ? displayName!
+        : (displayAddress != null && displayAddress.isNotEmpty
+            ? displayAddress
+            : null);
+    if (value == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label : ',
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+          TextSpan(
+            text: value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: hasName ? FontWeight.w700 : FontWeight.normal,
+              color: hasName ? _monitorLocationHighlightColor : null,
             ),
           ),
         ],

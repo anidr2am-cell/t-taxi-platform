@@ -91,6 +91,55 @@ class DriverLocationService {
     return parts.length ? parts.join(' / ') : null;
   }
 
+  parseBookingMetadata(metadata) {
+    if (!metadata) return {};
+    if (typeof metadata === 'object') return metadata;
+    try {
+      const parsed = JSON.parse(metadata);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  normalizeAddress(address) {
+    return typeof address === 'string' && address.trim() ? address.trim() : null;
+  }
+
+  resolveLocationDisplayName(name, nameTh, address) {
+    const normalizedNameTh = typeof nameTh === 'string' && nameTh.trim() ? nameTh.trim() : null;
+    if (normalizedNameTh) return normalizedNameTh;
+    const normalizedName = typeof name === 'string' && name.trim() ? name.trim() : null;
+    const normalizedAddress = this.normalizeAddress(address);
+    if (normalizedName && normalizedName !== normalizedAddress) return normalizedName;
+    return null;
+  }
+
+  mapActiveBooking(row) {
+    if (!row.booking_number) return null;
+    const metadata = this.parseBookingMetadata(row.metadata);
+    const originLocation = metadata.originLocation ?? {};
+    const destinationLocation = metadata.destinationLocation ?? {};
+    const originAddress = this.normalizeAddress(row.origin_address);
+    const destinationAddress = this.normalizeAddress(row.destination_address);
+    return {
+      bookingNumber: row.booking_number,
+      status: row.booking_status,
+      originName: this.resolveLocationDisplayName(
+        originLocation.name,
+        originLocation.nameTh,
+        originAddress,
+      ),
+      originAddress,
+      destinationName: this.resolveLocationDisplayName(
+        destinationLocation.name,
+        destinationLocation.nameTh,
+        destinationAddress,
+      ),
+      destinationAddress,
+    };
+  }
+
   mapLocationRow(row, { includeBooking = false } = {}) {
     if (!row || row.current_lat == null || row.current_lng == null) return null;
     const mapped = {
@@ -108,9 +157,7 @@ class DriverLocationService {
       stale: this.isStale(row.location_updated_at),
     };
     if (includeBooking) {
-      mapped.activeBooking = row.booking_number
-        ? { bookingNumber: row.booking_number, status: row.booking_status }
-        : null;
+      mapped.activeBooking = this.mapActiveBooking(row);
     }
     return mapped;
   }
