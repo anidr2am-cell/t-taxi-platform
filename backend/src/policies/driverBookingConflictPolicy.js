@@ -2,7 +2,7 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 
-const PICKUP_CONFLICT_WINDOW_MS = 3 * 60 * 60 * 1000;
+const PICKUP_CONFLICT_MIN_GAP_MS = 60 * 60 * 1000;
 
 function assertNoPickupTimeConflict(existingRows, targetPickupAt, { excludeBookingId = null } = {}) {
   if (!targetPickupAt) {
@@ -37,7 +37,7 @@ function assertNoPickupTimeConflict(existingRows, targetPickupAt, { excludeBooki
       });
     }
     const diff = Math.abs(existingMs - targetMs);
-    if (diff < PICKUP_CONFLICT_WINDOW_MS) {
+    if (diff <= PICKUP_CONFLICT_MIN_GAP_MS) {
       throw new AppError('Another assigned job is too close to this pickup time', {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_BOOKING_TIME_CONFLICT,
@@ -47,6 +47,6 @@ function assertNoPickupTimeConflict(existingRows, targetPickupAt, { excludeBooki
 }
 
 module.exports = {
-  PICKUP_CONFLICT_WINDOW_MS,
+  PICKUP_CONFLICT_MIN_GAP_MS,
   assertNoPickupTimeConflict,
 };

@@ -683,12 +683,12 @@ test('claimOpenCall atomically creates assignment and moves booking to DRIVER_AS
   setRealtimeIo(null);
 });
 
-test('claimOpenCall allows pickup times exactly 3 hours apart', async () => {
+test('claimOpenCall allows pickup times more than 60 minutes apart', async () => {
   const { service, conn, calls } = createHarness({
     conflictRows: [{
       id: 5,
       booking_number: 'TX202607120001',
-      scheduled_pickup_at: '2026-07-13 13:00:00',
+      scheduled_pickup_at: '2026-07-13 11:01:00',
     }],
     booking: { scheduled_pickup_at: '2026-07-13 10:00:00' },
   });
@@ -698,6 +698,22 @@ test('claimOpenCall allows pickup times exactly 3 hours apart', async () => {
   assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
   assert.equal(conn.committed, true);
   assert.equal(calls.conflictLookups.length, 1);
+});
+
+test('claimOpenCall allows pickup times 90 minutes apart under simplified conflict rule', async () => {
+  const { service, conn } = createHarness({
+    conflictRows: [{
+      id: 5,
+      booking_number: 'TX202607120001',
+      scheduled_pickup_at: '2026-07-13 11:30:00',
+    }],
+    booking: { scheduled_pickup_at: '2026-07-13 10:00:00' },
+  });
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+
+  assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
+  assert.equal(conn.committed, true);
 });
 
 test('claimOpenCall rejects pickup conflict even when hasActiveJob is false', async () => {

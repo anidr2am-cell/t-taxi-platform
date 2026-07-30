@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const {
   assertNoPickupTimeConflict,
-  PICKUP_CONFLICT_WINDOW_MS,
+  PICKUP_CONFLICT_MIN_GAP_MS,
 } = require('../src/policies/driverBookingConflictPolicy');
 
 function expectConflict(fn) {
@@ -14,67 +14,74 @@ function expectConflict(fn) {
   );
 }
 
-test('PICKUP_CONFLICT_WINDOW_MS is exactly 3 hours', () => {
-  assert.equal(PICKUP_CONFLICT_WINDOW_MS, 3 * 60 * 60 * 1000);
+test('PICKUP_CONFLICT_MIN_GAP_MS is exactly 60 minutes', () => {
+  assert.equal(PICKUP_CONFLICT_MIN_GAP_MS, 60 * 60 * 1000);
 });
 
-test('blocks 10:00 existing vs 12:59 new pickup', () => {
+test('blocks when pickup times are exactly 60 minutes apart', () => {
   expectConflict(() => assertNoPickupTimeConflict(
     [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
-    '2026-07-13 12:59:00',
+    '2026-07-13 11:00:00',
   ));
 });
 
-test('allows 10:00 existing vs 13:00 new pickup', () => {
+test('allows when pickup times are exactly 61 minutes apart', () => {
   assert.doesNotThrow(() => assertNoPickupTimeConflict(
     [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
-    '2026-07-13 13:00:00',
+    '2026-07-13 11:01:00',
   ));
 });
 
-test('allows 10:00 existing vs 13:01 new pickup', () => {
-  assert.doesNotThrow(() => assertNoPickupTimeConflict(
+test('blocks when pickup times are at the same instant', () => {
+  expectConflict(() => assertNoPickupTimeConflict(
     [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
-    '2026-07-13 13:01:00',
+    '2026-07-13 10:00:00',
   ));
 });
 
-test('blocks 15:00 existing vs 13:00 new pickup', () => {
+test('blocks when new pickup is earlier but within 60 minutes', () => {
   expectConflict(() => assertNoPickupTimeConflict(
     [{ id: 1, scheduled_pickup_at: '2026-07-13 15:00:00' }],
-    '2026-07-13 13:00:00',
+    '2026-07-13 14:01:00',
   ));
 });
 
-test('allows 15:00 existing vs 12:00 new pickup', () => {
+test('allows when new pickup is earlier and more than 60 minutes apart', () => {
   assert.doesNotThrow(() => assertNoPickupTimeConflict(
     [{ id: 1, scheduled_pickup_at: '2026-07-13 15:00:00' }],
-    '2026-07-13 12:00:00',
+    '2026-07-13 13:59:00',
   ));
 });
 
-test('allows 15:00 existing vs 11:30 new pickup', () => {
+test('allows when pickup times are 90 minutes apart under the simplified rule', () => {
   assert.doesNotThrow(() => assertNoPickupTimeConflict(
-    [{ id: 1, scheduled_pickup_at: '2026-07-13 15:00:00' }],
+    [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
     '2026-07-13 11:30:00',
   ));
 });
 
-test('blocks when any of multiple future assignments is under 3 hours apart', () => {
+test('allows when pickup times are 3 hours apart under the simplified rule', () => {
+  assert.doesNotThrow(() => assertNoPickupTimeConflict(
+    [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
+    '2026-07-13 13:00:00',
+  ));
+});
+
+test('blocks when any of multiple assignments is within 60 minutes', () => {
   expectConflict(() => assertNoPickupTimeConflict(
     [
       { id: 1, scheduled_pickup_at: '2026-07-13 08:00:00' },
-      { id: 2, scheduled_pickup_at: '2026-07-13 12:30:00' },
+      { id: 2, scheduled_pickup_at: '2026-07-13 10:30:00' },
     ],
     '2026-07-13 10:00:00',
   ));
 });
 
-test('allows when all assignments are at least 3 hours apart', () => {
+test('allows when all assignments are more than 60 minutes apart', () => {
   assert.doesNotThrow(() => assertNoPickupTimeConflict(
     [
-      { id: 1, scheduled_pickup_at: '2026-07-13 06:00:00' },
-      { id: 2, scheduled_pickup_at: '2026-07-13 14:00:00' },
+      { id: 1, scheduled_pickup_at: '2026-07-13 08:00:00' },
+      { id: 2, scheduled_pickup_at: '2026-07-13 12:00:00' },
     ],
     '2026-07-13 10:00:00',
   ));
@@ -86,7 +93,7 @@ test('allows when no active assignment rows are returned', () => {
 
 test('ignores excluded booking id during comparison', () => {
   assert.doesNotThrow(() => assertNoPickupTimeConflict(
-    [{ id: 10, scheduled_pickup_at: '2026-07-13 11:00:00' }],
+    [{ id: 10, scheduled_pickup_at: '2026-07-13 10:30:00' }],
     '2026-07-13 10:00:00',
     { excludeBookingId: 10 },
   ));
