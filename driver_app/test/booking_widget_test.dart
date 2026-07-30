@@ -244,7 +244,10 @@ void main() {
     await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
 
-    expect(find.text('2026-07-18 09:30'), findsOneWidget);
+    expect(
+      find.textContaining('출발 요청시간 : 2026-07-18 09:30'),
+      findsOneWidget,
+    );
     expect(find.text('예약: 7월 12일 15시 30분'), findsOneWidget);
     expect(find.byKey(const Key('bookingCreatedAtLabel')), findsOneWidget);
   });
@@ -255,7 +258,10 @@ void main() {
     await tester.tap(find.byKey(const Key('booking-TX209912319999')));
     await tester.pumpAndSettle();
 
-    expect(find.text('2026-07-18 09:30'), findsOneWidget);
+    expect(
+      find.textContaining('출발 요청시간 : 2026-07-18 09:30'),
+      findsOneWidget,
+    );
     expect(find.textContaining('예약:'), findsNothing);
     expect(find.byKey(const Key('bookingCreatedAtLabel')), findsNothing);
   });

@@ -39,18 +39,23 @@ class FcmTokenService {
     required NotificationDataSource notificationApi,
     required TokenStorage storage,
     PackageInfoProvider? packageInfoProvider,
+    Duration registrationRetryCooldown = const Duration(minutes: 5),
   }) : _messaging = messaging,
        _notificationApi = notificationApi,
        _storage = storage,
        _packageInfoProvider =
-           packageInfoProvider ?? PackageInfo.fromPlatform;
+           packageInfoProvider ?? PackageInfo.fromPlatform,
+       _registrationRetryCooldown = registrationRetryCooldown;
 
   final FcmMessagingClient _messaging;
   final NotificationDataSource _notificationApi;
   final TokenStorage _storage;
   final PackageInfoProvider _packageInfoProvider;
+  final Duration _registrationRetryCooldown;
   StreamSubscription<String>? _tokenRefreshSubscription;
   Future<void>? _registerInFlight;
+  String? _lastRegisteredToken;
+  DateTime? _lastRegistrationAttemptAt;
 
   Future<void> registerIfNeeded() {
     final active = _registerInFlight;
@@ -67,15 +72,30 @@ class FcmTokenService {
   Future<void> _registerIfNeeded() async {
     if (await _storage.read() == null) return;
 
+    _ensureTokenRefreshListener();
+
     try {
       await _messaging.requestPermission();
       final token = await _messaging.getToken();
       if (token == null || token.isEmpty) return;
+      if (await _shouldSkipRegistration(token)) return;
+
+      _lastRegistrationAttemptAt = DateTime.now();
       await _registerToken(token);
-      _ensureTokenRefreshListener();
     } catch (error, stackTrace) {
       _logFailure('FCM token registration failed', error, stackTrace);
     }
+  }
+
+  Future<bool> _shouldSkipRegistration(String token) async {
+    if (_lastRegisteredToken != token) return false;
+
+    final deviceId = await _storage.readNotificationDeviceId();
+    if (deviceId != null) return true;
+
+    final lastAttempt = _lastRegistrationAttemptAt;
+    if (lastAttempt == null) return false;
+    return DateTime.now().difference(lastAttempt) < _registrationRetryCooldown;
   }
 
   void _ensureTokenRefreshListener() {
@@ -83,7 +103,10 @@ class FcmTokenService {
     _tokenRefreshSubscription = _messaging.onTokenRefresh.listen(
       (token) async {
         if (token.isEmpty) return;
+        if (await _storage.read() == null) return;
         try {
+          if (await _shouldSkipRegistration(token)) return;
+          _lastRegistrationAttemptAt = DateTime.now();
           await _registerToken(token);
         } catch (error, stackTrace) {
           _logFailure('FCM token refresh registration failed', error, stackTrace);
@@ -103,6 +126,7 @@ class FcmTokenService {
       appVersion: appVersion.isEmpty ? null : appVersion,
     );
     await _storage.writeNotificationDeviceId(registered.deviceId);
+    _lastRegisteredToken = token;
   }
 
   Future<void> deactivateStoredDevice({required bool clearStoredId}) async {
@@ -113,6 +137,8 @@ class FcmTokenService {
     } catch (error, stackTrace) {
       _logFailure('FCM device deactivation failed', error, stackTrace);
     } finally {
+      _lastRegisteredToken = null;
+      _lastRegistrationAttemptAt = null;
       if (clearStoredId) {
         await _storage.clearNotificationDeviceId();
       }

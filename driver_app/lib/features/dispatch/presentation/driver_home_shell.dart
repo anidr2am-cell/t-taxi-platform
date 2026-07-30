@@ -44,7 +44,8 @@ class DriverHomeShell extends StatefulWidget {
   State<DriverHomeShell> createState() => _DriverHomeShellState();
 }
 
-class _DriverHomeShellState extends State<DriverHomeShell> {
+class _DriverHomeShellState extends State<DriverHomeShell>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _tripsVisited = false;
   bool _settlementVisited = false;
@@ -64,14 +65,31 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_refreshSettlementBadge());
     unawaited(_initializeFcm());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.fcmMessageService?.detachShellNavigator();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshFcmRegistration());
+    }
+  }
+
+  Future<void> _refreshFcmRegistration() async {
+    try {
+      await widget.fcmTokenService?.registerIfNeeded();
+    } catch (_) {
+      // FCM re-registration on resume must not block the main driver workflow.
+    }
   }
 
   Future<void> _initializeFcm() async {

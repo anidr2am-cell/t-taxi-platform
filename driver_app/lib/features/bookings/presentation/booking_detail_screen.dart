@@ -783,9 +783,28 @@ class _DetailBody extends StatelessWidget {
         _Section(
           title: l10n.sectionTripInfo,
           children: [
-            _Info(
-              label: l10n.labelPickup,
-              value: '${booking.pickupDate} ${booking.pickupTime}',
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text.rich(
+                TextSpan(
+                  style: Theme.of(context).textTheme.titleMedium,
+                  children: [
+                    TextSpan(
+                      text: '출발 요청시간 : ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.normal,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    TextSpan(
+                      text:
+                          formatBookingDateTime(booking.scheduledPickupAt) ??
+                          '${booking.pickupDate} ${booking.pickupTime}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
             ),
             if (formatBookingCreatedAtLabel(l10n, booking.createdAt)
                 case final label?)

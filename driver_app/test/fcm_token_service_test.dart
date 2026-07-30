@@ -62,10 +62,80 @@ void main() {
       notificationApi: notificationApi,
       storage: storage,
       packageInfoProvider: () async => fakePackageInfo(),
+      registrationRetryCooldown: const Duration(minutes: 5),
     );
 
     await expectLater(service.registerIfNeeded(), completes);
     expect(storage.notificationDeviceIdWriteCount, 0);
+    expect(notificationApi.registerCount, 1);
+
+    await messaging.close();
+    service.dispose();
+  });
+
+  test('token refresh listener stays active after initial registration failure', () async {
+    final messaging = FakeFcmMessagingClient();
+    final notificationApi = FakeNotificationDataSource()
+      ..registerError = const ApiException(ApiFailureKind.unavailable);
+    final storage = FakeTokenStorage(driverSession().tokens);
+    final service = FcmTokenService(
+      messaging: messaging,
+      notificationApi: notificationApi,
+      storage: storage,
+      packageInfoProvider: () async => fakePackageInfo(),
+      registrationRetryCooldown: Duration.zero,
+    );
+
+    await service.registerIfNeeded();
+    notificationApi.registerError = null;
+    messaging.emitTokenRefresh('refreshed-after-failure');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(notificationApi.registerCount, 2);
+    expect(notificationApi.lastRegisteredToken, 'refreshed-after-failure');
+
+    await messaging.close();
+    service.dispose();
+  });
+
+  test('registerIfNeeded skips duplicate registration for unchanged token', () async {
+    final messaging = FakeFcmMessagingClient();
+    final notificationApi = FakeNotificationDataSource();
+    final storage = FakeTokenStorage(driverSession().tokens);
+    final service = FcmTokenService(
+      messaging: messaging,
+      notificationApi: notificationApi,
+      storage: storage,
+      packageInfoProvider: () async => fakePackageInfo(),
+    );
+
+    await service.registerIfNeeded();
+    await service.registerIfNeeded();
+
+    expect(notificationApi.registerCount, 1);
+    expect(messaging.getTokenCount, 2);
+
+    await messaging.close();
+    service.dispose();
+  });
+
+  test('registerIfNeeded re-registers when FCM token changes on resume', () async {
+    final messaging = FakeFcmMessagingClient();
+    final notificationApi = FakeNotificationDataSource();
+    final storage = FakeTokenStorage(driverSession().tokens);
+    final service = FcmTokenService(
+      messaging: messaging,
+      notificationApi: notificationApi,
+      storage: storage,
+      packageInfoProvider: () async => fakePackageInfo(),
+    );
+
+    await service.registerIfNeeded();
+    messaging.token = 'rotated-fcm-token';
+    await service.registerIfNeeded();
+
+    expect(notificationApi.registerCount, 2);
+    expect(notificationApi.lastRegisteredToken, 'rotated-fcm-token');
 
     await messaging.close();
     service.dispose();

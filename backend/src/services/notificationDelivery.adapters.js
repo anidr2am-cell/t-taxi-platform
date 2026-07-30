@@ -165,6 +165,9 @@ class FcmNotificationAdapter {
         notificationType: notification.type,
         bookingNumber: String(notification.booking_number || notification.payload?.bookingNumber || ''),
       },
+      android: {
+        priority: 'high',
+      },
     };
   }
 
