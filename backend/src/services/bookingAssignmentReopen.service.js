@@ -34,7 +34,10 @@ class BookingAssignmentReopenService {
     const candidates = await this.driverRepository.listEligibleForOpenBooking(
       conn,
       booking.vehicle_type_id,
-      { excludeReleasedBookingId: booking.id },
+      {
+        excludeReleasedBookingId: booking.id,
+        scheduledPickupAt: booking.scheduled_pickup_at,
+      },
     );
     const drivers = [];
     for (const candidate of candidates) {

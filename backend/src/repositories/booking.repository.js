@@ -1,4 +1,5 @@
 const database = require('../config/database');
+const { PICKUP_CONFLICT_MIN_GAP_MINUTES } = require('../policies/driverBookingConflictPolicy');
 const {
   driverVehicleCoversBookingExistsSql,
   exactVehicleMatchExistsSql,
@@ -879,10 +880,15 @@ class BookingRepository {
               AND own_bda.deleted_at IS NULL
               AND own_bda.status IN ('ASSIGNED', 'ACCEPTED')
               AND own_b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+              AND (
+                own_b.scheduled_pickup_at IS NULL
+                OR b.scheduled_pickup_at IS NULL
+                OR ABS(TIMESTAMPDIFF(MINUTE, own_b.scheduled_pickup_at, b.scheduled_pickup_at)) <= ?
+              )
           )
         ORDER BY b.created_at DESC, b.scheduled_pickup_at ASC, b.booking_number ASC
       `,
-      [driverUserId],
+      [driverUserId, PICKUP_CONFLICT_MIN_GAP_MINUTES],
     );
     return rows;
   }

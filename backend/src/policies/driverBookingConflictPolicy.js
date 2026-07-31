@@ -46,7 +46,10 @@ function assertNoPickupTimeConflict(existingRows, targetPickupAt, { excludeBooki
   }
 }
 
+const PICKUP_CONFLICT_MIN_GAP_MINUTES = PICKUP_CONFLICT_MIN_GAP_MS / (60 * 1000);
+
 module.exports = {
   PICKUP_CONFLICT_MIN_GAP_MS,
+  PICKUP_CONFLICT_MIN_GAP_MINUTES,
   assertNoPickupTimeConflict,
 };

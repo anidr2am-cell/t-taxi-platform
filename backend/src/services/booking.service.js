@@ -120,7 +120,7 @@ class BookingService {
     };
   }
 
-  async getEligibleDriversForOpenBooking(conn, vehicleTypeId) {
+  async getEligibleDriversForOpenBooking(conn, vehicleTypeId, scheduledPickupAt = null) {
     if (!this.driverRepository) {
       return [];
     }
@@ -128,6 +128,7 @@ class BookingService {
     const candidates = await this.driverRepository.listEligibleForOpenBooking(
       conn,
       vehicleTypeId,
+      { scheduledPickupAt },
     );
     const drivers = [];
     for (const driver of candidates) {
@@ -236,8 +237,13 @@ class BookingService {
 
   async notifyEligibleDriversForOpenBooking(conn, {
     vehicleTypeId,
+    scheduledPickupAt = null,
   }) {
-    const drivers = await this.getEligibleDriversForOpenBooking(conn, vehicleTypeId);
+    const drivers = await this.getEligibleDriversForOpenBooking(
+      conn,
+      vehicleTypeId,
+      scheduledPickupAt,
+    );
     return this.mapEligibleDriversToTargets(drivers);
   }
 
@@ -654,7 +660,11 @@ class BookingService {
         },
       });
 
-      eligibleDrivers = await this.getEligibleDriversForOpenBooking(conn, vehicleType.id);
+      eligibleDrivers = await this.getEligibleDriversForOpenBooking(
+        conn,
+        vehicleType.id,
+        scheduledPickupAt,
+      );
       if (isUrgentRequest) {
         if (!this.urgentNegotiationRepository) {
           throw new AppError('Urgent negotiation service is unavailable', {

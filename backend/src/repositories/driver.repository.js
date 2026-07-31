@@ -1,5 +1,6 @@
 const database = require('../config/database');
 const SCORING = require('../constants/driverAssignmentScoring');
+const { PICKUP_CONFLICT_MIN_GAP_MINUTES } = require('../policies/driverBookingConflictPolicy');
 const { compatibleDriverVehicleIdSubquerySql } = require('../utils/vehicleMatchTier');
 
 class DriverRepository {
@@ -382,6 +383,7 @@ class DriverRepository {
   async listEligibleForOpenBooking(conn, vehicleTypeId, options = {}) {
     const executor = conn ?? this.pool;
     const excludeReleasedBookingId = options.excludeReleasedBookingId ?? null;
+    const scheduledPickupAt = options.scheduledPickupAt ?? null;
     const [rows] = await executor.query(
       `
         SELECT
@@ -417,6 +419,11 @@ class DriverRepository {
               AND bda.deleted_at IS NULL
               AND bda.status IN ('ASSIGNED', 'ACCEPTED')
               AND b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING')
+              AND (
+                ? IS NULL
+                OR b.scheduled_pickup_at IS NULL
+                OR ABS(TIMESTAMPDIFF(MINUTE, b.scheduled_pickup_at, ?)) <= ?
+              )
           )
           AND (
             ? IS NULL
@@ -432,7 +439,14 @@ class DriverRepository {
           )
         ORDER BY d.last_seen_at DESC, d.id ASC
       `,
-      [vehicleTypeId, excludeReleasedBookingId, excludeReleasedBookingId],
+      [
+        vehicleTypeId,
+        scheduledPickupAt,
+        scheduledPickupAt,
+        PICKUP_CONFLICT_MIN_GAP_MINUTES,
+        excludeReleasedBookingId,
+        excludeReleasedBookingId,
+      ],
     );
     return rows;
   }

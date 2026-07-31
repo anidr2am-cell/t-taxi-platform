@@ -18,6 +18,11 @@ test('PICKUP_CONFLICT_MIN_GAP_MS is exactly 60 minutes', () => {
   assert.equal(PICKUP_CONFLICT_MIN_GAP_MS, 60 * 60 * 1000);
 });
 
+test('PICKUP_CONFLICT_MIN_GAP_MINUTES matches policy milliseconds', () => {
+  const { PICKUP_CONFLICT_MIN_GAP_MINUTES } = require('../src/policies/driverBookingConflictPolicy');
+  assert.equal(PICKUP_CONFLICT_MIN_GAP_MINUTES, 60);
+});
+
 test('blocks when pickup times are exactly 60 minutes apart', () => {
   expectConflict(() => assertNoPickupTimeConflict(
     [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
