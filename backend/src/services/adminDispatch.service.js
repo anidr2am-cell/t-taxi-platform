@@ -16,6 +16,7 @@ const {
   ADMIN_RELEASED_REASON_CODE,
 } = require("../constants/bookingAssignmentRelease.constants");
 const { formatServiceDateTimeIso } = require("../utils/serviceDateTime.util");
+const { emitDriverAssignmentReleased } = require("../socket/realtime");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -57,6 +58,7 @@ class AdminDispatchService {
     reviewRepository = null,
     bookingAssignmentReopenService = null,
     driverCallService = null,
+    bookingNoShowPenaltyRepository = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -70,7 +72,19 @@ class AdminDispatchService {
     this.reviewRepository = reviewRepository;
     this.bookingAssignmentReopenService = bookingAssignmentReopenService;
     this.driverCallService = driverCallService;
+    this.bookingNoShowPenaltyRepository = bookingNoShowPenaltyRepository;
     this.adminOperationsService = new AdminOperationsService();
+  }
+
+  mapNoShowPenalty(row) {
+    if (!row) return null;
+    return {
+      amount: Number(row.penalty_amount),
+      currency: row.currency,
+      reason: row.reason,
+      createdByAdminId: row.created_by_admin_id,
+      createdAt: row.created_at,
+    };
   }
 
   actorFromUser(user) {
@@ -403,6 +417,10 @@ class AdminDispatchService {
         }
       : null;
 
+    const noShowPenaltyRow = this.bookingNoShowPenaltyRepository
+      ? await this.bookingNoShowPenaltyRepository.findByBookingId(row.id)
+      : null;
+
     const adminUnreadCount = adminUserId
       ? await this.bookingRepository.countAdminUnreadForBooking(
           adminUserId,
@@ -541,6 +559,7 @@ class AdminDispatchService {
         ? []
         : this.computeAllowedActions(row, activeAssignment),
       customerReview,
+      noShowPenalty: this.mapNoShowPenalty(noShowPenaltyRow),
       devQrTools: this.adminQrReissueService?.buildDevTools(row) ?? {
         qrReissueEnabled: false,
         disabledReason: "QR reissue service unavailable",
@@ -1544,6 +1563,113 @@ class AdminDispatchService {
     }
 
     return response;
+  }
+
+  async processNoShow(bookingNumber, input, user) {
+    const actor = this.actorFromUser(user);
+    if (!this.bookingNoShowPenaltyRepository) {
+      throw new AppError("No-show penalty repository unavailable", {
+        statusCode: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
+      });
+    }
+
+    const conn = await this.pool.getConnection();
+    let transition;
+    let penaltyRow = null;
+    let releasedDriverUserId = null;
+    const releasedAt = new Date().toISOString();
+
+    try {
+      await conn.beginTransaction();
+
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
+      if (!booking) {
+        throw new AppError("Booking not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      const existingPenalty =
+        await this.bookingNoShowPenaltyRepository.findByBookingId(
+          booking.id,
+          conn,
+        );
+      if (existingPenalty || booking.status === BOOKING_STATUS.NO_SHOW) {
+        throw new AppError("Booking no-show has already been processed", {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.BOOKING_NO_SHOW_ALREADY_PROCESSED,
+        });
+      }
+
+      releasedDriverUserId = booking.driver_user_id ?? null;
+      const statusReason =
+        input.reason.length > 100 ? input.reason.slice(0, 100) : input.reason;
+      const statusMemo =
+        input.memo ??
+        (input.reason.length > 100 ? input.reason.slice(0, 500) : null);
+
+      transition = await this.bookingStatusService.transitionInTransaction(
+        conn,
+        bookingNumber,
+        {
+          status: BOOKING_STATUS.NO_SHOW,
+          reason: statusReason,
+          memo: statusMemo,
+        },
+        actor,
+        { skipAccessCheck: true },
+      );
+
+      await this.bookingRepository.clearAssignmentOnCancel(
+        conn,
+        booking.id,
+        actor.id,
+        "ADMIN_NO_SHOW",
+      );
+
+      penaltyRow = await this.bookingNoShowPenaltyRepository.insert(conn, {
+        bookingId: booking.id,
+        penaltyAmount: input.penaltyAmount,
+        currency: "THB",
+        reason: input.reason,
+        createdByAdminId: actor.id,
+      });
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      if (err?.code === "ER_DUP_ENTRY") {
+        throw new AppError("Booking no-show has already been processed", {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.BOOKING_NO_SHOW_ALREADY_PROCESSED,
+        });
+      }
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    if (releasedDriverUserId) {
+      emitDriverAssignmentReleased(releasedDriverUserId, {
+        bookingNumber,
+        reason: "ADMIN_NO_SHOW",
+        reasonCode: "ADMIN_NO_SHOW",
+        bookingStatus: BOOKING_STATUS.NO_SHOW,
+        releasedAt,
+      });
+    }
+
+    return {
+      bookingNumber,
+      status: BOOKING_STATUS.NO_SHOW,
+      noShowPenalty: this.mapNoShowPenalty(penaltyRow),
+    };
   }
 }
 

@@ -114,6 +114,12 @@ const createAdminBookingNoteSchema = Joi.object({
   admin_user_id: Joi.forbidden(),
 });
 
+const processBookingNoShowSchema = Joi.object({
+  penaltyAmount: Joi.number().positive().required(),
+  reason: unicodeText({ max: 1000 }).required(),
+  memo: unicodeText({ max: 500, allowEmpty: true }).default(null),
+});
+
 const archiveBookingsSchema = Joi.object({
   bookingNumbers: Joi.array()
     .items(bookingNumberParam)
@@ -144,6 +150,7 @@ module.exports = {
   qrReissueSchema,
   adminBookingNotesQuerySchema,
   createAdminBookingNoteSchema,
+  processBookingNoShowSchema,
   archiveBookingsSchema,
   archiveDriversSchema,
   driverIdParamsSchema,

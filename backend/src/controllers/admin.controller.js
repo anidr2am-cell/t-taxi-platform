@@ -128,6 +128,15 @@ const restoreBookings = asyncHandler(async (req, res) => {
   return success(res, data, 'Bookings restored');
 });
 
+const processBookingNoShow = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().processNoShow(
+    req.params.bookingNumber,
+    req.body,
+    req.user,
+  );
+  return success(res, data, 'Booking marked as no-show');
+});
+
 module.exports = {
   listBookings,
   getBookingsSummary,
@@ -146,4 +155,5 @@ module.exports = {
   createBookingNote,
   archiveBookings,
   restoreBookings,
+  processBookingNoShow,
 };

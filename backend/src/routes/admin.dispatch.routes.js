@@ -15,6 +15,7 @@ const {
   qrReissueSchema,
   adminBookingNotesQuerySchema,
   createAdminBookingNoteSchema,
+  processBookingNoShowSchema,
   archiveBookingsSchema,
   archiveDriversSchema,
   driverIdParamsSchema,
@@ -70,6 +71,13 @@ router.post(
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: createAdminBookingNoteSchema }),
   adminController.createBookingNote,
+);
+
+router.post(
+  '/bookings/:bookingNumber/no-show',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: processBookingNoShowSchema }),
+  adminController.processBookingNoShow,
 );
 
 router.post(

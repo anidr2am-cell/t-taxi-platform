@@ -68,6 +68,7 @@ const UrgentNegotiationTimeoutWorker = require("../workers/urgentNegotiationTime
 const UrgentNegotiationSchedulerService = require("../services/urgentNegotiationScheduler.service");
 const SupportInquiryService = require("../services/supportInquiry.service");
 const AdminBookingNoteRepository = require("../repositories/adminBookingNote.repository");
+const BookingNoShowPenaltyRepository = require("../repositories/bookingNoShowPenalty.repository");
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
 const config = require("../config/env");
 const database = require("../config/database");
@@ -178,6 +179,10 @@ container.register(
 );
 container.register("bookingRepository", () => new BookingRepository());
 container.register("adminBookingNoteRepository", () => new AdminBookingNoteRepository());
+container.register(
+  "bookingNoShowPenaltyRepository",
+  () => new BookingNoShowPenaltyRepository(),
+);
 container.register(
   "adminBookingNoteService",
   (c) =>
@@ -376,6 +381,7 @@ container.register(
       c.get("reviewRepository"),
       c.get("bookingAssignmentReopenService"),
       c.get("driverCallService"),
+      c.get("bookingNoShowPenaltyRepository"),
     ),
 );
 container.register(
