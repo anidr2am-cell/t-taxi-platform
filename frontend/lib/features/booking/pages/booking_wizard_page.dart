@@ -185,6 +185,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final snapshot = _controller.state;
     final review = _controller.buildCompleteReview();
     final serviceLabel = l10n.t(snapshot.serviceType?.labelKey ?? '');
+    final scheduledPickupAt = _controller.scheduledPickupAtIsoFor(snapshot);
 
     final result = bookingMode == 'URGENT'
         ? await _controller.submitUrgentBooking()
@@ -233,7 +234,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               : null,
           nameSignRequested: snapshot.nameSign,
           customerPhone: snapshot.customerPhone,
-          scheduledPickupAt: _controller.scheduledPickupAtIso(),
+          scheduledPickupAt: scheduledPickupAt,
           selectedVehicle: snapshot.selectedVehicle,
           enableCustomerTools: true,
           meetingVehicleInfo: AirportMeetingVehicleInfo(

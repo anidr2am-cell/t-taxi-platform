@@ -163,9 +163,10 @@ class GuestBookingLookupService {
     const reviewEligible = this.isReviewEligible(row);
     const reviewSubmitted = Boolean(review);
     const canReview = reviewEligible && !reviewSubmitted;
+    const scheduledPickupAtRaw = row.scheduled_pickup_at_text ?? row.scheduled_pickup_at;
     const hasConfirmedSchedule = confirmedStatuses.has(row.status);
-    const scheduledPickupAtRaw = hasConfirmedSchedule
-      ? (row.scheduled_pickup_at_text ?? row.scheduled_pickup_at)
+    const scheduledPickupAtForResponse = hasConfirmedSchedule
+      ? scheduledPickupAtRaw
       : null;
     const cancellation = evaluateCustomerCancellation({
       status: row.status,
@@ -200,7 +201,7 @@ class GuestBookingLookupService {
       canCancel: cancellation.canCancel,
       cancellationDeadline: cancellation.cancellationDeadline,
       cancellationBlockedReason: cancellation.cancellationBlockedReason,
-      scheduledPickupAt: this.formatThailandIso(scheduledPickupAtRaw),
+      scheduledPickupAt: this.formatThailandIso(scheduledPickupAtForResponse),
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,

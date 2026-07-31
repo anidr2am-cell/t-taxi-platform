@@ -38,7 +38,7 @@ const PRICE = {
 const BOOKING_INPUT = {
   serviceTypeCode: 'AIRPORT_PICKUP',
   vehicleTypeCode: 'VAN',
-  scheduledPickupAt: '2026-07-14T03:00:00.000Z',
+  scheduledPickupAt: '2026-12-01T02:30:00.000Z',
   origin: { name: 'BKK Airport', placeId: 'origin-place' },
   destination: { name: 'Pattaya Hotel', placeId: 'destination-place' },
   passengers: { adults: 2, children: 0, infants: 0 },
@@ -93,6 +93,7 @@ function createHarness({ failSecondChargeItem = false } = {}) {
         id: 10,
         booking_number: 'TX202607130001',
         status: state.status,
+        scheduled_pickup_at: calls.booking?.scheduledPickupAt ?? null,
         payment_method: 'PAY_DRIVER',
         payment_status: 'UNPAID',
         total_amount: state.totalAmount,
@@ -163,6 +164,8 @@ test('OPEN booking derives total from charge items and notifies eligible drivers
     assert.equal(state.totalAmount, PRICE.totalAmount);
     assert.equal(result.totalAmount, PRICE.totalAmount);
     assert.equal(result.status, BOOKING_STATUS.OPEN);
+    assert.equal(result.canCancel, true);
+    assert.equal(result.cancellationBlockedReason, null);
     assert.equal(calls.commits, 1);
     assert.equal(calls.rollbacks, 0);
     assert.equal(calls.notifications.length, 1);

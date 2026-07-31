@@ -242,6 +242,7 @@ class BookingRepository {
           b.id,
           b.booking_number,
           b.status,
+          b.scheduled_pickup_at,
           b.total_amount,
           b.currency,
           b.payment_status,

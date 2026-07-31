@@ -323,9 +323,7 @@ class BookingWizardController extends ChangeNotifier {
     return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
   }
 
-  DateTime? selectedPickupDateTime() {
-    final date = _state.pickupDate;
-    final time = _state.pickupTime;
+  DateTime? pickupDateTimeFrom(String? date, String? time) {
     if (date == null || time == null) return null;
     final dateParts = date.split('-').map(int.tryParse).toList();
     final timeParts = time.split(':').map(int.tryParse).toList();
@@ -343,8 +341,18 @@ class BookingWizardController extends ChangeNotifier {
     );
   }
 
+  DateTime? selectedPickupDateTime() {
+    return pickupDateTimeFrom(_state.pickupDate, _state.pickupTime);
+  }
+
   String? scheduledPickupAtIso() {
     final selected = selectedPickupDateTime();
+    if (selected == null) return null;
+    return serializeThailandPickupAt(selected);
+  }
+
+  String? scheduledPickupAtIsoFor(BookingWizardState state) {
+    final selected = pickupDateTimeFrom(state.pickupDate, state.pickupTime);
     if (selected == null) return null;
     return serializeThailandPickupAt(selected);
   }

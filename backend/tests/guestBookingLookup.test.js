@@ -532,6 +532,22 @@ test('guest lookup hides scheduledPickupAt before assignment and for cancelled b
   }
 });
 
+test('guest lookup OPEN cancellation uses pickup time while hiding scheduledPickupAt in response', async () => {
+  const { service } = buildService(bookingRow({
+    status: 'OPEN',
+    scheduled_pickup_at_text: '2026-12-01 09:30:00',
+  }));
+
+  const result = await service.lookup({
+    bookingNumber: 'TX202607010001',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.scheduledPickupAt, null);
+  assert.equal(result.canCancel, true);
+  assert.equal(result.cancellationBlockedReason, null);
+});
+
 test('guest lookup DRIVER_ASSIGNED cancellation uses pickup time instead of invalid pickup block', async () => {
   const { service } = buildService(bookingRow({
     status: 'DRIVER_ASSIGNED',
