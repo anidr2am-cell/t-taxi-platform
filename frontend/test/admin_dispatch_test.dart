@@ -37,6 +37,11 @@ class _FakeAdminApi extends AdminDispatchApiService {
   int addNoteCalls = 0;
   int archiveCalls = 0;
   int restoreCalls = 0;
+  int processNoShowCalls = 0;
+  num? lastNoShowPenaltyAmount;
+  String? lastNoShowReason;
+  String? lastNoShowMemo;
+  Object? processNoShowError;
   List<Map<String, dynamic>> notes = [];
   List<String> lastArchivedBookings = [];
   List<String> lastRestoredBookings = [];
@@ -297,6 +302,31 @@ class _FakeAdminApi extends AdminDispatchApiService {
       if (type == 'BOARDING') 'boardingQrToken': 'dev-boarding-token',
       if (type == 'DROPOFF') 'dropoffQrToken': 'dev-dropoff-token',
       'expiresAt': '2099-01-01 00:00:00',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> processNoShow(
+    String bookingNumber, {
+    required num penaltyAmount,
+    required String reason,
+    String? memo,
+  }) async {
+    processNoShowCalls += 1;
+    lastNoShowPenaltyAmount = penaltyAmount;
+    lastNoShowReason = reason;
+    lastNoShowMemo = memo;
+    if (processNoShowError != null) throw processNoShowError!;
+    return {
+      'bookingNumber': bookingNumber,
+      'status': 'NO_SHOW',
+      'noShowPenalty': {
+        'amount': penaltyAmount,
+        'currency': 'THB',
+        'reason': reason,
+        'createdByAdminId': 1,
+        'createdAt': '2026-07-28 10:00:00',
+      },
     };
   }
 }
@@ -2600,5 +2630,202 @@ void main() {
     expect(AppLocalizations('ko').t('admin_notes_title'), '내부 메모');
     expect(AppLocalizations('en').t('admin_notes_title'), 'Internal notes');
     expect(AppLocalizations('th').t('admin_notes_title'), 'บันทึกภายใน');
+  });
+
+  testWidgets('shows no-show action for eligible booking status', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'DRIVER_ASSIGNED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': [],
+              'noShowPenalty': null,
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Mark no-show'), findsOneWidget);
+  });
+
+  testWidgets('hides no-show action for blocked booking statuses', (
+    tester,
+  ) async {
+    for (final status in [
+      'PICKED_UP',
+      'SETTLEMENT_PENDING',
+      'COMPLETED',
+      'CANCELLED',
+      'NO_SHOW',
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': status,
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': [],
+              },
+            ),
+            onChanged: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Mark no-show'), findsNothing);
+    }
+  });
+
+  testWidgets('shows no-show penalty section and already processed notice', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'NO_SHOW',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': [],
+              'noShowPenalty': {
+                'amount': 500,
+                'currency': 'THB',
+                'reason': 'Customer did not appear',
+                'createdByAdminId': 7,
+                'createdAt': '2026-07-28 10:00:00',
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Mark no-show'), findsNothing);
+    expect(
+      find.text('No-show already recorded for this booking.'),
+      findsOneWidget,
+    );
+    expect(find.text('No-show penalty'), findsOneWidget);
+    expect(find.text('500 THB'), findsOneWidget);
+    expect(find.text('Customer did not appear'), findsOneWidget);
+    expect(find.text('#7'), findsOneWidget);
+  });
+
+  testWidgets('no-show dialog submits penalty and refreshes detail', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi(
+      detailResponses: [
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'DRIVER_ASSIGNED',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'allowedActions': [],
+          'noShowPenalty': null,
+        },
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'NO_SHOW',
+          'route': {
+            'origin': {'address': 'BKK'},
+            'destination': {'address': 'Pattaya'},
+          },
+          'customer': {'name': 'Kim', 'phone': '+66123456789'},
+          'pricing': {
+            'totalAmount': 1200,
+            'currency': 'THB',
+            'paymentMethod': 'PAY_DRIVER',
+          },
+          'allowedActions': [],
+          'noShowPenalty': {
+            'amount': 500,
+            'currency': 'THB',
+            'reason': 'Customer did not appear',
+            'createdByAdminId': 1,
+            'createdAt': '2026-07-28 10:00:00',
+          },
+        },
+      ],
+    );
+    var changed = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: api,
+          onChanged: () => changed += 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark no-show'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Penalty amount (THB)'),
+      '500',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Reason'),
+      'Customer did not appear',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Confirm no-show'));
+    await tester.pumpAndSettle();
+    expect(api.processNoShowCalls, 1);
+    expect(api.lastNoShowPenaltyAmount, 500);
+    expect(api.lastNoShowReason, 'Customer did not appear');
+    expect(changed, 1);
+    expect(find.text('No-show recorded successfully.'), findsOneWidget);
+    expect(find.text('500 THB'), findsOneWidget);
   });
 }

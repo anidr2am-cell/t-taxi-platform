@@ -43,6 +43,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   bool _submitting = false;
   final _noteController = TextEditingController();
   final _manualSettlementNoteController = TextEditingController();
+  final _noShowPenaltyAmountController = TextEditingController();
+  final _noShowReasonController = TextEditingController();
+  final _noShowMemoController = TextEditingController();
   final _tripSectionKey = GlobalKey();
   final _assignmentSectionKey = GlobalKey();
   final _operationsSummaryKey = GlobalKey();
@@ -57,6 +60,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   void dispose() {
     _noteController.dispose();
     _manualSettlementNoteController.dispose();
+    _noShowPenaltyAmountController.dispose();
+    _noShowReasonController.dispose();
+    _noShowMemoController.dispose();
     super.dispose();
   }
 
@@ -232,6 +238,177 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         (commissionStatus == 'DUE' ||
             commissionStatus == 'OVERDUE' ||
             commissionStatus == 'PENDING');
+  }
+
+  static const Set<String> _noShowBlockedStatuses = {
+    'PICKED_UP',
+    'SETTLEMENT_PENDING',
+    'COMPLETED',
+    'CANCELLED',
+    'NO_SHOW',
+  };
+
+  Map<String, dynamic>? _noShowPenalty(Map<String, dynamic> detail) {
+    final penalty = detail['noShowPenalty'];
+    if (penalty is! Map) return null;
+    return Map<String, dynamic>.from(penalty);
+  }
+
+  bool _hasNoShowPenalty(Map<String, dynamic> detail) =>
+      _noShowPenalty(detail) != null;
+
+  bool _canProcessNoShow(Map<String, dynamic> detail) {
+    if (_hasNoShowPenalty(detail)) return false;
+    final status = detail['status'] as String?;
+    if (status == null || status.isEmpty) return false;
+    return !_noShowBlockedStatuses.contains(status);
+  }
+
+  String _noShowErrorMessage(Object err, AppLocalizations l10n) {
+    if (err is AdminDispatchApiException) {
+      switch (err.errorCode) {
+        case 'BOOKING_NO_SHOW_ALREADY_PROCESSED':
+          return _noShowText(context, 'error_already_processed');
+        case 'INVALID_STATUS_TRANSITION':
+          return _noShowText(context, 'error_invalid_status');
+        case 'FORBIDDEN':
+          return _noShowText(context, 'error_forbidden');
+        case 'VALIDATION_ERROR':
+          return validationErrorMessage(err, languageCode: l10n.languageCode) ??
+              _noShowText(context, 'error_validation');
+        default:
+          break;
+      }
+    }
+    return userFacingError(
+      err,
+      fallback: _noShowText(context, 'error_action_failed'),
+    );
+  }
+
+  Future<void> _processNoShow() async {
+    if (_submitting || _detail == null) return;
+    _noShowPenaltyAmountController.clear();
+    _noShowReasonController.clear();
+    _noShowMemoController.clear();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final penaltyText = _noShowPenaltyAmountController.text.trim();
+            final reasonText = _noShowReasonController.text.trim();
+            final memoText = _noShowMemoController.text.trim();
+            final penaltyAmount = num.tryParse(penaltyText);
+            final canSubmit =
+                penaltyAmount != null &&
+                penaltyAmount > 0 &&
+                reasonText.isNotEmpty &&
+                reasonText.length <= 1000 &&
+                memoText.length <= 500;
+
+            return AlertDialog(
+              title: Text(_noShowText(context, 'title')),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(_noShowText(context, 'body')),
+                    const SizedBox(height: AppTokens.spaceSm),
+                    Text(
+                      _noShowText(context, 'warning'),
+                      style: const TextStyle(
+                        color: AppTokens.warning,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.spaceMd),
+                    TextField(
+                      controller: _noShowPenaltyAmountController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: _noShowText(context, 'penalty_label'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                    const SizedBox(height: AppTokens.spaceSm),
+                    TextField(
+                      controller: _noShowReasonController,
+                      maxLength: 1000,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: _noShowText(context, 'reason_label'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                    const SizedBox(height: AppTokens.spaceSm),
+                    TextField(
+                      controller: _noShowMemoController,
+                      maxLength: 500,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: _noShowText(context, 'memo_label'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(_noShowText(context, 'cancel')),
+                ),
+                FilledButton(
+                  onPressed: canSubmit
+                      ? () => Navigator.pop(context, true)
+                      : null,
+                  child: Text(_noShowText(context, 'confirm')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    final penaltyAmount = num.parse(_noShowPenaltyAmountController.text.trim());
+    final reason = _noShowReasonController.text.trim();
+    final memo = _noShowMemoController.text.trim();
+
+    setState(() => _submitting = true);
+    try {
+      await widget.api.processNoShow(
+        widget.bookingNumber,
+        penaltyAmount: penaltyAmount,
+        reason: reason,
+        memo: memo.isEmpty ? null : memo,
+      );
+      widget.onChanged();
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_noShowText(context, 'success'))),
+      );
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_noShowErrorMessage(err, context.l10n))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   Future<void> _retrySettlement() async {
@@ -661,6 +838,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                         child: _pricingSection(l10n, detail),
                       ),
                     ),
+                    if (_hasNoShowPenalty(detail)) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      _noShowPenaltySection(l10n, detail),
+                    ],
                     if (detail['customerReview'] is Map) ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       KeyedSubtree(
@@ -812,7 +993,79 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         ),
       );
     }
+    if (_hasNoShowPenalty(detail)) {
+      buttons.add(
+        _noticeBox(
+          icon: Icons.event_busy_outlined,
+          text: _noShowText(context, 'already_processed'),
+          isWarning: true,
+        ),
+      );
+    } else if (_canProcessNoShow(detail)) {
+      buttons.add(
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTokens.warning,
+              side: const BorderSide(color: AppTokens.warning),
+            ),
+            onPressed: _submitting ? null : _processNoShow,
+            icon: const Icon(Icons.person_off_outlined),
+            label: Text(_noShowText(context, 'button')),
+          ),
+        ),
+      );
+    }
     return buttons.isEmpty ? null : AppUi.adminStickyActions(actions: buttons);
+  }
+
+  Widget _noShowPenaltySection(
+    AppLocalizations l10n,
+    Map<String, dynamic> detail,
+  ) {
+    final penalty = _noShowPenalty(detail);
+    if (penalty == null) return const SizedBox.shrink();
+
+    final amount = penalty['amount'];
+    final currency = penalty['currency'] as String? ?? 'THB';
+    final reason = penalty['reason'] as String? ?? '-';
+    final createdByAdminId = penalty['createdByAdminId'];
+    final createdAt = penalty['createdAt'] as String?;
+
+    return AppUi.adminDetailSection(
+      context: context,
+      title: _noShowText(context, 'section_title'),
+      subtitle: _noShowText(context, 'section_subtitle'),
+      backgroundColor: AppTokens.surfaceMuted,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppUi.summaryRow(
+            label: _noShowText(context, 'amount_label'),
+            value: '$amount $currency',
+            emphasize: true,
+          ),
+          AppUi.summaryRow(
+            label: _noShowText(context, 'reason_label'),
+            value: reason,
+          ),
+          if (createdByAdminId != null)
+            AppUi.summaryRow(
+              label: _noShowText(context, 'processed_by'),
+              value: '#$createdByAdminId',
+            ),
+          if (createdAt != null)
+            AppUi.summaryRow(
+              label: _noShowText(context, 'processed_at'),
+              value:
+                  _formatOptionalDate(l10n, createdAt) ??
+                  _formatBangkokServiceDateTime(createdAt),
+            ),
+        ],
+      ),
+    );
   }
 
   DateTime? _parseDateTime(dynamic value) {
@@ -2416,6 +2669,87 @@ String _manualSettlementText(BuildContext context, String key) {
       'note_required': 'กรุณากรอกบันทึกการอนุมัติ',
       'section_hint': 'ใช้เฉพาะเมื่อยืนยันการชำระเงินนอกขั้นตอนสลิปโอนเงินแล้ว',
       'cancel': 'ยกเลิก',
+    },
+  };
+  return values[language]?[key] ?? values['en']![key] ?? key;
+}
+
+String _noShowText(BuildContext context, String key) {
+  final language = Localizations.localeOf(context).languageCode;
+  const values = {
+    'en': {
+      'button': 'Mark no-show',
+      'title': 'Mark booking as no-show',
+      'body':
+          'Record a separate no-show penalty for this booking. This is not part of commission settlement.',
+      'warning': 'This action cannot be undone.',
+      'confirm': 'Confirm no-show',
+      'penalty_label': 'Penalty amount (THB)',
+      'amount_label': 'Amount',
+      'reason_label': 'Reason',
+      'memo_label': 'Memo (optional)',
+      'cancel': 'Cancel',
+      'success': 'No-show recorded successfully.',
+      'already_processed': 'No-show already recorded for this booking.',
+      'section_title': 'No-show penalty',
+      'section_subtitle':
+          'Separate admin record — not linked to commission settlement.',
+      'processed_by': 'Processed by admin',
+      'processed_at': 'Processed at',
+      'error_already_processed': 'This booking has already been marked no-show.',
+      'error_invalid_status':
+          'No-show cannot be recorded for the current booking status.',
+      'error_validation': 'Please check the no-show form and try again.',
+      'error_action_failed': 'Unable to record no-show.',
+      'error_forbidden': 'You do not have permission to record no-show.',
+    },
+    'ko': {
+      'button': '노쇼 처리',
+      'title': '노쇼 처리',
+      'body':
+          '이 예약에 대한 노쇼 패널티를 별도로 기록합니다. 수수료 정산과는 별개입니다.',
+      'warning': '이 작업은 되돌릴 수 없습니다.',
+      'confirm': '노쇼 처리 확인',
+      'penalty_label': '패널티 금액 (THB)',
+      'amount_label': '금액',
+      'reason_label': '사유',
+      'memo_label': '메모 (선택)',
+      'cancel': '취소',
+      'success': '노쇼 처리가 완료되었습니다.',
+      'already_processed': '이미 노쇼 처리된 예약입니다.',
+      'section_title': '노쇼 패널티',
+      'section_subtitle': '정산과 별도로 관리되는 관리자 기록입니다.',
+      'processed_by': '처리 관리자',
+      'processed_at': '처리 시각',
+      'error_already_processed': '이미 노쇼 처리된 예약입니다.',
+      'error_invalid_status': '현재 예약 상태에서는 노쇼 처리할 수 없습니다.',
+      'error_validation': '입력값을 확인한 뒤 다시 시도해 주세요.',
+      'error_action_failed': '노쇼 처리에 실패했습니다.',
+      'error_forbidden': '노쇼 처리 권한이 없습니다.',
+    },
+    'th': {
+      'button': 'บันทึก no-show',
+      'title': 'บันทึก no-show',
+      'body':
+          'บันทึกค่าปรับ no-show แยกจากรายการนี้ ไม่ใช่ส่วนหนึ่งของการชำระค่าคอมมิชชัน',
+      'warning': 'ไม่สามารถยกเลิกการทำรายการนี้ได้',
+      'confirm': 'ยืนยัน no-show',
+      'penalty_label': 'จำนวนค่าปรับ (THB)',
+      'amount_label': 'จำนวนเงิน',
+      'reason_label': 'เหตุผล',
+      'memo_label': 'บันทึก (ไม่บังคับ)',
+      'cancel': 'ยกเลิก',
+      'success': 'บันทึก no-show สำเร็จแล้ว',
+      'already_processed': 'รายการนี้ถูกบันทึก no-show แล้ว',
+      'section_title': 'ค่าปรับ no-show',
+      'section_subtitle': 'บันทึกแยกจากการชำระค่าคอมมิชชัน',
+      'processed_by': 'ผู้ดูแลที่ดำเนินการ',
+      'processed_at': 'เวลาที่ดำเนินการ',
+      'error_already_processed': 'รายการนี้ถูกบันทึก no-show แล้ว',
+      'error_invalid_status': 'ไม่สามารถบันทึก no-show ในสถานะปัจจุบันได้',
+      'error_validation': 'กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง',
+      'error_action_failed': 'ไม่สามารถบันทึก no-show ได้',
+      'error_forbidden': 'คุณไม่มีสิทธิ์บันทึก no-show',
     },
   };
   return values[language]?[key] ?? values['en']![key] ?? key;

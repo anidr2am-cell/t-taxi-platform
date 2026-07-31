@@ -233,6 +233,27 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<Map<String, dynamic>> processNoShow(
+    String bookingNumber, {
+    required num penaltyAmount,
+    required String reason,
+    String? memo,
+  }) async {
+    final body = <String, dynamic>{
+      'penaltyAmount': penaltyAmount,
+      'reason': reason,
+    };
+    if (memo != null && memo.isNotEmpty) {
+      body['memo'] = memo;
+    }
+    final data = await _request(
+      'POST',
+      '/admin/bookings/$bookingNumber/no-show',
+      body: body,
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<List<dynamic>> listDrivers({bool? archived}) async {
     final query = <String, String>{};
     if (archived == true) query['archived'] = 'true';
