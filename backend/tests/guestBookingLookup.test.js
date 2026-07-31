@@ -521,18 +521,19 @@ test('guest lookup exposes scheduledPickupAt for confirmed post-assignment statu
   }
 });
 
-test('guest lookup hides scheduledPickupAt before assignment and for cancelled bookings', async () => {
+test('guest lookup exposes scheduledPickupAt regardless of booking status', async () => {
+  const expectedPickup = '2026-07-01T09:30:00+07:00';
   for (const status of ['PENDING', 'OPEN', 'CONFIRMED', 'CANCELLED', 'NO_SHOW']) {
     const { service } = buildService(bookingRow({ status }));
     const result = await service.lookup({
       bookingNumber: 'TX202607010001',
       phone: '+66 81 234 5678',
     });
-    assert.equal(result.scheduledPickupAt, null, status);
+    assert.equal(result.scheduledPickupAt, expectedPickup, status);
   }
 });
 
-test('guest lookup OPEN cancellation uses pickup time while hiding scheduledPickupAt in response', async () => {
+test('guest lookup OPEN cancellation uses pickup time and exposes scheduledPickupAt in response', async () => {
   const { service } = buildService(bookingRow({
     status: 'OPEN',
     scheduled_pickup_at_text: '2026-12-01 09:30:00',
@@ -543,7 +544,7 @@ test('guest lookup OPEN cancellation uses pickup time while hiding scheduledPick
     phone: '+66 81 234 5678',
   });
 
-  assert.equal(result.scheduledPickupAt, null);
+  assert.equal(result.scheduledPickupAt, '2026-12-01T09:30:00+07:00');
   assert.equal(result.canCancel, true);
   assert.equal(result.cancellationBlockedReason, null);
 });

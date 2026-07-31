@@ -11,15 +11,6 @@ const {
 } = require('../policies/customerBookingCancellation.policy');
 
 const LOOKUP_GUEST_TOKEN_TTL_HOURS = 24;
-const confirmedStatuses = new Set([
-  'ASSIGNED',
-  BOOKING_STATUS.DRIVER_ASSIGNED,
-  BOOKING_STATUS.ON_ROUTE,
-  BOOKING_STATUS.DRIVER_ARRIVED,
-  BOOKING_STATUS.PICKED_UP,
-  BOOKING_STATUS.SETTLEMENT_PENDING,
-  BOOKING_STATUS.COMPLETED,
-]);
 const CUSTOMER_TRACKING_STATUSES = new Set([
   BOOKING_STATUS.DRIVER_ASSIGNED,
   BOOKING_STATUS.ON_ROUTE,
@@ -164,10 +155,6 @@ class GuestBookingLookupService {
     const reviewSubmitted = Boolean(review);
     const canReview = reviewEligible && !reviewSubmitted;
     const scheduledPickupAtRaw = row.scheduled_pickup_at_text ?? row.scheduled_pickup_at;
-    const hasConfirmedSchedule = confirmedStatuses.has(row.status);
-    const scheduledPickupAtForResponse = hasConfirmedSchedule
-      ? scheduledPickupAtRaw
-      : null;
     const cancellation = evaluateCustomerCancellation({
       status: row.status,
       scheduledPickupAt: scheduledPickupAtRaw,
@@ -201,7 +188,7 @@ class GuestBookingLookupService {
       canCancel: cancellation.canCancel,
       cancellationDeadline: cancellation.cancellationDeadline,
       cancellationBlockedReason: cancellation.cancellationBlockedReason,
-      scheduledPickupAt: this.formatThailandIso(scheduledPickupAtForResponse),
+      scheduledPickupAt: this.formatThailandIso(scheduledPickupAtRaw),
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,
