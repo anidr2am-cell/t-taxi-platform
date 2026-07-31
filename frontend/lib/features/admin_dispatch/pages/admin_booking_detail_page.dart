@@ -248,6 +248,18 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     'NO_SHOW',
   };
 
+  static const Set<String> _noShowPreAssignmentStatuses = {
+    'PENDING',
+    'OPEN',
+    'CONFIRMED',
+  };
+
+  static const Set<String> _noShowAssignedStatuses = {
+    'DRIVER_ASSIGNED',
+    'ON_ROUTE',
+    'DRIVER_ARRIVED',
+  };
+
   Map<String, dynamic>? _noShowPenalty(Map<String, dynamic> detail) {
     final penalty = detail['noShowPenalty'];
     if (penalty is! Map) return null;
@@ -257,11 +269,38 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   bool _hasNoShowPenalty(Map<String, dynamic> detail) =>
       _noShowPenalty(detail) != null;
 
-  bool _canProcessNoShow(Map<String, dynamic> detail) {
+  bool _shouldShowNoShowButton(Map<String, dynamic> detail) {
     if (_hasNoShowPenalty(detail)) return false;
     final status = detail['status'] as String?;
     if (status == null || status.isEmpty) return false;
-    return !_noShowBlockedStatuses.contains(status);
+    if (_noShowBlockedStatuses.contains(status)) return false;
+    return _noShowPreAssignmentStatuses.contains(status) ||
+        _noShowAssignedStatuses.contains(status);
+  }
+
+  bool _isNoShowActionEnabled(Map<String, dynamic> detail) {
+    final status = detail['status'] as String?;
+    if (status == null || status.isEmpty) return false;
+    return _noShowAssignedStatuses.contains(status);
+  }
+
+  Widget _noShowActionButton(Map<String, dynamic> detail) {
+    final enabled = _isNoShowActionEnabled(detail) && !_submitting;
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        style: enabled
+            ? OutlinedButton.styleFrom(
+                foregroundColor: AppTokens.warning,
+                side: const BorderSide(color: AppTokens.warning),
+              )
+            : null,
+        onPressed: enabled ? _processNoShow : null,
+        icon: const Icon(Icons.person_off_outlined),
+        label: Text(_noShowText(context, 'button')),
+      ),
+    );
   }
 
   String _noShowErrorMessage(Object err, AppLocalizations l10n) {
@@ -1001,22 +1040,8 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           isWarning: true,
         ),
       );
-    } else if (_canProcessNoShow(detail)) {
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTokens.warning,
-              side: const BorderSide(color: AppTokens.warning),
-            ),
-            onPressed: _submitting ? null : _processNoShow,
-            icon: const Icon(Icons.person_off_outlined),
-            label: Text(_noShowText(context, 'button')),
-          ),
-        ),
-      );
+    } else if (_shouldShowNoShowButton(detail)) {
+      buttons.add(_noShowActionButton(detail));
     }
     return buttons.isEmpty ? null : AppUi.adminStickyActions(actions: buttons);
   }
