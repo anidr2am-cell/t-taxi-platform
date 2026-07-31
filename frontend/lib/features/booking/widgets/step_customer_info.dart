@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/country_option.dart';
@@ -152,6 +153,26 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
             onChanged: widget.onPhoneChanged,
+          ),
+        ),
+        SizedBox(height: gap),
+        AppUi.surfaceCard(
+          backgroundColor: AppTokens.warningLight,
+          padding: widget.embedded
+              ? const EdgeInsets.all(WizardCompact.cardPadding)
+              : const EdgeInsets.all(AppTokens.spaceMd),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.info_outline, color: AppTokens.warning),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.t('customer_contact_sns_notice'),
+                  style: const TextStyle(height: 1.45),
+                ),
+              ),
+            ],
           ),
         ),
         SizedBox(height: gap),

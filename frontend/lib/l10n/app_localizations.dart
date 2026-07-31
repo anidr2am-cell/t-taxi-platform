@@ -431,6 +431,8 @@ class AppLocalizations {
       'messenger_type': 'Messenger Type',
       'messenger_id': 'Messenger ID',
       'messenger_type_hint': 'LINE, WhatsApp, etc.',
+      'customer_contact_sns_notice':
+          'After booking, we will contact you via SNS in advance to share vehicle and driver details. If we cannot reach you, your booking may be cancelled. Please provide a contact number or SNS account that accepts friend requests.',
       'additional_requests': 'Additional Requests',
       'country_code_hint': 'TH, US, KR…',
       'country_search_hint': 'Search country or enter a value',
@@ -1732,6 +1734,8 @@ class AppLocalizations {
       'messenger_type': '메신저 종류',
       'messenger_id': '메신저 ID',
       'messenger_type_hint': 'LINE, WhatsApp 등',
+      'customer_contact_sns_notice':
+          '예약 완료후 차량과 기사 등의 정보 안내를 위해 SNS로 미리 연락드립니다. 연락이 안되는 경우 예약이 취소될 수 있으니 필히 SNS로 친구추가가 가능한 연락처나 SNS 계정 정보를 기재해 주시기 바랍니다.',
       'additional_requests': '추가 요청',
       'country_code_hint': 'TH, US, KR…',
       'country_search_hint': '국가 검색 또는 직접 입력',
@@ -2665,6 +2669,8 @@ class AppLocalizations {
       'messenger_type': '通讯软件类型',
       'messenger_id': '通讯软件 ID',
       'messenger_type_hint': 'LINE、WhatsApp 等',
+      'customer_contact_sns_notice':
+          '预约完成后，我们会通过 SNS 提前联系您，告知车辆和司机等信息。如无法联系，预约可能会被取消，请务必填写可通过 SNS 添加好友的联系方式或 SNS 账号。',
       'additional_requests': '附加要求',
       'country_code_hint': 'TH、US、KR…',
       'country_search_hint': '搜索国家或直接输入',
@@ -3195,6 +3201,8 @@ class AppLocalizations {
       'messenger_type': 'メッセンジャー種類',
       'messenger_id': 'メッセンジャー ID',
       'messenger_type_hint': 'LINE、WhatsApp など',
+      'customer_contact_sns_notice':
+          '予約完了後、車両やドライバーなどの情報をお知らせするため、事前にSNSでご連絡します。連絡が取れない場合、予約がキャンセルされることがあります。SNSで友だち追加が可能な連絡先またはSNSアカウントを必ずご記入ください。',
       'additional_requests': '追加リクエスト',
       'country_code_hint': 'TH、US、KR…',
       'country_search_hint': '国を検索または直接入力',
@@ -3766,6 +3774,8 @@ class AppLocalizations {
       'messenger_type': 'ประเภทแอปแชท',
       'messenger_id': 'ID แอปแชท',
       'messenger_type_hint': 'LINE, WhatsApp ฯลฯ',
+      'customer_contact_sns_notice':
+          'หลังจองเสร็จ เราจะติดต่อคุณล่วงหน้าผ่าน SNS เพื่อแจ้งข้อมูลรถและคนขับ หากติดต่อไม่ได้ การจองอาจถูกยกเลิก กรุณาระบุเบอร์ติดต่อหรือบัญชี SNS ที่สามารถเพิ่มเพื่อนได้',
       'additional_requests': 'คำขอเพิ่มเติม',
       'country_code_hint': 'TH, US, KR…',
       'country_search_hint': 'ค้นหาประเทศหรือกรอกเอง',
