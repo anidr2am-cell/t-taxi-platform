@@ -11,6 +11,11 @@ import '../utils/flight_time_format.dart';
 import '../utils/pickup_time_format.dart';
 import 'pickup_time_picker_sheet.dart';
 import 'wizard_compact.dart';
+import 'wizard_ui.dart';
+
+enum _PickupTimeSource { manual, flight }
+
+const _pickupFlightConflictThresholdMinutes = 30;
 
 class StepPickupDateTime extends StatefulWidget {
   const StepPickupDateTime({
@@ -42,6 +47,11 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
   FlightSearchResult? _lookupResult;
   String? _lookupErrorCode;
   bool _lookupConfirmed = false;
+  int? _pickupTimeConflictMinutes;
+  DateTime? _flightArrivalBangkok;
+  DateTime? _manualPickupAtConfirm;
+  _PickupTimeSource? _selectedPickupSource;
+  bool _applyingFlightPickupTime = false;
 
   FlightLookupApiService get _flightLookupApi =>
       widget.flightLookupApi ?? FlightLookupApiService();
@@ -74,9 +84,76 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
     if (oldWidget.state.pickupTime != widget.state.pickupTime ||
         oldWidget.state.pickupDate != widget.state.pickupDate) {
       _syncManualTimeField();
+      if (oldWidget.state.pickupDate != widget.state.pickupDate) {
+        _clearLookup();
+      } else if (!_applyingFlightPickupTime) {
+        _onPickupDateTimeChangedExternally();
+      }
     }
-    if (oldWidget.state.pickupDate != widget.state.pickupDate) {
-      _clearLookup();
+  }
+
+  DateTime? _bangkokWallClockFromIsoUtc(String? isoUtc) {
+    if (isoUtc == null || isoUtc.isEmpty) return null;
+    final utc = DateTime.parse(isoUtc).toUtc();
+    final bangkok = utc.add(const Duration(hours: 7));
+    return DateTime(
+      bangkok.year,
+      bangkok.month,
+      bangkok.day,
+      bangkok.hour,
+      bangkok.minute,
+    );
+  }
+
+  int? _absoluteMinuteDifference(DateTime? left, DateTime? right) {
+    if (left == null || right == null) return null;
+    return left.difference(right).inMinutes.abs();
+  }
+
+  void _resetPickupTimeConflict() {
+    _pickupTimeConflictMinutes = null;
+    _flightArrivalBangkok = null;
+    _manualPickupAtConfirm = null;
+    _selectedPickupSource = null;
+  }
+
+  void _evaluatePickupTimeConflict({required bool clearSelection}) {
+    final result = _lookupResult;
+    if (!_lookupConfirmed || result == null) {
+      _resetPickupTimeConflict();
+      return;
+    }
+
+    final flightArrival = _bangkokWallClockFromIsoUtc(result.arrival.scheduledAt);
+    final manualPickup = widget.controller.selectedPickupDateTime();
+    if (flightArrival == null || manualPickup == null) {
+      _resetPickupTimeConflict();
+      return;
+    }
+
+    final diff = _absoluteMinuteDifference(manualPickup, flightArrival);
+    if (diff == null || diff < _pickupFlightConflictThresholdMinutes) {
+      _resetPickupTimeConflict();
+      return;
+    }
+
+    _flightArrivalBangkok = flightArrival;
+    _manualPickupAtConfirm = manualPickup;
+    _pickupTimeConflictMinutes = diff;
+    if (clearSelection) {
+      _selectedPickupSource = null;
+    }
+  }
+
+  void _onPickupDateTimeChangedExternally() {
+    if (_lookupConfirmed && _lookupResult != null) {
+      setState(() {
+        _evaluatePickupTimeConflict(clearSelection: true);
+      });
+      return;
+    }
+    if (_pickupTimeConflictMinutes != null || _selectedPickupSource != null) {
+      setState(_resetPickupTimeConflict);
     }
   }
 
@@ -84,7 +161,8 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
     if (_lookupResult == null &&
         _lookupErrorCode == null &&
         !_isLookingUp &&
-        !_lookupConfirmed) {
+        !_lookupConfirmed &&
+        _pickupTimeConflictMinutes == null) {
       return;
     }
     setState(() {
@@ -92,6 +170,59 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       _lookupErrorCode = null;
       _lookupConfirmed = false;
       _isLookingUp = false;
+      _resetPickupTimeConflict();
+    });
+  }
+
+  void _confirmFlightLookup() {
+    setState(() {
+      _lookupConfirmed = true;
+      _evaluatePickupTimeConflict(clearSelection: true);
+    });
+  }
+
+  String _formatPickupSummary(AppLocalizations l10n, DateTime value) {
+    final amLabel = l10n.t('pickup_time_am');
+    final pmLabel = l10n.t('pickup_time_pm');
+    final date = widget.controller.formatDate(value);
+    final time = PickupTimeFormat.formatDisplay(
+      hour24: value.hour,
+      minute: value.minute,
+      amLabel: amLabel,
+      pmLabel: pmLabel,
+    );
+    return '$date $time';
+  }
+
+  Future<void> _selectManualPickupTime() async {
+    final manualPickup = _manualPickupAtConfirm;
+    setState(() => _selectedPickupSource = _PickupTimeSource.manual);
+    if (manualPickup == null) return;
+
+    final current = widget.controller.selectedPickupDateTime();
+    if (current != null &&
+        current.year == manualPickup.year &&
+        current.month == manualPickup.month &&
+        current.day == manualPickup.day &&
+        current.hour == manualPickup.hour &&
+        current.minute == manualPickup.minute) {
+      return;
+    }
+
+    await widget.controller.setPickupDateTime(manualPickup);
+  }
+
+  Future<void> _selectFlightPickupTime() async {
+    final flightArrival = _flightArrivalBangkok;
+    if (flightArrival == null) return;
+
+    setState(() => _selectedPickupSource = _PickupTimeSource.flight);
+    _applyingFlightPickupTime = true;
+    await widget.controller.setPickupDateTime(flightArrival);
+    if (!mounted) return;
+    setState(() {
+      _applyingFlightPickupTime = false;
+      _evaluatePickupTimeConflict(clearSelection: false);
     });
   }
 
@@ -110,6 +241,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       _lookupResult = null;
       _lookupErrorCode = null;
       _lookupConfirmed = false;
+      _resetPickupTimeConflict();
     });
 
     try {
@@ -278,7 +410,8 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: () => setState(() => _lookupConfirmed = true),
+              key: const Key('flight_lookup_confirm_button'),
+              onPressed: _confirmFlightLookup,
               icon: Icon(
                 _lookupConfirmed ? Icons.check_circle : Icons.check_circle_outline,
                 size: 18,
@@ -287,8 +420,76 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
               label: Text(l10n.t('flight_lookup_confirm')),
             ),
           ),
+          if (_lookupConfirmed && _pickupTimeConflictMinutes != null) ...[
+            const SizedBox(height: WizardCompact.fieldGap),
+            _buildPickupTimeConflictSection(l10n),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildPickupTimeConflictSection(AppLocalizations l10n) {
+    final minutes = _pickupTimeConflictMinutes!;
+    final manualPickup = _manualPickupAtConfirm;
+    final flightArrival = _flightArrivalBangkok;
+    if (manualPickup == null || flightArrival == null) {
+      return const SizedBox.shrink();
+    }
+
+    final copy = _FlightPickupConflictCopy(l10n.languageCode);
+    final manualSubtitle = _formatPickupSummary(l10n, manualPickup);
+    final flightSubtitle = _formatPickupSummary(l10n, flightArrival);
+    final selectedPickup = widget.controller.selectedPickupDateTime();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          key: const Key('flight_pickup_conflict_warning'),
+          copy.warning(minutes),
+          style: const TextStyle(
+            color: AppTokens.error,
+            height: 1.45,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: WizardCompact.fieldGap),
+        Material(
+          key: const Key('flight_pickup_use_manual_tile'),
+          color: Colors.transparent,
+          child: WizardUi.selectionTile(
+            title: copy.useManualTime,
+            subtitle: manualSubtitle,
+            icon: Icons.edit_calendar_outlined,
+            selected: _selectedPickupSource == _PickupTimeSource.manual,
+            onTap: _selectManualPickupTime,
+          ),
+        ),
+        const SizedBox(height: WizardCompact.fieldGap),
+        Material(
+          key: const Key('flight_pickup_use_flight_tile'),
+          color: Colors.transparent,
+          child: WizardUi.selectionTile(
+            title: copy.useFlightTime,
+            subtitle: flightSubtitle,
+            icon: Icons.flight_land_outlined,
+            selected: _selectedPickupSource == _PickupTimeSource.flight,
+            onTap: _selectFlightPickupTime,
+          ),
+        ),
+        if (_selectedPickupSource != null && selectedPickup != null) ...[
+          const SizedBox(height: WizardCompact.fieldGap),
+          Text(
+            key: const Key('flight_pickup_final_summary'),
+            '${copy.finalPickupLabel}: ${_formatPickupSummary(l10n, selectedPickup)}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -537,6 +738,72 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
     await widget.controller.setPickupDateTime(
       DateTime(date.year, date.month, date.day, selected.hour, selected.minute),
     );
+  }
+}
+
+class _FlightPickupConflictCopy {
+  _FlightPickupConflictCopy(this.languageCode);
+
+  final String languageCode;
+
+  String warning(int minutes) {
+    switch (languageCode) {
+      case 'ko':
+        return '입력하신 픽업 시간과 항공편 도착 예정 시간이 $minutes분 차이납니다.';
+      case 'zh':
+        return '您输入的接送时间与航班预计到达时间相差 $minutes 分钟。';
+      case 'ja':
+        return '入力したピックアップ時間とフライト到着予定時間が $minutes 分異なります。';
+      case 'th':
+        return 'เวลารับที่คุณกรอกกับเวลาถึงตามกำหนดของเที่ยวบินต่างกัน $minutes นาที';
+      default:
+        return 'Your pickup time and the flight scheduled arrival differ by $minutes minutes.';
+    }
+  }
+
+  String get useManualTime {
+    switch (languageCode) {
+      case 'ko':
+        return '직접 입력한 시간 사용';
+      case 'zh':
+        return '使用我输入的时间';
+      case 'ja':
+        return '入力した時間を使用';
+      case 'th':
+        return 'ใช้เวลาที่กรอกเอง';
+      default:
+        return 'Keep my entered time';
+    }
+  }
+
+  String get useFlightTime {
+    switch (languageCode) {
+      case 'ko':
+        return '항공편 시간 기준으로 변경';
+      case 'zh':
+        return '按航班到达时间更改';
+      case 'ja':
+        return 'フライト到着時間に変更';
+      case 'th':
+        return 'เปลี่ยนตามเวลาเที่ยวบิน';
+      default:
+        return 'Use flight arrival time';
+    }
+  }
+
+  String get finalPickupLabel {
+    switch (languageCode) {
+      case 'ko':
+        return '최종 픽업 요청시간';
+      case 'zh':
+        return '最终接送请求时间';
+      case 'ja':
+        return '最終ピックアップ希望時間';
+      case 'th':
+        return 'เวลารับสุดท้ายที่ขอ';
+      default:
+        return 'Final pickup request time';
+    }
   }
 }
 

@@ -69,14 +69,16 @@ Future<void> _pumpStep(
       create: (_) => LocaleState(),
       child: MaterialApp(
         home: Scaffold(
-          body: AnimatedBuilder(
-            animation: controller,
-            builder: (context, _) => StepPickupDateTime(
-              embedded: true,
-              state: controller.state.copyWith(serviceType: serviceType),
-              controller: controller,
-              flightLookupApi: api,
-              onFlightNumberChanged: onFlightNumberChanged ?? (_) {},
+          body: SingleChildScrollView(
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) => StepPickupDateTime(
+                embedded: true,
+                state: controller.state.copyWith(serviceType: serviceType),
+                controller: controller,
+                flightLookupApi: api,
+                onFlightNumberChanged: onFlightNumberChanged ?? (_) {},
+              ),
             ),
           ),
         ),
@@ -237,6 +239,102 @@ void main() {
 
       expect(controller.canProceedFromStep(3), isTrue);
       expect(controller.state.flightNumber, isEmpty);
+    });
+  });
+
+  group('StepPickupDateTime flight pickup time conflict', () {
+    late BookingWizardController controller;
+
+    setUp(() async {
+      controller = BookingWizardController(
+        storage: _NoopStorage(),
+        now: () => fixedNow,
+      );
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.airportPickup);
+    });
+
+    Future<void> lookupAndConfirm(WidgetTester tester) async {
+      final api = _apiForResponses([
+        http.Response(jsonEncode(_successPayload()), 200),
+      ]);
+      await _pumpStep(tester, controller: controller, api: api);
+      await tester.enterText(find.byKey(const Key('flight_number_field')), 'TG401');
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('flight_lookup_search_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byKey(const Key('flight_lookup_confirm_button')));
+      await tester.pump();
+    }
+
+    testWidgets('shows conflict UI when pickup differs by 30+ minutes', (
+      tester,
+    ) async {
+      await lookupAndConfirm(tester);
+
+      expect(find.byKey(const Key('flight_pickup_conflict_warning')), findsOneWidget);
+      expect(
+        find.textContaining('differ by 525 minutes'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('flight_pickup_use_manual_tile')), findsOneWidget);
+      expect(find.byKey(const Key('flight_pickup_use_flight_tile')), findsOneWidget);
+    });
+
+    testWidgets('hides conflict UI when pickup differs by less than 30 minutes', (
+      tester,
+    ) async {
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 19, 20));
+      await lookupAndConfirm(tester);
+
+      expect(find.byKey(const Key('flight_pickup_conflict_warning')), findsNothing);
+      expect(find.byKey(const Key('flight_pickup_use_manual_tile')), findsNothing);
+    });
+
+    testWidgets('uses flight arrival time when flight option is selected', (
+      tester,
+    ) async {
+      await lookupAndConfirm(tester);
+
+      final flightTile = find.byKey(const Key('flight_pickup_use_flight_tile'));
+      await tester.ensureVisible(flightTile);
+      await tester.tap(flightTile);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(controller.state.pickupDate, '2026-07-01');
+      expect(controller.state.pickupTime, '19:45');
+      expect(controller.scheduledPickupAtIso(), '2026-07-01T19:45:00+07:00');
+      expect(find.byKey(const Key('flight_pickup_conflict_warning')), findsNothing);
+    });
+
+    testWidgets('keeps manual pickup when manual option is selected', (
+      tester,
+    ) async {
+      await lookupAndConfirm(tester);
+
+      final manualTile = find.byKey(const Key('flight_pickup_use_manual_tile'));
+      await tester.ensureVisible(manualTile);
+      await tester.tap(manualTile);
+      await tester.pump();
+
+      expect(controller.state.pickupDate, '2026-07-01');
+      expect(controller.state.pickupTime, '11:00');
+      expect(controller.scheduledPickupAtIso(), '2026-07-01T11:00:00+07:00');
+      expect(find.byKey(const Key('flight_pickup_final_summary')), findsOneWidget);
+    });
+
+    testWidgets('clears conflict UI after pickup time is edited manually', (
+      tester,
+    ) async {
+      await lookupAndConfirm(tester);
+      expect(find.byKey(const Key('flight_pickup_conflict_warning')), findsOneWidget);
+
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 19, 20));
+      await tester.pump();
+
+      expect(find.byKey(const Key('flight_pickup_conflict_warning')), findsNothing);
     });
   });
 }
