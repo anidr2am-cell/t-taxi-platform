@@ -561,14 +561,8 @@ class BookingWizardController extends ChangeNotifier {
       'customer': {
         'name': _state.customerName.trim(),
         'phone': _state.customerPhone.trim(),
-        if (_state.customerCountryCode.trim().isNotEmpty)
-          'countryCode': _state.customerCountryCode.trim(),
-        if (_state.customerEmail.trim().isNotEmpty)
-          'email': _state.customerEmail.trim(),
-        if (_state.messengerType.trim().isNotEmpty)
-          'messengerType': _state.messengerType.trim(),
-        if (_state.messengerId.trim().isNotEmpty)
-          'messengerId': _state.messengerId.trim(),
+        'messengerType': _state.messengerType.trim(),
+        'messengerId': _state.messengerId.trim(),
       },
       if (_state.additionalRequests.trim().isNotEmpty)
         'additionalRequests': _state.additionalRequests.trim(),
@@ -675,8 +669,8 @@ class BookingWizardController extends ChangeNotifier {
     if (field == 'customer.phone') {
       return (step: 6, messageKey: 'wizard_required_customer_phone');
     }
-    if (field == 'customer.email') {
-      return (step: 6, messageKey: 'wizard_customer_email_invalid');
+    if (field == 'customer.messengerType' || field == 'customer.messengerId') {
+      return (step: 6, messageKey: 'wizard_required_customer');
     }
     if (field.startsWith('customer.')) {
       return (step: 6, messageKey: 'wizard_required_customer');
@@ -1049,15 +1043,11 @@ class BookingWizardController extends ChangeNotifier {
     }
   }
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);
-  }
-
   bool _isCustomerStepValid() {
     if (_state.customerName.trim().isEmpty) return false;
     if (_state.customerPhone.trim().isEmpty) return false;
-    final email = _state.customerEmail.trim();
-    if (email.isNotEmpty && !_isValidEmail(email)) return false;
+    if (_state.messengerType.trim().isEmpty) return false;
+    if (_state.messengerId.trim().isEmpty) return false;
     return true;
   }
 
@@ -1204,9 +1194,15 @@ class BookingWizardController extends ChangeNotifier {
         }
         return 'wizard_pricing_after_vehicle';
       case 6:
-        if (_state.customerEmail.trim().isNotEmpty &&
-            !_isValidEmail(_state.customerEmail.trim())) {
-          return 'wizard_customer_email_invalid';
+        if (_state.customerName.trim().isEmpty) {
+          return 'wizard_required_customer_name';
+        }
+        if (_state.customerPhone.trim().isEmpty) {
+          return 'wizard_required_customer_phone';
+        }
+        if (_state.messengerType.trim().isEmpty ||
+            _state.messengerId.trim().isEmpty) {
+          return 'wizard_required_customer';
         }
         return 'wizard_required_customer';
       case 7:

@@ -16,6 +16,9 @@ import 'package:frontend/features/booking/services/recent_locations_storage.dart
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+const _testMessengerType = 'LINE';
+const _testMessengerId = 'line-user-id';
+
 void main() {
   test(
     'calculatePricing sends contract body with passengers, luggage, and options',
@@ -706,8 +709,9 @@ void main() {
     await controller.selectVehicle('SUV');
     await controller.updateCustomerInfo(
       name: 'Kim',
-      email: 'kim@example.com',
       phone: '+66123456789',
+      messengerType: _testMessengerType,
+      messengerId: _testMessengerId,
     );
 
     final payload = controller.buildCreatePayload();
@@ -745,14 +749,24 @@ void main() {
       await controller.updatePassengersAndLuggage(adults: 2);
       await controller.loadRecommendation();
       await controller.selectVehicle('SUV');
-      await controller.updateCustomerInfo(name: 'Kim', phone: '+66123456789');
+      await controller.updateCustomerInfo(
+        name: 'Kim',
+        phone: '+66123456789',
+        messengerType: _testMessengerType,
+        messengerId: _testMessengerId,
+      );
 
       final payload = controller.buildCreatePayload();
+      final customer = Map<String, dynamic>.from(payload['customer'] as Map);
       final originPayload = Map<String, dynamic>.from(payload['origin'] as Map);
       final destinationPayload = Map<String, dynamic>.from(
         payload['destination'] as Map,
       );
 
+      expect(customer['messengerType'], _testMessengerType);
+      expect(customer['messengerId'], _testMessengerId);
+      expect(customer.containsKey('email'), isFalse);
+      expect(customer.containsKey('countryCode'), isFalse);
       expect(origin.code, 'BKK');
       expect(destination.code, 'PATTAYA');
       expect(originPayload, containsPair('address', origin.address));
@@ -884,8 +898,9 @@ void main() {
       await controller.selectVehicle('SUV');
       await controller.updateCustomerInfo(
         name: 'สมชาย ใจดี',
-        email: 'kim@example.com',
         phone: '+66123456789',
+        messengerType: _testMessengerType,
+        messengerId: _testMessengerId,
       );
 
       final result = await controller.submitBooking();
@@ -942,6 +957,8 @@ void main() {
       await controller.updateCustomerInfo(
         name: 'Kim',
         phone: '+66123456789',
+        messengerType: _testMessengerType,
+        messengerId: _testMessengerId,
         flightNumber: 'bad-flight',
       );
 
@@ -986,16 +1003,16 @@ void main() {
   );
 
   test(
-    'submit maps backend customer.email validation error to customer step',
+    'submit maps backend customer.messengerType validation error to customer step',
     () async {
       final controller = BookingWizardController(
         apiService: _FailingCreateBookingApi(
           BookingApiException('Validation failed', 'VALIDATION_ERROR', [
             const BookingApiErrorDetail(
               source: 'body',
-              field: 'customer.email',
-              type: 'string.email',
-              message: 'customer.email must be a valid email',
+              field: 'customer.messengerType',
+              type: 'any.required',
+              message: 'customer.messengerType is required',
             ),
           ]),
         ),
@@ -1011,7 +1028,7 @@ void main() {
 
       expect(result, isNull);
       expect(controller.state.step, 6);
-      expect(controller.state.errorMessage, 'wizard_customer_email_invalid');
+      expect(controller.state.errorMessage, 'wizard_required_customer');
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
   );
@@ -1075,8 +1092,9 @@ Future<void> _fillSubmittableCityTransfer(
   await controller.selectVehicle('SUV');
   await controller.updateCustomerInfo(
     name: 'Kim',
-    email: 'kim@example.com',
     phone: '+66123456789',
+    messengerType: _testMessengerType,
+    messengerId: _testMessengerId,
   );
 }
 

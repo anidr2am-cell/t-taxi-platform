@@ -38,6 +38,8 @@ function validPayload(overrides = {}) {
       email: 'kim@example.com',
       phone: '+66123456789',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
     ...overrides,
   };
@@ -89,6 +91,8 @@ test('booking validator accepts missing customer email', () => {
       name: 'Kim',
       phone: '+66123456789',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
   });
 
@@ -105,11 +109,40 @@ test('booking validator accepts null customer email', () => {
       email: null,
       phone: '+66123456789',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
   }));
 
   assert.equal(error, undefined);
   assert.equal(value.customer.email, null);
+});
+
+test('booking validator requires customer messengerType and messengerId', () => {
+  const missingMessengerType = createBookingSchema.validate(validPayload({
+    customer: {
+      name: 'Kim',
+      phone: '+66123456789',
+      messengerId: 'line-user-id',
+    },
+  }));
+  assert.ok(missingMessengerType.error);
+  assert.equal(missingMessengerType.error.details[0].path.join('.'), 'customer.messengerType');
+
+  const missingMessengerId = createBookingSchema.validate(validPayload({
+    customer: {
+      name: 'Kim',
+      phone: '+66123456789',
+      messengerType: 'LINE',
+    },
+  }));
+  assert.ok(missingMessengerId.error);
+  assert.equal(missingMessengerId.error.details[0].path.join('.'), 'customer.messengerId');
+
+  const withMessenger = createBookingSchema.validate(validPayload());
+  assert.equal(withMessenger.error, undefined);
+  assert.equal(withMessenger.value.customer.messengerType, 'LINE');
+  assert.equal(withMessenger.value.customer.messengerId, 'line-user-id');
 });
 
 test('booking validator normalizes empty customer email to null', () => {
@@ -119,6 +152,8 @@ test('booking validator normalizes empty customer email to null', () => {
       email: '   ',
       phone: '+66123456789',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
   }));
 
@@ -133,6 +168,8 @@ test('booking validator rejects invalid customer email', () => {
       email: 'not-an-email',
       phone: '+66123456789',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
   }));
 
@@ -145,6 +182,8 @@ test('booking validator still requires customer name and phone', () => {
     customer: {
       phone: '+66123456789',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
   }));
   assert.ok(missingName.error);
@@ -154,6 +193,8 @@ test('booking validator still requires customer name and phone', () => {
     customer: {
       name: 'Kim',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
   }));
   assert.ok(missingPhone.error);
@@ -184,6 +225,8 @@ test('booking validator accepts multilingual customer names and free-text places
         name: `  ${name}  `,
         phone: '+66123456789',
         countryCode: 'TH',
+        messengerType: 'LINE',
+        messengerId: 'line-user-id',
       },
       additionalRequests: 'Soi 6/1 — พบที่ล็อบบี้',
     }));
@@ -197,19 +240,34 @@ test('booking validator accepts multilingual customer names and free-text places
 
 test('booking validator rejects blank, control-character, and too-long customer names', () => {
   const blank = createBookingSchema.validate(validPayload({
-    customer: { name: '   ', phone: '+66123456789' },
+    customer: {
+      name: '   ',
+      phone: '+66123456789',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
+    },
   }));
   assert.ok(blank.error);
   assert.equal(blank.error.details[0].path.join('.'), 'customer.name');
 
   const control = createBookingSchema.validate(validPayload({
-    customer: { name: 'Kim\u0000', phone: '+66123456789' },
+    customer: {
+      name: 'Kim\u0000',
+      phone: '+66123456789',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
+    },
   }));
   assert.ok(control.error);
   assert.equal(control.error.details[0].type, 'string.controlCharacters');
 
   const tooLong = createBookingSchema.validate(validPayload({
-    customer: { name: '가'.repeat(101), phone: '+66123456789' },
+    customer: {
+      name: '가'.repeat(101),
+      phone: '+66123456789',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
+    },
   }));
   assert.ok(tooLong.error);
   assert.equal(tooLong.error.details[0].type, 'string.max');
@@ -231,6 +289,8 @@ test('booking validator accepts optional countryCode and free text', () => {
         name: 'Kim',
         phone: '+66123456789',
         countryCode,
+        messengerType: 'LINE',
+        messengerId: 'line-user-id',
       },
     }));
 
@@ -244,6 +304,8 @@ test('booking validator accepts missing countryCode', () => {
     customer: {
       name: 'Kim',
       phone: '+66123456789',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
   }));
 

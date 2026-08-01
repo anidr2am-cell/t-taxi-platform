@@ -3,7 +3,6 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_wizard_state.dart';
-import '../models/country_option.dart';
 import 'wizard_compact.dart';
 
 class StepCustomerInfo extends StatefulWidget {
@@ -38,25 +37,16 @@ class StepCustomerInfo extends StatefulWidget {
 
 class _StepCustomerInfoState extends State<StepCustomerInfo> {
   late final TextEditingController _nameController;
-  late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _countryController;
   late final TextEditingController _messengerTypeController;
   late final TextEditingController _messengerIdController;
   late final TextEditingController _requestsController;
-  late final FocusNode _countryFocusNode;
-  bool _localizedInitialCountry = false;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.state.customerName);
-    _emailController = TextEditingController(text: widget.state.customerEmail);
     _phoneController = TextEditingController(text: widget.state.customerPhone);
-    _countryController = TextEditingController(
-      text: widget.state.customerCountryCode,
-    );
-    _countryFocusNode = FocusNode();
     _messengerTypeController = TextEditingController(
       text: widget.state.messengerType,
     );
@@ -71,27 +61,11 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
-    _countryController.dispose();
-    _countryFocusNode.dispose();
     _messengerTypeController.dispose();
     _messengerIdController.dispose();
     _requestsController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_localizedInitialCountry) return;
-    _localizedInitialCountry = true;
-    final country = CountryCatalog.byCode(widget.state.customerCountryCode);
-    if (country != null) {
-      _countryController.text = country.localizedName(
-        context.l10n.languageCode,
-      );
-    }
   }
 
   InputDecoration _fieldDecoration(
@@ -115,7 +89,11 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final copy = _CustomerContactCopy(l10n.languageCode);
     final gap = widget.embedded ? WizardCompact.fieldGap : 12.0;
+    final cardPadding = widget.embedded
+        ? const EdgeInsets.all(WizardCompact.cardPadding)
+        : const EdgeInsets.all(AppTokens.spaceMd);
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -136,123 +114,88 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
           ),
         ),
         SizedBox(height: gap),
-        TextField(
-          controller: _emailController,
-          decoration: _fieldDecoration(l10n, l10n.t('email')),
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          onChanged: widget.onEmailChanged,
-        ),
-        SizedBox(height: gap),
-        Semantics(
-          label: _requiredSemanticsLabel(l10n, 'phone'),
-          textField: true,
-          child: TextField(
-            controller: _phoneController,
-            decoration: _fieldDecoration(l10n, l10n.t('phone'), required: true),
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.next,
-            onChanged: widget.onPhoneChanged,
-          ),
-        ),
-        SizedBox(height: gap),
+        AppUi.sectionHeader(context, title: copy.sectionTitle),
+        const SizedBox(height: 8),
         AppUi.surfaceCard(
-          backgroundColor: AppTokens.warningLight,
-          padding: widget.embedded
-              ? const EdgeInsets.all(WizardCompact.cardPadding)
-              : const EdgeInsets.all(AppTokens.spaceMd),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: cardPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.info_outline, color: AppTokens.warning),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  l10n.t('customer_contact_sns_notice'),
-                  style: const TextStyle(height: 1.45),
+              Semantics(
+                label: _requiredSemanticsLabel(l10n, 'phone'),
+                textField: true,
+                child: TextField(
+                  controller: _phoneController,
+                  decoration: _fieldDecoration(
+                    l10n,
+                    l10n.t('phone'),
+                    required: true,
+                  ),
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  onChanged: widget.onPhoneChanged,
+                ),
+              ),
+              SizedBox(height: gap),
+              Container(
+                padding: cardPadding,
+                decoration: BoxDecoration(
+                  color: AppTokens.warningLight,
+                  borderRadius: AppTokens.borderRadiusMd,
+                  border: Border.all(color: AppTokens.border),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, color: AppTokens.warning),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.t('customer_contact_sns_notice'),
+                        style: const TextStyle(height: 1.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: gap),
+              Text(
+                copy.messengerPairHint,
+                style: WizardCompact.hintTextStyle,
+              ),
+              const SizedBox(height: 6),
+              Semantics(
+                label: _requiredSemanticsLabel(l10n, 'messenger_type'),
+                textField: true,
+                child: TextField(
+                  controller: _messengerTypeController,
+                  decoration: _fieldDecoration(
+                    l10n,
+                    l10n.t('messenger_type'),
+                    hint: l10n.t('messenger_type_hint'),
+                    required: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onChanged: widget.onMessengerTypeChanged,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Semantics(
+                label: _requiredSemanticsLabel(l10n, 'messenger_id'),
+                textField: true,
+                child: TextField(
+                  controller: _messengerIdController,
+                  decoration: _fieldDecoration(
+                    l10n,
+                    l10n.t('messenger_id'),
+                    required: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onChanged: widget.onMessengerIdChanged,
                 ),
               ),
             ],
           ),
-        ),
-        SizedBox(height: gap),
-        Semantics(
-          label: l10n.t('country'),
-          textField: true,
-          child: RawAutocomplete<CountryOption>(
-            textEditingController: _countryController,
-            focusNode: _countryFocusNode,
-            displayStringForOption: (option) =>
-                option.localizedName(l10n.languageCode),
-            optionsBuilder: (value) => CountryCatalog.search(value.text),
-            onSelected: (option) {
-              _countryController.text = option.localizedName(l10n.languageCode);
-              widget.onCountryChanged(option.code);
-            },
-            fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-              return TextField(
-                controller: controller,
-                focusNode: focusNode,
-                decoration: _fieldDecoration(
-                  l10n,
-                  l10n.t('country'),
-                  hint: l10n.t('country_search_hint'),
-                ),
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => onSubmitted(),
-                onChanged: widget.onCountryChanged,
-              );
-            },
-            optionsViewBuilder: (context, onSelected, options) {
-              final items = options.toList(growable: false);
-              return Align(
-                alignment: Alignment.topLeft,
-                child: Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(12),
-                  clipBehavior: Clip.antiAlias,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: 520,
-                      maxHeight: 280,
-                    ),
-                    child: ListView.builder(
-                      padding: EdgeInsets.zero,
-                      shrinkWrap: true,
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final option = items[index];
-                        return ListTile(
-                          key: ValueKey('country_option_${option.code}'),
-                          title: Text(option.localizedName(l10n.languageCode)),
-                          trailing: Text(option.code),
-                          onTap: () => onSelected(option),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        SizedBox(height: gap),
-        TextField(
-          controller: _messengerTypeController,
-          decoration: _fieldDecoration(
-            l10n,
-            l10n.t('messenger_type'),
-            hint: l10n.t('messenger_type_hint'),
-          ),
-          textInputAction: TextInputAction.next,
-          onChanged: widget.onMessengerTypeChanged,
-        ),
-        SizedBox(height: gap),
-        TextField(
-          controller: _messengerIdController,
-          decoration: _fieldDecoration(l10n, l10n.t('messenger_id')),
-          textInputAction: TextInputAction.next,
-          onChanged: widget.onMessengerIdChanged,
         ),
         SizedBox(height: gap),
         TextField(
@@ -270,5 +213,41 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
       padding: AppUi.pagePadding(context),
       child: content,
     );
+  }
+}
+
+class _CustomerContactCopy {
+  _CustomerContactCopy(this.languageCode);
+
+  final String languageCode;
+
+  String get sectionTitle {
+    switch (languageCode) {
+      case 'ko':
+        return '연락처';
+      case 'zh':
+        return '联系方式';
+      case 'ja':
+        return '連絡先';
+      case 'th':
+        return 'ช่องทางติดต่อ';
+      default:
+        return 'Contact';
+    }
+  }
+
+  String get messengerPairHint {
+    switch (languageCode) {
+      case 'ko':
+        return '메신저 종류와 아이디를 함께 입력해 주세요.';
+      case 'zh':
+        return '请同时填写 messenger 类型和 ID。';
+      case 'ja':
+        return 'メッセンジャーの種類と ID を両方入力してください。';
+      case 'th':
+        return 'กรุณากรอกประเภทและ ID ของ Messenger ให้ครบคู่กัน';
+      default:
+        return 'Please enter both messenger type and ID.';
+    }
   }
 }

@@ -79,24 +79,22 @@ void main() {
       controller = BookingWizardController(storage: _NoopStorage());
     });
 
-    test('requires name and phone but not email or country', () async {
-      await controller.updateCustomerInfo(name: 'Jane', phone: '+66123456789');
-      expect(controller.canProceedFromStep(6), isTrue);
+    test('requires name, phone, and messenger fields', () async {
+      expect(controller.canProceedFromStep(6), isFalse);
 
       await controller.updateCustomerInfo(
         name: 'Jane',
         phone: '+66123456789',
-        countryCode: '대한민국',
+        messengerType: 'LINE',
+        messengerId: 'line-user-id',
       );
       expect(controller.canProceedFromStep(6), isTrue);
-    });
 
-    test('rejects invalid email when provided', () async {
       await controller.updateCustomerInfo(
         name: 'Jane',
         phone: '+66123456789',
-        countryCode: 'TH',
-        email: 'not-an-email',
+        messengerType: 'LINE',
+        messengerId: '   ',
       );
       expect(controller.canProceedFromStep(6), isFalse);
     });

@@ -72,6 +72,8 @@ function scenarioPayload({
       phone: '+66000000001',
       email: 'regression@example.com',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
     additionalRequests: REGRESSION_MARKER,
   };

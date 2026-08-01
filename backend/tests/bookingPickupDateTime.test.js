@@ -40,6 +40,8 @@ function validPayload(overrides = {}) {
       email: 'kim@example.com',
       phone: '+66123456789',
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
     ...overrides,
   };

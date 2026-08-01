@@ -77,6 +77,8 @@ function buildBookingPayload({ customerName, customerPhone, label }) {
       email: null,
       phone: customerPhone,
       countryCode: 'TH',
+      messengerType: 'LINE',
+      messengerId: 'line-user-id',
     },
     additionalRequests: label ? `MVP demo seed — ${label}` : 'MVP demo seed',
   };
