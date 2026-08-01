@@ -137,28 +137,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
                 ),
               ),
               SizedBox(height: gap),
-              Container(
-                padding: cardPadding,
-                decoration: BoxDecoration(
-                  color: AppTokens.warningLight,
-                  borderRadius: AppTokens.borderRadiusMd,
-                  border: Border.all(color: AppTokens.border),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.info_outline, color: AppTokens.warning),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        l10n.t('customer_contact_sns_notice'),
-                        style: const TextStyle(height: 1.45),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: gap),
               Text(
                 copy.messengerPairHint,
                 style: WizardCompact.hintTextStyle,
@@ -192,6 +170,28 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
                   ),
                   textInputAction: TextInputAction.next,
                   onChanged: widget.onMessengerIdChanged,
+                ),
+              ),
+              SizedBox(height: gap),
+              Container(
+                padding: cardPadding,
+                decoration: BoxDecoration(
+                  color: AppTokens.warningLight,
+                  borderRadius: AppTokens.borderRadiusMd,
+                  border: Border.all(color: AppTokens.border),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, color: AppTokens.warning),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.t('customer_contact_sns_notice'),
+                        style: const TextStyle(height: 1.45),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
