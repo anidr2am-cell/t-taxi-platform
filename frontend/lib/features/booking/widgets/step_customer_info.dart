@@ -36,9 +36,15 @@ class StepCustomerInfo extends StatefulWidget {
 }
 
 class _StepCustomerInfoState extends State<StepCustomerInfo> {
+  static const _messengerTypeOptions = <String>[
+    'LINE',
+    'WhatsApp',
+    'KAKAO TALK',
+    'WeChat',
+  ];
+
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _messengerTypeController;
   late final TextEditingController _messengerIdController;
   late final TextEditingController _requestsController;
 
@@ -47,9 +53,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     super.initState();
     _nameController = TextEditingController(text: widget.state.customerName);
     _phoneController = TextEditingController(text: widget.state.customerPhone);
-    _messengerTypeController = TextEditingController(
-      text: widget.state.messengerType,
-    );
     _messengerIdController = TextEditingController(
       text: widget.state.messengerId,
     );
@@ -62,7 +65,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _messengerTypeController.dispose();
     _messengerIdController.dispose();
     _requestsController.dispose();
     super.dispose();
@@ -84,6 +86,12 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
 
   String _requiredSemanticsLabel(AppLocalizations l10n, String fieldKey) {
     return '${l10n.t('field_required')} ${l10n.t(fieldKey)}';
+  }
+
+  String? _selectedMessengerTypeValue() {
+    final normalized = widget.state.messengerType.trim();
+    if (normalized.isEmpty) return null;
+    return _messengerTypeOptions.contains(normalized) ? normalized : null;
   }
 
   @override
@@ -144,17 +152,31 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
               const SizedBox(height: 6),
               Semantics(
                 label: _requiredSemanticsLabel(l10n, 'messenger_type'),
-                textField: true,
-                child: TextField(
-                  controller: _messengerTypeController,
+                child: DropdownButtonFormField<String>(
+                  value: _selectedMessengerTypeValue(),
+                  isExpanded: true,
                   decoration: _fieldDecoration(
                     l10n,
                     l10n.t('messenger_type'),
-                    hint: l10n.t('messenger_type_hint'),
                     required: true,
                   ),
-                  textInputAction: TextInputAction.next,
-                  onChanged: widget.onMessengerTypeChanged,
+                  hint: Text(
+                    l10n.t('messenger_type'),
+                    style: WizardCompact.hintTextStyle,
+                  ),
+                  items: _messengerTypeOptions
+                      .map(
+                        (option) => DropdownMenuItem<String>(
+                          value: option,
+                          child: Text(option),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    if (value != null) {
+                      widget.onMessengerTypeChanged(value);
+                    }
+                  },
                 ),
               ),
               const SizedBox(height: 6),
