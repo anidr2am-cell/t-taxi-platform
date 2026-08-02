@@ -110,6 +110,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
           AppUi.sectionHeader(context, title: l10n.t('customer_info')),
           const SizedBox(height: 8),
         ],
+        if (widget.embedded) SizedBox(height: WizardCompact.fieldGap),
         Semantics(
           label: _requiredSemanticsLabel(l10n, 'name'),
           textField: true,
