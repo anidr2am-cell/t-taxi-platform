@@ -342,7 +342,7 @@ void main() {
   });
 
   group('PR72 jobs QA', () {
-    testWidgets('three tabs and open call card without commission', (
+    testWidgets('open call card shows commission and driver income breakdown', (
       tester,
     ) async {
       await DriverUxQaHarness.configureViewport(
@@ -364,8 +364,12 @@ void main() {
       expect(find.textContaining('BKK — Suvarnabhumi Airport'), findsWidgets);
       expect(find.textContaining('Pattaya Hotel'), findsWidgets);
       expect(find.textContaining('고객 결제 총액'), findsWidgets);
-      expect(find.textContaining('회사에 납부할 수수료'), findsNothing);
-      expect(find.textContaining('기사 예상 수입'), findsNothing);
+      expect(find.textContaining('수수료'), findsWidgets);
+      expect(find.textContaining('THB 200'), findsWidgets);
+      expect(find.textContaining('피켓비용'), findsWidgets);
+      expect(find.textContaining('THB 100'), findsWidgets);
+      expect(find.textContaining('기사 예상 수입'), findsWidgets);
+      expect(find.textContaining('THB 2,200'), findsWidgets);
       expect(find.textContaining('รับงานนี้'), findsWidgets);
       DriverUxQaHarness.expectNoOverflow(tester);
     });

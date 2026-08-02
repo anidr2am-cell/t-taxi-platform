@@ -733,11 +733,7 @@ class _UrgentCallsSection extends StatelessWidget {
                     ],
                     if (customerTotal != null) ...[
                       const SizedBox(height: 8),
-                      AppUi.summaryRow(
-                        label: l10n.t('driver_customer_total_amount'),
-                        value: customerTotal,
-                        emphasize: true,
-                      ),
+                      ..._openCallPaymentSummaryRows(l10n, call, customerTotal),
                     ],
                     if (luggage.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -897,11 +893,7 @@ class _OpenCallsSection extends StatelessWidget {
                       ),
                       if (customerTotal != null) ...[
                         const SizedBox(height: 8),
-                        AppUi.summaryRow(
-                          label: l10n.t('driver_customer_total_amount'),
-                          value: customerTotal,
-                          emphasize: true,
-                        ),
+                        ..._openCallPaymentSummaryRows(l10n, call, customerTotal),
                       ],
                       if (luggage.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -1300,6 +1292,92 @@ String? _driverLocationAddressOnly(DriverBookingLocation location) {
   final address = location.address?.trim();
   if (address != null && address.isNotEmpty) return address;
   return null;
+}
+
+/// Fixed platform commission for the current pricing tier.
+/// Replace with an API field when pricing tiers diversify.
+const _openCallCommissionAmount = 200.0;
+
+/// Fixed picket (name sign) surcharge when requested.
+const _openCallPicketAmount = 100.0;
+
+double? _openCallCustomerPaymentAmount(DriverOpenCall call) {
+  if (call.customerPaymentAmount != null) {
+    return call.customerPaymentAmount;
+  }
+  if (call.amount > 0) {
+    return call.amount;
+  }
+  return null;
+}
+
+/// Open-call API includes [nameSignRequested], but [DriverOpenCall] does not
+/// map it yet. When [driverExpectedIncomeAmount] is present, infer picket cost
+/// from the same payment breakdown the backend uses.
+double? _openCallPicketCost(DriverOpenCall call, double customerTotal) {
+  final driverIncome = call.driverExpectedIncomeAmount;
+  if (driverIncome == null) {
+    return null;
+  }
+  final inferred = customerTotal - _openCallCommissionAmount - driverIncome;
+  if (inferred <= 0) {
+    return 0;
+  }
+  if (inferred >= _openCallPicketAmount - 0.01) {
+    return _openCallPicketAmount;
+  }
+  return inferred;
+}
+
+double _openCallDriverIncome(
+  DriverOpenCall call,
+  double customerTotal,
+  double picketCost,
+) {
+  return call.driverExpectedIncomeAmount ??
+      (customerTotal - _openCallCommissionAmount - picketCost);
+}
+
+List<Widget> _openCallPaymentSummaryRows(
+  AppLocalizations l10n,
+  DriverOpenCall call,
+  String customerTotalFormatted,
+) {
+  final customerTotal = _openCallCustomerPaymentAmount(call);
+  if (customerTotal == null) {
+    return const [];
+  }
+
+  final currency = call.customerPaymentCurrency ?? call.currency;
+  final picketCost = _openCallPicketCost(call, customerTotal);
+  final resolvedPicket = picketCost ?? 0.0;
+  final driverIncome = _openCallDriverIncome(
+    call,
+    customerTotal,
+    resolvedPicket,
+  );
+
+  return [
+    AppUi.summaryRow(
+      label: l10n.t('driver_customer_total_amount'),
+      value: customerTotalFormatted,
+      emphasize: true,
+    ),
+    AppUi.summaryRow(
+      label: '수수료',
+      value: DriverMoneyFormat.money(_openCallCommissionAmount, currency),
+    ),
+    if (picketCost != null)
+      AppUi.summaryRow(
+        label: '피켓비용',
+        value: DriverMoneyFormat.money(picketCost, currency),
+      ),
+    AppUi.summaryRow(
+      label: l10n.t('driver_expected_income'),
+      value: DriverMoneyFormat.money(driverIncome, currency),
+      emphasize: true,
+    ),
+  ];
 }
 
 Widget _driverJobsRouteLocations(
