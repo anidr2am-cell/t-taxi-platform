@@ -68,6 +68,34 @@ class CommissionSettlementService {
     }
   }
 
+  normalizeLocationText(value) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  }
+
+  locationNamesFromMetadata(metadata) {
+    const parsed = metadata ?? {};
+    const originLocation = parsed.originLocation ?? {};
+    const destinationLocation = parsed.destinationLocation ?? {};
+    return {
+      origin: {
+        name: this.normalizeLocationText(originLocation.name),
+        nameTh: this.normalizeLocationText(originLocation.nameTh),
+      },
+      destination: {
+        name: this.normalizeLocationText(destinationLocation.name),
+        nameTh: this.normalizeLocationText(destinationLocation.nameTh),
+      },
+    };
+  }
+
+  mapRouteEndpoint(locationNames, side, address) {
+    const names = locationNames[side];
+    return {
+      name: names.nameTh ?? names.name ?? null,
+      address: address ?? null,
+    };
+  }
+
   formatDateTime(date) {
     return date.toISOString().slice(0, 19).replace('T', ' ');
   }
@@ -235,6 +263,7 @@ class CommissionSettlementService {
 
   mapSettlementListItem(row, apiBasePath, role) {
     const metadata = this.parseMetadata(row.metadata);
+    const locationNames = this.locationNamesFromMetadata(metadata);
     const now = new Date();
     const commissionStatus = this.mapPublicCommissionStatus(row, metadata, now);
     const receiptStatus = this.mapReceiptStatus(row, metadata);
@@ -248,8 +277,16 @@ class CommissionSettlementService {
       status: row.status,
       pickupDate: row.pickup_date ?? null,
       pickupTime: row.pickup_time ?? null,
-      origin: row.origin_address ?? null,
-      destination: row.destination_address ?? null,
+      origin: this.mapRouteEndpoint(
+        locationNames,
+        'origin',
+        row.origin_address,
+      ),
+      destination: this.mapRouteEndpoint(
+        locationNames,
+        'destination',
+        row.destination_address,
+      ),
       completedAt: row.completed_at,
       commissionAmount: row.commission_amount != null ? Number(row.commission_amount) : null,
       customerPaymentAmount,

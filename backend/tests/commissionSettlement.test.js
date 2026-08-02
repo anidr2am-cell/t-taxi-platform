@@ -636,8 +636,14 @@ test('mapSettlementListItem includes trip summary fields with null-safe addresse
   );
   assert.equal(item.pickupDate, '2026-07-01');
   assert.equal(item.pickupTime, '09:30:00');
-  assert.equal(item.origin, 'BKK Airport');
-  assert.equal(item.destination, 'Pattaya Hotel');
+  assert.deepEqual(item.origin, {
+    name: null,
+    address: 'BKK Airport',
+  });
+  assert.deepEqual(item.destination, {
+    name: null,
+    address: 'Pattaya Hotel',
+  });
   assert.equal(item.driverId, undefined);
   assert.equal(item.driverName, undefined);
   assert.equal(item.customerPaymentAmount, 1200);
@@ -659,9 +665,39 @@ test('mapSettlementListItem includes trip summary fields with null-safe addresse
     '/api/v1/driver/settlements',
     ROLES.DRIVER,
   );
-  assert.equal(nullItem.origin, null);
-  assert.equal(nullItem.destination, null);
+  assert.deepEqual(nullItem.origin, { name: null, address: null });
+  assert.deepEqual(nullItem.destination, { name: null, address: null });
   assert.equal(nullItem.driverExpectedIncomeAmount, 1080);
+});
+
+test('mapSettlementListItem maps metadata location names onto route endpoints', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      origin_address: '999 Moo 1, Samut Prakan, Thailand',
+      destination_address: 'Pattaya Hotel Address',
+      metadata: JSON.stringify({
+        originLocation: {
+          name: 'BKK — Suvarnabhumi Airport',
+          nameTh: 'ท่าอากาศยานสุวรรณภูมิ',
+        },
+        destinationLocation: {
+          name: 'Pattaya Hotel',
+        },
+      }),
+    }),
+    '/api/v1/admin/settlements',
+    ROLES.ADMIN,
+  );
+
+  assert.deepEqual(item.origin, {
+    name: 'ท่าอากาศยานสุวรรณภูมิ',
+    address: '999 Moo 1, Samut Prakan, Thailand',
+  });
+  assert.deepEqual(item.destination, {
+    name: 'Pattaya Hotel',
+    address: 'Pattaya Hotel Address',
+  });
 });
 
 test('mapSettlementListItem keeps unknown income nullable when commission is unknown', () => {

@@ -210,6 +210,53 @@ test("service maps queue item without secrets", () => {
   assert.ok(!("boardingQrTokenHash" in item));
 });
 
+test("mapQueueItem exposes route endpoints with metadata location names", () => {
+  const service = new AdminDispatchService(
+    {},
+    {},
+    {},
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+  const item = service.mapQueueItem(
+    queueRow({
+      origin_address: "999 Moo 1, Samut Prakan, Thailand",
+      destination_address: "Pattaya Hotel Address",
+      metadata: JSON.stringify({
+        originLocation: {
+          name: "BKK — Suvarnabhumi Airport",
+          nameTh: "ท่าอากาศยานสุวรรณภูมิ",
+        },
+        destinationLocation: {
+          name: "Pattaya Hotel",
+        },
+      }),
+    }),
+  );
+
+  assert.deepEqual(item.origin, {
+    name: "ท่าอากาศยานสุวรรณภูมิ",
+    address: "999 Moo 1, Samut Prakan, Thailand",
+  });
+  assert.deepEqual(item.destination, {
+    name: "Pattaya Hotel",
+    address: "Pattaya Hotel Address",
+  });
+
+  const addressOnly = service.mapQueueItem(queueRow());
+  assert.deepEqual(addressOnly.origin, {
+    name: null,
+    address: "BKK",
+  });
+  assert.deepEqual(addressOnly.destination, {
+    name: null,
+    address: "Pattaya",
+  });
+});
+
 test("driver active-job queries use all non-terminal operating statuses", async () => {
   const queries = [];
   const pool = {

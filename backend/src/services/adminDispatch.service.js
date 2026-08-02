@@ -157,6 +157,8 @@ class AdminDispatchService {
     const passengerCount =
       (row.adults ?? 0) + (row.children ?? 0) + (row.infants ?? 0);
     const operations = this.adminOperationsService.evaluateOperations(row);
+    const metadata = this.parseMetadata(row.metadata) ?? {};
+    const locationNames = this.locationNamesFromMetadata(metadata);
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -165,8 +167,16 @@ class AdminDispatchService {
         name: row.service_type_name,
       },
       scheduledPickupAt: formatServiceDateTimeIso(row.scheduled_pickup_at),
-      origin: row.origin_address,
-      destination: row.destination_address,
+      origin: this.mapRouteEndpoint(
+        locationNames,
+        "origin",
+        row.origin_address,
+      ),
+      destination: this.mapRouteEndpoint(
+        locationNames,
+        "destination",
+        row.destination_address,
+      ),
       customerDisplayName: row.customer_name,
       customerPhone: row.customer_phone,
       passengerCount,
@@ -302,6 +312,14 @@ class AdminDispatchService {
         name: this.normalizeLocationText(destinationLocation.name),
         nameTh: this.normalizeLocationText(destinationLocation.nameTh),
       },
+    };
+  }
+
+  mapRouteEndpoint(locationNames, side, address) {
+    const names = locationNames[side];
+    return {
+      name: names.nameTh ?? names.name ?? null,
+      address: address ?? null,
     };
   }
 
