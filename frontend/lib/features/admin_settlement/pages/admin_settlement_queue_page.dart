@@ -164,6 +164,16 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                                         fontSize: 13,
                                       ),
                                     ),
+                                    const SizedBox(height: 2),
+                                    _AdminSettlementRouteSummary(
+                                      origin: _adminSettlementRouteEndpointFromItem(
+                                        item['origin'],
+                                      ),
+                                      destination:
+                                          _adminSettlementRouteEndpointFromItem(
+                                        item['destination'],
+                                      ),
+                                    ),
                                     if (item['dueAt'] != null)
                                       Text(
                                         'Due: ${item['dueAt']}',
@@ -537,6 +547,20 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                       ),
                       if (_detail?['dueAt'] != null)
                         Text('Due: ${_detail?['dueAt']}'),
+                      const SizedBox(height: AppTokens.spaceSm),
+                      _AdminSettlementRouteLine(
+                        label: context.l10n.t('origin'),
+                        location: _adminSettlementRouteEndpointFromItem(
+                          _detail?['origin'],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _AdminSettlementRouteLine(
+                        label: context.l10n.t('destination'),
+                        location: _adminSettlementRouteEndpointFromItem(
+                          _detail?['destination'],
+                        ),
+                      ),
                       if (hasReceipt)
                         Padding(
                           padding: const EdgeInsets.only(
@@ -667,6 +691,115 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                 ],
               ],
             ),
+    );
+  }
+}
+
+const _adminLocationHighlightColor = Color(0xFF006A60);
+
+Map<String, dynamic> _adminSettlementRouteEndpointFromItem(dynamic value) {
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+  if (value is String) {
+    final trimmed = value.trim();
+    if (trimmed.isNotEmpty) {
+      return {'name': null, 'address': trimmed};
+    }
+  }
+  return const {};
+}
+
+String? _adminSettlementRouteEndpointName(Map<String, dynamic> location) {
+  final name = (location['name'] as String?)?.trim();
+  if (name != null && name.isNotEmpty) {
+    return name;
+  }
+  return null;
+}
+
+String? _adminSettlementRouteEndpointAddress(Map<String, dynamic> location) {
+  final address = (location['address'] as String?)?.trim();
+  if (address != null && address.isNotEmpty) {
+    return address;
+  }
+  return null;
+}
+
+List<InlineSpan> _adminSettlementRouteEndpointValueSpans(
+  Map<String, dynamic> location,
+) {
+  final name = _adminSettlementRouteEndpointName(location);
+  final address = _adminSettlementRouteEndpointAddress(location);
+  if (name == null) {
+    return [TextSpan(text: address ?? '-')];
+  }
+  final showAddress =
+      address != null && address.isNotEmpty && address != name;
+  return [
+    TextSpan(
+      text: name,
+      style: const TextStyle(
+        color: _adminLocationHighlightColor,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    if (showAddress) TextSpan(text: ' $address'),
+  ];
+}
+
+class _AdminSettlementRouteSummary extends StatelessWidget {
+  const _AdminSettlementRouteSummary({
+    required this.origin,
+    required this.destination,
+  });
+
+  final Map<String, dynamic> origin;
+  final Map<String, dynamic> destination;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(
+          color: AppTokens.textSecondary,
+          fontSize: 12,
+          height: 1.35,
+        ),
+        children: [
+          TextSpan(text: '${l10n.t('origin')} : '),
+          ..._adminSettlementRouteEndpointValueSpans(origin),
+          const TextSpan(text: '\n'),
+          TextSpan(text: '${l10n.t('destination')} : '),
+          ..._adminSettlementRouteEndpointValueSpans(destination),
+        ],
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+class _AdminSettlementRouteLine extends StatelessWidget {
+  const _AdminSettlementRouteLine({
+    required this.label,
+    required this.location,
+  });
+
+  final String label;
+  final Map<String, dynamic> location;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+        children: [
+          TextSpan(text: '$label : '),
+          ..._adminSettlementRouteEndpointValueSpans(location),
+        ],
+      ),
     );
   }
 }

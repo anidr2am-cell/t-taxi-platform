@@ -825,8 +825,8 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
               ),
               const SizedBox(height: 4),
               _AdminRouteEndpointsText(
-                routeText:
-                    '${item['origin']} → ${item['destination']}',
+                origin: _adminRouteEndpointFromItem(item['origin']),
+                destination: _adminRouteEndpointFromItem(item['destination']),
               ),
               const SizedBox(height: AppTokens.spaceSm),
               Text(
@@ -1124,7 +1124,8 @@ class _BookingListCard extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           _AdminRouteEndpointsText(
-            routeText: '${item['origin']} → ${item['destination']}',
+            origin: _adminRouteEndpointFromItem(item['origin']),
+            destination: _adminRouteEndpointFromItem(item['destination']),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1533,30 +1534,71 @@ String _formatAdminBangkokDateTime(String? raw) {
       '${two(bangkok.hour)}:${two(bangkok.minute)}';
 }
 
+Map<String, dynamic> _adminRouteEndpointFromItem(dynamic value) {
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+  if (value is String) {
+    final trimmed = value.trim();
+    if (trimmed.isNotEmpty) {
+      return {'name': null, 'address': trimmed};
+    }
+  }
+  return const {};
+}
+
+String? _adminRouteEndpointName(Map<String, dynamic> location) {
+  final name = (location['name'] as String?)?.trim();
+  if (name != null && name.isNotEmpty) {
+    return name;
+  }
+  return null;
+}
+
+String? _adminRouteEndpointAddress(Map<String, dynamic> location) {
+  final address = (location['address'] as String?)?.trim();
+  if (address != null && address.isNotEmpty) {
+    return address;
+  }
+  return null;
+}
+
+List<InlineSpan> _adminRouteEndpointValueSpans(Map<String, dynamic> location) {
+  final name = _adminRouteEndpointName(location);
+  final address = _adminRouteEndpointAddress(location);
+  if (name == null) {
+    return [TextSpan(text: address ?? '-')];
+  }
+  final showAddress =
+      address != null && address.isNotEmpty && address != name;
+  return [
+    TextSpan(
+      text: name,
+      style: const TextStyle(
+        color: _adminLocationHighlightColor,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    if (showAddress) TextSpan(text: ' $address'),
+  ];
+}
+
 class _AdminRouteEndpointsText extends StatelessWidget {
   const _AdminRouteEndpointsText({
-    required this.routeText,
+    required this.origin,
+    required this.destination,
     this.maxLines,
     this.overflow,
   });
 
-  final String routeText;
+  final Map<String, dynamic> origin;
+  final Map<String, dynamic> destination;
   final int? maxLines;
   final TextOverflow? overflow;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final parsed = _parseRouteEndpoints(routeText);
-    if (parsed == null) {
-      return Text(
-        routeText,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-        maxLines: maxLines,
-        overflow: overflow,
-      );
-    }
-
     return Text.rich(
       TextSpan(
         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1568,13 +1610,7 @@ class _AdminRouteEndpointsText extends StatelessWidget {
               fontWeight: FontWeight.normal,
             ),
           ),
-          TextSpan(
-            text: parsed.origin,
-            style: const TextStyle(
-              color: _adminLocationHighlightColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          ..._adminRouteEndpointValueSpans(origin),
           const TextSpan(
             text: ' → ',
             style: TextStyle(
@@ -1589,30 +1625,11 @@ class _AdminRouteEndpointsText extends StatelessWidget {
               fontWeight: FontWeight.normal,
             ),
           ),
-          TextSpan(
-            text: parsed.destination,
-            style: const TextStyle(
-              color: _adminLocationHighlightColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          ..._adminRouteEndpointValueSpans(destination),
         ],
       ),
       maxLines: maxLines,
       overflow: overflow,
     );
   }
-}
-
-({String origin, String destination})? _parseRouteEndpoints(String routeText) {
-  final arrowIndex = routeText.indexOf('→');
-  if (arrowIndex <= 0 || arrowIndex >= routeText.length - 1) {
-    return null;
-  }
-  final origin = routeText.substring(0, arrowIndex).trim();
-  final destination = routeText.substring(arrowIndex + 1).trim();
-  if (origin.isEmpty || destination.isEmpty) {
-    return null;
-  }
-  return (origin: origin, destination: destination);
 }
