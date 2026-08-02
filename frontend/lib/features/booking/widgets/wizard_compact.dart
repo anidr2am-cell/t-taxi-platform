@@ -11,18 +11,18 @@ class WizardCompact {
   static const cardPadding = 12.0;
   static const headerPadding = EdgeInsets.fromLTRB(12, 10, 12, 10);
   static const bodyPadding = EdgeInsets.fromLTRB(12, 0, 12, 12);
-  static const minTouchHeight = 44.0;
+  static const minTouchHeight = 48.0;
 
   static const _requiredLabelStyle = TextStyle(
     color: AppTokens.error,
-    fontSize: 10.7,
+    fontSize: 13.91,
     fontWeight: FontWeight.w700,
     height: 1.1,
   );
 
   static const _fieldLabelStyle = TextStyle(
     color: AppTokens.textSecondary,
-    fontSize: 12.8,
+    fontSize: 16.64,
     height: 1.1,
   );
 
@@ -65,7 +65,7 @@ class WizardCompact {
       prefixIcon: prefixIcon,
       floatingLabelBehavior: FloatingLabelBehavior.always,
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: const OutlineInputBorder(),
       constraints: const BoxConstraints(minHeight: minTouchHeight),
     );
