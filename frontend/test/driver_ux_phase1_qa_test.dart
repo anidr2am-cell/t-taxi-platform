@@ -349,7 +349,34 @@ void main() {
         tester,
         size: const Size(360, 800),
       );
-      final api = QaDriverApi(online: true, openCalls: [qaOpenCall()]);
+      final api = QaDriverApi(
+        online: true,
+        openCalls: [
+          DriverOpenCall.fromJson({
+            'bookingNumber': 'TX202607130001',
+            'status': 'OPEN',
+            'pickupDate': '2026-07-13',
+            'pickupTime': '10:30',
+            'origin': 'BKK Airport',
+            'destination': 'Pattaya Hotel',
+            'serviceType': {'name': 'Airport pickup'},
+            'vehicleType': {'name': 'Van', 'code': 'VAN'},
+            'amount': 2500,
+            'currency': 'THB',
+            'passengerCount': 2,
+            'customerPaymentAmount': 2500,
+            'customerPaymentCurrency': 'THB',
+            'driverExpectedIncomeAmount': 2200,
+            'driverExpectedIncomeCurrency': 'THB',
+            'nameSignRequested': true,
+            'luggage': {
+              'carriers20Inch': 1,
+              'carriers24InchPlus': 2,
+              'golfBags': 1,
+            },
+          }),
+        ],
+      );
       await tester.pumpWidget(DriverUxQaHarness.page(DriverJobsPage(api: api)));
       await tester.pumpAndSettle();
       if (find.textContaining('온라인 상태에서만').evaluate().isNotEmpty) {

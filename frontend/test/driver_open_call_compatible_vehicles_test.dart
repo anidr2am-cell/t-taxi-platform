@@ -44,6 +44,39 @@ void main() {
     expect(call.compatibleVehicles.last.isExactMatch, isFalse);
   });
 
+  test('DriverOpenCall parses nameSignRequested from JSON', () {
+    final withPicket = DriverOpenCall.fromJson({
+      'bookingNumber': 'TX202607250003',
+      'status': 'OPEN',
+      'pickupDate': '2026-07-25',
+      'pickupTime': '10:00',
+      'origin': 'A',
+      'destination': 'B',
+      'serviceType': {'name': 'Airport'},
+      'vehicleType': {'name': 'Sedan', 'code': 'SEDAN'},
+      'amount': 1000,
+      'currency': 'THB',
+      'passengerCount': 2,
+      'nameSignRequested': true,
+    });
+    final withoutPicket = DriverOpenCall.fromJson({
+      'bookingNumber': 'TX202607250004',
+      'status': 'OPEN',
+      'pickupDate': '2026-07-25',
+      'pickupTime': '10:00',
+      'origin': 'A',
+      'destination': 'B',
+      'serviceType': {'name': 'Airport'},
+      'vehicleType': {'name': 'Sedan', 'code': 'SEDAN'},
+      'amount': 1000,
+      'currency': 'THB',
+      'passengerCount': 2,
+    });
+
+    expect(withPicket.nameSignRequested, isTrue);
+    expect(withoutPicket.nameSignRequested, isFalse);
+  });
+
   test('single compatible vehicle means picker is unnecessary', () {
     final call = DriverOpenCall.fromJson({
       'bookingNumber': 'TX202607250002',

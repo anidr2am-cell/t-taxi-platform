@@ -1311,22 +1311,8 @@ double? _openCallCustomerPaymentAmount(DriverOpenCall call) {
   return null;
 }
 
-/// Open-call API includes [nameSignRequested], but [DriverOpenCall] does not
-/// map it yet. When [driverExpectedIncomeAmount] is present, infer picket cost
-/// from the same payment breakdown the backend uses.
-double? _openCallPicketCost(DriverOpenCall call, double customerTotal) {
-  final driverIncome = call.driverExpectedIncomeAmount;
-  if (driverIncome == null) {
-    return null;
-  }
-  final inferred = customerTotal - _openCallCommissionAmount - driverIncome;
-  if (inferred <= 0) {
-    return 0;
-  }
-  if (inferred >= _openCallPicketAmount - 0.01) {
-    return _openCallPicketAmount;
-  }
-  return inferred;
+double _openCallPicketCost(DriverOpenCall call) {
+  return call.nameSignRequested ? _openCallPicketAmount : 0;
 }
 
 double _openCallDriverIncome(
@@ -1349,12 +1335,11 @@ List<Widget> _openCallPaymentSummaryRows(
   }
 
   final currency = call.customerPaymentCurrency ?? call.currency;
-  final picketCost = _openCallPicketCost(call, customerTotal);
-  final resolvedPicket = picketCost ?? 0.0;
+  final picketCost = _openCallPicketCost(call);
   final driverIncome = _openCallDriverIncome(
     call,
     customerTotal,
-    resolvedPicket,
+    picketCost,
   );
 
   return [
@@ -1367,11 +1352,10 @@ List<Widget> _openCallPaymentSummaryRows(
       label: '수수료',
       value: DriverMoneyFormat.money(_openCallCommissionAmount, currency),
     ),
-    if (picketCost != null)
-      AppUi.summaryRow(
-        label: '피켓비용',
-        value: DriverMoneyFormat.money(picketCost, currency),
-      ),
+    AppUi.summaryRow(
+      label: '피켓비용',
+      value: DriverMoneyFormat.money(picketCost, currency),
+    ),
     AppUi.summaryRow(
       label: l10n.t('driver_expected_income'),
       value: DriverMoneyFormat.money(driverIncome, currency),

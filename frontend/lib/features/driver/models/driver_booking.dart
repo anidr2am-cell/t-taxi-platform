@@ -332,6 +332,7 @@ class DriverOpenCall {
     this.driverExpectedIncomeAmount,
     this.driverExpectedIncomeCurrency,
     this.luggage,
+    this.nameSignRequested = false,
     this.isUrgentRequest = false,
     this.negotiationId,
     this.minRequiredEtaMinutes,
@@ -359,6 +360,7 @@ class DriverOpenCall {
   final double? driverExpectedIncomeAmount;
   final String? driverExpectedIncomeCurrency;
   final Map<String, dynamic>? luggage;
+  final bool nameSignRequested;
   final bool isUrgentRequest;
   final int? negotiationId;
   final int? minRequiredEtaMinutes;
@@ -392,6 +394,7 @@ class DriverOpenCall {
       driverExpectedIncomeAmount: driverExpectedIncomeAmount,
       driverExpectedIncomeCurrency: driverExpectedIncomeCurrency,
       luggage: luggage,
+      nameSignRequested: nameSignRequested,
       isUrgentRequest: isUrgentRequest ?? this.isUrgentRequest,
       negotiationId: negotiationId ?? this.negotiationId,
       minRequiredEtaMinutes:
@@ -445,6 +448,7 @@ class DriverOpenCall {
       luggage: json['luggage'] == null
           ? null
           : Map<String, dynamic>.from(json['luggage'] as Map),
+      nameSignRequested: json['nameSignRequested'] == true,
       isUrgentRequest: json['isUrgentRequest'] == true,
       negotiationId: (json['negotiationId'] as num?)?.toInt(),
       minRequiredEtaMinutes: (json['minRequiredEtaMinutes'] as num?)?.toInt(),
