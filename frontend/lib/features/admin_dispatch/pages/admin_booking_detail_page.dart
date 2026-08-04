@@ -1772,6 +1772,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             label: l10n.t('phone'),
             value: customer['phone'] as String? ?? '',
           ),
+          if (customer['messengerType'] != null)
+            AppUi.summaryRow(
+              label: l10n.t('messenger_type'),
+              value: customer['messengerType'] as String,
+            ),
+          if (customer['messengerId'] != null)
+            AppUi.summaryRow(
+              label: l10n.t('messenger_id'),
+              value: customer['messengerId'] as String,
+            ),
           if (customer['email'] != null)
             AppUi.summaryRow(
               label: l10n.t('email'),
