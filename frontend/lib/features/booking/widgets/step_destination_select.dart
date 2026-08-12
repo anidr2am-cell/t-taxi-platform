@@ -10,6 +10,7 @@ class StepDestinationSelect extends StatelessWidget {
   final LocationOption? selected;
   final String languageCode;
   final ValueChanged<LocationOption> onSelected;
+  final void Function(String errorCategory)? onSearchFailed;
   final bool embedded;
   final FocusNode? focusNode;
 
@@ -19,6 +20,7 @@ class StepDestinationSelect extends StatelessWidget {
     required this.selected,
     required this.languageCode,
     required this.onSelected,
+    this.onSearchFailed,
     this.embedded = false,
     this.focusNode,
   });
@@ -39,6 +41,8 @@ class StepDestinationSelect extends StatelessWidget {
           _showAirportShortcuts ? 'airport_shortcuts_destination' : null,
       compact: embedded,
       focusNode: focusNode,
+      placeType: 'destination',
+      onSearchFailed: onSearchFailed,
       onSelected: onSelected,
     );
 

@@ -8,23 +8,24 @@ import '../../../widgets/app_ui.dart';
 import '../../../widgets/language_selector.dart';
 import '../controllers/booking_wizard_controller.dart';
 import '../models/booking_wizard_state.dart';
+import '../models/booking_wizard_steps.dart';
 import '../models/location_option.dart';
 import '../models/service_type_option.dart';
 import '../pages/booking_complete_page.dart';
 import '../pages/urgent_booking_flow_page.dart';
+import '../utils/customer_booking_format.dart';
+import '../services/booking_analytics.dart';
 import '../widgets/airport_meeting_guide_card.dart';
+import '../widgets/booking_progress_header.dart';
+import '../widgets/booking_summary_bar.dart';
+import '../widgets/step_confirmation.dart';
 import '../widgets/step_customer_info.dart';
-import '../widgets/step_destination_select.dart';
-import '../widgets/step_origin_select.dart';
 import '../widgets/step_passengers_luggage.dart';
 import '../widgets/step_pickup_datetime.dart';
-import '../widgets/step_confirmation.dart';
-import '../widgets/step_service_select.dart';
+import '../widgets/step_route_select.dart';
 import '../widgets/step_vehicle_select.dart';
 import '../widgets/wizard_compact.dart';
-import '../widgets/wizard_section_card.dart';
 import '../widgets/wizard_status_views.dart';
-import '../widgets/wizard_step_indicator.dart';
 
 class BookingWizardPage extends StatefulWidget {
   const BookingWizardPage({super.key, this.now, this.controller});
@@ -41,15 +42,39 @@ class BookingWizardPage extends StatefulWidget {
 
 class _BookingWizardPageState extends State<BookingWizardPage> {
   late final BookingWizardController _controller;
+  final FocusNode _originFocusNode = FocusNode();
+  final FocusNode _destinationFocusNode = FocusNode();
+  final FocusNode _customerNameFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
-  late final List<GlobalKey> _sectionKeys = List.generate(
-    BookingWizardState.stepCount,
-    (_) => GlobalKey(),
-  );
-  late final List<FocusNode> _sectionFocusNodes = List.generate(
-    BookingWizardState.stepCount,
-    (_) => FocusNode(),
-  );
+  int? _lastTrackedStep;
+  bool _sessionStartedTracked = false;
+
+  void _syncAnalytics(BuildContext context) {
+    if (!_controller.isInitialized) return;
+    final width = MediaQuery.sizeOf(context).width;
+    final locale = context.read<LocaleState>().languageCode;
+    if (!_sessionStartedTracked) {
+      _sessionStartedTracked = true;
+      _controller.analytics.trackBookingStarted(
+        locale: locale,
+        deviceType: BookingAnalytics.deviceTypeForWidth(width),
+      );
+    }
+    final step = _controller.state.step;
+    if (_lastTrackedStep == step) return;
+    _lastTrackedStep = step;
+    _controller.analytics.trackStepViewed(
+      stepNumber: step + 1,
+      stepName: BookingAnalytics.stepNameFor(step),
+    );
+    if (step == BookingWizardSteps.review) {
+      final state = _controller.state;
+      _controller.analytics.trackBookingReviewViewed(
+        vehicleType: state.selectedVehicle,
+        routeType: BookingAnalytics.routeTypeFor(state.serviceType),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -70,9 +95,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
   @override
   void dispose() {
     _scrollController.dispose();
-    for (final node in _sectionFocusNodes) {
-      node.dispose();
-    }
+    _originFocusNode.dispose();
+    _destinationFocusNode.dispose();
+    _customerNameFocusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -82,65 +107,66 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     return l10n.t(message);
   }
 
-  void _scrollToSection(int step) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final target = _sectionKeys[step].currentContext;
-      if (target == null) return;
-      Scrollable.ensureVisible(
-        target,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-        alignment: 0.06,
-      );
-      if (_sectionFocusNodes[step].canRequestFocus) {
-        _sectionFocusNodes[step].requestFocus();
-      }
-    });
+  String? _formattedPrice(BookingWizardState state) {
+    final pricing = state.pricing;
+    if (pricing == null) return null;
+    return CustomerBookingFormat.money(pricing.totalAmount, pricing.currency);
   }
 
-  String _stepTitle(AppLocalizations l10n, int step) {
-    switch (step) {
-      case 0:
-        return l10n.t('select_service');
-      case 1:
-        return l10n.t('origin');
-      case 2:
-        return l10n.t('destination');
-      case 3:
-        return l10n.t('pickup_datetime');
-      case 4:
-        return l10n.t('passengers');
-      case 5:
-        return l10n.t('select_vehicle');
-      case 6:
-        return l10n.t('customer_info');
-      case 7:
-        return l10n.t('customer_confirmation_title');
+  String _ctaLabel(AppLocalizations l10n, BookingWizardState state) {
+    final price = _formattedPrice(state);
+    switch (state.step) {
+      case BookingWizardSteps.route:
+        return l10n.t('wizard_cta_route');
+      case BookingWizardSteps.schedule:
+        return l10n.t('wizard_cta_schedule');
+      case BookingWizardSteps.vehicle:
+        if (state.selectedVehicle == null || price == null) {
+          return l10n.t('wizard_cta_vehicle_unselected');
+        }
+        return l10n
+            .t('wizard_cta_vehicle_selected')
+            .replaceAll('{price}', price);
+      case BookingWizardSteps.customer:
+        return price == null
+            ? l10n.t('customer_review_booking')
+            : l10n.t('wizard_cta_customer').replaceAll('{price}', price);
+      case BookingWizardSteps.review:
+        return price == null
+            ? l10n.t('customer_confirm_booking')
+            : l10n.t('wizard_cta_confirm').replaceAll('{price}', price);
       default:
-        return l10n.t('book_your_ride');
+        return l10n.t('ui_next');
     }
   }
 
-  Future<void> _handleProceedToConfirmation() async {
+  Future<void> _handleAdvance() async {
     if (_controller.isSubmitting || _controller.isLoading) return;
-    if (_controller.state.step == 7) return;
-    if (!_controller.canProceedToConfirmation()) return;
+    final state = _controller.state;
+    if (state.step == BookingWizardSteps.review) return;
 
-    await _controller.goToStep(7);
-    _scrollToSection(7);
+    final advanced = await _controller.goNext();
+    if (!advanced && mounted && _controller.state.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _wizardErrorText(context.l10n, _controller.state.errorMessage),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _handleSubmit() async {
     if (_controller.isSubmitting || _controller.isLoading) return;
-    if (_controller.state.step != 7) return;
+    if (_controller.state.step != BookingWizardSteps.review) return;
 
     await _submitBooking(bookingMode: 'STANDARD');
   }
 
   Future<void> _handleUrgentSubmit() async {
     if (_controller.isSubmitting || _controller.isLoading) return;
-    if (_controller.state.step != 7) return;
+    if (_controller.state.step != BookingWizardSteps.review) return;
     if (!_controller.isUrgentPickupWindowSelected()) return;
 
     final l10n = context.l10n;
@@ -171,16 +197,16 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
 
     await _controller.prepareForSubmit();
 
-    final firstIncomplete = _controller.firstIncompleteStep();
-    if (firstIncomplete != null && firstIncomplete < 7) {
-      _scrollToSection(firstIncomplete);
-      return;
-    }
-
     final canSubmit = bookingMode == 'URGENT'
         ? _controller.canSubmitUrgent()
         : _controller.canSubmitStandard();
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      final firstIncomplete = _controller.firstIncompleteStep();
+      if (firstIncomplete != null) {
+        await _controller.goToStep(firstIncomplete);
+      }
+      return;
+    }
 
     final snapshot = _controller.state;
     final review = _controller.buildCompleteReview();
@@ -201,7 +227,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         );
         final errorStep =
             _controller.firstIncompleteStep() ?? _controller.state.step;
-        _scrollToSection(errorStep);
+        await _controller.goToStep(errorStep);
       }
       return;
     }
@@ -245,59 +271,102 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     );
   }
 
-  Widget _buildStepContent(int step, BookingWizardState state, String locale) {
+  Widget _buildTrustNotes(AppLocalizations l10n, {bool includeFlight = false}) {
+    final keys = [
+      'wizard_trust_toll_included',
+      'wizard_trust_no_airport_parking',
+      'wizard_trust_no_night_surcharge',
+      if (includeFlight) 'wizard_trust_flight_delay_wait',
+    ];
+    return AppUi.surfaceCard(
+      backgroundColor: AppTokens.accentLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < keys.length; i++) ...[
+            if (i > 0) const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.check_circle_outline, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.t(keys[i]),
+                    style: const TextStyle(height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepContent(
+    int step,
+    BookingWizardState state,
+    String locale,
+    AppLocalizations l10n,
+  ) {
     switch (step) {
-      case 0:
-        return StepServiceSelect(
-          embedded: true,
-          selected: state.serviceType,
-          onSelected: _controller.selectService,
-        );
-      case 1:
-        return StepOriginSelect(
-          embedded: true,
-          serviceType: state.serviceType,
-          selected: state.origin,
+      case BookingWizardSteps.route:
+        return StepRouteSelect(
+          state: state,
+          controller: _controller,
           languageCode: locale,
-          focusNode: _sectionFocusNodes[1],
-          onSelected: _controller.setOrigin,
+          originFocusNode: _originFocusNode,
+          destinationFocusNode: _destinationFocusNode,
         );
-      case 2:
-        return StepDestinationSelect(
-          embedded: true,
-          serviceType: state.serviceType,
-          selected: state.destination,
-          languageCode: locale,
-          focusNode: _sectionFocusNodes[2],
-          onSelected: _controller.setDestination,
+      case BookingWizardSteps.schedule:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            StepPickupDateTime(
+              embedded: true,
+              state: state,
+              controller: _controller,
+              onFlightNumberChanged: (value) =>
+                  _controller.updateCustomerInfo(flightNumber: value),
+            ),
+            const SizedBox(height: WizardCompact.sectionGap),
+            _buildTrustNotes(
+              l10n,
+              includeFlight:
+                  state.serviceType == BookingServiceType.airportPickup,
+            ),
+          ],
         );
-      case 3:
-        return StepPickupDateTime(
-          embedded: true,
-          state: state,
-          controller: _controller,
-          focusNode: _sectionFocusNodes[3],
-          onFlightNumberChanged: (value) =>
-              _controller.updateCustomerInfo(flightNumber: value),
+      case BookingWizardSteps.vehicle:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            StepPassengersLuggage(
+              embedded: true,
+              state: state,
+              controller: _controller,
+              onRetryRecommendation: _controller.loadRecommendation,
+            ),
+            const SizedBox(height: WizardCompact.sectionGap),
+            StepVehicleSelect(
+              embedded: true,
+              state: state,
+              controller: _controller,
+            ),
+            const SizedBox(height: WizardCompact.sectionGap),
+            _buildTrustNotes(
+              l10n,
+              includeFlight:
+                  state.serviceType == BookingServiceType.airportPickup,
+            ),
+          ],
         );
-      case 4:
-        return StepPassengersLuggage(
-          embedded: true,
-          state: state,
-          controller: _controller,
-          onRetryRecommendation: _controller.loadRecommendation,
-        );
-      case 5:
-        return StepVehicleSelect(
-          embedded: true,
-          state: state,
-          controller: _controller,
-        );
-      case 6:
+      case BookingWizardSteps.customer:
         return StepCustomerInfo(
           embedded: true,
           state: state,
-          nameFocusNode: _sectionFocusNodes[6],
+          nameFocusNode: _customerNameFocusNode,
           onNameChanged: (v) => _controller.updateCustomerInfo(name: v),
           onEmailChanged: (v) => _controller.updateCustomerInfo(email: v),
           onPhoneChanged: (v) => _controller.updateCustomerInfo(phone: v),
@@ -310,14 +379,11 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           onAdditionalRequestsChanged: (v) =>
               _controller.updateCustomerInfo(additionalRequests: v),
         );
-      case 7:
+      case BookingWizardSteps.review:
         return StepConfirmation(
           embedded: true,
           state: state,
-          onEditStep: (step) {
-            _controller.goToStep(step);
-            _scrollToSection(step);
-          },
+          onEditStep: (editStep) => _controller.goToStepForEdit(editStep),
         );
       default:
         return const SizedBox.shrink();
@@ -339,165 +405,197 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           return const Scaffold(body: WizardLoadingView());
         }
 
+        _syncAnalytics(context);
+
         final state = _controller.state;
-        final isConfirmationStep = state.step == 7;
+        final isReviewStep = state.step == BookingWizardSteps.review;
         final isUrgentWindow = _controller.isUrgentPickupWindowSelected();
         final isBusy = _controller.isLoading || _controller.isSubmitting;
-        final canProceedToConfirmation =
-            !isConfirmationStep &&
-            _controller.canProceedToConfirmation() &&
-            !isBusy;
+        final canAdvance =
+            !isReviewStep && _controller.canProceedFromCurrentStep() && !isBusy;
         final canSubmitStandard =
-            isConfirmationStep &&
+            isReviewStep &&
             !isUrgentWindow &&
             _controller.canSubmitStandard() &&
             !isBusy;
         final canSubmitUrgent =
-            isConfirmationStep &&
+            isReviewStep &&
             isUrgentWindow &&
             _controller.canSubmitUrgent() &&
             !isBusy;
+        final showAdvanceCta = !isReviewStep;
+        final validationKey = _controller.stepValidationMessageKey(state.step);
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.t('book_your_ride')),
-            actions: const [LanguageSelector()],
-          ),
-          body: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: Column(
-                children: [
-                  WizardStepIndicator(
-                    completedRequired: _controller.completedRequiredCount,
-                    totalRequired: _controller.totalRequiredCount,
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      padding: AppUi.pagePadding(context),
-                      child: Column(
-                        children: [
-                          for (
-                            var i = 0;
-                            i < BookingWizardState.stepCount;
-                            i++
-                          ) ...[
-                            KeyedSubtree(
-                              key: _sectionKeys[i],
-                              child: WizardSectionCard(
-                                stepNumber: i + 1,
-                                title: _stepTitle(l10n, i),
-                                validationHint:
-                                    !_controller.canProceedFromStep(i)
-                                    ? () {
-                                        final key = _controller
-                                            .stepValidationMessageKey(i);
-                                        return key != null ? l10n.t(key) : null;
-                                      }()
-                                    : null,
-                                child: _buildStepContent(i, state, locale),
-                              ),
-                            ),
-                            if (i < BookingWizardState.stepCount - 1)
-                              const SizedBox(height: WizardCompact.sectionGap),
-                          ],
-                        ],
+        return PopScope(
+          canPop: state.step == BookingWizardSteps.route,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop && state.step > BookingWizardSteps.route) {
+              _controller.goBack();
+            }
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(l10n.t(BookingWizardSteps.titleKey(state.step))),
+              leading: state.step > BookingWizardSteps.route
+                  ? Semantics(
+                      label: l10n.t('back'),
+                      button: true,
+                      child: BackButton(onPressed: _controller.goBack),
+                    )
+                  : null,
+              actions: const [LanguageSelector()],
+            ),
+            body: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Column(
+                  children: [
+                    BookingProgressHeader(currentStep: state.step),
+                    if (state.step >= BookingWizardSteps.schedule)
+                      BookingSummaryBar(
+                        state: state,
+                        controller: _controller,
                       ),
-                    ),
-                  ),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: AppTokens.surface,
-                      border: Border(top: BorderSide(color: AppTokens.border)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x0F000000),
-                          blurRadius: 12,
-                          offset: Offset(0, -2),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        padding: EdgeInsets.fromLTRB(
+                          AppTokens.spaceMd,
+                          AppTokens.spaceMd,
+                          AppTokens.spaceMd,
+                          AppTokens.spaceMd + 88 + bottomInset,
                         ),
-                      ],
-                    ),
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppTokens.spaceMd),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (isConfirmationStep && isUrgentWindow) ...[
-                              AppUi.surfaceCard(
-                                backgroundColor: AppTokens.warningLight,
-                                child: Text(
-                                  l10n.t('customer_urgent_pickup_hint'),
-                                  style: const TextStyle(height: 1.45),
+                            if (validationKey != null &&
+                                !isReviewStep &&
+                                !_controller.canProceedFromCurrentStep())
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: AppUi.surfaceCard(
+                                  backgroundColor: AppTokens.warningLight,
+                                  child: Text(
+                                    l10n.t(validationKey),
+                                    style: const TextStyle(height: 1.45),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                            ],
-                            if (canProceedToConfirmation)
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48,
-                                child: ElevatedButton(
-                                  onPressed: _handleProceedToConfirmation,
-                                  child: Text(l10n.t('customer_review_booking')),
-                                ),
-                              ),
-                            if (canSubmitUrgent)
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48,
-                                child: FilledButton(
-                                  onPressed: _handleUrgentSubmit,
-                                  child: _controller.isSubmitting
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : Text(l10n.t('customer_urgent_request')),
-                                ),
-                              ),
-                            if (canSubmitStandard)
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48,
-                                child: ElevatedButton(
-                                  onPressed: _handleSubmit,
-                                  child: _controller.isSubmitting
-                                      ? Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Flexible(
-                                              child: Text(
-                                                l10n.t(
-                                                  'customer_booking_processing',
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : Text(l10n.t('customer_confirm_booking')),
-                                ),
-                              ),
+                            _buildStepContent(state.step, state, locale, l10n),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: AppTokens.surface,
+                        border: Border(top: BorderSide(color: AppTokens.border)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x0F000000),
+                            blurRadius: 12,
+                            offset: Offset(0, -2),
+                          ),
+                        ],
+                      ),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppTokens.spaceMd,
+                            AppTokens.spaceMd,
+                            AppTokens.spaceMd,
+                            AppTokens.spaceMd + bottomInset,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (isReviewStep && isUrgentWindow) ...[
+                                AppUi.surfaceCard(
+                                  backgroundColor: AppTokens.warningLight,
+                                  child: Text(
+                                    l10n.t('customer_urgent_pickup_hint'),
+                                    style: const TextStyle(height: 1.45),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (showAdvanceCta)
+                                Semantics(
+                                  button: true,
+                                  label: _ctaLabel(l10n, state),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    height: 48,
+                                    child: ElevatedButton(
+                                      onPressed:
+                                          canAdvance ? _handleAdvance : null,
+                                      child: Text(
+                                        _ctaLabel(l10n, state),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (canSubmitUrgent)
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: FilledButton(
+                                    onPressed: _handleUrgentSubmit,
+                                    child: _controller.isSubmitting
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(l10n.t('customer_urgent_request')),
+                                  ),
+                                ),
+                              if (canSubmitStandard)
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton(
+                                    onPressed: _handleSubmit,
+                                    child: _controller.isSubmitting
+                                        ? Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Flexible(
+                                                child: Text(
+                                                  l10n.t(
+                                                    'customer_booking_processing',
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Text(_ctaLabel(l10n, state)),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

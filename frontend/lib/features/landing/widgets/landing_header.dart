@@ -60,7 +60,7 @@ class _BrandBlock extends StatelessWidget {
 
     return Semantics(
       header: true,
-      label: 'T-Ride',
+      label: 'T-Rider',
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: logoMaxWidth),
         child: Column(
@@ -76,7 +76,7 @@ class _BrandBlock extends StatelessWidget {
                 key: const Key('landing_header_logo'),
                 fit: BoxFit.contain,
                 alignment: Alignment.centerLeft,
-                semanticLabel: 'T-Ride',
+                semanticLabel: 'T-Rider',
                 errorBuilder: (context, error, stackTrace) {
                   return const SizedBox.shrink();
                 },

@@ -155,7 +155,7 @@ function createHarness({ failSecondChargeItem = false } = {}) {
 test('OPEN booking derives total from charge items and notifies eligible drivers after commit', async () => {
   const { service, calls, state } = createHarness();
   try {
-    const result = await service.createBooking(BOOKING_INPUT, null);
+    const result = (await service.createBooking(BOOKING_INPUT, null)).data;
 
     assert.equal(calls.booking.totalAmount, 0);
     assert.equal(calls.booking.status, BOOKING_STATUS.OPEN);

@@ -1824,3 +1824,118 @@ test("reassign does not dispatch outbox when transaction fails", async () => {
   );
   assert.equal(dispatched, 0);
 });
+
+test("booking detail exposes route customer pricing messenger and flight contract fields", async () => {
+  const bookingRepo = {
+    async findAdminBookingDetail() {
+      return {
+        id: 1,
+        booking_number: "TX202607010001",
+        status: "OPEN",
+        scheduled_pickup_at: "2026-07-01 09:30:00",
+        origin_address: "999 Moo 1, Samut Prakan, Thailand",
+        origin_place_id: "google-bkk",
+        origin_lat: 13.69,
+        origin_lng: 100.75,
+        destination_address: "Pattaya, Chon Buri, Thailand",
+        destination_place_id: "google-pattaya",
+        destination_lat: 12.92,
+        destination_lng: 100.88,
+        customer_name: "Kim Test",
+        customer_email: null,
+        customer_phone: "+66123456789",
+        customer_country_code: null,
+        special_requests: "Need child seat",
+        payment_method: "PAY_DRIVER",
+        payment_status: "UNPAID",
+        commission_status: "NOT_DUE_YET",
+        total_amount: 1300,
+        currency: "THB",
+        vehicle_count: 1,
+        created_at: "2026-06-30 10:00:00",
+        updated_at: "2026-06-30 10:00:00",
+        metadata: JSON.stringify({
+          messengerType: "LINE",
+          messengerId: "line-user-id",
+          originLocation: {
+            name: "Suvarnabhumi Airport",
+            nameTh: "ท่าอากาศยานสุวรรณภูมิ",
+          },
+          destinationLocation: {
+            name: "Pattaya Hotel",
+          },
+        }),
+        service_type_code: "AIRPORT_PICKUP",
+        service_type_name: "Airport Pickup",
+        vehicle_type_code: "SUV",
+        vehicle_type_name: "SUV",
+        adults: 2,
+        children: 1,
+        infants: 0,
+        carriers_20_inch: 1,
+        carriers_24_inch_plus: 2,
+        golf_bags: 1,
+        special_items: "1",
+        flight_number: "TG409",
+        flight_scheduled_arrival_at: null,
+        flight_estimated_arrival_at: null,
+        delay_status: null,
+        delay_minutes: null,
+        airport_code_custom: "BKK",
+        airport_iata: "BKK",
+      };
+    },
+    async findChargeItemsByBookingId() {
+      return [
+        {
+          charge_type: "VEHICLE_BASE",
+          description: "SUV AIRPORT_PICKUP",
+          quantity: 1,
+          unit_price: 1300,
+          amount: 1300,
+        },
+      ];
+    },
+    async findStatusLogsByBookingId() {
+      return [];
+    },
+    async findAssignmentsByBookingId() {
+      return [];
+    },
+  };
+  const service = new AdminDispatchService(
+    {},
+    bookingRepo,
+    {},
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const detail = await service.getBookingDetail("TX202607010001");
+
+  assert.equal(detail.bookingNumber, "TX202607010001");
+  assert.equal(detail.route.origin.address, "999 Moo 1, Samut Prakan, Thailand");
+  assert.equal(detail.route.origin.placeId, "google-bkk");
+  assert.equal(detail.route.destination.address, "Pattaya, Chon Buri, Thailand");
+  assert.equal(detail.scheduledPickupAt, "2026-07-01T02:30:00.000Z");
+  assert.equal(detail.vehicle.typeCode, "SUV");
+  assert.deepEqual(detail.passengers, { adults: 2, children: 1, infants: 0 });
+  assert.deepEqual(detail.luggage, {
+    carriers20Inch: 1,
+    carriers24InchPlus: 2,
+    golfBags: 1,
+    specialItems: "1",
+  });
+  assert.equal(detail.flight.flightNumber, "TG409");
+  assert.equal(detail.flight.airportIata, "BKK");
+  assert.equal(detail.customer.name, "Kim Test");
+  assert.equal(detail.customer.phone, "+66123456789");
+  assert.equal(detail.customer.messengerType, "LINE");
+  assert.equal(detail.customer.messengerId, "line-user-id");
+  assert.equal(detail.pricing.totalAmount, 1300);
+  assert.equal(detail.pricing.chargeItems[0].chargeType, "VEHICLE_BASE");
+  assert.equal(detail.pricing.chargeItems[0].amount, 1300);
+});

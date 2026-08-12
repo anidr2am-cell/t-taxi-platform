@@ -236,8 +236,9 @@ class BookingRepository {
     );
   }
 
-  async findById(bookingId) {
-    const [rows] = await this.pool.query(
+  async findById(bookingId, conn = null) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
       `
         SELECT
           b.id,
@@ -249,6 +250,7 @@ class BookingRepository {
           b.payment_status,
           b.payment_method,
           b.customer_user_id,
+          b.is_urgent_request,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           d.user_id AS driver_user_id
         FROM bookings b

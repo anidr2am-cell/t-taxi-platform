@@ -672,7 +672,10 @@ void main() {
       expect(controller.state.pickupTime, '00:04');
       expect(controller.selectedPickupDateTime(), DateTime(2026, 7, 8, 0, 4));
       expect(controller.canLoadRecommendation(), true);
-      expect(controller.stepValidationMessageKey(5), 'wizard_required_vehicle');
+      expect(controller.state.recommendation, isNotNull);
+      expect(controller.state.selectedVehicle, 'SUV');
+      expect(controller.state.pricing, isNotNull);
+      expect(controller.stepValidationMessageKey(2), isNull);
     },
   );
 
@@ -906,7 +909,7 @@ void main() {
       final result = await controller.submitBooking();
 
       expect(result, isNull);
-      expect(controller.state.step, 6);
+      expect(controller.state.step, 3);
       expect(controller.state.errorMessage, 'wizard_required_customer_name');
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
@@ -965,7 +968,7 @@ void main() {
       final result = await controller.submitBooking();
 
       expect(result, isNull);
-      expect(controller.state.step, 3);
+      expect(controller.state.step, 1);
       expect(controller.state.errorMessage, 'flight_number_invalid');
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
@@ -996,7 +999,7 @@ void main() {
       final result = await controller.submitBooking();
 
       expect(result, isNull);
-      expect(controller.state.step, 3);
+      expect(controller.state.step, 1);
       expect(controller.state.errorMessage, 'pickup_datetime_required');
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
@@ -1027,7 +1030,7 @@ void main() {
       final result = await controller.submitBooking();
 
       expect(result, isNull);
-      expect(controller.state.step, 6);
+      expect(controller.state.step, 3);
       expect(controller.state.errorMessage, 'wizard_required_customer');
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
@@ -1058,7 +1061,7 @@ void main() {
       final result = await controller.submitBooking();
 
       expect(result, isNull);
-      expect(controller.state.step, 4);
+      expect(controller.state.step, 2);
       expect(controller.state.errorMessage, 'wizard_required_passengers');
       expect(controller.state.errorMessage, isNot('Validation failed'));
     },
@@ -1179,7 +1182,10 @@ class _CapturingBookingApi implements BookingApiService {
   }
 
   @override
-  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) {
     throw UnimplementedError();
   }
 
@@ -1224,7 +1230,10 @@ class _FailingCreateBookingApi extends _CapturingBookingApi {
   final BookingApiException error;
 
   @override
-  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) {
     throw error;
   }
 }

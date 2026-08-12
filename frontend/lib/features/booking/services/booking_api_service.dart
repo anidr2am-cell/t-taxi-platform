@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import '../../../config/app_config.dart';
 import '../models/booking_create_result.dart';
@@ -60,18 +61,23 @@ class BookingApiService {
     String path, {
     Map<String, String>? query,
     Map<String, dynamic>? body,
+    Map<String, String>? headers,
   }) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
     http.Response response;
+    final requestHeaders = <String, String>{
+      'Accept': 'application/json',
+      if (headers != null) ...headers,
+    };
 
     if (method == 'GET') {
-      response = await _client.get(uri);
+      response = await _client.get(uri, headers: requestHeaders);
     } else {
       response = await _client.post(
         uri,
         headers: {
+          ...requestHeaders,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
         body: jsonEncode(body ?? {}),
       );
@@ -188,13 +194,31 @@ class BookingApiService {
     return PricingResult.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
-  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) async {
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) async {
     final data = await _request(
       'POST',
       '/bookings',
       body: _normalizeCreateBookingBody(body),
+      headers: idempotencyKey != null && idempotencyKey.isNotEmpty
+          ? {'Idempotency-Key': idempotencyKey}
+          : null,
     );
     return BookingCreateResult.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
+  static String generateIdempotencyKey() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    String hex(int value) => value.toRadixString(16).padLeft(2, '0');
+    final hexBytes = bytes.map(hex).join();
+    return '${hexBytes.substring(0, 8)}-${hexBytes.substring(8, 12)}-'
+        '${hexBytes.substring(12, 16)}-${hexBytes.substring(16, 20)}-'
+        '${hexBytes.substring(20)}';
   }
 
   Map<String, dynamic> _normalizeCreateBookingBody(Map<String, dynamic> body) {

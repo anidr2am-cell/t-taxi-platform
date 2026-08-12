@@ -54,6 +54,7 @@ class BookingService {
     commissionSettlementService = null,
     urgentNegotiationRepository = null,
     placesService = null,
+    bookingIdempotencyService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -69,6 +70,7 @@ class BookingService {
     this.commissionSettlementService = commissionSettlementService;
     this.urgentNegotiationRepository = urgentNegotiationRepository;
     this.placesService = placesService;
+    this.bookingIdempotencyService = bookingIdempotencyService;
   }
 
   buildOpenCallPayload({
@@ -442,7 +444,35 @@ class BookingService {
     };
   }
 
-  async createBooking(input, authUser) {
+  buildCreateBookingResult(booking, { guestAccessToken = null, boardingQrToken = null } = {}) {
+    const cancellation = evaluateCustomerCancellation({
+      status: booking.status,
+      scheduledPickupAt: booking.scheduled_pickup_at,
+    });
+    return {
+      bookingId: booking.id,
+      bookingNumber: booking.booking_number,
+      status: booking.status,
+      paymentMethod: booking.payment_method,
+      paymentStatus: booking.payment_status,
+      totalAmount: Number(booking.total_amount),
+      currency: booking.currency,
+      guestAccessToken,
+      boardingQrToken,
+      trustMessage: TRUST_MESSAGE,
+      isUrgentRequest: Boolean(booking.is_urgent_request),
+      canCancel: cancellation.canCancel,
+      cancellationDeadline: cancellation.cancellationDeadline,
+      cancellationBlockedReason: cancellation.cancellationBlockedReason,
+    };
+  }
+
+  async createBooking(input, authUser, options = {}) {
+    const { idempotencyKey = null } = options;
+    const requestHash = idempotencyKey
+      ? this.bookingIdempotencyService?.computeRequestHash(input)
+      : null;
+
     const conn = await this.pool.getConnection();
 
     const guestAccessToken = authUser ? null : generateSecureToken();
@@ -450,6 +480,33 @@ class BookingService {
 
     try {
       await conn.beginTransaction();
+
+      if (idempotencyKey && this.bookingIdempotencyService) {
+        const idempotency = await this.bookingIdempotencyService.begin(
+          conn,
+          idempotencyKey,
+          requestHash,
+        );
+        if (idempotency.action === 'replay') {
+          const booking = await this.bookingRepository.findById(idempotency.bookingId, conn);
+          if (!booking) {
+            throw new AppError('Booking not found', {
+              statusCode: HTTP_STATUS.NOT_FOUND,
+              errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+            });
+          }
+          const response = this.buildCreateBookingResult(booking, {
+            guestAccessToken: idempotency.replaySecrets?.guestAccessToken ?? null,
+            boardingQrToken: idempotency.replaySecrets?.boardingQrToken ?? null,
+          });
+          await conn.commit();
+          return {
+            data: response,
+            replayed: true,
+            responseStatus: idempotency.responseStatus,
+          };
+        }
+      }
 
       const pricingInput = this.buildPricingInput(input);
       const pricing = await this.pricingService.calculate(pricingInput);
@@ -698,6 +755,24 @@ class BookingService {
         });
       }
 
+      const booking = await this.bookingRepository.findById(bookingId, conn);
+      const response = this.buildCreateBookingResult(booking, {
+        guestAccessToken,
+        boardingQrToken,
+      });
+
+      if (idempotencyKey && this.bookingIdempotencyService) {
+        await this.bookingIdempotencyService.complete(conn, {
+          idempotencyKey,
+          bookingId: booking.id,
+          responseStatus: HTTP_STATUS.CREATED,
+          responsePayload: this.bookingIdempotencyService.buildReplaySecrets({
+            guestAccessToken,
+            boardingQrToken,
+          }),
+        });
+      }
+
       await conn.commit();
 
       if (this.outboxProcessor && outboxId) {
@@ -729,29 +804,22 @@ class BookingService {
         }
       }
 
-      const booking = await this.bookingRepository.findById(bookingId);
-      const cancellation = evaluateCustomerCancellation({
-        status: booking.status,
-        scheduledPickupAt: booking.scheduled_pickup_at,
-      });
-
       return {
-        bookingId: booking.id,
-        bookingNumber: booking.booking_number,
-        status: booking.status,
-        paymentMethod: booking.payment_method,
-        paymentStatus: booking.payment_status,
-        totalAmount: Number(booking.total_amount),
-        currency: booking.currency,
-        guestAccessToken,
-        boardingQrToken,
-        trustMessage: TRUST_MESSAGE,
-        isUrgentRequest,
-        canCancel: cancellation.canCancel,
-        cancellationDeadline: cancellation.cancellationDeadline,
-        cancellationBlockedReason: cancellation.cancellationBlockedReason,
+        data: response,
+        replayed: false,
+        responseStatus: HTTP_STATUS.CREATED,
       };
     } catch (err) {
+      if (idempotencyKey && this.bookingIdempotencyService) {
+        try {
+          await this.bookingIdempotencyService.releasePending(conn, idempotencyKey);
+        } catch (releaseErr) {
+          logger.warn('Failed to release pending idempotency key', {
+            idempotencyKey,
+            error: releaseErr?.message,
+          });
+        }
+      }
       await conn.rollback();
       throw err;
     } finally {

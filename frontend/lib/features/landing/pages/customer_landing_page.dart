@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/pwa_install_banner.dart';
 import '../../booking/pages/guest_booking_lookup_page.dart';
-import '../../booking/pages/booking_wizard_page.dart';
 import '../widgets/landing_booking_lookup_card.dart';
 import '../widgets/landing_bottom_cta.dart';
 import '../widgets/landing_footer.dart';
@@ -18,10 +17,7 @@ class CustomerLandingPage extends StatelessWidget {
   const CustomerLandingPage({super.key});
 
   void _openBookingWizard(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const BookingWizardPage()),
-    );
+    Navigator.pushNamed(context, '/booking');
   }
 
   void _openBookingLookup(BuildContext context) {

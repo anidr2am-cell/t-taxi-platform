@@ -9,6 +9,7 @@ import 'core/pwa/driver_pwa_install_prompt.dart';
 import 'features/admin/widgets/admin_auth_gate.dart';
 import 'features/admin_settlement/pages/admin_settlement_queue_page.dart';
 import 'features/admin_settlement/services/admin_settlement_api_service.dart';
+import 'features/booking/pages/booking_wizard_page.dart';
 import 'features/booking/pages/guest_booking_lookup_page.dart';
 import 'features/driver/pages/driver_login_page.dart';
 import 'features/driver/pages/driver_shell_page.dart';
@@ -51,7 +52,7 @@ class TTaxiApp extends StatelessWidget {
 
     return MaterialApp(
       navigatorKey: _navigatorKey,
-      title: 'T-Ride',
+      title: 'T-Rider',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       locale: Locale(locale.languageCode),
@@ -66,6 +67,7 @@ class TTaxiApp extends StatelessWidget {
       ],
       routes: {
         '/': (_) => const HomeScreen(),
+        '/booking': (_) => const BookingWizardPage(),
         '/admin': (_) => const AdminScreen(initialTab: 1),
         '/booking/lookup': (_) =>
             const GuestBookingLookupPage(enableCustomerTools: true),

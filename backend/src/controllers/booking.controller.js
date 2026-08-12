@@ -18,9 +18,24 @@ const recommendVehicle = asyncHandler(async (req, res) => {
   return success(res, data, data.message);
 });
 
+const { normalizeIdempotencyKey } = require('../utils/bookingIdempotency.util');
+const AppError = require('../utils/AppError');
+const ERROR_CODES = require('../constants/errorCodes');
+
 const createBooking = asyncHandler(async (req, res) => {
-  const data = await getBookingService().createBooking(req.body, req.user);
-  return success(res, data, 'Booking created', HTTP_STATUS.CREATED);
+  const normalizedKey = normalizeIdempotencyKey(req.get('Idempotency-Key'));
+  if (normalizedKey?.invalid) {
+    throw new AppError('Invalid Idempotency-Key header', {
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      errorCode: ERROR_CODES.VALIDATION_ERROR,
+    });
+  }
+
+  const result = await getBookingService().createBooking(req.body, req.user, {
+    idempotencyKey: normalizedKey?.value ?? null,
+  });
+  const statusCode = result.replayed ? HTTP_STATUS.OK : result.responseStatus;
+  return success(res, result.data, 'Booking created', statusCode);
 });
 
 const updateBookingStatus = asyncHandler(async (req, res) => {

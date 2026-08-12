@@ -10,6 +10,7 @@ class StepOriginSelect extends StatelessWidget {
   final LocationOption? selected;
   final String languageCode;
   final ValueChanged<LocationOption> onSelected;
+  final void Function(String errorCategory)? onSearchFailed;
   final bool embedded;
   final FocusNode? focusNode;
 
@@ -19,6 +20,7 @@ class StepOriginSelect extends StatelessWidget {
     required this.selected,
     required this.languageCode,
     required this.onSelected,
+    this.onSearchFailed,
     this.embedded = false,
     this.focusNode,
   });
@@ -42,6 +44,8 @@ class StepOriginSelect extends StatelessWidget {
       airportShortcutsLabelKey: _showAirportShortcuts ? 'airport_shortcuts_origin' : null,
       compact: embedded,
       focusNode: focusNode,
+      placeType: 'origin',
+      onSearchFailed: onSearchFailed,
       onSelected: onSelected,
     );
 

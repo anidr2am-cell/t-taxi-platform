@@ -69,6 +69,8 @@ const UrgentNegotiationSchedulerService = require("../services/urgentNegotiation
 const SupportInquiryService = require("../services/supportInquiry.service");
 const AdminBookingNoteRepository = require("../repositories/adminBookingNote.repository");
 const BookingNoShowPenaltyRepository = require("../repositories/bookingNoShowPenalty.repository");
+const BookingIdempotencyRepository = require("../repositories/bookingIdempotency.repository");
+const BookingIdempotencyService = require("../services/bookingIdempotency.service");
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
 const config = require("../config/env");
 const database = require("../config/database");
@@ -208,6 +210,14 @@ container.register(
     ),
 );
 container.register(
+  "bookingIdempotencyRepository",
+  () => new BookingIdempotencyRepository(),
+);
+container.register(
+  "bookingIdempotencyService",
+  (c) => new BookingIdempotencyService(c.get("bookingIdempotencyRepository")),
+);
+container.register(
   "bookingService",
   (c) =>
     new BookingService(
@@ -225,6 +235,7 @@ container.register(
       c.get("commissionSettlementService"),
       c.get("urgentNegotiationRepository"),
       c.get("placesService"),
+      c.get("bookingIdempotencyService"),
     ),
 );
 container.register(

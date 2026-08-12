@@ -19,7 +19,8 @@ import 'support/booking_location_test_data.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
-import 'package:frontend/features/booking/widgets/wizard_section_card.dart';
+import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
+import 'package:frontend/features/booking/widgets/booking_progress_header.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -89,53 +90,27 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('shows 8 expanded sections with final confirmation step', (
+    testWidgets('shows first route step with 5-step progress header', (
       tester,
     ) async {
       await pumpWizard(tester);
 
-      expect(find.byType(WizardSectionCard), findsNWidgets(8));
+      expect(find.byType(BookingProgressHeader), findsOneWidget);
+      expect(find.text('1/5 Route'), findsOneWidget);
       expect(find.text('Select Service Type'), findsOneWidget);
-      expect(find.text('Customer Information'), findsOneWidget);
-      expect(find.text('Select Vehicle'), findsOneWidget);
-      expect(find.text('Final booking check'), findsWidgets);
-      expect(find.text('Next'), findsNothing);
-      expect(find.text('Edit'), findsWidgets);
+      expect(find.text('Select date and time'), findsOneWidget);
     });
 
-    testWidgets('allows customer input before pickup step is complete', (
+    testWidgets('customer step is not shown on first route step', (
       tester,
     ) async {
       await pumpWizard(tester);
 
-      await tester.enterText(
-        find.bySemanticsLabel('(Required) Name'),
-        'Jane Doe',
-      );
-      await tester.pump();
-
-      expect(find.text('Jane Doe'), findsWidgets);
-      expect(
-        find.text(
-          'Complete service, origin, destination, pick-up time, and passengers first.',
-        ),
-        findsWidgets,
-      );
+      expect(find.text('Customer Information'), findsNothing);
+      expect(find.text('Final booking check'), findsNothing);
     });
 
-    testWidgets('review button hidden until all required fields complete', (
-      tester,
-    ) async {
-      await pumpWizard(tester);
-
-      expect(find.text('Review booking'), findsNothing);
-
-      await tester.tap(find.text('Airport Pickup'));
-      await tester.pumpAndSettle();
-      expect(find.text('Review booking'), findsNothing);
-    });
-
-    testWidgets('shows validation hints for incomplete sections', (
+    testWidgets('allows advancing when route step is complete', (
       tester,
     ) async {
       await pumpWizard(tester);
@@ -143,7 +118,32 @@ void main() {
       await tester.tap(find.text('City Transfer'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Review booking'), findsNothing);
+      expect(find.text('Please select an origin.'), findsOneWidget);
+      expect(find.text('Select date and time'), findsOneWidget);
+    });
+
+    testWidgets('review CTA hidden until route step complete', (
+      tester,
+    ) async {
+      await pumpWizard(tester);
+
+      expect(find.text('Select date and time'), findsOneWidget);
+      final advanceButton = find.widgetWithText(ElevatedButton, 'Select date and time');
+      expect(tester.widget<ElevatedButton>(advanceButton).onPressed, isNull);
+
+      await tester.tap(find.text('Airport Pickup'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<ElevatedButton>(advanceButton).onPressed, isNull);
+    });
+
+    testWidgets('shows validation hints on route step', (
+      tester,
+    ) async {
+      await pumpWizard(tester);
+
+      await tester.tap(find.text('City Transfer'));
+      await tester.pumpAndSettle();
+
       expect(find.text('Please select an origin.'), findsOneWidget);
     });
 
@@ -151,6 +151,7 @@ void main() {
       tester,
     ) async {
       final saved = BookingWizardState(
+        step: 3,
         serviceType: BookingServiceType.airportPickup,
         pickupDate: '2026-07-01',
         pickupTime: '09:30',
@@ -168,6 +169,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.byType(BookingProgressHeader), findsOneWidget);
+      expect(find.text('2/5 Date & time'), findsOneWidget);
       expect(find.byIcon(Icons.flight_outlined), findsOneWidget);
     });
 
@@ -207,7 +210,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(WizardSectionCard), findsNWidgets(8));
+      expect(find.text('5/5 Review booking'), findsOneWidget);
       expect(find.text('Kim'), findsWidgets);
     });
 
@@ -431,10 +434,11 @@ void main() {
     },
   );
 
-  test('validationSteps covers 8 wizard sections', () {
-    expect(BookingWizardState.stepCount, 8);
-    expect(BookingWizardController.validationSteps, [0, 1, 2, 3, 4, 5, 6, 7]);
-    expect(BookingWizardController.preConfirmationSteps, [0, 1, 2, 3, 4, 5, 6]);
+  test('validationSteps covers 5 wizard steps', () {
+    expect(BookingWizardState.stepCount, 5);
+    expect(BookingWizardController.validationSteps, [0, 1, 2, 3, 4]);
+    expect(BookingWizardController.preConfirmationSteps, [0, 1, 2, 3]);
+    expect(BookingWizardSteps.review, 4);
   });
 
   test(
@@ -545,7 +549,10 @@ class _TrackingRecommendApi implements BookingApiService {
   }
 
   @override
-  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) {
     throw UnimplementedError();
   }
 
@@ -635,7 +642,10 @@ class _CountingBookingApi implements BookingApiService {
   }
 
   @override
-  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) {
     throw UnimplementedError();
   }
 
@@ -720,7 +730,10 @@ class _CapturingBookingApi implements BookingApiService {
   }
 
   @override
-  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) {
     throw UnimplementedError();
   }
 

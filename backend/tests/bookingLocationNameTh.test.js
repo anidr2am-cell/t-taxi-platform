@@ -210,14 +210,14 @@ test('createBooking succeeds without nameTh when Places Details fails', async ()
     },
   });
 
-  const result = await service.createBooking({
+  const result = (await service.createBooking({
     ...BASE_INPUT,
     originAirportIata: undefined,
     destination: {
       ...BASE_INPUT.destination,
       placeId: 'google-hilton-pattaya',
     },
-  }, null);
+  }, null)).data;
 
   assert.equal(result.bookingNumber, 'TX202607130001');
   const metadata = parseMetadata(calls.booking);

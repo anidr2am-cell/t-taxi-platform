@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
+import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
 import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/models/pricing_result.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
@@ -25,7 +26,7 @@ void main() {
   group('booking wizard confirmation actions', () {
     Future<BookingWizardController> buildCompleteController({
       required DateTime pickup,
-      int step = 0,
+      int step = BookingWizardSteps.review,
     }) async {
       final controller = BookingWizardController(
         now: () => fixedUtc,
@@ -59,9 +60,11 @@ void main() {
       await controller.updateCustomerInfo(
         name: 'Jane Doe',
         phone: '+66123456789',
+        messengerType: 'LINE',
+        messengerId: 'line-user',
       );
-      if (step == 7) {
-        await controller.goToStep(7);
+      if (step == BookingWizardSteps.review) {
+        await controller.goToStep(BookingWizardSteps.review);
       }
       controller.markInitializedForTest();
       return controller;
@@ -83,102 +86,83 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    testWidgets('urgent pickup with complete fields shows review button', (
+    testWidgets('urgent pickup on review step shows urgent request button', (
       tester,
     ) async {
       final controller = await buildCompleteController(pickup: urgentPickup);
       await pumpWizard(tester, controller);
 
-      expect(find.text('Review booking'), findsOneWidget);
-      expect(find.text('Urgent request'), findsNothing);
-      expect(find.text('Confirm booking'), findsNothing);
-    });
-
-    testWidgets('review button enters step 7 and shows urgent request only', (
-      tester,
-    ) async {
-      final controller = await buildCompleteController(pickup: urgentPickup);
-      await pumpWizard(tester, controller);
-
-      await tester.tap(find.text('Review booking'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-
-      expect(controller.state.step, 7);
       expect(find.text('Urgent request'), findsOneWidget);
       expect(find.text('Confirm booking'), findsNothing);
-      expect(find.text('Review booking'), findsNothing);
     });
 
-    testWidgets('standard pickup review enters step 7 with confirm only', (
+    testWidgets('standard pickup on review step shows confirm button', (
       tester,
     ) async {
       final controller = await buildCompleteController(pickup: standardPickup);
       await pumpWizard(tester, controller);
 
-      await tester.tap(find.text('Review booking'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-
-      expect(controller.state.step, 7);
-      expect(find.text('Confirm booking'), findsOneWidget);
+      expect(find.textContaining('Confirm booking'), findsOneWidget);
       expect(find.text('Urgent request'), findsNothing);
-      expect(find.text('Review booking'), findsNothing);
     });
 
-    testWidgets('step 7 pickup change to urgent switches primary action', (
+    testWidgets('review step pickup change to urgent switches primary action', (
       tester,
     ) async {
       final controller = await buildCompleteController(
         pickup: standardPickup,
-        step: 7,
+        step: BookingWizardSteps.review,
       );
       await pumpWizard(tester, controller);
 
-      expect(find.text('Confirm booking'), findsOneWidget);
+      expect(find.textContaining('Confirm booking'), findsOneWidget);
       expect(find.text('Urgent request'), findsNothing);
 
       await controller.setPickupDateTime(urgentPickup);
       await tester.pump();
 
       expect(find.text('Urgent request'), findsOneWidget);
-      expect(find.text('Confirm booking'), findsNothing);
+      expect(find.textContaining('Confirm booking'), findsNothing);
     });
 
-    testWidgets('step 7 pickup change to standard switches primary action', (
+    testWidgets('review step pickup change to standard switches primary action', (
       tester,
     ) async {
       final controller = await buildCompleteController(
         pickup: urgentPickup,
-        step: 7,
+        step: BookingWizardSteps.review,
       );
       await pumpWizard(tester, controller);
 
       expect(find.text('Urgent request'), findsOneWidget);
-      expect(find.text('Confirm booking'), findsNothing);
+      expect(find.textContaining('Confirm booking'), findsNothing);
 
       await controller.setPickupDateTime(standardPickup);
       await tester.pump();
 
-      expect(find.text('Confirm booking'), findsOneWidget);
+      expect(find.textContaining('Confirm booking'), findsOneWidget);
       expect(find.text('Urgent request'), findsNothing);
     });
 
-    testWidgets('edit from confirmation returns to review button flow', (
+    testWidgets('edit from confirmation returns to review after CTA', (
       tester,
     ) async {
       final controller = await buildCompleteController(
         pickup: urgentPickup,
-        step: 7,
+        step: BookingWizardSteps.review,
       );
       await pumpWizard(tester, controller);
 
-      await controller.goToStep(1);
-      await tester.pump();
+      await controller.goToStepForEdit(BookingWizardSteps.route);
+      await tester.pumpAndSettle();
 
-      expect(controller.state.step, 1);
-      expect(find.text('Review booking'), findsOneWidget);
-      expect(find.text('Urgent request'), findsNothing);
+      expect(controller.state.step, BookingWizardSteps.route);
+
+      await tester.tap(find.text('Select date and time'));
+      await tester.pumpAndSettle();
+
+      expect(controller.state.step, BookingWizardSteps.review);
+      expect(find.text('Urgent request'), findsOneWidget);
     });
   });
 }
@@ -229,7 +213,10 @@ class _StubBookingApi implements BookingApiService {
   }
 
   @override
-  Future<BookingCreateResult> createBooking(Map<String, dynamic> body) {
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) {
     throw UnimplementedError();
   }
 

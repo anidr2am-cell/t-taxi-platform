@@ -1,12 +1,12 @@
 {
-    "name": "T-Ride",
-    "short_name": "T-Ride",
+    "name": "T-Rider",
+    "short_name": "T-Rider",
     "id": "/",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#087F7A",
-    "description": "T-Ride Thailand Taxi Service",
+    "description": "T-Rider Thailand Taxi Service",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

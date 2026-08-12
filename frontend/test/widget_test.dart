@@ -21,14 +21,14 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('landing_header_logo')), findsOneWidget);
-    expect(find.text('T-Ride'), findsNothing);
+      expect(find.text('T-Rider'), findsNothing);
     final logo = tester.widget<Image>(
       find.byKey(const Key('landing_header_logo')),
     );
     expect((logo.image as AssetImage).assetName, LandingHeader.logoAssetPath);
   });
 
-  test('web metadata uses T-Ride brand', () {
+  test('web metadata uses T-Rider brand', () {
     final index = File('web/index.html').readAsStringSync();
     final manifest =
         jsonDecode(File('web/manifest.json').readAsStringSync())
@@ -37,16 +37,16 @@ void main() {
         jsonDecode(File('web/manifest-driver.json').readAsStringSync())
             as Map<String, dynamic>;
 
-    expect(index, contains('<title>T-Ride</title>'));
-    expect(index, contains('apple-mobile-web-app-title" content="T-Ride"'));
+    expect(index, contains('<title>T-Rider</title>'));
+    expect(index, contains('apple-mobile-web-app-title" content="T-Rider"'));
     expect(index, contains('id = \'app-manifest\''));
     expect(index, contains('manifest-driver.json'));
     expect(
       index,
       contains('window.location.pathname.startsWith(\'/driver/\')'),
     );
-    expect(manifest['name'], 'T-Ride');
-    expect(manifest['short_name'], 'T-Ride');
+    expect(manifest['name'], 'T-Rider');
+    expect(manifest['short_name'], 'T-Rider');
     expect(manifest['id'], '/');
     expect(manifest['start_url'], '/');
 

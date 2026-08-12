@@ -99,29 +99,42 @@ class StepVehicleSelect extends StatelessWidget {
             padding: EdgeInsets.only(
               bottom: embedded ? WizardCompact.fieldGap : 10,
             ),
-            child: embedded
-                ? WizardUi.selectionTile(
-                    title: vehicle,
-                    subtitle: enabled
-                        ? (isRecommended ? recommendation.message : null)
-                        : l10n.t('customer_vehicle_not_suitable'),
-                    icon: _iconForVehicle(vehicle),
-                    selected: selected,
-                    onTap: enabled
-                        ? () => controller.selectVehicle(vehicle)
-                        : null,
-                  )
-                : AppUi.selectionTile(
-                    title: vehicle,
-                    subtitle: enabled
-                        ? (isRecommended ? recommendation.message : null)
-                        : l10n.t('customer_vehicle_not_suitable'),
-                    icon: _iconForVehicle(vehicle),
-                    selected: selected,
-                    onTap: enabled
-                        ? () => controller.selectVehicle(vehicle)
-                        : null,
-                  ),
+            child: Semantics(
+              button: true,
+              selected: selected,
+              label: vehicle,
+              child: embedded
+                  ? WizardUi.selectionTile(
+                      title: vehicle,
+                      subtitle: enabled
+                          ? (isRecommended ? recommendation.message : null)
+                          : l10n.t('customer_vehicle_not_suitable'),
+                      icon: _iconForVehicle(vehicle),
+                      selected: selected,
+                      onTap: () {
+                        if (enabled) {
+                          controller.selectVehicle(vehicle);
+                        } else {
+                          controller.reportVehicleCapacityWarning(vehicle);
+                        }
+                      },
+                    )
+                  : AppUi.selectionTile(
+                      title: vehicle,
+                      subtitle: enabled
+                          ? (isRecommended ? recommendation.message : null)
+                          : l10n.t('customer_vehicle_not_suitable'),
+                      icon: _iconForVehicle(vehicle),
+                      selected: selected,
+                      onTap: () {
+                        if (enabled) {
+                          controller.selectVehicle(vehicle);
+                        } else {
+                          controller.reportVehicleCapacityWarning(vehicle);
+                        }
+                      },
+                    ),
+            ),
           );
         }),
         if (state.selectedVehicle == null)

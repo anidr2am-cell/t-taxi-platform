@@ -7,6 +7,7 @@ import 'package:frontend/features/booking/models/booking_wizard_state.dart';
 import 'package:frontend/features/booking/utils/pickup_time_format.dart';
 import 'package:frontend/features/booking/widgets/name_sign_info_card.dart';
 import 'package:frontend/features/booking/widgets/pickup_time_picker_sheet.dart';
+import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
 import 'package:frontend/features/booking/widgets/step_confirmation.dart';
 import 'package:frontend/features/booking/widgets/step_origin_select.dart';
 import 'package:frontend/features/booking/widgets/step_destination_select.dart';
@@ -80,7 +81,7 @@ void main() {
     });
 
     test('requires name, phone, and messenger fields', () async {
-      expect(controller.canProceedFromStep(6), isFalse);
+      expect(controller.canProceedFromStep(BookingWizardSteps.customer), isFalse);
 
       await controller.updateCustomerInfo(
         name: 'Jane',
@@ -88,7 +89,7 @@ void main() {
         messengerType: 'LINE',
         messengerId: 'line-user-id',
       );
-      expect(controller.canProceedFromStep(6), isTrue);
+      expect(controller.canProceedFromStep(BookingWizardSteps.customer), isTrue);
 
       await controller.updateCustomerInfo(
         name: 'Jane',
@@ -96,7 +97,7 @@ void main() {
         messengerType: 'LINE',
         messengerId: '   ',
       );
-      expect(controller.canProceedFromStep(6), isFalse);
+      expect(controller.canProceedFromStep(BookingWizardSteps.customer), isFalse);
     });
   });
 
@@ -232,19 +233,23 @@ void main() {
       final controller = BookingWizardController(storage: _NoopStorage());
 
       await controller.updatePassengersAndLuggage(nameSign: true);
-      expect(controller.canProceedFromStep(4), isFalse);
+      expect(controller.canProceedFromStep(BookingWizardSteps.vehicle), isFalse);
       expect(
-        controller.stepValidationMessageKey(4),
+        controller.stepValidationMessageKey(BookingWizardSteps.vehicle),
         'wizard_required_name_sign_text',
       );
 
       await controller.updatePassengersAndLuggage(nameSignText: '   ');
-      expect(controller.canProceedFromStep(4), isFalse);
+      expect(controller.canProceedFromStep(BookingWizardSteps.vehicle), isFalse);
 
       await controller.updatePassengersAndLuggage(
         nameSignText: '  KIM FAMILY  ',
       );
-      expect(controller.canProceedFromStep(4), isTrue);
+      expect(controller.canProceedFromStep(BookingWizardSteps.vehicle), isFalse);
+      expect(
+        controller.stepValidationMessageKey(BookingWizardSteps.vehicle),
+        'wizard_vehicle_prerequisites',
+      );
     });
 
     testWidgets('confirmation shows entered name sign text', (tester) async {

@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../utils/user_facing_error.dart';
+import '../models/booking_wizard_steps.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
 import '../models/location_option.dart';
 import '../models/service_type_option.dart';
+import '../services/booking_analytics.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_state_storage.dart';
 import '../services/recent_locations_storage.dart';
@@ -15,21 +17,28 @@ class BookingWizardController extends ChangeNotifier {
     BookingApiService? apiService,
     BookingStateStorage? storage,
     RecentLocationsStorage? recentLocationsStorage,
+    BookingAnalytics? analytics,
     DateTime Function()? now,
   }) : _api = apiService ?? BookingApiService(),
        _storage = storage ?? BookingStateStorage(),
        _recentLocations = recentLocationsStorage ?? RecentLocationsStorage(),
+       _analytics = analytics ?? BookingAnalytics.instance,
        _now = now ?? DateTime.now;
 
   final BookingApiService _api;
   final BookingStateStorage _storage;
   final RecentLocationsStorage _recentLocations;
+  final BookingAnalytics _analytics;
   final DateTime Function() _now;
+
+  BookingAnalytics get analytics => _analytics;
 
   BookingWizardState _state = const BookingWizardState();
   bool _isLoading = false;
+  String? _submitIdempotencyKey;
   bool _isSubmitting = false;
   bool _isInitialized = false;
+  bool _returnToReview = false;
   int _recommendationGeneration = 0;
   int _pricingGeneration = 0;
 
@@ -45,8 +54,10 @@ class BookingWizardController extends ChangeNotifier {
     notifyListeners();
   }
 
-  static const validationSteps = [0, 1, 2, 3, 4, 5, 6, 7];
-  static const preConfirmationSteps = [0, 1, 2, 3, 4, 5, 6];
+  static const validationSteps = BookingWizardSteps.validationSteps;
+  static const preConfirmationSteps = BookingWizardSteps.preConfirmationSteps;
+
+  bool get returnToReview => _returnToReview;
 
   static const vehicleTierOrder = [
     'SEDAN',
@@ -140,12 +151,13 @@ class BookingWizardController extends ChangeNotifier {
   Future<void> initialize() async {
     final restored = await _storage.load();
     if (restored != null) {
-      final step = restored.step >= BookingWizardState.stepCount
-          ? BookingWizardState.stepCount - 1
-          : restored.step;
+      final migratedStep = BookingWizardSteps.clampStep(restored.step);
       _state = restored.copyWith(
-        step: step,
+        step: migratedStep,
         pickupTime: _normalizePickupTime(restored.pickupTime),
+        clearRecommendation: true,
+        clearPricing: true,
+        clearError: true,
       );
       _sanitizeCustomerVehicleSelection();
       if (!_hasSelectablePickupDateTime()) {
@@ -155,6 +167,7 @@ class BookingWizardController extends ChangeNotifier {
       await _seedDefaultPickupDateTime();
     }
     _isInitialized = true;
+    await syncDerivedData();
     notifyListeners();
   }
 
@@ -182,6 +195,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<void> selectService(BookingServiceType type) async {
+    _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
       serviceType: type,
       clearOrigin: true,
@@ -196,7 +210,56 @@ class BookingWizardController extends ChangeNotifier {
     await syncDerivedData();
   }
 
+  Future<void> swapOriginDestination() async {
+    final origin = _state.origin;
+    final destination = _state.destination;
+    if (origin == null && destination == null) return;
+    _invalidateSubmitIdempotencyKey();
+    _state = _state.copyWith(
+      origin: destination,
+      destination: origin,
+      clearRecommendation: true,
+      clearPricing: true,
+      clearError: true,
+    );
+    await _persist();
+    notifyListeners();
+    await syncDerivedData();
+  }
+
+  bool get isSameOriginDestination =>
+      _isSamePlace(_state.origin, _state.destination);
+
+  bool _isSamePlace(LocationOption? a, LocationOption? b) {
+    if (a == null || b == null) return false;
+    if (a.id == b.id) return true;
+    final aPlaceId = a.placeId;
+    final bPlaceId = b.placeId;
+    if (aPlaceId != null && aPlaceId.isNotEmpty && aPlaceId == bPlaceId) {
+      return true;
+    }
+    final aLat = a.latitude;
+    final aLng = a.longitude;
+    final bLat = b.latitude;
+    final bLng = b.longitude;
+    if (aLat != null && aLng != null && bLat != null && bLng != null) {
+      const epsilon = 0.0001;
+      if ((aLat - bLat).abs() < epsilon && (aLng - bLng).abs() < epsilon) {
+        return true;
+      }
+    }
+    final aCode = a.code;
+    if (aCode != null &&
+        aCode.isNotEmpty &&
+        aCode == b.code &&
+        a.kind == b.kind) {
+      return true;
+    }
+    return false;
+  }
+
   Future<void> setOrigin(LocationOption location) async {
+    _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
       origin: location,
       clearRecommendation: true,
@@ -210,6 +273,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<void> setDestination(LocationOption location) async {
+    _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
       destination: location,
       clearRecommendation: true,
@@ -391,6 +455,7 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
       pickupDate: formatDate(bangkokValue),
       pickupTime: formatTime(bangkokValue),
@@ -442,6 +507,7 @@ class BookingWizardController extends ChangeNotifier {
       clearError: true,
     );
     if (affectsRecommendationOrPricing) {
+      _invalidateSubmitIdempotencyKey();
       _recommendationGeneration += 1;
       _pricingGeneration += 1;
     }
@@ -625,20 +691,58 @@ class BookingWizardController extends ChangeNotifier {
     if (_isSubmitting || _isLoading) return null;
     if (!canSubmitAll(validatePickup: validatePickup)) return null;
 
+    _analytics.trackBookingSubmitAttempted(
+      vehicleType: _state.selectedVehicle,
+      paymentMethod: 'PAY_DRIVER',
+    );
+
     _isSubmitting = true;
     _setLoading(true);
+    final idempotencyKey = _ensureSubmitIdempotencyKey();
+    const maxInProgressRetries = 3;
     try {
-      final result = await _api.createBooking(
-        buildCreatePayload(bookingMode: bookingMode),
-      );
-      await _storage.clear();
-      _state = const BookingWizardState();
-      notifyListeners();
-      return result;
+      for (var attempt = 0; attempt <= maxInProgressRetries; attempt++) {
+        try {
+          final result = await _api.createBooking(
+            buildCreatePayload(bookingMode: bookingMode),
+            idempotencyKey: idempotencyKey,
+          );
+          _analytics.trackBookingCompleted(
+            bookingId: result.bookingNumber,
+            vehicleType: _state.selectedVehicle,
+            totalPrice: result.totalAmount,
+          );
+          _submitIdempotencyKey = null;
+          await _storage.clear();
+          _state = const BookingWizardState();
+          notifyListeners();
+          return result;
+        } on BookingApiException catch (e) {
+          if (e.errorCode == 'IDEMPOTENCY_REQUEST_IN_PROGRESS' &&
+              attempt < maxInProgressRetries) {
+            await Future<void>.delayed(
+              Duration(milliseconds: 400 * (attempt + 1)),
+            );
+            continue;
+          }
+          rethrow;
+        }
+      }
+      return null;
     } catch (e) {
       final fieldError = _bookingValidationError(e);
+      _analytics.trackBookingFailed(
+        stepName: BookingAnalytics.stepNameFor(
+          _state.step == BookingWizardSteps.review
+              ? BookingWizardSteps.review
+              : (fieldError?.step ?? _state.step),
+        ),
+        errorCategory: BookingAnalytics.errorCategoryFor(e),
+      );
       _state = _state.copyWith(
-        step: _state.step == 7 ? 7 : (fieldError?.step ?? _state.step),
+        step: _state.step == BookingWizardSteps.review
+            ? BookingWizardSteps.review
+            : (fieldError?.step ?? _state.step),
         errorMessage:
             fieldError?.messageKey ??
             userFacingError(e, fallback: 'ui_load_failed'),
@@ -649,6 +753,14 @@ class BookingWizardController extends ChangeNotifier {
       _isSubmitting = false;
       _setLoading(false);
     }
+  }
+
+  void _invalidateSubmitIdempotencyKey() {
+    _submitIdempotencyKey = null;
+  }
+
+  String _ensureSubmitIdempotencyKey() {
+    return _submitIdempotencyKey ??= BookingApiService.generateIdempotencyKey();
   }
 
   ({int step, String messageKey})? _bookingValidationError(Object error) {
@@ -664,37 +776,37 @@ class BookingWizardController extends ChangeNotifier {
     );
     final field = first.field;
     if (field == 'customer.name') {
-      return (step: 6, messageKey: 'wizard_required_customer_name');
+      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer_name');
     }
     if (field == 'customer.phone') {
-      return (step: 6, messageKey: 'wizard_required_customer_phone');
+      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer_phone');
     }
     if (field == 'customer.messengerType' || field == 'customer.messengerId') {
-      return (step: 6, messageKey: 'wizard_required_customer');
+      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer');
     }
     if (field.startsWith('customer.')) {
-      return (step: 6, messageKey: 'wizard_required_customer');
+      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer');
     }
     if (field == 'origin' || field.startsWith('origin.')) {
-      return (step: 1, messageKey: 'wizard_required_origin');
+      return (step: BookingWizardSteps.route, messageKey: 'wizard_required_origin');
     }
     if (field == 'destination' || field.startsWith('destination.')) {
-      return (step: 2, messageKey: 'wizard_required_destination');
+      return (step: BookingWizardSteps.route, messageKey: 'wizard_required_destination');
     }
     if (field == 'scheduledPickupAt') {
-      return (step: 3, messageKey: 'pickup_datetime_required');
+      return (step: BookingWizardSteps.schedule, messageKey: 'pickup_datetime_required');
     }
     if (field == 'transfer.flightNumber') {
-      return (step: 3, messageKey: 'flight_number_invalid');
+      return (step: BookingWizardSteps.schedule, messageKey: 'flight_number_invalid');
     }
     if (field.startsWith('passengers.') || field.startsWith('luggage.')) {
-      return (step: 4, messageKey: 'wizard_required_passengers');
+      return (step: BookingWizardSteps.vehicle, messageKey: 'wizard_required_passengers');
     }
     if (field == 'options.nameSignText') {
-      return (step: 4, messageKey: 'wizard_required_name_sign_text');
+      return (step: BookingWizardSteps.vehicle, messageKey: 'wizard_required_name_sign_text');
     }
     if (field == 'vehicleTypeCode' || field == 'vehicleCount') {
-      return (step: 5, messageKey: 'wizard_required_vehicle');
+      return (step: BookingWizardSteps.vehicle, messageKey: 'wizard_required_vehicle');
     }
     return (step: _state.step, messageKey: 'ui_action_failed');
   }
@@ -754,6 +866,10 @@ class BookingWizardController extends ChangeNotifier {
         errorMessage: userFacingError(e, fallback: 'ui_load_failed'),
         clearRecommendation: true,
       );
+      _analytics.trackBookingFailed(
+        stepName: BookingAnalytics.stepNameFor(BookingWizardSteps.vehicle),
+        errorCategory: BookingAnalytics.errorCategoryFor(e),
+      );
     } finally {
       if (generation == _recommendationGeneration) {
         _setLoading(false);
@@ -789,6 +905,7 @@ class BookingWizardController extends ChangeNotifier {
         !isVehicleEnabled(vehicleCode)) {
       return;
     }
+    _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
       selectedVehicle: vehicleCode,
       clearPricing: true,
@@ -797,6 +914,41 @@ class BookingWizardController extends ChangeNotifier {
     await _persist();
     notifyListeners();
     await loadPricing();
+    _analytics.trackVehicleSelected(
+      vehicleType: vehicleCode,
+      quotedPrice: _state.pricing?.totalAmount,
+    );
+  }
+
+  void reportVehicleCapacityWarning(String vehicleCode) {
+    if (isVehicleEnabled(vehicleCode)) return;
+    final recommendation = _state.recommendation;
+    final warningType = recommendation != null &&
+            !recommendation.selectableVehicles.contains(vehicleCode)
+        ? 'capacity_exceeded'
+        : 'tier_too_small';
+    _analytics.trackVehicleCapacityWarning(
+      vehicleType: vehicleCode,
+      warningType: warningType,
+    );
+  }
+
+  void reportPlaceSearchFailed({
+    required String placeType,
+    required String errorCategory,
+  }) {
+    _analytics.trackPlaceSearchFailed(
+      placeType: placeType,
+      errorCategory: errorCategory,
+    );
+  }
+
+  void _trackStepCompleted(int step) {
+    _analytics.trackStepCompleted(
+      stepNumber: step + 1,
+      stepName: BookingAnalytics.stepNameFor(step),
+      routeType: BookingAnalytics.routeTypeFor(_state.serviceType),
+    );
   }
 
   Map<String, String?> _pricingLocationParams() {
@@ -976,6 +1128,10 @@ class BookingWizardController extends ChangeNotifier {
             userFacingError(e, fallback: 'ui_action_failed'),
         clearPricing: true,
       );
+      _analytics.trackBookingFailed(
+        stepName: BookingAnalytics.stepNameFor(BookingWizardSteps.vehicle),
+        errorCategory: BookingAnalytics.errorCategoryFor(e),
+      );
     } finally {
       if (generation == _pricingGeneration) {
         _setLoading(false);
@@ -986,32 +1142,58 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<bool> goNext() async {
-    if (_state.step == 4) {
-      if (!canProceedFromStep(4)) {
-        _state = _state.copyWith(
-          errorMessage: stepValidationMessageKey(4),
-          clearRecommendation: true,
-        );
-        await _persist();
-        notifyListeners();
-        return false;
+    if (_state.step == BookingWizardSteps.vehicle) {
+      if (!canProceedFromStep(BookingWizardSteps.vehicle)) {
+        if (_state.adults >= 1 &&
+            _isNameSignTextValid() &&
+            canLoadRecommendation() &&
+            _state.recommendation == null) {
+          await loadRecommendation();
+        }
+        if (!canProceedFromStep(BookingWizardSteps.vehicle)) {
+          _state = _state.copyWith(
+            errorMessage: stepValidationMessageKey(BookingWizardSteps.vehicle),
+            clearRecommendation: _state.recommendation == null,
+          );
+          await _persist();
+          notifyListeners();
+          return false;
+        }
       }
-      await loadRecommendation();
-      if (_state.recommendation == null && _state.errorMessage != null) {
-        return false;
-      }
+    } else if (!canProceedFromStep(_state.step)) {
+      _state = _state.copyWith(
+        errorMessage: stepValidationMessageKey(_state.step),
+      );
+      await _persist();
+      notifyListeners();
+      return false;
+    }
+
+    if (_returnToReview && _state.step != BookingWizardSteps.review) {
+      _trackStepCompleted(_state.step);
+      _returnToReview = false;
+      _state = _state.copyWith(
+        step: BookingWizardSteps.review,
+        clearError: true,
+      );
+      await _persist();
+      notifyListeners();
+      return true;
     }
 
     if (_state.step < BookingWizardState.stepCount - 1) {
+      final completedStep = _state.step;
       final nextStep = _state.step + 1;
       _state = _state.copyWith(step: nextStep, clearError: true);
       await _persist();
       notifyListeners();
+      _trackStepCompleted(completedStep);
 
-      if (nextStep == 4 && _state.recommendation == null) {
+      if (nextStep == BookingWizardSteps.vehicle &&
+          _state.recommendation == null) {
         await loadRecommendation();
       }
-      if (nextStep == 5 &&
+      if (nextStep == BookingWizardSteps.vehicle &&
           _state.selectedVehicle != null &&
           _state.pricing == null) {
         await loadPricing();
@@ -1035,12 +1217,19 @@ class BookingWizardController extends ChangeNotifier {
     await _persist();
     notifyListeners();
 
-    if (step == 4 && _state.recommendation == null) {
+    if (step == BookingWizardSteps.vehicle && _state.recommendation == null) {
       await loadRecommendation();
     }
-    if (step == 5 && _state.selectedVehicle != null && _state.pricing == null) {
+    if (step == BookingWizardSteps.vehicle &&
+        _state.selectedVehicle != null &&
+        _state.pricing == null) {
       await loadPricing();
     }
+  }
+
+  Future<void> goToStepForEdit(int step) async {
+    _returnToReview = true;
+    await goToStep(step);
   }
 
   bool _isCustomerStepValid() {
@@ -1059,22 +1248,22 @@ class BookingWizardController extends ChangeNotifier {
 
   bool canProceedFromStep(int step) {
     switch (step) {
-      case 0:
-        return _state.serviceType != null;
-      case 1:
-        return _state.origin != null;
-      case 2:
-        return _state.destination != null;
-      case 3:
+      case BookingWizardSteps.route:
+        return _state.serviceType != null &&
+            _state.origin != null &&
+            _state.destination != null &&
+            !isSameOriginDestination;
+      case BookingWizardSteps.schedule:
         final selected = selectedPickupDateTime();
         return selected != null && isPickupSelectable(selected);
-      case 4:
-        return _state.adults >= 1 && _isNameSignTextValid();
-      case 5:
-        return _state.selectedVehicle != null && _state.pricing != null;
-      case 6:
+      case BookingWizardSteps.vehicle:
+        return _state.adults >= 1 &&
+            _isNameSignTextValid() &&
+            _state.selectedVehicle != null &&
+            _state.pricing != null;
+      case BookingWizardSteps.customer:
         return _isCustomerStepValid();
-      case 7:
+      case BookingWizardSteps.review:
         return canProceedToConfirmation();
       default:
         return false;
@@ -1112,7 +1301,8 @@ class BookingWizardController extends ChangeNotifier {
   Future<void> syncDerivedData() async {
     if (_isSubmitting) return;
     if (canLoadRecommendation() &&
-        (_state.recommendation == null || !_isLoading)) {
+        _state.recommendation == null &&
+        !_isLoading) {
       await loadRecommendation();
       return;
     }
@@ -1142,7 +1332,7 @@ class BookingWizardController extends ChangeNotifier {
   bool canSubmitAll({bool Function(DateTime value)? validatePickup}) {
     final pickupValidator = validatePickup ?? isStandardPickupAllowed;
     for (final step in validationSteps) {
-      if (step == 3) {
+      if (step == BookingWizardSteps.schedule) {
         final selected = selectedPickupDateTime();
         if (selected == null || !pickupValidator(selected)) return false;
         continue;
@@ -1167,13 +1357,13 @@ class BookingWizardController extends ChangeNotifier {
   String? stepValidationMessageKey(int step) {
     if (canProceedFromStep(step)) return null;
     switch (step) {
-      case 0:
-        return 'wizard_required_service';
-      case 1:
-        return 'wizard_required_origin';
-      case 2:
+      case BookingWizardSteps.route:
+        if (_state.serviceType == null) return 'wizard_required_service';
+        if (_state.origin == null) return 'wizard_required_origin';
+        if (_state.destination == null) return 'wizard_required_destination';
+        if (isSameOriginDestination) return 'wizard_same_place_error';
         return 'wizard_required_destination';
-      case 3:
+      case BookingWizardSteps.schedule:
         if (selectedPickupDateTime() == null) {
           return 'pickup_datetime_required';
         }
@@ -1181,19 +1371,18 @@ class BookingWizardController extends ChangeNotifier {
           return 'customer_urgent_pickup_hint';
         }
         return _state.errorMessage ?? 'pickup_time_minimum';
-      case 4:
+      case BookingWizardSteps.vehicle:
         if (!_isNameSignTextValid()) {
           return 'wizard_required_name_sign_text';
         }
-        return 'wizard_required_passengers';
-      case 5:
+        if (_state.adults < 1) return 'wizard_required_passengers';
         if (_state.selectedVehicle == null) {
           return canLoadRecommendation()
               ? 'wizard_required_vehicle'
               : 'wizard_vehicle_prerequisites';
         }
         return 'wizard_pricing_after_vehicle';
-      case 6:
+      case BookingWizardSteps.customer:
         if (_state.customerName.trim().isEmpty) {
           return 'wizard_required_customer_name';
         }
@@ -1205,7 +1394,7 @@ class BookingWizardController extends ChangeNotifier {
           return 'wizard_required_customer';
         }
         return 'wizard_required_customer';
-      case 7:
+      case BookingWizardSteps.review:
         return 'customer_confirmation_required';
       default:
         return null;

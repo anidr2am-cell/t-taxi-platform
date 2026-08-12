@@ -5,9 +5,9 @@ import '../../../widgets/app_ui.dart';
 import '../utils/customer_booking_format.dart';
 import '../utils/location_display.dart';
 import '../models/booking_wizard_state.dart';
-import '../models/location_option.dart';
-import '../utils/pricing_display.dart';
+import '../models/booking_wizard_steps.dart';
 import '../models/service_type_option.dart';
+import '../utils/pricing_display.dart';
 
 class StepConfirmation extends StatelessWidget {
   final BookingWizardState state;
@@ -40,7 +40,7 @@ class StepConfirmation extends StatelessWidget {
         _section(
           context,
           title: l10n.t('customer_confirmation_trip'),
-          editStep: 1,
+          editStep: BookingWizardSteps.route,
           children: [
             AppUi.summaryRow(
               label: l10n.t('service_type'),
@@ -54,6 +54,14 @@ class StepConfirmation extends StatelessWidget {
               label: l10n.t('destination'),
               location: state.destination,
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _section(
+          context,
+          title: l10n.t('pickup_datetime'),
+          editStep: BookingWizardSteps.schedule,
+          children: [
             AppUi.summaryRow(
               label: l10n.t('pickup_datetime'),
               value: CustomerBookingFormat.pickupDate(
@@ -74,7 +82,7 @@ class StepConfirmation extends StatelessWidget {
         _section(
           context,
           title: l10n.t('customer_confirmation_passengers'),
-          editStep: 4,
+          editStep: BookingWizardSteps.vehicle,
           children: [
             AppUi.summaryRow(label: l10n.t('adults'), value: '${state.adults}'),
             AppUi.summaryRow(
@@ -112,19 +120,19 @@ class StepConfirmation extends StatelessWidget {
                 label: l10n.t('name_sign_text_label'),
                 value: state.nameSignText!.trim(),
               ),
+            AppUi.summaryRow(
+              label: l10n.t('vehicle'),
+              value: state.selectedVehicle ?? '-',
+            ),
           ],
         ),
         const SizedBox(height: 12),
         _section(
           context,
           title: l10n.t('customer_confirmation_vehicle_payment'),
-          editStep: 5,
+          editStep: BookingWizardSteps.vehicle,
           backgroundColor: AppTokens.primaryLight,
           children: [
-            AppUi.summaryRow(
-              label: l10n.t('vehicle'),
-              value: state.selectedVehicle ?? '-',
-            ),
             if (pricing != null) ...[
               AppUi.summaryRow(
                 label: l10n.t('base_price'),
@@ -158,13 +166,23 @@ class StepConfirmation extends StatelessWidget {
         _section(
           context,
           title: l10n.t('customer_confirmation_customer'),
-          editStep: 6,
+          editStep: BookingWizardSteps.customer,
           children: [
             AppUi.summaryRow(label: l10n.t('name'), value: state.customerName),
             AppUi.summaryRow(
               label: l10n.t('phone'),
               value: state.customerPhone,
             ),
+            if (state.messengerType.trim().isNotEmpty)
+              AppUi.summaryRow(
+                label: l10n.t('messenger_type'),
+                value: state.messengerType.trim(),
+              ),
+            if (state.messengerId.trim().isNotEmpty)
+              AppUi.summaryRow(
+                label: l10n.t('messenger_id'),
+                value: state.messengerId.trim(),
+              ),
             if (state.customerEmail.trim().isNotEmpty)
               AppUi.summaryRow(
                 label: l10n.t('email'),

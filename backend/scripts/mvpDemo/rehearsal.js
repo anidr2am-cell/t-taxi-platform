@@ -140,7 +140,7 @@ async function runHappyPath({
       }
       bookingNumber = res.body.data.bookingNumber;
     } else {
-      const created = await bookingService.createBooking(payload, null);
+      const created = (await bookingService.createBooking(payload, null)).data;
       bookingNumber = created.bookingNumber;
     }
     steps.push(stepResult('happy path create booking', true, bookingNumber));

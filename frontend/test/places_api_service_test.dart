@@ -98,7 +98,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump();
 
-    expect(find.text('No locations found'), findsOneWidget);
+    expect(
+      find.text(
+        'No places matched. Try a different search term or pick a location on the map.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('places search shows controlled error state', (tester) async {

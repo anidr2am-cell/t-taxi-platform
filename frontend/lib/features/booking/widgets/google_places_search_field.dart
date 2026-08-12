@@ -8,6 +8,7 @@ import '../../../utils/user_facing_error.dart';
 import '../models/airport_shortcuts.dart';
 import '../models/location_option.dart';
 import '../models/place_prediction.dart';
+import '../services/booking_analytics.dart';
 import '../services/places_api_service.dart';
 import '../services/recent_locations_storage.dart';
 import 'map_location_picker.dart';
@@ -25,6 +26,8 @@ class GooglePlacesSearchField extends StatefulWidget {
   final bool compact;
   final FocusNode? focusNode;
   final ValueChanged<LocationOption> onSelected;
+  final void Function(String errorCategory)? onSearchFailed;
+  final String placeType;
   final PlacesApiService? placesApi;
   final Future<LocationOption?> Function(
     BuildContext context,
@@ -44,6 +47,8 @@ class GooglePlacesSearchField extends StatefulWidget {
     this.airportShortcutsLabelKey,
     this.compact = false,
     this.focusNode,
+    this.onSearchFailed,
+    this.placeType = 'place',
     this.placesApi,
     this.mapPicker,
   });
@@ -171,12 +176,18 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         _loading = false;
         _highlightedIndex = 0;
       });
+      if (results.isEmpty) {
+        widget.onSearchFailed?.call('no_results');
+      }
     } catch (e) {
       setState(() {
         _loading = false;
         _error = userFacingError(e, fallback: 'ui_load_failed');
         _predictions = [];
       });
+      widget.onSearchFailed?.call(
+        BookingAnalytics.placeErrorCategory(e, noResults: false),
+      );
     }
   }
 
@@ -198,6 +209,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         _loadingDetails = false;
         _error = userFacingError(e, fallback: 'ui_load_failed');
       });
+      widget.onSearchFailed?.call(
+        BookingAnalytics.placeErrorCategory(e, noResults: false),
+      );
     }
   }
 
@@ -436,9 +450,12 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
         _recentSection(l10n),
         Focus(
           onKeyEvent: _handleKeyEvent,
-          child: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
+          child: Semantics(
+            label: widget.label,
+            textField: true,
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
             decoration: widget.compact
                 ? WizardCompact.inputDecoration(
                     label: widget.label,
@@ -460,8 +477,29 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
                         : null,
                   ),
             onChanged: _onQueryChanged,
+            ),
           ),
         ),
+        if (_loading && _controller.text.trim().length >= 2)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.t('wizard_places_searching'),
+                    style: const TextStyle(color: AppTokens.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
@@ -489,7 +527,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
             !_loadingDetails)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: WizardEmptyView(message: l10n.t('no_results')),
+            child: WizardEmptyView(
+              message: l10n.t('wizard_places_no_results_hint'),
+            ),
           ),
         if (_predictions.isNotEmpty)
           Container(

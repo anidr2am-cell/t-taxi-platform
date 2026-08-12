@@ -201,7 +201,11 @@ function installRegressionStubs(state) {
         additionalRequests: input.additionalRequests,
       };
       state.bookings.push(booking);
-      return booking;
+      return {
+        data: booking,
+        replayed: false,
+        responseStatus: 201,
+      };
     },
   }));
 

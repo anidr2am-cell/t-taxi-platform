@@ -176,7 +176,7 @@ async function main() {
       label: scenario.status,
     });
 
-    const created = await bookingService.createBooking(payload, null);
+    const created = (await bookingService.createBooking(payload, null)).data;
     await applyScenarioSteps({
       scenario,
       bookingNumber: created.bookingNumber,

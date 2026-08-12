@@ -36,7 +36,10 @@ Widget _wrapLanding({
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          routes: {'/support': (_) => const CustomerSupportPage()},
+          routes: {
+            '/booking': (_) => const BookingWizardPage(),
+            '/support': (_) => const CustomerSupportPage(),
+          },
           home: MediaQuery(
             data: MediaQueryData(size: Size(width, height)),
             child: Scaffold(body: child),
@@ -133,13 +136,13 @@ void main() {
 
       expect((logo.image as AssetImage).assetName, LandingHeader.logoAssetPath);
       expect(logo.fit, BoxFit.contain);
-      expect(logo.semanticLabel, 'T-Ride');
+      expect(logo.semanticLabel, 'T-Rider');
       expect(logoSize.height, inInclusiveRange(30, 36));
       expect(logoSize.width, lessThanOrEqualTo(116));
       expect(
         find.descendant(
           of: find.byKey(const Key('landing_brand_block')),
-          matching: find.text('T-Ride'),
+          matching: find.text('T-Rider'),
         ),
         findsNothing,
       );
@@ -199,15 +202,15 @@ void main() {
       }
     });
 
-    testWidgets('hero title includes T-Ride across supported landing locales', (
+    testWidgets('hero title includes T-Rider across supported landing locales', (
       tester,
     ) async {
       const expected = {
-        'en': 'A comfortable start in Thailand with T-Ride',
-        'ko': '태국에서 만나는 편안한 출발 T-Ride',
-        'zh': '在泰国，和 T-Ride 一起舒适出发',
-        'ja': 'タイで始まる快適な旅 T-Ride',
-        'th': 'เริ่มต้นการเดินทางในไทยอย่างสบายใจกับ T-Ride',
+        'en': 'A comfortable start in Thailand with T-Rider',
+        'ko': '태국에서 만나는 편안한 출발 T-Rider',
+        'zh': '在泰国，和 T-Rider 一起舒适出发',
+        'ja': 'タイで始まる快適な旅 T-Rider',
+        'th': 'เริ่มต้นการเดินทางในไทยอย่างสบายใจกับ T-Rider',
       };
 
       for (final entry in expected.entries) {

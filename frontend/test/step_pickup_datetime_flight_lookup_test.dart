@@ -7,6 +7,7 @@ import 'package:frontend/features/booking/models/booking_wizard_state.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
 import 'package:frontend/features/booking/services/flight_lookup_api_service.dart';
+import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
 import 'package:frontend/features/booking/widgets/step_pickup_datetime.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:http/http.dart' as http;
@@ -205,7 +206,7 @@ void main() {
   });
 
   group('flight lookup does not block wizard step 3', () {
-    test('canProceedFromStep(3) without lookup', () async {
+    test('canProceedFromStep(schedule) without lookup', () async {
       final controller = BookingWizardController(
         storage: _NoopStorage(),
         now: () => fixedNow,
@@ -214,10 +215,10 @@ void main() {
       await controller.selectService(BookingServiceType.airportPickup);
       await controller.updateCustomerInfo(flightNumber: 'TG401');
 
-      expect(controller.canProceedFromStep(3), isTrue);
+      expect(controller.canProceedFromStep(BookingWizardSteps.schedule), isTrue);
     });
 
-    test('canProceedFromStep(3) remains true after failed lookup state only', () async {
+    test('canProceedFromStep(schedule) remains true after failed lookup state only', () async {
       final controller = BookingWizardController(
         storage: _NoopStorage(),
         now: () => fixedNow,
@@ -227,17 +228,17 @@ void main() {
       await controller.updateCustomerInfo(flightNumber: 'TG401');
 
       expect(controller.state.flightNumber, 'TG401');
-      expect(controller.canProceedFromStep(3), isTrue);
+      expect(controller.canProceedFromStep(BookingWizardSteps.schedule), isTrue);
     });
 
-    test('canProceedFromStep(3) without flight number still depends on pickup time only', () async {
+    test('canProceedFromStep(schedule) without flight number still depends on pickup time only', () async {
       final controller = BookingWizardController(
         storage: _NoopStorage(),
         now: () => fixedNow,
       );
       await controller.initialize();
 
-      expect(controller.canProceedFromStep(3), isTrue);
+      expect(controller.canProceedFromStep(BookingWizardSteps.schedule), isTrue);
       expect(controller.state.flightNumber, isEmpty);
     });
   });
