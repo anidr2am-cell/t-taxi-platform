@@ -256,6 +256,7 @@ class _NameSignTextFieldState extends State<_NameSignTextField> {
         controller: _controller,
         maxLength: 100,
         textInputAction: TextInputAction.done,
+        scrollPadding: WizardCompact.fieldScrollPadding,
         decoration: InputDecoration(
           labelText: l10n.t('name_sign_text_label'),
           hintText: l10n.t('name_sign_text_hint'),

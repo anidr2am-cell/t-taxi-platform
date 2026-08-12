@@ -456,6 +456,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
+              scrollPadding: WizardCompact.fieldScrollPadding,
             decoration: widget.compact
                 ? WizardCompact.inputDecoration(
                     label: widget.label,

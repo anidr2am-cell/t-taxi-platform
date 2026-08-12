@@ -13,6 +13,10 @@ class WizardCompact {
   static const bodyPadding = EdgeInsets.fromLTRB(12, 0, 12, 12);
   static const minTouchHeight = 48.0;
 
+  /// Keeps focused fields visible when the keyboard is open (no viewInsets here;
+  /// scaffold resize already accounts for keyboard height).
+  static const fieldScrollPadding = EdgeInsets.fromLTRB(20, 20, 20, 32);
+
   static const _requiredLabelStyle = TextStyle(
     color: AppTokens.error,
     fontSize: 13.91,

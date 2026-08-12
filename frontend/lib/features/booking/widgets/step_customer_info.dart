@@ -117,6 +117,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
           child: TextField(
             controller: _nameController,
             focusNode: widget.nameFocusNode,
+            scrollPadding: WizardCompact.fieldScrollPadding,
             decoration: _fieldDecoration(l10n, l10n.t('name'), required: true),
             textInputAction: TextInputAction.next,
             onChanged: widget.onNameChanged,
@@ -135,6 +136,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
                 textField: true,
                 child: TextField(
                   controller: _phoneController,
+                  scrollPadding: WizardCompact.fieldScrollPadding,
                   decoration: _fieldDecoration(
                     l10n,
                     l10n.t('phone'),
@@ -186,6 +188,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
                 textField: true,
                 child: TextField(
                   controller: _messengerIdController,
+                  scrollPadding: WizardCompact.fieldScrollPadding,
                   decoration: _fieldDecoration(
                     l10n,
                     l10n.t('messenger_id'),
@@ -223,6 +226,7 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
         SizedBox(height: gap),
         TextField(
           controller: _requestsController,
+          scrollPadding: WizardCompact.fieldScrollPadding,
           decoration: _fieldDecoration(l10n, l10n.t('additional_requests')),
           maxLines: 3,
           onChanged: widget.onAdditionalRequestsChanged,

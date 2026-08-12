@@ -306,6 +306,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                 key: const Key('flight_number_field'),
                 controller: _flightController,
                 focusNode: widget.focusNode,
+                scrollPadding: WizardCompact.fieldScrollPadding,
                 decoration: WizardCompact.inputDecoration(
                   label: l10n.t('flight_number'),
                   hint: l10n.t('flight_number_hint'),

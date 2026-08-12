@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
@@ -58,6 +59,27 @@ void main() {
     await pumpAtWidth(tester, 360);
     expect(find.bySemanticsLabel('Swap locations'), findsOneWidget);
   });
+
+  testWidgets('fixed CTA bar visible when keyboard is closed', (tester) async {
+    await pumpAtWidth(tester, 360);
+    expect(find.byKey(const Key('booking_wizard_cta_bar')), findsOneWidget);
+  });
+
+  for (final width in [320.0, 360.0, 390.0, 430.0]) {
+    testWidgets(
+      'fixed CTA bar hidden when keyboard open at ${width.toInt()}px',
+      (tester) async {
+        await pumpAtWidth(tester, width);
+        tester.view.viewInsets = FakeViewPadding(bottom: 336);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('booking_wizard_cta_bar')), findsNothing);
+        expect(tester.takeException(), isNull);
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+      },
+    );
+  }
 }
 
 class _EmptyStorage extends BookingStateStorage {
