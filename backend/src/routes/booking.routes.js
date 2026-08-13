@@ -29,7 +29,6 @@ const {
 } = require("../validators/urgentNegotiation.validator");
 const bookingContactConnectionController = require("../controllers/bookingContactConnection.controller");
 const {
-  bookingNumberParamsSchema,
   startContactConnectionSchema,
 } = require("../validators/bookingContactConnection.validator");
 
