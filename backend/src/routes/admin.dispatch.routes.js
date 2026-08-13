@@ -157,7 +157,6 @@ router.get(
 );
 
 const bookingContactConnectionController = require('../controllers/bookingContactConnection.controller');
-const { bookingNumberParamsSchema } = require('../validators/bookingContactConnection.validator');
 
 router.post(
   '/bookings/:bookingNumber/contact/verify',
