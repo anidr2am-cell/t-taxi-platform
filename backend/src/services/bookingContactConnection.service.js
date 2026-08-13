@@ -103,8 +103,8 @@ class BookingContactConnectionService {
     try {
       await conn.beginTransaction();
       const booking = await this.bookingRepository.findByBookingNumberForUpdate(
-        bookingNumber,
         conn,
+        bookingNumber,
       );
       if (!booking) {
         throw this.notFound();
@@ -155,8 +155,8 @@ class BookingContactConnectionService {
     try {
       await conn.beginTransaction();
       const booking = await this.bookingRepository.findByBookingNumberForUpdate(
-        bookingNumber,
         conn,
+        bookingNumber,
       );
       if (!booking) {
         throw this.notFound();
@@ -226,8 +226,8 @@ class BookingContactConnectionService {
     try {
       await conn.beginTransaction();
       const booking = await this.bookingRepository.findByBookingNumberForUpdate(
-        bookingNumber,
         conn,
+        bookingNumber,
       );
       if (!booking) {
         throw this.notFound();

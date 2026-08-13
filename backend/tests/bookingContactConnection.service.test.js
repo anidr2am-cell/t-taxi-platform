@@ -25,7 +25,7 @@ function createService(overrides = {}) {
   };
 
   const bookingRepository = {
-    async findByBookingNumberForUpdate(_bookingNumber, _conn) {
+    async findByBookingNumberForUpdate(_conn, _bookingNumber) {
       return overrides.booking ?? null;
     },
     async findById(id) {
@@ -123,6 +123,89 @@ test('startConnection rejects disabled channel', async () => {
   process.env.CONTACT_CONNECTION_REQUIRED = previous;
   delete require.cache[require.resolve('../src/config/env')];
   delete require.cache[require.resolve('../src/policies/bookingDispatchEligibility.policy')];
+});
+
+test('startConnection passes transaction conn as first arg to findByBookingNumberForUpdate', async () => {
+  let capturedConn = null;
+  let capturedBookingNumber = null;
+
+  const pool = {
+    async getConnection() {
+      const conn = {
+        async beginTransaction() {},
+        async commit() {},
+        async rollback() {},
+        release() {},
+      };
+      return conn;
+    },
+  };
+
+  const bookingRepository = {
+    async findByBookingNumberForUpdate(conn, bookingNumber) {
+      capturedConn = conn;
+      capturedBookingNumber = bookingNumber;
+      return {
+        id: 1,
+        booking_number: bookingNumber,
+        contact_status: CONTACT_STATUS.PENDING,
+        status: BOOKING_STATUS.OPEN,
+        is_urgent_request: 0,
+        payment_method: 'PAY_DRIVER',
+        payment_status: 'UNPAID',
+        total_amount: 1000,
+        currency: 'THB',
+      };
+    },
+    async findById(id) {
+      return {
+        id,
+        booking_number: capturedBookingNumber,
+        contact_status: CONTACT_STATUS.PENDING,
+        status: BOOKING_STATUS.OPEN,
+        is_urgent_request: 0,
+        payment_method: 'PAY_DRIVER',
+        payment_status: 'UNPAID',
+        total_amount: 1000,
+        currency: 'THB',
+      };
+    },
+    async findContactBookingByNumber() {
+      return null;
+    },
+  };
+
+  const contactConnectionRepository = {
+    async cancelActiveConnections() {},
+    async insertConnection() {
+      return 1;
+    },
+    async updateBookingContactSnapshot() {},
+    async findById(_conn, connectionId) {
+      return {
+        id: connectionId,
+        channel: 'LINE',
+        status: CONTACT_STATUS.PENDING,
+      };
+    },
+  };
+
+  const service = new BookingContactConnectionService(
+    pool,
+    bookingRepository,
+    contactConnectionRepository,
+    { async assertCustomerOrGuestAccess() {}, formatDateTime: (d) => d.toISOString() },
+    {
+      async getContactChannelsPublic() {
+        return { channels: [{ code: 'LINE', enabled: true }] };
+      },
+    },
+  );
+
+  await service.startConnection('TX202608130001', 'LINE', null, 'guest-token');
+
+  assert.equal(typeof capturedConn?.beginTransaction, 'function');
+  assert.equal(capturedBookingNumber, 'TX202608130001');
 });
 
 test('startConnection accepts enabled channel', async () => {
