@@ -15,6 +15,8 @@
     "smoke:staging": "node scripts/staging-smoke-test.js",
     "smoke:staging:fare-table": "node scripts/staging-fare-table-smoke.js",
     "regression:staging:booking": "node scripts/staging-booking-regression.js",
+    "e2e:staging:standard-open-call": "node scripts/staging-standard-open-call.js",
+    "e2e:staging:standard-open-call:dry-run": "node scripts/staging-standard-open-call.js --dry-run",
     "provision:staging:test-accounts": "node scripts/provision-staging-test-accounts.js",
     "create-test-driver": "node scripts/create-test-driver.js",
     "create-test-admin": "node scripts/create-test-admin.js",
