@@ -12,11 +12,14 @@ import '../models/booking_wizard_steps.dart';
 import '../models/location_option.dart';
 import '../models/service_type_option.dart';
 import '../pages/booking_complete_page.dart';
+import '../pages/booking_contact_connect_page.dart';
 import '../pages/urgent_booking_flow_page.dart';
+import '../models/booking_contact_connect_args.dart';
 import '../utils/customer_booking_format.dart';
 import '../services/booking_analytics.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/booking_progress_header.dart';
+import '../widgets/booking_review_form.dart';
 import '../widgets/booking_summary_bar.dart';
 import '../widgets/step_confirmation.dart';
 import '../widgets/step_customer_info.dart';
@@ -234,6 +237,48 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
 
     if (!mounted) return;
 
+    final guestToken = result.guestAccessToken;
+    if (guestToken != null && guestToken.isNotEmpty) {
+      await const BookingReviewApi().persistGuestToken(
+        result.bookingNumber,
+        guestToken,
+      );
+    }
+
+    final needsContactConnect = result.contactConnectionRequired ||
+        result.contactStatus == 'PENDING';
+
+    if (needsContactConnect) {
+      final connectArgs = BookingContactConnectArgs(
+        result: result,
+        serviceLabel: serviceLabel,
+        origin: snapshot.origin,
+        destination: snapshot.destination,
+        review: review,
+        serviceTypeCode: snapshot.serviceType?.apiCode,
+        originAirportCode: snapshot.origin?.kind == LocationKind.airport
+            ? snapshot.origin?.code
+            : null,
+        nameSignRequested: snapshot.nameSign,
+        customerPhone: snapshot.customerPhone,
+        scheduledPickupAt: scheduledPickupAt,
+        selectedVehicle: snapshot.selectedVehicle,
+        isUrgent: bookingMode == 'URGENT' || result.isUrgentRequest,
+        meetingVehicleInfo: AirportMeetingVehicleInfo(
+          vehicleType: snapshot.selectedVehicle,
+        ),
+      );
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => BookingContactConnectPage(
+            bookingNumber: result.bookingNumber,
+            args: connectArgs,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (bookingMode == 'URGENT' || result.isUrgentRequest) {
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -372,10 +417,6 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           onPhoneChanged: (v) => _controller.updateCustomerInfo(phone: v),
           onCountryChanged: (v) =>
               _controller.updateCustomerInfo(countryCode: v),
-          onMessengerTypeChanged: (v) =>
-              _controller.updateCustomerInfo(messengerType: v),
-          onMessengerIdChanged: (v) =>
-              _controller.updateCustomerInfo(messengerId: v),
           onAdditionalRequestsChanged: (v) =>
               _controller.updateCustomerInfo(additionalRequests: v),
         );

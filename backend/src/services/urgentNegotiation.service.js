@@ -22,7 +22,9 @@ const {
   emitBookingUrgentNegotiationExpired,
 } = require('../socket/realtime');
 const URGENT_NEGOTIATION_TIMEOUT_CONFIG = require('../constants/urgentNegotiationTimeoutConfig');
-const logger = require('../utils/logger');
+const {
+  assertBookingDispatchEligible,
+} = require('../policies/bookingDispatchEligibility.policy');
 
 class UrgentNegotiationService {
   constructor(
@@ -176,6 +178,7 @@ class UrgentNegotiationService {
           errorCode: ERROR_CODES.URGENT_NOT_URGENT_BOOKING,
         });
       }
+      assertBookingDispatchEligible(booking);
 
       const negotiation = await this.urgentNegotiationRepository.findBroadcastingNegotiationForUpdate(
         conn,

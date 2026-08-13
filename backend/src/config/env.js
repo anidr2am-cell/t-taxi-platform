@@ -62,6 +62,7 @@ const envSchema = Joi.object({
   SMTP_FROM_EMAIL: Joi.string().email().allow('').optional(),
   TZ: Joi.string().default('Asia/Bangkok'),
   ALLOW_DEV_QR_REISSUE: Joi.boolean().truthy('true', '1').falsy('false', '0').optional(),
+  CONTACT_CONNECTION_REQUIRED: Joi.boolean().truthy('true', '1').falsy('false', '0').default(false),
 }).unknown(true);
 
 const { value: env, error } = envSchema.validate(process.env, { abortEarly: false });
@@ -245,5 +246,6 @@ module.exports = {
   timezone: env.TZ,
   features: {
     allowDevQrReissue: resolveAllowDevQrReissue(env.NODE_ENV, env.ALLOW_DEV_QR_REISSUE),
+    contactConnectionRequired: env.CONTACT_CONNECTION_REQUIRED === true,
   },
 };

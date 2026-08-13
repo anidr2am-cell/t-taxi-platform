@@ -1,6 +1,9 @@
 const database = require('../config/database');
 const { PICKUP_CONFLICT_MIN_GAP_MINUTES } = require('../policies/driverBookingConflictPolicy');
 const {
+  isContactConnectionRequired,
+} = require('../policies/bookingDispatchEligibility.policy');
+const {
   driverVehicleCoversBookingExistsSql,
   exactVehicleMatchExistsSql,
 } = require('../utils/vehicleMatchTier');
@@ -56,7 +59,7 @@ class BookingRepository {
     const [result] = await conn.query(
       `
         INSERT INTO bookings (
-          booking_number, status, service_type_id,
+          booking_number, status, contact_status, service_type_id,
           origin_address, origin_place_id, origin_lat, origin_lng,
           destination_address, destination_place_id, destination_lat, destination_lng,
           scheduled_pickup_at, vehicle_type_id, recommended_vehicle_type_id, vehicle_count,
@@ -67,19 +70,20 @@ class BookingRepository {
           is_urgent_request,
           created_by, updated_by
         ) VALUES (
-          ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?
         )
       `,
       [
         row.bookingNumber,
         row.status,
+        row.contactStatus ?? 'VERIFIED',
         row.serviceTypeId,
         row.originAddress,
         row.originPlaceId,
@@ -251,6 +255,8 @@ class BookingRepository {
           b.payment_method,
           b.customer_user_id,
           b.is_urgent_request,
+          b.contact_status,
+          b.contact_channel,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           d.user_id AS driver_user_id
         FROM bookings b
@@ -267,6 +273,51 @@ class BookingRepository {
       [bookingId],
     );
     return rows[0] || null;
+  }
+
+  contactVerifiedSql() {
+    if (!isContactConnectionRequired()) {
+      return '1=1';
+    }
+    return "b.contact_status = 'VERIFIED'";
+  }
+
+  async findContactBookingByNumber(bookingNumber, conn = null) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
+      `
+        SELECT
+          b.id,
+          b.booking_number,
+          b.status,
+          b.contact_status,
+          b.contact_channel,
+          b.contact_requested_at,
+          b.contact_verified_at,
+          b.customer_user_id,
+          b.is_urgent_request,
+          b.urgent_negotiation_id,
+          b.payment_method,
+          b.payment_status,
+          b.total_amount,
+          b.currency,
+          COALESCE(b.driver_id, bda.driver_id) AS driver_id
+        FROM bookings b
+        LEFT JOIN booking_driver_assignments bda ON bda.id = (
+          SELECT bda2.id
+          FROM booking_driver_assignments bda2
+          WHERE bda2.booking_id = b.id
+            AND bda2.deleted_at IS NULL
+            AND bda2.is_active = 1
+          ORDER BY bda2.updated_at DESC, bda2.id DESC
+          LIMIT 1
+        )
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL AND b.is_archived = 0
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] ?? null;
   }
 
   async findByBookingNumber(bookingNumber) {
@@ -417,6 +468,10 @@ class BookingRepository {
           b.payment_status, b.payment_method, b.customer_user_id,
           b.is_urgent_request,
           b.urgent_negotiation_id,
+          b.contact_status,
+          b.contact_channel,
+          b.contact_requested_at,
+          b.contact_verified_at,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           b.dropoff_qr_token_hash, b.dropoff_qr_expires_at, b.dropoff_qr_used_at,
           d.user_id AS driver_user_id,
@@ -855,6 +910,7 @@ class BookingRepository {
         WHERE b.deleted_at IS NULL
           AND b.is_archived = 0
           AND b.status = 'OPEN'
+          AND ${this.contactVerifiedSql()}
           AND ${driverVehicleCoversBookingExistsSql()}
           AND NOT EXISTS (
             SELECT 1
@@ -1376,6 +1432,10 @@ class BookingRepository {
         b.destination_address,
         b.customer_name,
         b.customer_phone,
+        b.contact_status,
+        b.contact_channel,
+        b.contact_requested_at,
+        b.contact_verified_at,
         b.payment_method,
         b.total_amount,
         b.currency,
@@ -1551,6 +1611,10 @@ class BookingRepository {
           b.customer_email,
           b.customer_phone,
           b.customer_country_code,
+          b.contact_status,
+          b.contact_channel,
+          b.contact_requested_at,
+          b.contact_verified_at,
           b.special_requests,
           b.payment_method,
           b.payment_status,

@@ -18,6 +18,10 @@ const {
   evaluateCustomerCancellation,
 } = require('../policies/customerBookingCancellation.policy');
 const {
+  isContactConnectionRequired,
+} = require('../policies/bookingDispatchEligibility.policy');
+const CONTACT_STATUS = require('../constants/contactStatus');
+const {
   getThailandAirportNameTh,
   normalizeAirportIata,
 } = require('../constants/thailandAirports.constants');
@@ -343,6 +347,27 @@ class BookingService {
     }
   }
 
+  isContactDispatchCompleted(metadata) {
+    return this.parseBookingMetadata(metadata).contactDispatchCompleted === true;
+  }
+
+  needsContactDispatchRetry(bookingRow) {
+    if (!isContactConnectionRequired()) return false;
+    if ((bookingRow?.contact_status ?? CONTACT_STATUS.VERIFIED) !== CONTACT_STATUS.VERIFIED) {
+      return false;
+    }
+    if (bookingRow?.status !== BOOKING_STATUS.OPEN) {
+      return false;
+    }
+    return !this.isContactDispatchCompleted(bookingRow.metadata);
+  }
+
+  async markContactDispatchCompleted(conn, bookingId, existingMetadata) {
+    const metadata = this.parseBookingMetadata(existingMetadata);
+    metadata.contactDispatchCompleted = true;
+    await this.bookingRepository.updateBookingFields(conn, bookingId, { metadata });
+  }
+
   location(value) {
     if (value == null) return null;
     const parsed = Number(value);
@@ -464,7 +489,109 @@ class BookingService {
       canCancel: cancellation.canCancel,
       cancellationDeadline: cancellation.cancellationDeadline,
       cancellationBlockedReason: cancellation.cancellationBlockedReason,
+      contactStatus: booking.contact_status ?? CONTACT_STATUS.VERIFIED,
+      contactConnectionRequired: isContactConnectionRequired(),
     };
+  }
+
+  shouldDeferDispatchUntilContactVerified() {
+    return isContactConnectionRequired();
+  }
+
+  resolveInitialContactStatus() {
+    return this.shouldDeferDispatchUntilContactVerified()
+      ? CONTACT_STATUS.PENDING
+      : CONTACT_STATUS.VERIFIED;
+  }
+
+  async dispatchAfterContactVerified(bookingRow) {
+    if (!bookingRow?.id) return false;
+    if ((bookingRow.contact_status ?? CONTACT_STATUS.VERIFIED) !== CONTACT_STATUS.VERIFIED) {
+      return false;
+    }
+
+    const conn = await this.pool.getConnection();
+    try {
+      const booking = await this.bookingRepository.findById(bookingRow.id, conn);
+      if (!booking || booking.status !== BOOKING_STATUS.OPEN) {
+        return false;
+      }
+
+      const fullBooking = await this.bookingRepository.findOpenDriverCallByBookingId(
+        conn,
+        booking.id,
+      );
+      if (!fullBooking) {
+        return false;
+      }
+
+      if (this.isContactDispatchCompleted(fullBooking.metadata)) {
+        return false;
+      }
+
+      const eligibleDrivers = await this.getEligibleDriversForOpenBooking(
+        conn,
+        fullBooking.vehicle_type_id,
+        fullBooking.scheduled_pickup_at,
+      );
+
+      const pricing = { totalAmount: fullBooking.total_amount, currency: fullBooking.currency };
+      const metadata = this.parseBookingMetadata(fullBooking.metadata);
+      const openCallPayload = this.buildOpenCallPayload({
+        bookingNumber: fullBooking.booking_number,
+        scheduledPickupAt: fullBooking.scheduled_pickup_at,
+        originAddress: fullBooking.origin_address,
+        destinationAddress: fullBooking.destination_address,
+        metadata,
+        serviceType: {
+          code: fullBooking.service_type_code,
+          name: fullBooking.service_type_name,
+        },
+        vehicleType: {
+          code: fullBooking.vehicle_type_code,
+          name: fullBooking.vehicle_type_name,
+        },
+        pricing,
+        luggage: {
+          carriers20Inch: fullBooking.carriers_20_inch ?? 0,
+          carriers24InchPlus: fullBooking.carriers_24_inch_plus ?? 0,
+          golfBags: fullBooking.golf_bags ?? 0,
+          specialItems: fullBooking.special_items ?? null,
+        },
+      });
+
+      if (fullBooking.is_urgent_request) {
+        const urgentPayload = {
+          bookingNumber: fullBooking.booking_number,
+          negotiationId: fullBooking.urgent_negotiation_id,
+          attemptCount: 0,
+          minRequiredEtaMinutes: fullBooking.urgent_min_required_eta_minutes ?? null,
+        };
+        emitDriverUrgentCallNew(urgentPayload);
+        await this.dispatchUrgentCallNotifications({
+          drivers: eligibleDrivers,
+          bookingId: booking.id,
+          bookingNumber: fullBooking.booking_number,
+          urgentPayload,
+        });
+      } else {
+        const openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
+        await this.dispatchOpenCallNotifications({
+          drivers: eligibleDrivers,
+          bookingId: booking.id,
+          bookingNumber: fullBooking.booking_number,
+          openCallPayload,
+        });
+        for (const target of openCallTargets) {
+          emitDriverCallAvailable(target.userId, openCallPayload);
+        }
+      }
+
+      await this.markContactDispatchCompleted(conn, booking.id, fullBooking.metadata);
+      return true;
+    } finally {
+      conn.release();
+    }
   }
 
   async createBooking(input, authUser, options = {}) {
@@ -589,6 +716,7 @@ class BookingService {
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
         status: BOOKING_STATUS.OPEN,
+        contactStatus: this.resolveInitialContactStatus(),
         serviceTypeId: serviceType.id,
         originAddress,
         originPlaceId: origin.placeId ?? null,
@@ -778,29 +906,32 @@ class BookingService {
       if (this.outboxProcessor && outboxId) {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
       }
-      if (isUrgentRequest) {
-        const urgentPayload = {
-          bookingNumber,
-          negotiationId: urgentNegotiationId,
-          attemptCount: 0,
-          minRequiredEtaMinutes: null,
-        };
-        emitDriverUrgentCallNew(urgentPayload);
-        await this.dispatchUrgentCallNotifications({
-          drivers: eligibleDrivers,
-          bookingId,
-          bookingNumber,
-          urgentPayload,
-        });
-      } else {
-        await this.dispatchOpenCallNotifications({
-          drivers: eligibleDrivers,
-          bookingId,
-          bookingNumber,
-          openCallPayload,
-        });
-        for (const target of openCallTargets) {
-          emitDriverCallAvailable(target.userId, openCallPayload);
+      const deferDispatch = this.shouldDeferDispatchUntilContactVerified();
+      if (!deferDispatch) {
+        if (isUrgentRequest) {
+          const urgentPayload = {
+            bookingNumber,
+            negotiationId: urgentNegotiationId,
+            attemptCount: 0,
+            minRequiredEtaMinutes: null,
+          };
+          emitDriverUrgentCallNew(urgentPayload);
+          await this.dispatchUrgentCallNotifications({
+            drivers: eligibleDrivers,
+            bookingId,
+            bookingNumber,
+            urgentPayload,
+          });
+        } else {
+          await this.dispatchOpenCallNotifications({
+            drivers: eligibleDrivers,
+            bookingId,
+            bookingNumber,
+            openCallPayload,
+          });
+          for (const target of openCallTargets) {
+            emitDriverCallAvailable(target.userId, openCallPayload);
+          }
         }
       }
 

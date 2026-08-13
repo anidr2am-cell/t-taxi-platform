@@ -48,8 +48,6 @@ void main() {
               onEmailChanged: (_) {},
               onPhoneChanged: (_) {},
               onCountryChanged: (_) {},
-              onMessengerTypeChanged: (_) {},
-              onMessengerIdChanged: (_) {},
               onAdditionalRequestsChanged: (_) {},
             ),
           ),
@@ -58,9 +56,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('(Required)'), findsNWidgets(4));
+    expect(find.textContaining('(Required)'), findsNWidgets(2));
     expect(find.textContaining('(Required) Email'), findsNothing);
     expect(find.textContaining('(Required) Country'), findsNothing);
-    expect(find.text('Please enter both messenger type and ID.'), findsOneWidget);
+    expect(find.textContaining('Messenger'), findsNothing);
   });
 }

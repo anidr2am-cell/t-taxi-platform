@@ -217,6 +217,70 @@ class BookingAnalytics {
     });
   }
 
+  void trackBookingCreated({
+    required String bookingId,
+    String? vehicleType,
+    num? totalPrice,
+    bool isUrgent = false,
+  }) {
+    track('booking_created', {
+      'booking_id': bookingId,
+      if (vehicleType != null) 'vehicle_type': vehicleType,
+      if (totalPrice != null) 'total_price': totalPrice.round(),
+      'is_urgent': isUrgent,
+    });
+  }
+
+  void trackContactConnectViewed({
+    required String bookingId,
+    String? contactStatus,
+  }) {
+    track('contact_connect_viewed', {
+      'booking_id': bookingId,
+      if (contactStatus != null) 'contact_status': contactStatus,
+    });
+  }
+
+  void trackContactConnectStarted({
+    required String bookingId,
+    required String channel,
+  }) {
+    track('contact_connect_started', {
+      'booking_id': bookingId,
+      'channel': channel,
+    });
+  }
+
+  void trackContactConfirmRequested({
+    required String bookingId,
+    String? channel,
+  }) {
+    track('contact_confirm_requested', {
+      'booking_id': bookingId,
+      if (channel != null) 'channel': channel,
+    });
+  }
+
+  void trackContactConnectSucceeded({required String bookingId}) {
+    track('contact_connect_succeeded', {
+      'booking_id': bookingId,
+    });
+  }
+
+  void trackBookingFullyCompleted({
+    required String bookingId,
+    String? vehicleType,
+    num? totalPrice,
+    bool isUrgent = false,
+  }) {
+    track('booking_fully_completed', {
+      'booking_id': bookingId,
+      if (vehicleType != null) 'vehicle_type': vehicleType,
+      if (totalPrice != null) 'total_price': totalPrice.round(),
+      'is_urgent': isUrgent,
+    });
+  }
+
   void trackBookingFailed({
     required String stepName,
     required String errorCategory,

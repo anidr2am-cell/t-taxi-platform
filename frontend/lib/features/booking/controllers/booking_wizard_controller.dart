@@ -627,8 +627,8 @@ class BookingWizardController extends ChangeNotifier {
       'customer': {
         'name': _state.customerName.trim(),
         'phone': _state.customerPhone.trim(),
-        'messengerType': _state.messengerType.trim(),
-        'messengerId': _state.messengerId.trim(),
+        'messengerType': 'PENDING',
+        'messengerId': 'POST_CREATE',
       },
       if (_state.additionalRequests.trim().isNotEmpty)
         'additionalRequests': _state.additionalRequests.trim(),
@@ -706,6 +706,12 @@ class BookingWizardController extends ChangeNotifier {
           final result = await _api.createBooking(
             buildCreatePayload(bookingMode: bookingMode),
             idempotencyKey: idempotencyKey,
+          );
+          _analytics.trackBookingCreated(
+            bookingId: result.bookingNumber,
+            vehicleType: _state.selectedVehicle,
+            totalPrice: result.totalAmount,
+            isUrgent: bookingMode == 'URGENT',
           );
           _analytics.trackBookingCompleted(
             bookingId: result.bookingNumber,
@@ -1235,8 +1241,6 @@ class BookingWizardController extends ChangeNotifier {
   bool _isCustomerStepValid() {
     if (_state.customerName.trim().isEmpty) return false;
     if (_state.customerPhone.trim().isEmpty) return false;
-    if (_state.messengerType.trim().isEmpty) return false;
-    if (_state.messengerId.trim().isEmpty) return false;
     return true;
   }
 
@@ -1388,10 +1392,6 @@ class BookingWizardController extends ChangeNotifier {
         }
         if (_state.customerPhone.trim().isEmpty) {
           return 'wizard_required_customer_phone';
-        }
-        if (_state.messengerType.trim().isEmpty ||
-            _state.messengerId.trim().isEmpty) {
-          return 'wizard_required_customer';
         }
         return 'wizard_required_customer';
       case BookingWizardSteps.review:

@@ -14,6 +14,8 @@ class BookingCreateResult {
   final String? cancellationDeadline;
   final String? cancellationBlockedReason;
   final bool isUrgentRequest;
+  final String? contactStatus;
+  final bool contactConnectionRequired;
 
   const BookingCreateResult({
     this.bookingId,
@@ -31,6 +33,8 @@ class BookingCreateResult {
     this.cancellationDeadline,
     this.cancellationBlockedReason,
     this.isUrgentRequest = false,
+    this.contactStatus,
+    this.contactConnectionRequired = false,
   });
 
   factory BookingCreateResult.fromJson(Map<String, dynamic> json) {
@@ -54,6 +58,8 @@ class BookingCreateResult {
       cancellationDeadline: json['cancellationDeadline'] as String?,
       cancellationBlockedReason: json['cancellationBlockedReason'] as String?,
       isUrgentRequest: json['isUrgentRequest'] == true,
+      contactStatus: json['contactStatus'] as String?,
+      contactConnectionRequired: json['contactConnectionRequired'] == true,
     );
   }
 }

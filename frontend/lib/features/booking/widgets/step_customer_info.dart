@@ -11,8 +11,6 @@ class StepCustomerInfo extends StatefulWidget {
   final ValueChanged<String> onEmailChanged;
   final ValueChanged<String> onPhoneChanged;
   final ValueChanged<String> onCountryChanged;
-  final ValueChanged<String> onMessengerTypeChanged;
-  final ValueChanged<String> onMessengerIdChanged;
   final ValueChanged<String> onAdditionalRequestsChanged;
   final bool embedded;
   final FocusNode? nameFocusNode;
@@ -24,8 +22,6 @@ class StepCustomerInfo extends StatefulWidget {
     required this.onEmailChanged,
     required this.onPhoneChanged,
     required this.onCountryChanged,
-    required this.onMessengerTypeChanged,
-    required this.onMessengerIdChanged,
     required this.onAdditionalRequestsChanged,
     this.embedded = false,
     this.nameFocusNode,
@@ -36,16 +32,8 @@ class StepCustomerInfo extends StatefulWidget {
 }
 
 class _StepCustomerInfoState extends State<StepCustomerInfo> {
-  static const _messengerTypeOptions = <String>[
-    'LINE',
-    'WhatsApp',
-    'KAKAO TALK',
-    'WeChat',
-  ];
-
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _messengerIdController;
   late final TextEditingController _requestsController;
 
   @override
@@ -53,9 +41,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
     super.initState();
     _nameController = TextEditingController(text: widget.state.customerName);
     _phoneController = TextEditingController(text: widget.state.customerPhone);
-    _messengerIdController = TextEditingController(
-      text: widget.state.messengerId,
-    );
     _requestsController = TextEditingController(
       text: widget.state.additionalRequests,
     );
@@ -65,7 +50,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _messengerIdController.dispose();
     _requestsController.dispose();
     super.dispose();
   }
@@ -86,12 +70,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
 
   String _requiredSemanticsLabel(AppLocalizations l10n, String fieldKey) {
     return '${l10n.t('field_required')} ${l10n.t(fieldKey)}';
-  }
-
-  String? _selectedMessengerTypeValue() {
-    final normalized = widget.state.messengerType.trim();
-    if (normalized.isEmpty) return null;
-    return _messengerTypeOptions.contains(normalized) ? normalized : null;
   }
 
   @override
@@ -145,57 +123,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   onChanged: widget.onPhoneChanged,
-                ),
-              ),
-              SizedBox(height: gap),
-              Text(
-                copy.messengerPairHint,
-                style: WizardCompact.hintTextStyle,
-              ),
-              const SizedBox(height: 6),
-              Semantics(
-                label: _requiredSemanticsLabel(l10n, 'messenger_type'),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedMessengerTypeValue(),
-                  isExpanded: true,
-                  decoration: _fieldDecoration(
-                    l10n,
-                    l10n.t('messenger_type'),
-                    required: true,
-                  ),
-                  hint: Text(
-                    l10n.t('messenger_type'),
-                    style: WizardCompact.hintTextStyle,
-                  ),
-                  items: _messengerTypeOptions
-                      .map(
-                        (option) => DropdownMenuItem<String>(
-                          value: option,
-                          child: Text(option),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: (value) {
-                    if (value != null) {
-                      widget.onMessengerTypeChanged(value);
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(height: 6),
-              Semantics(
-                label: _requiredSemanticsLabel(l10n, 'messenger_id'),
-                textField: true,
-                child: TextField(
-                  controller: _messengerIdController,
-                  scrollPadding: WizardCompact.fieldScrollPadding,
-                  decoration: _fieldDecoration(
-                    l10n,
-                    l10n.t('messenger_id'),
-                    required: true,
-                  ),
-                  textInputAction: TextInputAction.next,
-                  onChanged: widget.onMessengerIdChanged,
                 ),
               ),
               SizedBox(height: gap),
@@ -260,21 +187,6 @@ class _CustomerContactCopy {
         return 'ช่องทางติดต่อ';
       default:
         return 'Contact';
-    }
-  }
-
-  String get messengerPairHint {
-    switch (languageCode) {
-      case 'ko':
-        return '메신저 종류와 아이디를 함께 입력해 주세요.';
-      case 'zh':
-        return '请同时填写 messenger 类型和 ID。';
-      case 'ja':
-        return 'メッセンジャーの種類と ID を両方入力してください。';
-      case 'th':
-        return 'กรุณากรอกประเภทและ ID ของ Messenger ให้ครบคู่กัน';
-      default:
-        return 'Please enter both messenger type and ID.';
     }
   }
 }

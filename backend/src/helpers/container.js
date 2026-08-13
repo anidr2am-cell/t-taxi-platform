@@ -71,6 +71,8 @@ const AdminBookingNoteRepository = require("../repositories/adminBookingNote.rep
 const BookingNoShowPenaltyRepository = require("../repositories/bookingNoShowPenalty.repository");
 const BookingIdempotencyRepository = require("../repositories/bookingIdempotency.repository");
 const BookingIdempotencyService = require("../services/bookingIdempotency.service");
+const BookingContactConnectionRepository = require("../repositories/bookingContactConnection.repository");
+const BookingContactConnectionService = require("../services/bookingContactConnection.service");
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
 const config = require("../config/env");
 const database = require("../config/database");
@@ -236,6 +238,21 @@ container.register(
       c.get("urgentNegotiationRepository"),
       c.get("placesService"),
       c.get("bookingIdempotencyService"),
+    ),
+);
+container.register(
+  "bookingContactConnectionRepository",
+  () => new BookingContactConnectionRepository(database.pool),
+);
+container.register(
+  "bookingContactConnectionService",
+  (c) =>
+    new BookingContactConnectionService(
+      database.pool,
+      c.get("bookingRepository"),
+      c.get("bookingContactConnectionRepository"),
+      c.get("bookingService"),
+      c.get("platformSettingsService"),
     ),
 );
 container.register(

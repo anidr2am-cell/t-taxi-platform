@@ -11,6 +11,9 @@ const {
   emitDriverUrgentCallNew,
 } = require('../socket/realtime');
 const logger = require('../utils/logger');
+const {
+  assertBookingDispatchEligible,
+} = require('../policies/bookingDispatchEligibility.policy');
 
 class BookingAssignmentReopenService {
   constructor(
@@ -238,6 +241,8 @@ class BookingAssignmentReopenService {
         errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
       });
     }
+
+    assertBookingDispatchEligible(booking);
 
     const openCallPayload = {
       ...mapOpenCall(openRow),

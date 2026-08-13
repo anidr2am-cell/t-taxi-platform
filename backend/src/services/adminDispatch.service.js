@@ -17,6 +17,9 @@ const {
 } = require("../constants/bookingAssignmentRelease.constants");
 const { formatServiceDateTimeIso } = require("../utils/serviceDateTime.util");
 const { emitDriverAssignmentReleased } = require("../socket/realtime");
+const {
+  assertBookingDispatchEligible,
+} = require("../policies/bookingDispatchEligibility.policy");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -179,6 +182,9 @@ class AdminDispatchService {
       ),
       customerDisplayName: row.customer_name,
       customerPhone: row.customer_phone,
+      contactStatus: row.contact_status ?? 'VERIFIED',
+      contactChannel: row.contact_channel ?? null,
+      contactRequestedAt: row.contact_requested_at ?? null,
       passengerCount,
       luggageSummary: this.formatLuggageSummary(row),
       vehicleType: {
@@ -500,6 +506,10 @@ class AdminDispatchService {
         countryCode: row.customer_country_code,
         messengerType: metadata?.messengerType ?? null,
         messengerId: metadata?.messengerId ?? null,
+        contactStatus: row.contact_status ?? 'VERIFIED',
+        contactChannel: row.contact_channel ?? null,
+        contactRequestedAt: row.contact_requested_at ?? null,
+        contactVerifiedAt: row.contact_verified_at ?? null,
       },
       specialRequests: row.special_requests,
       passengers: {
@@ -1031,6 +1041,7 @@ class AdminDispatchService {
         errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
       });
     }
+    assertBookingDispatchEligible(booking);
   }
 
   async buildDriverCandidatePreview(booking) {
@@ -1234,6 +1245,8 @@ class AdminDispatchService {
           errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
         });
       }
+
+      assertBookingDispatchEligible(booking);
 
       if (TERMINAL_ASSIGN_STATUSES.has(booking.status)) {
         throw new AppError("Booking cannot be assigned in the current status", {

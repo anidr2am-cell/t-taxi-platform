@@ -80,22 +80,18 @@ void main() {
       controller = BookingWizardController(storage: _NoopStorage());
     });
 
-    test('requires name, phone, and messenger fields', () async {
+    test('requires name and phone only', () async {
       expect(controller.canProceedFromStep(BookingWizardSteps.customer), isFalse);
 
       await controller.updateCustomerInfo(
         name: 'Jane',
         phone: '+66123456789',
-        messengerType: 'LINE',
-        messengerId: 'line-user-id',
       );
       expect(controller.canProceedFromStep(BookingWizardSteps.customer), isTrue);
 
       await controller.updateCustomerInfo(
         name: 'Jane',
-        phone: '+66123456789',
-        messengerType: 'LINE',
-        messengerId: '   ',
+        phone: '   ',
       );
       expect(controller.canProceedFromStep(BookingWizardSteps.customer), isFalse);
     });

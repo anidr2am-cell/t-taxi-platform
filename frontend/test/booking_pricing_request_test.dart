@@ -16,8 +16,8 @@ import 'package:frontend/features/booking/services/recent_locations_storage.dart
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-const _testMessengerType = 'LINE';
-const _testMessengerId = 'line-user-id';
+const _testMessengerType = 'PENDING';
+const _testMessengerId = 'POST_CREATE';
 
 void main() {
   test(

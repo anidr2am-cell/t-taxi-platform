@@ -9,10 +9,24 @@ const {
   detectImageFileSignature,
   isSupportedSettingsImageMetadata,
 } = require('../utils/imageSignature');
+const { validateContactChannelUrl } = require('../utils/contactChannelUrl.util');
 
 const GROUP = 'operations';
+const CONTACT_GROUP = 'contact_channels';
 const TEXT_KEYS = ['lineQrDescription', 'bankName', 'accountName', 'accountNumber', 'promptPayNumber'];
-const IMAGE_KEYS = { lineQr: 'lineQrImagePath', promptPayQr: 'promptPayQrImagePath' };
+const CONTACT_TEXT_KEYS = [
+  'contactLineEnabled', 'contactLineDisplayName', 'contactLineAddUrl', 'contactLineAccountId',
+  'contactKakaoEnabled', 'contactKakaoDisplayName', 'contactKakaoAddUrl', 'contactKakaoAccountId',
+  'contactWhatsappEnabled', 'contactWhatsappDisplayName', 'contactWhatsappPhoneNumber',
+  'contactWechatEnabled', 'contactWechatDisplayName', 'contactWechatAccountId',
+];
+const IMAGE_KEYS = {
+  lineQr: 'lineQrImagePath',
+  promptPayQr: 'promptPayQrImagePath',
+  contactLineQr: 'contactLineQrImagePath',
+  contactKakaoQr: 'contactKakaoQrImagePath',
+  contactWechatQr: 'contactWechatQrImagePath',
+};
 
 class PlatformSettingsService {
   constructor(settingsRepository) {
@@ -43,7 +57,84 @@ class PlatformSettingsService {
     return {
       lineQrDescription: values.lineQrDescription || '',
       lineQrImageUrl: settingsAssetUrl('lineQr', values.lineQrImagePath),
+      contactChannels: await this.buildContactChannelsPublic(values),
     };
+  }
+
+  async getContactChannelsPublic() {
+    const rows = await this.settingsRepository.findByGroup(GROUP);
+    const contactRows = await this.settingsRepository.findByGroup(CONTACT_GROUP);
+    const values = {
+      ...Object.fromEntries(rows.map((row) => [row.key_name, row.value])),
+      ...Object.fromEntries(contactRows.map((row) => [row.key_name, row.value])),
+    };
+    return { channels: await this.buildContactChannelsPublic(values) };
+  }
+
+  truthy(value) {
+    return String(value ?? '').trim().toLowerCase() === 'true' || value === '1';
+  }
+
+  async buildContactChannelsPublic(values = {}) {
+    const channels = [
+      {
+        code: 'LINE',
+        enabled: this.truthy(values.contactLineEnabled),
+        displayName: values.contactLineDisplayName || 'LINE',
+        addUrl: values.contactLineAddUrl || '',
+        accountId: values.contactLineAccountId || '',
+        qrImageUrl: settingsAssetUrl('contactLineQr', values.contactLineQrImagePath),
+      },
+      {
+        code: 'KAKAO',
+        enabled: this.truthy(values.contactKakaoEnabled),
+        displayName: values.contactKakaoDisplayName || 'KakaoTalk',
+        addUrl: values.contactKakaoAddUrl || '',
+        accountId: values.contactKakaoAccountId || '',
+        qrImageUrl: settingsAssetUrl('contactKakaoQr', values.contactKakaoQrImagePath),
+      },
+      {
+        code: 'WHATSAPP',
+        enabled: this.truthy(values.contactWhatsappEnabled),
+        displayName: values.contactWhatsappDisplayName || 'WhatsApp',
+        phoneNumber: values.contactWhatsappPhoneNumber || '',
+      },
+      {
+        code: 'WECHAT',
+        enabled: this.truthy(values.contactWechatEnabled),
+        displayName: values.contactWechatDisplayName || 'WeChat',
+        accountId: values.contactWechatAccountId || '',
+        qrImageUrl: settingsAssetUrl('contactWechatQr', values.contactWechatQrImagePath),
+      },
+    ];
+    return channels.filter((channel) => channel.enabled);
+  }
+
+  async updateContactChannels(input, userId) {
+    this.validateContactChannelUrls(input);
+    await Promise.all(CONTACT_TEXT_KEYS.map((key) => this.settingsRepository.upsert(
+      CONTACT_GROUP, key, String(input[key] ?? '').trim(), userId,
+    )));
+    return this.getContactChannelsPublic();
+  }
+
+  validateContactChannelUrls(input = {}) {
+    const urlFields = [
+      { key: 'contactLineAddUrl', label: 'LINE add URL' },
+      { key: 'contactKakaoAddUrl', label: 'Kakao add URL' },
+    ];
+    for (const field of urlFields) {
+      const raw = String(input[field.key] ?? '').trim();
+      if (!raw) continue;
+      const result = validateContactChannelUrl(raw);
+      if (!result.valid) {
+        throw new AppError(`${field.label} is invalid`, {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+          errors: [{ field: field.key, message: result.reason }],
+        });
+      }
+    }
   }
 
   async update(input, userId) {

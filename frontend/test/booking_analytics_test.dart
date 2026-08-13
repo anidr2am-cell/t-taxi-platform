@@ -101,6 +101,51 @@ void main() {
       expect(sink.named('booking_submit_attempted'), hasLength(2));
     });
 
+    test('booking_created and booking_completed fire on submit success', () {
+      analytics.trackBookingCreated(
+        bookingId: 'TX202607010001',
+        vehicleType: 'SUV',
+        totalPrice: 1500,
+      );
+      analytics.trackBookingCompleted(
+        bookingId: 'TX202607010001',
+        vehicleType: 'SUV',
+        totalPrice: 1500,
+      );
+
+      expect(sink.named('booking_created'), hasLength(1));
+      expect(sink.named('booking_completed'), hasLength(1));
+    });
+
+    test('contact connect funnel events include booking id only', () {
+      analytics.trackContactConnectViewed(
+        bookingId: 'TX202607010001',
+        contactStatus: 'PENDING',
+      );
+      analytics.trackContactConnectStarted(
+        bookingId: 'TX202607010001',
+        channel: 'LINE',
+      );
+      analytics.trackContactConfirmRequested(
+        bookingId: 'TX202607010001',
+        channel: 'LINE',
+      );
+      analytics.trackContactConnectSucceeded(bookingId: 'TX202607010001');
+      analytics.trackBookingFullyCompleted(
+        bookingId: 'TX202607010001',
+        vehicleType: 'SUV',
+        totalPrice: 1500,
+      );
+
+      expect(sink.named('contact_connect_viewed').single.properties.keys,
+          containsAll(['booking_id', 'contact_status']));
+      expect(sink.named('booking_fully_completed'), hasLength(1));
+      expect(
+        sink.named('contact_connect_started').single.properties['channel'],
+        'LINE',
+      );
+    });
+
     test('PII properties are stripped', () {
       analytics.track('booking_failed', {
         'step_name': 'customer',
@@ -159,8 +204,6 @@ void main() {
       await controller.updateCustomerInfo(
         name: 'Jane Doe',
         phone: '+66123456789',
-        messengerType: 'LINE',
-        messengerId: 'line-user',
       );
       controller.markInitializedForTest();
       await controller.goToStep(BookingWizardSteps.review);
@@ -170,6 +213,7 @@ void main() {
 
       expect(sink.named('vehicle_selected'), isNotEmpty);
       expect(sink.named('booking_submit_attempted'), hasLength(1));
+      expect(sink.named('booking_created'), hasLength(1));
       expect(sink.named('booking_completed'), hasLength(1));
       expect(
         sink.named('booking_completed').single.properties.containsKey('phone'),

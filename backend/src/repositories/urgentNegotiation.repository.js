@@ -14,7 +14,8 @@ class UrgentNegotiationRepository {
           b.status,
           b.scheduled_pickup_at,
           b.customer_user_id,
-          b.vehicle_type_id
+          b.vehicle_type_id,
+          b.contact_status
         FROM bookings b
         WHERE b.booking_number = ?
           AND b.deleted_at IS NULL

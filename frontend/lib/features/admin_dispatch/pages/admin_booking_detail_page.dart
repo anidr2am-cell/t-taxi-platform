@@ -535,6 +535,28 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     }
   }
 
+  Future<void> _verifyContactConnection(Map<String, dynamic> detail) async {
+    setState(() => _submitting = true);
+    try {
+      await widget.api.verifyContactConnection(widget.bookingNumber);
+      widget.onChanged();
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.t('admin_contact_verify_success'))),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(err))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   Future<void> _assign() async {
     final result = await showAssignDriverDialog(
       context: context,
@@ -1772,12 +1794,37 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             label: l10n.t('phone'),
             value: customer['phone'] as String? ?? '',
           ),
-          if (customer['messengerType'] != null)
+          if (customer['contactStatus'] != null)
+            AppUi.summaryRow(
+              label: l10n.t('admin_contact_status'),
+              value: customer['contactStatus'] as String,
+            ),
+          if (customer['contactChannel'] != null)
+            AppUi.summaryRow(
+              label: l10n.t('admin_contact_channel'),
+              value: customer['contactChannel'] as String,
+            ),
+          if (customer['contactStatus'] == 'CONFIRM_REQUESTED') ...[
+            const SizedBox(height: 12),
+            Text(
+              l10n.t('admin_contact_confirm_requested_hint'),
+              style: const TextStyle(height: 1.45),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: () => _verifyContactConnection(detail),
+              child: Text(l10n.t('admin_contact_verify_button')),
+            ),
+          ],
+          if (customer['messengerType'] != null &&
+              customer['messengerType'] != 'PENDING')
             AppUi.summaryRow(
               label: l10n.t('messenger_type'),
               value: customer['messengerType'] as String,
             ),
-          if (customer['messengerId'] != null)
+          if (customer['messengerId'] != null &&
+              customer['messengerId'] != 'PENDING' &&
+              customer['messengerId'] != 'POST_CREATE')
             AppUi.summaryRow(
               label: l10n.t('messenger_id'),
               value: customer['messengerId'] as String,

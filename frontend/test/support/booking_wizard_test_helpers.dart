@@ -10,8 +10,8 @@ import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
 
-const bookingContractMessengerType = 'LINE';
-const bookingContractMessengerId = 'line-contract-user';
+const bookingContractMessengerType = 'PENDING';
+const bookingContractMessengerId = 'POST_CREATE';
 
 class CapturingBookingApi implements BookingApiService {
   Map<String, dynamic>? lastPricingRequest;

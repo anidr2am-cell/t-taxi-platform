@@ -18,6 +18,9 @@ const {
 const {
   isVehicleCompatibleWithBooking,
 } = require('../utils/vehicleMatchTier');
+const {
+  assertBookingDispatchEligible,
+} = require('../policies/bookingDispatchEligibility.policy');
 
 const RELEASE_BLOCK_MESSAGES = {
   [RELEASE_BLOCKED_REASON.NOT_ASSIGNED_DRIVER]:
@@ -310,6 +313,7 @@ class DriverCallService {
       if (booking.status !== BOOKING_STATUS.OPEN) {
         this.throwAlreadyClaimed();
       }
+      assertBookingDispatchEligible(booking);
 
       if (Number(booking.is_urgent_request)) {
         await this.assertNoActiveUrgentNegotiation(conn, booking.id);

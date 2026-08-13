@@ -27,6 +27,11 @@ const {
 const {
   submitUrgentDecisionSchema,
 } = require("../validators/urgentNegotiation.validator");
+const bookingContactConnectionController = require("../controllers/bookingContactConnection.controller");
+const {
+  bookingNumberParamsSchema,
+  startContactConnectionSchema,
+} = require("../validators/bookingContactConnection.validator");
 
 const router = express.Router();
 
@@ -40,6 +45,32 @@ router.post(
   "/pricing/calculate",
   validate({ body: pricingCalculateSchema }),
   pricingController.calculatePricing,
+);
+
+router.get(
+  "/contact-channels/public",
+  bookingContactConnectionController.getContactChannelSettings,
+);
+
+router.get(
+  "/:bookingNumber/contact-connection",
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema }),
+  bookingContactConnectionController.getContactConnection,
+);
+
+router.post(
+  "/:bookingNumber/contact-connections",
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema, body: startContactConnectionSchema }),
+  bookingContactConnectionController.startContactConnection,
+);
+
+router.post(
+  "/:bookingNumber/contact-connections/confirm-sent",
+  optionalAuthMiddleware,
+  validate({ params: bookingNumberParamsSchema }),
+  bookingContactConnectionController.confirmContactSent,
 );
 
 router.post(
