@@ -88,7 +88,7 @@ function fakeDryRunPool() {
     async query(sql, params = []) {
       calls.push(['query', sql, params]);
       if (/SELECT DATABASE\(\) AS name/.test(sql)) {
-        return [[{ name: 'ttaxi_staging' }]];
+        return [[{ name: 'tride_staging' }]];
       }
       if (/information_schema\.TABLES/.test(sql)) {
         return [[
@@ -145,7 +145,7 @@ function fakeProvisionPool(seed, options = {}) {
     async query(sql, params = []) {
       calls.push(['query', sql, params]);
       if (/SELECT DATABASE\(\) AS name/.test(sql)) {
-        return [[{ name: 'ttaxi_staging' }]];
+        return [[{ name: 'tride_staging' }]];
       }
       if (/information_schema\.TABLES/.test(sql)) {
         return [[
@@ -256,6 +256,15 @@ function fakeProvisionPool(seed, options = {}) {
   };
 }
 
+test('provision refuses legacy ttaxi database target before connecting', () => {
+  withEnv({ DB_NAME: 'ttaxi' }, () => {
+    assert.throws(
+      () => provision.assertProvisionDatabaseTarget(),
+      /Refusing staging provision with DB_NAME=ttaxi/,
+    );
+  });
+});
+
 test('provision config requires explicit live opt-in and strong distinct passwords', () => {
   withEnv({
     TRIDE_PROVISION_TEST_ACCOUNTS: undefined,
@@ -299,7 +308,7 @@ test('provision dry-run validates T-Ride schema and performs no writes', async (
   }, () => provision.provisionAccounts(pool, provision.resolveConfig({ dryRun: true })));
 
   assert.equal(result.dryRun, true);
-  assert.equal(result.databaseName, 'ttaxi_staging');
+  assert.equal(result.databaseName, 'tride_staging');
   assert.equal(result.admin.email, provision.DEFAULT_ADMIN_EMAIL);
   assert.equal(result.admin.role, ROLES.ADMIN);
   assert.equal(result.driver.email, provision.DEFAULT_DRIVER_EMAIL);

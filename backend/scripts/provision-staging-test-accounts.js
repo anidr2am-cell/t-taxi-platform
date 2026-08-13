@@ -5,11 +5,14 @@
  * Secrets are read from environment variables only. The script never prints
  * passwords, hashes, tokens, or full request payloads.
  */
+const fs = require('node:fs');
 const path = require('node:path');
 
 const ROLES = require('../src/constants/roles');
 const { loginSchema } = require('../src/validators/auth.validator');
 const { hashPassword } = require('../src/utils/passwordHash.util');
+
+const ALLOWED_PROVISION_DATABASE = 'tride_staging';
 
 const DEFAULT_ADMIN_EMAIL = 'tride.e2e.admin@example.com';
 const DEFAULT_DRIVER_EMAIL = 'tride.e2e.driver@example.com';
@@ -134,8 +137,11 @@ async function getCurrentDatabase(conn) {
 
 async function assertTriageDatabase(conn) {
   const databaseName = await getCurrentDatabase(conn);
-  if (!databaseName || /ktaxi/i.test(databaseName)) {
-    throw new Error('Refusing to provision against a legacy or unknown database');
+  if (databaseName !== ALLOWED_PROVISION_DATABASE) {
+    throw new Error(
+      `Refusing to provision against database "${databaseName ?? 'unknown'}". `
+      + `Allowed: ${ALLOWED_PROVISION_DATABASE}`,
+    );
   }
 
   const [tables] = await conn.query(
@@ -635,11 +641,45 @@ function printResult(result) {
   console.log('Passwords: not printed');
 }
 
-async function main() {
+function resolveStagingProvisionEnvPath() {
+  if (process.env.TRIDE_STAGING_PROVISION_ENV) {
+    return path.resolve(process.env.TRIDE_STAGING_PROVISION_ENV);
+  }
+  return path.join(__dirname, '../.env.staging-provision.local');
+}
+
+function assertProvisionDatabaseTarget() {
+  const dbName = String(process.env.DB_NAME ?? '').trim();
+  if (dbName !== ALLOWED_PROVISION_DATABASE) {
+    throw new Error(
+      `Refusing staging provision with DB_NAME=${dbName || 'unset'}. `
+      + `Expected ${ALLOWED_PROVISION_DATABASE}. `
+      + 'Copy backend/.env.staging-provision.example to backend/.env.staging-provision.local '
+      + 'with T-Ride staging DB settings, or run inside tride-backend on the staging server.',
+    );
+  }
+}
+
+function loadProvisionEnvironment() {
+  const backendEnvPath = path.join(__dirname, '../.env');
   require('dotenv').config({
-    path: path.join(__dirname, '../.env'),
-    override: true,
+    path: backendEnvPath,
+    override: false,
   });
+
+  const stagingEnvPath = resolveStagingProvisionEnvPath();
+  if (fs.existsSync(stagingEnvPath)) {
+    require('dotenv').config({
+      path: stagingEnvPath,
+      override: true,
+    });
+  }
+
+  assertProvisionDatabaseTarget();
+}
+
+async function main() {
+  loadProvisionEnvironment();
   const database = require('../src/config/database');
   const args = parseArgs(process.argv.slice(2));
   try {
@@ -659,6 +699,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  ALLOWED_PROVISION_DATABASE,
   DEFAULT_ADMIN_EMAIL,
   DEFAULT_DRIVER_EMAIL,
   DEFAULT_ADMIN_NAME,
@@ -670,7 +711,10 @@ module.exports = {
   TEST_NAME_PREFIX,
   assertExistingUserIsTestAccount,
   assertPasswordPolicy,
+  assertProvisionDatabaseTarget,
+  loadProvisionEnvironment,
   parseArgs,
   provisionAccounts,
   resolveConfig,
+  resolveStagingProvisionEnvPath,
 };

@@ -8,6 +8,7 @@ flutter/.dart_tool/
 !.env.e2e.example
 !**/.env.example
 !**/.env.production.example
+!**/.env.staging-provision.example
 
 logs/
 
