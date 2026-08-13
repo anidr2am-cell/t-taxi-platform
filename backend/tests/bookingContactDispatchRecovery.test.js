@@ -57,7 +57,7 @@ test('dispatchAfterContactVerified marks metadata and skips duplicate dispatch',
         destination_address: 'Hotel',
       };
     },
-    async updateBookingFields(_conn, bookingId, fields) {
+    async updateCommissionFields(_conn, bookingId, fields) {
       metadataUpdates.push({ bookingId, metadata: fields.metadata });
       bookingRow.metadata = JSON.stringify(fields.metadata);
     },
@@ -128,4 +128,89 @@ test('needsContactDispatchRetry is true for verified open booking without dispat
     }),
     false,
   );
+});
+
+test('dispatchAfterContactVerified uses urgent path for urgent bookings', async () => {
+  const metadataUpdates = [];
+  const bookingRow = {
+    id: 6,
+    contact_status: CONTACT_STATUS.VERIFIED,
+    status: BOOKING_STATUS.OPEN,
+    metadata: JSON.stringify({}),
+  };
+
+  const pool = {
+    async getConnection() {
+      return { release() {} };
+    },
+  };
+
+  const bookingRepository = {
+    async findById(id) {
+      return { ...bookingRow, id };
+    },
+    async findOpenDriverCallByBookingId(_conn, id) {
+      return {
+        id,
+        booking_number: 'TX202608130021',
+        contact_status: CONTACT_STATUS.VERIFIED,
+        status: BOOKING_STATUS.OPEN,
+        metadata: bookingRow.metadata,
+        vehicle_type_id: 1,
+        scheduled_pickup_at: '2026-08-13 09:00:00',
+        total_amount: 1000,
+        currency: 'THB',
+        payment_method: 'PAY_DRIVER',
+        is_urgent_request: 1,
+        urgent_negotiation_id: 99,
+        urgent_min_required_eta_minutes: 30,
+        service_type_code: 'AIRPORT_PICKUP',
+        service_type_name: 'Airport Pickup',
+        vehicle_type_code: 'SEDAN',
+        vehicle_type_name: 'Sedan',
+        origin_address: 'BKK',
+        destination_address: 'Hotel',
+      };
+    },
+    async updateCommissionFields(_conn, bookingId, fields) {
+      metadataUpdates.push({ bookingId, metadata: fields.metadata });
+      bookingRow.metadata = JSON.stringify(fields.metadata);
+    },
+  };
+
+  const service = new BookingService(
+    pool,
+    bookingRepository,
+    {},
+    {},
+    {},
+    {},
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  );
+
+  service.getEligibleDriversForOpenBooking = async () => [{ id: 1, user_id: 2 }];
+  let urgentNotificationCount = 0;
+  let openCallNotificationCount = 0;
+  service.dispatchUrgentCallNotifications = async () => {
+    urgentNotificationCount += 1;
+  };
+  service.dispatchOpenCallNotifications = async () => {
+    openCallNotificationCount += 1;
+  };
+
+  const dispatched = await service.dispatchAfterContactVerified(bookingRow);
+
+  assert.equal(dispatched, true);
+  assert.equal(urgentNotificationCount, 1);
+  assert.equal(openCallNotificationCount, 0);
+  assert.equal(metadataUpdates[0].metadata.contactDispatchCompleted, true);
 });

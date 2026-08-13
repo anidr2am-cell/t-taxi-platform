@@ -365,7 +365,7 @@ class BookingService {
   async markContactDispatchCompleted(conn, bookingId, existingMetadata) {
     const metadata = this.parseBookingMetadata(existingMetadata);
     metadata.contactDispatchCompleted = true;
-    await this.bookingRepository.updateBookingFields(conn, bookingId, { metadata });
+    await this.bookingRepository.updateCommissionFields(conn, bookingId, { metadata });
   }
 
   location(value) {
