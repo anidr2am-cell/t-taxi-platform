@@ -214,3 +214,97 @@ test('dispatchAfterContactVerified uses urgent path for urgent bookings', async 
   assert.equal(openCallNotificationCount, 0);
   assert.equal(metadataUpdates[0].metadata.contactDispatchCompleted, true);
 });
+
+test('dispatchAfterContactVerified passes SUV vehicle_type_id into eligibility lookup', async () => {
+  const bookingRow = {
+    id: 192,
+    contact_status: CONTACT_STATUS.VERIFIED,
+    status: BOOKING_STATUS.OPEN,
+    metadata: JSON.stringify({}),
+  };
+
+  const pool = {
+    async getConnection() {
+      return { release() {} };
+    },
+  };
+
+  const openCallRow = {
+    id: 192,
+    booking_number: 'TX202608140002',
+    contact_status: CONTACT_STATUS.VERIFIED,
+    status: BOOKING_STATUS.OPEN,
+    metadata: bookingRow.metadata,
+    vehicle_type_id: 2,
+    scheduled_pickup_at: '2026-08-28 23:35:00',
+    total_amount: 2500,
+    currency: 'THB',
+    payment_method: 'PAY_DRIVER',
+    is_urgent_request: 0,
+    service_type_code: 'AIRPORT_PICKUP',
+    service_type_name: 'Airport Pickup',
+    vehicle_type_code: 'SUV',
+    vehicle_type_name: 'SUV',
+    origin_address: 'BKK',
+    destination_address: 'Pattaya',
+  };
+
+  const bookingRepository = {
+    async findById(id) {
+      return { ...bookingRow, id };
+    },
+    async findOpenDriverCallByBookingId(_conn, id) {
+      assert.equal(
+        openCallRow.vehicle_type_id,
+        2,
+        'open call row must include vehicle_type_id for contact verified dispatch',
+      );
+      return { ...openCallRow, id };
+    },
+    async updateCommissionFields(_conn, bookingId, fields) {
+      bookingRow.metadata = JSON.stringify(fields.metadata);
+    },
+  };
+
+  const service = new BookingService(
+    pool,
+    bookingRepository,
+    {},
+    {},
+    {},
+    {},
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  );
+
+  let capturedVehicleTypeId;
+  let capturedScheduledPickupAt;
+  service.getEligibleDriversForOpenBooking = async (_conn, vehicleTypeId, scheduledPickupAt) => {
+    capturedVehicleTypeId = vehicleTypeId;
+    capturedScheduledPickupAt = scheduledPickupAt;
+    return [{ id: 11, user_id: 15 }];
+  };
+  service.mapEligibleDriversToTargets = (drivers) => drivers.map((d) => ({
+    driverId: d.id,
+    userId: d.user_id,
+  }));
+  service.buildOpenCallPayload = () => ({ bookingNumber: 'TX202608140002' });
+  service.parseBookingMetadata = BookingService.prototype.parseBookingMetadata;
+  service.isContactDispatchCompleted = BookingService.prototype.isContactDispatchCompleted;
+  service.markContactDispatchCompleted = BookingService.prototype.markContactDispatchCompleted;
+  service.dispatchOpenCallNotifications = async () => {};
+
+  const dispatched = await service.dispatchAfterContactVerified(bookingRow);
+
+  assert.equal(dispatched, true);
+  assert.equal(capturedVehicleTypeId, 2);
+  assert.equal(capturedScheduledPickupAt, '2026-08-28 23:35:00');
+});

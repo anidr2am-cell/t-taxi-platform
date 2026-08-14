@@ -873,6 +873,7 @@ class BookingRepository {
         b.name_sign_text,
         st.code AS service_type_code,
         st.name AS service_type_name,
+        b.vehicle_type_id,
         vt.code AS vehicle_type_code,
         vt.name AS vehicle_type_name,
         bp.adults,

@@ -44,6 +44,26 @@ test('findOpenDriverCallByBookingId selects name_sign_requested via charge item 
   assertNameSignAmountUsesSumSubquery(capturedSql);
   assert.match(capturedSql, /WHERE b\.id = \?/);
   assert.match(capturedSql, /AND b\.status = 'OPEN'/);
+  assert.match(capturedSql, /b\.vehicle_type_id/);
+});
+
+test('findOpenDriverCallByBookingId exposes vehicle_type_id for contact verified dispatch', async () => {
+  const conn = {
+    async query(_sql, _params) {
+      return [[{
+        booking_number: 'TX202608140002',
+        vehicle_type_id: 2,
+        vehicle_type_code: 'SUV',
+        vehicle_type_name: 'SUV',
+      }]];
+    },
+  };
+  const repository = new BookingRepository({});
+
+  const row = await repository.findOpenDriverCallByBookingId(conn, 192);
+
+  assert.equal(row.vehicle_type_id, 2);
+  assert.equal(row.vehicle_type_code, 'SUV');
 });
 
 test('findOpenDriverCallsForDriver shares the same name_sign_requested EXISTS select', async () => {
