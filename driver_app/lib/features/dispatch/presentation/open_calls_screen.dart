@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -118,12 +119,38 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     }
   }
 
+  // TEMP SOCKET DEBUG — remove after M2 STANDARD realtime E2E diagnosis
+  void _socketDebug(String message) {
+    debugPrint(message);
+  }
+
   void _handleSocketEvent(DriverSocketEvent event) {
-    if (!mounted || _status?.online != true || !_foreground) return;
+    if (event.type == DriverSocketEventType.newCall) {
+      final bookingNumber = _bookingNumber(event.payload) ?? '<missing>';
+      _socketDebug(
+        '[SOCKET DEBUG] handler newCall '
+        'mounted=$mounted '
+        'online=${_status?.online == true} '
+        'foreground=$_foreground '
+        'bookingNumber=$bookingNumber',
+      );
+    }
+    if (!mounted || _status?.online != true || !_foreground) {
+      if (event.type == DriverSocketEventType.newCall) {
+        _socketDebug('[SOCKET DEBUG] handler newCall skipped by guard');
+      }
+      return;
+    }
     switch (event.type) {
       case DriverSocketEventType.newCall:
+        _socketDebug('[SOCKET DEBUG] refresh open calls from socket');
         setState(() => _showNewCallNotice = true);
-        unawaited(_loadCalls());
+        unawaited(
+          _loadCalls(
+            debugSource: 'socket',
+            targetBookingNumber: _bookingNumber(event.payload),
+          ),
+        );
       case DriverSocketEventType.callClaimed:
       case DriverSocketEventType.callConfirmed:
       case DriverSocketEventType.assignmentReleased:
@@ -258,7 +285,10 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     widget.driverSocket?.disconnect();
   }
 
-  Future<void> _loadCalls() async {
+  Future<void> _loadCalls({
+    String? debugSource,
+    String? targetBookingNumber,
+  }) async {
     if (_status?.online != true) return;
     setState(() {
       _loadingCalls = true;
@@ -271,6 +301,17 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         _calls = calls;
         _loadingCalls = false;
       });
+      if (debugSource == 'socket') {
+        final containsTarget = targetBookingNumber != null &&
+            calls.items.any(
+              (call) => call.bookingNumber == targetBookingNumber,
+            );
+        _socketDebug(
+          '[SOCKET DEBUG] open calls refreshed '
+          'count=${calls.items.length} '
+          'containsTarget=${containsTarget ? 'YES' : 'NO'}',
+        );
+      }
     } on ApiException catch (error) {
       if (error.kind == ApiFailureKind.unauthorized) {
         await widget.onUnauthorized();

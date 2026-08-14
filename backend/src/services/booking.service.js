@@ -576,6 +576,11 @@ class BookingService {
         });
       } else {
         const openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
+        // TEMP SOCKET DEBUG — remove after M2 STANDARD realtime E2E diagnosis
+        logger.info('[SOCKET DEBUG] eligible open-call targets', {
+          bookingNumber: fullBooking.booking_number,
+          count: openCallTargets.length,
+        });
         await this.dispatchOpenCallNotifications({
           drivers: eligibleDrivers,
           bookingId: booking.id,

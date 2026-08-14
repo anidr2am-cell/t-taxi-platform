@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../../config/app_config.dart';
@@ -47,6 +48,11 @@ abstract interface class DriverSocketTransport {
 typedef DriverSocketTransportFactory =
     DriverSocketTransport Function(String socketUrl, String accessToken);
 
+// TEMP SOCKET DEBUG — remove after M2 STANDARD realtime E2E diagnosis
+void _socketDebug(String message) {
+  debugPrint(message);
+}
+
 class DriverSocketService implements DriverSocketConnection {
   DriverSocketService({
     required AppConfig config,
@@ -92,13 +98,37 @@ class DriverSocketService implements DriverSocketConnection {
     _transport = transport;
     transport.onConnect(() {
       if (!identical(_transport, transport)) return;
+      _socketDebug('[SOCKET DEBUG] connected');
       transport.emit('driver:calls:subscribe', const <String, dynamic>{});
+      _socketDebug('[SOCKET DEBUG] subscribe emitted');
       if (_hasConnectedBefore) {
         _add(const DriverSocketEvent(DriverSocketEventType.reconnected));
       }
       _hasConnectedBefore = true;
     });
-    _listen(transport, 'driver:call:new', DriverSocketEventType.newCall);
+    transport.on('connect_error', (data) {
+      if (!identical(_transport, transport)) return;
+      _socketDebug('[SOCKET DEBUG] connect_error ${data ?? 'unknown'}');
+    });
+    transport.on('disconnect', (data) {
+      if (!identical(_transport, transport)) return;
+      _socketDebug('[SOCKET DEBUG] disconnected reason=${data ?? 'unknown'}');
+    });
+    transport.on('driver:call:new', (data) {
+      if (!identical(_transport, transport)) return;
+      final payload = _payload(data);
+      final bookingNumber = payload['bookingNumber'];
+      if (bookingNumber is String && bookingNumber.isNotEmpty) {
+        _socketDebug(
+          '[SOCKET DEBUG] received driver:call:new bookingNumber=$bookingNumber',
+        );
+      } else {
+        _socketDebug(
+          '[SOCKET DEBUG] received driver:call:new bookingNumber=<missing>',
+        );
+      }
+      _add(DriverSocketEvent(DriverSocketEventType.newCall, payload));
+    });
     _listen(
       transport,
       'driver:call:claimed',
