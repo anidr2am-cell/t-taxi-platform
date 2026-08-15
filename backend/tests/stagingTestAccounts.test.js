@@ -762,6 +762,7 @@ test('booking regression runner archives only verified E2E regression bookings',
             bookingNumber: record.bookingNumber,
             customer: { name: record.payload.customer.name },
             specialRequests: runner.REGRESSION_MARKER,
+            status: 'OPEN',
           },
         },
       };
@@ -771,7 +772,7 @@ test('booking regression runner archives only verified E2E regression bookings',
     .then((archive) => ({ archive, calls })));
 
   assert.equal(result.archive.archived, 2);
-  assert.equal(result.calls.length, 3);
+  assert.equal(result.calls.length, 5);
 });
 
 test('booking regression runner refuses to archive non-regression bookings', async () => {
@@ -786,6 +787,7 @@ test('booking regression runner refuses to archive non-regression bookings', asy
             bookingNumber: record.bookingNumber,
             customer: { name: 'Real Customer' },
             specialRequests: runner.REGRESSION_MARKER,
+            status: 'OPEN',
           },
         },
       };
@@ -811,6 +813,7 @@ test('booking regression runner refuses to archive E2E bookings without marker',
             bookingNumber: record.bookingNumber,
             customer: { name: record.payload.customer.name },
             specialRequests: 'manual test',
+            status: 'OPEN',
           },
         },
       };

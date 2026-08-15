@@ -11,9 +11,15 @@ const {
   assertSafeEnvironment,
   toPricingPayload,
   createBookingIdempotencyKey,
+  REGRESSION_MARKER,
+  TEST_NAME_PREFIX,
 } = require('./staging-booking-regression');
+const {
+  assertTestDriverEligibleForNewJob,
+  cleanupRegressionBookings,
+  formatCleanupFailure,
+} = require('./e2eRegressionCleanup');
 
-const E2E_MARKER = 'RECEIPT_IDEMPOTENCY_E2E';
 const CUSTOMER_NAME = '[E2E] Settlement Receipt Idempotency';
 const TIMEOUT_MS = Number(process.env.TRIDE_REGRESSION_TIMEOUT_MS || 25000);
 const PREFERRED_CHANNELS = ['LINE', 'WHATSAPP', 'KAKAO'];
@@ -94,7 +100,7 @@ function bookingPayload() {
       email: 'receipt-idempotency-e2e@example.com',
       countryCode: 'TH',
     },
-    additionalRequests: E2E_MARKER,
+    additionalRequests: REGRESSION_MARKER,
   };
 }
 
@@ -214,11 +220,11 @@ async function claimOpenCall(baseUrl, driverToken, bookingNumber, driverVehicleI
   });
 }
 
-async function archiveBooking(baseUrl, adminToken, bookingNumber) {
-  return fetchJson(baseUrl, '/api/v1/admin/bookings/archive', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({ bookingNumbers: [bookingNumber], reason: E2E_MARKER }),
+async function archiveBooking(baseUrl, adminToken, driverToken, bookingNumber, payload) {
+  return cleanupRegressionBookings(baseUrl, {
+    adminToken,
+    driverToken,
+    records: [{ bookingNumber, payload }],
   });
 }
 
@@ -282,6 +288,7 @@ async function main() {
   let driverToken;
   let driverWasOnline = false;
   let bookingNumber = null;
+  let bookingPayloadRef = payload;
   const receiptKey = createBookingIdempotencyKey();
 
   try {
@@ -295,6 +302,12 @@ async function main() {
       headers: { authorization: `Bearer ${driverToken}` },
     });
     driverWasOnline = true;
+
+    await assertTestDriverEligibleForNewJob(
+      baseUrl,
+      adminToken,
+      driverLogin.user?.name ?? `${TEST_NAME_PREFIX} Regression Driver`,
+    );
 
     await fetchJson(baseUrl, '/api/v1/bookings/pricing/calculate', {
       method: 'POST',
@@ -351,7 +364,7 @@ async function main() {
       throw new Error(`Expected 409 IDEMPOTENCY_KEY_REUSED, got ${conflict.status} ${report.CONFLICT_ERROR}`);
     }
 
-    await archiveBooking(baseUrl, adminToken, bookingNumber);
+    await archiveBooking(baseUrl, adminToken, driverToken, bookingNumber, bookingPayloadRef);
     console.log(JSON.stringify(report, null, 2));
     console.log('PASS receipt idempotency E2E');
   } catch (err) {
@@ -360,9 +373,9 @@ async function main() {
     process.exitCode = 1;
     if (bookingNumber && adminToken) {
       try {
-        await archiveBooking(baseUrl, adminToken, bookingNumber);
+        await archiveBooking(baseUrl, adminToken, driverToken, bookingNumber, bookingPayloadRef);
       } catch (cleanupErr) {
-        console.error(`Cleanup archive failed: ${cleanupErr.message}`);
+        console.error(formatCleanupFailure(bookingNumber, cleanupErr.message));
       }
     }
   } finally {

@@ -375,23 +375,15 @@ function assertSafeRegressionBookingDetail(detail, record) {
   }
 }
 
-async function archiveCreatedRegressionBookings(baseUrl, adminToken, records) {
-  if (!records.length) return { archived: 0 };
-  for (const record of records) {
-    const detail = await fetchJson(baseUrl, `/api/v1/admin/bookings/${record.bookingNumber}`, {
-      headers: { authorization: `Bearer ${adminToken}` },
-    });
-    assertSafeRegressionBookingDetail(detail, record);
-  }
-  const body = await fetchJson(baseUrl, '/api/v1/admin/bookings/archive', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({
-      bookingNumbers: records.map((record) => record.bookingNumber),
-      reason: REGRESSION_MARKER,
-    }),
+async function archiveCreatedRegressionBookings(baseUrl, adminToken, records, options = {}) {
+  const {
+    cleanupRegressionBookings,
+  } = require('./e2eRegressionCleanup');
+  return cleanupRegressionBookings(baseUrl, {
+    adminToken,
+    driverToken: options.driverToken ?? null,
+    records,
   });
-  return responseData(body);
 }
 
 async function main() {
@@ -494,7 +486,9 @@ async function main() {
       });
     }
 
-    await archiveCreatedRegressionBookings(baseUrl, adminToken, createdRecords);
+    await archiveCreatedRegressionBookings(baseUrl, adminToken, createdRecords, {
+      driverToken,
+    });
     archivedCreatedBookings = true;
 
     console.log(`Regression completed. Created/archived bookings: ${createdRecords.map((record) => record.bookingNumber).join(', ')}`);
@@ -505,7 +499,9 @@ async function main() {
     process.exitCode = 1;
     if (createdRecords.length && !archivedCreatedBookings) {
       try {
-        const cleanup = await archiveCreatedRegressionBookings(baseUrl, adminToken, createdRecords);
+        const cleanup = await archiveCreatedRegressionBookings(baseUrl, adminToken, createdRecords, {
+          driverToken,
+        });
         archivedCreatedBookings = true;
         console.log(`Regression cleanup archived bookings: ${createdRecords.map((record) => record.bookingNumber).join(', ')} (${cleanup?.archived ?? createdRecords.length})`);
       } catch (cleanupErr) {
