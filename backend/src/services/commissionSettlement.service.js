@@ -22,6 +22,13 @@ const APPROVAL_MODES = {
   MANUAL_WITHOUT_RECEIPT: 'MANUAL_WITHOUT_RECEIPT',
 };
 
+const ACTIVATED_COMMISSION_STATUSES = new Set([
+  COMMISSION_STATUS.DUE,
+  COMMISSION_STATUS.OVERDUE,
+  COMMISSION_STATUS.PAID,
+  COMMISSION_STATUS.WAIVED,
+]);
+
 function settlementApiBase(segment) {
   const config = require('../config');
   return `/api/${config.server.apiVersion}/${segment}`;
@@ -73,6 +80,25 @@ class CommissionSettlementService {
     } catch {
       return {};
     }
+  }
+
+  isCommissionObligationAlreadyActivated(commissionStatus) {
+    return ACTIVATED_COMMISSION_STATUSES.has(commissionStatus);
+  }
+
+  shouldSkipObligationActivation(booking) {
+    if (this.isCommissionObligationAlreadyActivated(booking.commission_status)) {
+      return true;
+    }
+    return booking.commission_status !== COMMISSION_STATUS.NOT_DUE_YET
+      && booking.commission_status !== COMMISSION_STATUS.PENDING_AFTER_COMPLETION;
+  }
+
+  isManualApprovalReplayState(row) {
+    if (row.status !== 'COMPLETED') return false;
+    if (row.commission_status !== COMMISSION_STATUS.PAID) return false;
+    const metadata = this.parseMetadata(row.metadata);
+    return metadata.commissionApprovalMode === APPROVAL_MODES.MANUAL_WITHOUT_RECEIPT;
   }
 
   normalizeLocationText(value) {
@@ -401,11 +427,7 @@ class CommissionSettlementService {
   async reconcileMissingObligationForBooking(bookingNumber) {
     const row = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
     if (!row || row.status !== 'COMPLETED') return;
-    if (
-      row.commission_status !== COMMISSION_STATUS.NOT_DUE_YET
-      && row.commission_status !== COMMISSION_STATUS.PENDING_AFTER_COMPLETION
-      && row.commission_amount != null
-    ) {
+    if (this.shouldSkipObligationActivation(row)) {
       return;
     }
     await this.activateObligationForCompletedBooking(row.id);
@@ -431,11 +453,7 @@ class CommissionSettlementService {
         return;
       }
 
-      if (
-        booking.commission_status !== COMMISSION_STATUS.NOT_DUE_YET
-        && booking.commission_status !== COMMISSION_STATUS.PENDING_AFTER_COMPLETION
-        && booking.commission_amount != null
-      ) {
+      if (this.shouldSkipObligationActivation(booking)) {
         await conn.commit();
         return;
       }
@@ -909,6 +927,7 @@ class CommissionSettlementService {
   async approve(bookingNumber, user) {
     const conn = await this.pool.getConnection();
     let bookingTransition = null;
+    let transactionCommitted = false;
     try {
       await conn.beginTransaction();
       const row = await this.bookingRepository.findSettlementByBookingNumberForUpdate(
@@ -1019,6 +1038,7 @@ class CommissionSettlementService {
       }
 
       await conn.commit();
+      transactionCommitted = true;
 
       if (outboxId && this.outboxProcessor) {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
@@ -1037,7 +1057,9 @@ class CommissionSettlementService {
 
       return this.mapAdminDetail(updatedSettlement, null);
     } catch (err) {
-      await conn.rollback();
+      if (!transactionCommitted) {
+        await conn.rollback();
+      }
       throw err;
     } finally {
       conn.release();
@@ -1068,6 +1090,13 @@ class CommissionSettlementService {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,
         });
+      }
+
+      if (this.isManualApprovalReplayState(row)) {
+        await conn.commit();
+        transactionCommitted = true;
+        const current = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
+        return this.mapAdminDetail(current, null);
       }
 
       if (row.commission_status === COMMISSION_STATUS.PAID) {
