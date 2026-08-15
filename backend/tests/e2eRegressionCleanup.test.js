@@ -118,8 +118,8 @@ test('cleanup refuses non-E2E customer name', async () => {
   }
 });
 
-test('SETTLEMENT_PENDING cleanup approves receipt then archives', async () => {
-  const record = regressionRecord({ bookingNumber: 'TX202608150016' });
+test('SETTLEMENT_PENDING cleanup uses settlement detail receiptFileId for normal approve', async () => {
+  const record = regressionRecord({ bookingNumber: 'TX202608150017' });
   const calls = [];
   const mock = mockFetch([
     (url, options) => {
@@ -132,12 +132,23 @@ test('SETTLEMENT_PENDING cleanup approves receipt then archives', async () => {
             customer: record.payload.customer,
             specialRequests: REGRESSION_MARKER,
             status: 'SETTLEMENT_PENDING',
-            commissionReceiptFileId: 246,
+            operations: { settlementState: 'RECEIPT_SUBMITTED' },
+          },
+        });
+      }
+      if (url.endsWith(`/api/v1/admin/settlements/${record.bookingNumber}`) && options.method !== 'POST') {
+        return jsonResponse({
+          success: true,
+          data: {
+            bookingNumber: record.bookingNumber,
+            receiptFileId: 247,
+            receiptStatus: 'RECEIPT_SUBMITTED',
+            canApprove: true,
           },
         });
       }
       if (url.endsWith(`/api/v1/admin/settlements/${record.bookingNumber}/approve`)) {
-        return jsonResponse({ success: true, data: { bookingNumber: record.bookingNumber } });
+        return jsonResponse({ success: true, data: { bookingNumber: record.bookingNumber, status: 'COMPLETED' } });
       }
       if (url.endsWith('/api/v1/admin/bookings/archive')) {
         return jsonResponse({ success: true, data: { archived: 1 } });
@@ -151,11 +162,74 @@ test('SETTLEMENT_PENDING cleanup approves receipt then archives', async () => {
       driverToken: 'driver-token',
       records: [record],
     });
-    assert.ok(calls.some((call) => call.url.includes('/approve')));
+    assert.ok(calls.some((call) => call.url.includes('/api/v1/admin/settlements/TX202608150017') && call.method === 'GET'));
+    assert.ok(calls.some((call) => call.url.endsWith('/approve') && call.method === 'POST'));
+    assert.equal(calls.filter((call) => call.url.includes('/manual-approve')).length, 0);
     assert.ok(calls.some((call) => call.url.includes('/archive')));
   } finally {
     mock.restore();
   }
+});
+
+test('SETTLEMENT_PENDING without receipt uses manual approve', async () => {
+  const record = regressionRecord({ bookingNumber: 'TX202608150018' });
+  const calls = [];
+  const mock = mockFetch([
+    (url, options) => {
+      calls.push({ url, method: options.method ?? 'GET' });
+      if (url.endsWith(`/api/v1/admin/bookings/${record.bookingNumber}`)) {
+        return jsonResponse({
+          success: true,
+          data: {
+            bookingNumber: record.bookingNumber,
+            customer: record.payload.customer,
+            specialRequests: REGRESSION_MARKER,
+            status: 'SETTLEMENT_PENDING',
+          },
+        });
+      }
+      if (url.endsWith(`/api/v1/admin/settlements/${record.bookingNumber}`) && options.method !== 'POST') {
+        return jsonResponse({
+          success: true,
+          data: {
+            bookingNumber: record.bookingNumber,
+            receiptStatus: 'RECEIPT_MISSING',
+            canManualApprove: true,
+          },
+        });
+      }
+      if (url.endsWith(`/api/v1/admin/settlements/${record.bookingNumber}/manual-approve`)) {
+        return jsonResponse({ success: true, data: { bookingNumber: record.bookingNumber } });
+      }
+      if (url.endsWith('/api/v1/admin/bookings/archive')) {
+        return jsonResponse({ success: true, data: { archived: 1 } });
+      }
+      return null;
+    },
+  ]);
+  try {
+    await cleanup.cleanupRegressionBookings('https://trider.taxi', {
+      adminToken: 'admin-token',
+      records: [record],
+    });
+    assert.ok(calls.some((call) => call.url.includes('/manual-approve')));
+    assert.equal(calls.filter((call) => call.url.endsWith('/approve')).length, 0);
+  } finally {
+    mock.restore();
+  }
+});
+
+test('admin booking detail lacks receipt pointer fields used by settlement UI contract', () => {
+  const adminDispatch = require('../src/services/adminDispatch.service');
+  const source = adminDispatch.prototype.getBookingDetail.toString();
+  assert.doesNotMatch(source, /receiptFileId/);
+  assert.doesNotMatch(source, /commissionReceiptFileId/);
+});
+
+test('settlementHasReceipt follows admin settlement detail contract', () => {
+  assert.equal(cleanup.settlementHasReceipt({ receiptFileId: 247 }), true);
+  assert.equal(cleanup.settlementHasReceipt({ receiptStatus: 'RECEIPT_SUBMITTED' }), false);
+  assert.equal(cleanup.settlementHasReceipt(null), false);
 });
 
 test('DRIVER_ASSIGNED cleanup unassigns before archive', async () => {

@@ -97,18 +97,35 @@ async function postDriverTripActions(baseUrl, driverToken, bookingNumber, action
   }
 }
 
-async function completeSettlementPendingBooking(baseUrl, adminToken, detail) {
-  const bookingNumber = detail.bookingNumber;
-  const hasReceipt = Boolean(
-    detail.commissionReceiptFileId
-    ?? detail.receiptFileId
-    ?? detail.hasCommissionReceipt,
+async function fetchAdminSettlementDetail(baseUrl, adminToken, bookingNumber) {
+  const detail = await fetchJson(
+    baseUrl,
+    `/api/v1/admin/settlements/${encodeURIComponent(bookingNumber)}`,
+    {
+      headers: { authorization: `Bearer ${adminToken}` },
+    },
   );
+  if (detail.status === 404) {
+    return null;
+  }
+  if (!detail.ok) {
+    throw new Error(`Admin settlement detail failed: ${detail.body?.error_code || detail.status}`);
+  }
+  return responseData(detail.body);
+}
+
+function settlementHasReceipt(settlementDetail) {
+  return Boolean(settlementDetail?.receiptFileId);
+}
+
+async function completeSettlementPendingBooking(baseUrl, adminToken, bookingNumber) {
+  const settlement = await fetchAdminSettlementDetail(baseUrl, adminToken, bookingNumber);
+  const hasReceipt = settlementHasReceipt(settlement);
 
   if (hasReceipt) {
     const approve = await fetchJson(
       baseUrl,
-      `/api/v1/admin/settlements/${bookingNumber}/approve`,
+      `/api/v1/admin/settlements/${encodeURIComponent(bookingNumber)}/approve`,
       {
         method: 'POST',
         headers: { authorization: `Bearer ${adminToken}` },
@@ -117,12 +134,12 @@ async function completeSettlementPendingBooking(baseUrl, adminToken, detail) {
     if (!approve.ok) {
       throw new Error(`Settlement approve failed: ${approve.body?.error_code || approve.status}`);
     }
-    return;
+    return { path: 'approve', settlement };
   }
 
   const manual = await fetchJson(
     baseUrl,
-    `/api/v1/admin/settlements/${bookingNumber}/manual-approve`,
+    `/api/v1/admin/settlements/${encodeURIComponent(bookingNumber)}/manual-approve`,
     {
       method: 'POST',
       headers: { authorization: `Bearer ${adminToken}` },
@@ -132,6 +149,7 @@ async function completeSettlementPendingBooking(baseUrl, adminToken, detail) {
   if (!manual.ok) {
     throw new Error(`Settlement manual-approve failed: ${manual.body?.error_code || manual.status}`);
   }
+  return { path: 'manual-approve', settlement };
 }
 
 async function teardownRegressionBooking(baseUrl, {
@@ -209,8 +227,11 @@ async function teardownRegressionBooking(baseUrl, {
       });
 
     case 'SETTLEMENT_PENDING':
-      await completeSettlementPendingBooking(baseUrl, adminToken, detail);
-      return { action: 'settlement_complete', status: detail.status };
+      return {
+        ...(await completeSettlementPendingBooking(baseUrl, adminToken, bookingNumber)),
+        action: 'settlement_complete',
+        status: detail.status,
+      };
 
     default:
       throw new Error(`Unsupported booking status for E2E teardown: ${detail.status}`);
@@ -275,5 +296,7 @@ module.exports = {
   cleanupRegressionBooking,
   cleanupRegressionBookings,
   formatCleanupFailure,
+  fetchAdminSettlementDetail,
+  settlementHasReceipt,
   teardownRegressionBooking,
 };
