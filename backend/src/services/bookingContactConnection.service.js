@@ -144,6 +144,12 @@ class BookingContactConnectionService {
       return this.mapPublicConnection(updatedBooking, connection);
     } catch (err) {
       await conn.rollback();
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('Booking already has an active contact connection', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.CONTACT_CONNECTION_ALREADY_ACTIVE,
+        });
+      }
       throw err;
     } finally {
       conn.release();

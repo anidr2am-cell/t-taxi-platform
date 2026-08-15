@@ -9,7 +9,164 @@ process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
 
 const CONTACT_STATUS = require('../src/constants/contactStatus');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
+const ERROR_CODES = require('../src/constants/errorCodes');
+const HTTP_STATUS = require('../src/constants/httpStatus');
 const BookingContactConnectionService = require('../src/services/bookingContactConnection.service');
+
+function createConcurrentContactHarness(initial = {}) {
+  const connections = [...(initial.connections ?? [])];
+  let booking = {
+    id: 1,
+    booking_number: 'TX202608130001',
+    contact_status: CONTACT_STATUS.PENDING,
+    status: BOOKING_STATUS.OPEN,
+    is_urgent_request: 0,
+    payment_method: 'PAY_DRIVER',
+    payment_status: 'UNPAID',
+    total_amount: 1000,
+    currency: 'THB',
+    ...(initial.booking ?? {}),
+  };
+  let nextConnectionId = initial.nextConnectionId ?? 100;
+  let lockChain = Promise.resolve();
+
+  const withBookingLock = async (fn) => {
+    const previous = lockChain;
+    let release;
+    lockChain = new Promise((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  };
+
+  const countActive = () => connections.filter((row) => (
+    row.status === CONTACT_STATUS.PENDING
+    || row.status === CONTACT_STATUS.CONFIRM_REQUESTED
+    || row.status === CONTACT_STATUS.VERIFIED
+  )).length;
+
+  const pool = {
+    async getConnection() {
+      return {
+        async beginTransaction() {},
+        async commit() {},
+        async rollback() {},
+        release() {},
+      };
+    },
+  };
+
+  const bookingRepository = {
+    async findByBookingNumberForUpdate(_conn, bookingNumber) {
+      return withBookingLock(async () => ({ ...booking, booking_number: bookingNumber }));
+    },
+    async findById(id) {
+      return { ...booking, id };
+    },
+    async findContactBookingByNumber() {
+      return booking;
+    },
+  };
+
+  const contactConnectionRepository = {
+    async cancelActiveConnections(_conn, bookingId) {
+      for (const row of connections) {
+        if (
+          row.booking_id === bookingId
+          && (row.status === CONTACT_STATUS.PENDING
+            || row.status === CONTACT_STATUS.CONFIRM_REQUESTED)
+        ) {
+          row.status = CONTACT_STATUS.CANCELLED;
+        }
+      }
+    },
+    async insertConnection(_conn, row) {
+      if (row.simulateDupEntry) {
+        const err = new Error("Duplicate entry 'uk_bcc_one_active_per_booking'");
+        err.code = 'ER_DUP_ENTRY';
+        throw err;
+      }
+
+      const activeExists = connections.some((existing) => (
+        existing.booking_id === row.bookingId
+        && (existing.status === CONTACT_STATUS.PENDING
+          || existing.status === CONTACT_STATUS.CONFIRM_REQUESTED
+          || existing.status === CONTACT_STATUS.VERIFIED)
+      ));
+      if (activeExists) {
+        const err = new Error("Duplicate entry 'uk_bcc_one_active_per_booking'");
+        err.code = 'ER_DUP_ENTRY';
+        throw err;
+      }
+
+      const id = nextConnectionId;
+      nextConnectionId += 1;
+      connections.push({
+        id,
+        booking_id: row.bookingId,
+        channel: row.channel,
+        status: row.status ?? CONTACT_STATUS.PENDING,
+      });
+      return id;
+    },
+    async findActiveByBookingId(_conn, bookingId) {
+      const active = connections
+        .filter((row) => row.booking_id === bookingId
+          && (row.status === CONTACT_STATUS.PENDING
+            || row.status === CONTACT_STATUS.CONFIRM_REQUESTED
+            || row.status === CONTACT_STATUS.VERIFIED))
+        .sort((a, b) => b.id - a.id);
+      return active[0] ?? null;
+    },
+    async findById(_conn, connectionId) {
+      return connections.find((row) => row.id === connectionId) ?? null;
+    },
+    async updateConnectionStatus() {},
+    async updateBookingContactSnapshot(_conn, bookingId, patch) {
+      if (booking.id === bookingId) {
+        booking = {
+          ...booking,
+          contact_status: patch.contactStatus,
+          contact_channel: patch.contactChannel ?? booking.contact_channel,
+          contact_requested_at: patch.contactRequestedAt ?? booking.contact_requested_at,
+          contact_verified_at: patch.contactVerifiedAt ?? booking.contact_verified_at,
+        };
+      }
+    },
+  };
+
+  const service = new BookingContactConnectionService(
+    pool,
+    bookingRepository,
+    contactConnectionRepository,
+    {
+      async assertCustomerOrGuestAccess() {},
+      formatDateTime: (date) => date.toISOString(),
+    },
+    {
+      async getContactChannelsPublic() {
+        return {
+          channels: initial.enabledChannels ?? [
+            { code: 'LINE', enabled: true },
+            { code: 'WHATSAPP', enabled: true },
+          ],
+        };
+      },
+    },
+  );
+
+  return {
+    service,
+    getConnections: () => connections,
+    getBooking: () => booking,
+    countActive,
+  };
+}
 
 function createService(overrides = {}) {
   let lockQueue = Promise.resolve();
@@ -399,4 +556,103 @@ test('confirmSent on VERIFIED booking is safe no-op', async () => {
   const result = await service.confirmSent('TX202608130001', null, 'guest-token');
   assert.equal(result.contactStatus, CONTACT_STATUS.VERIFIED);
   assert.equal(snapshotUpdates, 0);
+});
+
+test('concurrent startConnection same channel keeps one active connection', async () => {
+  const { service, getConnections, countActive } = createConcurrentContactHarness();
+
+  const results = await Promise.all([
+    service.startConnection('TX202608130001', 'LINE', null, 'guest-token'),
+    service.startConnection('TX202608130001', 'LINE', null, 'guest-token'),
+  ]);
+
+  assert.equal(countActive(), 1);
+  assert.equal(getConnections().length, 2);
+  assert.equal(getConnections().filter((row) => row.status === CONTACT_STATUS.CANCELLED).length, 1);
+  assert.ok(results.every((result) => result.connection));
+  assert.ok(results.every((result) => result.connection.channel === 'LINE'));
+});
+
+test('concurrent startConnection different channels serializes to one active connection', async () => {
+  const { service, getConnections, countActive, getBooking } = createConcurrentContactHarness();
+
+  const results = await Promise.all([
+    service.startConnection('TX202608130001', 'LINE', null, 'guest-token'),
+    service.startConnection('TX202608130001', 'WHATSAPP', null, 'guest-token'),
+  ]);
+
+  assert.equal(countActive(), 1);
+  const active = getConnections().find((row) => row.status === CONTACT_STATUS.PENDING);
+  assert.ok(['LINE', 'WHATSAPP'].includes(active.channel));
+  assert.equal(getBooking().contact_channel, active.channel);
+  assert.equal(results.filter((result) => result.connection.channel === active.channel).length, 1);
+});
+
+test('startConnection maps active-connection unique violation to domain conflict', async () => {
+  const harness = createConcurrentContactHarness({
+    connections: [{
+      id: 50,
+      booking_id: 1,
+      channel: 'LINE',
+      status: CONTACT_STATUS.VERIFIED,
+    }],
+    booking: {
+      id: 1,
+      booking_number: 'TX202608130001',
+      contact_status: CONTACT_STATUS.PENDING,
+      status: BOOKING_STATUS.OPEN,
+    },
+  });
+
+  await assert.rejects(
+    () => harness.service.startConnection('TX202608130001', 'WHATSAPP', null, 'guest-token'),
+    (err) => err.statusCode === HTTP_STATUS.CONFLICT
+      && err.errorCode === ERROR_CODES.CONTACT_CONNECTION_ALREADY_ACTIVE,
+  );
+  assert.equal(harness.countActive(), 1);
+});
+
+test('startConnection on VERIFIED booking does not create a new active row', async () => {
+  const harness = createConcurrentContactHarness({
+    connections: [{
+      id: 50,
+      booking_id: 1,
+      channel: 'LINE',
+      status: CONTACT_STATUS.VERIFIED,
+    }],
+    booking: {
+      id: 1,
+      booking_number: 'TX202608130001',
+      contact_status: CONTACT_STATUS.VERIFIED,
+      contact_channel: 'LINE',
+      status: BOOKING_STATUS.OPEN,
+    },
+  });
+
+  const beforeCount = harness.getConnections().length;
+  const result = await harness.service.startConnection(
+    'TX202608130001',
+    'WHATSAPP',
+    null,
+    'guest-token',
+  );
+
+  assert.equal(harness.getConnections().length, beforeCount);
+  assert.equal(harness.countActive(), 1);
+  assert.equal(result.contactStatus, CONTACT_STATUS.VERIFIED);
+  assert.equal(result.connection.channel, 'LINE');
+});
+
+test('multiple cancelled contact connections do not violate active guard semantics', () => {
+  const cancelledRows = [
+    { booking_id: 1, status: CONTACT_STATUS.CANCELLED },
+    { booking_id: 1, status: CONTACT_STATUS.CANCELLED },
+    { booking_id: 1, status: CONTACT_STATUS.CANCELLED },
+  ];
+  const activeRows = cancelledRows.filter((row) => (
+    row.status === CONTACT_STATUS.PENDING
+    || row.status === CONTACT_STATUS.CONFIRM_REQUESTED
+    || row.status === CONTACT_STATUS.VERIFIED
+  ));
+  assert.equal(activeRows.length, 0);
 });

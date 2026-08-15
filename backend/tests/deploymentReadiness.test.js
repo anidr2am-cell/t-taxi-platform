@@ -194,6 +194,27 @@ test('Linux migrate script exists and is documented', () => {
   assert.match(content, /DB_NAME/);
 });
 
+test('booking contact connection active guard migration is idempotent and defines one-active invariant', () => {
+  const migrationPath = path.join(
+    repoRoot,
+    'database',
+    '50_booking_contact_connection_active_guard.sql',
+  );
+  const sql = fs.readFileSync(migrationPath, 'utf8');
+
+  assert.match(sql, /active_connection_guard/);
+  assert.match(sql, /GENERATED ALWAYS AS/);
+  assert.match(sql, /'PENDING'/);
+  assert.match(sql, /'CONFIRM_REQUESTED'/);
+  assert.match(sql, /'VERIFIED'/);
+  assert.match(sql, /ELSE NULL/);
+  assert.match(sql, /uk_bcc_one_active_per_booking/);
+  assert.match(sql, /duplicate active contact connections exist/);
+  assert.match(sql, /information_schema\.COLUMNS/);
+  assert.match(sql, /information_schema\.STATISTICS/);
+  assert.doesNotMatch(sql, /USE ttaxi/i);
+});
+
 test('.env.example contains placeholders only and staging-sensitive defaults are safe', () => {
   const envExample = fs.readFileSync(path.join(backendRoot, '.env.example'), 'utf8');
   const dockerEnvExample = fs.readFileSync(
