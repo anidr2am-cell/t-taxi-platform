@@ -20,14 +20,17 @@ container nginx fallback.
 
 ## Required production env alignment
 
-Use the real domain only on the production server:
+Use the real domain only on the production server. Set `API_BASE_URL` to the
+public HTTPS origin (not `/api`): the Flutter client appends `/api/v1`, and
+Caddy proxies `/api/*` to the backend on the same origin.
 
 ```env
 APP_ENV=production
 NODE_ENV=production
-API_BASE_URL=/api
-TRIDE_API_BASE_URL=/api
+API_BASE_URL=https://ride.example.com
+TRIDE_API_BASE_URL=https://ride.example.com
 SOCKET_URL=https://ride.example.com
+TRIDE_SOCKET_URL=https://ride.example.com
 ALLOWED_ORIGINS=https://ride.example.com
 CORS_ORIGIN=https://ride.example.com
 FRONTEND_PUBLIC_URL=https://ride.example.com

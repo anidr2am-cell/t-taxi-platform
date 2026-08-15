@@ -60,8 +60,8 @@ Required values:
 - exact HTTPS API base `PUBLIC_API_URL`, including `/api` for same-origin
   topology
 - `APP_ENV=production`
-- exact HTTPS `API_BASE_URL` and `SOCKET_URL`, or same-origin `/api` for
-  `API_BASE_URL`
+- exact HTTPS `API_BASE_URL` and `SOCKET_URL` on the public origin (Flutter
+  appends `/api/v1`; Caddy proxies `/api/*`)
 - `SWAGGER_ENABLED=false`
 - `ALLOW_DEV_QR_REISSUE=false`
 - persistent `UPLOAD_DIR`
@@ -166,11 +166,14 @@ issuance and renewal on the new production VPS only. Do not use the existing
 KTaxi/TTaxi server, legacy nginx/certbot, host 80/443, or `88taxi.net` for this
 topology.
 
-Expected same-origin env shape:
+Expected same-origin env shape (public HTTPS origin; do not use `/api` for
+`API_BASE_URL` because the Flutter client appends `/api/v1`):
 
 ```env
-API_BASE_URL=/api
+API_BASE_URL=https://ride.example.com
+TRIDE_API_BASE_URL=https://ride.example.com
 SOCKET_URL=https://ride.example.com
+TRIDE_SOCKET_URL=https://ride.example.com
 ALLOWED_ORIGINS=https://ride.example.com
 CORS_ORIGIN=https://ride.example.com
 FRONTEND_PUBLIC_URL=https://ride.example.com

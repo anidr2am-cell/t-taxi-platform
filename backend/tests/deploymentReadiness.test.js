@@ -351,12 +351,23 @@ test('production proxy template uses isolated same-origin Caddy topology', () =>
   assert.match(proxyCompose, /\$\{PROXY_HTTPS_BIND:-0\.0\.0\.0\}:\$\{PROXY_HTTPS_PORT:-443\}:443/);
   assert.match(proxyCompose, /external: true/);
   assert.match(proxyCompose, /name: \$\{TRIDE_PROD_NETWORK:-tride-prod-net\}/);
-  assert.match(productionEnv, /API_BASE_URL=\/api/);
-  assert.match(productionEnv, /TRIDE_API_BASE_URL=\/api/);
+  assert.match(productionEnv, /API_BASE_URL=https:\/\/ride\.example\.com/);
+  assert.match(productionEnv, /TRIDE_API_BASE_URL=https:\/\/ride\.example\.com/);
   assert.match(productionEnv, /SOCKET_URL=https:\/\/ride\.example\.com/);
+  assert.match(productionEnv, /TRIDE_SOCKET_URL=https:\/\/ride\.example\.com/);
   assert.match(productionEnv, /CORS_ORIGIN=https:\/\/ride\.example\.com/);
   assert.match(productionEnv, /PUBLIC_API_URL=https:\/\/ride\.example\.com\/api/);
   assert.match(productionCompose, /PUBLIC_API_URL: \$\{PUBLIC_API_URL:\?Set PUBLIC_API_URL in \.env\.production\}/);
+  assert.doesNotMatch(productionEnv, /trider\.taxi/);
+  assert.doesNotMatch(productionEnv, /API_BASE_URL=\/api/);
+  assert.doesNotMatch(productionEnv, /TRIDE_API_BASE_URL=\/api/);
+  const browserFacingUrlLines =
+    productionEnv.match(
+      /^(?:API_BASE_URL|TRIDE_API_BASE_URL|SOCKET_URL|TRIDE_SOCKET_URL|CORS_ORIGIN|ALLOWED_ORIGINS|FRONTEND_PUBLIC_URL|BACKEND_PUBLIC_URL|PUBLIC_API_URL)=.*$/gm,
+    ) || [];
+  for (const line of browserFacingUrlLines) {
+    assert.doesNotMatch(line, /localhost|127\.0\.0\.1|88taxi|ktaxi|tride-backend|tride-prod-backend/i);
+  }
   assert.doesNotMatch(caddyfile, /handle_path/);
   assert.doesNotMatch(caddyfile, /strip_prefix/);
   assert.doesNotMatch(combined, /88taxi\.net/);

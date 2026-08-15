@@ -99,8 +99,8 @@ services:
       dockerfile: deploy/docker/Dockerfile.frontend
       args:
         APP_ENV: production
-        API_BASE_URL: ${TRIDE_API_BASE_URL:-https://trider.taxi}
-        SOCKET_URL: ${TRIDE_SOCKET_URL:-https://trider.taxi}
+        API_BASE_URL: ${TRIDE_API_BASE_URL:-https://ride.example.com}
+        SOCKET_URL: ${TRIDE_SOCKET_URL:-https://ride.example.com}
     container_name: tride-prod-frontend
     restart: unless-stopped
     logging: *default-logging

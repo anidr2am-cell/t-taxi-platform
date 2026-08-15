@@ -88,6 +88,37 @@ void main() {
       );
     });
 
+    test('production same-origin public origin builds booking API path', () {
+      const origin = 'https://ride.example.com';
+      final apiBaseUrl = AppConfigValidation.resolveApiBaseUrl(
+        appEnvironment: 'production',
+        apiBaseUrl: origin,
+      );
+      expect(apiBaseUrl, origin);
+      expect('$apiBaseUrl/api/v1', 'https://ride.example.com/api/v1');
+    });
+
+    test('production relative /api would double-prefix booking API path', () {
+      final relativeApiBase = AppConfigValidation.resolveApiBaseUrl(
+        appEnvironment: 'production',
+        apiBaseUrl: '/api',
+      );
+      expect(relativeApiBase, '/api');
+      expect('$relativeApiBase/api/v1', '/api/api/v1');
+    });
+
+    test('production same-origin public origin accepts socket URL', () {
+      const origin = 'https://ride.example.com';
+      expect(
+        AppConfigValidation.resolveSocketUrl(
+          appEnvironment: 'production',
+          socketUrl: origin,
+          apiBaseUrl: origin,
+        ),
+        origin,
+      );
+    });
+
     test(
       'production rejects missing SOCKET_URL when API_BASE_URL is invalid',
       () {
