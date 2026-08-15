@@ -107,7 +107,22 @@ function emitDriverUrgentCallUnlocked(payload) {
 }
 
 function emitDriverUrgentCallNew(payload) {
-  if (!ioInstance) return;
+  const bookingNumber = payload?.bookingNumber ?? null;
+  const negotiationId = payload?.negotiationId ?? null;
+  // TEMP SOCKET DEBUG — remove after M2 URGENT realtime E2E diagnosis
+  if (!ioInstance) {
+    logger.info('[SOCKET DEBUG] emit driver:urgent-call:new skipped io unavailable', {
+      bookingNumber,
+      negotiationId,
+      room: DRIVER_ALL_ROOM,
+    });
+    return;
+  }
+  logger.info('[SOCKET DEBUG] emit driver:urgent-call:new', {
+    bookingNumber,
+    negotiationId,
+    room: DRIVER_ALL_ROOM,
+  });
   ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:new', payload);
 }
 

@@ -160,6 +160,21 @@ class DriverSocketService implements DriverSocketConnection {
       }
       _add(DriverSocketEvent(DriverSocketEventType.newCall, payload));
     });
+    transport.on('driver:urgent-call:new', (data) {
+      if (!identical(_transport, transport)) return;
+      final payload = _payload(data);
+      final bookingNumber = payload['bookingNumber'];
+      if (bookingNumber is String && bookingNumber.isNotEmpty) {
+        _socketDebug(
+          '[SOCKET DEBUG] received driver:urgent-call:new bookingNumber=$bookingNumber',
+        );
+      } else {
+        _socketDebug(
+          '[SOCKET DEBUG] received driver:urgent-call:new bookingNumber=<missing>',
+        );
+      }
+      _add(DriverSocketEvent(DriverSocketEventType.urgentCallNew, payload));
+    });
     _listen(
       transport,
       'driver:call:claimed',
@@ -176,7 +191,6 @@ class DriverSocketService implements DriverSocketConnection {
       DriverSocketEventType.assignmentReleased,
     );
     for (final binding in const [
-      ('driver:urgent-call:new', DriverSocketEventType.urgentCallNew),
       ('driver:urgent-call:locked', DriverSocketEventType.urgentCallLocked),
       (
         'driver:urgent-call:eta-required',

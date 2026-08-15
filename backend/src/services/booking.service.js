@@ -567,6 +567,11 @@ class BookingService {
           attemptCount: 0,
           minRequiredEtaMinutes: fullBooking.urgent_min_required_eta_minutes ?? null,
         };
+        // TEMP SOCKET DEBUG — remove after M2 URGENT realtime E2E diagnosis
+        logger.info('[SOCKET DEBUG] urgent eligible targets', {
+          bookingNumber: fullBooking.booking_number,
+          count: eligibleDrivers.length,
+        });
         emitDriverUrgentCallNew(urgentPayload);
         await this.dispatchUrgentCallNotifications({
           drivers: eligibleDrivers,

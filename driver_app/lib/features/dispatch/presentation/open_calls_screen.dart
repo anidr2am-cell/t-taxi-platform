@@ -135,9 +135,20 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         'bookingNumber=$bookingNumber',
       );
     }
+    if (event.type == DriverSocketEventType.urgentCallNew) {
+      _socketDebug(
+        '[SOCKET DEBUG] handler urgentCallNew '
+        'mounted=$mounted '
+        'online=${_status?.online == true} '
+        'foreground=$_foreground',
+      );
+    }
     if (!mounted || _status?.online != true || !_foreground) {
       if (event.type == DriverSocketEventType.newCall) {
         _socketDebug('[SOCKET DEBUG] handler newCall skipped by guard');
+      }
+      if (event.type == DriverSocketEventType.urgentCallNew) {
+        _socketDebug('[SOCKET DEBUG] handler urgentCallNew skipped by guard');
       }
       return;
     }
@@ -158,11 +169,17 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         unawaited(_loadCalls());
       case DriverSocketEventType.urgentCallNew:
         final bookingNumber = _bookingNumber(event.payload);
+        _socketDebug('[SOCKET DEBUG] refresh urgent open calls from socket');
         setState(() {
           if (bookingNumber != null) _hiddenUrgent.remove(bookingNumber);
           _showNewCallNotice = true;
         });
-        unawaited(_loadCalls());
+        unawaited(
+          _loadCalls(
+            debugSource: 'urgent-socket',
+            targetBookingNumber: bookingNumber,
+          ),
+        );
       case DriverSocketEventType.urgentCallLocked:
         final bookingNumber = _bookingNumber(event.payload);
         final lockedDriverId = _intValue(event.payload['lockedDriverId']);
@@ -308,6 +325,17 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
             );
         _socketDebug(
           '[SOCKET DEBUG] open calls refreshed '
+          'count=${calls.items.length} '
+          'containsTarget=${containsTarget ? 'YES' : 'NO'}',
+        );
+      }
+      if (debugSource == 'urgent-socket') {
+        final containsTarget = targetBookingNumber != null &&
+            calls.items.any(
+              (call) => call.bookingNumber == targetBookingNumber,
+            );
+        _socketDebug(
+          '[SOCKET DEBUG] urgent open calls refreshed '
           'count=${calls.items.length} '
           'containsTarget=${containsTarget ? 'YES' : 'NO'}',
         );
