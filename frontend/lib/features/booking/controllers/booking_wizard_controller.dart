@@ -627,8 +627,6 @@ class BookingWizardController extends ChangeNotifier {
       'customer': {
         'name': _state.customerName.trim(),
         'phone': _state.customerPhone.trim(),
-        'messengerType': 'PENDING',
-        'messengerId': 'POST_CREATE',
       },
       if (_state.additionalRequests.trim().isNotEmpty)
         'additionalRequests': _state.additionalRequests.trim(),

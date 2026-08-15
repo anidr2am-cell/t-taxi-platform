@@ -361,8 +361,6 @@ Future<BookingWizardController> buildReviewReadyController({
   await controller.updateCustomerInfo(
     name: 'Jane Doe',
     phone: '+66123456789',
-    messengerType: bookingContractMessengerType,
-    messengerId: bookingContractMessengerId,
   );
   return controller;
 }

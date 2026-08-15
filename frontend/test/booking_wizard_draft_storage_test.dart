@@ -179,8 +179,6 @@ BookingWizardState sampleDraftState() {
     selectedVehicle: 'SUV',
     customerName: 'Kim Test',
     customerPhone: '+66123456789',
-    messengerType: bookingContractMessengerType,
-    messengerId: bookingContractMessengerId,
     flightNumber: 'TG409',
     additionalRequests: 'Need child seat',
   );
@@ -223,7 +221,7 @@ void main() {
       expect(restored.selectedVehicle, 'SUV');
       expect(restored.customerName, 'Kim Test');
       expect(restored.customerPhone, '+66123456789');
-      expect(restored.messengerId, bookingContractMessengerId);
+      expect(restored.messengerId, '');
       expect(restored.flightNumber, 'TG409');
     });
 
@@ -316,7 +314,7 @@ void main() {
 
       expect(stateJson['customerName'], 'Kim Test');
       expect(stateJson['customerPhone'], '+66123456789');
-      expect(stateJson['messengerId'], bookingContractMessengerId);
+      expect(stateJson['messengerId'], '');
       expect(decoded['expiresAt'], isNotNull);
     });
 

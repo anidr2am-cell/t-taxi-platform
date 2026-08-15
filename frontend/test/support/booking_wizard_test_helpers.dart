@@ -10,8 +10,8 @@ import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
 
-const bookingContractMessengerType = 'PENDING';
-const bookingContractMessengerId = 'POST_CREATE';
+const bookingContractCustomerName = 'Kim Test';
+const bookingContractCustomerPhone = '+66123456789';
 
 class CapturingBookingApi implements BookingApiService {
   Map<String, dynamic>? lastPricingRequest;
@@ -228,10 +228,8 @@ Future<BookingWizardController> buildContractAirportPickupController({
   await controller.loadRecommendation();
   await controller.selectVehicle('SUV');
   await controller.updateCustomerInfo(
-    name: 'Kim Test',
-    phone: '+66123456789',
-    messengerType: bookingContractMessengerType,
-    messengerId: bookingContractMessengerId,
+    name: bookingContractCustomerName,
+    phone: bookingContractCustomerPhone,
     additionalRequests: 'Need child seat',
   );
 

@@ -74,8 +74,6 @@ function bookingPayload() {
       phone: '+66000000002',
       email: 'standard-open-call-e2e@example.com',
       countryCode: 'TH',
-      messengerType: 'LINE',
-      messengerId: 'e2e-standard-open-call',
     },
     additionalRequests: E2E_MARKER,
   };

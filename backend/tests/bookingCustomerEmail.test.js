@@ -118,31 +118,54 @@ test('booking validator accepts null customer email', () => {
   assert.equal(value.customer.email, null);
 });
 
-test('booking validator requires customer messengerType and messengerId', () => {
-  const missingMessengerType = createBookingSchema.validate(validPayload({
+test('booking validator accepts optional customer messengerType and messengerId', () => {
+  const withoutMessenger = createBookingSchema.validate(validPayload({
     customer: {
       name: 'Kim',
       phone: '+66123456789',
-      messengerId: 'line-user-id',
+      countryCode: 'TH',
     },
   }));
-  assert.ok(missingMessengerType.error);
-  assert.equal(missingMessengerType.error.details[0].path.join('.'), 'customer.messengerType');
+  assert.equal(withoutMessenger.error, undefined);
+  assert.equal(withoutMessenger.value.customer.messengerType, undefined);
+  assert.equal(withoutMessenger.value.customer.messengerId, undefined);
 
-  const missingMessengerId = createBookingSchema.validate(validPayload({
+  const messengerTypeOnly = createBookingSchema.validate(validPayload({
     customer: {
       name: 'Kim',
       phone: '+66123456789',
       messengerType: 'LINE',
     },
   }));
-  assert.ok(missingMessengerId.error);
-  assert.equal(missingMessengerId.error.details[0].path.join('.'), 'customer.messengerId');
+  assert.equal(messengerTypeOnly.error, undefined);
+  assert.equal(messengerTypeOnly.value.customer.messengerType, 'LINE');
+  assert.equal(messengerTypeOnly.value.customer.messengerId, undefined);
+
+  const messengerIdOnly = createBookingSchema.validate(validPayload({
+    customer: {
+      name: 'Kim',
+      phone: '+66123456789',
+      messengerId: 'line-user-id',
+    },
+  }));
+  assert.equal(messengerIdOnly.error, undefined);
+  assert.equal(messengerIdOnly.value.customer.messengerType, undefined);
+  assert.equal(messengerIdOnly.value.customer.messengerId, 'line-user-id');
 
   const withMessenger = createBookingSchema.validate(validPayload());
   assert.equal(withMessenger.error, undefined);
   assert.equal(withMessenger.value.customer.messengerType, 'LINE');
   assert.equal(withMessenger.value.customer.messengerId, 'line-user-id');
+
+  const emptyMessengerType = createBookingSchema.validate(validPayload({
+    customer: {
+      name: 'Kim',
+      phone: '+66123456789',
+      messengerType: '',
+    },
+  }));
+  assert.ok(emptyMessengerType.error);
+  assert.equal(emptyMessengerType.error.details[0].path.join('.'), 'customer.messengerType');
 });
 
 test('booking validator normalizes empty customer email to null', () => {

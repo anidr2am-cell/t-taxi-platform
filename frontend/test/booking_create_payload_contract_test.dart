@@ -60,8 +60,8 @@ void main() {
       final customer = Map<String, dynamic>.from(payload['customer'] as Map);
       expect(customer['name'], 'Kim Test');
       expect(customer['phone'], '+66123456789');
-      expect(customer['messengerType'], bookingContractMessengerType);
-      expect(customer['messengerId'], bookingContractMessengerId);
+      expect(customer.containsKey('messengerType'), isFalse);
+      expect(customer.containsKey('messengerId'), isFalse);
       expect(customer.containsKey('email'), isFalse);
       expect(customer.containsKey('countryCode'), isFalse);
 
