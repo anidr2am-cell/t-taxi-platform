@@ -8,8 +8,9 @@ abstract interface class SettlementDataSource {
   Future<SettlementItem> getSettlement(String bookingNumber);
   Future<SettlementItem> uploadReceipt(
     String bookingNumber,
-    SettlementUploadFile file,
-  );
+    SettlementUploadFile file, {
+    required String idempotencyKey,
+  });
   Future<List<int>> downloadReceipt(String path);
 }
 
@@ -57,12 +58,14 @@ class SettlementApi implements SettlementDataSource {
   @override
   Future<SettlementItem> uploadReceipt(
     String bookingNumber,
-    SettlementUploadFile file,
-  ) async {
+    SettlementUploadFile file, {
+    required String idempotencyKey,
+  }) async {
     _validateFile(file);
     final envelope = await _client.postMultipart(
       '/api/v1/driver/settlements/$bookingNumber/receipt',
       bearerToken: await _token(),
+      headers: {'Idempotency-Key': idempotencyKey},
       files: [
         ApiMultipartFile(
           field: 'file',

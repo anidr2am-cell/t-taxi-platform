@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/idempotency_key.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/app_localizations_extensions.dart';
 import '../data/settlement_api.dart';
@@ -58,6 +59,7 @@ class ReceiptUploadSheet extends StatefulWidget {
 
 class _ReceiptUploadSheetState extends State<ReceiptUploadSheet> {
   SettlementUploadFile? _file;
+  String? _idempotencyKey;
   bool _uploading = false;
   ApiException? _error;
 
@@ -66,19 +68,25 @@ class _ReceiptUploadSheetState extends State<ReceiptUploadSheet> {
     if (picked == null) return;
     setState(() {
       _file = picked;
+      _idempotencyKey = generateIdempotencyKey();
       _error = null;
     });
   }
 
   Future<void> _upload() async {
     final file = _file;
-    if (file == null || _uploading) return;
+    final idempotencyKey = _idempotencyKey;
+    if (file == null || idempotencyKey == null || _uploading) return;
     setState(() {
       _uploading = true;
       _error = null;
     });
     try {
-      await widget.api.uploadReceipt(widget.bookingNumber, file);
+      await widget.api.uploadReceipt(
+        widget.bookingNumber,
+        file,
+        idempotencyKey: idempotencyKey,
+      );
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (error) {
       if (mounted) {

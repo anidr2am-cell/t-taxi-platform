@@ -1170,8 +1170,9 @@ class FakeSettlementApi implements SettlementDataSource {
   @override
   Future<SettlementItem> uploadReceipt(
     String bookingNumber,
-    SettlementUploadFile file,
-  ) async {
+    SettlementUploadFile file, {
+    required String idempotencyKey,
+  }) async {
     uploadCount++;
     uploadedBookingNumber = bookingNumber;
     uploadedFile = file;

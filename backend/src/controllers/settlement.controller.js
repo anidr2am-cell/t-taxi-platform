@@ -52,6 +52,7 @@ const uploadDriverReceipt = asyncHandler(async (req, res) => {
     req.user.id,
     req.params.bookingNumber,
     req.file,
+    { idempotencyKey: req.get('Idempotency-Key') },
   );
   return success(res, data, 'Receipt uploaded');
 });

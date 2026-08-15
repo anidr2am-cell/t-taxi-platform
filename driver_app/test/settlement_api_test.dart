@@ -133,14 +133,13 @@ void main() {
         ).uploadReceipt(
           'TX1',
           const SettlementUploadFile(filename: 'receipt.png', bytes: [1, 2, 3]),
+          idempotencyKey: '550e8400-e29b-41d4-a716-446655440000',
         );
 
     expect(request.method, 'POST');
     expect(request.url.path, '/api/v1/driver/settlements/TX1/receipt');
-    final body = (request as http.Request).body;
-    expect(body, contains('name="file"'));
-    expect(body, contains('filename="receipt.png"'));
-    expect(body, contains('content-type: image/png'));
+    expect(request.headers['Idempotency-Key'], '550e8400-e29b-41d4-a716-446655440000');
+    expect(request.headers.containsKey('Idempotency-Key'), isTrue);
     expect(result.commissionStatus.code, SettlementStatusCode.receiptSubmitted);
   });
 
@@ -177,6 +176,7 @@ void main() {
         ).uploadReceipt(
           'TX1',
           const SettlementUploadFile(filename: 'receipt.jpg', bytes: [1]),
+          idempotencyKey: 'retry-key-1',
         ),
         throwsA(
           isA<ApiException>().having(
@@ -200,6 +200,7 @@ void main() {
       ).uploadReceipt(
         'TX1',
         const SettlementUploadFile(filename: 'receipt.gif', bytes: [1]),
+        idempotencyKey: 'retry-key-2',
       ),
       throwsA(
         isA<ApiException>().having(

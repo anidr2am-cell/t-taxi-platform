@@ -216,6 +216,23 @@ test('booking contact connection active guard migration is idempotent and define
   assert.doesNotMatch(sql, /USE ttaxi/i);
 });
 
+test('settlement receipt idempotency migration defines scoped unique table', () => {
+  const migrationPath = path.join(
+    repoRoot,
+    'database',
+    '51_settlement_receipt_idempotency.sql',
+  );
+  const sql = fs.readFileSync(migrationPath, 'utf8');
+
+  assert.match(sql, /settlement_receipt_idempotency/);
+  assert.match(sql, /request_fingerprint/);
+  assert.match(sql, /uk_settlement_receipt_idempotency_scope/);
+  assert.match(sql, /driver_user_id/);
+  assert.match(sql, /idempotency_key/);
+  assert.match(sql, /expires_at/);
+  assert.match(sql, /information_schema\.TABLES/);
+});
+
 test('.env.example contains placeholders only and staging-sensitive defaults are safe', () => {
   const envExample = fs.readFileSync(path.join(backendRoot, '.env.example'), 'utf8');
   const dockerEnvExample = fs.readFileSync(

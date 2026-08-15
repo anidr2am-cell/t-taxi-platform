@@ -2186,11 +2186,30 @@ paths:
     post:
       tags: [Driver]
       summary: Upload commission receipt
+      description: |
+        Upload a commission receipt for settlement review. Send a unique client-generated
+        `Idempotency-Key` per upload attempt in staging and production. Reuse the same key
+        when retrying the same receipt bytes. Same key + same receipt content replays the
+        stored result without creating duplicate files, activity logs, or notifications.
+        Same key + different receipt content returns 409. Concurrent requests with the same
+        key return an in-progress conflict.
       operationId: driverUploadSettlementReceipt
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/BookingNumber'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: |
+            Opaque unique client-generated request key (1-128 chars, alphanumeric and hyphen).
+            Required in staging and production deployments.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9-]{1,128}$'
+          example: 550e8400-e29b-41d4-a716-446655440000
       requestBody:
         required: true
         content:
@@ -2205,14 +2224,17 @@ paths:
                   description: Receipt image (JPEG, PNG) or PDF. Max size from UPLOAD_MAX_FILE_SIZE_MB env (default 10 MB).
       responses:
         '200':
+          description: Receipt uploaded or idempotent replay of a prior successful upload
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSettlementItem'
         '400':
-          description: Invalid file type, MIME mismatch, or file too large (FILE_TOO_LARGE)
+          description: Missing/invalid Idempotency-Key, invalid file type, MIME mismatch, or file too large
         '409':
-          description: Receipt already approved (RECEIPT_ALREADY_APPROVED)
+          description: |
+            Receipt already approved (RECEIPT_ALREADY_APPROVED), same key with different receipt
+            content (IDEMPOTENCY_KEY_REUSED), or upload already in progress (IDEMPOTENCY_REQUEST_IN_PROGRESS)
 
   /admin/reviews:
     get:

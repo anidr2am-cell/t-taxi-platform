@@ -73,6 +73,8 @@ const AdminBookingNoteRepository = require("../repositories/adminBookingNote.rep
 const BookingNoShowPenaltyRepository = require("../repositories/bookingNoShowPenalty.repository");
 const BookingIdempotencyRepository = require("../repositories/bookingIdempotency.repository");
 const BookingIdempotencyService = require("../services/bookingIdempotency.service");
+const SettlementReceiptIdempotencyRepository = require("../repositories/settlementReceiptIdempotency.repository");
+const SettlementReceiptIdempotencyService = require("../services/settlementReceiptIdempotency.service");
 const BookingContactConnectionRepository = require("../repositories/bookingContactConnection.repository");
 const BookingContactConnectionService = require("../services/bookingContactConnection.service");
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
@@ -220,6 +222,16 @@ container.register(
 container.register(
   "bookingIdempotencyService",
   (c) => new BookingIdempotencyService(c.get("bookingIdempotencyRepository")),
+);
+container.register(
+  "settlementReceiptIdempotencyRepository",
+  () => new SettlementReceiptIdempotencyRepository(),
+);
+container.register(
+  "settlementReceiptIdempotencyService",
+  (c) => new SettlementReceiptIdempotencyService(
+    c.get("settlementReceiptIdempotencyRepository"),
+  ),
 );
 container.register(
   "bookingService",
@@ -371,6 +383,7 @@ container.register(
       c.get("outboxRepository"),
       c.get("outboxProcessor"),
       c.get("bookingStatusService"),
+      c.get("settlementReceiptIdempotencyService"),
     ),
 );
 container.register("reviewRepository", () => new ReviewRepository());
@@ -605,6 +618,7 @@ container.register(
     new BookingIdempotencyCleanupWorker({
       pool: database.pool,
       bookingIdempotencyRepository: c.get("bookingIdempotencyRepository"),
+      settlementReceiptIdempotencyRepository: c.get("settlementReceiptIdempotencyRepository"),
       config: {
         batchSize: config.external.bookingIdempotencyCleanupBatchSize,
       },

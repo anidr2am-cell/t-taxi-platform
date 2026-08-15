@@ -10,6 +10,11 @@ const logger = require('../utils/logger');
 const { randomUUID } = require('node:crypto');
 const { EVENTS } = require('../events');
 const { settingsAssetUrl } = require('../utils/settingsAssetUrl');
+const {
+  hashFileContent,
+  computeSettlementReceiptFingerprint,
+  computeIdempotencyExpiresAt,
+} = require('../utils/settlementReceiptIdempotency.util');
 
 const ADMIN_RECONCILE_BATCH_LIMIT = 100;
 const APPROVAL_MODES = {
@@ -47,6 +52,7 @@ class CommissionSettlementService {
     outboxRepository,
     outboxProcessor,
     bookingStatusService = null,
+    settlementReceiptIdempotencyService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -56,6 +62,7 @@ class CommissionSettlementService {
     this.outboxRepository = outboxRepository;
     this.outboxProcessor = outboxProcessor;
     this.bookingStatusService = bookingStatusService;
+    this.settlementReceiptIdempotencyService = settlementReceiptIdempotencyService;
   }
 
   parseMetadata(raw) {
@@ -584,12 +591,70 @@ class CommissionSettlementService {
     return `${Date.now()}-${Math.round(Math.random() * 1e9)}${allowedExt}`;
   }
 
-  async uploadReceipt(driverUserId, bookingNumber, file) {
+  assertReceiptIdempotencyKey(rawValue) {
+    const config = require('../config');
+    const {
+      normalizeIdempotencyKey,
+      isReceiptIdempotencyKeyRequired,
+    } = require('../utils/settlementReceiptIdempotency.util');
+    const normalized = normalizeIdempotencyKey(rawValue);
+    if (isReceiptIdempotencyKeyRequired(config.server.nodeEnv)) {
+      if (!normalized || normalized.invalid || !normalized.value) {
+        throw new AppError(
+          'Idempotency-Key header is required. Send a unique client-generated key per receipt upload attempt and reuse it on retries.',
+          {
+            statusCode: HTTP_STATUS.BAD_REQUEST,
+            errorCode: ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED,
+          },
+        );
+      }
+    }
+    if (normalized?.invalid) {
+      throw new AppError('Invalid Idempotency-Key header', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    return normalized?.value ?? null;
+  }
+
+  cleanupReceiptTempFile(file) {
+    if (file?.path && fs.existsSync(file.path)) {
+      try {
+        fs.unlinkSync(file.path);
+      } catch (cleanupError) {
+        logger.warn('Receipt temporary file cleanup failed', {
+          error: cleanupError.message,
+        });
+      }
+    }
+  }
+
+  async buildReceiptUploadReplayResponse(bookingNumber) {
+    const updated = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
+    if (!updated) {
+      throw new AppError('Settlement not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,
+      });
+    }
+    const mapped = this.mapSettlementListItem(
+      updated,
+      settlementApiBase('driver/settlements'),
+      ROLES.DRIVER,
+    );
+    return { ...mapped, idempotent: true };
+  }
+
+  async uploadReceipt(driverUserId, bookingNumber, file, options = {}) {
     this.validateUploadedFile(file);
     const driver = await this.resolveDriver(driverUserId);
+    const idempotencyKey = this.assertReceiptIdempotencyKey(options.idempotencyKey);
+    const contentHash = hashFileContent(file.path);
     const conn = await this.pool.getConnection();
     let stagedFinalPath = null;
     let transactionCommitted = false;
+    let idempotencyScope = null;
 
     try {
       await conn.beginTransaction();
@@ -613,6 +678,34 @@ class CommissionSettlementService {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.SETTLEMENT_NOT_FOUND,
         });
+      }
+
+      let idempotencyDecision = { action: 'proceed' };
+      if (idempotencyKey && this.settlementReceiptIdempotencyService) {
+        const requestFingerprint = computeSettlementReceiptFingerprint({
+          bookingId: row.id,
+          driverUserId,
+          contentHash,
+        });
+        idempotencyDecision = await this.settlementReceiptIdempotencyService.begin(conn, {
+          bookingId: row.id,
+          driverUserId,
+          idempotencyKey,
+          requestFingerprint,
+          expiresAt: computeIdempotencyExpiresAt(),
+        });
+        idempotencyScope = {
+          bookingId: row.id,
+          driverUserId,
+          idempotencyKey,
+        };
+      }
+
+      if (idempotencyDecision.action === 'replay') {
+        await conn.commit();
+        transactionCommitted = true;
+        this.cleanupReceiptTempFile(file);
+        return this.buildReceiptUploadReplayResponse(bookingNumber);
       }
 
       if (row.commission_status === COMMISSION_STATUS.PAID) {
@@ -678,6 +771,20 @@ class CommissionSettlementService {
         });
       }
 
+      if (idempotencyScope && this.settlementReceiptIdempotencyService) {
+        await this.settlementReceiptIdempotencyService.complete(conn, {
+          bookingId: idempotencyScope.bookingId,
+          driverUserId: idempotencyScope.driverUserId,
+          idempotencyKey: idempotencyScope.idempotencyKey,
+          receiptFileId: fileId,
+          responseStatus: HTTP_STATUS.OK,
+          responsePayload: {
+            receiptFileId: fileId,
+            idempotent: false,
+          },
+        });
+      }
+
       await conn.commit();
       transactionCommitted = true;
 
@@ -685,15 +792,7 @@ class CommissionSettlementService {
         await this.outboxProcessor.dispatchOutboxIds([outboxId]);
       }
 
-      if (file?.path && fs.existsSync(file.path)) {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (cleanupError) {
-          logger.warn('Receipt temporary file cleanup failed', {
-            error: cleanupError.message,
-          });
-        }
-      }
+      this.cleanupReceiptTempFile(file);
 
       const updated = await this.bookingRepository.findSettlementByBookingNumber(bookingNumber);
       const mapped = this.mapSettlementListItem(
@@ -713,7 +812,7 @@ class CommissionSettlementService {
           errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
         });
       }
-      return mapped;
+      return { ...mapped, idempotent: false };
     } catch (err) {
       if (!transactionCommitted) {
         try {
@@ -722,6 +821,16 @@ class CommissionSettlementService {
           logger.warn('Receipt transaction rollback failed', {
             error: rollbackError.message,
           });
+        }
+
+        if (idempotencyScope && this.settlementReceiptIdempotencyService) {
+          try {
+            await this.settlementReceiptIdempotencyService.releasePending(conn, idempotencyScope);
+          } catch (releaseError) {
+            logger.warn('Receipt idempotency pending release failed', {
+              error: releaseError.message,
+            });
+          }
         }
 
         if (stagedFinalPath && fs.existsSync(stagedFinalPath)) {
@@ -734,15 +843,7 @@ class CommissionSettlementService {
           }
         }
       }
-      if (file?.path && fs.existsSync(file.path)) {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (cleanupError) {
-          logger.warn('Receipt temporary file cleanup failed', {
-            error: cleanupError.message,
-          });
-        }
-      }
+      this.cleanupReceiptTempFile(file);
       throw err;
     } finally {
       conn.release();

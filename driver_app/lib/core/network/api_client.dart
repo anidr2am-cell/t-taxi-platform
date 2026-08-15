@@ -100,10 +100,12 @@ class ApiClient {
     String? bearerToken,
     Map<String, String> fields = const {},
     List<ApiMultipartFile> files = const [],
+    Map<String, String> headers = const {},
   }) async {
     try {
       final request = http.MultipartRequest('POST', _endpoint(path))
         ..headers['Accept'] = 'application/json'
+        ..headers.addAll(headers)
         ..fields.addAll(fields);
       if (bearerToken != null && bearerToken.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $bearerToken';

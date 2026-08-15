@@ -4,11 +4,13 @@ class BookingIdempotencyCleanupWorker {
   constructor({
     pool,
     bookingIdempotencyRepository,
+    settlementReceiptIdempotencyRepository = null,
     config,
     nowFn = () => Date.now(),
   }) {
     this.pool = pool;
     this.bookingIdempotencyRepository = bookingIdempotencyRepository;
+    this.settlementReceiptIdempotencyRepository = settlementReceiptIdempotencyRepository;
     this.config = config;
     this.nowFn = nowFn;
   }
@@ -17,12 +19,20 @@ class BookingIdempotencyCleanupWorker {
     const startedAt = this.nowFn();
     const conn = await this.pool.getConnection();
     try {
-      const deleted = await this.bookingIdempotencyRepository.deleteExpiredBatch(
+      const bookingDeleted = await this.bookingIdempotencyRepository.deleteExpiredBatch(
         conn,
         this.config.batchSize,
       );
+      const receiptDeleted = this.settlementReceiptIdempotencyRepository
+        ? await this.settlementReceiptIdempotencyRepository.deleteExpiredBatch(
+          conn,
+          this.config.batchSize,
+        )
+        : 0;
       return {
-        deleted,
+        deleted: bookingDeleted + receiptDeleted,
+        bookingDeleted,
+        receiptDeleted,
         durationMs: this.nowFn() - startedAt,
       };
     } catch (err) {
