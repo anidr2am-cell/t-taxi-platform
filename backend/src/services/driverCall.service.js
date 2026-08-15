@@ -22,6 +22,8 @@ const {
   assertBookingDispatchEligible,
 } = require('../policies/bookingDispatchEligibility.policy');
 
+const OPEN_CALL_CLAIM_ASSIGNMENT_REASON = 'DRIVER_CLAIM_OPEN_CALL';
+
 const RELEASE_BLOCK_MESSAGES = {
   [RELEASE_BLOCKED_REASON.NOT_ASSIGNED_DRIVER]:
     'Booking is not assigned to this driver',
@@ -194,6 +196,80 @@ class DriverCallService {
     });
   }
 
+  isOpenCallClaimAssignment(assignment) {
+    return assignment?.assignment_reason === OPEN_CALL_CLAIM_ASSIGNMENT_REASON;
+  }
+
+  async buildClaimSuccessResponse(conn, driverUserId, bookingNumber, { idempotent = false } = {}) {
+    const detailRow = await this.bookingRepository.findActiveDriverBookingByNumberForUpdate(
+      conn,
+      driverUserId,
+      bookingNumber,
+    );
+    if (!detailRow) {
+      throw new AppError('Booking not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+      });
+    }
+    return {
+      bookingNumber,
+      status: BOOKING_STATUS.DRIVER_ASSIGNED,
+      booking: this.driverJobService.mapDetail(detailRow),
+      idempotent,
+    };
+  }
+
+  async tryReplayOpenCallClaim(conn, driver, activeAssignment, bookingNumber) {
+    if (!activeAssignment) {
+      return null;
+    }
+    if (Number(activeAssignment.driver_id) !== Number(driver.id)) {
+      this.throwAlreadyClaimed();
+    }
+    if (!this.isOpenCallClaimAssignment(activeAssignment)) {
+      return null;
+    }
+    return this.buildClaimSuccessResponse(conn, driver.user_id, bookingNumber, { idempotent: true });
+  }
+
+  async replayClaimAfterDupEntry(driverUserId, bookingNumber) {
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const driver = await this.driverRepository.findByUserIdForUpdate(conn, driverUserId);
+      this.assertDriverCanClaim(driver);
+
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
+      if (!booking) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      const active = await this.bookingRepository.findActiveAssignmentForUpdate(
+        conn,
+        booking.id,
+      );
+      const replay = await this.tryReplayOpenCallClaim(conn, driver, active, bookingNumber);
+      if (replay) {
+        await conn.commit();
+        return replay;
+      }
+      this.throwAlreadyClaimed();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
   throwReleaseNotAllowed(message = 'Booking release is not allowed', extras = {}) {
     throw new AppError(message, {
       statusCode: HTTP_STATUS.CONFLICT,
@@ -310,6 +386,22 @@ class DriverCallService {
           errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
         });
       }
+
+      const active = await this.bookingRepository.findActiveAssignmentForUpdate(
+        conn,
+        booking.id,
+      );
+      const replay = await this.tryReplayOpenCallClaim(
+        conn,
+        driver,
+        active,
+        normalizedBookingNumber,
+      );
+      if (replay) {
+        await conn.commit();
+        return replay;
+      }
+
       if (booking.status !== BOOKING_STATUS.OPEN) {
         this.throwAlreadyClaimed();
       }
@@ -319,10 +411,6 @@ class DriverCallService {
         await this.assertNoActiveUrgentNegotiation(conn, booking.id);
       }
 
-      const active = await this.bookingRepository.findActiveAssignmentForUpdate(
-        conn,
-        booking.id,
-      );
       if (active) {
         this.throwAlreadyClaimed();
       }
@@ -438,7 +526,7 @@ class DriverCallService {
     } catch (err) {
       await conn.rollback();
       if (err.code === 'ER_DUP_ENTRY') {
-        this.throwAlreadyClaimed();
+        return this.replayClaimAfterDupEntry(driverUserId, normalizedBookingNumber);
       }
       throw err;
     } finally {
@@ -455,6 +543,7 @@ class DriverCallService {
       bookingNumber: normalizedBookingNumber,
       status: BOOKING_STATUS.DRIVER_ASSIGNED,
       booking: confirmedPayload,
+      idempotent: false,
     };
   }
 

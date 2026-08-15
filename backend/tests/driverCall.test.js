@@ -114,6 +114,12 @@ function createHarness(overrides = {}) {
       return booking;
     },
     async findActiveAssignmentForUpdate() {
+      if (overrides.sharedAssignmentState?.active) {
+        return overrides.sharedAssignmentState.active;
+      }
+      if (overrides.dupReplayState?.assignmentVisible) {
+        return overrides.dupReplayState.assignment;
+      }
       return overrides.activeAssignment ?? null;
     },
     async hasReleasedAssignment() {
@@ -129,9 +135,22 @@ function createHarness(overrides = {}) {
         }
       }
       if (overrides.insertThrowsDupEntry) {
+        if (overrides.dupReplayState) {
+          overrides.dupReplayState.assignmentVisible = true;
+        }
         const err = new Error('Duplicate entry');
         err.code = 'ER_DUP_ENTRY';
         throw err;
+      }
+      const assignment = {
+        id: 99,
+        driver_id: row.driverId,
+        assignment_reason: row.assignmentReason,
+        status: 'ASSIGNED',
+        is_active: 1,
+      };
+      if (overrides.sharedAssignmentState) {
+        overrides.sharedAssignmentState.active = assignment;
       }
       calls.assignments.push(row);
       return 99;
@@ -1400,7 +1419,91 @@ test('driver call socket handler joins driver rooms and rejects non-drivers', as
   assert.equal(ack.error.code, ERROR_CODES.FORBIDDEN);
 });
 
-test('claimOpenCall maps ER_DUP_ENTRY to ALREADY_ASSIGNED', async () => {
+test('claimOpenCall replays success for same driver with existing open-call assignment', async () => {
+  setRealtimeIo({ to() { return { emit() {} }; } });
+  const { service, conn, calls } = createHarness({
+    booking: { status: BOOKING_STATUS.DRIVER_ASSIGNED },
+    activeAssignment: {
+      id: 99,
+      driver_id: 7,
+      assignment_reason: 'DRIVER_CLAIM_OPEN_CALL',
+      status: 'ASSIGNED',
+      is_active: 1,
+    },
+  });
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+
+  assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
+  assert.equal(result.idempotent, true);
+  assert.equal(conn.committed, true);
+  assert.equal(calls.assignments.length, 0);
+  assert.equal(calls.statusUpdates.length, 0);
+});
+
+test('claimOpenCall response-loss retry returns same assignment without duplicate writes', async () => {
+  setRealtimeIo({ to() { return { emit() {} }; } });
+  const sharedAssignmentState = { active: null };
+  const { service, calls } = createHarness({ sharedAssignmentState });
+
+  const first = await service.claimOpenCall(42, 'TX202607130001');
+  assert.equal(first.idempotent, false);
+  assert.equal(calls.assignments.length, 1);
+
+  const retry = await service.claimOpenCall(42, 'TX202607130001');
+  assert.equal(retry.idempotent, true);
+  assert.equal(retry.booking.bookingNumber, first.booking.bookingNumber);
+  assert.equal(calls.assignments.length, 1);
+  assert.equal(sharedAssignmentState.active.id, 99);
+});
+
+test('claimOpenCall maps ER_DUP_ENTRY to success replay when same driver owns claim assignment', async () => {
+  const dupReplayState = {
+    assignmentVisible: false,
+    assignment: {
+      id: 99,
+      driver_id: 7,
+      assignment_reason: 'DRIVER_CLAIM_OPEN_CALL',
+      status: 'ASSIGNED',
+      is_active: 1,
+    },
+  };
+  const { service, conn } = createHarness({
+    insertThrowsDupEntry: true,
+    dupReplayState,
+    booking: { status: BOOKING_STATUS.OPEN },
+  });
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+  assert.equal(result.idempotent, true);
+  assert.equal(conn.rolledBack, true);
+});
+
+test('claimOpenCall maps ER_DUP_ENTRY to ALREADY_ASSIGNED when another driver owns assignment', async () => {
+  const dupReplayState = {
+    assignmentVisible: false,
+    assignment: {
+      id: 99,
+      driver_id: 8,
+      assignment_reason: 'DRIVER_CLAIM_OPEN_CALL',
+      status: 'ASSIGNED',
+      is_active: 1,
+    },
+  };
+  const { service, conn } = createHarness({
+    insertThrowsDupEntry: true,
+    dupReplayState,
+    booking: { status: BOOKING_STATUS.OPEN },
+  });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.ALREADY_ASSIGNED,
+  );
+  assert.equal(conn.rolledBack, true);
+});
+
+test('claimOpenCall maps ER_DUP_ENTRY to ALREADY_ASSIGNED when replay evidence is missing', async () => {
   const { service, conn } = createHarness({ insertThrowsDupEntry: true });
 
   await assert.rejects(
@@ -1412,6 +1515,7 @@ test('claimOpenCall maps ER_DUP_ENTRY to ALREADY_ASSIGNED', async () => {
 
 test('concurrent claimOpenCall attempts allow only one success', async () => {
   const assignmentState = { inserts: 0 };
+  const sharedAssignmentState = { active: null };
   const sharedBooking = {
     id: 10,
     booking_number: 'TX202607130001',
@@ -1423,12 +1527,14 @@ test('concurrent claimOpenCall attempts allow only one success', async () => {
     driver: { id: 7, user_id: 42, name: 'Driver A' },
     booking: sharedBooking,
     assignmentState,
+    sharedAssignmentState,
     insertDupOnRace: true,
   });
   const second = createHarness({
     driver: { id: 8, user_id: 43, name: 'Driver B' },
     booking: sharedBooking,
     assignmentState,
+    sharedAssignmentState,
     insertDupOnRace: true,
   });
 
@@ -1448,6 +1554,7 @@ test('concurrent claimOpenCall attempts allow only one success', async () => {
 
 test('same driver concurrent claimOpenCall attempts allow only one assignment', async () => {
   const assignmentState = { inserts: 0 };
+  const sharedAssignmentState = { active: null };
   const sharedBooking = {
     id: 10,
     booking_number: 'TX202607130001',
@@ -1458,11 +1565,13 @@ test('same driver concurrent claimOpenCall attempts allow only one assignment', 
   const first = createHarness({
     booking: sharedBooking,
     assignmentState,
+    sharedAssignmentState,
     insertDupOnRace: true,
   });
   const second = createHarness({
     booking: sharedBooking,
     assignmentState,
+    sharedAssignmentState,
     insertDupOnRace: true,
   });
 
@@ -1473,7 +1582,10 @@ test('same driver concurrent claimOpenCall attempts allow only one assignment', 
 
   const fulfilled = results.filter((row) => row.status === 'fulfilled');
   const rejected = results.filter((row) => row.status === 'rejected');
-  assert.equal(fulfilled.length, 1);
-  assert.equal(rejected.length, 1);
-  assert.equal(rejected[0].reason.errorCode, ERROR_CODES.ALREADY_ASSIGNED);
+  assert.equal(fulfilled.length, 2);
+  assert.equal(rejected.length, 0);
+  const idempotentFlags = fulfilled.map((row) => row.value.idempotent).sort();
+  assert.deepEqual(idempotentFlags, [false, true]);
+  assert.equal(assignmentState.inserts, 2);
+  assert.equal(first.calls.assignments.length + second.calls.assignments.length, 1);
 });

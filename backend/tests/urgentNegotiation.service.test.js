@@ -86,6 +86,19 @@ function createHarness(overrides = {}) {
       if (negotiation.status !== 'BROADCASTING') return null;
       return { ...negotiation };
     },
+    async findNegotiationByBookingIdForUpdate(_conn, bookingId) {
+      if (!negotiation || negotiation.booking_id !== bookingId) return null;
+      return { ...negotiation };
+    },
+    async findLatestAttempt(_conn, negotiationId) {
+      if (!negotiation || negotiation.id !== negotiationId) return null;
+      return {
+        id: 501,
+        negotiation_id: negotiationId,
+        attempt_number: Number(negotiation.attempt_count || 1),
+        driver_id: negotiation.locked_driver_id,
+      };
+    },
     async lockNegotiationIfBroadcasting(_conn, { negotiationId, driverId }) {
       calls.lockCalls.push({ negotiationId, driverId });
       if (!negotiation || negotiation.id !== negotiationId) return 0;
@@ -276,7 +289,31 @@ test('concurrent lock attempts allow only one success and one URGENT_ALREADY_LOC
   setRealtimeIo(null);
 });
 
-test('lockNegotiation rejects when negotiation is already LOCKED', async () => {
+test('lockNegotiation replays success when same driver already locked negotiation', async () => {
+  const emitted = captureSocket();
+  const { service, conn, calls } = createHarness({
+    negotiation: {
+      id: 100,
+      booking_id: 10,
+      status: 'LOCKED',
+      attempt_count: 1,
+      locked_driver_id: 7,
+      lock_expires_at: '2026-07-23 01:30:00.000',
+    },
+  });
+
+  const result = await service.lockNegotiation(42, BOOKING_NUMBER);
+
+  assert.equal(result.status, 'LOCKED');
+  assert.equal(result.idempotent, true);
+  assert.equal(conn.committed, true);
+  assert.equal(calls.lockCalls.length, 0);
+  assert.equal(calls.attempts.length, 0);
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+test('lockNegotiation rejects when negotiation is already LOCKED by another driver', async () => {
   const { service } = createHarness({
     negotiation: {
       id: 100,
@@ -289,9 +326,27 @@ test('lockNegotiation rejects when negotiation is already LOCKED', async () => {
 
   await assert.rejects(
     () => service.lockNegotiation(43, BOOKING_NUMBER),
-    (error) => error.errorCode === ERROR_CODES.URGENT_NEGOTIATION_NOT_BROADCASTING
+    (error) => error.errorCode === ERROR_CODES.URGENT_ALREADY_LOCKED
       && error.statusCode === HTTP_STATUS.CONFLICT,
   );
+});
+
+test('lockNegotiation response-loss retry returns existing lock without duplicate side effects', async () => {
+  const emitted = captureSocket();
+  const { service, calls } = createHarness();
+
+  const first = await service.lockNegotiation(42, BOOKING_NUMBER);
+  assert.equal(first.idempotent, false);
+  assert.equal(calls.attempts.length, 1);
+  assert.equal(emitted.length, 2);
+
+  emitted.length = 0;
+  const retry = await service.lockNegotiation(42, BOOKING_NUMBER);
+  assert.equal(retry.idempotent, true);
+  assert.equal(retry.negotiationId, first.negotiationId);
+  assert.equal(calls.attempts.length, 1);
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
 });
 
 test('lockNegotiation returns 404 for missing booking', async () => {
@@ -1407,7 +1462,33 @@ test('processExpiredNegotiations processes locked and awaiting expired rows', as
   setRealtimeIo(null);
 });
 
-test('duplicate submitEta after AWAITING_CUSTOMER returns controlled conflict', async () => {
+test('duplicate submitEta after AWAITING_CUSTOMER replays same ETA without duplicate side effects', async () => {
+  const emitted = captureSocket();
+  const { service, calls } = createSubmitEtaHarness({
+    negotiation: {
+      status: 'AWAITING_CUSTOMER',
+      customer_decision_expires_at: '2099-07-23 01:32:00.000',
+    },
+    attempts: [{
+      id: 1,
+      negotiation_id: 100,
+      attempt_number: 1,
+      driver_id: 7,
+      proposed_eta_minutes: 25,
+      eta_submitted_at: '2099-07-23 01:30:00.000',
+      outcome: 'IN_PROGRESS',
+    }],
+  });
+
+  const result = await service.submitEta(42, BOOKING_NUMBER, 25, { nowMs: SUBMIT_NOW_MS });
+  assert.equal(result.idempotent, true);
+  assert.equal(result.etaMinutes, 25);
+  assert.equal(calls.attemptUpdates.length, 0);
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+test('duplicate submitEta with different ETA after AWAITING_CUSTOMER returns controlled conflict', async () => {
   const { service, calls } = createSubmitEtaHarness({
     negotiation: {
       status: 'AWAITING_CUSTOMER',
@@ -1425,14 +1506,82 @@ test('duplicate submitEta after AWAITING_CUSTOMER returns controlled conflict', 
   });
 
   await assert.rejects(
-    () => service.submitEta(42, BOOKING_NUMBER, 25, { nowMs: SUBMIT_NOW_MS }),
-    (error) => error.errorCode === ERROR_CODES.URGENT_NOT_LOCKED
+    () => service.submitEta(42, BOOKING_NUMBER, 20, { nowMs: SUBMIT_NOW_MS }),
+    (error) => error.errorCode === ERROR_CODES.URGENT_ETA_INVALID
       && error.statusCode === HTTP_STATUS.CONFLICT,
   );
   assert.equal(calls.attemptUpdates.length, 0);
 });
 
-test('duplicate submitCustomerDecision ACCEPT does not create second assignment', async () => {
+test('duplicate submitEta after AWAITING_CUSTOMER with different stored ETA returns controlled conflict', async () => {
+  const { service, calls } = createSubmitEtaHarness({
+    negotiation: {
+      status: 'AWAITING_CUSTOMER',
+      customer_decision_expires_at: '2099-07-23 01:32:00.000',
+    },
+    attempts: [{
+      id: 1,
+      negotiation_id: 100,
+      attempt_number: 1,
+      driver_id: 7,
+      proposed_eta_minutes: 30,
+      eta_submitted_at: '2099-07-23 01:30:00.000',
+      outcome: 'IN_PROGRESS',
+    }],
+  });
+
+  await assert.rejects(
+    () => service.submitEta(42, BOOKING_NUMBER, 25, { nowMs: SUBMIT_NOW_MS }),
+    (error) => error.errorCode === ERROR_CODES.URGENT_ETA_INVALID
+      && error.statusCode === HTTP_STATUS.CONFLICT,
+  );
+  assert.equal(calls.attemptUpdates.length, 0);
+});
+
+test('duplicate submitCustomerDecision ACCEPT replays confirmed assignment without duplicate writes', async () => {
+  const emitted = captureSocket();
+  const { service, calls } = createCustomerDecisionHarness({
+    negotiation: {
+      status: 'CONFIRMED',
+      locked_driver_id: 7,
+      customer_decision_expires_at: '2099-07-23 01:32:00.000',
+    },
+    booking: {
+      status: 'DRIVER_ASSIGNED',
+    },
+    attempts: [{
+      id: 1,
+      negotiation_id: 100,
+      attempt_number: 1,
+      driver_id: 7,
+      proposed_eta_minutes: 30,
+      eta_submitted_at: '2099-07-23 01:30:00.000',
+      outcome: 'CUSTOMER_ACCEPTED',
+    }],
+    activeAssignment: {
+      id: 9001,
+      driver_id: 7,
+      assignment_reason: 'URGENT_CUSTOMER_CONFIRMED',
+      status: 'ASSIGNED',
+      is_active: 1,
+    },
+  });
+
+  const result = await service.submitCustomerDecision(
+    BOOKING_NUMBER,
+    'ACCEPT',
+    { authUser: { id: 99, role: 'CUSTOMER' }, nowMs: DECISION_NOW_MS },
+  );
+
+  assert.equal(result.idempotent, true);
+  assert.equal(result.assignmentId, 9001);
+  assert.equal(calls.assignments.length, 0);
+  assert.equal(calls.attemptOutcomes.length, 0);
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+test('duplicate submitCustomerDecision ACCEPT without replay evidence remains conflict', async () => {
   const { service, calls } = createCustomerDecisionHarness({
     negotiation: {
       status: 'CONFIRMED',

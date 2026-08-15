@@ -1176,6 +1176,121 @@ paths:
         '409':
           $ref: '#/components/responses/QrOperationConflict'
 
+  /driver/calls/{bookingNumber}/claim:
+    post:
+      tags: [Driver]
+      summary: Claim an open STANDARD call
+      description: |
+        Atomically assigns the authenticated online driver to an OPEN booking.
+        Retries by the same driver after a successful claim return the existing
+        `DRIVER_CLAIM_OPEN_CALL` assignment as an idempotent success without
+        creating a second assignment or re-emitting socket events. Another driver
+        receives 409 `ALREADY_ASSIGNED`.
+      operationId: driverClaimOpenCall
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                driverVehicleId:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Booking claimed or idempotent replay of existing claim assignment
+        '409':
+          description: Booking already assigned to another driver or no longer claimable
+
+  /driver/urgent-calls/{bookingNumber}/lock:
+    post:
+      tags: [Driver]
+      summary: Lock an urgent call for ETA submission
+      description: |
+        Moves a BROADCASTING urgent negotiation to LOCKED for the authenticated driver.
+        Retries by the same locked driver replay the existing lock state without
+        inserting another attempt or re-emitting ETA-required / locked socket events.
+        Another driver receives 409 `URGENT_ALREADY_LOCKED`.
+      operationId: driverLockUrgentCall
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          description: Urgent call locked or idempotent replay of existing lock
+        '409':
+          description: Negotiation not broadcasting or already locked by another driver
+
+  /driver/urgent-calls/{bookingNumber}/eta:
+    post:
+      tags: [Driver]
+      summary: Submit ETA for a locked urgent call
+      description: |
+        Moves a LOCKED negotiation to AWAITING_CUSTOMER for the locked driver.
+        Retries with the same ETA minutes replay the existing proposal without
+        duplicate customer notifications or socket events. Retries with a different
+        ETA return 409 `URGENT_ETA_INVALID`; ETA changes require a separate domain action.
+      operationId: driverSubmitUrgentCallEta
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [etaMinutes]
+              properties:
+                etaMinutes:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: ETA submitted or idempotent replay of the same ETA proposal
+        '409':
+          description: Negotiation not locked, ETA mismatch, or validation conflict
+
+  /bookings/{bookingNumber}/urgent-decision:
+    post:
+      tags: [Booking]
+      summary: Customer accept or reject urgent ETA proposal
+      description: |
+        Customer decision on an AWAITING_CUSTOMER urgent negotiation.
+        ACCEPT retries after CONFIRMED replay the existing urgent assignment when
+        durable evidence exists (`CUSTOMER_ACCEPTED` attempt outcome and
+        `URGENT_CUSTOMER_CONFIRMED` assignment) without duplicate notifications.
+        REJECT retries remain 409 when the negotiation has already advanced; replay
+        is unsupported without durable decision fingerprinting.
+      operationId: submitUrgentCustomerDecision
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [ACCEPT, REJECT]
+      responses:
+        '200':
+          description: Decision applied or idempotent ACCEPT replay
+        '409':
+          description: Negotiation not awaiting decision or unsupported REJECT replay
+
   /driver/bookings/{bookingNumber}/scan-boarding:
     post:
       tags: [Driver]

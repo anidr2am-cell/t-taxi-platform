@@ -134,6 +134,82 @@ class UrgentNegotiationService {
     if (authUser?.id) return authUser.id;
     return null;
   }
+
+  isLockOwnedByDriver(negotiation, driverId) {
+    return negotiation?.status === 'LOCKED'
+      && Number(negotiation.locked_driver_id) === Number(driverId);
+  }
+
+  async buildLockReplayResult(conn, negotiation, booking, driver, normalizedBookingNumber) {
+    const latestAttempt = await this.urgentNegotiationRepository.findLatestAttempt(
+      conn,
+      negotiation.id,
+    );
+    const lockedNegotiation = await this.urgentNegotiationRepository.findNegotiationById(
+      conn,
+      negotiation.id,
+    );
+    return {
+      bookingNumber: normalizedBookingNumber,
+      bookingId: booking.id,
+      negotiationId: negotiation.id,
+      attemptId: latestAttempt?.id ?? null,
+      attemptNumber: latestAttempt?.attempt_number ?? Number(negotiation.attempt_count || 0),
+      driverId: driver.id,
+      status: lockedNegotiation?.status || 'LOCKED',
+      lockExpiresAt: formatServiceDateTimeForApi(
+        lockedNegotiation?.lock_expires_at,
+      ),
+      idempotent: true,
+    };
+  }
+
+  async tryReplayCustomerAccept(conn, { booking, negotiation }) {
+    if (negotiation.status !== 'CONFIRMED') {
+      return null;
+    }
+
+    const latestAttempt = await this.urgentNegotiationRepository.findLatestAttempt(
+      conn,
+      negotiation.id,
+    );
+    if (latestAttempt?.outcome !== 'CUSTOMER_ACCEPTED') {
+      return null;
+    }
+
+    const activeAssignment = await this.bookingRepository.findActiveAssignmentForUpdate(
+      conn,
+      booking.id,
+    );
+    if (
+      !activeAssignment
+      || Number(activeAssignment.driver_id) !== Number(negotiation.locked_driver_id)
+      || activeAssignment.assignment_reason !== 'URGENT_CUSTOMER_CONFIRMED'
+    ) {
+      return null;
+    }
+
+    const lockedDriver = await this.driverRepository.findById(negotiation.locked_driver_id);
+    if (!lockedDriver) {
+      return null;
+    }
+
+    return {
+      bookingNumber: booking.booking_number,
+      bookingId: booking.id,
+      negotiationId: negotiation.id,
+      attemptNumber: latestAttempt.attempt_number,
+      driverId: lockedDriver.id,
+      status: negotiation.status,
+      decision: 'ACCEPT',
+      etaMinutes: latestAttempt.proposed_eta_minutes,
+      assignmentId: activeAssignment.id,
+      bookingStatus: booking.status,
+      lockedDriverUserId: lockedDriver.user_id,
+      idempotent: true,
+    };
+  }
+
   async lockNegotiation(driverUserId, bookingNumber) {
     const normalizedBookingNumber = this.driverJobService.validateBookingNumber(bookingNumber);
     const normalizedDriverUserId = Number(driverUserId);
@@ -180,11 +256,32 @@ class UrgentNegotiationService {
       }
       assertBookingDispatchEligible(booking);
 
-      const negotiation = await this.urgentNegotiationRepository.findBroadcastingNegotiationForUpdate(
+      let negotiation = await this.urgentNegotiationRepository.findBroadcastingNegotiationForUpdate(
         conn,
         booking.id,
       );
       if (!negotiation) {
+        const current = await this.urgentNegotiationRepository.findNegotiationByBookingIdForUpdate(
+          conn,
+          booking.id,
+        );
+        if (this.isLockOwnedByDriver(current, driver.id)) {
+          lockResult = await this.buildLockReplayResult(
+            conn,
+            current,
+            booking,
+            driver,
+            normalizedBookingNumber,
+          );
+          await conn.commit();
+          return lockResult;
+        }
+        if (current?.status === 'LOCKED') {
+          this.throwAppError('Another driver has already locked this urgent call', {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.URGENT_ALREADY_LOCKED,
+          });
+        }
         this.throwAppError('Urgent negotiation is not accepting locks', {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.URGENT_NEGOTIATION_NOT_BROADCASTING,
@@ -199,6 +296,21 @@ class UrgentNegotiationService {
         },
       );
       if (affectedRows !== 1) {
+        const current = await this.urgentNegotiationRepository.findNegotiationById(
+          conn,
+          negotiation.id,
+        );
+        if (this.isLockOwnedByDriver(current, driver.id)) {
+          lockResult = await this.buildLockReplayResult(
+            conn,
+            current,
+            booking,
+            driver,
+            normalizedBookingNumber,
+          );
+          await conn.commit();
+          return lockResult;
+        }
         this.throwAppError('Another driver has already locked this urgent call', {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.URGENT_ALREADY_LOCKED,
@@ -228,6 +340,7 @@ class UrgentNegotiationService {
         lockExpiresAt: formatServiceDateTimeForApi(
           lockedNegotiation?.lock_expires_at,
         ),
+        idempotent: false,
       };
       driverUserIdForEmit = driver.user_id;
 
@@ -246,11 +359,13 @@ class UrgentNegotiationService {
       lockExpiresAt: lockResult.lockExpiresAt,
     };
 
-    emitDriverUrgentCallEtaRequired(driverUserIdForEmit, socketPayload);
-    emitDriverUrgentCallLocked({
-      ...socketPayload,
-      lockedDriverId: lockResult.driverId,
-    });
+    if (!lockResult.idempotent) {
+      emitDriverUrgentCallEtaRequired(driverUserIdForEmit, socketPayload);
+      emitDriverUrgentCallLocked({
+        ...socketPayload,
+        lockedDriverId: lockResult.driverId,
+      });
+    }
 
     return lockResult;
   }
@@ -304,6 +419,42 @@ class UrgentNegotiationService {
         this.throwAppError('Urgent negotiation not found', {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.URGENT_NEGOTIATION_NOT_FOUND,
+        });
+      }
+
+      if (negotiation.status === 'AWAITING_CUSTOMER') {
+        if (Number(negotiation.locked_driver_id) !== Number(driver.id)) {
+          this.throwAppError('Only the locked driver can submit ETA', {
+            statusCode: HTTP_STATUS.FORBIDDEN,
+            errorCode: ERROR_CODES.URGENT_NOT_LOCKED_DRIVER,
+          });
+        }
+
+        const existingAttempt = await this.urgentNegotiationRepository.findLatestAttempt(
+          conn,
+          negotiation.id,
+        );
+        if (Number(existingAttempt?.proposed_eta_minutes) === normalizedEtaMinutes) {
+          submitResult = {
+            bookingNumber: normalizedBookingNumber,
+            bookingId: booking.id,
+            negotiationId: negotiation.id,
+            attemptNumber: existingAttempt?.attempt_number ?? null,
+            driverId: driver.id,
+            status: negotiation.status,
+            etaMinutes: normalizedEtaMinutes,
+            customerDecisionExpiresAt: formatServiceDateTimeForApi(
+              negotiation.customer_decision_expires_at,
+            ),
+            idempotent: true,
+          };
+          await conn.commit();
+          return submitResult;
+        }
+
+        this.throwAppError('Submitted ETA does not match the previously accepted proposal', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.URGENT_ETA_INVALID,
         });
       }
 
@@ -369,6 +520,7 @@ class UrgentNegotiationService {
         customerDecisionExpiresAt: formatServiceDateTimeForApi(
           updatedNegotiation.customer_decision_expires_at,
         ),
+        idempotent: false,
       };
 
       await conn.commit();
@@ -379,13 +531,15 @@ class UrgentNegotiationService {
       conn.release();
     }
 
-    emitBookingUrgentNegotiationEtaProposed(submitResult.bookingId, {
-      bookingNumber: submitResult.bookingNumber,
-      negotiationId: submitResult.negotiationId,
-      attemptNumber: submitResult.attemptNumber,
-      etaMinutes: submitResult.etaMinutes,
-      expiresAt: submitResult.customerDecisionExpiresAt,
-    });
+    if (!submitResult?.idempotent) {
+      emitBookingUrgentNegotiationEtaProposed(submitResult.bookingId, {
+        bookingNumber: submitResult.bookingNumber,
+        negotiationId: submitResult.negotiationId,
+        attemptNumber: submitResult.attemptNumber,
+        etaMinutes: submitResult.etaMinutes,
+        expiresAt: submitResult.customerDecisionExpiresAt,
+      });
+    }
 
     return submitResult;
   }
@@ -434,6 +588,14 @@ class UrgentNegotiationService {
       }
 
       if (negotiation.status !== 'AWAITING_CUSTOMER') {
+        if (normalizedDecision === 'ACCEPT') {
+          const replay = await this.tryReplayCustomerAccept(conn, { booking, negotiation });
+          if (replay) {
+            decisionResult = replay;
+            await conn.commit();
+            return decisionResult;
+          }
+        }
         this.throwAppError('Urgent negotiation is not awaiting customer decision', {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.URGENT_NEGOTIATION_NOT_AWAITING,
@@ -498,7 +660,7 @@ class UrgentNegotiationService {
       conn.release();
     }
 
-    if (normalizedDecision === 'ACCEPT') {
+    if (normalizedDecision === 'ACCEPT' && !decisionResult?.idempotent) {
       emitDriverUrgentCallConfirmed(decisionResult.lockedDriverUserId, {
         bookingNumber: decisionResult.bookingNumber,
         negotiationId: decisionResult.negotiationId,
