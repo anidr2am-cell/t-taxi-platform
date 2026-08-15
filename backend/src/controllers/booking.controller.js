@@ -18,12 +18,29 @@ const recommendVehicle = asyncHandler(async (req, res) => {
   return success(res, data, data.message);
 });
 
-const { normalizeIdempotencyKey } = require('../utils/bookingIdempotency.util');
+const {
+  normalizeIdempotencyKey,
+  isIdempotencyKeyRequired,
+} = require('../utils/bookingIdempotency.util');
 const AppError = require('../utils/AppError');
 const ERROR_CODES = require('../constants/errorCodes');
+const config = require('../config');
 
 const createBooking = asyncHandler(async (req, res) => {
-  const normalizedKey = normalizeIdempotencyKey(req.get('Idempotency-Key'));
+  const rawIdempotencyKey = req.get('Idempotency-Key');
+  if (isIdempotencyKeyRequired(config.server.nodeEnv)) {
+    if (rawIdempotencyKey === undefined || rawIdempotencyKey === null || !String(rawIdempotencyKey).trim()) {
+      throw new AppError(
+        'Idempotency-Key header is required. Send a unique client-generated key per booking submit attempt and reuse it on retries.',
+        {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.IDEMPOTENCY_KEY_REQUIRED,
+        },
+      );
+    }
+  }
+
+  const normalizedKey = normalizeIdempotencyKey(rawIdempotencyKey);
   if (normalizedKey?.invalid) {
     throw new AppError('Invalid Idempotency-Key header', {
       statusCode: HTTP_STATUS.BAD_REQUEST,

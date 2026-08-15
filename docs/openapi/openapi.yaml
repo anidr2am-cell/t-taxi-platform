@@ -354,8 +354,26 @@ paths:
       description: |
         Creates booking, charge items, chat room, activity log.
         Server generates `bookingNumber` (TXYYYYMMDD0001). Client must not generate it.
+
+        Send a unique client-generated `Idempotency-Key` per submit attempt in staging and
+        production. Reuse the same key when retrying the same payload. Same key + same payload
+        returns the completed booking response; same key + different payload returns 409;
+        concurrent requests with the same key return an in-progress conflict.
       security: []
       operationId: createBooking
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: |
+            Opaque unique client-generated request key (1-128 chars, alphanumeric and hyphen).
+            Required in staging and production deployments.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '^[A-Za-z0-9-]{1,128}$'
+          example: 550e8400-e29b-41d4-a716-446655440000
       requestBody:
         required: true
         content:

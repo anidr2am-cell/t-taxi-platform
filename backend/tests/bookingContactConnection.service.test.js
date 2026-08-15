@@ -342,3 +342,61 @@ test('mapPublicConnection includes urgent continuation fields without PII', asyn
   assert.equal(mapped.customerName, undefined);
   assert.equal(mapped.customerPhone, undefined);
 });
+
+test('confirmSent duplicate call on CONFIRM_REQUESTED is safe early return', async () => {
+  let snapshotUpdates = 0;
+  let connectionUpdates = 0;
+  const booking = {
+    id: 1,
+    booking_number: 'TX202608130001',
+    contact_status: CONTACT_STATUS.CONFIRM_REQUESTED,
+    status: BOOKING_STATUS.OPEN,
+  };
+  const { service } = createService({
+    booking,
+    bookingById: booking,
+    connection: {
+      id: 2,
+      channel: 'LINE',
+      status: CONTACT_STATUS.CONFIRM_REQUESTED,
+      customerConfirmedAt: '2026-08-13 10:00:00',
+    },
+  });
+  service.contactConnectionRepository.updateConnectionStatus = async () => {
+    connectionUpdates += 1;
+  };
+  service.contactConnectionRepository.updateBookingContactSnapshot = async () => {
+    snapshotUpdates += 1;
+  };
+
+  const result = await service.confirmSent('TX202608130001', null, 'guest-token');
+  assert.equal(result.contactStatus, CONTACT_STATUS.CONFIRM_REQUESTED);
+  assert.equal(snapshotUpdates, 0);
+  assert.equal(connectionUpdates, 0);
+});
+
+test('confirmSent on VERIFIED booking is safe no-op', async () => {
+  let snapshotUpdates = 0;
+  const booking = {
+    id: 1,
+    booking_number: 'TX202608130001',
+    contact_status: CONTACT_STATUS.VERIFIED,
+    status: BOOKING_STATUS.OPEN,
+  };
+  const { service } = createService({
+    booking,
+    bookingById: booking,
+    connection: {
+      id: 2,
+      channel: 'LINE',
+      status: CONTACT_STATUS.VERIFIED,
+    },
+  });
+  service.contactConnectionRepository.updateBookingContactSnapshot = async () => {
+    snapshotUpdates += 1;
+  };
+
+  const result = await service.confirmSent('TX202608130001', null, 'guest-token');
+  assert.equal(result.contactStatus, CONTACT_STATUS.VERIFIED);
+  assert.equal(snapshotUpdates, 0);
+});

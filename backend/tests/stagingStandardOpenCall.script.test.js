@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const { createBookingIdempotencyKey } = require('../scripts/staging-booking-regression');
 const {
   E2E_MARKER,
   bookingPayload,
@@ -11,6 +12,13 @@ const {
   assertSafeArchiveDetail,
   pickEnabledContactChannel,
 } = require('../scripts/staging-standard-open-call');
+
+test('createBookingIdempotencyKey returns unique UUID values', () => {
+  const first = createBookingIdempotencyKey();
+  const second = createBookingIdempotencyKey();
+  assert.match(first, /^[0-9a-f-]{36}$/i);
+  assert.notEqual(first, second);
+});
 
 test('bookingPayload validates against createBookingSchema', () => {
   assertValidPayload(bookingPayload());

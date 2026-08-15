@@ -120,6 +120,19 @@ function createHarness(overrides = {}) {
       return overrides.hasReleasedAssignment ?? false;
     },
     async insertDriverAssignment(_conn, row) {
+      if (overrides.assignmentState) {
+        overrides.assignmentState.inserts = (overrides.assignmentState.inserts || 0) + 1;
+        if (overrides.insertDupOnRace && overrides.assignmentState.inserts > 1) {
+          const err = new Error('Duplicate entry');
+          err.code = 'ER_DUP_ENTRY';
+          throw err;
+        }
+      }
+      if (overrides.insertThrowsDupEntry) {
+        const err = new Error('Duplicate entry');
+        err.code = 'ER_DUP_ENTRY';
+        throw err;
+      }
       calls.assignments.push(row);
       return 99;
     },
@@ -1385,4 +1398,82 @@ test('driver call socket handler joins driver rooms and rejects non-drivers', as
   await customerHandlers['driver:calls:subscribe']({}, (value) => { ack = value; });
   assert.equal(ack.ok, false);
   assert.equal(ack.error.code, ERROR_CODES.FORBIDDEN);
+});
+
+test('claimOpenCall maps ER_DUP_ENTRY to ALREADY_ASSIGNED', async () => {
+  const { service, conn } = createHarness({ insertThrowsDupEntry: true });
+
+  await assert.rejects(
+    () => service.claimOpenCall(42, 'TX202607130001'),
+    (err) => err.statusCode === 409 && err.errorCode === ERROR_CODES.ALREADY_ASSIGNED,
+  );
+  assert.equal(conn.rolledBack, true);
+});
+
+test('concurrent claimOpenCall attempts allow only one success', async () => {
+  const assignmentState = { inserts: 0 };
+  const sharedBooking = {
+    id: 10,
+    booking_number: 'TX202607130001',
+    status: BOOKING_STATUS.OPEN,
+    vehicle_type_id: 3,
+    scheduled_pickup_at: '2099-07-13 10:00:00',
+  };
+  const first = createHarness({
+    driver: { id: 7, user_id: 42, name: 'Driver A' },
+    booking: sharedBooking,
+    assignmentState,
+    insertDupOnRace: true,
+  });
+  const second = createHarness({
+    driver: { id: 8, user_id: 43, name: 'Driver B' },
+    booking: sharedBooking,
+    assignmentState,
+    insertDupOnRace: true,
+  });
+
+  const results = await Promise.allSettled([
+    first.service.claimOpenCall(42, 'TX202607130001'),
+    second.service.claimOpenCall(43, 'TX202607130001'),
+  ]);
+
+  const fulfilled = results.filter((row) => row.status === 'fulfilled');
+  const rejected = results.filter((row) => row.status === 'rejected');
+  assert.equal(fulfilled.length, 1);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason.errorCode, ERROR_CODES.ALREADY_ASSIGNED);
+  assert.equal(assignmentState.inserts, 2);
+  assert.equal(first.calls.assignments.length + second.calls.assignments.length, 1);
+});
+
+test('same driver concurrent claimOpenCall attempts allow only one assignment', async () => {
+  const assignmentState = { inserts: 0 };
+  const sharedBooking = {
+    id: 10,
+    booking_number: 'TX202607130001',
+    status: BOOKING_STATUS.OPEN,
+    vehicle_type_id: 3,
+    scheduled_pickup_at: '2099-07-13 10:00:00',
+  };
+  const first = createHarness({
+    booking: sharedBooking,
+    assignmentState,
+    insertDupOnRace: true,
+  });
+  const second = createHarness({
+    booking: sharedBooking,
+    assignmentState,
+    insertDupOnRace: true,
+  });
+
+  const results = await Promise.allSettled([
+    first.service.claimOpenCall(42, 'TX202607130001'),
+    first.service.claimOpenCall(42, 'TX202607130001'),
+  ]);
+
+  const fulfilled = results.filter((row) => row.status === 'fulfilled');
+  const rejected = results.filter((row) => row.status === 'rejected');
+  assert.equal(fulfilled.length, 1);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason.errorCode, ERROR_CODES.ALREADY_ASSIGNED);
 });

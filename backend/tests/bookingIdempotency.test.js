@@ -522,3 +522,11 @@ test('COMPLETED replay does not rerun booking create side effects', async () => 
   assert.equal(calls.dispatchOutbox, afterFirst.dispatchOutbox);
   assert.equal(calls.notifications, afterFirst.notifications);
 });
+
+test('isIdempotencyKeyRequired is enabled for staging and production only', () => {
+  const { isIdempotencyKeyRequired } = require('../src/utils/bookingIdempotency.util');
+  assert.equal(isIdempotencyKeyRequired('production'), true);
+  assert.equal(isIdempotencyKeyRequired('staging'), true);
+  assert.equal(isIdempotencyKeyRequired('test'), false);
+  assert.equal(isIdempotencyKeyRequired('development'), false);
+});

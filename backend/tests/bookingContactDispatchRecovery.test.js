@@ -14,6 +14,11 @@ delete require.cache[require.resolve('../src/policies/bookingDispatchEligibility
 const CONTACT_STATUS = require('../src/constants/contactStatus');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
 const BookingService = require('../src/services/booking.service');
+const { createLockState } = require('./support/mysqlAdvisoryLock.helpers');
+
+function createAdvisoryConn() {
+  return createLockState().createConn();
+}
 
 test('dispatchAfterContactVerified marks metadata and skips duplicate dispatch', async () => {
   const metadataUpdates = [];
@@ -26,9 +31,7 @@ test('dispatchAfterContactVerified marks metadata and skips duplicate dispatch',
 
   const pool = {
     async getConnection() {
-      return {
-        release() {},
-      };
+      return createAdvisoryConn();
     },
   };
 
@@ -141,7 +144,7 @@ test('dispatchAfterContactVerified uses urgent path for urgent bookings', async 
 
   const pool = {
     async getConnection() {
-      return { release() {} };
+      return createAdvisoryConn();
     },
   };
 
@@ -225,7 +228,7 @@ test('dispatchAfterContactVerified passes SUV vehicle_type_id into eligibility l
 
   const pool = {
     async getConnection() {
-      return { release() {} };
+      return createAdvisoryConn();
     },
   };
 

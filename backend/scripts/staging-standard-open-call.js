@@ -14,6 +14,7 @@ const {
   assertSafeEnvironment,
   TEST_NAME_PREFIX,
   toPricingPayload,
+  createBookingIdempotencyKey,
 } = require('./staging-booking-regression');
 
 const E2E_MARKER = 'AUTOMATED_STANDARD_OPEN_CALL_E2E';
@@ -389,6 +390,9 @@ async function main() {
 
     const created = await fetchJson(baseUrl, '/api/v1/bookings', {
       method: 'POST',
+      headers: {
+        'Idempotency-Key': createBookingIdempotencyKey(),
+      },
       body: JSON.stringify(payload),
     });
     const createdData = responseData(created);

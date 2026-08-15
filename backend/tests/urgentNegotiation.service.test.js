@@ -1406,3 +1406,72 @@ test('processExpiredNegotiations processes locked and awaiting expired rows', as
   assert.deepEqual(customerProcessed, [101]);
   setRealtimeIo(null);
 });
+
+test('duplicate submitEta after AWAITING_CUSTOMER returns controlled conflict', async () => {
+  const { service, calls } = createSubmitEtaHarness({
+    negotiation: {
+      status: 'AWAITING_CUSTOMER',
+      customer_decision_expires_at: '2099-07-23 01:32:00.000',
+    },
+    attempts: [{
+      id: 1,
+      negotiation_id: 100,
+      attempt_number: 1,
+      driver_id: 7,
+      proposed_eta_minutes: 25,
+      eta_submitted_at: '2099-07-23 01:30:00.000',
+      outcome: 'IN_PROGRESS',
+    }],
+  });
+
+  await assert.rejects(
+    () => service.submitEta(42, BOOKING_NUMBER, 25, { nowMs: SUBMIT_NOW_MS }),
+    (error) => error.errorCode === ERROR_CODES.URGENT_NOT_LOCKED
+      && error.statusCode === HTTP_STATUS.CONFLICT,
+  );
+  assert.equal(calls.attemptUpdates.length, 0);
+});
+
+test('duplicate submitCustomerDecision ACCEPT does not create second assignment', async () => {
+  const { service, calls } = createCustomerDecisionHarness({
+    negotiation: {
+      status: 'CONFIRMED',
+      locked_driver_id: 7,
+      customer_decision_expires_at: '2099-07-23 01:32:00.000',
+    },
+  });
+
+  await assert.rejects(
+    () => service.submitCustomerDecision(
+      BOOKING_NUMBER,
+      'ACCEPT',
+      { authUser: { id: 99, role: 'CUSTOMER' }, nowMs: DECISION_NOW_MS },
+    ),
+    (error) => error.errorCode === ERROR_CODES.URGENT_NEGOTIATION_NOT_AWAITING
+      && error.statusCode === HTTP_STATUS.CONFLICT,
+  );
+  assert.equal(calls.assignments.length, 0);
+});
+
+test('duplicate submitCustomerDecision REJECT does not repeat round transition', async () => {
+  const { service, calls } = createCustomerDecisionHarness({
+    negotiation: {
+      status: 'BROADCASTING',
+      locked_driver_id: null,
+      attempt_count: 1,
+      min_required_eta_minutes: 30,
+      customer_decision_expires_at: '2099-07-23 01:32:00.000',
+    },
+  });
+
+  await assert.rejects(
+    () => service.submitCustomerDecision(
+      BOOKING_NUMBER,
+      'REJECT',
+      { authUser: { id: 99, role: 'CUSTOMER' }, nowMs: DECISION_NOW_MS },
+    ),
+    (error) => error.errorCode === ERROR_CODES.URGENT_NEGOTIATION_NOT_AWAITING
+      && error.statusCode === HTTP_STATUS.CONFLICT,
+  );
+  assert.equal(calls.attemptOutcomes.length, 0);
+});

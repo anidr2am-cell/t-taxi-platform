@@ -5,6 +5,7 @@
  * This script is intentionally gated for live staging. It never prints
  * credentials and only prints generated test booking numbers.
  */
+const crypto = require('node:crypto');
 const REGRESSION_MARKER = 'AUTOMATED_REGRESSION_TEST';
 const EXPECTED_BASE_URL = 'https://trider.taxi';
 const TEST_NAME_PREFIX = '[E2E]';
@@ -77,6 +78,10 @@ function futurePickup(offsetDays = 7) {
   date.setUTCDate(date.getUTCDate() + offsetDays);
   date.setUTCHours(3, 30, 0, 0);
   return date.toISOString();
+}
+
+function createBookingIdempotencyKey() {
+  return crypto.randomUUID();
 }
 
 function scenarios() {
@@ -445,6 +450,9 @@ async function main() {
       });
       const created = await fetchJson(baseUrl, '/api/v1/bookings', {
         method: 'POST',
+        headers: {
+          'Idempotency-Key': createBookingIdempotencyKey(),
+        },
         body: JSON.stringify(item.payload),
       });
       const bookingNumber = created?.data?.bookingNumber;
@@ -562,4 +570,5 @@ module.exports = {
   selectTestDriverCandidate,
   scenarios,
   toPricingPayload,
+  createBookingIdempotencyKey,
 };

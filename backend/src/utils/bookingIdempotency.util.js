@@ -80,6 +80,10 @@ function computeIdempotencyExpiresAt(now = new Date()) {
   return expiresAt;
 }
 
+function isIdempotencyKeyRequired(nodeEnv) {
+  return nodeEnv === 'production' || nodeEnv === 'staging';
+}
+
 module.exports = {
   FINGERPRINT_TOP_LEVEL_FIELDS,
   MAX_IDEMPOTENCY_KEY_LENGTH,
@@ -88,4 +92,5 @@ module.exports = {
   normalizeIdempotencyKey,
   getIdempotencyTtlHours,
   computeIdempotencyExpiresAt,
+  isIdempotencyKeyRequired,
 };

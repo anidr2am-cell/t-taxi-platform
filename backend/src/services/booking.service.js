@@ -26,6 +26,12 @@ const {
   normalizeAirportIata,
 } = require('../constants/thailandAirports.constants');
 const logger = require('../utils/logger');
+const {
+  acquireNamedLock,
+  releaseNamedLock,
+  contactDispatchLockName,
+  DEFAULT_LOCK_TIMEOUT_SECONDS,
+} = require('../utils/mysqlAdvisoryLock');
 
 const TRUST_MESSAGE = 'Keep your booking number. You can check driver assignment and trip status on the booking lookup page.';
 
@@ -506,14 +512,30 @@ class BookingService {
 
   async dispatchAfterContactVerified(bookingRow) {
     if (!bookingRow?.id) return false;
-    if ((bookingRow.contact_status ?? CONTACT_STATUS.VERIFIED) !== CONTACT_STATUS.VERIFIED) {
-      return false;
-    }
 
     const conn = await this.pool.getConnection();
+    const lockName = contactDispatchLockName(bookingRow.id);
+    let lockHeld = false;
+
     try {
+      const acquired = await acquireNamedLock(conn, lockName, DEFAULT_LOCK_TIMEOUT_SECONDS);
+      if (acquired === null) {
+        logger.error('Failed to acquire contact dispatch advisory lock', {
+          bookingId: bookingRow.id,
+          lockName,
+        });
+        return false;
+      }
+      if (!acquired) {
+        return false;
+      }
+      lockHeld = true;
+
       const booking = await this.bookingRepository.findById(bookingRow.id, conn);
       if (!booking || booking.status !== BOOKING_STATUS.OPEN) {
+        return false;
+      }
+      if ((booking.contact_status ?? CONTACT_STATUS.VERIFIED) !== CONTACT_STATUS.VERIFIED) {
         return false;
       }
 
@@ -590,6 +612,17 @@ class BookingService {
       await this.markContactDispatchCompleted(conn, booking.id, fullBooking.metadata);
       return true;
     } finally {
+      if (lockHeld) {
+        try {
+          await releaseNamedLock(conn, lockName);
+        } catch (releaseErr) {
+          logger.warn('Failed to release contact dispatch advisory lock', {
+            bookingId: bookingRow.id,
+            lockName,
+            error: releaseErr?.message,
+          });
+        }
+      }
       conn.release();
     }
   }

@@ -437,6 +437,9 @@ class DriverCallService {
       await conn.commit();
     } catch (err) {
       await conn.rollback();
+      if (err.code === 'ER_DUP_ENTRY') {
+        this.throwAlreadyClaimed();
+      }
       throw err;
     } finally {
       conn.release();
