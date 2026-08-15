@@ -63,6 +63,19 @@ class BookingIdempotencyRepository {
       [idempotencyKey],
     );
   }
+
+  async deleteExpiredBatch(conn, batchSize) {
+    const [result] = await conn.query(
+      `
+        DELETE FROM booking_idempotency_keys
+        WHERE expires_at < UTC_TIMESTAMP()
+        ORDER BY expires_at ASC
+        LIMIT ?
+      `,
+      [batchSize],
+    );
+    return result.affectedRows ?? 0;
+  }
 }
 
 module.exports = BookingIdempotencyRepository;

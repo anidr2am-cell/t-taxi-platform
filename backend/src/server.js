@@ -51,6 +51,7 @@ if (config.swagger.enabled) {
 
   container.get('flightSyncSchedulerService').start();
   container.get('urgentNegotiationSchedulerService').start();
+  container.get('bookingIdempotencyCleanupSchedulerService').start();
 });
 
 function shutdown(signal) {
@@ -64,6 +65,11 @@ function shutdown(signal) {
     container.get('urgentNegotiationSchedulerService').stop();
   } catch (err) {
     logger.warn('Urgent negotiation timeout worker stop failed', { error: err.message });
+  }
+  try {
+    container.get('bookingIdempotencyCleanupSchedulerService').stop();
+  } catch (err) {
+    logger.warn('Booking idempotency cleanup worker stop failed', { error: err.message });
   }
   httpServer.close(() => {
     logger.info('HTTP server closed');

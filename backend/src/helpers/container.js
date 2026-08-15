@@ -66,6 +66,8 @@ const UrgentNegotiationRepository = require("../repositories/urgentNegotiation.r
 const UrgentNegotiationService = require("../services/urgentNegotiation.service");
 const UrgentNegotiationTimeoutWorker = require("../workers/urgentNegotiationTimeout.worker");
 const UrgentNegotiationSchedulerService = require("../services/urgentNegotiationScheduler.service");
+const BookingIdempotencyCleanupWorker = require("../workers/bookingIdempotencyCleanup.worker");
+const BookingIdempotencyCleanupSchedulerService = require("../services/bookingIdempotencyCleanupScheduler.service");
 const SupportInquiryService = require("../services/supportInquiry.service");
 const AdminBookingNoteRepository = require("../repositories/adminBookingNote.repository");
 const BookingNoShowPenaltyRepository = require("../repositories/bookingNoShowPenalty.repository");
@@ -594,6 +596,29 @@ container.register(
         enabled: config.external.urgentNegotiationTimeoutEnabled,
         intervalMs: config.external.urgentNegotiationTimeoutIntervalMs,
         batchSize: config.external.urgentNegotiationTimeoutBatchSize,
+      },
+    ),
+);
+container.register(
+  "bookingIdempotencyCleanupWorker",
+  (c) =>
+    new BookingIdempotencyCleanupWorker({
+      pool: database.pool,
+      bookingIdempotencyRepository: c.get("bookingIdempotencyRepository"),
+      config: {
+        batchSize: config.external.bookingIdempotencyCleanupBatchSize,
+      },
+    }),
+);
+container.register(
+  "bookingIdempotencyCleanupSchedulerService",
+  (c) =>
+    new BookingIdempotencyCleanupSchedulerService(
+      c.get("bookingIdempotencyCleanupWorker"),
+      {
+        enabled: config.external.bookingIdempotencyCleanupEnabled,
+        intervalMs: config.external.bookingIdempotencyCleanupIntervalMs,
+        batchSize: config.external.bookingIdempotencyCleanupBatchSize,
       },
     ),
 );
