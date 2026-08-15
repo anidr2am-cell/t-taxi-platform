@@ -400,4 +400,14 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main };
+module.exports = {
+  main,
+  loadE2eLocalEnv,
+  fetchJson,
+  login,
+  uploadReceipt,
+  pdfBytes,
+  responseData,
+  driveToSettlementPending,
+  REGRESSION_MARKER,
+};

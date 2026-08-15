@@ -54,6 +54,12 @@ test('receipt E2E payload uses accepted regression cleanup marker', () => {
   assert.equal(REGRESSION_MARKER, 'AUTOMATED_REGRESSION_TEST');
 });
 
+test('settlement approval replay E2E payload uses accepted regression cleanup marker', () => {
+  const approvalReplay = require('../scripts/staging-settlement-approval-replay-e2e');
+  assert.equal(approvalReplay.receiptBookingPayload().additionalRequests, REGRESSION_MARKER);
+  assert.equal(approvalReplay.manualBookingPayload().additionalRequests, REGRESSION_MARKER);
+});
+
 test('cleanup refuses non-E2E marker', async () => {
   const record = regressionRecord({ payload: { additionalRequests: 'RECEIPT_IDEMPOTENCY_E2E' } });
   const mock = mockFetch([
