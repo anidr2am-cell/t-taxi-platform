@@ -57,7 +57,6 @@ class PlatformSettingsService {
     return {
       lineQrDescription: values.lineQrDescription || '',
       lineQrImageUrl: settingsAssetUrl('lineQr', values.lineQrImagePath),
-      contactChannels: await this.buildContactChannelsPublic(values),
     };
   }
 

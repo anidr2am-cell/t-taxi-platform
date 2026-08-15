@@ -85,6 +85,34 @@ describe('PlatformSettingsService', () => {
     assert.equal(settings.bankName, undefined);
     assert.equal(settings.accountNumber, undefined);
     assert.equal(settings.promptPayQrImageUrl, undefined);
+    assert.equal(settings.contactChannels, undefined);
+  });
+
+  test('contact channel public settings stay on dedicated endpoint', async () => {
+    const service = new PlatformSettingsService({
+      async findByGroup(groupName) {
+        if (groupName === 'contact_channels') {
+          return [
+            { key_name: 'contactLineEnabled', value: 'true' },
+            { key_name: 'contactLineAddUrl', value: 'https://line.me/R/ti/p/@example' },
+          ];
+        }
+        return [{ key_name: 'lineQrDescription', value: 'LINE 문의 안내' }];
+      },
+      async findByGroupAndKey() {
+        return null;
+      },
+      async upsert() {},
+    });
+
+    const publicSettings = await service.getPublic();
+    const contactChannels = await service.getContactChannelsPublic();
+
+    assert.deepEqual(Object.keys(publicSettings).sort(), ['lineQrDescription', 'lineQrImageUrl']);
+    assert.equal(publicSettings.contactChannels, undefined);
+    assert.equal(contactChannels.channels.length, 1);
+    assert.equal(contactChannels.channels[0].code, 'LINE');
+    assert.equal(contactChannels.channels[0].addUrl, 'https://line.me/R/ti/p/@example');
   });
 
   test('admin settings retain settlement payment fields and image URLs', async () => {
