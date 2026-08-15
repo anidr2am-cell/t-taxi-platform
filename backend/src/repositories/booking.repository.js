@@ -1864,6 +1864,42 @@ class BookingRepository {
     );
   }
 
+  async findSettlementNotificationDriver(conn, bookingId) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
+      `
+        SELECT
+          COALESCE(bda.driver_id, b.driver_id) AS driver_id,
+          d.user_id AS driver_user_id
+        FROM bookings b
+        LEFT JOIN booking_driver_assignments bda ON bda.id = (
+          SELECT bda2.id
+          FROM booking_driver_assignments bda2
+          WHERE bda2.booking_id = b.id
+            AND bda2.deleted_at IS NULL
+          ORDER BY
+            CASE WHEN bda2.status = 'COMPLETED' THEN 0 ELSE 1 END,
+            bda2.is_active DESC,
+            bda2.updated_at DESC,
+            bda2.id DESC
+          LIMIT 1
+        )
+        LEFT JOIN drivers d
+          ON d.id = COALESCE(bda.driver_id, b.driver_id)
+         AND d.deleted_at IS NULL
+        WHERE b.id = ?
+          AND b.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    const row = rows[0];
+    if (!row?.driver_id || !row?.driver_user_id) {
+      return null;
+    }
+    return row;
+  }
+
   async clearAssignmentOnCancel(conn, bookingId, actorUserId, reason = 'CUSTOMER_CANCELLED') {
     const active = await this.findActiveAssignmentForUpdate(conn, bookingId);
     if (active) {

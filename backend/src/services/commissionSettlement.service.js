@@ -1010,17 +1010,7 @@ class CommissionSettlementService {
 
       let outboxId = null;
       if (this.outboxRepository) {
-        const [driverRows] = await conn.query(
-          `
-            SELECT b.driver_id, d.user_id AS driver_user_id
-            FROM bookings b
-            INNER JOIN drivers d ON d.id = b.driver_id
-            WHERE b.id = ? AND b.deleted_at IS NULL
-            LIMIT 1
-          `,
-          [row.id],
-        );
-        const driverRow = driverRows[0];
+        const driverRow = await this.bookingRepository.findSettlementNotificationDriver(conn, row.id);
         if (driverRow?.driver_user_id) {
           outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
             aggregateId: row.id,
@@ -1189,17 +1179,7 @@ class CommissionSettlementService {
       });
 
       if (this.outboxRepository) {
-        const [driverRows] = await conn.query(
-          `
-            SELECT b.driver_id, d.user_id AS driver_user_id
-            FROM bookings b
-            INNER JOIN drivers d ON d.id = b.driver_id
-            WHERE b.id = ? AND b.deleted_at IS NULL
-            LIMIT 1
-          `,
-          [row.id],
-        );
-        const driverRow = driverRows[0];
+        const driverRow = await this.bookingRepository.findSettlementNotificationDriver(conn, row.id);
         if (driverRow?.driver_user_id) {
           outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
             aggregateId: row.id,

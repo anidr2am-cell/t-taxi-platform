@@ -313,15 +313,15 @@ test('manual approval without receipt marks settlement paid and records audit me
         metadata: savedFields.metadata,
       });
     },
+    async findSettlementNotificationDriver() {
+      return { driver_id: 5, driver_user_id: 44 };
+    },
   };
   const conn = {
     async beginTransaction() {},
     async commit() {},
     async rollback() {},
     release() {},
-    async query() {
-      return [[{ driver_id: 5, driver_user_id: 44 }]];
-    },
   };
   const service = new CommissionSettlementService(
     { async getConnection() { return conn; } },

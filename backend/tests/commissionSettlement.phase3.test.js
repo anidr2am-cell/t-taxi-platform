@@ -54,10 +54,18 @@ function cloneMetadata(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function createRowLockHarness(initialRow) {
+function createRowLockHarness(initialRow, options = {}) {
   let row = settlementRow(initialRow);
   let locked = false;
   const waiters = [];
+  const assignmentDriver = {
+    driver_id: Object.hasOwn(options, 'assignmentDriverId')
+      ? options.assignmentDriverId
+      : (row.driver_id ?? 5),
+    driver_user_id: Object.hasOwn(options, 'assignmentDriverUserId')
+      ? options.assignmentDriverUserId
+      : 44,
+  };
   const counts = {
     activityLogs: [],
     outboxEvents: [],
@@ -100,10 +108,7 @@ function createRowLockHarness(initialRow) {
         inTxn = false;
       },
       release() {},
-      async query(_sql, params) {
-        if (params?.[0] === 7 || params?.[0] === row.id) {
-          return [[{ driver_id: row.driver_id, driver_user_id: 44 }]];
-        }
+      async query() {
         return [[], []];
       },
     };
@@ -169,6 +174,13 @@ function createRowLockHarness(initialRow) {
     async driverOwnsSettlementBooking() {
       return true;
     },
+    async findSettlementNotificationDriver(_conn, bookingId) {
+      if (bookingId !== row.id) return null;
+      if (!assignmentDriver.driver_id || !assignmentDriver.driver_user_id) {
+        return null;
+      }
+      return { ...assignmentDriver };
+    },
   };
 
   const outboxRepository = {
@@ -222,6 +234,7 @@ function createRowLockHarness(initialRow) {
     pool,
     bookingStatusService,
     outboxRepository,
+    assignmentDriver,
   };
 }
 
@@ -631,15 +644,15 @@ test('approve post-commit dispatch failure does not rollback committed transacti
     },
     async updateCommissionFields() {},
     async insertActivityLog() {},
+    async findSettlementNotificationDriver() {
+      return { driver_id: 5, driver_user_id: 44 };
+    },
   };
   const conn = {
     async beginTransaction() {},
     async commit() {},
     async rollback() { rolledBack = true; },
     release() {},
-    async query() {
-      return [[{ driver_id: 5, driver_user_id: 44 }]];
-    },
   };
   const service = new CommissionSettlementService(
     { async getConnection() { return conn; } },
@@ -728,4 +741,112 @@ test('activation still proceeds for COMPLETED + PENDING_AFTER_COMPLETION', async
   const counts = harness.getCounts();
   assert.equal(counts.updateCalls, 1);
   assert.equal(counts.activityLogs, 1);
+});
+
+test('receipt approve emits settlement.approved outbox from assignment when bookings.driver_id is null', async () => {
+  const harness = createRowLockHarness(
+    settlementRow({
+      driver_id: null,
+      commission_receipt_file_id: 11,
+      receipt_mime_type: 'application/pdf',
+    }),
+    { assignmentDriverId: 11, assignmentDriverUserId: 15 },
+  );
+
+  await harness.service.approve(BOOKING_NUMBER, ADMIN_A);
+
+  assert.equal(
+    harness.counts.outboxEvents.filter((event) => event.eventType === EVENTS.SETTLEMENT_APPROVED).length,
+    1,
+  );
+  const outbox = harness.counts.outboxEvents[0];
+  assert.equal(outbox.payload.driverId, 11);
+  assert.equal(outbox.payload.driverUserId, 15);
+});
+
+test('receipt approve retry keeps settlement.approved outbox count at 1 when driver_id is null', async () => {
+  const harness = createRowLockHarness(
+    settlementRow({
+      driver_id: null,
+      commission_receipt_file_id: 11,
+      receipt_mime_type: 'application/pdf',
+    }),
+    { assignmentDriverId: 11, assignmentDriverUserId: 15 },
+  );
+
+  await harness.service.approve(BOOKING_NUMBER, ADMIN_A);
+  await harness.service.approve(BOOKING_NUMBER, ADMIN_B);
+
+  assert.equal(
+    harness.counts.outboxEvents.filter((event) => event.eventType === EVENTS.SETTLEMENT_APPROVED).length,
+    1,
+  );
+});
+
+test('manual approve emits settlement.approved outbox from assignment when bookings.driver_id is null', async () => {
+  const harness = createRowLockHarness(
+    settlementRow({
+      driver_id: null,
+      commission_receipt_file_id: null,
+      commission_amount: 200,
+    }),
+    { assignmentDriverId: 11, assignmentDriverUserId: 15 },
+  );
+
+  await harness.service.manualApproveWithoutReceipt(
+    BOOKING_NUMBER,
+    'AUTOMATED_REGRESSION_TEST',
+    ADMIN_A,
+  );
+
+  assert.equal(
+    harness.counts.outboxEvents.filter((event) => event.eventType === EVENTS.SETTLEMENT_APPROVED).length,
+    1,
+  );
+  const outbox = harness.counts.outboxEvents[0];
+  assert.equal(outbox.payload.driverId, 11);
+  assert.equal(outbox.payload.driverUserId, 15);
+  assert.equal(outbox.payload.approvalMode, 'MANUAL_WITHOUT_RECEIPT');
+});
+
+test('manual approve retry keeps settlement.approved outbox count at 1 when driver_id is null', async () => {
+  const harness = createRowLockHarness(
+    settlementRow({
+      driver_id: null,
+      commission_receipt_file_id: null,
+      commission_amount: 200,
+    }),
+    { assignmentDriverId: 11, assignmentDriverUserId: 15 },
+  );
+
+  await harness.service.manualApproveWithoutReceipt(
+    BOOKING_NUMBER,
+    'AUTOMATED_REGRESSION_TEST',
+    ADMIN_A,
+  );
+  await harness.service.manualApproveWithoutReceipt(
+    BOOKING_NUMBER,
+    'AUTOMATED_REGRESSION_TEST',
+    ADMIN_B,
+  );
+
+  assert.equal(
+    harness.counts.outboxEvents.filter((event) => event.eventType === EVENTS.SETTLEMENT_APPROVED).length,
+    1,
+  );
+});
+
+test('null bookings.driver_id with missing assignment driver suppresses outbox', async () => {
+  const harness = createRowLockHarness(
+    settlementRow({
+      driver_id: null,
+      commission_receipt_file_id: 11,
+      receipt_mime_type: 'application/pdf',
+    }),
+    { assignmentDriverId: null, assignmentDriverUserId: null },
+  );
+
+  await harness.service.approve(BOOKING_NUMBER, ADMIN_A);
+
+  assert.equal(harness.counts.outboxEvents.length, 0);
 });

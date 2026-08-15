@@ -178,6 +178,13 @@ function buildMvpHarness(initialState = createLifecycleState()) {
     async findSettlementByBookingNumber(num) {
       return num === state.bookingNumber ? bookingRow(state) : null;
     },
+    async findSettlementNotificationDriver(_c, bookingId) {
+      if (bookingId !== state.bookingId) return null;
+      return {
+        driver_id: state.driverUserId ?? 5,
+        driver_user_id: DRIVER_USER_ID,
+      };
+    },
     async driverOwnsSettlementBooking(driverId, num) {
       return driverId === 5 && num === state.bookingNumber;
     },
