@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../../config/app_config.dart';
@@ -47,11 +46,6 @@ abstract interface class DriverSocketTransport {
 
 typedef DriverSocketTransportFactory =
     DriverSocketTransport Function(String socketUrl, String accessToken);
-
-// TEMP SOCKET DEBUG — remove after M2 STANDARD realtime E2E diagnosis
-void _socketDebug(String message) {
-  debugPrint(message);
-}
 
 class DriverSocketService implements DriverSocketConnection {
   DriverSocketService({
@@ -103,7 +97,6 @@ class DriverSocketService implements DriverSocketConnection {
 
   Future<void> _resumeTransport(DriverSocketTransport transport) async {
     if (!identical(_transport, transport) || transport.connected) return;
-    _socketDebug('[SOCKET DEBUG] reconnect requested');
     transport.connect();
   }
 
@@ -111,7 +104,6 @@ class DriverSocketService implements DriverSocketConnection {
     if (identical(_subscribedTransport, transport)) return;
     transport.emit('driver:calls:subscribe', const <String, dynamic>{});
     _subscribedTransport = transport;
-    _socketDebug('[SOCKET DEBUG] subscribe emitted');
   }
 
   void _clearSubscribeState([DriverSocketTransport? transport]) {
@@ -128,7 +120,6 @@ class DriverSocketService implements DriverSocketConnection {
     _transport = transport;
     transport.onConnect(() {
       if (!identical(_transport, transport)) return;
-      _socketDebug('[SOCKET DEBUG] connected');
       _emitSubscribe(transport);
       if (_hasConnectedBefore) {
         _add(const DriverSocketEvent(DriverSocketEventType.reconnected));
@@ -138,42 +129,20 @@ class DriverSocketService implements DriverSocketConnection {
     transport.on('connect_error', (data) {
       if (!identical(_transport, transport)) return;
       _clearSubscribeState(transport);
-      _socketDebug('[SOCKET DEBUG] connect_error ${data ?? 'unknown'}');
     });
     transport.on('disconnect', (data) {
       if (!identical(_transport, transport)) return;
       _clearSubscribeState(transport);
-      _socketDebug('[SOCKET DEBUG] disconnected reason=${data ?? 'unknown'}');
     });
     transport.on('driver:call:new', (data) {
       if (!identical(_transport, transport)) return;
-      final payload = _payload(data);
-      final bookingNumber = payload['bookingNumber'];
-      if (bookingNumber is String && bookingNumber.isNotEmpty) {
-        _socketDebug(
-          '[SOCKET DEBUG] received driver:call:new bookingNumber=$bookingNumber',
-        );
-      } else {
-        _socketDebug(
-          '[SOCKET DEBUG] received driver:call:new bookingNumber=<missing>',
-        );
-      }
-      _add(DriverSocketEvent(DriverSocketEventType.newCall, payload));
+      _add(DriverSocketEvent(DriverSocketEventType.newCall, _payload(data)));
     });
     transport.on('driver:urgent-call:new', (data) {
       if (!identical(_transport, transport)) return;
-      final payload = _payload(data);
-      final bookingNumber = payload['bookingNumber'];
-      if (bookingNumber is String && bookingNumber.isNotEmpty) {
-        _socketDebug(
-          '[SOCKET DEBUG] received driver:urgent-call:new bookingNumber=$bookingNumber',
-        );
-      } else {
-        _socketDebug(
-          '[SOCKET DEBUG] received driver:urgent-call:new bookingNumber=<missing>',
-        );
-      }
-      _add(DriverSocketEvent(DriverSocketEventType.urgentCallNew, payload));
+      _add(
+        DriverSocketEvent(DriverSocketEventType.urgentCallNew, _payload(data)),
+      );
     });
     _listen(
       transport,

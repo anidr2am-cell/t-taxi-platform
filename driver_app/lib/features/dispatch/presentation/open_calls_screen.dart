@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -119,49 +118,12 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     }
   }
 
-  // TEMP SOCKET DEBUG — remove after M2 STANDARD realtime E2E diagnosis
-  void _socketDebug(String message) {
-    debugPrint(message);
-  }
-
   void _handleSocketEvent(DriverSocketEvent event) {
-    if (event.type == DriverSocketEventType.newCall) {
-      final bookingNumber = _bookingNumber(event.payload) ?? '<missing>';
-      _socketDebug(
-        '[SOCKET DEBUG] handler newCall '
-        'mounted=$mounted '
-        'online=${_status?.online == true} '
-        'foreground=$_foreground '
-        'bookingNumber=$bookingNumber',
-      );
-    }
-    if (event.type == DriverSocketEventType.urgentCallNew) {
-      _socketDebug(
-        '[SOCKET DEBUG] handler urgentCallNew '
-        'mounted=$mounted '
-        'online=${_status?.online == true} '
-        'foreground=$_foreground',
-      );
-    }
-    if (!mounted || _status?.online != true || !_foreground) {
-      if (event.type == DriverSocketEventType.newCall) {
-        _socketDebug('[SOCKET DEBUG] handler newCall skipped by guard');
-      }
-      if (event.type == DriverSocketEventType.urgentCallNew) {
-        _socketDebug('[SOCKET DEBUG] handler urgentCallNew skipped by guard');
-      }
-      return;
-    }
+    if (!mounted || _status?.online != true || !_foreground) return;
     switch (event.type) {
       case DriverSocketEventType.newCall:
-        _socketDebug('[SOCKET DEBUG] refresh open calls from socket');
         setState(() => _showNewCallNotice = true);
-        unawaited(
-          _loadCalls(
-            debugSource: 'socket',
-            targetBookingNumber: _bookingNumber(event.payload),
-          ),
-        );
+        unawaited(_loadCalls());
       case DriverSocketEventType.callClaimed:
       case DriverSocketEventType.callConfirmed:
       case DriverSocketEventType.assignmentReleased:
@@ -169,17 +131,11 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         unawaited(_loadCalls());
       case DriverSocketEventType.urgentCallNew:
         final bookingNumber = _bookingNumber(event.payload);
-        _socketDebug('[SOCKET DEBUG] refresh urgent open calls from socket');
         setState(() {
           if (bookingNumber != null) _hiddenUrgent.remove(bookingNumber);
           _showNewCallNotice = true;
         });
-        unawaited(
-          _loadCalls(
-            debugSource: 'urgent-socket',
-            targetBookingNumber: bookingNumber,
-          ),
-        );
+        unawaited(_loadCalls());
       case DriverSocketEventType.urgentCallLocked:
         final bookingNumber = _bookingNumber(event.payload);
         final lockedDriverId = _intValue(event.payload['lockedDriverId']);
@@ -302,10 +258,7 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
     widget.driverSocket?.disconnect();
   }
 
-  Future<void> _loadCalls({
-    String? debugSource,
-    String? targetBookingNumber,
-  }) async {
+  Future<void> _loadCalls() async {
     if (_status?.online != true) return;
     setState(() {
       _loadingCalls = true;
@@ -318,28 +271,6 @@ class _OpenCallsScreenState extends State<OpenCallsScreen>
         _calls = calls;
         _loadingCalls = false;
       });
-      if (debugSource == 'socket') {
-        final containsTarget = targetBookingNumber != null &&
-            calls.items.any(
-              (call) => call.bookingNumber == targetBookingNumber,
-            );
-        _socketDebug(
-          '[SOCKET DEBUG] open calls refreshed '
-          'count=${calls.items.length} '
-          'containsTarget=${containsTarget ? 'YES' : 'NO'}',
-        );
-      }
-      if (debugSource == 'urgent-socket') {
-        final containsTarget = targetBookingNumber != null &&
-            calls.items.any(
-              (call) => call.bookingNumber == targetBookingNumber,
-            );
-        _socketDebug(
-          '[SOCKET DEBUG] urgent open calls refreshed '
-          'count=${calls.items.length} '
-          'containsTarget=${containsTarget ? 'YES' : 'NO'}',
-        );
-      }
     } on ApiException catch (error) {
       if (error.kind == ApiFailureKind.unauthorized) {
         await widget.onUnauthorized();

@@ -1,5 +1,4 @@
 const ROLES = require('../constants/roles');
-const logger = require('../utils/logger');
 
 let ioInstance = null;
 
@@ -21,35 +20,13 @@ async function joinDriverRooms(socket) {
   const authUser = socket.data.authUser;
   if (!authUser || authUser.role !== ROLES.DRIVER) return false;
   await socket.join(DRIVER_ALL_ROOM);
-  const room = driverUserRoom(authUser.id);
-  await socket.join(room);
-  // TEMP SOCKET DEBUG — remove after M2 STANDARD realtime E2E diagnosis
-  logger.info('[SOCKET DEBUG] subscribe', {
-    userId: authUser.id,
-    room,
-    socketId: socket.id ? String(socket.id).slice(0, 8) : null,
-  });
+  await socket.join(driverUserRoom(authUser.id));
   return true;
 }
 
 function emitDriverCallAvailable(driverUserId, payload) {
-  const room = driverUserRoom(driverUserId);
-  const bookingNumber = payload?.bookingNumber ?? null;
-  // TEMP SOCKET DEBUG — remove after M2 STANDARD realtime E2E diagnosis
-  if (!ioInstance) {
-    logger.info('[SOCKET DEBUG] emit driver:call:new skipped io unavailable', {
-      bookingNumber,
-      targetUserId: driverUserId,
-      room,
-    });
-    return;
-  }
-  logger.info('[SOCKET DEBUG] emit driver:call:new', {
-    bookingNumber,
-    targetUserId: driverUserId,
-    room,
-  });
-  ioInstance.to(room).emit('driver:call:new', payload);
+  if (!ioInstance) return;
+  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:call:new', payload);
 }
 
 function emitDriverCallClaimed(payload) {
@@ -107,22 +84,7 @@ function emitDriverUrgentCallUnlocked(payload) {
 }
 
 function emitDriverUrgentCallNew(payload) {
-  const bookingNumber = payload?.bookingNumber ?? null;
-  const negotiationId = payload?.negotiationId ?? null;
-  // TEMP SOCKET DEBUG — remove after M2 URGENT realtime E2E diagnosis
-  if (!ioInstance) {
-    logger.info('[SOCKET DEBUG] emit driver:urgent-call:new skipped io unavailable', {
-      bookingNumber,
-      negotiationId,
-      room: DRIVER_ALL_ROOM,
-    });
-    return;
-  }
-  logger.info('[SOCKET DEBUG] emit driver:urgent-call:new', {
-    bookingNumber,
-    negotiationId,
-    room: DRIVER_ALL_ROOM,
-  });
+  if (!ioInstance) return;
   ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:new', payload);
 }
 
