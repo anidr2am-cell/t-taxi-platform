@@ -11,13 +11,12 @@ const {
   assertSafeEnvironment,
   toPricingPayload,
   createBookingIdempotencyKey,
-  selectTestDriverCandidate,
-  archiveCreatedRegressionBookings,
 } = require('./staging-booking-regression');
 
 const E2E_MARKER = 'RECEIPT_IDEMPOTENCY_E2E';
 const CUSTOMER_NAME = '[E2E] Settlement Receipt Idempotency';
 const TIMEOUT_MS = Number(process.env.TRIDE_REGRESSION_TIMEOUT_MS || 25000);
+const PREFERRED_CHANNELS = ['LINE', 'WHATSAPP', 'KAKAO'];
 
 function loadE2eLocalEnv() {
   const candidates = [
@@ -161,22 +160,95 @@ function pdfBytes(label) {
   return Buffer.from(`%PDF-1.4\n${label}-${crypto.randomUUID()}\n`, 'utf8');
 }
 
-async function driveToSettlementPending(baseUrl, { adminToken, driverToken, bookingNumber, driverUser }) {
-  const candidates = await fetchJson(
+function guestHeaders(guestAccessToken) {
+  return { 'x-guest-access-token': guestAccessToken };
+}
+
+function pickEnabledContactChannel(channelsPayload) {
+  const channels = Array.isArray(channelsPayload?.channels) ? channelsPayload.channels : [];
+  for (const code of PREFERRED_CHANNELS) {
+    const match = channels.find((row) => row.code === code && row.enabled);
+    if (match) return code;
+  }
+  const fallback = channels.find((row) => row.enabled);
+  if (!fallback) throw new Error('No enabled contact channel');
+  return fallback.code;
+}
+
+async function verifyContactFlow(baseUrl, { bookingNumber, guestAccessToken, adminToken, driverToken }) {
+  const channelsBody = responseData((await fetchJson(baseUrl, '/api/v1/bookings/contact-channels/public')).body);
+  const channel = pickEnabledContactChannel(channelsBody);
+  await fetchJson(baseUrl, `/api/v1/bookings/${bookingNumber}/contact-connections`, {
+    method: 'POST',
+    headers: guestHeaders(guestAccessToken),
+    body: JSON.stringify({ channel }),
+  });
+  await fetchJson(baseUrl, `/api/v1/bookings/${bookingNumber}/contact-connections/confirm-sent`, {
+    method: 'POST',
+    headers: guestHeaders(guestAccessToken),
+  });
+  const verify = await fetchJson(
     baseUrl,
-    `/api/v1/admin/bookings/${bookingNumber}/driver-candidates`,
-    { headers: { authorization: `Bearer ${adminToken}` } },
+    `/api/v1/admin/bookings/${bookingNumber}/contact/verify`,
+    {
+      method: 'POST',
+      headers: { authorization: `Bearer ${adminToken}` },
+    },
   );
-  const candidate = selectTestDriverCandidate(candidates, driverUser);
-  const assign = await fetchJson(baseUrl, `/api/v1/admin/bookings/${bookingNumber}/assign-driver`, {
+  if (!verify.ok) throw new Error(`Admin verify failed: ${verify.body?.error_code}`);
+  if (responseData(verify.body)?.contactStatus !== 'VERIFIED') {
+    throw new Error('Contact not VERIFIED after admin verify');
+  }
+  const openCalls = responseData((await fetchJson(baseUrl, '/api/v1/driver/calls/open', {
+    headers: { authorization: `Bearer ${driverToken}` },
+  })).body);
+  const visible = (openCalls?.items ?? []).some((row) => row.bookingNumber === bookingNumber);
+  if (!visible) throw new Error('Booking not visible in open calls after VERIFIED');
+}
+
+async function claimOpenCall(baseUrl, driverToken, bookingNumber, driverVehicleId) {
+  return fetchJson(baseUrl, `/api/v1/driver/calls/${bookingNumber}/claim`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${driverToken}` },
+    body: JSON.stringify({ driverVehicleId }),
+  });
+}
+
+async function archiveBooking(baseUrl, adminToken, bookingNumber) {
+  return fetchJson(baseUrl, '/api/v1/admin/bookings/archive', {
     method: 'POST',
     headers: { authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({
-      driverId: candidate.driverId,
-      assignmentReason: E2E_MARKER,
-    }),
+    body: JSON.stringify({ bookingNumbers: [bookingNumber], reason: E2E_MARKER }),
   });
-  if (!assign.ok) throw new Error(`Assign driver failed: ${assign.body?.error_code}`);
+}
+
+async function driveToSettlementPending(baseUrl, {
+  adminToken,
+  driverToken,
+  bookingNumber,
+  guestAccessToken,
+}) {
+  await verifyContactFlow(baseUrl, {
+    bookingNumber,
+    guestAccessToken,
+    adminToken,
+    driverToken,
+  });
+
+  const openCalls = responseData((await fetchJson(baseUrl, '/api/v1/driver/calls/open', {
+    headers: { authorization: `Bearer ${driverToken}` },
+  })).body);
+  const openItem = (openCalls?.items ?? []).find((row) => row.bookingNumber === bookingNumber);
+  if (!openItem?.compatibleVehicles?.length) {
+    throw new Error('No compatible vehicle for claim');
+  }
+  const claim = await claimOpenCall(
+    baseUrl,
+    driverToken,
+    bookingNumber,
+    openItem.compatibleVehicles[0].id,
+  );
+  if (!claim.ok) throw new Error(`Claim failed: ${claim.body?.error_code}`);
 
   for (const action of ['start-route', 'arrive', 'mark-picked-up', 'end-trip']) {
     const step = await fetchJson(baseUrl, `/api/v1/driver/bookings/${bookingNumber}/${action}`, {
@@ -217,7 +289,6 @@ async function main() {
     const driverLogin = await login(baseUrl, process.env.TRIDE_TEST_DRIVER_EMAIL, process.env.TRIDE_TEST_DRIVER_PASSWORD);
     adminToken = adminLogin.token;
     driverToken = driverLogin.token;
-    const driverUser = driverLogin.user;
 
     await fetchJson(baseUrl, '/api/v1/driver/online', {
       method: 'POST',
@@ -235,14 +306,15 @@ async function main() {
       body: JSON.stringify(payload),
     });
     if (!created.ok) throw new Error(`Create booking failed: ${created.body?.error_code}`);
-    bookingNumber = responseData(created.body).bookingNumber;
+    const createdData = responseData(created.body);
+    bookingNumber = createdData.bookingNumber;
     report.BOOKING = bookingNumber;
 
     await driveToSettlementPending(baseUrl, {
       adminToken,
       driverToken,
       bookingNumber,
-      driverUser,
+      guestAccessToken: createdData.guestAccessToken,
     });
 
     const firstBytes = pdfBytes('first');
@@ -279,7 +351,7 @@ async function main() {
       throw new Error(`Expected 409 IDEMPOTENCY_KEY_REUSED, got ${conflict.status} ${report.CONFLICT_ERROR}`);
     }
 
-    await archiveCreatedRegressionBookings(baseUrl, adminToken, [{ bookingNumber }]);
+    await archiveBooking(baseUrl, adminToken, bookingNumber);
     console.log(JSON.stringify(report, null, 2));
     console.log('PASS receipt idempotency E2E');
   } catch (err) {
@@ -288,7 +360,7 @@ async function main() {
     process.exitCode = 1;
     if (bookingNumber && adminToken) {
       try {
-        await archiveCreatedRegressionBookings(baseUrl, adminToken, [{ bookingNumber }]);
+        await archiveBooking(baseUrl, adminToken, bookingNumber);
       } catch (cleanupErr) {
         console.error(`Cleanup archive failed: ${cleanupErr.message}`);
       }

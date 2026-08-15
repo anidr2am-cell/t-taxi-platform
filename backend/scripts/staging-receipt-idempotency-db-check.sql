@@ -13,10 +13,10 @@ LEFT JOIN booking_activity_logs al
 LEFT JOIN outbox_events oe
   ON oe.aggregate_id = b.id
  AND oe.event_type = 'RECEIPT_SUBMITTED'
-WHERE b.booking_number = ?
+WHERE b.booking_number = '@BOOKING_NUMBER@'
 GROUP BY b.id, b.booking_number, b.commission_receipt_file_id;
 
 SELECT COUNT(*) AS idempotency_rows
 FROM settlement_receipt_idempotency sri
 INNER JOIN bookings b ON b.id = sri.booking_id
-WHERE b.booking_number = ?;
+WHERE b.booking_number = '@BOOKING_NUMBER@';
