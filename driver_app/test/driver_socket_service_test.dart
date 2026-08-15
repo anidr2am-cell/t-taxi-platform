@@ -40,6 +40,7 @@ void main() {
       expect(received.single.type, DriverSocketEventType.newCall);
       expect(received.single.payload['bookingNumber'], 'TX209912319999');
 
+      transport.simulateDisconnect();
       transport.triggerConnect();
       await Future<void>.delayed(Duration.zero);
       expect(received.last.type, DriverSocketEventType.reconnected);
@@ -146,9 +147,110 @@ void main() {
     expect(received.single.payload['reasonCode'], 'ADMIN_RELEASED');
     await subscription.cancel();
   });
+
+  test('does not create duplicate transport when already connected', () async {
+    var factoryCalls = 0;
+    late _FakeSocketTransport transport;
+    final service = DriverSocketService(
+      config: AppConfig.forEnvironment(AppEnvironment.stg),
+      storage: FakeTokenStorage(const AuthTokens(accessToken: 'socket-jwt')),
+      transportFactory: (_, _) {
+        factoryCalls++;
+        return transport = _FakeSocketTransport();
+      },
+    );
+
+    await service.connect();
+    await service.connect();
+
+    expect(factoryCalls, 1);
+    expect(transport.connectCount, 1);
+    expect(service.isConnected, isTrue);
+  });
+
+  test('reconnects stale disconnected transport without creating a new socket',
+      () async {
+    var factoryCalls = 0;
+    late _FakeSocketTransport transport;
+    final service = DriverSocketService(
+      config: AppConfig.forEnvironment(AppEnvironment.stg),
+      storage: FakeTokenStorage(const AuthTokens(accessToken: 'socket-jwt')),
+      transportFactory: (_, _) {
+        factoryCalls++;
+        return transport = _FakeSocketTransport();
+      },
+    );
+
+    await service.connect();
+    transport.simulateDisconnect();
+    expect(service.isConnected, isFalse);
+
+    await service.connect();
+
+    expect(factoryCalls, 1);
+    expect(transport.connectCount, 2);
+    expect(service.isConnected, isTrue);
+    expect(
+      transport.emitted.where(
+        (event) => event.$1 == 'driver:calls:subscribe',
+      ),
+      hasLength(2),
+    );
+  });
+
+  test('connect succeeds after connect_error on existing transport', () async {
+    late _FakeSocketTransport transport;
+    final service = DriverSocketService(
+      config: AppConfig.forEnvironment(AppEnvironment.stg),
+      storage: FakeTokenStorage(const AuthTokens(accessToken: 'socket-jwt')),
+      transportFactory: (_, _) => transport = _FakeSocketTransport(autoConnect: false),
+    );
+
+    await service.connect();
+    expect(transport.connectCount, 1);
+    expect(service.isConnected, isFalse);
+
+    transport.trigger('connect_error', 'auth failed');
+    await service.connect();
+
+    expect(transport.connectCount, 2);
+    transport.triggerConnect();
+    expect(service.isConnected, isTrue);
+    expect(
+      transport.emitted.where(
+        (event) => event.$1 == 'driver:calls:subscribe',
+      ),
+      hasLength(1),
+    );
+  });
+
+  test('duplicate onConnect on same connection emits subscribe only once', () async {
+    late _FakeSocketTransport transport;
+    final service = DriverSocketService(
+      config: AppConfig.forEnvironment(AppEnvironment.stg),
+      storage: FakeTokenStorage(const AuthTokens(accessToken: 'socket-jwt')),
+      transportFactory: (_, _) => transport = _FakeSocketTransport(),
+    );
+
+    await service.connect();
+    transport.triggerConnect();
+    transport.triggerConnect();
+
+    expect(
+      transport.emitted.where(
+        (event) => event.$1 == 'driver:calls:subscribe',
+      ),
+      hasLength(1),
+    );
+
+    service.disconnect();
+  });
 }
 
 class _FakeSocketTransport implements DriverSocketTransport {
+  _FakeSocketTransport({this.autoConnect = true});
+
+  final bool autoConnect;
   final Map<String, List<void Function(Object?)>> _handlers = {};
   void Function()? _connectHandler;
   int connectCount = 0;
@@ -163,13 +265,20 @@ class _FakeSocketTransport implements DriverSocketTransport {
   @override
   void connect() {
     connectCount++;
-    _connected = true;
-    _connectHandler?.call();
+    if (autoConnect) {
+      _connected = true;
+      _connectHandler?.call();
+    }
   }
 
   void triggerConnect() {
     _connected = true;
     _connectHandler?.call();
+  }
+
+  void simulateDisconnect() {
+    _connected = false;
+    trigger('disconnect', 'transport disconnect');
   }
 
   void trigger(String event, Object? data) {

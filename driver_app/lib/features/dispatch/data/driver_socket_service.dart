@@ -69,6 +69,7 @@ class DriverSocketService implements DriverSocketConnection {
       StreamController<DriverSocketEvent>.broadcast();
 
   DriverSocketTransport? _transport;
+  DriverSocketTransport? _subscribedTransport;
   Future<void>? _connecting;
   bool _hasConnectedBefore = false;
 
@@ -82,12 +83,41 @@ class DriverSocketService implements DriverSocketConnection {
   Future<void> connect() {
     final active = _connecting;
     if (active != null) return active;
-    if (_transport != null) return Future.value();
+
+    final transport = _transport;
+    if (transport != null) {
+      if (transport.connected) return Future.value();
+      final operation = _resumeTransport(transport);
+      _connecting = operation;
+      return operation.whenComplete(() {
+        if (identical(_connecting, operation)) _connecting = null;
+      });
+    }
+
     final operation = _connect();
     _connecting = operation;
     return operation.whenComplete(() {
       if (identical(_connecting, operation)) _connecting = null;
     });
+  }
+
+  Future<void> _resumeTransport(DriverSocketTransport transport) async {
+    if (!identical(_transport, transport) || transport.connected) return;
+    _socketDebug('[SOCKET DEBUG] reconnect requested');
+    transport.connect();
+  }
+
+  void _emitSubscribe(DriverSocketTransport transport) {
+    if (identical(_subscribedTransport, transport)) return;
+    transport.emit('driver:calls:subscribe', const <String, dynamic>{});
+    _subscribedTransport = transport;
+    _socketDebug('[SOCKET DEBUG] subscribe emitted');
+  }
+
+  void _clearSubscribeState([DriverSocketTransport? transport]) {
+    if (transport == null || identical(_subscribedTransport, transport)) {
+      _subscribedTransport = null;
+    }
   }
 
   Future<void> _connect() async {
@@ -99,8 +129,7 @@ class DriverSocketService implements DriverSocketConnection {
     transport.onConnect(() {
       if (!identical(_transport, transport)) return;
       _socketDebug('[SOCKET DEBUG] connected');
-      transport.emit('driver:calls:subscribe', const <String, dynamic>{});
-      _socketDebug('[SOCKET DEBUG] subscribe emitted');
+      _emitSubscribe(transport);
       if (_hasConnectedBefore) {
         _add(const DriverSocketEvent(DriverSocketEventType.reconnected));
       }
@@ -108,10 +137,12 @@ class DriverSocketService implements DriverSocketConnection {
     });
     transport.on('connect_error', (data) {
       if (!identical(_transport, transport)) return;
+      _clearSubscribeState(transport);
       _socketDebug('[SOCKET DEBUG] connect_error ${data ?? 'unknown'}');
     });
     transport.on('disconnect', (data) {
       if (!identical(_transport, transport)) return;
+      _clearSubscribeState(transport);
       _socketDebug('[SOCKET DEBUG] disconnected reason=${data ?? 'unknown'}');
     });
     transport.on('driver:call:new', (data) {
@@ -194,6 +225,7 @@ class DriverSocketService implements DriverSocketConnection {
   void disconnect() {
     final transport = _transport;
     _transport = null;
+    _clearSubscribeState(transport);
     transport
       ?..disconnect()
       ..dispose();
