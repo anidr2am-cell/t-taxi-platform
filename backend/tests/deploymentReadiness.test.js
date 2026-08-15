@@ -209,6 +209,7 @@ test('booking contact connection active guard migration is idempotent and define
   assert.match(sql, /'VERIFIED'/);
   assert.match(sql, /ELSE NULL/);
   assert.match(sql, /uk_bcc_one_active_per_booking/);
+  assert.match(sql, /booking_id, active_connection_guard/);
   assert.match(sql, /duplicate active contact connections exist/);
   assert.match(sql, /information_schema\.COLUMNS/);
   assert.match(sql, /information_schema\.STATISTICS/);

@@ -44,11 +44,11 @@ BEGIN
       AND COLUMN_NAME = 'active_connection_guard'
   ) THEN
     ALTER TABLE booking_contact_connections
-      ADD COLUMN active_connection_guard BIGINT UNSIGNED
+      ADD COLUMN active_connection_guard TINYINT
       GENERATED ALWAYS AS (
         CASE
           WHEN status IN ('PENDING', 'CONFIRM_REQUESTED', 'VERIFIED')
-          THEN booking_id
+          THEN 1
           ELSE NULL
         END
       ) STORED;
@@ -69,7 +69,7 @@ BEGIN
         AND COLUMN_NAME = 'active_connection_guard'
     ) THEN
       ALTER TABLE booking_contact_connections
-        ADD UNIQUE KEY uk_bcc_one_active_per_booking (active_connection_guard);
+        ADD UNIQUE KEY uk_bcc_one_active_per_booking (booking_id, active_connection_guard);
     END IF;
   END IF;
 END$$
