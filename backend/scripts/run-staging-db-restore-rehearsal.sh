@@ -20,9 +20,13 @@ BACKUP_FILE="${1:?backup .sql.gz path required}"
 VERIFY_SQL="${SCRIPT_DIR}/staging-db-restore-rehearsal-verify.sql"
 READINESS_TIMEOUT_SECONDS="${READINESS_TIMEOUT_SECONDS:-120}"
 REHEARSAL_ROOT_PASSWORD=""
+VERIFY_TMP=""
 
 cleanup() {
   local rc=$?
+  if [[ -n "${VERIFY_TMP}" ]]; then
+    rm -f "${VERIFY_TMP}" 2>/dev/null || true
+  fi
   docker rm -f "${REHEARSAL_CONTAINER}" >/dev/null 2>&1 || true
   exit "${rc}"
 }
@@ -94,9 +98,12 @@ if [[ "${ready}" -ne 1 ]]; then
   exit 1
 fi
 
-docker exec "${REHEARSAL_CONTAINER}" sh -lc \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE `'"${REHEARSAL_DB}"'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"' \
-  >/dev/null
+if ! docker exec "${REHEARSAL_CONTAINER}" sh -lc \
+  "mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -e 'CREATE DATABASE ${REHEARSAL_DB} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'"; then
+  echo "RESTORE_REHEARSAL=FAIL"
+  echo "CREATE DATABASE failed" >&2
+  exit 1
+fi
 
 if ! gzip -dc "${BACKUP_FILE}" \
   | sed "s/\`${SOURCE_DB}\`/\`${REHEARSAL_DB}\`/g" \

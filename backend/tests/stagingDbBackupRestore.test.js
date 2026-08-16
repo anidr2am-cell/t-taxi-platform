@@ -194,3 +194,70 @@ test('cleanup still runs on restore failure via EXIT trap', () => {
   assert.ok(trapIndex >= 0);
   assert.ok(failIndex > trapIndex);
 });
+
+test('CREATE DATABASE command uses exact rehearsal DB name without shell backticks', () => {
+  const sql = helpers.buildCreateRehearsalDatabaseSql();
+  const command = helpers.buildCreateRehearsalDatabaseMysqlCommand();
+  assert.equal(
+    sql,
+    'CREATE DATABASE tride_restore_rehearsal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;',
+  );
+  assert.match(command, /CREATE DATABASE tride_restore_rehearsal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;/);
+  assert.doesNotMatch(sql, /CREATE DATABASE  CHARACTER/);
+  assert.equal(helpers.sqlUsesShellBacktickSubstitution(sql), false);
+  assert.equal(helpers.sqlUsesShellBacktickSubstitution(command), false);
+});
+
+test('restore runner CREATE DATABASE avoids nested backtick command substitution', () => {
+  const contents = read(restoreRunner);
+  assert.match(contents, /-e 'CREATE DATABASE \$\{REHEARSAL_DB\} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'/);
+  assert.match(contents, /CREATE DATABASE failed/);
+  assert.doesNotMatch(contents, /CREATE DATABASE `\$\{REHEARSAL_DB\}`/);
+  assert.doesNotMatch(contents, /CREATE DATABASE `'\$\{REHEARSAL_DB\}'`/);
+  assert.doesNotMatch(contents, /CREATE DATABASE  CHARACTER/);
+  assert.doesNotMatch(contents, /\beval\b/);
+});
+
+test('CREATE DATABASE failure exits non-zero and cleanup removes rehearsal container and VERIFY_TMP', () => {
+  const contents = read(restoreRunner);
+  assert.match(contents, /CREATE DATABASE failed/);
+  assert.match(contents, /if ! docker exec "\$\{REHEARSAL_CONTAINER\}" sh -lc/);
+  assert.match(contents, /VERIFY_TMP="\$\(mktemp\)"/);
+  assert.match(contents, /rm -f "\$\{VERIFY_TMP\}"/);
+  const cleanupBlock = contents.slice(contents.indexOf('cleanup()'), contents.indexOf('trap cleanup EXIT') + 20);
+  assert.match(cleanupBlock, /local rc=\$\?/);
+  assert.match(cleanupBlock, /exit "\$\{rc\}"/);
+  assert.match(cleanupBlock, /docker rm -f "\$\{REHEARSAL_CONTAINER\}"/);
+
+  const simulated = helpers.simulateRestoreCleanup(1, {
+    verifyTmp: '/tmp/restore-verify-abc',
+    removeContainer: true,
+  });
+  assert.equal(simulated.exitCode, 1);
+  assert.deepEqual(simulated.actions, [
+    { type: 'remove_verify_tmp', path: '/tmp/restore-verify-abc' },
+    { type: 'remove_container', name: 'tride-restore-rehearsal' },
+  ]);
+});
+
+test('backup dump includes CREATE DATABASE so restore rewrite is required', () => {
+  const backupContents = read(backupRunner);
+  assert.equal(helpers.backupDumpRequiresDatabaseRewrite(backupContents), true);
+  assert.match(read(restoreRunner), /sed "s\/\\`\$\{SOURCE_DB\}\\`\/\\`\$\{REHEARSAL_DB\}\\`\/g"/);
+});
+
+test('restore target remains tride_restore_rehearsal and never tride_staging', () => {
+  const guardContents = read(guards);
+  const restoreContents = read(restoreRunner);
+  assert.match(guardContents, /SOURCE_DB="tride_staging"/);
+  assert.match(guardContents, /REHEARSAL_DB="tride_restore_rehearsal"/);
+  assert.doesNotMatch(restoreContents, /mysql.*tride_staging/);
+  assert.throws(() => helpers.assertRehearsalDbName('tride_staging'), /Unexpected rehearsal DB/);
+});
+
+test('restore runner does not print secrets or use eval', () => {
+  const contents = read(restoreRunner);
+  assert.doesNotMatch(contents, /\beval\b/);
+  assert.doesNotMatch(contents, /echo.*PASSWORD/i);
+  assert.doesNotMatch(contents, /printf.*PASSWORD/i);
+});

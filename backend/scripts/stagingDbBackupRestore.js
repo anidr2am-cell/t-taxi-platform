@@ -112,6 +112,35 @@ function compareManifestCounts(sourceManifest, restoredManifest, keys) {
   return mismatches;
 }
 
+function buildCreateRehearsalDatabaseSql(rehearsalDb = REHEARSAL_DB) {
+  assertRehearsalDbName(rehearsalDb);
+  return `CREATE DATABASE ${rehearsalDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`;
+}
+
+function buildCreateRehearsalDatabaseMysqlCommand(rehearsalDb = REHEARSAL_DB) {
+  const sql = buildCreateRehearsalDatabaseSql(rehearsalDb);
+  return `mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e '${sql}'`;
+}
+
+function sqlUsesShellBacktickSubstitution(value) {
+  return /`/.test(String(value || ''));
+}
+
+function backupDumpRequiresDatabaseRewrite(backupScriptContent) {
+  return !/--no-create-db/.test(String(backupScriptContent || ''));
+}
+
+function simulateRestoreCleanup(exitCode, state = {}) {
+  const actions = [];
+  if (state.verifyTmp) {
+    actions.push({ type: 'remove_verify_tmp', path: state.verifyTmp });
+  }
+  if (state.removeContainer) {
+    actions.push({ type: 'remove_container', name: REHEARSAL_CONTAINER });
+  }
+  return { exitCode, actions };
+}
+
 module.exports = {
   APPROVED_BACKUP_ROOT,
   APPROVED_SOURCE_DB,
@@ -128,4 +157,9 @@ module.exports = {
   manifestContainsForbiddenSecrets,
   manifestContainsPiiKeys,
   compareManifestCounts,
+  buildCreateRehearsalDatabaseSql,
+  buildCreateRehearsalDatabaseMysqlCommand,
+  sqlUsesShellBacktickSubstitution,
+  backupDumpRequiresDatabaseRewrite,
+  simulateRestoreCleanup,
 };
