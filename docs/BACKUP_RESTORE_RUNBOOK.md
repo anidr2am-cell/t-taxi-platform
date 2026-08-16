@@ -131,7 +131,7 @@ Local pruning is **never** allowed when remote copy is disabled or failed.
 Copy the example file on the server:
 
 ```bash
-cp /opt/t-ride/deploy/docker/.env.backup.example /opt/t-ride/.env.backup
+cp /opt/t-ride/deploy/env.backup.example /opt/t-ride/.env.backup
 ```
 
 Configure rclone on the host separately. The repository stores only:
