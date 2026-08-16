@@ -12,6 +12,7 @@ const {
   toPricingPayload,
   createBookingIdempotencyKey,
   TEST_NAME_PREFIX,
+  REGRESSION_MARKER,
 } = require('./staging-booking-regression');
 const {
   cleanupRegressionBookings,
@@ -96,7 +97,7 @@ function bookingPayload() {
       email: 'contact-dispatch-durable-e2e@example.com',
       countryCode: 'TH',
     },
-    additionalRequests: E2E_MARKER,
+    additionalRequests: REGRESSION_MARKER,
   };
 }
 
@@ -249,6 +250,7 @@ async function main() {
       throw new Error('Booking not visible in open calls after contact dispatch');
     }
 
+    console.log(`CONTACT_DISPATCH_E2E_BOOKING=${bookingNumber}`);
     console.log(JSON.stringify({ ok: true, report }, null, 2));
   } finally {
     if (report.BOOKING && adminToken && driverToken) {
@@ -265,7 +267,15 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  E2E_MARKER,
+  CUSTOMER_NAME,
+  bookingPayload,
+};

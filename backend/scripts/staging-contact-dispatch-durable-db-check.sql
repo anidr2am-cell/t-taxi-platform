@@ -37,3 +37,21 @@ FROM (
   GROUP BY n.idempotency_key
   HAVING COUNT(*) > 1
 ) dup;
+
+SELECT COUNT(*) AS active_assignment_count
+FROM booking_driver_assignments bda
+JOIN bookings b ON b.id = bda.booking_id
+WHERE b.booking_number = '@BOOKING_NUMBER@'
+  AND bda.is_active = 1;
+
+SELECT
+  n.recipient_driver_id,
+  n.idempotency_key,
+  COUNT(*) AS notification_row_count
+FROM notifications n
+JOIN bookings b ON b.id = n.booking_id
+WHERE b.booking_number = '@BOOKING_NUMBER@'
+  AND n.deleted_at IS NULL
+  AND n.type = 'DRIVER_CALL_AVAILABLE'
+GROUP BY n.recipient_driver_id, n.idempotency_key
+ORDER BY n.recipient_driver_id, n.idempotency_key;
