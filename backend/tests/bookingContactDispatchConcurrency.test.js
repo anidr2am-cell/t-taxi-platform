@@ -92,7 +92,8 @@ function createDispatchHarness(overrides = {}) {
   service.parseBookingMetadata = BookingService.prototype.parseBookingMetadata;
   service.isContactDispatchCompleted = BookingService.prototype.isContactDispatchCompleted;
   service.markContactDispatchCompleted = BookingService.prototype.markContactDispatchCompleted;
-  service.dispatchOpenCallNotifications = async () => {
+  service.markContactDispatchDelivered = BookingService.prototype.markContactDispatchDelivered;
+  service.persistOpenCallNotificationsTx = async () => {
     if (overrides.dispatchDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, overrides.dispatchDelayMs));
     }
@@ -100,8 +101,10 @@ function createDispatchHarness(overrides = {}) {
       throw overrides.dispatchThrows;
     }
     notificationCount += 1;
+    return [{ notificationId: 1, created: true, driver: { id: 1, user_id: 2 } }];
   };
-  service.dispatchUrgentCallNotifications = async () => {};
+  service.persistUrgentCallNotificationsTx = async () => [];
+  service.dispatchContactDispatchPostCommit = async () => {};
 
   return {
     service,
@@ -126,8 +129,9 @@ test('concurrent dispatchAfterContactVerified runs side effects once', async () 
   const results = [first, second].sort();
   assert.deepEqual(results, [false, true]);
   assert.equal(harness.getNotificationCount(), 1);
-  assert.equal(harness.metadataUpdates.length, 1);
+  assert.equal(harness.metadataUpdates.length, 2);
   assert.equal(harness.metadataUpdates[0].metadata.contactDispatchCompleted, true);
+  assert.equal(harness.metadataUpdates[1].metadata.contactDispatchDelivered, true);
 });
 
 test('dispatchAfterContactVerified keeps marker absent when side effects fail', async () => {
@@ -150,9 +154,9 @@ test('dispatchAfterContactVerified keeps marker absent when side effects fail', 
   assert.equal(retry.getNotificationCount(), 1);
 });
 
-test('dispatchAfterContactVerified skips side effects when marker already completed', async () => {
+test('dispatchAfterContactVerified skips side effects when durable and delivery markers are complete', async () => {
   const harness = createDispatchHarness({
-    metadata: { contactDispatchCompleted: true },
+    metadata: { contactDispatchCompleted: true, contactDispatchDelivered: true },
   });
 
   const dispatched = await harness.service.dispatchAfterContactVerified(harness.bookingRow);

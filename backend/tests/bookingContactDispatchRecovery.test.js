@@ -94,19 +94,23 @@ test('dispatchAfterContactVerified marks metadata and skips duplicate dispatch',
   service.parseBookingMetadata = BookingService.prototype.parseBookingMetadata;
   service.isContactDispatchCompleted = BookingService.prototype.isContactDispatchCompleted;
   service.markContactDispatchCompleted = BookingService.prototype.markContactDispatchCompleted;
+  service.markContactDispatchDelivered = BookingService.prototype.markContactDispatchDelivered;
   let notificationCount = 0;
-  service.dispatchOpenCallNotifications = async () => {
+  service.persistOpenCallNotificationsTx = async () => {
     notificationCount += 1;
+    return [{ notificationId: 1, created: true, driver: { id: 1, user_id: 2 } }];
   };
-  service.dispatchUrgentCallNotifications = async () => {};
+  service.persistUrgentCallNotificationsTx = async () => [];
+  service.dispatchContactDispatchPostCommit = async () => {};
 
   const first = await service.dispatchAfterContactVerified(bookingRow);
   const second = await service.dispatchAfterContactVerified(bookingRow);
 
   assert.equal(first, true);
   assert.equal(second, false);
-  assert.equal(metadataUpdates.length, 1);
+  assert.equal(metadataUpdates.length, 2);
   assert.equal(metadataUpdates[0].metadata.contactDispatchCompleted, true);
+  assert.equal(metadataUpdates[1].metadata.contactDispatchDelivered, true);
   assert.equal(notificationCount, 1);
 });
 
@@ -128,6 +132,17 @@ test('needsContactDispatchRetry is true for verified open booking without dispat
       contact_status: CONTACT_STATUS.VERIFIED,
       status: BOOKING_STATUS.OPEN,
       metadata: JSON.stringify({ contactDispatchCompleted: true }),
+    }),
+    true,
+  );
+  assert.equal(
+    service.needsContactDispatchRetry({
+      contact_status: CONTACT_STATUS.VERIFIED,
+      status: BOOKING_STATUS.OPEN,
+      metadata: JSON.stringify({
+        contactDispatchCompleted: true,
+        contactDispatchDelivered: true,
+      }),
     }),
     false,
   );
@@ -203,12 +218,16 @@ test('dispatchAfterContactVerified uses urgent path for urgent bookings', async 
   service.getEligibleDriversForOpenBooking = async () => [{ id: 1, user_id: 2 }];
   let urgentNotificationCount = 0;
   let openCallNotificationCount = 0;
-  service.dispatchUrgentCallNotifications = async () => {
+  service.persistUrgentCallNotificationsTx = async () => {
     urgentNotificationCount += 1;
+    return [{ notificationId: 1, created: true, driver: { id: 1, user_id: 2 } }];
   };
-  service.dispatchOpenCallNotifications = async () => {
+  service.persistOpenCallNotificationsTx = async () => {
     openCallNotificationCount += 1;
+    return [];
   };
+  service.dispatchContactDispatchPostCommit = async () => {};
+  service.markContactDispatchDelivered = BookingService.prototype.markContactDispatchDelivered;
 
   const dispatched = await service.dispatchAfterContactVerified(bookingRow);
 
@@ -216,6 +235,7 @@ test('dispatchAfterContactVerified uses urgent path for urgent bookings', async 
   assert.equal(urgentNotificationCount, 1);
   assert.equal(openCallNotificationCount, 0);
   assert.equal(metadataUpdates[0].metadata.contactDispatchCompleted, true);
+  assert.equal(metadataUpdates[1].metadata.contactDispatchDelivered, true);
 });
 
 test('dispatchAfterContactVerified passes SUV vehicle_type_id into eligibility lookup', async () => {
@@ -303,7 +323,9 @@ test('dispatchAfterContactVerified passes SUV vehicle_type_id into eligibility l
   service.parseBookingMetadata = BookingService.prototype.parseBookingMetadata;
   service.isContactDispatchCompleted = BookingService.prototype.isContactDispatchCompleted;
   service.markContactDispatchCompleted = BookingService.prototype.markContactDispatchCompleted;
-  service.dispatchOpenCallNotifications = async () => {};
+  service.markContactDispatchDelivered = BookingService.prototype.markContactDispatchDelivered;
+  service.persistOpenCallNotificationsTx = async () => [];
+  service.dispatchContactDispatchPostCommit = async () => {};
 
   const dispatched = await service.dispatchAfterContactVerified(bookingRow);
 

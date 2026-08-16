@@ -571,68 +571,117 @@ class NotificationService {
   }
 
   async _persistNotificationIdempotent(spec, options = {}) {
+    const conn = await this.pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+      const result = await this.persistDirectNotificationTx(conn, spec, options);
+      await conn.commit();
+      return result;
+    } catch (err) {
+      await conn.rollback();
+      if (err.code === 'ER_DUP_ENTRY') {
+        const idempotencyKey = spec.idempotencyKey
+          ?? this.buildIdempotencyKey(
+            spec.eventId,
+            spec.notificationType,
+            this.buildRecipientKey(spec),
+          );
+        const row = await this.notificationRepository.findByIdempotencyKey(null, idempotencyKey);
+        return { notificationId: row?.id, created: false, idempotencyKey };
+      }
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async persistDirectNotificationTx(conn, spec, options = {}) {
     const recipientKey = this.buildRecipientKey(spec);
     const idempotencyKey = spec.idempotencyKey
       ?? this.buildIdempotencyKey(spec.eventId, spec.notificationType, recipientKey);
     const content = options.contentOverride
       ?? this.resolveContent(spec.notificationType, spec.payload?.bookingNumber);
 
-    const conn = await this.pool.getConnection();
-    let notificationId;
-    let created = false;
-
-    try {
-      await conn.beginTransaction();
-      const existing = await this.notificationRepository.findByIdempotencyKey(conn, idempotencyKey);
-      if (existing) {
-        notificationId = existing.id;
-      } else {
-        notificationId = await this.notificationRepository.insert(conn, {
-          recipientType: spec.recipientType,
-          userId: spec.userId ?? null,
-          recipientDriverId: spec.recipientDriverId ?? null,
-          bookingId: spec.bookingId ?? null,
-          audienceRole: spec.audienceRole ?? null,
-          eventId: spec.eventId,
-          eventName: spec.eventName,
-          idempotencyKey,
-          notificationType: spec.notificationType,
-          title: content.title,
-          body: content.body,
-          payload: spec.payload,
-        });
-        created = true;
-
-        for (const channel of Object.values(NOTIFICATION_CHANNELS)) {
-          const existingDelivery = await this.notificationRepository.findDeliveryByNotificationAndChannel(
-            notificationId,
-            channel,
-            conn,
-          );
-          if (!existingDelivery) {
-            await this.notificationRepository.insertDelivery(conn, {
-              notificationId,
-              channel,
-              deliveryStatus: DELIVERY_STATUS.PENDING,
-            });
-          }
-        }
-      }
-
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      if (err.code === 'ER_DUP_ENTRY') {
-        const row = await this.notificationRepository.findByIdempotencyKey(null, idempotencyKey);
-        notificationId = row?.id;
-      } else {
-        throw err;
-      }
-    } finally {
-      conn.release();
+    const existing = await this.notificationRepository.findByIdempotencyKey(conn, idempotencyKey);
+    if (existing) {
+      return { notificationId: existing.id, created: false, idempotencyKey };
     }
 
-    return { notificationId, created };
+    let notificationId;
+    try {
+      notificationId = await this.notificationRepository.insert(conn, {
+        recipientType: spec.recipientType,
+        userId: spec.userId ?? null,
+        recipientDriverId: spec.recipientDriverId ?? null,
+        bookingId: spec.bookingId ?? null,
+        audienceRole: spec.audienceRole ?? null,
+        eventId: spec.eventId,
+        eventName: spec.eventName,
+        idempotencyKey,
+        notificationType: spec.notificationType,
+        title: content.title,
+        body: content.body,
+        payload: spec.payload,
+      });
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        const row = await this.notificationRepository.findByIdempotencyKey(conn, idempotencyKey);
+        return { notificationId: row?.id, created: false, idempotencyKey };
+      }
+      throw err;
+    }
+
+    for (const channel of Object.values(NOTIFICATION_CHANNELS)) {
+      const existingDelivery = await this.notificationRepository.findDeliveryByNotificationAndChannel(
+        notificationId,
+        channel,
+        conn,
+      );
+      if (!existingDelivery) {
+        await this.notificationRepository.insertDelivery(conn, {
+          notificationId,
+          channel,
+          deliveryStatus: DELIVERY_STATUS.PENDING,
+        });
+      }
+    }
+
+    return { notificationId, created: true, idempotencyKey };
+  }
+
+  buildDirectNotificationSpec({
+    recipientUserId,
+    recipientDriverId = null,
+    bookingId = null,
+    notificationType,
+    payload = {},
+    idempotencyKey = null,
+    eventId = null,
+    eventName = null,
+    audienceRole = ROLES.DRIVER,
+  }) {
+    return {
+      eventId: eventId ?? randomUUID(),
+      eventName: eventName ?? `direct.${String(notificationType).toLowerCase()}`,
+      notificationType,
+      recipientType: RECIPIENT_TYPES.USER,
+      userId: recipientUserId,
+      recipientDriverId,
+      bookingId,
+      audienceRole,
+      payload: this.sanitizePayload(payload),
+      idempotencyKey,
+    };
+  }
+
+  async processDeliveriesForIdempotencyKey(idempotencyKey) {
+    const existing = await this.notificationRepository.findByIdempotencyKey(null, idempotencyKey);
+    if (!existing?.id) {
+      return false;
+    }
+    await this.processDeliveries(existing.id);
+    return true;
   }
 
   async processDeliveries(notificationId) {

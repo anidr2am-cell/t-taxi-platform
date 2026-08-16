@@ -247,6 +247,175 @@ class BookingService {
     }
   }
 
+  async persistOpenCallNotificationsTx(conn, {
+    drivers,
+    bookingId,
+    bookingNumber,
+    openCallPayload,
+    idempotencyKeyPrefix = 'driver-call-open',
+  }) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !drivers.length) {
+      return [];
+    }
+
+    const payload = this.buildDriverNotificationPayload(
+      bookingNumber,
+      openCallPayload,
+      'open_calls',
+    );
+    const persisted = [];
+    for (const driver of drivers) {
+      try {
+        const result = await notificationService.persistDirectNotificationTx(
+          conn,
+          notificationService.buildDirectNotificationSpec({
+            recipientUserId: driver.user_id,
+            recipientDriverId: driver.id,
+            bookingId,
+            notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+            payload,
+            idempotencyKey: `${idempotencyKeyPrefix}:${bookingId}:${driver.id}`,
+            eventName: 'driver.call.available',
+          }),
+        );
+        persisted.push({ ...result, driver });
+      } catch (err) {
+        logger.warn('Open call notification persist failed', {
+          bookingId,
+          driverId: driver.id,
+          error: err.message,
+        });
+        throw err;
+      }
+    }
+    return persisted;
+  }
+
+  async persistUrgentCallNotificationsTx(conn, {
+    drivers,
+    bookingId,
+    bookingNumber,
+    urgentPayload,
+    idempotencyKeyPrefix = 'driver-urgent-call-new',
+  }) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !drivers.length) {
+      return [];
+    }
+
+    const payload = this.buildDriverNotificationPayload(
+      bookingNumber,
+      urgentPayload,
+      'urgent_calls',
+    );
+    const persisted = [];
+    for (const driver of drivers) {
+      try {
+        const result = await notificationService.persistDirectNotificationTx(
+          conn,
+          notificationService.buildDirectNotificationSpec({
+            recipientUserId: driver.user_id,
+            recipientDriverId: driver.id,
+            bookingId,
+            notificationType: NOTIFICATION_TYPES.DRIVER_URGENT_CALL_NEW,
+            payload,
+            idempotencyKey: `${idempotencyKeyPrefix}:${bookingId}:${driver.id}`,
+            eventName: 'driver.urgent-call.new',
+          }),
+        );
+        persisted.push({ ...result, driver });
+      } catch (err) {
+        logger.warn('Urgent call notification persist failed', {
+          bookingId,
+          driverId: driver.id,
+          error: err.message,
+        });
+        throw err;
+      }
+    }
+    return persisted;
+  }
+
+  async deliverPersistedContactNotifications(persistedNotifications) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !persistedNotifications.length) {
+      return;
+    }
+
+    for (const item of persistedNotifications) {
+      if (!item.notificationId || !item.created) {
+        continue;
+      }
+      try {
+        await notificationService.processDeliveries(item.notificationId);
+      } catch (err) {
+        logger.warn('Contact dispatch notification delivery failed', {
+          notificationId: item.notificationId,
+          driverId: item.driver?.id,
+          error: err.message,
+        });
+      }
+    }
+  }
+
+  async redeliverContactDispatchNotifications({
+    drivers,
+    bookingId,
+    isUrgent,
+    idempotencyKeyPrefix = null,
+  }) {
+    const notificationService = this.getNotificationService();
+    if (!notificationService || !drivers.length) {
+      return;
+    }
+
+    const prefix = idempotencyKeyPrefix
+      ?? (isUrgent ? 'driver-urgent-call-new' : 'driver-call-open');
+    for (const driver of drivers) {
+      try {
+        await notificationService.processDeliveriesForIdempotencyKey(
+          `${prefix}:${bookingId}:${driver.id}`,
+        );
+      } catch (err) {
+        logger.warn('Contact dispatch notification redelivery failed', {
+          bookingId,
+          driverId: driver.id,
+          error: err.message,
+        });
+      }
+    }
+  }
+
+  async dispatchContactDispatchPostCommit({
+    bookingId,
+    isUrgent,
+    eligibleDrivers,
+    openCallPayload,
+    urgentPayload,
+    openCallTargets,
+    persistedNotifications,
+    durableStateCommitted,
+  }) {
+    if (isUrgent) {
+      emitDriverUrgentCallNew(urgentPayload);
+    } else {
+      for (const target of openCallTargets) {
+        emitDriverCallAvailable(target.userId, openCallPayload);
+      }
+    }
+
+    if (durableStateCommitted) {
+      await this.deliverPersistedContactNotifications(persistedNotifications);
+    } else {
+      await this.redeliverContactDispatchNotifications({
+        drivers: eligibleDrivers,
+        bookingId,
+        isUrgent,
+      });
+    }
+  }
+
   async notifyEligibleDriversForOpenBooking(conn, {
     vehicleTypeId,
     scheduledPickupAt = null,
@@ -357,6 +526,10 @@ class BookingService {
     return this.parseBookingMetadata(metadata).contactDispatchCompleted === true;
   }
 
+  isContactDispatchDelivered(metadata) {
+    return this.parseBookingMetadata(metadata).contactDispatchDelivered === true;
+  }
+
   needsContactDispatchRetry(bookingRow) {
     if (!isContactConnectionRequired()) return false;
     if ((bookingRow?.contact_status ?? CONTACT_STATUS.VERIFIED) !== CONTACT_STATUS.VERIFIED) {
@@ -365,12 +538,22 @@ class BookingService {
     if (bookingRow?.status !== BOOKING_STATUS.OPEN) {
       return false;
     }
-    return !this.isContactDispatchCompleted(bookingRow.metadata);
+    const metadata = this.parseBookingMetadata(bookingRow.metadata);
+    if (metadata.contactDispatchCompleted !== true) {
+      return true;
+    }
+    return metadata.contactDispatchDelivered !== true;
   }
 
   async markContactDispatchCompleted(conn, bookingId, existingMetadata) {
     const metadata = this.parseBookingMetadata(existingMetadata);
     metadata.contactDispatchCompleted = true;
+    await this.bookingRepository.updateCommissionFields(conn, bookingId, { metadata });
+  }
+
+  async markContactDispatchDelivered(conn, bookingId, existingMetadata) {
+    const metadata = this.parseBookingMetadata(existingMetadata);
+    metadata.contactDispatchDelivered = true;
     await this.bookingRepository.updateCommissionFields(conn, bookingId, { metadata });
   }
 
@@ -516,6 +699,7 @@ class BookingService {
     const conn = await this.pool.getConnection();
     const lockName = contactDispatchLockName(bookingRow.id);
     let lockHeld = false;
+    let transactionStarted = false;
 
     try {
       const acquired = await acquireNamedLock(conn, lockName, DEFAULT_LOCK_TIMEOUT_SECONDS);
@@ -547,7 +731,10 @@ class BookingService {
         return false;
       }
 
-      if (this.isContactDispatchCompleted(fullBooking.metadata)) {
+      const dispatchMetadata = this.parseBookingMetadata(fullBooking.metadata);
+      const durableStateCommitted = dispatchMetadata.contactDispatchCompleted === true;
+      const deliveryCompleted = dispatchMetadata.contactDispatchDelivered === true;
+      if (durableStateCommitted && deliveryCompleted) {
         return false;
       }
 
@@ -582,35 +769,94 @@ class BookingService {
         },
       });
 
-      if (fullBooking.is_urgent_request) {
-        const urgentPayload = {
+      const isUrgent = Boolean(fullBooking.is_urgent_request);
+      const urgentPayload = isUrgent
+        ? {
           bookingNumber: fullBooking.booking_number,
           negotiationId: fullBooking.urgent_negotiation_id,
           attemptCount: 0,
           minRequiredEtaMinutes: fullBooking.urgent_min_required_eta_minutes ?? null,
-        };
-        emitDriverUrgentCallNew(urgentPayload);
-        await this.dispatchUrgentCallNotifications({
-          drivers: eligibleDrivers,
-          bookingId: booking.id,
-          bookingNumber: fullBooking.booking_number,
-          urgentPayload,
-        });
-      } else {
-        const openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
-        await this.dispatchOpenCallNotifications({
-          drivers: eligibleDrivers,
-          bookingId: booking.id,
-          bookingNumber: fullBooking.booking_number,
-          openCallPayload,
-        });
-        for (const target of openCallTargets) {
-          emitDriverCallAvailable(target.userId, openCallPayload);
         }
+        : null;
+      const openCallTargets = isUrgent
+        ? []
+        : this.mapEligibleDriversToTargets(eligibleDrivers);
+
+      let persistedNotifications = [];
+      await conn.beginTransaction();
+      transactionStarted = true;
+
+      if (!durableStateCommitted) {
+        if (isUrgent) {
+          persistedNotifications = await this.persistUrgentCallNotificationsTx(conn, {
+            drivers: eligibleDrivers,
+            bookingId: booking.id,
+            bookingNumber: fullBooking.booking_number,
+            urgentPayload,
+          });
+        } else {
+          persistedNotifications = await this.persistOpenCallNotificationsTx(conn, {
+            drivers: eligibleDrivers,
+            bookingId: booking.id,
+            bookingNumber: fullBooking.booking_number,
+            openCallPayload,
+          });
+        }
+        await this.markContactDispatchCompleted(conn, booking.id, fullBooking.metadata);
       }
 
-      await this.markContactDispatchCompleted(conn, booking.id, fullBooking.metadata);
+      await conn.commit();
+      transactionStarted = false;
+
+      try {
+        await this.dispatchContactDispatchPostCommit({
+          bookingId: booking.id,
+          isUrgent,
+          eligibleDrivers,
+          openCallPayload,
+          urgentPayload,
+          openCallTargets,
+          persistedNotifications,
+          durableStateCommitted,
+        });
+
+        const deliveryConn = await this.pool.getConnection();
+        try {
+          await deliveryConn.beginTransaction();
+          const refreshedBooking = await this.bookingRepository.findById(booking.id, deliveryConn);
+          await this.markContactDispatchDelivered(
+            deliveryConn,
+            booking.id,
+            refreshedBooking?.metadata ?? fullBooking.metadata,
+          );
+          await deliveryConn.commit();
+        } catch (deliveryMarkerErr) {
+          await deliveryConn.rollback();
+          logger.warn('Failed to mark contact dispatch delivered', {
+            bookingId: booking.id,
+            error: deliveryMarkerErr?.message,
+          });
+        } finally {
+          deliveryConn.release();
+        }
+      } catch (postCommitErr) {
+        logger.warn('Contact dispatch post-commit delivery failed', {
+          bookingId: booking.id,
+          error: postCommitErr?.message,
+        });
+        return durableStateCommitted || persistedNotifications.length > 0;
+      }
+
       return true;
+    } catch (err) {
+      if (transactionStarted) {
+        try {
+          await conn.rollback();
+        } catch (_) {
+          // ignore rollback failure
+        }
+      }
+      throw err;
     } finally {
       if (lockHeld) {
         try {

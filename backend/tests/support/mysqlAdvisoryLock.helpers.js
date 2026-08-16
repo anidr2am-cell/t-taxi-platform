@@ -1,10 +1,25 @@
+function attachTransactionMethods(conn) {
+  let inTransaction = false;
+  conn.beginTransaction = async () => {
+    inTransaction = true;
+  };
+  conn.commit = async () => {
+    inTransaction = false;
+  };
+  conn.rollback = async () => {
+    inTransaction = false;
+  };
+  conn.isInTransaction = () => inTransaction;
+  return conn;
+}
+
 function createLockState() {
   const held = new Set();
   return {
     held,
     createConn() {
       const state = this;
-      return {
+      return attachTransactionMethods({
         released: false,
         async query(sql, params) {
           if (sql.includes('GET_LOCK')) {
@@ -24,7 +39,7 @@ function createLockState() {
         release() {
           this.released = true;
         },
-      };
+      });
     },
   };
 }
@@ -33,7 +48,7 @@ function createSerializedLockState() {
   let heldName = null;
   return {
     createConn() {
-      return {
+      return attachTransactionMethods({
         released: false,
         async query(sql, params) {
           if (sql.includes('GET_LOCK')) {
@@ -63,7 +78,7 @@ function createSerializedLockState() {
         release() {
           this.released = true;
         },
-      };
+      });
     },
   };
 }
