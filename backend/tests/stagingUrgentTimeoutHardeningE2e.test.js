@@ -63,4 +63,9 @@ test('staging timeout hardening runner removes copied E2E env on EXIT', () => {
   assert.match(contents, /local rc=\$\?/);
   assert.match(contents, /exit "\$rc"/);
   assert.doesNotMatch(contents, /^docker exec tride-backend rm -f \/srv\/tride\/\.env\.e2e\.local$/m);
+  assert.doesNotMatch(contents, /URGENT_NEGOTIATION_TIMEOUT_ENABLED=/);
+  assert.doesNotMatch(contents, /URGENT_NEGOTIATION_TIMEOUT_INTERVAL_MS=/);
+  assert.doesNotMatch(contents, /URGENT_NEGOTIATION_TIMEOUT_BATCH_SIZE=/);
+  assert.doesNotMatch(contents, /echo.*PASSWORD/i);
+  assert.doesNotMatch(contents, /printf.*PASSWORD/i);
 });

@@ -51,9 +51,6 @@ docker exec \
   -e TRIDE_TEST_DRIVER_EMAIL="${TRIDE_TEST_DRIVER_EMAIL}" \
   -e TRIDE_TEST_DRIVER_PASSWORD="${TRIDE_TEST_DRIVER_PASSWORD}" \
   -e TRIDE_ALLOW_LIVE_BOOKING_REGRESSION=1 \
-  -e URGENT_NEGOTIATION_TIMEOUT_ENABLED="${URGENT_NEGOTIATION_TIMEOUT_ENABLED:-}" \
-  -e URGENT_NEGOTIATION_TIMEOUT_INTERVAL_MS="${URGENT_NEGOTIATION_TIMEOUT_INTERVAL_MS:-}" \
-  -e URGENT_NEGOTIATION_TIMEOUT_BATCH_SIZE="${URGENT_NEGOTIATION_TIMEOUT_BATCH_SIZE:-}" \
   tride-backend node scripts/staging-urgent-timeout-hardening-e2e.js | tee /tmp/urgent-timeout-hardening-e2e.log
 
 for BOOKING in $(grep -oE 'TX[0-9]{12}' /tmp/urgent-timeout-hardening-e2e.log | sort -u); do
