@@ -9,6 +9,8 @@ const path = require('node:path');
 const { createBookingSchema } = require('../src/validators/booking.validator');
 const {
   assertSafeEnvironment,
+  assertValidBookingPayload,
+  bookingPayload: regressionBookingPayload,
   toPricingPayload,
   createBookingIdempotencyKey,
   TEST_NAME_PREFIX,
@@ -62,43 +64,43 @@ function loadE2eLocalEnv() {
   }
 }
 
-function futurePickup(offsetDays = 12) {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() + offsetDays);
-  date.setUTCHours(5, 30, 0, 0);
-  return date.toISOString();
-}
-
 function bookingPayload() {
+  const payload = regressionBookingPayload({
+    customerName: CUSTOMER_NAME,
+    flightNumber: 'TG402',
+  });
   return {
-    serviceTypeCode: 'AIRPORT_PICKUP',
-    vehicleTypeCode: 'SUV',
-    vehicleCount: 1,
-    scheduledPickupAt: futurePickup(),
-    origin: {
-      name: 'Suvarnabhumi Airport',
-      address: 'Suvarnabhumi Airport, Bangkok, Thailand',
-      placeId: 'staging-bkk',
-    },
-    destination: {
-      name: 'Pattaya',
-      address: 'Pattaya, Chon Buri, Thailand',
-      placeId: 'staging-pattaya',
-    },
-    originAirportIata: 'BKK',
-    destinationLocationCode: 'PATTAYA',
-    transfer: { airportIata: 'BKK', flightNumber: 'TG402' },
-    passengers: { adults: 2, children: 0, infants: 0 },
-    luggage: { carriers20Inch: 1, carriers24InchPlus: 1, golfBags: 0 },
-    options: { nameSign: true, nameSignText: 'E2E Contact Dispatch Durable' },
+    ...payload,
     customer: {
-      name: CUSTOMER_NAME,
+      ...payload.customer,
       phone: '+66000000004',
       email: 'contact-dispatch-durable-e2e@example.com',
-      countryCode: 'TH',
     },
-    additionalRequests: REGRESSION_MARKER,
+    options: {
+      nameSign: true,
+      nameSignText: 'E2E Contact Dispatch Durable',
+    },
   };
+}
+
+function buildCreateBookingRequest(payload) {
+  return payload;
+}
+
+function formatValidationErrors(errors) {
+  return errors
+    .map((item) => [item.field, item.type, item.source].filter(Boolean).join(':'))
+    .filter(Boolean)
+    .join(', ');
+}
+
+function formatCreateBookingFailure(create) {
+  const message = create.body?.error_code || create.body?.message || 'UNKNOWN';
+  const details = Array.isArray(create.body?.errors)
+    ? formatValidationErrors(create.body.errors)
+    : '';
+  const suffix = details ? ` (${details})` : '';
+  return `Create booking failed: HTTP ${create.status} ${message}${suffix}`;
 }
 
 function responseData(body) {
@@ -193,8 +195,8 @@ async function main() {
   loadE2eLocalEnv();
   const { baseUrl } = assertSafeEnvironment({ dryRun: false });
   const payload = bookingPayload();
-  const { error } = createBookingSchema.validate(payload, { abortEarly: false });
-  if (error) throw new Error(`Invalid payload: ${error.message}`);
+  const requestPayload = buildCreateBookingRequest(payload);
+  assertValidBookingPayload(requestPayload, 'contact dispatch durable request');
 
   const report = {
     BOOKING: null,
@@ -216,14 +218,19 @@ async function main() {
       process.env.TRIDE_TEST_DRIVER_PASSWORD,
     );
 
+    await fetchJson(baseUrl, '/api/v1/bookings/pricing/calculate', {
+      method: 'POST',
+      body: JSON.stringify(toPricingPayload(requestPayload)),
+    });
+
     const create = await fetchJson(baseUrl, '/api/v1/bookings', {
       method: 'POST',
       headers: {
-        'Idempotency-Key': createBookingIdempotencyKey(`${TEST_NAME_PREFIX}-${E2E_MARKER}`),
+        'Idempotency-Key': createBookingIdempotencyKey(),
       },
-      body: JSON.stringify(toPricingPayload(payload)),
+      body: JSON.stringify(requestPayload),
     });
-    if (!create.ok) throw new Error(`Create booking failed: ${create.body?.error_code}`);
+    if (!create.ok) throw new Error(formatCreateBookingFailure(create));
     const bookingNumber = responseData(create.body)?.bookingNumber;
     const guestAccessToken = responseData(create.body)?.guestAccessToken;
     if (!bookingNumber || !guestAccessToken) throw new Error('Create booking missing identifiers');
@@ -257,7 +264,7 @@ async function main() {
       const cleanup = await cleanupRegressionBookings(baseUrl, {
         adminToken,
         driverToken,
-        records: [{ bookingNumber: report.BOOKING, payload }],
+        records: [{ bookingNumber: report.BOOKING, payload: requestPayload }],
       });
       if (!cleanup.ok) {
         console.error(formatCleanupFailure(cleanup));
@@ -278,4 +285,6 @@ module.exports = {
   E2E_MARKER,
   CUSTOMER_NAME,
   bookingPayload,
+  buildCreateBookingRequest,
+  formatCreateBookingFailure,
 };
