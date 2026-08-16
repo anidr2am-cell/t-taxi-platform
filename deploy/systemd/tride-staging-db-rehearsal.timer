@@ -3,9 +3,10 @@ Description=Monthly T-Ride staging DB restore rehearsal timer
 Documentation=file:/opt/t-ride/docs/BACKUP_RESTORE_RUNBOOK.md
 
 [Timer]
-# First Sunday of each month at 04:00 Asia/Bangkok.
-OnCalendar=Sun *-*-1..7 04:00:00
-Timezone=Asia/Bangkok
+# Host-local schedule for Asia/Seoul (UTC+09): first Sunday 06:00 = 04:00 Asia/Bangkok.
+# systemd 249 does not support Timer Timezone=; OnCalendar uses the host timezone.
+# If the host timezone changes, review this schedule before enabling the timer.
+OnCalendar=Sun *-*-1..7 06:00:00
 Persistent=true
 Unit=tride-staging-db-rehearsal.service
 

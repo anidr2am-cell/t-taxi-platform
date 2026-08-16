@@ -194,10 +194,38 @@ deploy/systemd/tride-staging-db-rehearsal.service
 deploy/systemd/tride-staging-db-rehearsal.timer
 ```
 
-Suggested schedules:
+Suggested schedules (T-Rider operational intent in **Asia/Bangkok**):
 
-- daily backup: `02:30` with `Timezone=Asia/Bangkok`
-- monthly rehearsal: first Sunday `04:00` with `Timezone=Asia/Bangkok`
+- daily backup: `02:30` Asia/Bangkok
+- monthly rehearsal: first Sunday `04:00` Asia/Bangkok
+
+**Host timezone assumption:** the version-controlled timer templates use **host-local**
+`OnCalendar` values because the Gabia VPS runs **systemd 249**, which does not support
+`Timezone=` on `[Timer]` units. The templates are currently written for a host configured
+as **Asia/Seoul** (UTC+09):
+
+| Timer | Host-local (Asia/Seoul) | T-Rider equivalent (Asia/Bangkok) |
+|-------|-------------------------|-----------------------------------|
+| Daily backup | `04:30` | `02:30` |
+| Monthly rehearsal (first Sunday) | `06:00` | `04:00` |
+
+> **Warning:** these schedules are **not** timezone-independent. If the host timezone
+> changes (for example away from Asia/Seoul), review and update the timer `OnCalendar`
+> values before enabling the units. Do **not** change the host timezone to match the
+> templates; adjust the templates or accept different firing times.
+
+Validate unit syntax and calendar expressions **before** installation (no enable/start
+during verification):
+
+```bash
+systemd-analyze verify /opt/t-ride/deploy/systemd/tride-staging-db-backup.service \
+  /opt/t-ride/deploy/systemd/tride-staging-db-backup.timer
+systemd-analyze verify /opt/t-ride/deploy/systemd/tride-staging-db-rehearsal.service \
+  /opt/t-ride/deploy/systemd/tride-staging-db-rehearsal.timer
+
+systemd-analyze calendar '*-*-* 04:30:00'
+systemd-analyze calendar 'Sun *-*-1..7 06:00:00'
+```
 
 Install later (operator action only):
 

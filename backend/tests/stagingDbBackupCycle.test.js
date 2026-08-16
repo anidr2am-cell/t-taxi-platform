@@ -279,14 +279,25 @@ test('systemd units reference T-Rider scripts only and do not require node', () 
     assert.doesNotMatch(contents, /prune-staging-db-backups\.sh --apply/);
     assert.doesNotMatch(contents, /docker compose down/);
     assert.doesNotMatch(contents, /docker system prune/);
+    assert.doesNotMatch(contents, /systemctl enable/);
+    assert.doesNotMatch(contents, /systemctl start/);
+    assert.doesNotMatch(contents, /timedatectl/);
   }
-  for (const file of [backupTimer, rehearsalTimer]) {
-    const contents = read(file);
+  const backupTimerContents = read(backupTimer);
+  const rehearsalTimerContents = read(rehearsalTimer);
+  for (const contents of [backupTimerContents, rehearsalTimerContents]) {
     assert.match(contents, /Persistent=true/);
-    assert.match(contents, /Timezone=Asia\/Bangkok/);
+    assert.doesNotMatch(contents, /^\s*Timezone=/m);
     assert.doesNotMatch(contents, /\/opt\/ktaxi/);
     assert.doesNotMatch(contents, /\bnode\b/);
+    assert.doesNotMatch(contents, /systemctl enable/);
+    assert.doesNotMatch(contents, /systemctl start/);
+    assert.doesNotMatch(contents, /timedatectl/);
   }
+  assert.match(backupTimerContents, /OnCalendar=\*-\*-\* 04:30:00/);
+  assert.match(rehearsalTimerContents, /OnCalendar=Sun \*-\*-1\.\.7 06:00:00/);
+  assert.match(backupTimerContents, /Asia\/Seoul/);
+  assert.match(rehearsalTimerContents, /Asia\/Seoul/);
 });
 
 test('env backup example contains placeholders only', () => {

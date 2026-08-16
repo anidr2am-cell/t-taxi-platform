@@ -3,10 +3,10 @@ Description=Daily T-Ride staging DB backup cycle timer
 Documentation=file:/opt/t-ride/docs/BACKUP_RESTORE_RUNBOOK.md
 
 [Timer]
-# 02:30 Asia/Bangkok — requires systemd with Timezone= support (>= v253).
-# On older hosts, use: OnCalendar=*-*-* 02:30:00 and set host timezone to Asia/Bangkok.
-OnCalendar=*-*-* 02:30:00
-Timezone=Asia/Bangkok
+# Host-local schedule for Asia/Seoul (UTC+09): 04:30 = 02:30 Asia/Bangkok (UTC+07).
+# systemd 249 does not support Timer Timezone=; OnCalendar uses the host timezone.
+# If the host timezone changes, review this schedule before enabling the timer.
+OnCalendar=*-*-* 04:30:00
 Persistent=true
 Unit=tride-staging-db-backup.service
 
