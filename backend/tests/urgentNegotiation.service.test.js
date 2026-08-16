@@ -1228,7 +1228,14 @@ function createTimeoutHarness(overrides = {}) {
     async listExpiredAwaitingCustomerNegotiations() {
       return expiredAwaitingRows.map((row) => ({ ...row }));
     },
+    async findNegotiationById(_conn, negotiationId) {
+      if (negotiation.id !== negotiationId) return null;
+      return { ...negotiation };
+    },
     async findNegotiationByIdForUpdate(_conn, negotiationId) {
+      if (overrides.onBeforeNegotiationLock) {
+        await overrides.onBeforeNegotiationLock({ negotiation, booking, attempts });
+      }
       if (negotiation.id !== negotiationId) return null;
       return { ...negotiation };
     },
@@ -1291,6 +1298,10 @@ function createTimeoutHarness(overrides = {}) {
   };
 
   const bookingRepository = {
+    async findActiveAssignmentForUpdate(_conn, bookingId) {
+      if (bookingId !== booking.id) return null;
+      return overrides.activeAssignment ?? null;
+    },
     async updateStatus(_conn, _bookingId, status) {
       booking = { ...booking, status };
     },
@@ -1623,4 +1634,346 @@ test('duplicate submitCustomerDecision REJECT does not repeat round transition',
       && error.statusCode === HTTP_STATUS.CONFLICT,
   );
   assert.equal(calls.attemptOutcomes.length, 0);
+});
+
+test('processDriverEtaTimeout second run is a no-op without duplicate socket', async () => {
+  const emitted = captureSocket();
+  const { service, getNegotiation, getAttempts } = createTimeoutHarness();
+
+  const first = await service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS });
+  assert.equal(first.status, 'BROADCASTING');
+  const socketCountAfterFirst = emitted.length;
+
+  const second = await service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS });
+  assert.equal(second, null);
+  assert.equal(getNegotiation().status, 'BROADCASTING');
+  assert.equal(getNegotiation().attempt_count, 1);
+  assert.equal(getAttempts()[0].outcome, 'DRIVER_ETA_TIMEOUT');
+  assert.equal(emitted.length, socketCountAfterFirst);
+  setRealtimeIo(null);
+});
+
+test('processCustomerDecisionTimeout second run is a no-op without duplicate socket', async () => {
+  const emitted = captureSocket();
+  const { service, getNegotiation } = createTimeoutHarness({
+    initialStatus: 'AWAITING_CUSTOMER',
+    negotiation: {
+      status: 'AWAITING_CUSTOMER',
+      customer_decision_expires_at: '2099-07-23 01:29:00',
+    },
+    proposedEtaMinutes: 28,
+    expiredLockedRows: [],
+    expiredAwaitingRows: [{
+      id: 100,
+      booking_id: 10,
+      booking_number: BOOKING_NUMBER,
+      booking_status: 'OPEN',
+      attempt_count: 0,
+      locked_driver_id: 7,
+      customer_decision_expires_at: '2099-07-23 01:29:00',
+      min_required_eta_minutes: null,
+    }],
+  });
+
+  const first = await service.processCustomerDecisionTimeout(100, { nowMs: DECISION_NOW_MS });
+  assert.equal(first.status, 'BROADCASTING');
+  const socketCountAfterFirst = emitted.length;
+
+  const second = await service.processCustomerDecisionTimeout(100, { nowMs: DECISION_NOW_MS });
+  assert.equal(second, null);
+  assert.equal(getNegotiation().status, 'BROADCASTING');
+  assert.equal(emitted.length, socketCountAfterFirst);
+  setRealtimeIo(null);
+});
+
+test('processDriverEtaTimeout no-ops when negotiation advanced to AWAITING_CUSTOMER', async () => {
+  const emitted = captureSocket();
+  const { service, getNegotiation, getAttempts } = createTimeoutHarness({
+    onBeforeNegotiationLock: ({ negotiation }) => {
+      negotiation.status = 'AWAITING_CUSTOMER';
+      negotiation.customer_decision_expires_at = '2099-07-23 01:35:00';
+      negotiation.lock_expires_at = null;
+    },
+  });
+
+  const result = await service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS });
+
+  assert.equal(result, null);
+  assert.equal(getNegotiation().status, 'AWAITING_CUSTOMER');
+  assert.equal(getAttempts()[0].outcome, 'IN_PROGRESS');
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+test('processDriverEtaTimeout no-ops when customer accept already won', async () => {
+  const emitted = captureSocket();
+  const { service, getNegotiation, getAttempts } = createTimeoutHarness({
+    booking: {
+      status: 'DRIVER_ASSIGNED',
+      urgent_negotiation_id: 100,
+    },
+    negotiation: {
+      status: 'CONFIRMED',
+      closed_reason: 'CUSTOMER_ACCEPTED',
+    },
+    activeAssignment: {
+      id: 900,
+      booking_id: 10,
+      driver_id: 7,
+      is_active: 1,
+      assignment_reason: 'URGENT_CUSTOMER_CONFIRMED',
+    },
+  });
+
+  const result = await service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS });
+
+  assert.equal(result, null);
+  assert.equal(getNegotiation().status, 'CONFIRMED');
+  assert.equal(getAttempts()[0].outcome, 'IN_PROGRESS');
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+test('processDriverEtaTimeout no-ops when active assignment exists on OPEN booking', async () => {
+  const emitted = captureSocket();
+  const { service, getNegotiation, getAttempts } = createTimeoutHarness({
+    activeAssignment: {
+      id: 901,
+      booking_id: 10,
+      driver_id: 7,
+      is_active: 1,
+      assignment_reason: 'URGENT_CUSTOMER_CONFIRMED',
+    },
+  });
+
+  const result = await service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS });
+
+  assert.equal(result, null);
+  assert.equal(getNegotiation().status, 'LOCKED');
+  assert.equal(getAttempts()[0].outcome, 'IN_PROGRESS');
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+test('processDriverEtaTimeout no-ops when booking urgent pointer moved to another negotiation', async () => {
+  const emitted = captureSocket();
+  const { service, getNegotiation, getAttempts } = createTimeoutHarness({
+    booking: {
+      urgent_negotiation_id: 501,
+    },
+  });
+
+  const result = await service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS });
+
+  assert.equal(result, null);
+  assert.equal(getNegotiation().status, 'LOCKED');
+  assert.equal(getAttempts()[0].outcome, 'IN_PROGRESS');
+  assert.equal(emitted.length, 0);
+  setRealtimeIo(null);
+});
+
+function createConcurrentTimeoutHarness() {
+  let negotiation = createNegotiationState({
+    status: 'LOCKED',
+    locked_driver_id: 7,
+    attempt_count: 0,
+    lock_expires_at: '2099-07-23 01:29:00',
+  });
+  const booking = createBookingState({
+    urgent_negotiation_id: 100,
+    status: 'OPEN',
+  });
+  let attempts = [{
+    id: 1,
+    negotiation_id: 100,
+    attempt_number: 1,
+    driver_id: 7,
+    proposed_eta_minutes: null,
+    outcome: 'IN_PROGRESS',
+  }];
+
+  let forUpdateChain = Promise.resolve();
+
+  function createHarnessConn() {
+    return {
+      began: false,
+      committed: false,
+      rolledBack: false,
+      released: false,
+      async beginTransaction() { this.began = true; },
+      async commit() {
+        this.committed = true;
+        if (this._releaseNegotiationLock) {
+          this._releaseNegotiationLock();
+          this._releaseNegotiationLock = null;
+        }
+      },
+      async rollback() {
+        this.rolledBack = true;
+        if (this._releaseNegotiationLock) {
+          this._releaseNegotiationLock();
+          this._releaseNegotiationLock = null;
+        }
+      },
+      release() { this.released = true; },
+    };
+  }
+
+  const pool = {
+    async getConnection() {
+      return createHarnessConn();
+    },
+  };
+
+  const urgentNegotiationRepository = {
+    async findNegotiationById(_conn, negotiationId) {
+      if (negotiation.id !== negotiationId) return null;
+      return { ...negotiation };
+    },
+    async findNegotiationByIdForUpdate(conn, negotiationId) {
+      if (negotiation.id !== negotiationId) return null;
+      let release;
+      const previous = forUpdateChain;
+      forUpdateChain = new Promise((resolve) => {
+        release = resolve;
+      });
+      conn._releaseNegotiationLock = release;
+      await previous;
+      return { ...negotiation };
+    },
+    async findBookingForUrgentLockById(_conn, bookingId) {
+      if (booking.id !== bookingId) return null;
+      return { ...booking };
+    },
+    async findLatestAttempt(_conn, negotiationId) {
+      const latest = attempts
+        .filter((row) => row.negotiation_id === negotiationId)
+        .sort((a, b) => b.attempt_number - a.attempt_number)[0];
+      return latest ? { ...latest } : null;
+    },
+    async updateLatestAttemptOutcome(_conn, { negotiationId, outcome }) {
+      const latest = attempts
+        .filter((row) => row.negotiation_id === negotiationId)
+        .sort((a, b) => b.attempt_number - a.attempt_number)[0];
+      if (!latest) return 0;
+      latest.outcome = outcome;
+      return 1;
+    },
+    async rebroadcastAfterAttemptFailure(_conn, { negotiationId, fromStatus }) {
+      if (negotiation.id !== negotiationId || negotiation.status !== fromStatus) return null;
+      negotiation = {
+        ...negotiation,
+        status: 'BROADCASTING',
+        attempt_count: Number(negotiation.attempt_count || 0) + 1,
+        locked_driver_id: null,
+        locked_at: null,
+        lock_expires_at: null,
+        customer_decision_expires_at: null,
+      };
+      return { ...negotiation };
+    },
+    async cancelAfterAttemptFailure() {
+      return null;
+    },
+  };
+
+  const driverRepository = {
+    async findById(driverId) {
+      return driverId === 7 ? { id: 7, user_id: 42 } : null;
+    },
+  };
+
+  const bookingRepository = {
+    async findActiveAssignmentForUpdate() {
+      return null;
+    },
+    async updateStatus() {},
+    async insertStatusLog() {},
+    async insertActivityLog() {},
+  };
+
+  const service = new UrgentNegotiationService(
+    pool,
+    urgentNegotiationRepository,
+    driverRepository,
+    { validateBookingNumber(value) { return String(value); } },
+    bookingRepository,
+    { async assertCustomerOrGuestAccess() {} },
+    null,
+  );
+
+  return {
+    service,
+    getNegotiation: () => ({ ...negotiation }),
+    getAttempts: () => attempts.map((row) => ({ ...row })),
+  };
+}
+
+test('concurrent processDriverEtaTimeout calls produce one durable transition', async () => {
+  const emitted = captureSocket();
+  const { service, getNegotiation, getAttempts } = createConcurrentTimeoutHarness();
+
+  const [first, second] = await Promise.all([
+    service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS }),
+    service.processDriverEtaTimeout(100, { nowMs: DECISION_NOW_MS }),
+  ]);
+
+  const results = [first, second].filter(Boolean);
+  assert.equal(results.length, 1);
+  assert.equal(results[0].status, 'BROADCASTING');
+  assert.equal(getNegotiation().status, 'BROADCASTING');
+  assert.equal(getNegotiation().attempt_count, 1);
+  assert.equal(getAttempts()[0].outcome, 'DRIVER_ETA_TIMEOUT');
+  assert.equal(
+    emitted.filter((row) => row.room === DRIVER_ALL_ROOM && row.event === 'driver:urgent-call:new').length,
+    1,
+  );
+  setRealtimeIo(null);
+});
+
+test('processExpiredNegotiations logs warning without ReferenceError when processing fails', async () => {
+  const logger = require('../src/utils/logger');
+  const originalWarn = logger.warn;
+  const warnings = [];
+  logger.warn = (...args) => {
+    warnings.push(args);
+  };
+
+  try {
+    const conn = createConn();
+    const pool = createPool(conn);
+    const urgentNegotiationRepository = {
+      async listExpiredLockedNegotiations() {
+        return [{
+          id: 100,
+          booking_id: 10,
+          booking_number: BOOKING_NUMBER,
+        }];
+      },
+      async listExpiredAwaitingCustomerNegotiations() {
+        return [];
+      },
+      async findNegotiationById() {
+        throw new Error('forced timeout processing failure');
+      },
+    };
+    const service = new UrgentNegotiationService(
+      pool,
+      urgentNegotiationRepository,
+      {},
+      { validateBookingNumber(value) { return String(value); } },
+      {},
+      { async assertCustomerOrGuestAccess() {} },
+      null,
+    );
+
+    const summary = await service.processExpiredNegotiations({ batchSize: 20, nowMs: DECISION_NOW_MS });
+
+    assert.equal(summary.lockedFailed, 1);
+    assert.equal(warnings.length, 1);
+    assert.match(String(warnings[0][0]), /driver ETA timeout processing failed/i);
+    assert.equal(warnings[0][1].negotiationId, 100);
+  } finally {
+    logger.warn = originalWarn;
+  }
 });

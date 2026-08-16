@@ -25,6 +25,7 @@ const URGENT_NEGOTIATION_TIMEOUT_CONFIG = require('../constants/urgentNegotiatio
 const {
   assertBookingDispatchEligible,
 } = require('../policies/bookingDispatchEligibility.policy');
+const logger = require('../utils/logger');
 
 class UrgentNegotiationService {
   constructor(
@@ -117,6 +118,61 @@ class UrgentNegotiationService {
   isExpiredTimestamp(timestamp, nowMs = Date.now()) {
     const expiresMs = parseServiceDateTimeToMs(timestamp);
     return expiresMs != null && nowMs >= expiresMs;
+  }
+
+  isBookingEligibleForTimeoutWorker(booking, negotiationId) {
+    if (!booking) return false;
+    if (!Number(booking.is_urgent_request)) return false;
+    if (booking.status !== BOOKING_STATUS.OPEN) return false;
+    if (Number(booking.urgent_negotiation_id) !== Number(negotiationId)) return false;
+    return true;
+  }
+
+  /**
+   * Timeout worker lock order matches accept/lock paths: booking → negotiation → assignment.
+   */
+  async loadTimeoutWorkerContext(conn, negotiationId, { expectedStatus, expiryField, nowMs }) {
+    const snapshot = await this.urgentNegotiationRepository.findNegotiationById(
+      conn,
+      negotiationId,
+    );
+    if (!snapshot) {
+      return null;
+    }
+
+    const booking = await this.urgentNegotiationRepository.findBookingForUrgentLockById(
+      conn,
+      snapshot.booking_id,
+    );
+    if (!this.isBookingEligibleForTimeoutWorker(booking, negotiationId)) {
+      return null;
+    }
+
+    const activeAssignment = await this.bookingRepository.findActiveAssignmentForUpdate(
+      conn,
+      booking.id,
+    );
+    if (activeAssignment) {
+      return null;
+    }
+
+    const negotiation = await this.urgentNegotiationRepository.findNegotiationByIdForUpdate(
+      conn,
+      negotiationId,
+    );
+    if (!negotiation || negotiation.status !== expectedStatus) {
+      return null;
+    }
+
+    if (!this.isExpiredTimestamp(negotiation[expiryField], nowMs)) {
+      return null;
+    }
+
+    if (Number(booking.urgent_negotiation_id) !== Number(negotiation.id)) {
+      return null;
+    }
+
+    return { booking, negotiation };
   }
 
   normalizeCustomerDecision(decision) {
@@ -1071,30 +1127,17 @@ class UrgentNegotiationService {
     try {
       await conn.beginTransaction();
 
-      const negotiation = await this.urgentNegotiationRepository.findNegotiationByIdForUpdate(
-        conn,
-        negotiationId,
-      );
-      if (!negotiation || negotiation.status !== 'LOCKED') {
+      const context = await this.loadTimeoutWorkerContext(conn, negotiationId, {
+        expectedStatus: 'LOCKED',
+        expiryField: 'lock_expires_at',
+        nowMs,
+      });
+      if (!context) {
         await conn.commit();
         return null;
       }
 
-      if (!this.isExpiredTimestamp(negotiation.lock_expires_at, nowMs)) {
-        await conn.commit();
-        return null;
-      }
-
-      const booking = await this.urgentNegotiationRepository.findBookingForUrgentLockById(
-        conn,
-        negotiation.booking_id,
-      );
-      if (!booking) {
-        this.throwAppError('Booking not found', {
-          statusCode: HTTP_STATUS.NOT_FOUND,
-          errorCode: ERROR_CODES.NOT_FOUND,
-        });
-      }
+      const { booking, negotiation } = context;
 
       const latestAttempt = await this.urgentNegotiationRepository.findLatestAttempt(
         conn,
@@ -1149,30 +1192,17 @@ class UrgentNegotiationService {
     try {
       await conn.beginTransaction();
 
-      const negotiation = await this.urgentNegotiationRepository.findNegotiationByIdForUpdate(
-        conn,
-        negotiationId,
-      );
-      if (!negotiation || negotiation.status !== 'AWAITING_CUSTOMER') {
+      const context = await this.loadTimeoutWorkerContext(conn, negotiationId, {
+        expectedStatus: 'AWAITING_CUSTOMER',
+        expiryField: 'customer_decision_expires_at',
+        nowMs,
+      });
+      if (!context) {
         await conn.commit();
         return null;
       }
 
-      if (!this.isExpiredTimestamp(negotiation.customer_decision_expires_at, nowMs)) {
-        await conn.commit();
-        return null;
-      }
-
-      const booking = await this.urgentNegotiationRepository.findBookingForUrgentLockById(
-        conn,
-        negotiation.booking_id,
-      );
-      if (!booking) {
-        this.throwAppError('Booking not found', {
-          statusCode: HTTP_STATUS.NOT_FOUND,
-          errorCode: ERROR_CODES.NOT_FOUND,
-        });
-      }
+      const { booking, negotiation } = context;
 
       const latestAttempt = await this.urgentNegotiationRepository.findLatestAttempt(
         conn,
