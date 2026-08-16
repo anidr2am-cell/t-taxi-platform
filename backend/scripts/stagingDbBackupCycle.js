@@ -329,6 +329,17 @@ function parseKeyValueOutput(content) {
   return entries;
 }
 
+function readKeyValueOrDefault(content, key, defaultValue = 'FAIL') {
+  const value = parseKeyValueOutput(content)[key];
+  if (value == null || value === '') return defaultValue;
+  return value;
+}
+
+function invokesShellScriptViaBash(scriptContents, runnerVariable) {
+  const pattern = new RegExp(`bash "\\$\\{${runnerVariable}\\}"`);
+  return pattern.test(String(scriptContents || ''));
+}
+
 function envExampleContainsSecrets(content) {
   const lower = String(content || '').toLowerCase();
   return [
@@ -361,5 +372,7 @@ module.exports = {
   findLatestCompleteBackup,
   buildStructuredLogEntry,
   parseKeyValueOutput,
+  readKeyValueOrDefault,
+  invokesShellScriptViaBash,
   envExampleContainsSecrets,
 };

@@ -49,9 +49,22 @@ invoke_alert() {
   if [[ "${TRIDE_BACKUP_ALERT_ENABLED}" == "1" || "${TRIDE_BACKUP_ALERT_ENABLED}" == "true" ]]; then
     if [[ -x "${TRIDE_BACKUP_ALERT_SCRIPT}" ]]; then
       "${TRIDE_BACKUP_ALERT_SCRIPT}" "${reason}" "${LOG_FILE}" >> "${LOG_FILE}" 2>&1 || true
-    elif [[ -x "${ALERT_RUNNER}" ]]; then
-      "${ALERT_RUNNER}" "${reason}" "${LOG_FILE}" >> "${LOG_FILE}" 2>&1 || true
+    elif [[ -f "${ALERT_RUNNER}" ]]; then
+      bash "${ALERT_RUNNER}" "${reason}" "${LOG_FILE}" >> "${LOG_FILE}" 2>&1 || true
     fi
+  fi
+}
+
+read_kv_or_default() {
+  local key="$1"
+  local output="$2"
+  local default_value="${3:-FAIL}"
+  local value
+  value="$(grep -E "^${key}=" <<<"${output}" | tail -n 1 | cut -d= -f2- || true)"
+  if [[ -z "${value}" ]]; then
+    printf '%s' "${default_value}"
+  else
+    printf '%s' "${value}"
   fi
 }
 
@@ -77,12 +90,25 @@ assert_backup_config_safe
 
 log_line "BACKUP_CYCLE=START"
 
-BACKUP_OUTPUT="$("${BACKUP_RUNNER}" 2>&1 | tee -a "${LOG_FILE}")" || true
-BACKUP_FILE="$(grep -E '^BACKUP_FILE=' <<<"${BACKUP_OUTPUT}" | tail -n 1 | cut -d= -f2- || true)"
-MANIFEST_FILE="$(grep -E '^MANIFEST_FILE=' <<<"${BACKUP_OUTPUT}" | tail -n 1 | cut -d= -f2- || true)"
-BACKUP_RESULT="$(grep -E '^BACKUP_RESULT=' <<<"${BACKUP_OUTPUT}" | tail -n 1 | cut -d= -f2- || echo FAIL)"
-BACKUP_SHA256="$(grep -E '^BACKUP_SHA256=' <<<"${BACKUP_OUTPUT}" | tail -n 1 | cut -d= -f2- || true)"
-BACKUP_SIZE_BYTES="$(grep -E '^BACKUP_SIZE_BYTES=' <<<"${BACKUP_OUTPUT}" | tail -n 1 | cut -d= -f2- || true)"
+BACKUP_RUNNER_EXIT=0
+BACKUP_OUTPUT="$(bash "${BACKUP_RUNNER}" 2>&1 | tee -a "${LOG_FILE}")" || BACKUP_RUNNER_EXIT=$?
+if [[ "${BACKUP_RUNNER_EXIT}" -ne 0 ]]; then
+  log_line "Backup runner exited ${BACKUP_RUNNER_EXIT}" >&2
+fi
+
+BACKUP_FILE="$(read_kv_or_default BACKUP_FILE "${BACKUP_OUTPUT}" "")"
+MANIFEST_FILE="$(read_kv_or_default MANIFEST_FILE "${BACKUP_OUTPUT}" "")"
+BACKUP_RESULT="$(read_kv_or_default BACKUP_RESULT "${BACKUP_OUTPUT}" FAIL)"
+BACKUP_SHA256="$(read_kv_or_default BACKUP_SHA256 "${BACKUP_OUTPUT}" "")"
+BACKUP_SIZE_BYTES="$(read_kv_or_default BACKUP_SIZE_BYTES "${BACKUP_OUTPUT}" "")"
+
+if [[ "${BACKUP_RUNNER_EXIT}" -ne 0 && "${BACKUP_RESULT}" == "PASS" ]]; then
+  BACKUP_RESULT="FAIL"
+fi
+if [[ -z "${BACKUP_OUTPUT}" ]]; then
+  BACKUP_RESULT="FAIL"
+  log_line "Backup runner produced no output" >&2
+fi
 
 if [[ "${BACKUP_RESULT}" != "PASS" ]]; then
   log_line "BACKUP_CYCLE=FAIL"
@@ -111,9 +137,20 @@ if [[ -n "${MANIFEST_SHA256}" && "${MANIFEST_SHA256}" != "${ACTUAL_SHA256}" ]]; 
   finish_cycle 1
 fi
 
-REMOTE_OUTPUT="$("${REMOTE_RUNNER}" "${BACKUP_FILE}" "${MANIFEST_FILE}" 2>&1 | tee -a "${LOG_FILE}")" || true
-REMOTE_COPY_RESULT="$(grep -E '^REMOTE_COPY_RESULT=' <<<"${REMOTE_OUTPUT}" | tail -n 1 | cut -d= -f2- || echo FAIL)"
-REMOTE_VERIFY_RESULT="$(grep -E '^REMOTE_VERIFY_RESULT=' <<<"${REMOTE_OUTPUT}" | tail -n 1 | cut -d= -f2- || echo FAIL)"
+REMOTE_RUNNER_EXIT=0
+REMOTE_OUTPUT="$(bash "${REMOTE_RUNNER}" "${BACKUP_FILE}" "${MANIFEST_FILE}" 2>&1 | tee -a "${LOG_FILE}")" || REMOTE_RUNNER_EXIT=$?
+if [[ "${REMOTE_RUNNER_EXIT}" -ne 0 ]]; then
+  log_line "Remote copy runner exited ${REMOTE_RUNNER_EXIT}" >&2
+fi
+
+REMOTE_COPY_RESULT="$(read_kv_or_default REMOTE_COPY_RESULT "${REMOTE_OUTPUT}" FAIL)"
+REMOTE_VERIFY_RESULT="$(read_kv_or_default REMOTE_VERIFY_RESULT "${REMOTE_OUTPUT}" FAIL)"
+
+if [[ -z "${REMOTE_OUTPUT}" && "${REMOTE_RUNNER_EXIT}" -ne 0 ]]; then
+  REMOTE_COPY_RESULT="FAIL"
+  REMOTE_VERIFY_RESULT="FAIL"
+  log_line "Remote copy runner produced no output" >&2
+fi
 
 if [[ "${REMOTE_COPY_RESULT}" == "FAIL" || "${REMOTE_VERIFY_RESULT}" == "FAIL" ]]; then
   log_line "BACKUP_CYCLE=FAIL"
@@ -122,7 +159,7 @@ fi
 
 if [[ "${TRIDE_BACKUP_AUTO_PRUNE}" == "1" || "${TRIDE_BACKUP_AUTO_PRUNE}" == "true" ]]; then
   if [[ "${REMOTE_COPY_RESULT}" == "PASS" && "${REMOTE_VERIFY_RESULT}" == "PASS" ]]; then
-    if "${PRUNE_RUNNER}" --apply >> "${LOG_FILE}" 2>&1; then
+    if bash "${PRUNE_RUNNER}" --apply >> "${LOG_FILE}" 2>&1; then
       LOCAL_PRUNE_RUN="YES"
     else
       LOCAL_PRUNE_RUN="FAIL"

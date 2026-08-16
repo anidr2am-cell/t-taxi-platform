@@ -126,14 +126,42 @@ test('buildRemoteObjectPrefix preserves date hierarchy without secrets', () => {
 test('daily cycle runner enforces backup before remote and gated prune', () => {
   const contents = read(backupCycleRunner);
   assert.match(contents, /flock -n 9/);
-  assert.match(contents, /run-staging-db-backup\.sh/);
-  assert.match(contents, /staging-db-backup-remote\.sh/);
+  assert.match(contents, /bash "\$\{BACKUP_RUNNER\}" 2>&1/);
+  assert.match(contents, /bash "\$\{REMOTE_RUNNER\}"/);
+  assert.match(contents, /bash "\$\{PRUNE_RUNNER\}" --apply/);
+  assert.doesNotMatch(contents, /BACKUP_OUTPUT="\$\{BACKUP_RUNNER\}"/);
+  assert.match(contents, /read_kv_or_default BACKUP_RESULT .* FAIL/);
   assert.match(contents, /LOCAL_PRUNE_RUN=\$\{LOCAL_PRUNE_RUN\}/);
   assert.match(contents, /LOCAL_PRUNE_RUN="NO"/);
   assert.match(contents, /"\$\{REMOTE_COPY_RESULT\}" == "PASS"/);
   assert.match(contents, /TRIDE_BACKUP_AUTO_PRUNE/);
   assert.doesNotMatch(contents, /docker system prune/);
   assert.doesNotMatch(contents, /\/opt\/ktaxi/);
+});
+
+test('internal shell runners are invoked via bash without executable-bit dependency', () => {
+  const cycleContents = read(backupCycleRunner);
+  const monthlyContents = read(monthlyRunner);
+  assert.equal(cycle.invokesShellScriptViaBash(cycleContents, 'BACKUP_RUNNER'), true);
+  assert.equal(cycle.invokesShellScriptViaBash(cycleContents, 'REMOTE_RUNNER'), true);
+  assert.equal(cycle.invokesShellScriptViaBash(cycleContents, 'PRUNE_RUNNER'), true);
+  assert.equal(cycle.invokesShellScriptViaBash(monthlyContents, 'RESTORE_RUNNER'), true);
+});
+
+test('subprocess failure reports FAIL instead of blank key values', () => {
+  assert.equal(cycle.readKeyValueOrDefault('', 'BACKUP_RESULT', 'FAIL'), 'FAIL');
+  assert.equal(cycle.readKeyValueOrDefault('BACKUP_RESULT=\n', 'BACKUP_RESULT', 'FAIL'), 'FAIL');
+  assert.equal(cycle.readKeyValueOrDefault('BACKUP_RESULT=PASS', 'BACKUP_RESULT', 'FAIL'), 'PASS');
+  assert.equal(
+    cycle.readKeyValueOrDefault('REMOTE_COPY_RESULT=SKIPPED_DISABLED\nREMOTE_VERIFY_RESULT=SKIPPED_DISABLED', 'REMOTE_COPY_RESULT', 'FAIL'),
+    'SKIPPED_DISABLED',
+  );
+});
+
+test('remote-disabled mode remains unchanged in backup cycle defaults', () => {
+  const contents = read(backupCycleRunner);
+  assert.match(contents, /REMOTE_COPY_RESULT="SKIPPED_DISABLED"/);
+  assert.match(contents, /REMOTE_VERIFY_RESULT="SKIPPED_DISABLED"/);
 });
 
 test('remote runner supports disabled mode and verifies both files when enabled', () => {
@@ -155,7 +183,9 @@ test('prune runner defaults to dry-run and requires node retention planner', () 
 test('monthly rehearsal uses latest complete pair and isolated restore runner', () => {
   const contents = read(monthlyRunner);
   assert.match(contents, /--select-latest/);
-  assert.match(contents, /run-staging-db-restore-rehearsal\.sh/);
+  assert.match(contents, /bash "\$\{RESTORE_RUNNER\}"/);
+  assert.match(contents, /RESTORE_REHEARSAL="FAIL"/);
+  assert.match(contents, /RESTORE_REHEARSAL=\$\{RESTORE_REHEARSAL\}/);
   assert.match(contents, /172\.18\.0\.1:3100\/api\/v1\/health/);
   assert.match(contents, /https:\/\/trider\.taxi\/api\/v1\/health/);
   assert.doesNotMatch(contents, /docker exec tride-db/);

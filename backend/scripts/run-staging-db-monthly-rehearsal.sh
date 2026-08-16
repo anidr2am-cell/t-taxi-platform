@@ -55,9 +55,24 @@ if ! gzip -t "${MONTHLY_REHEARSAL_BACKUP}"; then
   exit 1
 fi
 
-RESTORE_OUTPUT="$("${RESTORE_RUNNER}" "${MONTHLY_REHEARSAL_BACKUP}" 2>&1 | tee -a "${LOG_FILE}")" || true
-RESTORE_REHEARSAL="$(grep -E '^RESTORE_REHEARSAL=' <<<"${RESTORE_OUTPUT}" | tail -n 1 | cut -d= -f2- || echo FAIL)"
+RESTORE_RUNNER_EXIT=0
+RESTORE_OUTPUT="$(bash "${RESTORE_RUNNER}" "${MONTHLY_REHEARSAL_BACKUP}" 2>&1 | tee -a "${LOG_FILE}")" || RESTORE_RUNNER_EXIT=$?
+if [[ "${RESTORE_RUNNER_EXIT}" -ne 0 ]]; then
+  log_line "Restore rehearsal runner exited ${RESTORE_RUNNER_EXIT}" >&2
+fi
+RESTORE_REHEARSAL="$(grep -E '^RESTORE_REHEARSAL=' <<<"${RESTORE_OUTPUT}" | tail -n 1 | cut -d= -f2- || true)"
+if [[ -z "${RESTORE_REHEARSAL}" ]]; then
+  RESTORE_REHEARSAL="FAIL"
+fi
+if [[ "${RESTORE_RUNNER_EXIT}" -ne 0 && "${RESTORE_REHEARSAL}" == "PASS" ]]; then
+  RESTORE_REHEARSAL="FAIL"
+fi
+if [[ -z "${RESTORE_OUTPUT}" ]]; then
+  RESTORE_REHEARSAL="FAIL"
+  log_line "Restore rehearsal runner produced no output" >&2
+fi
 if [[ "${RESTORE_REHEARSAL}" != "PASS" ]]; then
+  log_line "RESTORE_REHEARSAL=${RESTORE_REHEARSAL}"
   log_line "MONTHLY_REHEARSAL_RESULT=FAIL"
   exit 1
 fi
