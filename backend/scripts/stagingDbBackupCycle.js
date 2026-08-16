@@ -1,6 +1,7 @@
 /**
  * Staging DB backup cycle helpers: retention, remote config, orchestration gates.
- * Pure logic only — no Docker, rclone, or secret values.
+ * Pure logic for deterministic unit tests — host automation uses bash retention lib.
+ * No Docker, rclone, or secret values.
  */
 const fs = require('node:fs');
 const path = require('node:path');

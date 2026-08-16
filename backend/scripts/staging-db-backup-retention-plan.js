@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * CLI for staging backup retention planning and latest-backup selection.
+ * TEST-ONLY CLI for staging backup retention planning and latest-backup selection.
+ * Host automation uses staging-db-backup-retention-lib.sh (bash) instead.
  */
 const fs = require('node:fs');
 const path = require('node:path');

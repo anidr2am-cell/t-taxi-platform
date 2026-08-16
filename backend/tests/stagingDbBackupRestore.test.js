@@ -165,8 +165,9 @@ test('restore rehearsal compares restored counts against manifest keys', () => {
 
 test('prune helper defaults to dry-run and does not install cron', () => {
   const contents = read(pruneRunner);
-  assert.match(contents, /staging-db-backup-retention-plan\.js/);
+  assert.match(contents, /staging-db-backup-retention-lib\.sh/);
   assert.match(contents, /--apply/);
+  assert.doesNotMatch(contents, /\bexec node\b/);
   assert.doesNotMatch(contents, /crontab/);
   assert.doesNotMatch(contents, /systemctl enable/);
 });

@@ -11,9 +11,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/staging-db-backup-guards.sh"
 # shellcheck source=staging-db-backup-config.sh
 source "${SCRIPT_DIR}/staging-db-backup-config.sh"
+# shellcheck source=staging-db-backup-retention-lib.sh
+source "${SCRIPT_DIR}/staging-db-backup-retention-lib.sh"
 
 RESTORE_RUNNER="${SCRIPT_DIR}/run-staging-db-restore-rehearsal.sh"
-RETENTION_PLANNER="${SCRIPT_DIR}/staging-db-backup-retention-plan.js"
 LOG_DIR="${TRIDE_ROOT}/logs/backups"
 REHEARSAL_TS="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="${LOG_DIR}/monthly-rehearsal-${REHEARSAL_TS}.log"
@@ -31,28 +32,36 @@ log_line() {
   printf '%s\n' "$1" | tee -a "${LOG_FILE}"
 }
 
+log_monthly_diagnostics() {
+  log_line "MONTHLY_REHEARSAL_BACKUP=${MONTHLY_REHEARSAL_BACKUP}"
+  log_line "RESTORE_REHEARSAL=${RESTORE_REHEARSAL}"
+  log_line "INTERNAL_HEALTH=${INTERNAL_HEALTH}"
+  log_line "PUBLIC_HEALTH=${PUBLIC_HEALTH}"
+  log_line "MONTHLY_REHEARSAL_RESULT=${MONTHLY_REHEARSAL_RESULT}"
+}
+
+finish_monthly_fail() {
+  local message="${1:-}"
+  if [[ -n "${message}" ]]; then
+    log_line "${message}" >&2
+  fi
+  log_monthly_diagnostics
+  log_line "LOG_FILE=${LOG_FILE}"
+  exit 1
+}
+
 assert_tride_scope
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "node is required for monthly rehearsal selection" >&2
-  exit 1
-fi
-
-SELECT_JSON="$(node "${RETENTION_PLANNER}" --select-latest 2>/dev/null || true)"
-MONTHLY_REHEARSAL_BACKUP="$(node -e "const j=JSON.parse(process.argv[1]); console.log(j.latest?.backupPath || '')" "${SELECT_JSON}")"
-
+MONTHLY_REHEARSAL_BACKUP="$(backup_retention_select_latest_backup_path || true)"
 if [[ -z "${MONTHLY_REHEARSAL_BACKUP}" || ! -f "${MONTHLY_REHEARSAL_BACKUP}" ]]; then
-  log_line "MONTHLY_REHEARSAL_RESULT=FAIL"
-  log_line "No complete backup pair found" >&2
-  exit 1
+  finish_monthly_fail "No complete backup pair found"
 fi
 
 log_line "MONTHLY_REHEARSAL_BACKUP=${MONTHLY_REHEARSAL_BACKUP}"
 
 if ! gzip -t "${MONTHLY_REHEARSAL_BACKUP}"; then
-  log_line "MONTHLY_REHEARSAL_RESULT=FAIL"
-  log_line "Selected backup failed gzip integrity" >&2
-  exit 1
+  RESTORE_REHEARSAL="FAIL"
+  finish_monthly_fail "Selected backup failed gzip integrity"
 fi
 
 RESTORE_RUNNER_EXIT=0
@@ -72,9 +81,7 @@ if [[ -z "${RESTORE_OUTPUT}" ]]; then
   log_line "Restore rehearsal runner produced no output" >&2
 fi
 if [[ "${RESTORE_REHEARSAL}" != "PASS" ]]; then
-  log_line "RESTORE_REHEARSAL=${RESTORE_REHEARSAL}"
-  log_line "MONTHLY_REHEARSAL_RESULT=FAIL"
-  exit 1
+  finish_monthly_fail "Restore rehearsal failed"
 fi
 
 if curl -fsS http://172.18.0.1:3100/api/v1/health >> "${LOG_FILE}" 2>&1; then
@@ -84,17 +91,13 @@ if curl -fsS https://trider.taxi/api/v1/health >> "${LOG_FILE}" 2>&1; then
   PUBLIC_HEALTH="PASS"
 fi
 
-log_line "RESTORE_REHEARSAL=${RESTORE_REHEARSAL}"
-log_line "INTERNAL_HEALTH=${INTERNAL_HEALTH}"
-log_line "PUBLIC_HEALTH=${PUBLIC_HEALTH}"
-
 if [[ "${INTERNAL_HEALTH}" == "PASS" && "${PUBLIC_HEALTH}" == "PASS" ]]; then
   MONTHLY_REHEARSAL_RESULT="PASS"
 else
   MONTHLY_REHEARSAL_RESULT="FAIL"
 fi
 
-log_line "MONTHLY_REHEARSAL_RESULT=${MONTHLY_REHEARSAL_RESULT}"
+log_monthly_diagnostics
 log_line "LOG_FILE=${LOG_FILE}"
 
 if [[ "${MONTHLY_REHEARSAL_RESULT}" != "PASS" ]]; then

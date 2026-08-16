@@ -11,6 +11,8 @@ set -eu
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=staging-db-backup-guards.sh
 source "${SCRIPT_DIR}/staging-db-backup-guards.sh"
+# shellcheck source=staging-db-backup-retention-lib.sh
+source "${SCRIPT_DIR}/staging-db-backup-retention-lib.sh"
 
 APPLY=0
 if [[ "${1:-}" == "--apply" ]]; then
@@ -23,13 +25,4 @@ fi
 
 assert_tride_scope
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "node is required for retention planning" >&2
-  exit 1
-fi
-
-if [[ "${APPLY}" -eq 1 ]]; then
-  exec node "${SCRIPT_DIR}/staging-db-backup-retention-plan.js" --apply
-fi
-
-exec node "${SCRIPT_DIR}/staging-db-backup-retention-plan.js"
+backup_retention_emit_plan "${APPLY}"
