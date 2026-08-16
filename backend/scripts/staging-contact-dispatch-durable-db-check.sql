@@ -1,4 +1,5 @@
 SELECT
+  b.id AS booking_id,
   b.booking_number,
   b.status,
   b.contact_status,
@@ -15,9 +16,12 @@ WHERE b.booking_number = '@BOOKING_NUMBER@'
   AND n.deleted_at IS NULL;
 
 SELECT
+  b.id AS booking_id,
   n.id,
   n.recipient_driver_id,
   n.idempotency_key,
+  CONCAT('driver-call-open:', b.id, ':', n.recipient_driver_id) AS expected_key,
+  n.idempotency_key = CONCAT('driver-call-open:', b.id, ':', n.recipient_driver_id) AS key_matches,
   n.type,
   n.created_at
 FROM notifications n
@@ -45,13 +49,16 @@ WHERE b.booking_number = '@BOOKING_NUMBER@'
   AND bda.is_active = 1;
 
 SELECT
+  b.id AS booking_id,
   n.recipient_driver_id,
   n.idempotency_key,
+  CONCAT('driver-call-open:', b.id, ':', n.recipient_driver_id) AS expected_key,
+  n.idempotency_key = CONCAT('driver-call-open:', b.id, ':', n.recipient_driver_id) AS key_matches,
   COUNT(*) AS notification_row_count
 FROM notifications n
 JOIN bookings b ON b.id = n.booking_id
 WHERE b.booking_number = '@BOOKING_NUMBER@'
   AND n.deleted_at IS NULL
   AND n.type = 'DRIVER_CALL_AVAILABLE'
-GROUP BY n.recipient_driver_id, n.idempotency_key
+GROUP BY b.id, n.recipient_driver_id, n.idempotency_key
 ORDER BY n.recipient_driver_id, n.idempotency_key;

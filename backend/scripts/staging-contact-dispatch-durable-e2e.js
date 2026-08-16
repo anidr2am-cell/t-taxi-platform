@@ -94,6 +94,10 @@ function buildContactDispatchIdempotencyKey(bookingId, driverId) {
   return `${DRIVER_CALL_OPEN_KEY_PREFIX}:${bookingId}:${driverId}`;
 }
 
+function buildContactDispatchIdempotencyKeyPattern() {
+  return `${DRIVER_CALL_OPEN_KEY_PREFIX}:<bookingId>:<driverId>`;
+}
+
 function formatValidationErrors(errors) {
   return errors
     .map((item) => [item.field, item.type, item.source].filter(Boolean).join(':'))
@@ -126,8 +130,9 @@ function printSafeDiagnostics(report) {
   console.log(`FIRST_VERIFY_STATUS=${report.FIRST_VERIFY_STATUS ?? ''}`);
   console.log(`FIRST_VERIFY_DISPATCH_STARTED=${report.FIRST_VERIFY_DISPATCH_STARTED ?? ''}`);
   console.log(`OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY=${report.OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY ?? ''}`);
-  console.log(`EXPECTED_IDEMPOTENCY_KEY=${report.EXPECTED_IDEMPOTENCY_KEY ?? ''}`);
+  console.log(`EXPECTED_IDEMPOTENCY_KEY_PATTERN=${report.EXPECTED_IDEMPOTENCY_KEY_PATTERN ?? ''}`);
   console.log(`FIRST_TARGET_DRIVER_NOTIFICATION_COUNT=${report.FIRST_TARGET_DRIVER_NOTIFICATION_COUNT ?? ''}`);
+  console.log(`RETRY_TARGET_DRIVER_NOTIFICATION_COUNT=${report.RETRY_TARGET_DRIVER_NOTIFICATION_COUNT ?? ''}`);
 }
 
 async function fetchJson(baseUrl, urlPath, options = {}) {
@@ -159,16 +164,6 @@ async function login(baseUrl, email, password) {
   const token = body?.data?.accessToken || body?.data?.access_token;
   if (!token) throw new Error('Login missing access token');
   return { token, user: body?.data?.user ?? body?.data ?? null };
-}
-
-async function fetchAdminBookingDetail(baseUrl, adminToken, bookingNumber) {
-  const detail = await fetchJson(baseUrl, `/api/v1/admin/bookings/${bookingNumber}`, {
-    headers: { authorization: `Bearer ${adminToken}` },
-  });
-  if (!detail.ok) {
-    throw new Error(`Admin booking detail failed: ${detail.body?.error_code || detail.status}`);
-  }
-  return responseData(detail.body);
 }
 
 function guestHeaders(guestAccessToken) {
@@ -248,13 +243,12 @@ async function main() {
 
   const report = {
     BOOKING: null,
-    BOOKING_ID: null,
     TEST_DRIVER_ID: null,
     TEST_DRIVER_ELIGIBLE: null,
     FIRST_VERIFY_STATUS: null,
     FIRST_VERIFY_DISPATCH_STARTED: null,
     OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY: null,
-    EXPECTED_IDEMPOTENCY_KEY: null,
+    EXPECTED_IDEMPOTENCY_KEY_PATTERN: buildContactDispatchIdempotencyKeyPattern(),
     FIRST_TARGET_DRIVER_NOTIFICATION_COUNT: null,
     RETRY_TARGET_DRIVER_NOTIFICATION_COUNT: null,
     OPEN_CALL_VISIBLE: null,
@@ -307,16 +301,6 @@ async function main() {
     if (!bookingNumber || !guestAccessToken) throw new Error('Create booking missing identifiers');
     report.BOOKING = bookingNumber;
 
-    const bookingDetail = await fetchAdminBookingDetail(baseUrl, adminToken, bookingNumber);
-    report.BOOKING_ID = bookingDetail.id ?? bookingDetail.bookingId ?? null;
-    if (!report.BOOKING_ID) {
-      throw new Error('Admin booking detail missing booking id');
-    }
-    report.EXPECTED_IDEMPOTENCY_KEY = buildContactDispatchIdempotencyKey(
-      report.BOOKING_ID,
-      report.TEST_DRIVER_ID,
-    );
-
     const firstVerify = await verifyContact(baseUrl, { bookingNumber, guestAccessToken, adminToken });
     report.FIRST_VERIFY_STATUS = firstVerify.status;
     if (!firstVerify.ok) throw new Error(`First admin verify failed: ${firstVerify.body?.error_code}`);
@@ -368,6 +352,7 @@ async function main() {
       throw new Error('Booking not visible in open calls after contact dispatch retry');
     }
 
+    printSafeDiagnostics(report);
     console.log(`CONTACT_DISPATCH_E2E_BOOKING=${bookingNumber}`);
     console.log(JSON.stringify({ ok: true, report }, null, 2));
   } catch (err) {
@@ -418,6 +403,7 @@ module.exports = {
   bookingPayload,
   buildCreateBookingRequest,
   buildContactDispatchIdempotencyKey,
+  buildContactDispatchIdempotencyKeyPattern,
   countTargetDriverCallNotifications,
   formatCreateBookingFailure,
   printSafeDiagnostics,

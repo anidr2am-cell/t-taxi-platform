@@ -130,6 +130,9 @@ test('staging contact dispatch durable db-check runner is SELECT-only', () => {
   assert.match(sql, /duplicate_idempotency_key_count/);
   assert.match(sql, /active_assignment_count/);
   assert.match(sql, /recipient_driver_id/);
+  assert.match(sql, /booking_id/);
+  assert.match(sql, /expected_key/);
+  assert.match(sql, /key_matches/);
 });
 
 test('harness success output includes deterministic booking marker line', () => {
@@ -148,6 +151,9 @@ test('harness success output includes deterministic booking marker line', () => 
   assert.match(contents, /CLEANUP_API_BASED=YES/);
   assert.match(contents, /formatCleanupFailure\(bookingNumber, cleanupErr\.message\)/);
   assert.doesNotMatch(contents, /cleanup\.ok/);
+  assert.doesNotMatch(contents, /Admin booking detail missing booking id/);
+  assert.doesNotMatch(contents, /fetchAdminBookingDetail/);
+  assert.match(contents, /EXPECTED_IDEMPOTENCY_KEY_PATTERN/);
   assert.doesNotMatch(contents, /JSON\.stringify\(toPricingPayload\(payload\)\)/);
   assert.match(contents, /cleanupRegressionBookings/);
   assert.doesNotMatch(contents, /console\.log\(.*PASSWORD/i);
@@ -179,6 +185,28 @@ test('buildContactDispatchIdempotencyKey follows driver-call-open convention', (
   );
 });
 
+test('buildContactDispatchIdempotencyKeyPattern documents unresolved internal booking id', () => {
+  assert.equal(
+    harness.buildContactDispatchIdempotencyKeyPattern(),
+    'driver-call-open:<bookingId>:<driverId>',
+  );
+});
+
+test('harness does not require admin booking detail internal id before verify', () => {
+  const harnessPath = path.resolve(
+    __dirname,
+    '../scripts/staging-contact-dispatch-durable-e2e.js',
+  );
+  const contents = fs.readFileSync(harnessPath, 'utf8');
+  const createIndex = contents.indexOf("fetchJson(baseUrl, '/api/v1/bookings',");
+  const verifyIndex = contents.indexOf('const firstVerify = await verifyContact');
+  assert.ok(createIndex >= 0);
+  assert.ok(verifyIndex >= 0);
+  assert.ok(createIndex < verifyIndex);
+  assert.doesNotMatch(contents, /bookingDetail\.id/);
+  assert.doesNotMatch(contents, /bookingDetail\.bookingId/);
+});
+
 test('runApiCleanup prints PASS markers after successful cleanupRegressionBookings', () => {
   const harnessPath = path.resolve(
     __dirname,
@@ -190,6 +218,19 @@ test('runApiCleanup prints PASS markers after successful cleanupRegressionBookin
   assert.match(contents, /CLEANUP_API_BASED=YES/);
   assert.match(contents, /CLEANUP_RESULT=PASS/);
   assert.doesNotMatch(contents, /cleanup\.ok/);
+});
+
+test('cleanup still runs in finally after later API failure', () => {
+  const harnessPath = path.resolve(
+    __dirname,
+    '../scripts/staging-contact-dispatch-durable-e2e.js',
+  );
+  const contents = fs.readFileSync(harnessPath, 'utf8');
+  const finallyIndex = contents.indexOf('} finally {');
+  const cleanupIndex = contents.indexOf('await runApiCleanup');
+  assert.ok(finallyIndex >= 0);
+  assert.ok(cleanupIndex > finallyIndex);
+  assert.match(contents, /if \(bookingNumber && adminToken && driverToken\)/);
 });
 
 test('formatCleanupFailure uses booking number and safe reason text', () => {
@@ -278,8 +319,9 @@ test('printSafeDiagnostics excludes secrets and includes dispatch diagnostics', 
       FIRST_VERIFY_STATUS: 200,
       FIRST_VERIFY_DISPATCH_STARTED: true,
       OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY: true,
-      EXPECTED_IDEMPOTENCY_KEY: 'driver-call-open:5:11',
+      EXPECTED_IDEMPOTENCY_KEY_PATTERN: 'driver-call-open:<bookingId>:<driverId>',
       FIRST_TARGET_DRIVER_NOTIFICATION_COUNT: 1,
+      RETRY_TARGET_DRIVER_NOTIFICATION_COUNT: 1,
     });
   } finally {
     console.log = originalLog;
@@ -288,6 +330,8 @@ test('printSafeDiagnostics excludes secrets and includes dispatch diagnostics', 
   assert.match(joined, /BOOKING=TX202608160001/);
   assert.match(joined, /FIRST_VERIFY_DISPATCH_STARTED=true/);
   assert.match(joined, /TEST_DRIVER_ELIGIBLE=true/);
+  assert.match(joined, /EXPECTED_IDEMPOTENCY_KEY_PATTERN=driver-call-open:<bookingId>:<driverId>/);
+  assert.match(joined, /RETRY_TARGET_DRIVER_NOTIFICATION_COUNT=1/);
   assert.doesNotMatch(joined, /token/i);
   assert.doesNotMatch(joined, /password/i);
 });
