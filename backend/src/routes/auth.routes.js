@@ -3,6 +3,12 @@ const authController = require('../controllers/auth.controller');
 const validate = require('../middlewares/validate.middleware');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const {
+  loginIpRateLimit,
+  loginIdentifierRateLimit,
+  registerRateLimit,
+  refreshRateLimit,
+} = require('../middlewares/authRateLimit.middleware');
+const {
   registerSchema,
   loginSchema,
   refreshSchema,
@@ -11,9 +17,25 @@ const {
 
 const router = express.Router();
 
-router.post('/register', validate({ body: registerSchema }), authController.register);
-router.post('/login', validate({ body: loginSchema }), authController.login);
-router.post('/refresh', validate({ body: refreshSchema }), authController.refresh);
+router.post(
+  '/register',
+  registerRateLimit,
+  validate({ body: registerSchema }),
+  authController.register,
+);
+router.post(
+  '/login',
+  loginIpRateLimit,
+  loginIdentifierRateLimit,
+  validate({ body: loginSchema }),
+  authController.login,
+);
+router.post(
+  '/refresh',
+  refreshRateLimit,
+  validate({ body: refreshSchema }),
+  authController.refresh,
+);
 router.post('/logout', authMiddleware, validate({ body: logoutSchema }), authController.logout);
 router.get('/me', authMiddleware, authController.me);
 
