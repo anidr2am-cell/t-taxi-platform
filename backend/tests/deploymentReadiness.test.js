@@ -349,9 +349,44 @@ test('staging compose explicitly uses the backend staging target', () => {
 
   assert.match(compose, /dockerfile: deploy\/docker\/Dockerfile\.backend\s+target: staging/);
   assert.match(compose, /container_name: tride-backend/);
-  assert.match(compose, /\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
+  assert.match(compose, /127\.0\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
   assert.match(compose, /tride_uploads:\/srv\/tride\/uploads/);
   assert.match(compose, /tride_logs:\/srv\/tride\/logs/);
+});
+
+test('staging and production backend host ports bind to loopback only', () => {
+  const stagingCompose = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'docker-compose.staging.yml'),
+    'utf8',
+  );
+  const productionCompose = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'docker-compose.production.yml'),
+    'utf8',
+  );
+
+  assert.match(stagingCompose, /127\.0\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
+  assert.match(productionCompose, /127\.0\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-4100\}:3000/);
+  assert.doesNotMatch(stagingCompose, /^\s+-\s+"\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000"/m);
+  assert.doesNotMatch(productionCompose, /^\s+-\s+"\$\{TRIDE_BACKEND_HOST_PORT:-4100\}:3000"/m);
+});
+
+test('nginx proxies backend over Docker service names with forwarded client headers', () => {
+  const stagingNginx = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'nginx.frontend.conf'),
+    'utf8',
+  );
+  const productionNginx = fs.readFileSync(
+    path.join(repoRoot, 'deploy', 'docker', 'nginx.frontend.production.conf'),
+    'utf8',
+  );
+
+  assert.match(stagingNginx, /proxy_pass http:\/\/tride-backend:3000/);
+  assert.match(productionNginx, /proxy_pass http:\/\/tride-prod-backend:3000/);
+  for (const nginx of [stagingNginx, productionNginx]) {
+    assert.match(nginx, /proxy_set_header X-Real-IP \$remote_addr;/);
+    assert.match(nginx, /proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;/);
+    assert.match(nginx, /proxy_set_header X-Forwarded-Proto \$scheme;/);
+  }
 });
 
 test('production proxy template uses isolated same-origin Caddy topology', () => {

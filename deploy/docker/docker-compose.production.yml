@@ -5,7 +5,7 @@
 #   docker compose -f docker-compose.production.yml --env-file .env.production up -d --build
 #
 # Smoke ports (host → container):
-#   4100 → tride-prod-backend:3000
+#   127.0.0.1:4100 → tride-prod-backend:3000 (loopback only — nginx/Caddy use tride-prod-backend:3000)
 #   4101 → tride-prod-frontend:80
 #
 # Does NOT use host 80/443, ktaxi-nginx, or staging containers/volumes.
@@ -86,7 +86,7 @@ services:
       FLIGHT_SYNC_ENABLED: ${FLIGHT_SYNC_ENABLED:-false}
       TZ: ${TZ:-Asia/Bangkok}
     ports:
-      - "${TRIDE_BACKEND_HOST_PORT:-4100}:3000"
+      - "127.0.0.1:${TRIDE_BACKEND_HOST_PORT:-4100}:3000"
     volumes:
       - tride_prod_uploads:/srv/tride/uploads
       - tride_prod_logs:/srv/tride/logs

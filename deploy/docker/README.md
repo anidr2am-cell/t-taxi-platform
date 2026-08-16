@@ -7,7 +7,7 @@ Isolated staging stack beside legacy KTaxi.
 | Server path | `/opt/t-ride` |
 | Compose | `deploy/docker/docker-compose.staging.yml` |
 | DB | `tride-db`, MariaDB 10.11, `tride_staging` |
-| Backend | `tride-backend`, host 3100 -> container 3000 |
+| Backend | `tride-backend`, host `127.0.0.1:3100` -> container 3000 (loopback smoke only; nginx uses `tride-backend:3000`) |
 | Frontend | `tride-frontend`, host 3101 -> container 80 |
 | Volumes | `tride_mysql_data`, `tride_uploads`, `tride_logs` |
 
