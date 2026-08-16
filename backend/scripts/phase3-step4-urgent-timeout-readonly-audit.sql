@@ -1,8 +1,12 @@
 -- Phase 3 Step 4 read-only audit
 -- URGENT timeout worker / stale negotiation investigation (SELECT only).
 -- Lock window: 3 MIN (hardcoded). Customer decision: 2 MIN (hardcoded). MAX_ATTEMPTS: 3.
+--
+-- Live invariant queries intentionally exclude archived historical bookings
+-- (is_archived = 1). Archived rows such as released/cancelled E2E history may show
+-- OPEN + CONFIRMED pairings that are not current worker violations.
 
--- A. OPEN urgent bookings in BROADCASTING (no pure-BROADCASTING worker TTL in code)
+-- A. Current OPEN urgent bookings in BROADCASTING (operational listing)
 SELECT b.id, b.booking_number, b.status, b.created_at, b.scheduled_pickup_at,
        n.id AS negotiation_id, n.status AS negotiation_status, n.attempt_count,
        n.created_at AS negotiation_created_at, n.updated_at AS negotiation_updated_at,
@@ -14,21 +18,23 @@ WHERE b.deleted_at IS NULL AND b.is_archived = 0
   AND n.status = 'BROADCASTING'
 ORDER BY n.updated_at ASC;
 
--- B1. BROADCASTING/OPEN with active assignment (should be empty)
+-- B1. Live BROADCASTING/OPEN with active assignment (should be empty)
 SELECT b.booking_number, b.status, n.status AS neg_status, bda.id AS assignment_id
 FROM bookings b
 JOIN booking_urgent_negotiations n ON n.id = b.urgent_negotiation_id
 JOIN booking_driver_assignments bda ON bda.booking_id = b.id
   AND bda.is_active = 1 AND bda.deleted_at IS NULL
-WHERE b.is_urgent_request = 1 AND n.status = 'BROADCASTING';
+WHERE b.deleted_at IS NULL AND b.is_archived = 0
+  AND b.is_urgent_request = 1 AND n.status = 'BROADCASTING';
 
--- B2. CONFIRMED negotiation but booking still OPEN
+-- B2. Live CONFIRMED negotiation but booking still OPEN (should be empty)
 SELECT b.booking_number, b.status, n.status, n.closed_reason
 FROM bookings b
 JOIN booking_urgent_negotiations n ON n.id = b.urgent_negotiation_id
-WHERE b.is_urgent_request = 1 AND b.status = 'OPEN' AND n.status = 'CONFIRMED';
+WHERE b.deleted_at IS NULL AND b.is_archived = 0
+  AND b.is_urgent_request = 1 AND b.status = 'OPEN' AND n.status = 'CONFIRMED';
 
--- B3. Worker candidates right now
+-- B3. Worker candidates right now (live bookings only)
 SELECT n.id, b.booking_number, n.status, n.lock_expires_at, n.customer_decision_expires_at
 FROM booking_urgent_negotiations n
 JOIN bookings b ON b.id = n.booking_id
@@ -38,13 +44,15 @@ WHERE b.deleted_at IS NULL AND b.is_archived = 0
     OR (n.status = 'AWAITING_CUSTOMER' AND n.customer_decision_expires_at <= UTC_TIMESTAMP(3))
   );
 
--- C. Duplicate BROADCASTING rows per booking (should be 0)
-SELECT booking_id, COUNT(*) AS cnt
-FROM booking_urgent_negotiations
-WHERE status = 'BROADCASTING'
-GROUP BY booking_id HAVING cnt > 1;
+-- C. Duplicate BROADCASTING rows per live booking (should be 0)
+SELECT n.booking_id, COUNT(*) AS cnt
+FROM booking_urgent_negotiations n
+JOIN bookings b ON b.id = n.booking_id
+WHERE n.status = 'BROADCASTING'
+  AND b.deleted_at IS NULL AND b.is_archived = 0
+GROUP BY n.booking_id HAVING cnt > 1;
 
--- D. OPEN urgent with active assignment (open-call visibility conflict)
+-- D. Live OPEN urgent with active assignment (open-call visibility conflict)
 SELECT b.booking_number, b.status, n.status AS neg_status, bda.id AS active_assignment_id
 FROM bookings b
 JOIN booking_urgent_negotiations n ON n.id = b.urgent_negotiation_id
@@ -53,7 +61,7 @@ JOIN booking_driver_assignments bda ON bda.booking_id = b.id
 WHERE b.deleted_at IS NULL AND b.is_archived = 0
   AND b.is_urgent_request = 1 AND b.status = 'OPEN';
 
--- E. Timestamp / state inconsistencies
+-- E. Live timestamp / state inconsistencies
 SELECT b.booking_number, n.status,
        n.locked_at, n.lock_expires_at,
        n.customer_decision_expires_at, n.closed_at,
@@ -65,5 +73,6 @@ SELECT b.booking_number, n.status,
        END AS inconsistency
 FROM bookings b
 JOIN booking_urgent_negotiations n ON n.id = b.urgent_negotiation_id
-WHERE b.is_urgent_request = 1 AND b.deleted_at IS NULL AND b.is_archived = 0
+WHERE b.is_urgent_request = 1
+  AND b.deleted_at IS NULL AND b.is_archived = 0
 HAVING inconsistency IS NOT NULL;
