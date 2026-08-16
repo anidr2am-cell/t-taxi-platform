@@ -24,6 +24,76 @@ Required properties:
 - Off-server copy completed.
 - Backup success recorded in the deployment/incident log.
 
+### Staging automated runners (T-Ride only)
+
+These scripts are scoped to `/opt/t-ride`, `tride-db`, and `tride_staging` only.
+They never touch `/opt/ktaxi`, `ktaxi-*`, or legacy volumes.
+
+**Backup:**
+
+```bash
+bash /opt/t-ride/backend/scripts/run-staging-db-backup.sh
+```
+
+Expected safe output includes:
+
+```text
+BACKUP_FILE=/opt/t-ride/backups/tride_staging-YYYYMMDD-HHMMSS.sql.gz
+BACKUP_SIZE_BYTES=...
+BACKUP_SHA256=...
+GZIP_TEST=PASS
+BACKUP_RESULT=PASS
+MANIFEST_FILE=/opt/t-ride/backups/tride_staging-YYYYMMDD-HHMMSS.manifest
+```
+
+Each backup writes a companion manifest with snapshot table counts, migration
+file ceiling from the repo, and critical constraint presence checks. Manifests
+contain no passwords, tokens, or customer PII.
+
+**Restore rehearsal (isolated disposable MariaDB 10.11 container):**
+
+```bash
+bash /opt/t-ride/backend/scripts/run-staging-db-restore-rehearsal.sh \
+  /opt/t-ride/backups/tride_staging-YYYYMMDD-HHMMSS.sql.gz
+```
+
+Warning:
+
+```text
+NEVER restore a rehearsal backup into tride_staging or tride-db.
+```
+
+The rehearsal runner:
+
+- uses container `tride-restore-rehearsal`
+- uses database `tride_restore_rehearsal`
+- stores data in tmpfs only
+- does not mount `tride_mysql_data`
+- does not publish a host port
+- removes the disposable container in an EXIT trap
+
+**Health check after live rehearsal (manual):**
+
+```bash
+curl -fsS http://172.18.0.1:3100/api/v1/health
+curl -fsS https://trider.taxi/api/v1/health
+```
+
+**Retention helper (dry-run by default; cron not installed automatically):**
+
+```bash
+bash /opt/t-ride/backend/scripts/prune-staging-db-backups.sh
+bash /opt/t-ride/backend/scripts/prune-staging-db-backups.sh --apply
+```
+
+Recommended policy before enabling automation:
+
+- daily backups
+- keep 14 daily copies
+- keep 8 weekly copies
+- keep 6 monthly copies
+- copy off-server
+
 Example filename pattern:
 
 ```text
