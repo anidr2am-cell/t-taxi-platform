@@ -1,0 +1,13 @@
+[Unit]
+Description=Monthly T-Ride staging DB restore rehearsal timer
+Documentation=file:/opt/t-ride/docs/BACKUP_RESTORE_RUNBOOK.md
+
+[Timer]
+# First Sunday of each month at 04:00 Asia/Bangkok.
+OnCalendar=Sun *-*-1..7 04:00:00
+Timezone=Asia/Bangkok
+Persistent=true
+Unit=tride-staging-db-rehearsal.service
+
+[Install]
+WantedBy=timers.target

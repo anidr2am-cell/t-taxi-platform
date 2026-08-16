@@ -7,9 +7,9 @@ production deployment or migration.
 
 Suggested retention:
 
-- Daily backups: 7 days
-- Weekly backups: 4 weeks
-- Monthly backups: 3 months
+- Daily backups: 14 days
+- Weekly backups: 8 weeks
+- Monthly backups: 6 months
 
 Backups must be copied off-server. A backup that exists only on the production
 host is not enough.
@@ -93,6 +93,159 @@ Recommended policy before enabling automation:
 - keep 8 weekly copies
 - keep 6 monthly copies
 - copy off-server
+
+### Daily backup cycle (manual until systemd is enabled)
+
+```bash
+bash /opt/t-ride/backend/scripts/run-staging-db-backup-cycle.sh
+```
+
+Cycle flow:
+
+1. acquire `/opt/t-ride/logs/backups/backup-cycle.lock`
+2. run local backup + manifest verification
+3. copy backup + manifest off-server when remote is enabled
+4. verify remote upload
+5. run local retention only when **all** gates pass and `TRIDE_BACKUP_AUTO_PRUNE=1`
+
+Safe output fields:
+
+```text
+BACKUP_RESULT=PASS|FAIL
+REMOTE_COPY_RESULT=PASS|FAIL|SKIPPED_DISABLED
+REMOTE_VERIFY_RESULT=PASS|FAIL|SKIPPED_DISABLED
+LOCAL_PRUNE_RUN=YES|NO
+```
+
+While remote is disabled (`TRIDE_BACKUP_REMOTE_ENABLED=0`):
+
+```text
+REMOTE_COPY_RESULT=SKIPPED_DISABLED
+LOCAL_PRUNE_RUN=NO
+```
+
+Local pruning is **never** allowed when remote copy is disabled or failed.
+
+### Off-server copy configuration (example only)
+
+Copy the example file on the server:
+
+```bash
+cp /opt/t-ride/deploy/docker/.env.backup.example /opt/t-ride/.env.backup
+```
+
+Configure rclone on the host separately. The repository stores only:
+
+```text
+TRIDE_BACKUP_REMOTE_ENABLED=0
+TRIDE_BACKUP_REMOTE_NAME=
+TRIDE_BACKUP_REMOTE_PATH=T-Rider
+TRIDE_BACKUP_AUTO_PRUNE=0
+```
+
+Never commit access keys, secret keys, tokens, or DB passwords.
+
+Manual remote copy test:
+
+```bash
+bash /opt/t-ride/backend/scripts/staging-db-backup-remote.sh \
+  /opt/t-ride/backups/tride_staging-YYYYMMDD-HHMMSS.sql.gz \
+  /opt/t-ride/backups/tride_staging-YYYYMMDD-HHMMSS.manifest
+```
+
+Remote path layout:
+
+```text
+<TRIDE_BACKUP_REMOTE_PATH>/staging/db/YYYY/MM/<filename>
+```
+
+Remote retention mutation is **not** implemented in this step. Keep off-server
+copies equal to or longer than local retention.
+
+### Monthly restore rehearsal wrapper
+
+```bash
+bash /opt/t-ride/backend/scripts/run-staging-db-monthly-rehearsal.sh
+```
+
+This selects the newest complete local backup+manifest pair, runs the isolated
+restore rehearsal runner, then checks:
+
+```bash
+curl -fsS http://172.18.0.1:3100/api/v1/health
+curl -fsS https://trider.taxi/api/v1/health
+```
+
+Warning:
+
+```text
+NEVER automatically restore into tride_staging or tride-db.
+Actual staging/production restore remains a separate manual incident procedure.
+```
+
+### Systemd templates (create only — do not enable yet)
+
+Version-controlled unit files:
+
+```text
+deploy/systemd/tride-staging-db-backup.service
+deploy/systemd/tride-staging-db-backup.timer
+deploy/systemd/tride-staging-db-rehearsal.service
+deploy/systemd/tride-staging-db-rehearsal.timer
+```
+
+Suggested schedules:
+
+- daily backup: `02:30` with `Timezone=Asia/Bangkok`
+- monthly rehearsal: first Sunday `04:00` with `Timezone=Asia/Bangkok`
+
+Install later (operator action only):
+
+```bash
+sudo cp /opt/t-ride/deploy/systemd/tride-staging-db-backup.* /etc/systemd/system/
+sudo cp /opt/t-ride/deploy/systemd/tride-staging-db-rehearsal.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now tride-staging-db-backup.timer
+sudo systemctl enable --now tride-staging-db-rehearsal.timer
+```
+
+Check status:
+
+```bash
+systemctl status tride-staging-db-backup.timer
+systemctl status tride-staging-db-rehearsal.timer
+journalctl -u tride-staging-db-backup.service
+journalctl -u tride-staging-db-rehearsal.service
+```
+
+Disable later:
+
+```bash
+sudo systemctl disable --now tride-staging-db-backup.timer
+sudo systemctl disable --now tride-staging-db-rehearsal.timer
+```
+
+### Structured logs
+
+Backup cycle and monthly rehearsal logs:
+
+```text
+/opt/t-ride/logs/backups/
+```
+
+Logs include timestamps, filenames, sizes, hashes, remote results, and prune
+results. They never include DB credentials or remote secrets.
+
+### Alert hook
+
+Disabled by default. Enable with:
+
+```text
+TRIDE_BACKUP_ALERT_ENABLED=1
+TRIDE_BACKUP_ALERT_SCRIPT=/opt/t-ride/backend/scripts/staging-db-backup-alert.sh
+```
+
+Current alert delivery is log-only until a real notification provider is wired.
 
 Example filename pattern:
 

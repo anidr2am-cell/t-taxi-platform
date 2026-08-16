@@ -1,0 +1,19 @@
+[Unit]
+Description=T-Ride staging DB backup cycle
+Documentation=file:/opt/t-ride/docs/BACKUP_RESTORE_RUNBOOK.md
+After=docker.service
+Wants=docker.service
+ConditionPathExists=/opt/t-ride/backend/scripts/run-staging-db-backup-cycle.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/t-ride
+EnvironmentFile=-/opt/t-ride/.env.backup
+ExecStart=/bin/bash /opt/t-ride/backend/scripts/run-staging-db-backup-cycle.sh
+# Do not restart application services or touch legacy paths.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tride-staging-db-backup
+
+[Install]
+WantedBy=multi-user.target
