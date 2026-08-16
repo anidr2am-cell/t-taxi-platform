@@ -349,12 +349,12 @@ test('staging compose explicitly uses the backend staging target', () => {
 
   assert.match(compose, /dockerfile: deploy\/docker\/Dockerfile\.backend\s+target: staging/);
   assert.match(compose, /container_name: tride-backend/);
-  assert.match(compose, /127\.0\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
+  assert.match(compose, /172\.18\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
   assert.match(compose, /tride_uploads:\/srv\/tride\/uploads/);
   assert.match(compose, /tride_logs:\/srv\/tride\/logs/);
 });
 
-test('staging and production backend host ports bind to loopback only', () => {
+test('staging and production backend host ports avoid public interface binding', () => {
   const stagingCompose = fs.readFileSync(
     path.join(repoRoot, 'deploy', 'docker', 'docker-compose.staging.yml'),
     'utf8',
@@ -364,9 +364,10 @@ test('staging and production backend host ports bind to loopback only', () => {
     'utf8',
   );
 
-  assert.match(stagingCompose, /127\.0\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
+  assert.match(stagingCompose, /172\.18\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
   assert.match(productionCompose, /127\.0\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-4100\}:3000/);
   assert.doesNotMatch(stagingCompose, /^\s+-\s+"\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000"/m);
+  assert.doesNotMatch(stagingCompose, /127\.0\.0\.1:\$\{TRIDE_BACKEND_HOST_PORT:-3100\}:3000/);
   assert.doesNotMatch(productionCompose, /^\s+-\s+"\$\{TRIDE_BACKEND_HOST_PORT:-4100\}:3000"/m);
 });
 
