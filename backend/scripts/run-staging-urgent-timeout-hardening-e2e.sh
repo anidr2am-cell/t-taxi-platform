@@ -2,6 +2,14 @@
 set -eu
 source /opt/t-ride/deploy/docker/.env
 
+cleanup() {
+  local rc=$?
+  docker exec tride-backend rm -f /srv/tride/.env.e2e.local >/dev/null 2>&1 || true
+  exit "$rc"
+}
+
+trap cleanup EXIT
+
 read_env() {
   local key="$1"
   local file="/opt/t-ride/.env.e2e.local"
@@ -52,5 +60,3 @@ for BOOKING in $(grep -oE 'TX[0-9]{12}' /tmp/urgent-timeout-hardening-e2e.log | 
   echo "DB_CHECK booking=${BOOKING}"
   bash /opt/t-ride/backend/scripts/run-staging-urgent-timeout-hardening-db-check.sh "${BOOKING}"
 done
-
-docker exec tride-backend rm -f /srv/tride/.env.e2e.local

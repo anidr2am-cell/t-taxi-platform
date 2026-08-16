@@ -4,6 +4,8 @@ process.env.DB_NAME = process.env.DB_NAME || 'tride_test';
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret-value';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-value';
 
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
@@ -48,4 +50,17 @@ test('workerConfigReport exposes only non-secret timeout worker settings', () =>
 
 test('harness exports regression marker constant for cleanup safety checks', () => {
   assert.equal(harness.REGRESSION_MARKER, 'AUTOMATED_REGRESSION_TEST');
+});
+
+test('staging timeout hardening runner removes copied E2E env on EXIT', () => {
+  const runnerPath = path.resolve(
+    __dirname,
+    '../scripts/run-staging-urgent-timeout-hardening-e2e.sh',
+  );
+  const contents = fs.readFileSync(runnerPath, 'utf8');
+  assert.match(contents, /trap cleanup EXIT/);
+  assert.match(contents, /rm -f \/srv\/tride\/\.env\.e2e\.local/);
+  assert.match(contents, /local rc=\$\?/);
+  assert.match(contents, /exit "\$rc"/);
+  assert.doesNotMatch(contents, /^docker exec tride-backend rm -f \/srv\/tride\/\.env\.e2e\.local$/m);
 });
