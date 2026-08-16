@@ -10,12 +10,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const harness = require('../scripts/staging-contact-dispatch-durable-e2e');
+const NOTIFICATION_TYPES = require('../src/constants/notificationTypes');
 const { createBookingSchema } = require('../src/validators/booking.validator');
 const {
   REGRESSION_MARKER,
   toPricingPayload,
   assertValidBookingPayload,
+  TEST_NAME_PREFIX,
 } = require('../scripts/staging-booking-regression');
+const cleanup = require('../scripts/e2eRegressionCleanup');
 
 test('contact dispatch durable E2E payload uses regression cleanup marker', () => {
   const payload = harness.bookingPayload();
@@ -138,7 +141,153 @@ test('harness success output includes deterministic booking marker line', () => 
   assert.match(contents, /console\.log\(`CONTACT_DISPATCH_E2E_BOOKING=\$\{bookingNumber\}`\)/);
   assert.match(contents, /JSON\.stringify\(requestPayload\)/);
   assert.match(contents, /toPricingPayload\(requestPayload\)/);
+  assert.match(contents, /assertTestDriverEligibleForNewJob/);
+  assert.match(contents, /\/api\/v1\/driver\/online/);
+  assert.match(contents, /Expected exactly one DRIVER_CALL_AVAILABLE notification for E2E driver/);
+  assert.match(contents, /FIRST_VERIFY_DISPATCH_STARTED !== true/);
+  assert.match(contents, /CLEANUP_API_BASED=YES/);
+  assert.match(contents, /formatCleanupFailure\(bookingNumber, cleanupErr\.message\)/);
+  assert.doesNotMatch(contents, /cleanup\.ok/);
   assert.doesNotMatch(contents, /JSON\.stringify\(toPricingPayload\(payload\)\)/);
   assert.match(contents, /cleanupRegressionBookings/);
   assert.doesNotMatch(contents, /console\.log\(.*PASSWORD/i);
+});
+
+test('countTargetDriverCallNotifications uses notificationType and bookingNumber', () => {
+  const bookingNumber = 'TX202608160001';
+  const items = [
+    {
+      notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+      payload: { bookingNumber },
+    },
+    {
+      notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+      payload: { bookingNumber: 'TX202608169999' },
+    },
+    {
+      type: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+      payload: { bookingNumber },
+    },
+  ];
+  assert.equal(harness.countTargetDriverCallNotifications(items, bookingNumber), 1);
+});
+
+test('buildContactDispatchIdempotencyKey follows driver-call-open convention', () => {
+  assert.equal(
+    harness.buildContactDispatchIdempotencyKey(42, 11),
+    'driver-call-open:42:11',
+  );
+});
+
+test('runApiCleanup prints PASS markers after successful cleanupRegressionBookings', () => {
+  const harnessPath = path.resolve(
+    __dirname,
+    '../scripts/staging-contact-dispatch-durable-e2e.js',
+  );
+  const contents = fs.readFileSync(harnessPath, 'utf8');
+  assert.match(contents, /async function runApiCleanup/);
+  assert.match(contents, /await cleanupRegressionBookings/);
+  assert.match(contents, /CLEANUP_API_BASED=YES/);
+  assert.match(contents, /CLEANUP_RESULT=PASS/);
+  assert.doesNotMatch(contents, /cleanup\.ok/);
+});
+
+test('formatCleanupFailure uses booking number and safe reason text', () => {
+  assert.equal(
+    cleanup.formatCleanupFailure('TX202608160001', 'archive refused'),
+    'CLEANUP_FAILED booking=TX202608160001 reason=archive refused',
+  );
+});
+
+test('countTargetDriverCallNotifications only counts matching booking for target driver list', () => {
+  const bookingNumber = 'TX202608160001';
+  const sameDriverItems = [
+    {
+      notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+      payload: { bookingNumber },
+    },
+    {
+      notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE,
+      payload: { bookingNumber: 'TX202608169999' },
+    },
+  ];
+  assert.equal(harness.countTargetDriverCallNotifications(sameDriverItems, bookingNumber), 1);
+  assert.equal(
+    harness.countTargetDriverCallNotifications(
+      [{ notificationType: NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE, payload: { bookingNumber: 'TX999' } }],
+      bookingNumber,
+    ),
+    0,
+  );
+});
+
+test('harness checks driver eligibility before booking creation', () => {
+  const harnessPath = path.resolve(
+    __dirname,
+    '../scripts/staging-contact-dispatch-durable-e2e.js',
+  );
+  const contents = fs.readFileSync(harnessPath, 'utf8');
+  const eligibilityIndex = contents.indexOf('assertTestDriverEligibleForNewJob');
+  const createIndex = contents.indexOf("fetchJson(baseUrl, '/api/v1/bookings',");
+  assert.ok(eligibilityIndex >= 0);
+  assert.ok(createIndex >= 0);
+  assert.ok(eligibilityIndex < createIndex);
+});
+
+test('assertTestDriverEligibleForNewJob fails early when driver is not assignment eligible', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    if (String(url).endsWith('/api/v1/admin/drivers')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          data: {
+            items: [{
+              id: 11,
+              displayName: `${TEST_NAME_PREFIX} Regression Driver`,
+              assignmentEligible: false,
+              eligibilityState: 'OFFLINE',
+              activeAssignmentCount: 0,
+            }],
+          },
+        }),
+      };
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+  try {
+    await assert.rejects(
+      () => cleanup.assertTestDriverEligibleForNewJob('https://trider.taxi', 'admin-token'),
+      /not assignment eligible/,
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('printSafeDiagnostics excludes secrets and includes dispatch diagnostics', () => {
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  try {
+    harness.printSafeDiagnostics({
+      BOOKING: 'TX202608160001',
+      TEST_DRIVER_ID: 11,
+      TEST_DRIVER_ELIGIBLE: true,
+      FIRST_VERIFY_STATUS: 200,
+      FIRST_VERIFY_DISPATCH_STARTED: true,
+      OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY: true,
+      EXPECTED_IDEMPOTENCY_KEY: 'driver-call-open:5:11',
+      FIRST_TARGET_DRIVER_NOTIFICATION_COUNT: 1,
+    });
+  } finally {
+    console.log = originalLog;
+  }
+  const joined = logs.join('\n');
+  assert.match(joined, /BOOKING=TX202608160001/);
+  assert.match(joined, /FIRST_VERIFY_DISPATCH_STARTED=true/);
+  assert.match(joined, /TEST_DRIVER_ELIGIBLE=true/);
+  assert.doesNotMatch(joined, /token/i);
+  assert.doesNotMatch(joined, /password/i);
 });

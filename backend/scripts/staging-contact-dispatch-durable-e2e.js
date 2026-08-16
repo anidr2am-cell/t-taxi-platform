@@ -6,6 +6,7 @@
  */
 const fs = require('node:fs');
 const path = require('node:path');
+const NOTIFICATION_TYPES = require('../src/constants/notificationTypes');
 const { createBookingSchema } = require('../src/validators/booking.validator');
 const {
   assertSafeEnvironment,
@@ -17,6 +18,7 @@ const {
   REGRESSION_MARKER,
 } = require('./staging-booking-regression');
 const {
+  assertTestDriverEligibleForNewJob,
   cleanupRegressionBookings,
   formatCleanupFailure,
 } = require('./e2eRegressionCleanup');
@@ -25,6 +27,7 @@ const E2E_MARKER = 'CONTACT_DISPATCH_DURABLE_E2E';
 const CUSTOMER_NAME = '[E2E] Contact Dispatch Durable';
 const TIMEOUT_MS = Number(process.env.TRIDE_REGRESSION_TIMEOUT_MS || 25000);
 const PREFERRED_CHANNELS = ['LINE', 'WHATSAPP', 'KAKAO'];
+const DRIVER_CALL_OPEN_KEY_PREFIX = 'driver-call-open';
 
 function loadE2eLocalEnv() {
   const candidates = [
@@ -87,6 +90,10 @@ function buildCreateBookingRequest(payload) {
   return payload;
 }
 
+function buildContactDispatchIdempotencyKey(bookingId, driverId) {
+  return `${DRIVER_CALL_OPEN_KEY_PREFIX}:${bookingId}:${driverId}`;
+}
+
 function formatValidationErrors(errors) {
   return errors
     .map((item) => [item.field, item.type, item.source].filter(Boolean).join(':'))
@@ -105,6 +112,22 @@ function formatCreateBookingFailure(create) {
 
 function responseData(body) {
   return body?.data ?? body;
+}
+
+function countTargetDriverCallNotifications(items, bookingNumber) {
+  return items.filter((row) => row.payload?.bookingNumber === bookingNumber
+    && row.notificationType === NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE).length;
+}
+
+function printSafeDiagnostics(report) {
+  console.log(`BOOKING=${report.BOOKING ?? ''}`);
+  console.log(`TEST_DRIVER_ID=${report.TEST_DRIVER_ID ?? ''}`);
+  console.log(`TEST_DRIVER_ELIGIBLE=${report.TEST_DRIVER_ELIGIBLE ?? ''}`);
+  console.log(`FIRST_VERIFY_STATUS=${report.FIRST_VERIFY_STATUS ?? ''}`);
+  console.log(`FIRST_VERIFY_DISPATCH_STARTED=${report.FIRST_VERIFY_DISPATCH_STARTED ?? ''}`);
+  console.log(`OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY=${report.OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY ?? ''}`);
+  console.log(`EXPECTED_IDEMPOTENCY_KEY=${report.EXPECTED_IDEMPOTENCY_KEY ?? ''}`);
+  console.log(`FIRST_TARGET_DRIVER_NOTIFICATION_COUNT=${report.FIRST_TARGET_DRIVER_NOTIFICATION_COUNT ?? ''}`);
 }
 
 async function fetchJson(baseUrl, urlPath, options = {}) {
@@ -135,7 +158,17 @@ async function login(baseUrl, email, password) {
   if (!ok) throw new Error(`Login failed: ${body?.error_code || body?.message}`);
   const token = body?.data?.accessToken || body?.data?.access_token;
   if (!token) throw new Error('Login missing access token');
-  return token;
+  return { token, user: body?.data?.user ?? body?.data ?? null };
+}
+
+async function fetchAdminBookingDetail(baseUrl, adminToken, bookingNumber) {
+  const detail = await fetchJson(baseUrl, `/api/v1/admin/bookings/${bookingNumber}`, {
+    headers: { authorization: `Bearer ${adminToken}` },
+  });
+  if (!detail.ok) {
+    throw new Error(`Admin booking detail failed: ${detail.body?.error_code || detail.status}`);
+  }
+  return responseData(detail.body);
 }
 
 function guestHeaders(guestAccessToken) {
@@ -175,13 +208,13 @@ async function verifyContact(baseUrl, { bookingNumber, guestAccessToken, adminTo
   );
 }
 
-async function countDriverCallNotifications(baseUrl, driverToken, bookingNumber) {
-  const list = responseData((await fetchJson(baseUrl, '/api/v1/driver/notifications?limit=100', {
-    headers: { authorization: `Bearer ${driverToken}` },
-  })).body);
-  const items = Array.isArray(list?.items) ? list.items : [];
-  return items.filter((row) => row.payload?.bookingNumber === bookingNumber
-    && row.type === 'DRIVER_CALL_AVAILABLE').length;
+async function listDriverCallNotifications(baseUrl, driverToken) {
+  const list = responseData((await fetchJson(
+    baseUrl,
+    `/api/v1/driver/notifications?limit=100&notificationType=${NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE}`,
+    { headers: { authorization: `Bearer ${driverToken}` } },
+  )).body);
+  return Array.isArray(list?.items) ? list.items : [];
 }
 
 async function isOpenCallVisible(baseUrl, driverToken, bookingNumber) {
@@ -189,6 +222,21 @@ async function isOpenCallVisible(baseUrl, driverToken, bookingNumber) {
     headers: { authorization: `Bearer ${driverToken}` },
   })).body);
   return (openCalls?.items ?? []).some((row) => row.bookingNumber === bookingNumber);
+}
+
+async function runApiCleanup(baseUrl, {
+  adminToken,
+  driverToken,
+  bookingNumber,
+  requestPayload,
+}) {
+  await cleanupRegressionBookings(baseUrl, {
+    adminToken,
+    driverToken,
+    records: [{ bookingNumber, payload: requestPayload }],
+  });
+  console.log('CLEANUP_API_BASED=YES');
+  console.log('CLEANUP_RESULT=PASS');
 }
 
 async function main() {
@@ -200,23 +248,46 @@ async function main() {
 
   const report = {
     BOOKING: null,
+    BOOKING_ID: null,
+    TEST_DRIVER_ID: null,
+    TEST_DRIVER_ELIGIBLE: null,
+    FIRST_VERIFY_STATUS: null,
     FIRST_VERIFY_DISPATCH_STARTED: null,
-    FIRST_NOTIFICATION_COUNT: null,
-    RETRY_VERIFY_DISPATCH_STARTED: null,
-    RETRY_NOTIFICATION_COUNT: null,
+    OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY: null,
+    EXPECTED_IDEMPOTENCY_KEY: null,
+    FIRST_TARGET_DRIVER_NOTIFICATION_COUNT: null,
+    RETRY_TARGET_DRIVER_NOTIFICATION_COUNT: null,
     OPEN_CALL_VISIBLE: null,
   };
 
   let adminToken;
   let driverToken;
+  let driverWasOnline = false;
+  let bookingNumber = null;
 
   try {
-    adminToken = await login(baseUrl, process.env.TRIDE_ADMIN_EMAIL, process.env.TRIDE_ADMIN_PASSWORD);
-    driverToken = await login(
+    const adminLogin = await login(baseUrl, process.env.TRIDE_ADMIN_EMAIL, process.env.TRIDE_ADMIN_PASSWORD);
+    const driverLogin = await login(
       baseUrl,
       process.env.TRIDE_TEST_DRIVER_EMAIL,
       process.env.TRIDE_TEST_DRIVER_PASSWORD,
     );
+    adminToken = adminLogin.token;
+    driverToken = driverLogin.token;
+
+    const testDriver = await assertTestDriverEligibleForNewJob(
+      baseUrl,
+      adminToken,
+      driverLogin.user?.name ?? `${TEST_NAME_PREFIX} Regression Driver`,
+    );
+    report.TEST_DRIVER_ID = testDriver.id;
+    report.TEST_DRIVER_ELIGIBLE = testDriver.assignmentEligible === true;
+
+    await fetchJson(baseUrl, '/api/v1/driver/online', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${driverToken}` },
+    });
+    driverWasOnline = true;
 
     await fetchJson(baseUrl, '/api/v1/bookings/pricing/calculate', {
       method: 'POST',
@@ -231,43 +302,103 @@ async function main() {
       body: JSON.stringify(requestPayload),
     });
     if (!create.ok) throw new Error(formatCreateBookingFailure(create));
-    const bookingNumber = responseData(create.body)?.bookingNumber;
+    bookingNumber = responseData(create.body)?.bookingNumber;
     const guestAccessToken = responseData(create.body)?.guestAccessToken;
     if (!bookingNumber || !guestAccessToken) throw new Error('Create booking missing identifiers');
     report.BOOKING = bookingNumber;
 
+    const bookingDetail = await fetchAdminBookingDetail(baseUrl, adminToken, bookingNumber);
+    report.BOOKING_ID = bookingDetail.id ?? bookingDetail.bookingId ?? null;
+    if (!report.BOOKING_ID) {
+      throw new Error('Admin booking detail missing booking id');
+    }
+    report.EXPECTED_IDEMPOTENCY_KEY = buildContactDispatchIdempotencyKey(
+      report.BOOKING_ID,
+      report.TEST_DRIVER_ID,
+    );
+
     const firstVerify = await verifyContact(baseUrl, { bookingNumber, guestAccessToken, adminToken });
+    report.FIRST_VERIFY_STATUS = firstVerify.status;
     if (!firstVerify.ok) throw new Error(`First admin verify failed: ${firstVerify.body?.error_code}`);
     report.FIRST_VERIFY_DISPATCH_STARTED = responseData(firstVerify.body)?.dispatchStarted;
-    report.FIRST_NOTIFICATION_COUNT = await countDriverCallNotifications(baseUrl, driverToken, bookingNumber);
-    if (report.FIRST_NOTIFICATION_COUNT < 1) {
-      throw new Error('Expected at least one durable DRIVER_CALL_AVAILABLE notification after verify');
+    report.OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY = await isOpenCallVisible(
+      baseUrl,
+      driverToken,
+      bookingNumber,
+    );
+    printSafeDiagnostics(report);
+
+    if (report.FIRST_VERIFY_DISPATCH_STARTED !== true) {
+      throw new Error(
+        `Contact dispatch did not start (dispatchStarted=${report.FIRST_VERIFY_DISPATCH_STARTED})`,
+      );
+    }
+    if (!report.OPEN_CALL_VISIBLE_AFTER_FIRST_VERIFY) {
+      throw new Error(
+        'E2E driver cannot see open call after verify; driver may be ineligible (online/vehicle/settlement)',
+      );
+    }
+
+    const firstNotifications = await listDriverCallNotifications(baseUrl, driverToken);
+    report.FIRST_TARGET_DRIVER_NOTIFICATION_COUNT = countTargetDriverCallNotifications(
+      firstNotifications,
+      bookingNumber,
+    );
+    if (report.FIRST_TARGET_DRIVER_NOTIFICATION_COUNT !== 1) {
+      throw new Error(
+        `Expected exactly one DRIVER_CALL_AVAILABLE notification for E2E driver ${report.TEST_DRIVER_ID}, got ${report.FIRST_TARGET_DRIVER_NOTIFICATION_COUNT}`,
+      );
     }
 
     const retryVerify = await verifyContact(baseUrl, { bookingNumber, guestAccessToken, adminToken });
     if (!retryVerify.ok) throw new Error(`Retry admin verify failed: ${retryVerify.body?.error_code}`);
     report.RETRY_VERIFY_DISPATCH_STARTED = responseData(retryVerify.body)?.dispatchStarted;
-    report.RETRY_NOTIFICATION_COUNT = await countDriverCallNotifications(baseUrl, driverToken, bookingNumber);
-    if (report.RETRY_NOTIFICATION_COUNT !== report.FIRST_NOTIFICATION_COUNT) {
-      throw new Error('Retry verify changed durable notification count');
+
+    const retryNotifications = await listDriverCallNotifications(baseUrl, driverToken);
+    report.RETRY_TARGET_DRIVER_NOTIFICATION_COUNT = countTargetDriverCallNotifications(
+      retryNotifications,
+      bookingNumber,
+    );
+    if (report.RETRY_TARGET_DRIVER_NOTIFICATION_COUNT !== report.FIRST_TARGET_DRIVER_NOTIFICATION_COUNT) {
+      throw new Error('Retry verify changed durable notification count for E2E driver');
     }
 
     report.OPEN_CALL_VISIBLE = await isOpenCallVisible(baseUrl, driverToken, bookingNumber);
     if (!report.OPEN_CALL_VISIBLE) {
-      throw new Error('Booking not visible in open calls after contact dispatch');
+      throw new Error('Booking not visible in open calls after contact dispatch retry');
     }
 
     console.log(`CONTACT_DISPATCH_E2E_BOOKING=${bookingNumber}`);
     console.log(JSON.stringify({ ok: true, report }, null, 2));
+  } catch (err) {
+    console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
+    process.exitCode = 1;
+    if (bookingNumber) {
+      printSafeDiagnostics(report);
+    }
+    throw err;
   } finally {
-    if (report.BOOKING && adminToken && driverToken) {
-      const cleanup = await cleanupRegressionBookings(baseUrl, {
-        adminToken,
-        driverToken,
-        records: [{ bookingNumber: report.BOOKING, payload: requestPayload }],
-      });
-      if (!cleanup.ok) {
-        console.error(formatCleanupFailure(cleanup));
+    if (bookingNumber && adminToken && driverToken) {
+      try {
+        await runApiCleanup(baseUrl, {
+          adminToken,
+          driverToken,
+          bookingNumber,
+          requestPayload,
+        });
+      } catch (cleanupErr) {
+        console.error(formatCleanupFailure(bookingNumber, cleanupErr.message));
+        process.exitCode = 1;
+      }
+    }
+    if (driverWasOnline && driverToken) {
+      try {
+        await fetchJson(baseUrl, '/api/v1/driver/offline', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${driverToken}` },
+        });
+      } catch (offlineErr) {
+        console.error(`Driver offline cleanup failed: ${offlineErr.message}`);
         process.exitCode = 1;
       }
     }
@@ -275,16 +406,20 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((err) => {
-    console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
-    process.exitCode = 1;
+  main().catch(() => {
+    // exitCode already set in main
   });
 }
 
 module.exports = {
   E2E_MARKER,
   CUSTOMER_NAME,
+  DRIVER_CALL_OPEN_KEY_PREFIX,
   bookingPayload,
   buildCreateBookingRequest,
+  buildContactDispatchIdempotencyKey,
+  countTargetDriverCallNotifications,
   formatCreateBookingFailure,
+  printSafeDiagnostics,
+  runApiCleanup,
 };
