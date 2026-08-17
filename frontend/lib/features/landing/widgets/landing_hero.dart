@@ -176,7 +176,12 @@ class LandingHero extends StatelessWidget {
       child: FilledButton(
         onPressed: onBook,
         style: LandingClickableStyles.heroCtaStyle(compact: compact),
-        child: Text(l10n.t('landing_hero_cta')),
+        child: Text(
+          l10n.t('landing_hero_cta'),
+          softWrap: false,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
 
@@ -201,11 +206,14 @@ class LandingHero extends StatelessWidget {
       );
     }
 
-    return IntrinsicWidth(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [button, const SizedBox(height: 8), helper],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        IntrinsicWidth(child: button),
+        const SizedBox(height: 8),
+        helper,
+      ],
     );
   }
 }

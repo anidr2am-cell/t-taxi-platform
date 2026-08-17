@@ -84,7 +84,7 @@ abstract final class LandingClickableStyles {
 
   static ButtonStyle heroCtaStyle({required bool compact}) {
     return FilledButton.styleFrom(
-      minimumSize: const Size.fromHeight(52),
+      minimumSize: Size(compact ? 112 : 120, 52),
       backgroundColor: ctaBackground,
       foregroundColor: ctaForeground,
       disabledBackgroundColor: disabledBackground,
