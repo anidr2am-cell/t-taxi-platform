@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/booking/models/booking_wizard_route_args.dart';
+import 'package:frontend/features/booking/models/location_option.dart';
+import 'package:frontend/features/booking/models/service_type_option.dart';
 import 'package:frontend/features/booking/pages/booking_wizard_page.dart';
+import 'package:frontend/features/booking/widgets/step_pickup_datetime.dart';
+import 'package:frontend/features/booking/widgets/step_route_select.dart';
+import 'package:frontend/features/booking/widgets/wizard_status_views.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
+import 'package:frontend/features/landing/models/landing_booking_draft.dart';
 import 'package:frontend/features/landing/pages/customer_landing_page.dart';
 import 'package:frontend/features/landing/widgets/landing_clickable_styles.dart';
 import 'package:frontend/features/landing/widgets/landing_header.dart';
@@ -12,6 +19,19 @@ import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:frontend/theme/app_tokens.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+const _testOrigin = LocationOption(
+  id: 'test:origin',
+  displayName: 'Test Origin',
+  kind: LocationKind.place,
+);
+
+const _testDestination = LocationOption(
+  id: 'test:destination',
+  displayName: 'Test Destination',
+  kind: LocationKind.place,
+);
 
 Widget _wrapLanding({
   required Widget child,
@@ -37,7 +57,12 @@ Widget _wrapLanding({
             GlobalCupertinoLocalizations.delegate,
           ],
           routes: {
-            '/booking': (_) => const BookingWizardPage(),
+            '/booking': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              return BookingWizardPage(
+                routeArgs: args is BookingWizardRouteArgs ? args : null,
+              );
+            },
             '/support': (_) => const CustomerSupportPage(),
           },
           home: MediaQuery(
@@ -53,22 +78,55 @@ Widget _wrapLanding({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('CustomerLandingPage', () {
+    void configureView(WidgetTester tester, double width, double height) {
+      tester.view.physicalSize = Size(width, height);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
+
     Future<void> pumpLanding(
       WidgetTester tester, {
       double width = 360,
       double height = 900,
       Locale locale = const Locale('en'),
+      LandingBookingDraft? initialDraft,
     }) async {
+      configureView(tester, width, height);
       await tester.pumpWidget(
         _wrapLanding(
           width: width,
           height: height,
           locale: locale,
-          child: const CustomerLandingPage(),
+          child: CustomerLandingPage(initialDraft: initialDraft),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      if (width < 900) {
+        await tester.pumpAndSettle();
+      }
+    }
+
+    Future<void> pumpWizardReady(WidgetTester tester) async {
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(WizardLoadingView).evaluate().isNotEmpty) {
+          continue;
+        }
+        if (find.byType(BookingWizardPage).evaluate().isEmpty) {
+          continue;
+        }
+        if (find.byType(StepRouteSelect).evaluate().isNotEmpty ||
+            find.byType(StepPickupDateTime).evaluate().isNotEmpty) {
+          return;
+        }
+      }
     }
 
     testWidgets('has no overflow at 360px', (tester) async {
@@ -85,6 +143,75 @@ void main() {
     testWidgets('has no overflow at 1440px', (tester) async {
       await pumpLanding(tester, width: 1440, height: 1200);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders desktop booking widget at 1100px', (tester) async {
+      await pumpLanding(tester, width: 1100, height: 1200);
+
+      expect(find.byKey(const Key('landing_booking_widget')), findsOneWidget);
+      expect(find.byKey(const Key('landing_booking_service_row')), findsOneWidget);
+    });
+
+    testWidgets('hides desktop booking widget below 900px', (tester) async {
+      await pumpLanding(tester, width: 375, height: 900);
+
+      expect(find.byKey(const Key('landing_booking_widget')), findsNothing);
+      expect(find.text('Book now'), findsWidgets);
+    });
+
+    testWidgets('complete hero draft opens wizard at schedule step', (tester) async {
+      await pumpLanding(
+        tester,
+        width: 1100,
+        height: 1200,
+        initialDraft: const LandingBookingDraft(
+          serviceType: BookingServiceType.cityTransfer,
+          origin: _testOrigin,
+          destination: _testDestination,
+        ),
+      );
+
+      await tester.ensureVisible(find.byKey(const Key('landing_booking_submit')));
+      await tester.tap(find.byKey(const Key('landing_booking_submit')));
+      await pumpWizardReady(tester);
+
+      expect(find.byType(BookingWizardPage), findsOneWidget);
+      expect(find.byType(StepPickupDateTime), findsOneWidget);
+      expect(find.byType(StepRouteSelect), findsNothing);
+    });
+
+    testWidgets('mobile hero CTA without draft opens wizard at route step', (
+      tester,
+    ) async {
+      await pumpLanding(tester, width: 375);
+
+      await tester.tap(find.text('Book now').first);
+      await pumpWizardReady(tester);
+
+      expect(find.byType(BookingWizardPage), findsOneWidget);
+      expect(find.byType(StepRouteSelect), findsOneWidget);
+      expect(find.byType(StepPickupDateTime), findsNothing);
+    });
+
+    testWidgets('service card selection updates shared draft state', (tester) async {
+      await pumpLanding(tester, width: 1100, height: 1200);
+
+      await tester.tap(find.byKey(const Key('landing_service_golfTransfer')));
+      await pumpWizardReady(tester);
+      expect(find.byType(BookingWizardPage), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final golfHeroSegment = find.byKey(
+        const Key('landing_booking_service_golfTransfer'),
+      );
+      final decoration = tester.widget<Ink>(
+        find.descendant(of: golfHeroSegment, matching: find.byType(Ink)),
+      ).decoration! as ShapeDecoration;
+
+      expect(decoration.color, LandingClickableStyles.selectedBackground);
     });
 
     testWidgets('primary CTA opens booking wizard', (tester) async {

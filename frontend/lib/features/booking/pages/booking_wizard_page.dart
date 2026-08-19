@@ -7,6 +7,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../../widgets/language_selector.dart';
 import '../controllers/booking_wizard_controller.dart';
+import '../models/booking_wizard_route_args.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/booking_wizard_steps.dart';
 import '../models/location_option.dart';
@@ -31,13 +32,21 @@ import '../widgets/wizard_compact.dart';
 import '../widgets/wizard_status_views.dart';
 
 class BookingWizardPage extends StatefulWidget {
-  const BookingWizardPage({super.key, this.now, this.controller});
+  const BookingWizardPage({
+    super.key,
+    this.now,
+    this.controller,
+    this.routeArgs,
+  });
 
   /// Fixed clock for tests. Ignored when [controller] is provided.
   final DateTime Function()? now;
 
   /// Preconfigured controller for tests. Skips [BookingWizardController.initialize].
   final BookingWizardController? controller;
+
+  /// Route-level prefill from the landing page booking widget.
+  final BookingWizardRouteArgs? routeArgs;
 
   @override
   State<BookingWizardPage> createState() => _BookingWizardPageState();
@@ -89,9 +98,23 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         if (mounted) _controller.syncDerivedData();
       });
     } else {
-      _controller.initialize().then((_) {
-        if (mounted) _controller.syncDerivedData();
-      });
+      final args = widget.routeArgs;
+      if (args != null) {
+        _controller
+            .applyRoutePrefill(
+              serviceType: args.serviceType,
+              origin: args.origin,
+              destination: args.destination,
+              initialStep: args.initialStep,
+            )
+            .then((_) {
+          if (mounted) _controller.syncDerivedData();
+        });
+      } else {
+        _controller.initialize().then((_) {
+          if (mounted) _controller.syncDerivedData();
+        });
+      }
     }
   }
 

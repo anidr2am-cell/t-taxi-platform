@@ -4,42 +4,24 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../booking/models/service_type_option.dart';
+import '../models/landing_service_options.dart';
 import 'landing_clickable_styles.dart';
 
-class LandingServiceCards extends StatefulWidget {
+class LandingServiceCards extends StatelessWidget {
+  final BookingServiceType? selectedService;
+  final ValueChanged<BookingServiceType> onServiceSelected;
   final VoidCallback onBook;
 
-  const LandingServiceCards({super.key, required this.onBook});
-
-  @override
-  State<LandingServiceCards> createState() => _LandingServiceCardsState();
-}
-
-class _LandingServiceCardsState extends State<LandingServiceCards> {
-  BookingServiceType? _selected;
-
-  static const _services = [
-    _ServiceItem(
-      type: BookingServiceType.airportPickup,
-      icon: Icons.flight_land,
-    ),
-    _ServiceItem(
-      type: BookingServiceType.airportDropoff,
-      icon: Icons.flight_takeoff,
-    ),
-    _ServiceItem(
-      type: BookingServiceType.cityTransfer,
-      icon: Icons.route_outlined,
-    ),
-    _ServiceItem(
-      type: BookingServiceType.golfTransfer,
-      icon: Icons.sports_golf,
-    ),
-  ];
+  const LandingServiceCards({
+    super.key,
+    required this.selectedService,
+    required this.onServiceSelected,
+    required this.onBook,
+  });
 
   void _onServiceTap(BookingServiceType type) {
-    setState(() => _selected = type);
-    widget.onBook();
+    onServiceSelected(type);
+    onBook();
   }
 
   @override
@@ -59,15 +41,17 @@ class _LandingServiceCardsState extends State<LandingServiceCards> {
           Row(
             key: const Key('landing_service_row'),
             children: [
-              for (var index = 0; index < _services.length; index++) ...[
+              for (var index = 0; index < landingServiceOptions.length; index++) ...[
                 if (index > 0) const SizedBox(width: 6),
                 Expanded(
                   child: _ServiceTile(
-                    key: Key('landing_service_${_services[index].type.name}'),
-                    label: l10n.t(_services[index].type.labelKey),
-                    icon: _services[index].icon,
-                    selected: _selected == _services[index].type,
-                    onTap: () => _onServiceTap(_services[index].type),
+                    key: Key(
+                      'landing_service_${landingServiceOptions[index].type.name}',
+                    ),
+                    label: l10n.t(landingServiceOptions[index].type.labelKey),
+                    icon: landingServiceOptions[index].icon,
+                    selected: selectedService == landingServiceOptions[index].type,
+                    onTap: () => _onServiceTap(landingServiceOptions[index].type),
                   ),
                 ),
               ],
@@ -162,11 +146,4 @@ class _ServiceTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ServiceItem {
-  final BookingServiceType type;
-  final IconData icon;
-
-  const _ServiceItem({required this.type, required this.icon});
 }

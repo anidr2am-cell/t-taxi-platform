@@ -6,6 +6,7 @@ import 'landing_clickable_styles.dart';
 
 class LandingHero extends StatelessWidget {
   final VoidCallback onBook;
+  final Widget? desktopBookingWidget;
 
   static const pattayaHeroAssetPath = 'assets/images/pattaya_hero.jpg';
   static const hasPattayaHeroAsset = true;
@@ -13,7 +14,11 @@ class LandingHero extends StatelessWidget {
   static const mobileImageAlignment = Alignment(0.18, -0.18);
   static const desktopImageAlignment = Alignment(0.10, -0.12);
 
-  const LandingHero({super.key, required this.onBook});
+  const LandingHero({
+    super.key,
+    required this.onBook,
+    this.desktopBookingWidget,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,12 +73,13 @@ class LandingHero extends StatelessWidget {
                     children: [
                       Expanded(child: _heroCopy(l10n, compact: false)),
                       const SizedBox(width: 32),
-                      _ctaColumn(
-                        l10n,
-                        onBook,
-                        fullWidth: false,
-                        compact: false,
-                      ),
+                      desktopBookingWidget ??
+                          _ctaColumn(
+                            l10n,
+                            onBook,
+                            fullWidth: false,
+                            compact: false,
+                          ),
                     ],
                   )
                 : Column(

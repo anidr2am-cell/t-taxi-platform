@@ -210,6 +210,30 @@ class BookingWizardController extends ChangeNotifier {
     await syncDerivedData();
   }
 
+  Future<void> applyRoutePrefill({
+    required BookingServiceType serviceType,
+    required LocationOption origin,
+    required LocationOption destination,
+    required int initialStep,
+  }) async {
+    if (initialStep < 0 || initialStep >= BookingWizardState.stepCount) {
+      return;
+    }
+    _invalidateSubmitIdempotencyKey();
+    _state = BookingWizardState(
+      step: initialStep,
+      serviceType: serviceType,
+      origin: origin,
+      destination: destination,
+    );
+    await _seedDefaultPickupDateTime();
+    await _recentLocations.add(origin);
+    await _recentLocations.add(destination);
+    _isInitialized = true;
+    notifyListeners();
+    await syncDerivedData();
+  }
+
   Future<void> swapOriginDestination() async {
     final origin = _state.origin;
     final destination = _state.destination;

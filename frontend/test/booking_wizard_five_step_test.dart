@@ -6,6 +6,7 @@ import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/urgent_negotiation_status.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
+import 'package:frontend/features/booking/models/booking_wizard_route_args.dart';
 import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
 import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/models/pricing_result.dart';
@@ -16,6 +17,8 @@ import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
 import 'package:frontend/features/booking/widgets/booking_progress_header.dart';
+import 'package:frontend/features/booking/widgets/step_pickup_datetime.dart';
+import 'package:frontend/features/booking/widgets/wizard_status_views.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -166,7 +169,12 @@ void main() {
           child: MaterialApp(
             initialRoute: '/booking',
             routes: {
-              '/booking': (_) => const BookingWizardPage(),
+              '/booking': (context) {
+                final args = ModalRoute.of(context)?.settings.arguments;
+                return BookingWizardPage(
+                  routeArgs: args is BookingWizardRouteArgs ? args : null,
+                );
+              },
             },
           ),
         ),
@@ -174,6 +182,157 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BookingWizardPage), findsOneWidget);
+    });
+
+    test('applyRoutePrefill replaces draft with fresh route-only state', () async {
+      final storage = MemoryBookingStateStorage();
+      await storage.save(
+        BookingWizardState(
+          step: BookingWizardSteps.customer,
+          serviceType: BookingServiceType.airportPickup,
+          customerName: 'Stale Name',
+          customerPhone: '+66111111111',
+          pickupDate: '20260101',
+          pickupTime: '09:30',
+          selectedVehicle: 'SUV',
+          flightNumber: 'TG123',
+          adults: 3,
+        ),
+      );
+      final controller = BookingWizardController(
+        storage: storage,
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      const origin = LocationOption(
+        id: 'bkk',
+        displayName: 'Bangkok',
+        kind: LocationKind.city,
+        code: 'BANGKOK',
+      );
+      const destination = LocationOption(
+        id: 'pattaya',
+        displayName: 'Pattaya',
+        kind: LocationKind.city,
+        code: 'PATTAYA',
+      );
+
+      await controller.applyRoutePrefill(
+        serviceType: BookingServiceType.cityTransfer,
+        origin: origin,
+        destination: destination,
+        initialStep: BookingWizardSteps.schedule,
+      );
+
+      expect(controller.isInitialized, isTrue);
+      expect(controller.state.step, BookingWizardSteps.schedule);
+      expect(controller.state.serviceType, BookingServiceType.cityTransfer);
+      expect(controller.state.origin, origin);
+      expect(controller.state.destination, destination);
+      expect(controller.state.customerName, '');
+      expect(controller.state.customerPhone, '');
+      expect(controller.state.selectedVehicle, isNull);
+      expect(controller.state.flightNumber, '');
+      expect(controller.state.adults, 1);
+      expect(controller.state.pickupDate, isNot('20260101'));
+      expect(storage.value!.customerName, '');
+      expect(storage.value!.step, BookingWizardSteps.schedule);
+    });
+
+    testWidgets('routeArgs entry ignores stored draft and starts at schedule', (
+      tester,
+    ) async {
+      final savedAt = DateTime.now().toUtc();
+      final envelope = BookingWizardDraftEnvelope.create(
+        state: const BookingWizardState(
+          step: BookingWizardSteps.customer,
+          serviceType: BookingServiceType.airportPickup,
+          customerName: 'Stale Name',
+          customerPhone: '+66111111111',
+          pickupDate: '20260101',
+          pickupTime: '09:30',
+          selectedVehicle: 'SUV',
+          flightNumber: 'TG123',
+        ),
+        savedAt: savedAt,
+      );
+      SharedPreferences.setMockInitialValues({
+        BookingStateStorage.draftStorageKey: jsonEncode(envelope.toJson()),
+      });
+
+      const origin = LocationOption(
+        id: 'bkk',
+        displayName: 'Bangkok',
+        kind: LocationKind.city,
+        code: 'BANGKOK',
+      );
+      const destination = LocationOption(
+        id: 'pattaya',
+        displayName: 'Pattaya',
+        kind: LocationKind.city,
+        code: 'PATTAYA',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(),
+          child: MaterialApp(
+            home: BookingWizardPage(
+              now: () => DateTime.utc(2026, 6, 29, 3),
+              routeArgs: const BookingWizardRouteArgs(
+                serviceType: BookingServiceType.cityTransfer,
+                origin: origin,
+                destination: destination,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(WizardLoadingView).evaluate().isEmpty &&
+            find.byType(StepPickupDateTime).evaluate().isNotEmpty) {
+          break;
+        }
+      }
+
+      expect(find.byType(StepPickupDateTime), findsOneWidget);
+      expect(find.text('Stale Name'), findsNothing);
+    });
+
+    testWidgets('missing routeArgs restores stored draft', (tester) async {
+      final savedAt = DateTime.now().toUtc();
+      final envelope = BookingWizardDraftEnvelope.create(
+        state: const BookingWizardState(
+          step: BookingWizardSteps.customer,
+          serviceType: BookingServiceType.airportPickup,
+          customerName: 'Stored Name',
+          customerPhone: '+66111111111',
+          pickupDate: '20260701',
+          pickupTime: '09:30',
+        ),
+        savedAt: savedAt,
+      );
+      SharedPreferences.setMockInitialValues({
+        BookingStateStorage.draftStorageKey: jsonEncode(envelope.toJson()),
+      });
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(),
+          child: MaterialApp(
+            home: BookingWizardPage(now: () => DateTime.utc(2026, 6, 29, 3)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Stored Name'), findsOneWidget);
+      expect(find.text('4/5 Passenger info'), findsOneWidget);
     });
 
     test('step navigation alone does not call pricing API', () async {

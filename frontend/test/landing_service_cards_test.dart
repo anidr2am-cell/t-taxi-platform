@@ -38,7 +38,13 @@ void main() {
       'shows four compact tiles in one row at 360px without overflow',
       (tester) async {
         await tester.pumpWidget(
-          _wrap(child: LandingServiceCards(onBook: () {})),
+          _wrap(
+            child: LandingServiceCards(
+              selectedService: null,
+              onServiceSelected: (_) {},
+              onBook: () {},
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -58,9 +64,16 @@ void main() {
       tester,
     ) async {
       var booked = false;
+      BookingServiceType? selected;
 
       await tester.pumpWidget(
-        _wrap(child: LandingServiceCards(onBook: () => booked = true)),
+        _wrap(
+          child: LandingServiceCards(
+            selectedService: selected,
+            onServiceSelected: (type) => selected = type,
+            onBook: () => booked = true,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -68,13 +81,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(booked, isTrue);
+      expect(selected, BookingServiceType.cityTransfer);
     });
 
     testWidgets(
       'service tiles expose unselected and selected clickable surfaces',
       (tester) async {
+        BookingServiceType? selected;
+
         await tester.pumpWidget(
-          _wrap(child: LandingServiceCards(onBook: () {})),
+          _wrap(
+            child: LandingServiceCards(
+              selectedService: selected,
+              onServiceSelected: (type) => selected = type,
+              onBook: () {},
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -96,6 +118,17 @@ void main() {
         await tester.tap(find.text('Airport Pickup'));
         await tester.pumpAndSettle();
 
+        await tester.pumpWidget(
+          _wrap(
+            child: LandingServiceCards(
+              selectedService: selected,
+              onServiceSelected: (type) => selected = type,
+              onBook: () {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
         expect(
           decorationFor('landing_service_airportPickup').color,
           LandingClickableStyles.selectedBackground,
@@ -113,7 +146,13 @@ void main() {
         final l10n = AppLocalizations('en');
 
         await tester.pumpWidget(
-          _wrap(child: LandingServiceCards(onBook: () => booked = true)),
+          _wrap(
+            child: LandingServiceCards(
+              selectedService: null,
+              onServiceSelected: (_) {},
+              onBook: () => booked = true,
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -131,7 +170,11 @@ void main() {
         await tester.pumpWidget(
           _wrap(
             locale: Locale(code),
-            child: LandingServiceCards(onBook: () {}),
+            child: LandingServiceCards(
+              selectedService: null,
+              onServiceSelected: (_) {},
+              onBook: () {},
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -146,7 +189,15 @@ void main() {
     });
 
     testWidgets('compact tiles meet minimum touch height', (tester) async {
-      await tester.pumpWidget(_wrap(child: LandingServiceCards(onBook: () {})));
+      await tester.pumpWidget(
+        _wrap(
+          child: LandingServiceCards(
+            selectedService: null,
+            onServiceSelected: (_) {},
+            onBook: () {},
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final tileFinder = find.byType(ConstrainedBox).first;
