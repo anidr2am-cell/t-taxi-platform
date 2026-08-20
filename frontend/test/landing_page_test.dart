@@ -435,6 +435,37 @@ void main() {
       expect(decoration.color, isNot(LandingClickableStyles.background));
     });
 
+    testWidgets('trust section shows refund and driver policy cards', (
+      tester,
+    ) async {
+      await pumpLanding(tester, width: 1100, locale: const Locale('ko'));
+      await tester.scrollUntilVisible(
+        find.text('안심 취소·환불'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text('안심 취소·환불'), findsOneWidget);
+      expect(find.text('기사 품질 관리'), findsOneWidget);
+      expect(find.textContaining('24시간 이내 위약금 없이'), findsOneWidget);
+      expect(find.textContaining('즉시 배차를 정지'), findsOneWidget);
+    });
+
+    testWidgets('trust section has no overflow at 375px with five cards', (
+      tester,
+    ) async {
+      await pumpLanding(tester, width: 375, locale: const Locale('ko'));
+      await tester.scrollUntilVisible(
+        find.text('기사 품질 관리'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('안심 취소·환불'), findsOneWidget);
+      expect(find.text('기사 품질 관리'), findsOneWidget);
+    });
+
     for (final code in AppLocalizations.supportedLanguages) {
       testWidgets('renders without overflow for locale $code', (tester) async {
         await pumpLanding(tester, locale: Locale(code));

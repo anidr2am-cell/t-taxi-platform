@@ -23,13 +23,21 @@ class LandingTrustSection extends StatelessWidget {
       descKey: 'landing_trust_comfort_desc',
       icon: Icons.airline_seat_recline_extra_outlined,
     ),
+    _TrustItem(
+      titleKey: 'landing_trust_refund_title',
+      descKey: 'landing_trust_refund_desc',
+      icon: Icons.replay_outlined,
+    ),
+    _TrustItem(
+      titleKey: 'landing_trust_driver_policy_title',
+      descKey: 'landing_trust_driver_policy_desc',
+      icon: Icons.shield_outlined,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final width = MediaQuery.sizeOf(context).width;
-    final useRow = width >= 768;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -37,25 +45,29 @@ class LandingTrustSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppUi.sectionHeader(context, title: l10n.t('landing_trust_title')),
-          if (useRow)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < _items.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 12),
-                  Expanded(child: _TrustCard(l10n: l10n, item: _items[i])),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final columns = width >= 900 ? 3 : (width >= 768 ? 2 : 1);
+              const gap = 12.0;
+              const runGap = 8.0;
+              final itemWidth = columns == 1
+                  ? width
+                  : (width - gap * (columns - 1)) / columns;
+
+              return Wrap(
+                spacing: gap,
+                runSpacing: runGap,
+                children: [
+                  for (final item in _items)
+                    SizedBox(
+                      width: itemWidth,
+                      child: _TrustCard(l10n: l10n, item: item),
+                    ),
                 ],
-              ],
-            )
-          else
-            Column(
-              children: [
-                for (var i = 0; i < _items.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 8),
-                  _TrustCard(l10n: l10n, item: _items[i]),
-                ],
-              ],
-            ),
+              );
+            },
+          ),
         ],
       ),
     );

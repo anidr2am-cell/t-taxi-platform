@@ -51,6 +51,12 @@ class AppLocalizations {
       'landing_trust_comfort_title': 'A comfortable journey',
       'landing_trust_comfort_desc':
           'Focus on your trip—not navigating unfamiliar transport.',
+      'landing_trust_refund_title': 'Free Cancellation & Refund',
+      'landing_trust_refund_desc':
+          'You can cancel free of charge within 24 hours of booking confirmation, with no cancellation fee. If you find a lower confirmed quote for the same conditions (vehicle and schedule), contact us within 48 hours of booking and we\'ll refund the difference.',
+      'landing_trust_driver_policy_title': 'Driver Quality Management',
+      'landing_trust_driver_policy_desc':
+          'If you have any concerns about your driver, you can report them through the booking details page or via KakaoTalk/phone. We will follow up within 24 hours of receiving your report. For serious issues such as safety threats, we will immediately suspend the driver from dispatch.',
       'landing_how_it_works_title': 'How booking works',
       'landing_how_step_1_title': 'Enter trip details',
       'landing_how_step_1_desc':
@@ -1676,6 +1682,12 @@ class AppLocalizations {
       'landing_trust_confirmed_desc': '픽업 정보와 이동 일정을 미리 확인합니다.',
       'landing_trust_comfort_title': '편안한 여정',
       'landing_trust_comfort_desc': '복잡한 이동 걱정 없이 여행에 집중하세요.',
+      'landing_trust_refund_title': '안심 취소·환불',
+      'landing_trust_refund_desc':
+          '예약 확정 후 24시간 이내 위약금 없이 무료 취소 가능합니다. 동일 조건으로 더 저렴한 확정 견적을 발견하시면 예약 후 48시간 이내 문의 시 차액을 환불해드립니다.',
+      'landing_trust_driver_policy_title': '기사 품질 관리',
+      'landing_trust_driver_policy_desc':
+          '기사 관련 불편사항은 예약 상세 화면 또는 카카오톡/전화로 신고 가능하며, 접수 후 24시간 이내 확인 연락드립니다. 안전 위협 등 중대 사안은 즉시 배차를 정지합니다.',
       'landing_how_it_works_title': '이용 방법',
       'landing_how_step_1_title': '이동 정보 입력',
       'landing_how_step_1_desc': '서비스, 픽업 시간, 목적지를 선택하세요.',
@@ -2679,6 +2691,12 @@ class AppLocalizations {
       'landing_trust_confirmed_desc': '提前确认接车信息与行程安排。',
       'landing_trust_comfort_title': '舒适旅程',
       'landing_trust_comfort_desc': '无需为交通操心，专注享受旅行。',
+      'landing_trust_refund_title': '安心取消·退款',
+      'landing_trust_refund_desc':
+          '预约确认后24小时内可免费取消，无需支付违约金。若您在相同条件(车型·行程)下发现更优惠的确定报价，可在预约后48小时内联系我们，我们将为您退还差价。',
+      'landing_trust_driver_policy_title': '司机服务质量管理',
+      'landing_trust_driver_policy_desc':
+          '如对司机有任何不满，可通过预约详情页面或KakaoTalk/电话进行投诉。收到投诉后我们将在24小时内与您联系确认。对于安全威胁等严重情况，我们将立即暂停该司机的派单。',
       'landing_how_it_works_title': '预约流程',
       'landing_how_step_1_title': '填写行程信息',
       'landing_how_step_1_desc': '选择服务、接车时间与目的地。',
@@ -3248,6 +3266,12 @@ class AppLocalizations {
       'landing_trust_confirmed_desc': 'ピックアップ情報と行程を事前に確認できます。',
       'landing_trust_comfort_title': '快適な移動',
       'landing_trust_comfort_desc': '移動の心配なく、旅をお楽しみください。',
+      'landing_trust_refund_title': '安心キャンセル・返金',
+      'landing_trust_refund_desc':
+          'ご予約確定後24時間以内であれば、違約金なしで無料キャンセルが可能です。また、同条件(車種・日程)でより安い確定見積もりを見つけられた場合、ご予約後48時間以内にお問い合わせいただければ差額を返金いたします。',
+      'landing_trust_driver_policy_title': 'ドライバー品質管理',
+      'landing_trust_driver_policy_desc':
+          'ドライバーに関するご不満は、予約詳細画面またはカカオトーク/電話でご報告いただけます。ご報告後24時間以内にご連絡いたします。安全上の脅威など重大な事案については、直ちに配車を停止いたします。',
       'landing_how_it_works_title': 'ご利用の流れ',
       'landing_how_step_1_title': '移動情報を入力',
       'landing_how_step_1_desc': 'サービス、ピックアップ時間、目的地を選びます。',
@@ -3883,6 +3907,12 @@ class AppLocalizations {
       'landing_trust_comfort_title': 'การเดินทางที่สบาย',
       'landing_trust_comfort_desc':
           'ไม่ต้องกังวลเรื่องการเดินทาง โฟกัสกับทริปของคุณ',
+      'landing_trust_refund_title': 'ยกเลิก·คืนเงินอย่างอุ่นใจ',
+      'landing_trust_refund_desc':
+          'สามารถยกเลิกการจองได้ฟรีภายใน 24 ชั่วโมงหลังจากยืนยันการจอง โดยไม่มีค่าธรรมเนียม หากท่านพบราคาที่ถูกกว่าสำหรับเงื่อนไขเดียวกัน (ประเภทรถ·กำหนดการ) กรุณาติดต่อเราภายใน 48 ชั่วโมงหลังการจอง เราจะคืนส่วนต่างให้ท่าน',
+      'landing_trust_driver_policy_title': 'การจัดการคุณภาพคนขับ',
+      'landing_trust_driver_policy_desc':
+          'หากท่านมีข้อกังวลเกี่ยวกับคนขับ สามารถแจ้งได้ผ่านหน้ารายละเอียดการจองหรือทาง KakaoTalk/โทรศัพท์ เราจะติดต่อกลับภายใน 24 ชั่วโมงหลังจากได้รับแจ้ง สำหรับกรณีร้ายแรง เช่น การคุกคามด้านความปลอดภัย เราจะระงับการจัดสรรคนขับทันที',
       'landing_how_it_works_title': 'วิธีการจอง',
       'landing_how_step_1_title': 'กรอกข้อมูลการเดินทาง',
       'landing_how_step_1_desc': 'เลือกบริการ เวลารับ และจุดหมาย',
