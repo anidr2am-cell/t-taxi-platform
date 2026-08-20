@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../../utils/user_facing_error.dart';
 import '../services/admin_dispatch_api_service.dart';
+import '../utils/admin_customer_preference_options.dart';
 
 class RecommendDriversDialogResult {
   const RecommendDriversDialogResult({
@@ -21,10 +23,17 @@ Future<RecommendDriversDialogResult?> showRecommendDriversDialog({
   required BuildContext context,
   required AdminDispatchApiService api,
   required String bookingNumber,
+  bool preferFemaleDriver = false,
+  bool preferSmokingVehicle = false,
 }) {
   return showDialog<RecommendDriversDialogResult>(
     context: context,
-    builder: (ctx) => _RecommendDriversDialog(api: api, bookingNumber: bookingNumber),
+    builder: (ctx) => _RecommendDriversDialog(
+      api: api,
+      bookingNumber: bookingNumber,
+      preferFemaleDriver: preferFemaleDriver,
+      preferSmokingVehicle: preferSmokingVehicle,
+    ),
   );
 }
 
@@ -32,10 +41,14 @@ class _RecommendDriversDialog extends StatefulWidget {
   const _RecommendDriversDialog({
     required this.api,
     required this.bookingNumber,
+    this.preferFemaleDriver = false,
+    this.preferSmokingVehicle = false,
   });
 
   final AdminDispatchApiService api;
   final String bookingNumber;
+  final bool preferFemaleDriver;
+  final bool preferSmokingVehicle;
 
   @override
   State<_RecommendDriversDialog> createState() => _RecommendDriversDialogState();
@@ -82,6 +95,10 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
   @override
   Widget build(BuildContext context) {
     final recommendedId = _data?['recommendedDriverId'] as int?;
+    final preferenceOptions = AdminCustomerPreferenceOptions(
+      preferFemaleDriver: widget.preferFemaleDriver,
+      preferSmokingVehicle: widget.preferSmokingVehicle,
+    );
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: AppTokens.borderRadiusLg),
@@ -96,6 +113,12 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (preferenceOptions.hasAny) ...[
+                          AdminCustomerPreferenceBanner(
+                            options: preferenceOptions,
+                          ),
+                          const SizedBox(height: AppTokens.spaceMd),
+                        ],
                         if (_candidates.isEmpty)
                           AppUi.emptyState(title: 'No eligible drivers found for this booking.'),
                         ..._candidates.asMap().entries.map((entry) {

@@ -2828,4 +2828,163 @@ void main() {
     expect(find.text('No-show recorded successfully.'), findsOneWidget);
     expect(find.text('500 THB'), findsOneWidget);
   });
+
+  testWidgets('booking detail shows customer preference badges when requested', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'CONFIRMED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': ['ASSIGN_DRIVER'],
+              'options': {
+                'preferFemaleDriver': true,
+                'preferSmokingVehicle': true,
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Prefer Female Driver'), findsOneWidget);
+    expect(find.text('Prefer Smoking-Allowed Vehicle'), findsOneWidget);
+  });
+
+  testWidgets('booking detail hides customer preference badges when not requested', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202607010001',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202607010001',
+              'status': 'CONFIRMED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'allowedActions': ['ASSIGN_DRIVER'],
+              'options': {
+                'preferFemaleDriver': false,
+                'preferSmokingVehicle': false,
+              },
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Prefer Female Driver'), findsNothing);
+    expect(find.text('Prefer Smoking-Allowed Vehicle'), findsNothing);
+  });
+
+  testWidgets('recommend drivers dialog shows customer preference banner once', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showRecommendDriversDialog(
+              context: context,
+              api: _FakeAdminApi(),
+              bookingNumber: 'TX202607010001',
+              preferFemaleDriver: true,
+              preferSmokingVehicle: true,
+            ),
+            child: const Text('Open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Customer preferences: Prefer Female Driver / Prefer Smoking-Allowed Vehicle',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Driver A (SUV)'), findsOneWidget);
+  });
+
+  testWidgets('recommend drivers dialog hides preference banner when none requested', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showRecommendDriversDialog(
+              context: context,
+              api: _FakeAdminApi(),
+              bookingNumber: 'TX202607010001',
+            ),
+            child: const Text('Open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Customer preferences:'), findsNothing);
+  });
+
+  testWidgets('dispatch queue shows preference badge for flagged bookings', (
+    tester,
+  ) async {
+    final api = _FakeAdminApi(
+      token: 'token',
+      bookingsResponse: {
+        'page': 1,
+        'total': 1,
+        'items': [
+          {
+            ..._queueItem('TX202607010001'),
+            'options': {
+              'preferFemaleDriver': true,
+              'preferSmokingVehicle': false,
+            },
+          },
+        ],
+      },
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: AdminDispatchQueuePage(api: api)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Preference'), findsOneWidget);
+    expect(find.text('TX202607010001'), findsOneWidget);
+  });
 }

@@ -15,6 +15,7 @@ import '../widgets/assign_driver_dialog.dart';
 import '../widgets/recommend_drivers_dialog.dart';
 import '../widgets/unassign_driver_dialog.dart';
 import '../utils/admin_operations_ux.dart';
+import '../utils/admin_customer_preference_options.dart';
 
 class AdminBookingDetailPage extends StatefulWidget {
   final String bookingNumber;
@@ -593,10 +594,13 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Future<void> _recommendDrivers() async {
+    final preferences = AdminCustomerPreferenceOptions.fromMap(_detail);
     final result = await showRecommendDriversDialog(
       context: context,
       api: widget.api,
       bookingNumber: widget.bookingNumber,
+      preferFemaleDriver: preferences.preferFemaleDriver,
+      preferSmokingVehicle: preferences.preferSmokingVehicle,
     );
     if (result == null) return;
     setState(() => _submitting = true);
@@ -1858,6 +1862,12 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               label: l10n.t('admin_detail_special_requests'),
               value: '${detail['specialRequests']}',
             ),
+          if (AdminCustomerPreferenceOptions.fromMap(detail).hasAny) ...[
+            const SizedBox(height: AppTokens.spaceSm),
+            AdminCustomerPreferenceBadges(
+              options: AdminCustomerPreferenceOptions.fromMap(detail),
+            ),
+          ],
         ],
       ),
     );

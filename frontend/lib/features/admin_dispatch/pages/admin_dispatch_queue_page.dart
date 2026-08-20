@@ -11,6 +11,7 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../utils/admin_operations_ux.dart';
+import '../utils/admin_customer_preference_options.dart';
 import 'admin_booking_detail_page.dart';
 
 String? _serviceTypeCodeFromItem(Map<String, dynamic> item) {
@@ -1045,6 +1046,12 @@ class _BookingListCard extends StatelessWidget {
                 ),
                 tone: AppUi.toneForBookingStatus(status),
               ),
+              if (AdminCustomerPreferenceOptions.fromMap(item).hasAny) ...[
+                const SizedBox(width: 6),
+                AdminCustomerPreferenceQueueBadge(
+                  options: AdminCustomerPreferenceOptions.fromMap(item),
+                ),
+              ],
               if (isArchived) ...[
                 const SizedBox(width: 6),
                 AppUi.statusBadge(

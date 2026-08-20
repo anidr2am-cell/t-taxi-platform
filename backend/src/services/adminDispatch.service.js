@@ -205,6 +205,10 @@ class AdminDispatchService {
         reason: row.archive_reason ?? null,
       },
       createdAt: formatServiceDateTimeIso(row.created_at),
+      options: {
+        preferFemaleDriver: Boolean(row.prefer_female_driver),
+        preferSmokingVehicle: Boolean(row.prefer_smoking_vehicle),
+      },
       operations,
       primaryCta: operations.primaryCta,
       reassignment: row.last_driver_release_at
