@@ -66,7 +66,8 @@ class BookingRepository {
           route_id, total_amount, currency, payment_status, payment_method, commission_status,
           customer_user_id, customer_name, name_sign_text,
           customer_email, customer_phone, customer_country_code,
-          special_requests, metadata, boarding_qr_token_hash, boarding_qr_expires_at,
+          special_requests, prefer_female_driver, prefer_smoking_vehicle,
+          metadata, boarding_qr_token_hash, boarding_qr_expires_at,
           is_urgent_request,
           created_by, updated_by
         ) VALUES (
@@ -76,7 +77,7 @@ class BookingRepository {
           ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?,
-          ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?,
           ?, ?
@@ -112,6 +113,8 @@ class BookingRepository {
         row.customerPhone,
         row.customerCountryCode,
         row.specialRequests,
+        row.preferFemaleDriver ? 1 : 0,
+        row.preferSmokingVehicle ? 1 : 0,
         row.metadata ? JSON.stringify(row.metadata) : null,
         row.boardingQrTokenHash,
         row.boardingQrExpiresAt,
@@ -398,6 +401,8 @@ class BookingRepository {
               AND bci.deleted_at IS NULL
             LIMIT 1
           ) AS name_sign_requested,
+          b.prefer_female_driver,
+          b.prefer_smoking_vehicle,
           EXISTS (
             SELECT 1
             FROM booking_driver_assignments released_bda
@@ -1619,6 +1624,8 @@ class BookingRepository {
           b.contact_requested_at,
           b.contact_verified_at,
           b.special_requests,
+          b.prefer_female_driver,
+          b.prefer_smoking_vehicle,
           b.payment_method,
           b.payment_status,
           b.commission_status,

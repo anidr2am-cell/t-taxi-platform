@@ -1022,6 +1022,8 @@ class BookingService {
         customerPhone: input.customer.phone,
         customerCountryCode: input.customer.countryCode?.trim() || null,
         specialRequests: input.additionalRequests ?? input.specialRequests ?? null,
+        preferFemaleDriver: Boolean(input.options?.preferFemaleDriver),
+        preferSmokingVehicle: Boolean(input.options?.preferSmokingVehicle),
         metadata: Object.keys(metadata).length ? metadata : null,
         boardingQrTokenHash: hashToken(boardingQrToken),
         boardingQrExpiresAt: this.formatDateTime(boardingExpires),

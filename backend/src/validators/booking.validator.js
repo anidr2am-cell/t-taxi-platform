@@ -129,6 +129,8 @@ const createBookingSchema = Joi.object({
       then: nameSignTextField.required(),
       otherwise: Joi.string().trim().max(100).allow(null, '').empty('').default(null),
     }),
+    preferFemaleDriver: Joi.boolean().default(false),
+    preferSmokingVehicle: Joi.boolean().default(false),
   }).default({}),
   transfer: Joi.object({
     airportIata: Joi.string().length(3).uppercase().allow(null),
