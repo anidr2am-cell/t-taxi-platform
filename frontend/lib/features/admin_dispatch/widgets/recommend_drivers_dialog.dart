@@ -24,7 +24,6 @@ Future<RecommendDriversDialogResult?> showRecommendDriversDialog({
   required AdminDispatchApiService api,
   required String bookingNumber,
   bool preferFemaleDriver = false,
-  bool preferSmokingVehicle = false,
 }) {
   return showDialog<RecommendDriversDialogResult>(
     context: context,
@@ -32,7 +31,6 @@ Future<RecommendDriversDialogResult?> showRecommendDriversDialog({
       api: api,
       bookingNumber: bookingNumber,
       preferFemaleDriver: preferFemaleDriver,
-      preferSmokingVehicle: preferSmokingVehicle,
     ),
   );
 }
@@ -42,13 +40,11 @@ class _RecommendDriversDialog extends StatefulWidget {
     required this.api,
     required this.bookingNumber,
     this.preferFemaleDriver = false,
-    this.preferSmokingVehicle = false,
   });
 
   final AdminDispatchApiService api;
   final String bookingNumber;
   final bool preferFemaleDriver;
-  final bool preferSmokingVehicle;
 
   @override
   State<_RecommendDriversDialog> createState() => _RecommendDriversDialogState();
@@ -97,7 +93,6 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
     final recommendedId = _data?['recommendedDriverId'] as int?;
     final preferenceOptions = AdminCustomerPreferenceOptions(
       preferFemaleDriver: widget.preferFemaleDriver,
-      preferSmokingVehicle: widget.preferSmokingVehicle,
     );
 
     return AlertDialog(

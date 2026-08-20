@@ -131,47 +131,41 @@ function createBookingHarness() {
   return { service, calls };
 }
 
-test('createBookingSchema defaults preference options to false', () => {
+test('createBookingSchema defaults preferFemaleDriver to false', () => {
   const { error, value } = createBookingSchema.validate(validPayload());
   assert.equal(error, undefined);
   assert.equal(value.options.preferFemaleDriver, false);
-  assert.equal(value.options.preferSmokingVehicle, false);
 });
 
-test('createBookingSchema accepts preference options when true', () => {
+test('createBookingSchema accepts preferFemaleDriver when true', () => {
   const { error, value } = createBookingSchema.validate(validPayload({
     options: {
       preferFemaleDriver: true,
-      preferSmokingVehicle: true,
     },
   }));
   assert.equal(error, undefined);
   assert.equal(value.options.preferFemaleDriver, true);
-  assert.equal(value.options.preferSmokingVehicle, true);
 });
 
-test('createBooking persists preference options when provided', async () => {
+test('createBooking persists preferFemaleDriver when provided', async () => {
   const { service, calls } = createBookingHarness();
   await service.createBooking(validPayload({
     options: {
       preferFemaleDriver: true,
-      preferSmokingVehicle: true,
     },
   }));
 
   assert.equal(calls.booking.preferFemaleDriver, true);
-  assert.equal(calls.booking.preferSmokingVehicle, true);
 });
 
-test('createBooking persists preference options as false when omitted', async () => {
+test('createBooking persists preferFemaleDriver as false when omitted', async () => {
   const { service, calls } = createBookingHarness();
   await service.createBooking(validPayload());
 
   assert.equal(calls.booking.preferFemaleDriver, false);
-  assert.equal(calls.booking.preferSmokingVehicle, false);
 });
 
-test('guest lookup exposes preference options from stored booking row', async () => {
+test('guest lookup exposes preferFemaleDriver from stored booking row', async () => {
   const conn = {
     beginTransaction: async () => {},
     commit: async () => {},
@@ -209,7 +203,6 @@ test('guest lookup exposes preference options from stored booking row', async ()
         destination_location_code: 'PATTAYA',
         name_sign_requested: 0,
         prefer_female_driver: 1,
-        prefer_smoking_vehicle: 0,
       };
     },
     async insertGuestToken() {},
@@ -225,10 +218,9 @@ test('guest lookup exposes preference options from stored booking row', async ()
   });
 
   assert.equal(result.options.preferFemaleDriver, true);
-  assert.equal(result.options.preferSmokingVehicle, false);
 });
 
-test('admin booking detail exposes preference options from stored booking row', async () => {
+test('admin booking detail exposes preferFemaleDriver from stored booking row', async () => {
   const bookingRepo = {
     async findAdminBookingDetail() {
       return {
@@ -243,8 +235,7 @@ test('admin booking detail exposes preference options from stored booking row', 
         customer_phone: '+66123456789',
         customer_country_code: 'TH',
         special_requests: null,
-        prefer_female_driver: 0,
-        prefer_smoking_vehicle: 1,
+        prefer_female_driver: 1,
         payment_method: 'PAY_DRIVER',
         payment_status: 'UNPAID',
         commission_status: 'NOT_DUE_YET',
@@ -291,6 +282,5 @@ test('admin booking detail exposes preference options from stored booking row', 
 
   const detail = await service.getBookingDetail('TX202607010001');
 
-  assert.equal(detail.options.preferFemaleDriver, false);
-  assert.equal(detail.options.preferSmokingVehicle, true);
+  assert.equal(detail.options.preferFemaleDriver, true);
 });

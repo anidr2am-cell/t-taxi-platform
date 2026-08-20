@@ -38,49 +38,42 @@ void main() {
         'nameSign': true,
         'nameSignText': 'KIM FAMILY',
         'preferFemaleDriver': false,
-        'preferSmokingVehicle': false,
       });
 
       await controller.updatePassengersAndLuggage(
         preferFemaleDriver: true,
-        preferSmokingVehicle: true,
       );
       payload = controller.buildCreatePayload();
       expect(payload['options'], {
         'nameSign': true,
         'nameSignText': 'KIM FAMILY',
         'preferFemaleDriver': true,
-        'preferSmokingVehicle': true,
       });
 
       await controller.updatePassengersAndLuggage(
         preferFemaleDriver: false,
-        preferSmokingVehicle: false,
       );
       payload = controller.buildCreatePayload();
       expect(payload['options'], {
         'nameSign': true,
         'nameSignText': 'KIM FAMILY',
         'preferFemaleDriver': false,
-        'preferSmokingVehicle': false,
       });
     });
   });
 
   group('BookingStateStorage preference options', () {
-    test('persists and restores preferFemaleDriver and preferSmokingVehicle', () async {
+    test('persists and restores preferFemaleDriver', () async {
       SharedPreferences.setMockInitialValues({});
       final storage = BookingStateStorage(now: () => DateTime.utc(2026, 7, 1, 8));
       const state = BookingWizardState(
         preferFemaleDriver: true,
-        preferSmokingVehicle: true,
       );
 
       await storage.save(state);
       final restored = await storage.load();
 
       expect(restored?.preferFemaleDriver, isTrue);
-      expect(restored?.preferSmokingVehicle, isTrue);
 
       final prefs = await SharedPreferences.getInstance();
       final decoded = jsonDecode(
@@ -88,7 +81,6 @@ void main() {
       ) as Map<String, dynamic>;
       final stateJson = Map<String, dynamic>.from(decoded['state'] as Map);
       expect(stateJson['preferFemaleDriver'], isTrue);
-      expect(stateJson['preferSmokingVehicle'], isTrue);
     });
   });
 
@@ -113,13 +105,11 @@ void main() {
         tester,
         state: const BookingWizardState(
           preferFemaleDriver: true,
-          preferSmokingVehicle: true,
         ),
       );
 
       expect(find.text('Prefer Female Driver'), findsOneWidget);
-      expect(find.text('Prefer Smoking-Allowed Vehicle'), findsOneWidget);
-      expect(find.text('Yes'), findsNWidgets(2));
+      expect(find.text('Yes'), findsOneWidget);
     });
 
     testWidgets('hides preference rows when toggles are off', (tester) async {
@@ -129,7 +119,6 @@ void main() {
       );
 
       expect(find.text('Prefer Female Driver'), findsNothing);
-      expect(find.text('Prefer Smoking-Allowed Vehicle'), findsNothing);
     });
   });
 
@@ -165,13 +154,13 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('shows disclaimer under each preference toggle', (tester) async {
+    testWidgets('shows disclaimer under preference toggle', (tester) async {
       await pumpPassengerStep(tester, languageCode: 'en');
 
       final disclaimer =
           AppLocalizations('en').t('booking_preference_disclaimer');
-      expect(find.text(disclaimer), findsNWidgets(2));
-      expect(find.byType(SwitchListTile), findsNWidgets(3));
+      expect(find.text(disclaimer), findsOneWidget);
+      expect(find.byType(SwitchListTile), findsNWidgets(2));
     });
 
     for (final code in AppLocalizations.supportedLanguages) {

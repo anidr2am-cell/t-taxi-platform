@@ -7,19 +7,16 @@ import '../../../widgets/app_ui.dart';
 class AdminCustomerPreferenceOptions {
   const AdminCustomerPreferenceOptions({
     required this.preferFemaleDriver,
-    required this.preferSmokingVehicle,
   });
 
   final bool preferFemaleDriver;
-  final bool preferSmokingVehicle;
 
-  bool get hasAny => preferFemaleDriver || preferSmokingVehicle;
+  bool get hasAny => preferFemaleDriver;
 
   factory AdminCustomerPreferenceOptions.fromMap(Map<String, dynamic>? source) {
     if (source == null) {
       return const AdminCustomerPreferenceOptions(
         preferFemaleDriver: false,
-        preferSmokingVehicle: false,
       );
     }
     final options = source['options'] is Map
@@ -27,19 +24,12 @@ class AdminCustomerPreferenceOptions {
         : source;
     return AdminCustomerPreferenceOptions(
       preferFemaleDriver: options['preferFemaleDriver'] == true,
-      preferSmokingVehicle: options['preferSmokingVehicle'] == true,
     );
   }
 
   List<String> labels(AppLocalizations l10n) {
-    final labels = <String>[];
-    if (preferFemaleDriver) {
-      labels.add(l10n.t('booking_prefer_female_driver'));
-    }
-    if (preferSmokingVehicle) {
-      labels.add(l10n.t('booking_prefer_smoking_vehicle'));
-    }
-    return labels;
+    if (!preferFemaleDriver) return const [];
+    return [l10n.t('booking_prefer_female_driver')];
   }
 
   String? summaryText(AppLocalizations l10n) {
@@ -96,16 +86,10 @@ class AdminCustomerPreferenceBadges extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        if (options.preferFemaleDriver)
-          AppUi.statusBadge(
-            l10n.t('booking_prefer_female_driver'),
-            tone: AppStatusTone.info,
-          ),
-        if (options.preferSmokingVehicle)
-          AppUi.statusBadge(
-            l10n.t('booking_prefer_smoking_vehicle'),
-            tone: AppStatusTone.info,
-          ),
+        AppUi.statusBadge(
+          l10n.t('booking_prefer_female_driver'),
+          tone: AppStatusTone.info,
+        ),
       ],
     );
   }

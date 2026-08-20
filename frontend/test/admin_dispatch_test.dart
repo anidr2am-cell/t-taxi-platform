@@ -2853,7 +2853,6 @@ void main() {
               'allowedActions': ['ASSIGN_DRIVER'],
               'options': {
                 'preferFemaleDriver': true,
-                'preferSmokingVehicle': true,
               },
             },
           ),
@@ -2864,7 +2863,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Prefer Female Driver'), findsOneWidget);
-    expect(find.text('Prefer Smoking-Allowed Vehicle'), findsOneWidget);
   });
 
   testWidgets('booking detail hides customer preference badges when not requested', (
@@ -2891,7 +2889,6 @@ void main() {
               'allowedActions': ['ASSIGN_DRIVER'],
               'options': {
                 'preferFemaleDriver': false,
-                'preferSmokingVehicle': false,
               },
             },
           ),
@@ -2902,7 +2899,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Prefer Female Driver'), findsNothing);
-    expect(find.text('Prefer Smoking-Allowed Vehicle'), findsNothing);
   });
 
   testWidgets('recommend drivers dialog shows customer preference banner once', (
@@ -2917,7 +2913,6 @@ void main() {
               api: _FakeAdminApi(),
               bookingNumber: 'TX202607010001',
               preferFemaleDriver: true,
-              preferSmokingVehicle: true,
             ),
             child: const Text('Open'),
           ),
@@ -2928,9 +2923,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(
-        'Customer preferences: Prefer Female Driver / Prefer Smoking-Allowed Vehicle',
-      ),
+      find.text('Customer preferences: Prefer Female Driver'),
       findsOneWidget,
     );
     expect(find.text('Driver A (SUV)'), findsOneWidget);
@@ -2972,7 +2965,6 @@ void main() {
             ..._queueItem('TX202607010001'),
             'options': {
               'preferFemaleDriver': true,
-              'preferSmokingVehicle': false,
             },
           },
         ],

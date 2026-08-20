@@ -507,7 +507,6 @@ class BookingWizardController extends ChangeNotifier {
     bool? nameSign,
     String? nameSignText,
     bool? preferFemaleDriver,
-    bool? preferSmokingVehicle,
   }) async {
     final affectsRecommendationOrPricing =
         adults != null ||
@@ -529,7 +528,6 @@ class BookingWizardController extends ChangeNotifier {
       nameSign: nameSign,
       nameSignText: nameSignText,
       preferFemaleDriver: preferFemaleDriver,
-      preferSmokingVehicle: preferSmokingVehicle,
       clearRecommendation: affectsRecommendationOrPricing,
       clearPricing: affectsRecommendationOrPricing,
       clearError: true,
@@ -645,7 +643,6 @@ class BookingWizardController extends ChangeNotifier {
         'nameSign': _state.nameSign,
         if (_state.nameSign) 'nameSignText': _state.nameSignText?.trim(),
         'preferFemaleDriver': _state.preferFemaleDriver,
-        'preferSmokingVehicle': _state.preferSmokingVehicle,
       },
       if (airportIata != null)
         'transfer': {

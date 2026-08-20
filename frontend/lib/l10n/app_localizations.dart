@@ -172,7 +172,6 @@ class AppLocalizations {
       'special_luggage': 'Special Items',
       'name_sign': 'Name Sign Service (+100 THB)',
       'booking_prefer_female_driver': 'Prefer Female Driver',
-      'booking_prefer_smoking_vehicle': 'Prefer Smoking-Allowed Vehicle',
       'booking_preference_disclaimer':
           "We'll do our best to accommodate this during driver assignment, but it cannot be guaranteed.",
       'next': 'Next',
@@ -1567,7 +1566,6 @@ class AppLocalizations {
       'special_luggage': '특수 수하물',
       'name_sign': '피켓 서비스 (+100 THB)',
       'booking_prefer_female_driver': '여성 기사 선호',
-      'booking_prefer_smoking_vehicle': '흡연 가능 차량 선호',
       'booking_preference_disclaimer':
           '배정 시 최대한 반영하며, 100% 보장되지 않습니다',
       'next': '다음',
@@ -2613,7 +2611,6 @@ class AppLocalizations {
       'special_luggage': '特殊行李',
       'name_sign': '举牌服务 (+100 THB)',
       'booking_prefer_female_driver': '偏好女性司机',
-      'booking_prefer_smoking_vehicle': '偏好可吸烟车辆',
       'booking_preference_disclaimer': '我们将在安排司机时尽量满足此需求，但无法100%保证。',
       'next': '下一步',
       'back': '返回',
@@ -3191,7 +3188,6 @@ class AppLocalizations {
       'special_luggage': '特殊荷物',
       'name_sign': '名前看板サービス (+100 THB)',
       'booking_prefer_female_driver': '女性ドライバー希望',
-      'booking_prefer_smoking_vehicle': '喫煙可能車両希望',
       'booking_preference_disclaimer':
           '配車の際できる限り反映いたしますが、100%保証するものではありません。',
       'next': '次へ',
@@ -3795,7 +3791,6 @@ class AppLocalizations {
       'special_luggage': 'สัมภาระพิเศษ',
       'name_sign': 'บริการป้ายชื่อ (+100 THB)',
       'booking_prefer_female_driver': 'ต้องการคนขับหญิง',
-      'booking_prefer_smoking_vehicle': 'ต้องการรถที่สูบบุหรี่ได้',
       'booking_preference_disclaimer':
           'เราจะพยายามจัดสรรตามที่ท่านต้องการให้มากที่สุด แต่ไม่สามารถรับประกันได้ 100%',
       'next': 'ถัดไป',

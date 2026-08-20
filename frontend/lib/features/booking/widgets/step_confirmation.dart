@@ -125,11 +125,6 @@ class StepConfirmation extends StatelessWidget {
                 label: l10n.t('booking_prefer_female_driver'),
                 value: l10n.t('yes'),
               ),
-            if (state.preferSmokingVehicle)
-              AppUi.summaryRow(
-                label: l10n.t('booking_prefer_smoking_vehicle'),
-                value: l10n.t('yes'),
-              ),
             AppUi.summaryRow(
               label: l10n.t('vehicle'),
               value: state.selectedVehicle ?? '-',

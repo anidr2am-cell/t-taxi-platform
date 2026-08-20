@@ -600,7 +600,6 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       api: widget.api,
       bookingNumber: widget.bookingNumber,
       preferFemaleDriver: preferences.preferFemaleDriver,
-      preferSmokingVehicle: preferences.preferSmokingVehicle,
     );
     if (result == null) return;
     setState(() => _submitting = true);

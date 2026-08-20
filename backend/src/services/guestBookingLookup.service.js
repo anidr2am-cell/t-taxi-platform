@@ -208,7 +208,6 @@ class GuestBookingLookupService {
       options: {
         nameSignRequested: this.boolean(row.name_sign_requested),
         preferFemaleDriver: this.boolean(row.prefer_female_driver),
-        preferSmokingVehicle: this.boolean(row.prefer_smoking_vehicle),
       },
       vehicle: {
         typeCode: row.vehicle_type_code,

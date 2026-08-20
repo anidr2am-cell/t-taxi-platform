@@ -207,7 +207,6 @@ class AdminDispatchService {
       createdAt: formatServiceDateTimeIso(row.created_at),
       options: {
         preferFemaleDriver: Boolean(row.prefer_female_driver),
-        preferSmokingVehicle: Boolean(row.prefer_smoking_vehicle),
       },
       operations,
       primaryCta: operations.primaryCta,
@@ -518,7 +517,6 @@ class AdminDispatchService {
       specialRequests: row.special_requests,
       options: {
         preferFemaleDriver: Boolean(row.prefer_female_driver),
-        preferSmokingVehicle: Boolean(row.prefer_smoking_vehicle),
       },
       passengers: {
         adults: row.adults ?? 0,

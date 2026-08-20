@@ -190,19 +190,6 @@ class StepPassengersLuggage extends StatelessWidget {
                   preferFemaleDriver: v,
                 ),
               ),
-              Divider(
-                height: embedded ? 16 : 24,
-                color: AppTokens.border.withValues(alpha: 0.6),
-              ),
-              _BookingPreferenceToggle(
-                embedded: embedded,
-                title: l10n.t('booking_prefer_smoking_vehicle'),
-                disclaimer: l10n.t('booking_preference_disclaimer'),
-                value: state.preferSmokingVehicle,
-                onChanged: (v) => controller.updatePassengersAndLuggage(
-                  preferSmokingVehicle: v,
-                ),
-              ),
             ],
           ),
         ),

@@ -394,7 +394,6 @@ void main() {
         'nameSign': true,
         'nameSignText': 'KIM FAMILY',
         'preferFemaleDriver': false,
-        'preferSmokingVehicle': false,
       });
 
       await controller.updatePassengersAndLuggage(nameSign: false);
@@ -402,7 +401,6 @@ void main() {
       expect(disabledPayload['options'], {
         'nameSign': false,
         'preferFemaleDriver': false,
-        'preferSmokingVehicle': false,
       });
     },
   );
