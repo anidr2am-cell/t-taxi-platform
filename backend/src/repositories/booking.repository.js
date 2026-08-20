@@ -79,7 +79,6 @@ class BookingRepository {
           ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?,
           ?, ?
         )
       `,
@@ -1444,6 +1443,8 @@ class BookingRepository {
         b.contact_channel,
         b.contact_requested_at,
         b.contact_verified_at,
+        b.prefer_female_driver,
+        b.prefer_smoking_vehicle,
         b.payment_method,
         b.total_amount,
         b.currency,
