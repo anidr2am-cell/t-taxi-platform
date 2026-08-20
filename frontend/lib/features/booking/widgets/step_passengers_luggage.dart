@@ -175,6 +175,37 @@ class StepPassengersLuggage extends StatelessWidget {
           ),
         ],
         NameSignInfoCard(visible: state.nameSign),
+        SizedBox(height: embedded ? WizardCompact.fieldGap : AppTokens.spaceSm),
+        AppUi.surfaceCard(
+          padding: cardPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _BookingPreferenceToggle(
+                embedded: embedded,
+                title: l10n.t('booking_prefer_female_driver'),
+                disclaimer: l10n.t('booking_preference_disclaimer'),
+                value: state.preferFemaleDriver,
+                onChanged: (v) => controller.updatePassengersAndLuggage(
+                  preferFemaleDriver: v,
+                ),
+              ),
+              Divider(
+                height: embedded ? 16 : 24,
+                color: AppTokens.border.withValues(alpha: 0.6),
+              ),
+              _BookingPreferenceToggle(
+                embedded: embedded,
+                title: l10n.t('booking_prefer_smoking_vehicle'),
+                disclaimer: l10n.t('booking_preference_disclaimer'),
+                value: state.preferSmokingVehicle,
+                onChanged: (v) => controller.updatePassengersAndLuggage(
+                  preferSmokingVehicle: v,
+                ),
+              ),
+            ],
+          ),
+        ),
         if (!embedded) ...[
           SizedBox(height: gap),
           if (controller.isLoading)
@@ -195,6 +226,55 @@ class StepPassengersLuggage extends StatelessWidget {
     return SingleChildScrollView(
       padding: AppUi.pagePadding(context),
       child: content,
+    );
+  }
+}
+
+class _BookingPreferenceToggle extends StatelessWidget {
+  final bool embedded;
+  final String title;
+  final String disclaimer;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _BookingPreferenceToggle({
+    required this.embedded,
+    required this.title,
+    required this.disclaimer,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: embedded,
+          title: Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: embedded ? 14 : 16,
+            ),
+          ),
+          value: value,
+          onChanged: onChanged,
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 2, right: 2, bottom: 4),
+          child: Text(
+            disclaimer,
+            style: TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: embedded ? 12 : 13,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

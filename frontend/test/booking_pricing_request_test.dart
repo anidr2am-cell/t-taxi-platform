@@ -393,11 +393,17 @@ void main() {
       expect(payload['options'], {
         'nameSign': true,
         'nameSignText': 'KIM FAMILY',
+        'preferFemaleDriver': false,
+        'preferSmokingVehicle': false,
       });
 
       await controller.updatePassengersAndLuggage(nameSign: false);
       final disabledPayload = controller.buildCreatePayload();
-      expect(disabledPayload['options'], {'nameSign': false});
+      expect(disabledPayload['options'], {
+        'nameSign': false,
+        'preferFemaleDriver': false,
+        'preferSmokingVehicle': false,
+      });
     },
   );
 

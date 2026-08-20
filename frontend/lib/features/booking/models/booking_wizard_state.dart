@@ -19,6 +19,8 @@ class BookingWizardState {
   final int specialLuggageCount;
   final bool nameSign;
   final String? nameSignText;
+  final bool preferFemaleDriver;
+  final bool preferSmokingVehicle;
   final VehicleRecommendation? recommendation;
   final String? selectedVehicle;
   final PricingResult? pricing;
@@ -48,6 +50,8 @@ class BookingWizardState {
     this.specialLuggageCount = 0,
     this.nameSign = false,
     this.nameSignText,
+    this.preferFemaleDriver = false,
+    this.preferSmokingVehicle = false,
     this.recommendation,
     this.selectedVehicle,
     this.pricing,
@@ -83,6 +87,8 @@ class BookingWizardState {
     int? specialLuggageCount,
     bool? nameSign,
     String? nameSignText,
+    bool? preferFemaleDriver,
+    bool? preferSmokingVehicle,
     VehicleRecommendation? recommendation,
     bool clearRecommendation = false,
     bool clearSelectedVehicle = false,
@@ -116,6 +122,9 @@ class BookingWizardState {
       specialLuggageCount: specialLuggageCount ?? this.specialLuggageCount,
       nameSign: nameSign ?? this.nameSign,
       nameSignText: nameSignText ?? this.nameSignText,
+      preferFemaleDriver: preferFemaleDriver ?? this.preferFemaleDriver,
+      preferSmokingVehicle:
+          preferSmokingVehicle ?? this.preferSmokingVehicle,
       recommendation: clearRecommendation
           ? null
           : (recommendation ?? this.recommendation),
@@ -151,6 +160,8 @@ class BookingWizardState {
     'specialLuggageCount': specialLuggageCount,
     'nameSign': nameSign,
     'nameSignText': nameSignText,
+    'preferFemaleDriver': preferFemaleDriver,
+    'preferSmokingVehicle': preferSmokingVehicle,
     'selectedVehicle': selectedVehicle,
     'customerName': customerName,
     'customerEmail': customerEmail,
@@ -189,6 +200,8 @@ class BookingWizardState {
       specialLuggageCount: json['specialLuggageCount'] as int? ?? 0,
       nameSign: json['nameSign'] as bool? ?? false,
       nameSignText: json['nameSignText'] as String?,
+      preferFemaleDriver: json['preferFemaleDriver'] as bool? ?? false,
+      preferSmokingVehicle: json['preferSmokingVehicle'] as bool? ?? false,
       selectedVehicle: json['selectedVehicle'] as String?,
       customerName: json['customerName'] as String? ?? '',
       customerEmail: json['customerEmail'] as String? ?? '',

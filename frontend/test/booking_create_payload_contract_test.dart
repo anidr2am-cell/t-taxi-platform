@@ -51,6 +51,8 @@ void main() {
       expect(payload['options'], {
         'nameSign': true,
         'nameSignText': 'KIM FAMILY',
+        'preferFemaleDriver': false,
+        'preferSmokingVehicle': false,
       });
 
       final transfer = Map<String, dynamic>.from(payload['transfer'] as Map);
