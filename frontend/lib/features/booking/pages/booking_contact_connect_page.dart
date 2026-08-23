@@ -12,7 +12,6 @@ import '../../../widgets/app_ui.dart';
 import '../../../widgets/language_selector.dart';
 import '../models/booking_contact_connect_args.dart';
 import '../models/booking_create_result.dart';
-import '../models/booking_contact_connect_args.dart';
 import '../models/contact_channel.dart';
 import '../services/booking_analytics.dart';
 import '../services/booking_contact_connection_service.dart';
@@ -198,6 +197,28 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     }
   }
 
+  void _showPageSnackBar(String message) {
+    if (!mounted) return;
+
+    final bottomSafe = MediaQuery.paddingOf(context).bottom;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.fromLTRB(
+            AppTokens.spaceMd,
+            0,
+            AppTokens.spaceMd,
+            AppTokens.spaceMd + bottomSafe,
+          ),
+          duration: const Duration(milliseconds: 2000),
+        ),
+      );
+  }
+
   Future<void> _copyBookingRef() async {
     final l10n = context.l10n;
     final ref = BookingContactConnectPage.bookingRefMessage(
@@ -205,9 +226,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     );
     await writeClipboardText(ref);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.t('contact_connect_ref_copied'))),
-    );
+    _showPageSnackBar(l10n.t('contact_connect_ref_copied'));
   }
 
   Future<void> _handleChannelTap(ContactChannel channel) async {
@@ -227,9 +246,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     } else {
       final launched = await _launchChannel(channel, ref);
       if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.t('contact_connect_launch_failed'))),
-        );
+        _showPageSnackBar(context.l10n.t('contact_connect_launch_failed'));
       }
     }
 
@@ -246,6 +263,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         _selectedChannelCode = channel.code;
         _actionBusy = false;
       });
+      _showPageSnackBar(context.l10n.t('contact_connect_ref_copied'));
       _analytics.trackContactConnectStarted(
         bookingId: widget.bookingNumber,
         channel: channel.code,
@@ -423,10 +441,10 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     final l10n = context.l10n;
     final locale = context.watch<LocaleState>().languageCode;
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
-    const ctaBarReserveHeight = 88.0;
-    final scrollBottomPadding = keyboardVisible
-        ? AppTokens.spaceMd
-        : AppTokens.spaceMd + ctaBarReserveHeight;
+    final showCtaBar = !_loading &&
+        !_isConfirmRequested &&
+        _hasStartedConnection &&
+        !keyboardVisible;
     final orderedChannels = orderContactChannels(_channels, locale);
     final selectedChannel = orderedChannels.cast<ContactChannel?>().firstWhere(
           (channel) => channel!.code == _selectedChannelCode,
@@ -442,173 +460,154 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      AppTokens.spaceMd,
-                      AppTokens.spaceMd,
-                      AppTokens.spaceMd,
-                      scrollBottomPadding,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 430),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(AppTokens.spaceMd),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _ProgressSteps(
+                        currentStep: _progressStep,
+                        l10n: l10n,
+                      ),
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AppUi.surfaceCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _ProgressSteps(
-                              currentStep: _progressStep,
-                              l10n: l10n,
+                            Text(
+                              l10n.t('contact_connect_booking_number'),
+                              style: Theme.of(context).textTheme.labelLarge,
                             ),
-                            const SizedBox(height: AppTokens.spaceMd),
-                            AppUi.surfaceCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    l10n.t('contact_connect_booking_number'),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SelectableText(
+                                    widget.bookingNumber,
                                     style: Theme.of(context)
                                         .textTheme
-                                        .labelLarge,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: SelectableText(
-                                          widget.bookingNumber,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                              ),
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
                                         ),
-                                      ),
-                                      IconButton(
-                                        tooltip: l10n.t('booking_number_copy'),
-                                        onPressed: _copyBookingRef,
-                                        icon: const Icon(Icons.copy_outlined),
-                                      ),
-                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: AppTokens.spaceMd),
-                            Text(
-                              l10n.t('contact_connect_intro'),
-                              style: const TextStyle(height: 1.5),
-                            ),
-                            const SizedBox(height: AppTokens.spaceMd),
-                            if (_errorMessage != null) ...[
-                              AppUi.surfaceCard(
-                                backgroundColor: AppTokens.warningLight,
-                                child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(height: 1.45),
                                 ),
-                              ),
-                              const SizedBox(height: AppTokens.spaceMd),
-                            ],
-                            if (_isConfirmRequested)
-                              _WaitingCard(l10n: l10n)
-                            else if (!_hasStartedConnection) ...[
-                              Text(
-                                l10n.t('contact_connect_choose_channel'),
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                              const SizedBox(height: 12),
-                              for (final channel in orderedChannels) ...[
-                                _ChannelButton(
-                                  channel: channel,
-                                  busy: _actionBusy,
-                                  onTap: () => _handleChannelTap(channel),
+                                IconButton(
+                                  tooltip: l10n.t('booking_number_copy'),
+                                  onPressed: _copyBookingRef,
+                                  icon: const Icon(Icons.copy_outlined),
                                 ),
-                                const SizedBox(height: 8),
                               ],
-                              const SizedBox(height: 8),
-                              OutlinedButton(
-                                onPressed: null,
-                                child: Text(l10n.t('contact_connect_email_soon')),
-                              ),
-                            ] else if (selectedChannel?.code == 'WECHAT') ...[
-                              _WeChatPanel(
-                                channel: selectedChannel!,
-                                l10n: l10n,
-                                onCopyId: () async {
-                                  final id = selectedChannel.accountId?.trim();
-                                  if (id == null || id.isEmpty) return;
-                                  await writeClipboardText(id);
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        l10n.t('contact_connect_wechat_id_copied'),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ] else ...[
-                              AppUi.surfaceCard(
-                                backgroundColor: AppTokens.accentLight,
-                                child: Text(
-                                  l10n.t('contact_connect_after_launch'),
-                                  style: const TextStyle(height: 1.45),
-                                ),
-                              ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: AppTokens.spaceMd),
+                      Text(
+                        l10n.t('contact_connect_intro'),
+                        style: const TextStyle(height: 1.5),
+                      ),
+                      const SizedBox(height: AppTokens.spaceMd),
+                      if (_errorMessage != null) ...[
+                        AppUi.surfaceCard(
+                          backgroundColor: AppTokens.warningLight,
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(height: 1.45),
+                          ),
+                        ),
+                        const SizedBox(height: AppTokens.spaceMd),
+                      ],
+                      if (_isConfirmRequested)
+                        _WaitingCard(l10n: l10n)
+                      else if (!_hasStartedConnection) ...[
+                        Text(
+                          l10n.t('contact_connect_choose_channel'),
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 12),
+                        for (final channel in orderedChannels) ...[
+                          _ChannelButton(
+                            channel: channel,
+                            busy: _actionBusy,
+                            onTap: () => _handleChannelTap(channel),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: null,
+                          child: Text(l10n.t('contact_connect_email_soon')),
+                        ),
+                      ] else if (selectedChannel?.code == 'WECHAT') ...[
+                        _WeChatPanel(
+                          channel: selectedChannel!,
+                          l10n: l10n,
+                          onCopyId: () async {
+                            final id = selectedChannel.accountId?.trim();
+                            if (id == null || id.isEmpty) return;
+                            await writeClipboardText(id);
+                            if (!context.mounted) return;
+                            _showPageSnackBar(
+                              l10n.t('contact_connect_wechat_id_copied'),
+                            );
+                          },
+                        ),
+                      ] else ...[
+                        AppUi.surfaceCard(
+                          backgroundColor: AppTokens.accentLight,
+                          child: Text(
+                            l10n.t('contact_connect_after_launch'),
+                            style: const TextStyle(height: 1.45),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+      bottomNavigationBar: showCtaBar
+          ? Container(
+              key: const Key('contact_connect_cta_bar'),
+              decoration: const BoxDecoration(
+                color: AppTokens.surface,
+                border: Border(top: BorderSide(color: AppTokens.border)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x0F000000),
+                    blurRadius: 12,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTokens.spaceMd),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: _actionBusy ? null : _confirmSent,
+                      child: _actionBusy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(l10n.t('contact_connect_confirm_sent')),
                     ),
                   ),
                 ),
-                if (!_loading &&
-                    !_isConfirmRequested &&
-                    _hasStartedConnection &&
-                    !keyboardVisible)
-                  Container(
-                    key: const Key('contact_connect_cta_bar'),
-                    decoration: const BoxDecoration(
-                      color: AppTokens.surface,
-                      border: Border(top: BorderSide(color: AppTokens.border)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x0F000000),
-                          blurRadius: 12,
-                          offset: Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppTokens.spaceMd),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: FilledButton(
-                            onPressed: _actionBusy ? null : _confirmSent,
-                            child: _actionBusy
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(l10n.t('contact_connect_confirm_sent')),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            )
+          : null,
     );
   }
 }

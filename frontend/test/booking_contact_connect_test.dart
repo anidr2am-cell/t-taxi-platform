@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/booking_contact_connect_args.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
@@ -185,6 +186,66 @@ void main() {
       expect(find.text('WhatsApp'), findsOneWidget);
       expect(find.text('LINE'), findsOneWidget);
       expect(analyticsSink.named('contact_connect_viewed'), hasLength(1));
+    });
+
+    testWidgets('copy snackbar floats above confirm CTA', (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          return null;
+        }
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      final service = _FakeContactService(
+        channels: const [
+          ContactChannel(code: 'LINE', displayName: 'LINE'),
+        ],
+        connection: const ContactConnectionState(
+          bookingNumber: 'TX202608130001',
+          contactStatus: 'PENDING',
+        ),
+      );
+
+      await pumpPage(
+        tester,
+        service: service,
+        args: BookingContactConnectArgs(
+          result: _result(),
+          serviceLabel: 'Airport pickup',
+        ),
+      );
+
+      expect(find.byKey(const Key('contact_connect_cta_bar')), findsNothing);
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'LINE'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('contact_connect_cta_bar')), findsOneWidget);
+      expect(find.text('I sent the message'), findsOneWidget);
+      expect(find.text('Booking reference copied'), findsOneWidget);
+
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.behavior, SnackBarBehavior.floating);
+
+      final ctaRect = tester.getRect(find.byKey(const Key('contact_connect_cta_bar')));
+      final snackTextRect =
+          tester.getRect(find.text('Booking reference copied'));
+      expect(snackTextRect.bottom, lessThanOrEqualTo(ctaRect.top));
+
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('goldens/contact_connect_line_snackbar_375.png'),
+      );
     });
 
     testWidgets('confirm sent shows waiting state', (tester) async {
