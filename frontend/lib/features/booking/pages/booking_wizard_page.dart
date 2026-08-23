@@ -75,6 +75,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final step = _controller.state.step;
     if (_lastTrackedStep == step) return;
     _lastTrackedStep = step;
+    _resetScrollToTop();
     _controller.analytics.trackStepViewed(
       stepNumber: step + 1,
       stepName: BookingAnalytics.stepNameFor(step),
@@ -86,6 +87,15 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         routeType: BookingAnalytics.routeTypeFor(state.serviceType),
       );
     }
+  }
+
+  void _resetScrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      if (_scrollController.offset != 0) {
+        _scrollController.jumpTo(0);
+      }
+    });
   }
 
   @override

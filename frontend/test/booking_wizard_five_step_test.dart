@@ -25,6 +25,54 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/booking_wizard_test_helpers.dart';
 
+Future<void> _scrollWizardDown(WidgetTester tester) async {
+  final scrollView = tester.widget<SingleChildScrollView>(
+    find.byType(SingleChildScrollView),
+  );
+  final controller = scrollView.controller;
+  assert(controller != null);
+  controller!.jumpTo(250);
+  await tester.pumpAndSettle();
+}
+
+double _wizardScrollOffset(WidgetTester tester) {
+  final scrollView = tester.widget<SingleChildScrollView>(
+    find.byType(SingleChildScrollView),
+  );
+  return scrollView.controller?.offset ?? 0;
+}
+
+Future<BookingWizardController> _controllerAtScheduleStep() async {
+  final controller = BookingWizardController(
+    storage: MemoryBookingStateStorage(),
+    recentLocationsStorage: RecentLocationsStorage(
+      guestRepository: MemoryRecentLocationsRepository(),
+    ),
+    now: () => DateTime.utc(2026, 6, 29, 3),
+  );
+  controller.markInitializedForTest();
+  await controller.selectService(BookingServiceType.cityTransfer);
+  await controller.setOrigin(
+    const LocationOption(
+      id: 'bkk',
+      displayName: 'Bangkok',
+      kind: LocationKind.city,
+      code: 'BANGKOK',
+    ),
+  );
+  await controller.setDestination(
+    const LocationOption(
+      id: 'pattaya',
+      displayName: 'Pattaya',
+      kind: LocationKind.city,
+      code: 'PATTAYA',
+    ),
+  );
+  await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+  await controller.goToStep(BookingWizardSteps.schedule);
+  return controller;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -94,6 +142,65 @@ void main() {
 
       expect(controller.state.step, BookingWizardSteps.schedule);
       expect(find.text('2/5 Date & time'), findsOneWidget);
+    });
+
+    testWidgets('resets scroll to top when advancing to the next step', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 520);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final controller = await _controllerAtScheduleStep();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(),
+          child: MaterialApp(home: BookingWizardPage(controller: controller)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _scrollWizardDown(tester);
+      expect(_wizardScrollOffset(tester), greaterThan(0));
+
+      await tester.tap(find.text('Select vehicle'));
+      await tester.pumpAndSettle();
+
+      expect(controller.state.step, BookingWizardSteps.vehicle);
+      expect(_wizardScrollOffset(tester), 0);
+      expect(find.text('Adults (12+)'), findsOneWidget);
+    });
+
+    testWidgets('resets scroll to top when going back to the previous step', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 520);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final controller = await _controllerAtScheduleStep();
+      await controller.goNext();
+      expect(controller.state.step, BookingWizardSteps.vehicle);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(),
+          child: MaterialApp(home: BookingWizardPage(controller: controller)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _scrollWizardDown(tester);
+      expect(_wizardScrollOffset(tester), greaterThan(0));
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(controller.state.step, BookingWizardSteps.schedule);
+      expect(_wizardScrollOffset(tester), 0);
     });
 
     test('legacy draft step 7 restores to review step', () async {
