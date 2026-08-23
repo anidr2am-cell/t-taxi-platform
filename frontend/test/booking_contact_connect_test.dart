@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +61,62 @@ class _FakeContactService extends BookingContactConnectionService {
       connectionStatus: 'CONFIRM_REQUESTED',
     );
     return connection;
+  }
+}
+
+class _SlowConfirmFakeService extends _FakeContactService {
+  _SlowConfirmFakeService({
+    required super.channels,
+    required super.connection,
+  });
+
+  Completer<ContactConnectionState>? confirmCompleter;
+
+  @override
+  Future<ContactConnectionState> confirmSent({
+    required String bookingNumber,
+    required String guestAccessToken,
+  }) async {
+    confirmCompleter = Completer<ContactConnectionState>();
+    return confirmCompleter!.future;
+  }
+
+  void completeConfirm() {
+    connection = ContactConnectionState(
+      bookingNumber: connection.bookingNumber,
+      contactStatus: 'CONFIRM_REQUESTED',
+      connectionChannel: connection.connectionChannel,
+      connectionStatus: 'CONFIRM_REQUESTED',
+    );
+    confirmCompleter?.complete(connection);
+  }
+}
+
+class _PollingGuardFakeService extends _FakeContactService {
+  _PollingGuardFakeService({
+    required super.channels,
+    required super.connection,
+  });
+
+  int getConnectionCalls = 0;
+  Completer<ContactConnectionState>? pendingRefresh;
+
+  @override
+  Future<ContactConnectionState> getConnection({
+    required String bookingNumber,
+    required String guestAccessToken,
+  }) async {
+    getConnectionCalls++;
+    if (getConnectionCalls == 1) {
+      return connection;
+    }
+    pendingRefresh = Completer<ContactConnectionState>();
+    return pendingRefresh!.future;
+  }
+
+  void completePendingRefresh() {
+    pendingRefresh?.complete(connection);
+    pendingRefresh = null;
   }
 }
 
@@ -142,6 +200,7 @@ void main() {
       WidgetTester tester, {
       required _FakeContactService service,
       BookingContactConnectArgs? args,
+      bool settle = true,
     }) async {
       await tester.pumpWidget(
         ChangeNotifierProvider(
@@ -158,7 +217,18 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      if (settle) {
+        await tester.pumpAndSettle();
+        return;
+      }
+
+      await tester.pump();
+      for (var i = 0; i < 50; i++) {
+        if (find.text('TX202608130001').evaluate().isNotEmpty) {
+          break;
+        }
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
 
     Future<void> _expectSnackbarAboveCtaForChannel(
@@ -264,6 +334,91 @@ void main() {
 
     testWidgets('copy snackbar floats above confirm CTA for WhatsApp', (tester) async {
       await _expectSnackbarAboveCtaForChannel(tester, 'WHATSAPP', 'WhatsApp');
+    });
+
+    testWidgets('confirm overlay shows while confirm-sent request is in flight',
+        (tester) async {
+      final service = _SlowConfirmFakeService(
+        channels: const [
+          ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
+        ],
+        connection: ContactConnectionState(
+          bookingNumber: 'TX202608130001',
+          contactStatus: 'PENDING',
+          connectionChannel: 'WHATSAPP',
+        ),
+      );
+
+      await pumpPage(
+        tester,
+        service: service,
+        args: BookingContactConnectArgs(
+          result: _result(),
+          serviceLabel: 'Airport pickup',
+        ),
+        settle: false,
+      );
+
+      await tester.tap(find.text('I sent the message'));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('contact_connect_confirm_overlay')),
+        findsOneWidget,
+      );
+
+      service.completeConfirm();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.byKey(const Key('contact_connect_confirm_overlay')),
+        findsNothing,
+      );
+      expect(find.textContaining('Waiting for T-Rider'), findsOneWidget);
+    });
+
+    testWidgets('polling skips refresh while previous request is in flight',
+        (tester) async {
+      final service = _PollingGuardFakeService(
+        channels: const [
+          ContactChannel(code: 'WHATSAPP', displayName: 'WhatsApp'),
+        ],
+        connection: const ContactConnectionState(
+          bookingNumber: 'TX202608130001',
+          contactStatus: 'CONFIRM_REQUESTED',
+          connectionChannel: 'WHATSAPP',
+          connectionStatus: 'CONFIRM_REQUESTED',
+        ),
+      );
+
+      await pumpPage(
+        tester,
+        service: service,
+        args: BookingContactConnectArgs(
+          result: _result(contactStatus: 'CONFIRM_REQUESTED'),
+          serviceLabel: 'Airport pickup',
+        ),
+        settle: false,
+      );
+
+      expect(service.getConnectionCalls, 1);
+
+      await tester.pump(BookingContactConnectPage.pollInterval);
+      await tester.pump();
+      expect(service.getConnectionCalls, 2);
+      expect(service.pendingRefresh, isNotNull);
+
+      await tester.pump(BookingContactConnectPage.pollInterval);
+      await tester.pump();
+      expect(service.getConnectionCalls, 2);
+
+      service.completePendingRefresh();
+      await tester.pump();
+
+      await tester.pump(BookingContactConnectPage.pollInterval);
+      await tester.pump();
+      expect(service.getConnectionCalls, 3);
     });
 
     testWidgets('confirm sent shows waiting state', (tester) async {

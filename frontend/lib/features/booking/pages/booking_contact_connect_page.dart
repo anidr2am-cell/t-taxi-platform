@@ -58,6 +58,8 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
   String? _errorMessage;
   bool _loading = true;
   bool _actionBusy = false;
+  bool _confirmSubmitting = false;
+  bool _isRefreshing = false;
   bool _viewTracked = false;
   Timer? _pollTimer;
 
@@ -168,13 +170,18 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(BookingContactConnectPage.pollInterval, (_) {
+      if (_isRefreshing) return;
       _refreshConnection(silent: true);
     });
   }
 
   Future<void> _refreshConnection({bool silent = false}) async {
+    if (_isRefreshing) return;
+
     final token = _guestToken;
     if (token == null || token.isEmpty) return;
+
+    _isRefreshing = true;
     try {
       final connection = await _service.getConnection(
         bookingNumber: widget.bookingNumber,
@@ -194,6 +201,8 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       if (!silent && mounted) {
         setState(() => _errorMessage = context.l10n.t('contact_connect_load_failed'));
       }
+    } finally {
+      _isRefreshing = false;
     }
   }
 
@@ -315,7 +324,10 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     final token = _guestToken;
     if (token == null || _actionBusy) return;
 
-    setState(() => _actionBusy = true);
+    setState(() {
+      _actionBusy = true;
+      _confirmSubmitting = true;
+    });
     try {
       final connection = await _service.confirmSent(
         bookingNumber: widget.bookingNumber,
@@ -325,6 +337,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       setState(() {
         _connection = connection;
         _actionBusy = false;
+        _confirmSubmitting = false;
       });
       _analytics.trackContactConfirmRequested(
         bookingId: widget.bookingNumber,
@@ -335,6 +348,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
       if (!mounted) return;
       setState(() {
         _actionBusy = false;
+        _confirmSubmitting = false;
         _errorMessage = e.toString();
       });
     }
@@ -436,6 +450,73 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
     return 1;
   }
 
+  String get _stepContentKey {
+    if (_isConfirmRequested) return 'waiting';
+    if (!_hasStartedConnection) return 'channels';
+    if (_selectedChannelCode == 'WECHAT') return 'wechat';
+    return 'connected';
+  }
+
+  Widget _buildStepStatusSection({
+    required AppLocalizations l10n,
+    required List<ContactChannel> orderedChannels,
+    required ContactChannel? selectedChannel,
+  }) {
+    if (_isConfirmRequested) {
+      return _WaitingCard(l10n: l10n);
+    }
+    if (!_hasStartedConnection) {
+      return Column(
+        key: const ValueKey('channels'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.t('contact_connect_choose_channel'),
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 12),
+          for (final channel in orderedChannels) ...[
+            _ChannelButton(
+              channel: channel,
+              busy: _actionBusy,
+              onTap: () => _handleChannelTap(channel),
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: null,
+            child: Text(l10n.t('contact_connect_email_soon')),
+          ),
+        ],
+      );
+    }
+    if (selectedChannel?.code == 'WECHAT') {
+      return _WeChatPanel(
+        key: const ValueKey('wechat'),
+        channel: selectedChannel!,
+        l10n: l10n,
+        onCopyId: () async {
+          final id = selectedChannel.accountId?.trim();
+          if (id == null || id.isEmpty) return;
+          await writeClipboardText(id);
+          if (!context.mounted) return;
+          _showPageSnackBar(l10n.t('contact_connect_wechat_id_copied'));
+        },
+      );
+    }
+    return KeyedSubtree(
+      key: const ValueKey('connected'),
+      child: AppUi.surfaceCard(
+        backgroundColor: AppTokens.accentLight,
+        child: Text(
+          l10n.t('contact_connect_after_launch'),
+          style: const TextStyle(height: 1.45),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -458,9 +539,12 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         automaticallyImplyLeading: false,
         actions: const [LanguageSelector()],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+      body: Stack(
+        children: [
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else
+            SingleChildScrollView(
               padding: const EdgeInsets.all(AppTokens.spaceMd),
               child: Center(
                 child: ConstrainedBox(
@@ -497,7 +581,8 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
                                 ),
                                 IconButton(
                                   tooltip: l10n.t('booking_number_copy'),
-                                  onPressed: _copyBookingRef,
+                                  onPressed:
+                                      _confirmSubmitting ? null : _copyBookingRef,
                                   icon: const Icon(Icons.copy_outlined),
                                 ),
                               ],
@@ -521,55 +606,36 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
                         ),
                         const SizedBox(height: AppTokens.spaceMd),
                       ],
-                      if (_isConfirmRequested)
-                        _WaitingCard(l10n: l10n)
-                      else if (!_hasStartedConnection) ...[
-                        Text(
-                          l10n.t('contact_connect_choose_channel'),
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 12),
-                        for (final channel in orderedChannels) ...[
-                          _ChannelButton(
-                            channel: channel,
-                            busy: _actionBusy,
-                            onTap: () => _handleChannelTap(channel),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: null,
-                          child: Text(l10n.t('contact_connect_email_soon')),
-                        ),
-                      ] else if (selectedChannel?.code == 'WECHAT') ...[
-                        _WeChatPanel(
-                          channel: selectedChannel!,
-                          l10n: l10n,
-                          onCopyId: () async {
-                            final id = selectedChannel.accountId?.trim();
-                            if (id == null || id.isEmpty) return;
-                            await writeClipboardText(id);
-                            if (!context.mounted) return;
-                            _showPageSnackBar(
-                              l10n.t('contact_connect_wechat_id_copied'),
-                            );
-                          },
-                        ),
-                      ] else ...[
-                        AppUi.surfaceCard(
-                          backgroundColor: AppTokens.accentLight,
-                          child: Text(
-                            l10n.t('contact_connect_after_launch'),
-                            style: const TextStyle(height: 1.45),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: KeyedSubtree(
+                          key: ValueKey(_stepContentKey),
+                          child: _buildStepStatusSection(
+                            l10n: l10n,
+                            orderedChannels: orderedChannels,
+                            selectedChannel: selectedChannel,
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
+          if (_confirmSubmitting)
+            Positioned.fill(
+              child: ColoredBox(
+                key: const Key('contact_connect_confirm_overlay'),
+                color: const Color(0x3D000000),
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: showCtaBar
           ? Container(
               key: const Key('contact_connect_cta_bar'),
@@ -706,6 +772,7 @@ class _ChannelButton extends StatelessWidget {
 
 class _WeChatPanel extends StatelessWidget {
   const _WeChatPanel({
+    super.key,
     required this.channel,
     required this.l10n,
     required this.onCopyId,
