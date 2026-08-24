@@ -6,6 +6,7 @@ process.env.DB_USER = 'test';
 process.env.DB_NAME = 'tride_test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 4).toString('base64');
 
 const jwt = require('jsonwebtoken');
 const SOCIAL_PROVIDERS = require('../src/constants/socialProviders');
@@ -14,12 +15,21 @@ const HTTP_STATUS = require('../src/constants/httpStatus');
 const TokenService = require('../src/services/token.service');
 const AuthService = require('../src/services/auth.service');
 const SocialAuthService = require('../src/services/socialAuth.service');
-const { normalizeGoogleIdTokenPayload } = require('../src/services/socialAuth.service');
+const {
+  normalizeGoogleIdTokenPayload,
+  buildKakaoPlaceholderEmail,
+  computeTokenExpiresAt,
+} = require('../src/services/socialAuth.service');
 const RevokedRefreshTokenStore = require('../src/services/revokedRefreshToken.store');
 
 const GOOGLE_SUB = 'google-sub-123';
 const GOOGLE_EMAIL = 'social.test@example.com';
 const GOOGLE_NAME = 'Social Test User';
+
+const KAKAO_USER_ID = 'kakao-user-123';
+const KAKAO_EMAIL = 'kakao.test@example.com';
+const KAKAO_NAME = 'Kakao Test User';
+const KAKAO_REDIRECT_URI = 'https://trider.taxi/auth/kakao/callback';
 
 function createHarness() {
   let nextUserId = 1000;
@@ -73,17 +83,43 @@ function createHarness() {
         row.provider === provider && row.provider_user_id === providerUserId
       )) || null;
     },
-    async create({ userId, provider, providerUserId, providerEmail }) {
+    async create({
+      userId,
+      provider,
+      providerUserId,
+      providerEmail,
+      accessToken = null,
+      refreshToken = null,
+      tokenExpiresAt = null,
+    }) {
       const row = {
         id: nextSocialId,
         user_id: userId,
         provider,
         provider_user_id: providerUserId,
         provider_email: providerEmail,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_expires_at: tokenExpiresAt,
       };
       nextSocialId += 1;
       socialAccounts.push(row);
       return row.id;
+    },
+    async updateProviderTokens({
+      provider,
+      providerUserId,
+      accessToken,
+      refreshToken,
+      tokenExpiresAt,
+    }) {
+      const row = socialAccounts.find((item) => (
+        item.provider === provider && item.provider_user_id === providerUserId
+      ));
+      if (!row) return;
+      row.access_token = accessToken;
+      row.refresh_token = refreshToken;
+      row.token_expires_at = tokenExpiresAt;
     },
   };
 
@@ -121,6 +157,42 @@ function createHarness() {
           };
         }
         throw new Error('invalid token');
+      },
+      exchangeKakaoCodeImpl: async (code, redirectUri) => {
+        if (redirectUri !== KAKAO_REDIRECT_URI) {
+          throw new Error('unexpected redirect uri');
+        }
+        if (code === 'valid-kakao-code') {
+          return {
+            providerUserId: KAKAO_USER_ID,
+            email: KAKAO_EMAIL,
+            name: KAKAO_NAME,
+            accessToken: 'kakao-access-token-v1',
+            refreshToken: 'kakao-refresh-token-v1',
+            expiresIn: 3600,
+          };
+        }
+        if (code === 'valid-kakao-code-no-email') {
+          return {
+            providerUserId: 'kakao-user-no-email',
+            email: null,
+            name: 'Kakao No Email',
+            accessToken: 'kakao-access-token-no-email',
+            refreshToken: 'kakao-refresh-token-no-email',
+            expiresIn: 7200,
+          };
+        }
+        if (code === 'valid-kakao-code-relogin') {
+          return {
+            providerUserId: 'kakao-user-relogin',
+            email: 'relogin@example.com',
+            name: 'Kakao Relogin',
+            accessToken: 'kakao-access-token-v2',
+            refreshToken: 'kakao-refresh-token-v2',
+            expiresIn: 1800,
+          };
+        }
+        throw new Error('invalid kakao code');
       },
     },
   );
@@ -262,4 +334,93 @@ test('loginWithGoogle does not merge unverified email into an existing account',
   assert.equal(harness.users.size, 1);
   assert.equal(harness.socialAccounts.length, 0);
   assert.equal([...harness.users.keys()][0], existingUserId);
+});
+
+test('loginWithKakao creates user and stores Kakao OAuth tokens on first login', async () => {
+  const harness = createHarness();
+  const before = Date.now();
+
+  const result = await harness.socialAuthService.loginWithKakao(
+    'valid-kakao-code',
+    KAKAO_REDIRECT_URI,
+  );
+
+  assert.equal(result.user.email, KAKAO_EMAIL);
+  assert.equal(result.user.name, KAKAO_NAME);
+  assert.ok(result.accessToken);
+  assert.ok(result.refreshToken);
+  assert.equal(harness.socialAccounts.length, 1);
+  assert.equal(harness.socialAccounts[0].provider, SOCIAL_PROVIDERS.KAKAO);
+  assert.equal(harness.socialAccounts[0].provider_user_id, KAKAO_USER_ID);
+  assert.equal(harness.socialAccounts[0].provider_email, KAKAO_EMAIL);
+  assert.equal(harness.socialAccounts[0].access_token, 'kakao-access-token-v1');
+  assert.equal(harness.socialAccounts[0].refresh_token, 'kakao-refresh-token-v1');
+  assert.ok(harness.socialAccounts[0].token_expires_at instanceof Date);
+  assert.ok(harness.socialAccounts[0].token_expires_at.getTime() >= before + 3600 * 1000 - 1000);
+});
+
+test('loginWithKakao allows signup when Kakao account has no email', async () => {
+  const harness = createHarness();
+
+  const result = await harness.socialAuthService.loginWithKakao(
+    'valid-kakao-code-no-email',
+    KAKAO_REDIRECT_URI,
+  );
+
+  assert.equal(result.user.email, buildKakaoPlaceholderEmail('kakao-user-no-email'));
+  assert.equal(result.user.name, 'Kakao No Email');
+  assert.equal(harness.socialAccounts.length, 1);
+  assert.equal(harness.socialAccounts[0].provider_email, null);
+  assert.equal(harness.socialAccounts[0].access_token, 'kakao-access-token-no-email');
+});
+
+test('loginWithKakao updates stored tokens on re-login', async () => {
+  const harness = createHarness();
+
+  await harness.socialAuthService.loginWithKakao(
+    'valid-kakao-code-relogin',
+    KAKAO_REDIRECT_URI,
+  );
+
+  const firstRow = harness.socialAccounts[0];
+  assert.equal(firstRow.access_token, 'kakao-access-token-v2');
+  assert.equal(firstRow.refresh_token, 'kakao-refresh-token-v2');
+
+  harness.socialAuthService.exchangeKakaoCodeImpl = async () => ({
+    providerUserId: 'kakao-user-relogin',
+    email: 'relogin@example.com',
+    name: 'Kakao Relogin',
+    accessToken: 'kakao-access-token-v3',
+    refreshToken: 'kakao-refresh-token-v3',
+    expiresIn: 900,
+  });
+
+  const second = await harness.socialAuthService.loginWithKakao(
+    'valid-kakao-code-relogin',
+    KAKAO_REDIRECT_URI,
+  );
+
+  assert.equal(second.user.email, 'relogin@example.com');
+  assert.equal(harness.socialAccounts.length, 1);
+  assert.equal(harness.socialAccounts[0].access_token, 'kakao-access-token-v3');
+  assert.equal(harness.socialAccounts[0].refresh_token, 'kakao-refresh-token-v3');
+});
+
+test('loginWithKakao rejects invalid authorization code', async () => {
+  const harness = createHarness();
+
+  await assert.rejects(
+    () => harness.socialAuthService.loginWithKakao('bad-kakao-code', KAKAO_REDIRECT_URI),
+    (err) => {
+      assert.equal(err.statusCode, HTTP_STATUS.UNAUTHORIZED);
+      assert.equal(err.errorCode, ERROR_CODES.AUTH_INVALID);
+      return true;
+    },
+  );
+});
+
+test('computeTokenExpiresAt returns null for invalid expiresIn', () => {
+  assert.equal(computeTokenExpiresAt(null), null);
+  assert.equal(computeTokenExpiresAt('not-a-number'), null);
+  assert.equal(computeTokenExpiresAt(-1), null);
 });

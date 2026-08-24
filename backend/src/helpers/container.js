@@ -130,7 +130,11 @@ container.register(
     c.get("userRepository"),
     c.get("socialAccountRepository"),
     c.get("authService"),
-    { googleClientId: config.external.googleOAuthClientId },
+    {
+      googleClientId: config.external.googleOAuthClientId,
+      kakaoRestApiKey: config.external.kakaoRestApiKey,
+      kakaoClientSecret: config.external.kakaoClientSecret,
+    },
   ),
 );
 container.register("vehicleRepository", () => new VehicleRepository());

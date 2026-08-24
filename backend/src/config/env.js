@@ -5,6 +5,7 @@
  * 런타임 중 예기치 않은 오류를 방지합니다.
  */
 const Joi = require('joi');
+const { resolveEncryptionKey } = require('../utils/tokenEncryption.util');
 
 const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'staging', 'production', 'test').default('development'),
@@ -23,7 +24,17 @@ const envSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().min(16).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('1h'),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
+  SOCIAL_TOKEN_ENCRYPTION_KEY: Joi.string().required().custom((value, helpers) => {
+    try {
+      resolveEncryptionKey(value);
+      return value;
+    } catch (err) {
+      return helpers.message({ custom: err.message });
+    }
+  }),
   GOOGLE_OAUTH_CLIENT_ID: Joi.string().allow('').optional(),
+  KAKAO_REST_API_KEY: Joi.string().allow('').optional(),
+  KAKAO_CLIENT_SECRET: Joi.string().allow('').optional(),
   GOOGLE_PLACES_API_KEY: Joi.string().allow('').optional(),
   AERODATABOX_API_KEY: Joi.string().allow('').optional(),
   AERODATABOX_BASE_URL: Joi.string().uri().default('https://aerodatabox.p.rapidapi.com'),
@@ -186,6 +197,8 @@ module.exports = {
   },
   external: {
     googleOAuthClientId: env.GOOGLE_OAUTH_CLIENT_ID || '',
+    kakaoRestApiKey: env.KAKAO_REST_API_KEY || '',
+    kakaoClientSecret: env.KAKAO_CLIENT_SECRET || '',
     googleMapsApiKey: env.GOOGLE_MAPS_API_KEY || env.GOOGLE_PLACES_API_KEY,
     aeroDataBoxApiKey: env.AERODATABOX_API_KEY,
     aeroDataBoxBaseUrl: env.AERODATABOX_BASE_URL,

@@ -5,6 +5,9 @@ const ERROR_CODES = require('../constants/errorCodes');
 const ROLES = require('../constants/roles');
 const SOCIAL_PROVIDERS = require('../constants/socialProviders');
 
+const KAKAO_TOKEN_URL = 'https://kauth.kakao.com/oauth/token';
+const KAKAO_USER_ME_URL = 'https://kapi.kakao.com/v2/user/me';
+
 function normalizeGoogleIdTokenPayload(payload) {
   if (!payload?.sub) {
     throw new AppError('Invalid Google ID token', {
@@ -22,13 +25,49 @@ function normalizeGoogleIdTokenPayload(payload) {
   };
 }
 
+function buildKakaoPlaceholderEmail(providerUserId) {
+  return `kakao_${providerUserId}@social.trider.local`;
+}
+
+function computeTokenExpiresAt(expiresIn) {
+  const seconds = Number(expiresIn);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return null;
+  }
+  return new Date(Date.now() + seconds * 1000);
+}
+
+function normalizeKakaoUserPayload(payload) {
+  const providerUserId = payload?.id != null ? String(payload.id) : null;
+  if (!providerUserId) {
+    throw new AppError('Invalid Kakao authorization code', {
+      statusCode: HTTP_STATUS.UNAUTHORIZED,
+      errorCode: ERROR_CODES.AUTH_INVALID,
+    });
+  }
+
+  const email = payload.kakao_account?.email
+    ? payload.kakao_account.email.trim().toLowerCase()
+    : null;
+
+  return {
+    providerUserId,
+    email,
+    name: payload.properties?.nickname || null,
+  };
+}
+
 class SocialAuthService {
   constructor(userRepository, socialAccountRepository, authService, options = {}) {
     this.userRepository = userRepository;
     this.socialAccountRepository = socialAccountRepository;
     this.authService = authService;
     this.googleClientId = options.googleClientId || null;
+    this.kakaoRestApiKey = options.kakaoRestApiKey || null;
+    this.kakaoClientSecret = options.kakaoClientSecret || null;
     this.verifyGoogleIdTokenImpl = options.verifyGoogleIdTokenImpl || null;
+    this.exchangeKakaoCodeImpl = options.exchangeKakaoCodeImpl || null;
+    this.fetchImpl = options.fetchImpl || globalThis.fetch;
   }
 
   async verifyGoogleIdToken(idToken) {
@@ -74,6 +113,94 @@ class SocialAuthService {
     }
   }
 
+  async exchangeKakaoCode(authorizationCode, redirectUri) {
+    if (this.exchangeKakaoCodeImpl) {
+      try {
+        return await this.exchangeKakaoCodeImpl(authorizationCode, redirectUri);
+      } catch (err) {
+        if (err instanceof AppError) {
+          throw err;
+        }
+        throw new AppError('Invalid Kakao authorization code', {
+          statusCode: HTTP_STATUS.UNAUTHORIZED,
+          errorCode: ERROR_CODES.AUTH_INVALID,
+        });
+      }
+    }
+
+    if (!this.kakaoRestApiKey) {
+      throw new AppError('Kakao sign-in is not configured', {
+        statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+        errorCode: ERROR_CODES.EXTERNAL_API_ERROR,
+      });
+    }
+
+    const tokenBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: this.kakaoRestApiKey,
+      redirect_uri: redirectUri,
+      code: authorizationCode,
+    });
+    if (this.kakaoClientSecret) {
+      tokenBody.set('client_secret', this.kakaoClientSecret);
+    }
+
+    let tokenResponse;
+    try {
+      tokenResponse = await this.fetchImpl(KAKAO_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        },
+        body: tokenBody.toString(),
+      });
+    } catch (err) {
+      throw new AppError('Kakao sign-in is temporarily unavailable', {
+        statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+        errorCode: ERROR_CODES.EXTERNAL_API_ERROR,
+      });
+    }
+
+    const tokenJson = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokenJson.access_token) {
+      throw new AppError('Invalid Kakao authorization code', {
+        statusCode: HTTP_STATUS.UNAUTHORIZED,
+        errorCode: ERROR_CODES.AUTH_INVALID,
+      });
+    }
+
+    let userResponse;
+    try {
+      userResponse = await this.fetchImpl(KAKAO_USER_ME_URL, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${tokenJson.access_token}`,
+        },
+      });
+    } catch (err) {
+      throw new AppError('Kakao sign-in is temporarily unavailable', {
+        statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+        errorCode: ERROR_CODES.EXTERNAL_API_ERROR,
+      });
+    }
+
+    const userJson = await userResponse.json();
+    if (!userResponse.ok) {
+      throw new AppError('Invalid Kakao authorization code', {
+        statusCode: HTTP_STATUS.UNAUTHORIZED,
+        errorCode: ERROR_CODES.AUTH_INVALID,
+      });
+    }
+
+    const profile = normalizeKakaoUserPayload(userJson);
+    return {
+      ...profile,
+      accessToken: tokenJson.access_token,
+      refreshToken: tokenJson.refresh_token || null,
+      expiresIn: tokenJson.expires_in ?? null,
+    };
+  }
+
   async loginWithGoogle(idToken) {
     const profile = await this.verifyGoogleIdToken(idToken);
     return this.loginOrRegisterWithSocial({
@@ -84,8 +211,31 @@ class SocialAuthService {
     });
   }
 
-  async loginOrRegisterWithSocial({ provider, providerUserId, email, name }) {
+  async loginWithKakao(code, redirectUri) {
+    const profile = await this.exchangeKakaoCode(code, redirectUri);
+    return this.loginOrRegisterWithSocial({
+      provider: SOCIAL_PROVIDERS.KAKAO,
+      providerUserId: profile.providerUserId,
+      email: profile.email,
+      name: profile.name,
+      providerTokens: {
+        accessToken: profile.accessToken,
+        refreshToken: profile.refreshToken,
+        tokenExpiresAt: computeTokenExpiresAt(profile.expiresIn),
+      },
+    });
+  }
+
+  async loginOrRegisterWithSocial({
+    provider,
+    providerUserId,
+    email,
+    name,
+    providerTokens = null,
+  }) {
     const normalizedEmail = email?.trim().toLowerCase() || null;
+    const requiresEmail = provider === SOCIAL_PROVIDERS.GOOGLE;
+
     if (!providerUserId) {
       throw new AppError('Social provider user id is required', {
         statusCode: HTTP_STATUS.BAD_REQUEST,
@@ -98,43 +248,65 @@ class SocialAuthService {
       providerUserId,
     );
     if (existingLink) {
-      return this._loginExistingUser(existingLink.user_id);
+      if (providerTokens) {
+        await this.socialAccountRepository.updateProviderTokens({
+          provider,
+          providerUserId,
+          accessToken: providerTokens.accessToken,
+          refreshToken: providerTokens.refreshToken,
+          tokenExpiresAt: providerTokens.tokenExpiresAt,
+        });
+      }
+      return this._loginExistingUser(existingLink.user_id, provider);
     }
 
-    if (!normalizedEmail) {
+    if (requiresEmail && !normalizedEmail) {
       throw new AppError('Social account email is required', {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
     }
 
-    const existingUser = await this.userRepository.findByEmail(normalizedEmail);
-    if (existingUser) {
-      if (existingUser.role !== ROLES.CUSTOMER) {
-        throw new AppError('Invalid Google ID token', {
-          statusCode: HTTP_STATUS.UNAUTHORIZED,
-          errorCode: ERROR_CODES.AUTH_INVALID,
+    if (normalizedEmail) {
+      const existingUser = await this.userRepository.findByEmail(normalizedEmail);
+      if (existingUser) {
+        if (existingUser.role !== ROLES.CUSTOMER) {
+          throw new AppError('Invalid social login credentials', {
+            statusCode: HTTP_STATUS.UNAUTHORIZED,
+            errorCode: ERROR_CODES.AUTH_INVALID,
+          });
+        }
+        await this.socialAccountRepository.create({
+          userId: existingUser.id,
+          provider,
+          providerUserId,
+          providerEmail: normalizedEmail,
+          accessToken: providerTokens?.accessToken ?? null,
+          refreshToken: providerTokens?.refreshToken ?? null,
+          tokenExpiresAt: providerTokens?.tokenExpiresAt ?? null,
         });
+        return this._loginExistingUser(existingUser.id, provider);
       }
-      await this.socialAccountRepository.create({
-        userId: existingUser.id,
-        provider,
-        providerUserId,
-        providerEmail: normalizedEmail,
-      });
-      return this._loginExistingUser(existingUser.id);
     }
+
+    const accountEmail = normalizedEmail || buildKakaoPlaceholderEmail(providerUserId);
+    const displayName = name
+      || normalizedEmail?.split('@')[0]
+      || 'Customer';
 
     try {
       const user = await this.userRepository.createSocialCustomerWithProfile({
-        email: normalizedEmail,
-        displayName: name || normalizedEmail.split('@')[0],
+        email: accountEmail,
+        displayName,
       });
       await this.socialAccountRepository.create({
         userId: user.id,
         provider,
         providerUserId,
         providerEmail: normalizedEmail,
+        accessToken: providerTokens?.accessToken ?? null,
+        refreshToken: providerTokens?.refreshToken ?? null,
+        tokenExpiresAt: providerTokens?.tokenExpiresAt ?? null,
       });
       await this.userRepository.updateLastLoginAt(user.id);
       return this.authService.buildAuthResponse(user);
@@ -149,10 +321,13 @@ class SocialAuthService {
     }
   }
 
-  async _loginExistingUser(userId) {
+  async _loginExistingUser(userId, provider = SOCIAL_PROVIDERS.GOOGLE) {
     const user = await this.userRepository.findById(userId);
     if (!user || !user.is_active || user.role !== ROLES.CUSTOMER) {
-      throw new AppError('Invalid Google ID token', {
+      const message = provider === SOCIAL_PROVIDERS.GOOGLE
+        ? 'Invalid Google ID token'
+        : 'Invalid social login credentials';
+      throw new AppError(message, {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
         errorCode: ERROR_CODES.AUTH_INVALID,
       });
@@ -165,3 +340,6 @@ class SocialAuthService {
 
 module.exports = SocialAuthService;
 module.exports.normalizeGoogleIdTokenPayload = normalizeGoogleIdTokenPayload;
+module.exports.normalizeKakaoUserPayload = normalizeKakaoUserPayload;
+module.exports.buildKakaoPlaceholderEmail = buildKakaoPlaceholderEmail;
+module.exports.computeTokenExpiresAt = computeTokenExpiresAt;

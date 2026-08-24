@@ -29,10 +29,16 @@ const googleSocialLoginSchema = Joi.object({
   idToken: Joi.string().trim().min(1).required(),
 });
 
+const kakaoSocialLoginSchema = Joi.object({
+  code: Joi.string().trim().min(1).required(),
+  redirectUri: Joi.string().trim().uri().required(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   refreshSchema,
   logoutSchema,
   googleSocialLoginSchema,
+  kakaoSocialLoginSchema,
 };

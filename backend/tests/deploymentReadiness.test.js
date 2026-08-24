@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const backendRoot = path.resolve(__dirname, '..');
+const TEST_SOCIAL_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 11).toString('base64');
 
 test('staging env validation accepts production-like safe placeholders only when strong values are provided', () => {
   const output = execFileSync(
@@ -21,6 +22,7 @@ test('staging env validation accepts production-like safe placeholders only when
         DB_PASSWORD: 'strong-db-password',
         JWT_ACCESS_SECRET: 'strong-access-secret-value',
         JWT_REFRESH_SECRET: 'strong-refresh-secret-value',
+        SOCIAL_TOKEN_ENCRYPTION_KEY: TEST_SOCIAL_TOKEN_ENCRYPTION_KEY,
         CORS_ORIGIN: 'https://staging.example.com',
         ALLOW_DEV_QR_REISSUE: 'false',
       },
@@ -45,6 +47,7 @@ test('staging env validation rejects development QR reissue flag', () => {
         DB_PASSWORD: 'strong-db-password',
         JWT_ACCESS_SECRET: 'strong-access-secret-value',
         JWT_REFRESH_SECRET: 'strong-refresh-secret-value',
+        SOCIAL_TOKEN_ENCRYPTION_KEY: TEST_SOCIAL_TOKEN_ENCRYPTION_KEY,
         CORS_ORIGIN: 'https://staging.example.com',
         ALLOW_DEV_QR_REISSUE: 'true',
       },
@@ -70,6 +73,7 @@ test('production env validation rejects placeholder secrets and unsafe defaults'
         DB_PASSWORD: 'REPLACE_WITH_STRONG_PRODUCTION_DB_PASSWORD',
         JWT_ACCESS_SECRET: 'REPLACE_WITH_STRONG_RANDOM_ACCESS_SECRET_MIN_32_CHARS',
         JWT_REFRESH_SECRET: 'REPLACE_WITH_STRONG_RANDOM_REFRESH_SECRET_MIN_32_CHARS',
+        SOCIAL_TOKEN_ENCRYPTION_KEY: TEST_SOCIAL_TOKEN_ENCRYPTION_KEY,
         CORS_ORIGIN: 'https://tride.example.com',
         ALLOW_DEV_QR_REISSUE: 'false',
       },
@@ -99,6 +103,7 @@ test('production env validation rejects example and placeholder secret markers',
         DB_PASSWORD: 'EXAMPLE_PRODUCTION_DB_PASSWORD',
         JWT_ACCESS_SECRET: 'PLACEHOLDER_ACCESS_SECRET_VALUE',
         JWT_REFRESH_SECRET: 'CHANGE_ME_REFRESH_SECRET_VALUE',
+        SOCIAL_TOKEN_ENCRYPTION_KEY: TEST_SOCIAL_TOKEN_ENCRYPTION_KEY,
         CORS_ORIGIN: 'https://tride.example.com',
         ALLOW_DEV_QR_REISSUE: 'false',
         UPLOAD_DIR: '/srv/tride/uploads',
@@ -127,6 +132,7 @@ test('production env validation accepts explicit production-safe values', () => 
         DB_PASSWORD: 'strong-production-db-password',
         JWT_ACCESS_SECRET: 'strong-production-access-secret-value',
         JWT_REFRESH_SECRET: 'strong-production-refresh-secret-value',
+        SOCIAL_TOKEN_ENCRYPTION_KEY: TEST_SOCIAL_TOKEN_ENCRYPTION_KEY,
         CORS_ORIGIN: 'https://tride.example.com',
         ALLOW_DEV_QR_REISSUE: 'false',
         UPLOAD_DIR: '/srv/tride/uploads',
@@ -153,6 +159,7 @@ test('Google Places key alias maps to backend Places provider config', () => {
         DB_PASSWORD: 'strong-db-password',
         JWT_ACCESS_SECRET: 'strong-access-secret-value',
         JWT_REFRESH_SECRET: 'strong-refresh-secret-value',
+        SOCIAL_TOKEN_ENCRYPTION_KEY: TEST_SOCIAL_TOKEN_ENCRYPTION_KEY,
         CORS_ORIGIN: 'https://staging.example.com',
         ALLOW_DEV_QR_REISSUE: 'false',
         GOOGLE_MAPS_API_KEY: '',
