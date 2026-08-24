@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/auth/controllers/auth_controller.dart';
-import 'package:frontend/features/auth/controllers/auth_controller.dart';
+import 'package:frontend/features/auth/models/social_login_return_context.dart';
 import 'package:frontend/features/auth/services/auth_api_service.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
 import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
@@ -47,6 +47,79 @@ void main() {
     expect(find.text('계정을 만들면 다음 예약이 더 편해집니다'), findsOneWidget);
     expect(find.text('Google로 계속하기'), findsOneWidget);
     expect(find.text('나중에 하기'), findsOneWidget);
+  });
+
+  testWidgets('booking complete shows Kakao login button when enabled', (
+    tester,
+  ) async {
+    final authController = await prepareSignedOutAuthController();
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: BookingSocialLoginSection(
+          authController: authController,
+          showKakaoButton: true,
+          kakaoReturnContext: SocialLoginReturnContext.fromBookingComplete(
+            result: _result(),
+            serviceLabel: 'Airport Pickup',
+            baseUri: Uri.parse('https://trider.taxi/booking'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('카카오로 계속하기'), findsOneWidget);
+    expect(find.text('Google로 계속하기'), findsOneWidget);
+  });
+
+  testWidgets('kakao sign-in success stores tokens via mock callback flow', (
+    tester,
+  ) async {
+    final authController = await prepareSignedOutAuthController(
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/auth/social/kakao')) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'accessToken': 'kakao-access-token',
+                'refreshToken': 'kakao-refresh-token',
+                'expiresIn': 3600,
+                'user': {
+                  'id': 99,
+                  'email': 'kakao@example.com',
+                  'role': 'CUSTOMER',
+                  'name': 'Kakao User',
+                  'phone': null,
+                  'locale': 'ko',
+                  'isActive': true,
+                },
+              },
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 500);
+      }),
+    );
+
+    await authController.completeSignInWithKakaoCodeForTest(
+      code: 'mock-kakao-code',
+      redirectUri: 'https://trider.taxi/auth/kakao/callback',
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(AuthTokenStorage.accessTokenKey), 'kakao-access-token');
+    expect(
+      prefs.getString(AuthTokenStorage.refreshTokenKey),
+      'kakao-refresh-token',
+    );
+    expect(authController.isLoggedIn, isTrue);
+    expect(authController.user?.name, 'Kakao User');
   });
 
   testWidgets('sign-in success stores tokens and shows connected message', (

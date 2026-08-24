@@ -18,6 +18,7 @@ import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../auth/models/social_login_return_context.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
 import 'guest_booking_lookup_page.dart';
 
@@ -238,7 +239,22 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 onCopy: _copyBookingNumber,
                 statusTone: AppUi.toneForBookingStatus(_status),
               ),
-              BookingSocialLoginSection(authController: widget.authController),
+              BookingSocialLoginSection(
+                authController: widget.authController,
+                kakaoReturnContext: SocialLoginReturnContext.fromBookingComplete(
+                  result: widget.result,
+                  serviceLabel: widget.serviceLabel,
+                  origin: widget.origin,
+                  destination: widget.destination,
+                  serviceTypeCode: widget.serviceTypeCode,
+                  originAirportCode: widget.originAirportCode,
+                  nameSignRequested: widget.nameSignRequested,
+                  customerPhone: widget.customerPhone,
+                  scheduledPickupAt: widget.scheduledPickupAt,
+                  selectedVehicle: widget.selectedVehicle,
+                  enableCustomerTools: widget.enableCustomerTools,
+                ),
+              ),
               if (BookingStatusDisplay.customerGuidance(l10n, _status) !=
                   null) ...[
                 const SizedBox(height: AppTokens.spaceMd),

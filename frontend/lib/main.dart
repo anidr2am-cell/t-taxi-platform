@@ -24,6 +24,7 @@ import 'features/legal/pages/privacy_policy_page.dart';
 import 'features/support/pages/customer_support_page.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/booking_provider.dart';
+import 'features/auth/pages/kakao_oauth_callback_page.dart';
 import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/widgets/booking_social_login_section.dart';
 import 'screens/admin/admin_screen.dart';
@@ -115,8 +116,18 @@ class TTaxiApp extends StatelessWidget {
           ),
         },
       },
-      onGenerateRoute: buildE2ERoute,
+      onGenerateRoute: (settings) {
+        return buildKakaoOAuthCallbackRoute(settings) ??
+            buildE2ERoute(settings);
+      },
       onGenerateInitialRoutes: (initialRoute) {
+        final kakaoRoute = buildKakaoOAuthCallbackRoute(
+          RouteSettings(name: initialRoute),
+        );
+        if (kakaoRoute != null) {
+          return [kakaoRoute];
+        }
+
         final e2eRoute = buildE2ERoute(RouteSettings(name: initialRoute));
         if (e2eRoute != null) return [e2eRoute];
 

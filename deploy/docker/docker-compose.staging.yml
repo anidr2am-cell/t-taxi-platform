@@ -84,6 +84,7 @@ services:
         APP_ENV: production
         API_BASE_URL: ${TRIDE_API_BASE_URL:-http://localhost:3100}
         SOCKET_URL: ${TRIDE_SOCKET_URL:-}
+        KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
     container_name: tride-frontend
     restart: unless-stopped
     depends_on:

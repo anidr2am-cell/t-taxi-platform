@@ -13,6 +13,7 @@ COPY frontend/ ./
 ARG APP_ENV=development
 ARG API_BASE_URL
 ARG SOCKET_URL
+ARG KAKAO_REST_API_KEY
 
 RUN test -n "$APP_ENV" \
     && if [ "$APP_ENV" = "production" ]; then \
@@ -39,15 +40,21 @@ RUN test -n "$APP_ENV" \
     fi
 
 RUN EFFECTIVE_API_BASE_URL="${API_BASE_URL:-http://localhost:3100}" \
+    && KAKAO_DEFINE="" \
+    && if [ -n "$KAKAO_REST_API_KEY" ]; then \
+      KAKAO_DEFINE="--dart-define=KAKAO_REST_API_KEY=${KAKAO_REST_API_KEY}"; \
+    fi \
     && if [ -n "$SOCKET_URL" ]; then \
       flutter build web --release \
         --dart-define=APP_ENV=${APP_ENV} \
         --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
-        --dart-define=SOCKET_URL=${SOCKET_URL}; \
+        --dart-define=SOCKET_URL=${SOCKET_URL} \
+        $KAKAO_DEFINE; \
     else \
       flutter build web --release \
         --dart-define=APP_ENV=${APP_ENV} \
-        --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL}; \
+        --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
+        $KAKAO_DEFINE; \
     fi
 
 FROM nginx:1.27-alpine

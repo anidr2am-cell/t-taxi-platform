@@ -3,13 +3,23 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../config/kakao_auth_config.dart';
 import '../controllers/auth_controller.dart';
+import '../models/social_login_return_context.dart';
 import 'google_sign_in_button.dart';
+import 'kakao_sign_in_button.dart';
 
 class BookingSocialLoginSection extends StatefulWidget {
-  const BookingSocialLoginSection({super.key, this.authController});
+  const BookingSocialLoginSection({
+    super.key,
+    this.authController,
+    this.kakaoReturnContext,
+    this.showKakaoButton,
+  });
 
   final AuthController? authController;
+  final SocialLoginReturnContext? kakaoReturnContext;
+  final bool? showKakaoButton;
 
   @override
   State<BookingSocialLoginSection> createState() =>
@@ -23,6 +33,13 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
 
   AuthController _resolveController(BuildContext context) {
     return widget.authController ?? AuthScope.of(context);
+  }
+
+  bool _shouldShowKakaoButton(AuthController controller) {
+    if (widget.showKakaoButton != null) {
+      return widget.showKakaoButton!;
+    }
+    return KakaoAuthConfig.isConfigured && widget.kakaoReturnContext != null;
   }
 
   @override
@@ -41,7 +58,7 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
         }
 
         if (controller.isLoggedIn) {
-          if (_wasLoggedInAtMount) {
+          if (_wasLoggedInAtMount && controller.hadPersistedSessionAtInit) {
             return const SizedBox.shrink();
           }
           return _ConnectedCard(
@@ -54,10 +71,15 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
           l10n: context.l10n,
           isLoading: controller.isLoading,
           errorMessage: controller.errorMessage,
+          showKakaoButton: _shouldShowKakaoButton(controller),
           onLater: () => setState(() => _dismissed = true),
-          onSignInPressed: controller.isLoading
+          onGoogleSignInPressed: controller.isLoading
               ? null
               : () => controller.signInWithGoogle(),
+          onKakaoSignInPressed: controller.isLoading ||
+                  widget.kakaoReturnContext == null
+              ? null
+              : () => controller.beginKakaoSignIn(widget.kakaoReturnContext!),
         );
       },
     );
@@ -85,15 +107,19 @@ class _PromptCard extends StatelessWidget {
     required this.l10n,
     required this.isLoading,
     required this.errorMessage,
+    required this.showKakaoButton,
     required this.onLater,
-    required this.onSignInPressed,
+    required this.onGoogleSignInPressed,
+    required this.onKakaoSignInPressed,
   });
 
   final AppLocalizations l10n;
   final bool isLoading;
   final String? errorMessage;
+  final bool showKakaoButton;
   final VoidCallback onLater;
-  final VoidCallback? onSignInPressed;
+  final VoidCallback? onGoogleSignInPressed;
+  final VoidCallback? onKakaoSignInPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -132,8 +158,16 @@ class _PromptCard extends StatelessWidget {
                 label: l10n.t('auth_google_continue'),
                 locale: l10n.languageCode,
                 loading: isLoading,
-                onPressed: onSignInPressed,
+                onPressed: onGoogleSignInPressed,
               ),
+              if (showKakaoButton) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                KakaoSignInButton(
+                  label: l10n.t('auth_kakao_continue'),
+                  loading: isLoading,
+                  onPressed: onKakaoSignInPressed,
+                ),
+              ],
               const SizedBox(height: AppTokens.spaceSm),
               TextButton(
                 onPressed: isLoading ? null : onLater,
