@@ -20,6 +20,7 @@ import 'features/driver_settlement/pages/driver_settlement_list_page.dart';
 import 'features/driver_settlement/services/driver_settlement_api_service.dart';
 import 'features/driver_settlement/utils/e2e_receipt_file_picker.dart'
     if (dart.library.html) 'features/driver_settlement/utils/e2e_receipt_file_picker_web.dart';
+import 'features/legal/pages/privacy_policy_page.dart';
 import 'features/support/pages/customer_support_page.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/booking_provider.dart';
@@ -90,6 +91,7 @@ class TTaxiApp extends StatelessWidget {
         '/driver/jobs': (_) =>
             const DriverPwaInstallPromptHost(child: DriverShellPage()),
         '/support': (_) => const CustomerSupportPage(),
+        '/privacy-policy': (_) => const PrivacyPolicyPage(),
         if (_enableE2ERoutes) ...{
           '/admin/e2e/settlement-detail': (_) =>
               AdminE2ESettlementDetailRoute(uri: Uri.base),

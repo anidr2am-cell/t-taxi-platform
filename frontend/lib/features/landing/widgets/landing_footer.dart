@@ -27,6 +27,21 @@ class LandingFooter extends StatelessWidget {
               color: AppTokens.textMuted,
             ),
           ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.pushNamed(context, '/privacy-policy'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTokens.textMuted,
+              textStyle: const TextStyle(
+                fontSize: 12,
+                decoration: TextDecoration.underline,
+              ),
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(l10n.t('landing_privacy_policy_link')),
+          ),
           const SizedBox(height: 4),
           Text(
             '© ${DateTime.now().year} ${l10n.t('app_title')}',

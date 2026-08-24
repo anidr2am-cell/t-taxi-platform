@@ -75,6 +75,10 @@ class AppLocalizations {
       'landing_booking_lookup_action': 'Find my booking',
       'landing_footer_note':
           'Professional airport and city transfers across Thailand.',
+      'landing_privacy_policy_link': 'Privacy policy',
+      'privacy_policy_title': 'Privacy policy',
+      'privacy_policy_load_failed':
+          'Privacy policy could not be loaded. Please try again later.',
       'landing_language_label': 'Language',
       'support_title': 'Customer center',
       'support_page_intro':
@@ -1709,6 +1713,10 @@ class AppLocalizations {
       'landing_booking_lookup_desc': '예약번호로 일정과 기사 정보를 확인하세요.',
       'landing_booking_lookup_action': '예약 조회',
       'landing_footer_note': '태국 전역 공항·도시 이동 전문 서비스',
+      'landing_privacy_policy_link': '개인정보처리방침',
+      'privacy_policy_title': '개인정보처리방침',
+      'privacy_policy_load_failed':
+          '개인정보처리방침을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
       'landing_language_label': '언어',
       'support_title': '고객센터',
       'support_page_intro':
@@ -2721,6 +2729,9 @@ class AppLocalizations {
       'landing_booking_lookup_desc': '使用预约号查看行程与司机信息。',
       'landing_booking_lookup_action': '查询预约',
       'landing_footer_note': '泰国全境专业机场与城市接送',
+      'landing_privacy_policy_link': '隐私政策',
+      'privacy_policy_title': '隐私政策',
+      'privacy_policy_load_failed': '无法加载隐私政策。请稍后重试。',
       'landing_language_label': '语言',
       'support_title': '客服中心',
       'support_page_intro': '如果预约有困难或需要咨询，请联系客户中心。也可以附加机票、酒店凭证或预约截图。',
@@ -3299,6 +3310,10 @@ class AppLocalizations {
       'landing_booking_lookup_desc': '予約番号で行程とドライバー情報を確認できます。',
       'landing_booking_lookup_action': '予約を検索',
       'landing_footer_note': 'タイ全土のプロ空港・市内送迎サービス',
+      'landing_privacy_policy_link': 'プライバシーポリシー',
+      'privacy_policy_title': 'プライバシーポリシー',
+      'privacy_policy_load_failed':
+          'プライバシーポリシーを読み込めませんでした。しばらくしてから再度お試しください。',
       'landing_language_label': '言語',
       'support_title': 'カスタマーセンター',
       'support_page_intro':
@@ -3944,6 +3959,10 @@ class AppLocalizations {
       'landing_booking_lookup_desc': 'ตรวจสอบตารางและข้อมูลทริปด้วยหมายเลขจอง',
       'landing_booking_lookup_action': 'ค้นหาการจอง',
       'landing_footer_note': 'บริการรับส่งสนามบินและในเมืองทั่วประเทศไทย',
+      'landing_privacy_policy_link': 'นโยบายความเป็นส่วนตัว',
+      'privacy_policy_title': 'นโยบายความเป็นส่วนตัว',
+      'privacy_policy_load_failed':
+          'ไม่สามารถโหลดนโยบายความเป็นส่วนตัวได้ กรุณาลองใหม่อีกครั้ง',
       'landing_language_label': 'ภาษา',
       'support_title': 'ศูนย์บริการลูกค้า',
       'support_page_intro':

@@ -31,6 +31,7 @@ dependencies:
   geolocator: ^14.0.2
   geolocator_web: ^4.1.4
   image: ^4.8.0
+  flutter_markdown: ^0.7.7+1
 
 dev_dependencies:
   flutter_test:
@@ -41,3 +42,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/legal/

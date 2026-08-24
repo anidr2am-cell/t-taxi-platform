@@ -14,6 +14,7 @@ import 'package:frontend/features/landing/pages/customer_landing_page.dart';
 import 'package:frontend/features/landing/widgets/landing_clickable_styles.dart';
 import 'package:frontend/features/landing/widgets/landing_header.dart';
 import 'package:frontend/features/landing/widgets/landing_hero.dart';
+import 'package:frontend/features/legal/pages/privacy_policy_page.dart';
 import 'package:frontend/features/support/pages/customer_support_page.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
@@ -64,6 +65,9 @@ Widget _wrapLanding({
               );
             },
             '/support': (_) => const CustomerSupportPage(),
+            '/privacy-policy': (_) => const PrivacyPolicyPage(
+              initialMarkdown: '# Privacy\n\nSample policy.',
+            ),
           },
           home: MediaQuery(
             data: MediaQueryData(size: Size(width, height)),
@@ -464,6 +468,20 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('안심 취소·환불'), findsOneWidget);
       expect(find.text('기사 품질 관리'), findsOneWidget);
+    });
+
+    testWidgets('footer opens privacy policy page', (tester) async {
+      await pumpLanding(tester, width: 375, locale: const Locale('ko'));
+      await tester.scrollUntilVisible(
+        find.text('개인정보처리방침'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      await tester.tap(find.text('개인정보처리방침'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sample policy.'), findsOneWidget);
     });
 
     for (final code in AppLocalizations.supportedLanguages) {
