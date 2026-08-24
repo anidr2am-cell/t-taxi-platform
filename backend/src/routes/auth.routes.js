@@ -13,6 +13,7 @@ const {
   loginSchema,
   refreshSchema,
   logoutSchema,
+  googleSocialLoginSchema,
 } = require('../validators/auth.validator');
 
 const router = express.Router();
@@ -29,6 +30,12 @@ router.post(
   loginIdentifierRateLimit,
   validate({ body: loginSchema }),
   authController.login,
+);
+router.post(
+  '/social/google',
+  loginIpRateLimit,
+  validate({ body: googleSocialLoginSchema }),
+  authController.googleSocialLogin,
 );
 router.post(
   '/refresh',

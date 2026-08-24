@@ -2,6 +2,7 @@
  * helpers/container.js — Simple Dependency Injection container
  */
 const UserRepository = require("../repositories/user.repository");
+const SocialAccountRepository = require("../repositories/socialAccount.repository");
 const VehicleRepository = require("../repositories/vehicle.repository");
 const VehicleService = require("../services/vehicle.service");
 const LocationRepository = require("../repositories/location.repository");
@@ -12,6 +13,7 @@ const ChargePolicyRepository = require("../repositories/chargePolicy.repository"
 const RevokedRefreshTokenStore = require("../services/revokedRefreshToken.store");
 const TokenService = require("../services/token.service");
 const AuthService = require("../services/auth.service");
+const SocialAuthService = require("../services/socialAuth.service");
 const VehicleRecommendationService = require("../services/vehicleRecommendation.service");
 const PricingService = require("../services/pricing.service");
 const RouteAdminService = require("../services/routeAdmin.service");
@@ -109,6 +111,7 @@ class Container {
 const container = new Container();
 
 container.register("userRepository", () => new UserRepository());
+container.register("socialAccountRepository", () => new SocialAccountRepository());
 container.register(
   "revokedRefreshTokenStore",
   () => new RevokedRefreshTokenStore(),
@@ -120,6 +123,15 @@ container.register(
 container.register(
   "authService",
   (c) => new AuthService(c.get("userRepository"), c.get("tokenService")),
+);
+container.register(
+  "socialAuthService",
+  (c) => new SocialAuthService(
+    c.get("userRepository"),
+    c.get("socialAccountRepository"),
+    c.get("authService"),
+    { googleClientId: config.external.googleOAuthClientId },
+  ),
 );
 container.register("vehicleRepository", () => new VehicleRepository());
 container.register(

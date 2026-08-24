@@ -5,6 +5,7 @@ const container = require('../helpers/container');
 const logger = require('../utils/logger');
 
 const getAuthService = () => container.get('authService');
+const getSocialAuthService = () => container.get('socialAuthService');
 const getDriverStatusService = () => container.get('driverStatusService');
 
 const register = asyncHandler(async (req, res) => {
@@ -14,6 +15,11 @@ const register = asyncHandler(async (req, res) => {
 
 const login = asyncHandler(async (req, res) => {
   const data = await getAuthService().login(req.body);
+  return success(res, data, 'Login successful');
+});
+
+const googleSocialLogin = asyncHandler(async (req, res) => {
+  const data = await getSocialAuthService().loginWithGoogle(req.body.idToken);
   return success(res, data, 'Login successful');
 });
 
@@ -45,6 +51,7 @@ const me = asyncHandler(async (req, res) => {
 module.exports = {
   register,
   login,
+  googleSocialLogin,
   refresh,
   logout,
   me,

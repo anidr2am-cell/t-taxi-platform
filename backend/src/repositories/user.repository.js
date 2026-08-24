@@ -87,6 +87,42 @@ class UserRepository {
     locale,
     displayName,
   }) {
+    return this._createCustomerWithProfileInternal({
+      email,
+      passwordHash,
+      phone,
+      phoneCountryCode,
+      countryCode,
+      locale,
+      displayName,
+    });
+  }
+
+  async createSocialCustomerWithProfile({
+    email,
+    displayName,
+    locale = 'ko',
+  }) {
+    return this._createCustomerWithProfileInternal({
+      email,
+      passwordHash: null,
+      phone: null,
+      phoneCountryCode: null,
+      countryCode: null,
+      locale,
+      displayName,
+    });
+  }
+
+  async _createCustomerWithProfileInternal({
+    email,
+    passwordHash,
+    phone,
+    phoneCountryCode,
+    countryCode,
+    locale,
+    displayName,
+  }) {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();

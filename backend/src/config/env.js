@@ -23,7 +23,7 @@ const envSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().min(16).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('1h'),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
-  GOOGLE_MAPS_API_KEY: Joi.string().allow('').optional(),
+  GOOGLE_OAUTH_CLIENT_ID: Joi.string().allow('').optional(),
   GOOGLE_PLACES_API_KEY: Joi.string().allow('').optional(),
   AERODATABOX_API_KEY: Joi.string().allow('').optional(),
   AERODATABOX_BASE_URL: Joi.string().uri().default('https://aerodatabox.p.rapidapi.com'),
@@ -185,6 +185,7 @@ module.exports = {
     refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
   },
   external: {
+    googleOAuthClientId: env.GOOGLE_OAUTH_CLIENT_ID || '',
     googleMapsApiKey: env.GOOGLE_MAPS_API_KEY || env.GOOGLE_PLACES_API_KEY,
     aeroDataBoxApiKey: env.AERODATABOX_API_KEY,
     aeroDataBoxBaseUrl: env.AERODATABOX_BASE_URL,

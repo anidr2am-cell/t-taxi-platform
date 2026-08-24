@@ -25,9 +25,14 @@ const logoutSchema = Joi.object({
   refreshToken: Joi.string().trim().optional(),
 });
 
+const googleSocialLoginSchema = Joi.object({
+  idToken: Joi.string().trim().min(1).required(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   refreshSchema,
   logoutSchema,
+  googleSocialLoginSchema,
 };
