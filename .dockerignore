@@ -11,6 +11,7 @@ backend/logs
 frontend/build
 frontend/.dart_tool
 **/*.md
+!frontend/assets/legal/*.md
 docs
 deploy/pm2
 .cursor
