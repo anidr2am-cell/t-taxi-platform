@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
@@ -11,14 +12,17 @@ import 'package:frontend/theme/app_tokens.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'support/booking_complete_test_helpers.dart';
 import 'support/booking_location_test_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+late AuthController _bookingCompleteAuthController;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
+  setUp(() async {
+    _bookingCompleteAuthController = await prepareSignedOutAuthController();
   });
 
   testWidgets('BKK airport pickup without name sign shows Gate 7 guide', (
@@ -464,21 +468,10 @@ Widget _wrap(Widget child, {Locale locale = const Locale('en')}) {
 }
 
 Widget _wrapPage(Widget child, {Locale locale = const Locale('en')}) {
-  return MaterialApp(
-    locale: locale,
-    supportedLocales: const [
-      Locale('en'),
-      Locale('ko'),
-      Locale('th'),
-      Locale('ja'),
-      Locale('zh'),
-    ],
-    localizationsDelegates: [
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
+  return wrapBookingCompleteTestApp(
     home: child,
+    authController: _bookingCompleteAuthController,
+    locale: locale,
   );
 }
 

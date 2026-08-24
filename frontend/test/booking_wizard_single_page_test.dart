@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/models/booking_complete_review.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
@@ -15,6 +16,7 @@ import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/pages/booking_wizard_page.dart';
 
+import 'support/booking_complete_test_helpers.dart';
 import 'support/booking_location_test_data.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
@@ -27,6 +29,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  late AuthController bookingCompleteAuthController;
+
+  setUp(() async {
+    bookingCompleteAuthController = await prepareSignedOutAuthController();
+  });
 
   group('booking complete copy', () {
     testWidgets('copy button copies reservation number and shows snackbar', (
@@ -48,7 +56,8 @@ void main() {
       });
 
       await tester.pumpWidget(
-        MaterialApp(
+        wrapBookingCompleteTestApp(
+          authController: bookingCompleteAuthController,
           home: BookingCompletePage(
             result: const BookingCreateResult(
               bookingId: 1,
@@ -230,7 +239,8 @@ void main() {
       'shows review details without duplicating route summary fields',
       (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          wrapBookingCompleteTestApp(
+            authController: bookingCompleteAuthController,
             home: BookingCompletePage(
               result: const BookingCreateResult(
                 bookingNumber: 'TX202607010001',
@@ -281,7 +291,8 @@ void main() {
 
     testWidgets('hides empty optional review rows', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        wrapBookingCompleteTestApp(
+          authController: bookingCompleteAuthController,
           home: BookingCompletePage(
             result: const BookingCreateResult(
               bookingNumber: 'TX202607010001',
@@ -325,7 +336,8 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-        MaterialApp(
+        wrapBookingCompleteTestApp(
+          authController: bookingCompleteAuthController,
           home: BookingCompletePage(
             result: const BookingCreateResult(
               bookingNumber: 'TX202607010001',

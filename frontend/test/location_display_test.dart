@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
@@ -9,9 +10,16 @@ import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
 import 'package:frontend/features/booking/utils/location_display.dart';
 import 'package:frontend/features/booking/widgets/step_confirmation.dart';
 
+import 'support/booking_complete_test_helpers.dart';
 import 'support/booking_location_test_data.dart';
 
 void main() {
+  late AuthController bookingCompleteAuthController;
+
+  setUp(() async {
+    bookingCompleteAuthController = await prepareSignedOutAuthController();
+  });
+
   group('resolveBookingLocationParts', () {
     test('shows name and address when both differ', () {
       final parts = resolveBookingLocationParts(
@@ -89,7 +97,8 @@ void main() {
 
   testWidgets('BookingCompletePage shows two-line locations', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      wrapBookingCompleteTestApp(
+        authController: bookingCompleteAuthController,
         home: BookingCompletePage(
           result: const BookingCreateResult(
             bookingNumber: 'TX202607010001',

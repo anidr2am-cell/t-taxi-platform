@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
@@ -13,6 +14,7 @@ import 'package:frontend/features/driver/pages/driver_booking_detail_page.dart';
 import 'package:frontend/features/driver/pages/driver_jobs_page.dart';
 import 'package:frontend/features/driver/pages/driver_today_page.dart';
 
+import 'support/booking_complete_test_helpers.dart';
 import 'support/booking_location_test_data.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver_settlement/pages/driver_settlement_list_page.dart';
@@ -22,8 +24,10 @@ import 'support/driver_ux_qa_harness.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
+  late AuthController bookingCompleteAuthController;
+
+  setUp(() async {
+    bookingCompleteAuthController = await prepareSignedOutAuthController();
   });
 
   group('PR72 driver shell QA', () {
@@ -599,7 +603,8 @@ void main() {
         size: const Size(360, 800),
       );
       await tester.pumpWidget(
-        MaterialApp(
+        wrapBookingCompleteTestApp(
+          authController: bookingCompleteAuthController,
           home: BookingCompletePage(
             result: BookingCreateResult(
               bookingId: 1,

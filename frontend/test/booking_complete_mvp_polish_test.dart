@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/booking_complete_page.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 
+import 'support/booking_complete_test_helpers.dart';
 import 'support/booking_location_test_data.dart';
 
 void main() {
+  late AuthController authController;
+
+  setUp(() async {
+    authController = await prepareSignedOutAuthController();
+  });
+
   test('booking complete trust copy is QR-free in every customer locale', () {
     for (final languageCode in AppLocalizations.supportedLanguages) {
       final message = AppLocalizations(languageCode).t('booking_trust_message');
@@ -22,7 +30,8 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      wrapBookingCompleteTestApp(
+        authController: authController,
         home: BookingCompletePage(
           result: _result(),
           serviceLabel: 'Airport Pickup',
@@ -43,7 +52,8 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      wrapBookingCompleteTestApp(
+        authController: authController,
         home: BookingCompletePage(
           result: _result(trustMessage: 'Show the boarding QR to the driver.'),
           serviceLabel: 'Airport Pickup',

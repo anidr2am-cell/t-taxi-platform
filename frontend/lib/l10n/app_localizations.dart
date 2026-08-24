@@ -1148,6 +1148,13 @@ class AppLocalizations {
       'guest_lookup_refresh_needs_phone':
           'Enter your phone on the lookup form to refresh this booking.',
       'booking_complete_track_cta': 'Track my booking',
+      'auth_social_login_title':
+          'Create an account to make your next booking easier',
+      'auth_social_login_description':
+          'View booking history and auto-fill your details on future trips.',
+      'auth_google_continue': 'Continue with Google',
+      'auth_social_login_later': 'Maybe later',
+      'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': 'Cancel booking',
       'booking_cancel_action': 'Cancel booking',
       'booking_cancel_policy_hint':
@@ -2285,6 +2292,12 @@ class AppLocalizations {
       'guest_lookup_refresh': '새로고침',
       'guest_lookup_refresh_needs_phone': '새로고침하려면 조회 화면에서 전화번호를 입력해 주세요.',
       'booking_complete_track_cta': '예약 상태 확인',
+      'auth_social_login_title': '계정을 만들면 다음 예약이 더 편해집니다',
+      'auth_social_login_description':
+          '예약 내역 조회, 정보 자동입력이 가능해집니다',
+      'auth_google_continue': 'Google로 계속하기',
+      'auth_social_login_later': '나중에 하기',
+      'auth_social_login_connected': '{name}님, 연결되었습니다',
       'booking_cancel_section': '예약 취소',
       'booking_cancel_action': '예약 취소',
       'booking_cancel_policy_hint': '픽업 2시간 전까지 취소할 수 있습니다.',
@@ -2912,6 +2925,12 @@ class AppLocalizations {
       'guest_lookup_refresh': '刷新',
       'guest_lookup_refresh_needs_phone': '请在查询表单中输入电话号码以刷新此预订。',
       'booking_complete_track_cta': '查看我的预订',
+      'auth_social_login_title': 'Create an account to make your next booking easier',
+      'auth_social_login_description':
+          'View booking history and auto-fill your details on future trips.',
+      'auth_google_continue': 'Continue with Google',
+      'auth_social_login_later': 'Maybe later',
+      'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': '取消预订',
       'booking_cancel_action': '取消预订',
       'booking_cancel_policy_hint': '可在上车前 2 小时取消。',
@@ -3502,6 +3521,12 @@ class AppLocalizations {
       'guest_lookup_refresh': '更新',
       'guest_lookup_refresh_needs_phone': '更新するには検索フォームで電話番号を入力してください。',
       'booking_complete_track_cta': '予約状況を確認',
+      'auth_social_login_title': 'Create an account to make your next booking easier',
+      'auth_social_login_description':
+          'View booking history and auto-fill your details on future trips.',
+      'auth_google_continue': 'Continue with Google',
+      'auth_social_login_later': 'Maybe later',
+      'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': '予約キャンセル',
       'booking_cancel_action': '予約をキャンセル',
       'booking_cancel_policy_hint': 'ピックアップの2時間前までキャンセルできます。',
@@ -4138,6 +4163,12 @@ class AppLocalizations {
       'guest_lookup_refresh_needs_phone':
           'กรุณากรอกเบอร์โทรในแบบฟอร์มค้นหาเพื่อรีเฟรชการจองนี้',
       'booking_complete_track_cta': 'ติดตามการจองของฉัน',
+      'auth_social_login_title': 'Create an account to make your next booking easier',
+      'auth_social_login_description':
+          'View booking history and auto-fill your details on future trips.',
+      'auth_google_continue': 'Continue with Google',
+      'auth_social_login_later': 'Maybe later',
+      'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': 'ยกเลิกการจอง',
       'booking_cancel_action': 'ยกเลิกการจอง',
       'booking_cancel_policy_hint':

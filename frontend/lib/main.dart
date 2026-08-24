@@ -24,6 +24,8 @@ import 'features/legal/pages/privacy_policy_page.dart';
 import 'features/support/pages/customer_support_page.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/booking_provider.dart';
+import 'features/auth/controllers/auth_controller.dart';
+import 'features/auth/widgets/booking_social_login_section.dart';
 import 'screens/admin/admin_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -40,10 +42,23 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => LocaleState()),
         ChangeNotifierProvider(create: (_) => BookingState()),
+        ChangeNotifierProvider(create: (_) => AuthController()),
       ],
-      child: const TTaxiApp(),
+      child: const _AppRoot(),
     ),
   );
+}
+
+class _AppRoot extends StatelessWidget {
+  const _AppRoot();
+
+  @override
+  Widget build(BuildContext context) {
+    return AuthScope(
+      controller: context.watch<AuthController>(),
+      child: const TTaxiApp(),
+    );
+  }
 }
 
 class TTaxiApp extends StatelessWidget {

@@ -17,6 +17,8 @@ import '../widgets/booking_notification_section.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../auth/widgets/booking_social_login_section.dart';
 import 'guest_booking_lookup_page.dart';
 
 class BookingCompletePage extends StatefulWidget {
@@ -35,6 +37,7 @@ class BookingCompletePage extends StatefulWidget {
   final String? selectedVehicle;
   final bool enableCustomerTools;
   final GuestBookingLookupService? lookupService;
+  final AuthController? authController;
 
   const BookingCompletePage({
     super.key,
@@ -53,6 +56,7 @@ class BookingCompletePage extends StatefulWidget {
     this.selectedVehicle,
     this.enableCustomerTools = false,
     this.lookupService,
+    this.authController,
   });
 
   @override
@@ -234,6 +238,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 onCopy: _copyBookingNumber,
                 statusTone: AppUi.toneForBookingStatus(_status),
               ),
+              BookingSocialLoginSection(authController: widget.authController),
               if (BookingStatusDisplay.customerGuidance(l10n, _status) !=
                   null) ...[
                 const SizedBox(height: AppTokens.spaceMd),
