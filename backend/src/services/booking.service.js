@@ -1423,6 +1423,93 @@ class BookingService {
       boardingQrExpiresAt: expiresAt,
     };
   }
+
+  async claimBookingWithGuestToken({ userId, bookingNumber, guestAccessToken }) {
+    const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
+    const token = String(guestAccessToken ?? '').trim();
+    if (!token) {
+      throw new AppError('Booking is not accessible', {
+        statusCode: HTTP_STATUS.FORBIDDEN,
+        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+      });
+    }
+
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        normalizedBookingNumber,
+      );
+      if (!booking) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      if (booking.customer_user_id) {
+        if (Number(booking.customer_user_id) === Number(userId)) {
+          await conn.commit();
+          return { bookingNumber: normalizedBookingNumber };
+        }
+        throw new AppError('Booking is already linked to another account', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.BOOKING_ALREADY_CLAIMED,
+        });
+      }
+
+      const guestToken = await this.bookingRepository.findActiveGuestTokenForBooking(
+        conn,
+        booking.id,
+        hashToken(token),
+      );
+      if (!guestToken) {
+        throw new AppError('Booking is not accessible', {
+          statusCode: HTTP_STATUS.FORBIDDEN,
+          errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+        });
+      }
+
+      const affectedRows = await this.bookingRepository.claimBookingOwnership(
+        conn,
+        booking.id,
+        userId,
+      );
+      if (affectedRows === 0) {
+        const refreshed = await this.bookingRepository.findByBookingNumberForUpdate(
+          conn,
+          normalizedBookingNumber,
+        );
+        if (
+          refreshed?.customer_user_id
+          && Number(refreshed.customer_user_id) === Number(userId)
+        ) {
+          await conn.commit();
+          return { bookingNumber: normalizedBookingNumber };
+        }
+        if (refreshed?.customer_user_id) {
+          throw new AppError('Booking is already linked to another account', {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.BOOKING_ALREADY_CLAIMED,
+          });
+        }
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      await conn.commit();
+      return { bookingNumber: normalizedBookingNumber };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
 }
 
 module.exports = BookingService;

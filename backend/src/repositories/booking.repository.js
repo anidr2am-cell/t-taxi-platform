@@ -526,6 +526,21 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  async claimBookingOwnership(conn, bookingId, userId) {
+    const [result] = await conn.query(
+      `
+        UPDATE bookings
+        SET customer_user_id = ?
+        WHERE id = ?
+          AND deleted_at IS NULL
+          AND is_archived = 0
+          AND customer_user_id IS NULL
+      `,
+      [userId, bookingId],
+    );
+    return result.affectedRows ?? 0;
+  }
+
   async findGuestAssignedDriverVehiclePhotoFile(bookingId, tokenHash) {
     const [rows] = await this.pool.query(
       `
