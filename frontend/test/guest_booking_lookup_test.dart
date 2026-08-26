@@ -1150,6 +1150,7 @@ class _FakeLookupService extends GuestBookingLookupService {
   Future<GuestBookingLookupResult> cancelBooking({
     required GuestBookingLookupResult booking,
     String? reason,
+    String? customerAccessToken,
   }) async {
     cancelCount += 1;
     if (cancelError != null) {

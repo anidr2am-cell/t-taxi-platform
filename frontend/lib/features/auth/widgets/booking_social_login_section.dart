@@ -110,6 +110,8 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
           return _ConnectedCard(
             l10n: context.l10n,
             displayName: controller.user!.displayLabel,
+            onViewMyBookings: () =>
+                Navigator.of(context).pushNamed('/my-bookings'),
           );
         }
 
@@ -247,10 +249,15 @@ class _PromptCard extends StatelessWidget {
 }
 
 class _ConnectedCard extends StatelessWidget {
-  const _ConnectedCard({required this.l10n, required this.displayName});
+  const _ConnectedCard({
+    required this.l10n,
+    required this.displayName,
+    required this.onViewMyBookings,
+  });
 
   final AppLocalizations l10n;
   final String displayName;
+  final VoidCallback onViewMyBookings;
 
   @override
   Widget build(BuildContext context) {
@@ -263,18 +270,31 @@ class _ConnectedCard extends StatelessWidget {
         const SizedBox(height: AppTokens.spaceMd),
         AppUi.surfaceCard(
           backgroundColor: AppTokens.successLight,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.check_circle_outline, color: AppTokens.success),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: AppTokens.textSecondary,
-                    height: 1.45,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.check_circle_outline, color: AppTokens.success),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: const TextStyle(
+                        color: AppTokens.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: onViewMyBookings,
+                  child: Text(l10n.t('my_bookings_view_button')),
                 ),
               ),
             ],

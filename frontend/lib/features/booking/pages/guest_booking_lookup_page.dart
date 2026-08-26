@@ -6,7 +6,9 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
+import '../services/customer_bookings_api_service.dart';
 import '../services/guest_booking_lookup_service.dart';
+import '../../auth/services/auth_token_storage.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
 import '../utils/location_display.dart';
@@ -22,16 +24,22 @@ class GuestBookingLookupPage extends StatefulWidget {
     super.key,
     this.lookupService,
     this.enableCustomerTools = false,
+    this.fromMyBookings = false,
     this.reviewApi,
     this.trackingBuilder,
     this.initialResult,
+    this.customerBookingsApiService,
+    this.tokenStorage,
   });
 
   final GuestBookingLookupService? lookupService;
   final bool enableCustomerTools;
+  final bool fromMyBookings;
   final BookingReviewApi? reviewApi;
   final Widget Function(GuestBookingLookupResult result)? trackingBuilder;
   final GuestBookingLookupResult? initialResult;
+  final CustomerBookingsApiService? customerBookingsApiService;
+  final AuthTokenStorage? tokenStorage;
 
   @override
   State<GuestBookingLookupPage> createState() => _GuestBookingLookupPageState();
@@ -43,11 +51,16 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   final _phoneController = TextEditingController();
   late final GuestBookingLookupService _lookupService =
       widget.lookupService ?? GuestBookingLookupService();
+  late final CustomerBookingsApiService _customerBookingsApiService =
+      widget.customerBookingsApiService ?? CustomerBookingsApiService();
+  late final AuthTokenStorage _tokenStorage =
+      widget.tokenStorage ?? AuthTokenStorage();
 
   GuestBookingLookupResult? _result;
   bool _loading = true;
   bool _refreshing = false;
   String? _error;
+  String? _customerAccessToken;
 
   @override
   void initState() {
@@ -58,6 +71,15 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     } else {
       _loadCached();
     }
+    if (widget.fromMyBookings) {
+      _loadCustomerAccessToken();
+    }
+  }
+
+  Future<void> _loadCustomerAccessToken() async {
+    final session = await _tokenStorage.loadSession();
+    if (!mounted) return;
+    setState(() => _customerAccessToken = session?.accessToken);
   }
 
   void _applyInitialResult(GuestBookingLookupResult result) {
@@ -96,6 +118,12 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   Future<void> _refresh() async {
     final result = _result;
     if (result == null) return;
+
+    if (widget.fromMyBookings) {
+      await _refreshFromMyBookings(result);
+      return;
+    }
+
     final phone = result.customerPhone?.trim();
     if (phone == null || phone.isEmpty) {
       setState(() {
@@ -137,6 +165,39 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
   }
 
+  Future<void> _refreshFromMyBookings(GuestBookingLookupResult result) async {
+    setState(() {
+      _refreshing = true;
+      _error = null;
+    });
+
+    try {
+      final refreshed = await _customerBookingsApiService.findMyBookingByNumber(
+        result.bookingNumber,
+      );
+      if (!mounted) return;
+      setState(() {
+        _result = refreshed;
+        _refreshing = false;
+      });
+    } on CustomerBookingsApiException catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _refreshing = false;
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('guest_lookup_load_error'),
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _refreshing = false;
+        _error = context.l10n.t('guest_lookup_load_error');
+      });
+    }
+  }
+
   bool _canShowTracking(GuestBookingLookupResult result) {
     const trackingStatuses = {
       'DRIVER_ASSIGNED',
@@ -152,9 +213,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   }
 
   bool _canShowNotifications(GuestBookingLookupResult result) {
+    final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
     return widget.enableCustomerTools &&
         result.capabilities.notificationsAvailable &&
-        result.guestAccessToken.trim().isNotEmpty;
+        (hasGuestToken || widget.fromMyBookings);
   }
 
   bool _canShowDriverPhone(GuestBookingLookupResult result) {
@@ -164,9 +226,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       'DRIVER_ARRIVED',
       'PICKED_UP',
     };
+    final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
     return activeStatuses.contains(result.status) &&
         result.driverPhone?.trim().isNotEmpty == true &&
-        result.guestAccessToken.trim().isNotEmpty;
+        (hasGuestToken || widget.fromMyBookings);
   }
 
   Widget _trackingSection(GuestBookingLookupResult result) {
@@ -379,7 +442,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         _actionSummary(result),
         if (result.driverName?.trim().isNotEmpty == true) ...[
           const SizedBox(height: AppTokens.spaceMd),
-          AssignedDriverStatusCard(result: result),
+          AssignedDriverStatusCard(
+            result: result,
+            allowDriverPhoneWithoutGuestToken: widget.fromMyBookings,
+          ),
         ],
         if (BookingStatusDisplay.customerGuidance(
               l10n,
@@ -416,6 +482,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         GuestBookingCancelSection(
           booking: result,
           lookupService: _lookupService,
+          customerAccessToken: widget.fromMyBookings ? _customerAccessToken : null,
+          tokenStorage: widget.fromMyBookings ? _tokenStorage : null,
           onCancelled: (updated) {
             setState(() {
               _result = updated;
@@ -431,6 +499,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
             bookingNumber: result.bookingNumber,
             guestAccessToken: result.guestAccessToken,
+            customerAccessToken:
+                widget.fromMyBookings ? _customerAccessToken : null,
             api: widget.reviewApi,
             initialState: result.review!.toFormState(),
           ),
@@ -442,6 +512,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
             bookingNumber: result.bookingNumber,
             guestAccessToken: result.guestAccessToken,
+            customerAccessToken:
+                widget.fromMyBookings ? _customerAccessToken : null,
             api: widget.reviewApi,
             initialState: reviewFormState,
             onSubmitted: _refresh,
@@ -550,6 +622,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               bookingNumber: result.bookingNumber,
               bookingId: result.bookingId,
               guestAccessToken: result.guestAccessToken,
+              customerAccessToken:
+                  widget.fromMyBookings ? _customerAccessToken : null,
+              useCustomerPushRegistration: widget.fromMyBookings,
             ),
         ],
         const SizedBox(height: AppTokens.spaceLg),

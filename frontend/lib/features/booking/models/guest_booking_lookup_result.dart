@@ -66,6 +66,19 @@ class GuestBookingLookupResult {
   final String? customerPhone;
 
   factory GuestBookingLookupResult.fromJson(Map<String, dynamic> json) {
+    return _fromApiJson(json, requireGuestAccessToken: true);
+  }
+
+  factory GuestBookingLookupResult.fromCustomerBookingsApiJson(
+    Map<String, dynamic> json,
+  ) {
+    return _fromApiJson(json, requireGuestAccessToken: false);
+  }
+
+  static GuestBookingLookupResult _fromApiJson(
+    Map<String, dynamic> json, {
+    required bool requireGuestAccessToken,
+  }) {
     final route = Map<String, dynamic>.from(json['route'] as Map? ?? {});
     final origin = Map<String, dynamic>.from(route['origin'] as Map? ?? {});
     final destination = Map<String, dynamic>.from(
@@ -89,7 +102,8 @@ class GuestBookingLookupResult {
 
     final bookingNumber = json['bookingNumber'] as String? ?? '';
     final token = guestAccess['token'] as String? ?? '';
-    if (bookingNumber.isEmpty || token.isEmpty) {
+    if (bookingNumber.isEmpty ||
+        (requireGuestAccessToken && token.isEmpty)) {
       throw const FormatException('Invalid booking lookup response');
     }
 

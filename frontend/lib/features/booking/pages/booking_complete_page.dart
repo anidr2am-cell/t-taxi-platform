@@ -438,8 +438,10 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 child: AppUi.primaryButton(
                   label: l10n.t('app_title'),
                   icon: Icons.home_outlined,
-                  onPressed: () =>
-                      Navigator.of(context).popUntil((route) => route.isFirst),
+                  onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/',
+                    (route) => false,
+                  ),
                 ),
               ),
             ],

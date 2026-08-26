@@ -11,10 +11,12 @@ class AssignedDriverStatusCard extends StatelessWidget {
     super.key,
     required this.result,
     this.apiBaseUrl,
+    this.allowDriverPhoneWithoutGuestToken = false,
   });
 
   final GuestBookingLookupResult result;
   final String? apiBaseUrl;
+  final bool allowDriverPhoneWithoutGuestToken;
 
   bool get _canShowDriverPhone {
     const activeStatuses = {
@@ -23,9 +25,10 @@ class AssignedDriverStatusCard extends StatelessWidget {
       'DRIVER_ARRIVED',
       'PICKED_UP',
     };
+    final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
     return activeStatuses.contains(result.status) &&
         result.driverPhone?.trim().isNotEmpty == true &&
-        result.guestAccessToken.trim().isNotEmpty;
+        (hasGuestToken || allowDriverPhoneWithoutGuestToken);
   }
 
   @override

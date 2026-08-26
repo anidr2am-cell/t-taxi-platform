@@ -50,6 +50,8 @@ class BookingNotificationSection extends StatefulWidget {
     required this.bookingNumber,
     this.bookingId,
     this.guestAccessToken,
+    this.customerAccessToken,
+    this.useCustomerPushRegistration = false,
     this.api,
     this.deviceRegistrationService,
   });
@@ -57,6 +59,8 @@ class BookingNotificationSection extends StatefulWidget {
   final String bookingNumber;
   final int? bookingId;
   final String? guestAccessToken;
+  final String? customerAccessToken;
+  final bool useCustomerPushRegistration;
   final BookingNotificationApi? api;
   final NotificationDeviceRegistrationService? deviceRegistrationService;
 
@@ -86,11 +90,14 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
       _error = null;
     });
     try {
-      final token = widget.guestAccessToken
-          ?? await const BookingReviewApi().loadGuestToken(widget.bookingNumber);
+      final guestToken = widget.guestAccessToken?.trim().isNotEmpty == true
+          ? widget.guestAccessToken
+          : await const BookingReviewApi().loadGuestToken(widget.bookingNumber);
+      final customerToken = widget.customerAccessToken;
       final data = await _api.listForBooking(
         bookingNumber: widget.bookingNumber,
-        guestAccessToken: token,
+        guestAccessToken: guestToken,
+        customerAccessToken: customerToken,
       );
       setState(() {
         _items = data['items'] as List<dynamic>? ?? [];
@@ -110,12 +117,23 @@ class _BookingNotificationSectionState extends State<BookingNotificationSection>
       _enablingNotifications = true;
       _pushStatus = null;
     });
-    final token = widget.guestAccessToken
-        ?? await const BookingReviewApi().loadGuestToken(widget.bookingNumber);
-    final result = await _deviceRegistration.enableGuest(
-      bookingId: widget.bookingId,
-      guestAccessToken: token,
-    );
+    final guestToken = widget.guestAccessToken?.trim().isNotEmpty == true
+        ? widget.guestAccessToken
+        : await const BookingReviewApi().loadGuestToken(widget.bookingNumber);
+    final customerToken = widget.customerAccessToken;
+    final NotificationDeviceRegistrationResult result;
+    if (widget.useCustomerPushRegistration &&
+        customerToken != null &&
+        customerToken.isNotEmpty) {
+      result = await _deviceRegistration.enableAuthenticated(
+        accessTokenLoader: () async => customerToken,
+      );
+    } else {
+      result = await _deviceRegistration.enableGuest(
+        bookingId: widget.bookingId,
+        guestAccessToken: guestToken,
+      );
+    }
     setState(() {
       _pushStatus = _messageForPushResult(context.l10n, result);
       _enablingNotifications = false;

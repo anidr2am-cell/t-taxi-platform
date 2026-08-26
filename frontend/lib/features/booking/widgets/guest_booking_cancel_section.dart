@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../services/booking_api_service.dart';
 import '../services/guest_booking_lookup_service.dart';
+import '../../auth/services/auth_token_storage.dart';
 import '../utils/booking_cancel_display.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
@@ -17,11 +18,15 @@ class GuestBookingCancelSection extends StatefulWidget {
     required this.booking,
     required this.onCancelled,
     this.lookupService,
+    this.customerAccessToken,
+    this.tokenStorage,
   });
 
   final GuestBookingLookupResult booking;
   final ValueChanged<GuestBookingLookupResult> onCancelled;
   final GuestBookingLookupService? lookupService;
+  final String? customerAccessToken;
+  final AuthTokenStorage? tokenStorage;
 
   @override
   State<GuestBookingCancelSection> createState() =>
@@ -173,7 +178,17 @@ class _GuestBookingCancelSectionState extends State<GuestBookingCancelSection> {
     });
 
     try {
-      final updated = await _lookupService.cancelBooking(booking: booking);
+      var customerToken = widget.customerAccessToken?.trim();
+      if ((customerToken == null || customerToken.isEmpty) &&
+          booking.guestAccessToken.trim().isEmpty &&
+          widget.tokenStorage != null) {
+        final session = await widget.tokenStorage!.loadSession();
+        customerToken = session?.accessToken;
+      }
+      final updated = await _lookupService.cancelBooking(
+        booking: booking,
+        customerAccessToken: customerToken,
+      );
       if (!mounted) return;
       setState(() {
         _cancelling = false;

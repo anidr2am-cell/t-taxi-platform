@@ -149,26 +149,35 @@ class GuestBookingLookupService {
   Future<GuestBookingLookupResult> cancelBooking({
     required GuestBookingLookupResult booking,
     String? reason,
+    String? customerAccessToken,
   }) async {
     final token = booking.guestAccessToken.trim();
-    if (token.isEmpty) {
+    final jwt = customerAccessToken?.trim() ?? '';
+    if (token.isEmpty && jwt.isEmpty) {
       throw BookingApiException(
-        'Guest access token is required',
+        'Booking is not accessible',
         'BOOKING_NOT_ACCESSIBLE',
       );
     }
 
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    final body = <String, dynamic>{
+      if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+    };
+    if (token.isNotEmpty) {
+      headers['X-Guest-Access-Token'] = token;
+      body['guestAccessToken'] = token;
+    } else {
+      headers['Authorization'] = 'Bearer $jwt';
+    }
+
     final response = await _client.post(
       Uri.parse('$_base/bookings/${booking.bookingNumber}/cancel'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Guest-Access-Token': token,
-      },
-      body: jsonEncode({
-        'guestAccessToken': token,
-        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
-      }),
+      headers: headers,
+      body: jsonEncode(body),
     );
     final decoded = jsonDecode(response.body);
 

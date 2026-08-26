@@ -113,6 +113,7 @@ class BookingReviewForm extends StatefulWidget {
     super.key,
     required this.bookingNumber,
     this.guestAccessToken,
+    this.customerAccessToken,
     this.api,
     this.initialState,
     this.onSubmitted,
@@ -120,6 +121,7 @@ class BookingReviewForm extends StatefulWidget {
 
   final String bookingNumber;
   final String? guestAccessToken;
+  final String? customerAccessToken;
   final BookingReviewApi? api;
   final Map<String, dynamic>? initialState;
   final VoidCallback? onSubmitted;
@@ -165,11 +167,13 @@ class BookingReviewFormState extends State<BookingReviewForm> {
       _error = null;
     });
     try {
-      final token =
+      final guestToken =
           widget.guestAccessToken ?? await _api.loadGuestToken(widget.bookingNumber);
+      final customerToken = widget.customerAccessToken;
       final state = await _api.getReview(
         bookingNumber: widget.bookingNumber,
-        guestAccessToken: token,
+        guestAccessToken: guestToken,
+        customerAccessToken: customerToken,
       );
       setState(() {
         _state = state;
@@ -212,8 +216,9 @@ class BookingReviewFormState extends State<BookingReviewForm> {
       _error = null;
     });
     try {
-      final token =
+      final guestToken =
           widget.guestAccessToken ?? await _api.loadGuestToken(widget.bookingNumber);
+      final customerToken = widget.customerAccessToken;
       final tags = ReviewTags.sanitizeSelection(_rating!, _selectedTags);
       final comment = _commentController.text.trim();
       final state = await _api.submitReview(
@@ -221,7 +226,8 @@ class BookingReviewFormState extends State<BookingReviewForm> {
         rating: _rating!,
         tags: tags,
         comment: comment.isEmpty ? null : comment,
-        guestAccessToken: token,
+        guestAccessToken: guestToken,
+        customerAccessToken: customerToken,
       );
       if (!mounted) return;
       setState(() {
