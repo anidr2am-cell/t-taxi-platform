@@ -1,3 +1,8 @@
+import 'package:flutter/foundation.dart';
+
+@visibleForTesting
+void Function(Uri uri)? debugStripKakaoCallbackCodeHook;
+
 Uri buildKakaoCallbackUriWithoutCode(Uri uri) {
   if (!uri.queryParameters.containsKey('code')) {
     return uri;
@@ -7,4 +12,6 @@ Uri buildKakaoCallbackUriWithoutCode(Uri uri) {
   return uri.replace(queryParameters: params);
 }
 
-void stripKakaoCallbackCodeFromBrowserUrl(Uri uri) {}
+void stripKakaoCallbackCodeFromBrowserUrl(Uri uri) {
+  debugStripKakaoCallbackCodeHook?.call(uri);
+}

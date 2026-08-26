@@ -1157,6 +1157,9 @@ class AppLocalizations {
       'auth_kakao_callback_error': 'Kakao sign-in failed. Please try again.',
       'auth_kakao_callback_already_processed':
           'This sign-in request was already handled. Please try again if needed.',
+      'auth_kakao_callback_slow_loading':
+          'This is taking longer than expected. Please refresh the page.',
+      'auth_kakao_callback_refresh': 'Refresh page',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': 'Cancel booking',
@@ -2304,6 +2307,9 @@ class AppLocalizations {
       'auth_kakao_callback_error': '카카오 로그인에 실패했습니다. 다시 시도해 주세요.',
       'auth_kakao_callback_already_processed':
           '이미 처리된 로그인 요청입니다. 필요하면 다시 시도해 주세요.',
+      'auth_kakao_callback_slow_loading':
+          '처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.',
+      'auth_kakao_callback_refresh': '새로고침',
       'auth_social_login_later': '나중에 하기',
       'auth_social_login_connected': '{name}님, 연결되었습니다',
       'booking_cancel_section': '예약 취소',
@@ -2940,6 +2946,8 @@ class AppLocalizations {
       'auth_kakao_continue': '使用 Kakao 继续',
       'auth_kakao_callback_error': 'Kakao 登录失败，请重试。',
       'auth_kakao_callback_already_processed': '该登录请求已处理。如需请重新尝试。',
+      'auth_kakao_callback_slow_loading': '处理时间较长，请刷新页面。',
+      'auth_kakao_callback_refresh': '刷新页面',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': '取消预订',
@@ -3540,6 +3548,9 @@ class AppLocalizations {
       'auth_kakao_callback_error': 'Kakaoログインに失敗しました。もう一度お試しください。',
       'auth_kakao_callback_already_processed':
           'このログイン要求はすでに処理されています。必要なら再度お試しください。',
+      'auth_kakao_callback_slow_loading':
+          '処理に時間がかかっています。ページを更新してください。',
+      'auth_kakao_callback_refresh': 'ページを更新',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': '予約キャンセル',
@@ -4186,6 +4197,9 @@ class AppLocalizations {
       'auth_kakao_callback_error': 'เข้าสู่ระบบ Kakao ไม่สำเร็จ โปรดลองอีกครั้ง',
       'auth_kakao_callback_already_processed':
           'คำขอเข้าสู่ระบบนี้ถูกดำเนินการแล้ว โปรดลองอีกครั้งหากจำเป็น',
+      'auth_kakao_callback_slow_loading':
+          'ใช้เวลานานกว่าปกติ โปรดรีเฟรชหน้า',
+      'auth_kakao_callback_refresh': 'รีเฟรชหน้า',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': 'ยกเลิกการจอง',

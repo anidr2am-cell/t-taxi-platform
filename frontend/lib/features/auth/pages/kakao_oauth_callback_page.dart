@@ -13,9 +13,13 @@ import '../models/kakao_oauth_callback_guard.dart';
 import '../models/social_login_return_context.dart';
 import '../services/kakao_oauth_callback_guard_storage.dart';
 import '../services/kakao_oauth_callback_url.dart';
+import '../services/kakao_oauth_page_reload.dart';
 import '../widgets/booking_social_login_section.dart';
 
 const kBookingCompleteRouteName = '/booking/complete';
+
+@visibleForTesting
+const kKakaoCallbackLoadingHintDelay = Duration(seconds: 8);
 
 @visibleForTesting
 Route<dynamic>? buildKakaoOAuthCallbackRoute(RouteSettings settings) {
@@ -35,10 +39,12 @@ class KakaoOAuthCallbackPage extends StatefulWidget {
     super.key,
     required this.uri,
     this.guardStorage,
+    this.loadingHintDelay = kKakaoCallbackLoadingHintDelay,
   });
 
   final Uri uri;
   final KakaoOAuthCallbackGuardStorage? guardStorage;
+  final Duration loadingHintDelay;
 
   @override
   State<KakaoOAuthCallbackPage> createState() => _KakaoOAuthCallbackPageState();
@@ -46,9 +52,28 @@ class KakaoOAuthCallbackPage extends StatefulWidget {
 
 class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
   bool _started = false;
+  bool _showSlowLoadingHint = false;
+  Timer? _slowLoadingTimer;
 
   KakaoOAuthCallbackGuardStorage get _guardStorage =>
       widget.guardStorage ?? createKakaoOAuthCallbackGuardStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _slowLoadingTimer = Timer(widget.loadingHintDelay, () {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _showSlowLoadingHint = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _slowLoadingTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -65,7 +90,6 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
   Future<void> _handleCallback() async {
     final l10n = context.l10n;
     final authController = AuthScope.of(context);
-    await authController.initialize();
 
     final oauthError = parseKakaoAuthorizationError(widget.uri);
     if (oauthError != null) {
@@ -96,8 +120,6 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
       );
       return;
     }
-
-    stripKakaoCallbackCodeFromBrowserUrl(widget.uri);
 
     final existingRecord = await _guardStorage.load();
     if (existingRecord != null && existingRecord.code == code) {
@@ -134,10 +156,6 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
       redirectUri: redirectUri,
     );
 
-    if (!mounted) {
-      return;
-    }
-
     if (authController.isLoggedIn) {
       await _guardStorage.save(
         KakaoOAuthCallbackGuardRecord(
@@ -146,6 +164,9 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
           returnContext: savedContext,
         ),
       );
+      if (!mounted) {
+        return;
+      }
       await _navigateToReturnContext(savedContext, authController);
       return;
     }
@@ -157,6 +178,10 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
         returnContext: savedContext,
       ),
     );
+
+    if (!mounted) {
+      return;
+    }
 
     await _finishWithError(
       authController.errorMessage ?? l10n.t('auth_kakao_callback_error'),
@@ -172,12 +197,18 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
   ) async {
     if (record.isSuccess || authController.isLoggedIn) {
       authController.setErrorMessage(null);
+      if (!mounted) {
+        return;
+      }
       await _navigateToReturnContext(record.returnContext, authController);
       return;
     }
 
     if (record.isPending) {
       authController.setErrorMessage(null);
+      if (!mounted) {
+        return;
+      }
       await _finishWithReplayNotice(
         l10n.t('auth_kakao_callback_already_processed'),
         record.returnContext,
@@ -187,6 +218,9 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
     }
 
     authController.setErrorMessage(null);
+    if (!mounted) {
+      return;
+    }
     await _finishWithReplayNotice(
       l10n.t('auth_kakao_callback_already_processed'),
       record.returnContext,
@@ -216,6 +250,8 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
     SocialLoginReturnContext? savedContext,
     AuthController authController,
   ) async {
+    stripKakaoCallbackCodeFromBrowserUrl(widget.uri);
+
     if (!mounted) {
       return;
     }
@@ -248,8 +284,33 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    final l10n = context.l10n;
+
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppTokens.spaceLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              if (_showSlowLoadingHint) ...[
+                const SizedBox(height: AppTokens.spaceLg),
+                Text(
+                  l10n.t('auth_kakao_callback_slow_loading'),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
+                FilledButton(
+                  key: const Key('kakao_callback_refresh_button'),
+                  onPressed: reloadKakaoOAuthBrowserPage,
+                  child: Text(l10n.t('auth_kakao_callback_refresh')),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

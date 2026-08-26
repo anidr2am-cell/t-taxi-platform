@@ -24,6 +24,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    debugStripKakaoCallbackCodeHook = null;
   });
 
   test('buildKakaoOAuthCallbackRoute matches callback path', () {
@@ -324,6 +325,273 @@ void main() {
     expect(apiCallCount, 0);
     expect(find.text('TX202607010001'), findsOneWidget);
   });
+
+  testWidgets('strip callback code runs after API completes', (tester) async {
+    final guardStorage = MemoryKakaoOAuthCallbackGuardStorage();
+    var apiCompleted = false;
+    var stripCount = 0;
+
+    debugStripKakaoCallbackCodeHook = (uri) {
+      expect(apiCompleted, isTrue);
+      stripCount += 1;
+      expect(uri.queryParameters['code'], 'mock-kakao-code');
+    };
+
+    await SocialLoginReturnStorage().save(
+      SocialLoginReturnContext.fromBookingComplete(
+        result: _result(),
+        serviceLabel: 'Airport Pickup',
+        enableCustomerTools: true,
+        baseUri: Uri.parse('https://trider.taxi/booking'),
+      ),
+    );
+
+    final authController = _buildAuthController(
+      onRequest: (request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        apiCompleted = true;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+              'user': {
+                'id': 42,
+                'email': 'kakao@example.com',
+                'role': 'CUSTOMER',
+                'name': 'Minji',
+                'phone': null,
+                'locale': 'ko',
+                'isActive': true,
+              },
+            },
+          }),
+          200,
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: KakaoOAuthCallbackPage(
+          uri: Uri.parse(
+            'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
+          ),
+          guardStorage: guardStorage,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(stripCount, 0);
+
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    expect(stripCount, 1);
+    expect(find.text('Minji님, 연결되었습니다'), findsOneWidget);
+  });
+
+  testWidgets('callback proceeds while auth initialize is still pending', (
+    tester,
+  ) async {
+    final guardStorage = MemoryKakaoOAuthCallbackGuardStorage();
+    await SocialLoginReturnStorage().save(
+      SocialLoginReturnContext.fromBookingComplete(
+        result: _result(),
+        serviceLabel: 'Airport Pickup',
+        enableCustomerTools: true,
+        baseUri: Uri.parse('https://trider.taxi/booking'),
+      ),
+    );
+
+    final authController = AuthController(
+      apiService: AuthApiService(
+        client: MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'accessToken': 'access-token',
+                'refreshToken': 'refresh-token',
+                'expiresIn': 3600,
+                'user': {
+                  'id': 42,
+                  'email': 'kakao@example.com',
+                  'role': 'CUSTOMER',
+                  'name': 'Minji',
+                  'phone': null,
+                  'locale': 'ko',
+                  'isActive': true,
+                },
+              },
+            }),
+            200,
+          );
+        }),
+        baseUrl: 'http://localhost:3000',
+      ),
+      tokenStorage: AuthTokenStorage(),
+      googleSignInService: DelayedGoogleSignInService(
+        initDelay: const Duration(seconds: 30),
+      ),
+    );
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: KakaoOAuthCallbackPage(
+          uri: Uri.parse(
+            'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
+          ),
+          guardStorage: guardStorage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Minji님, 연결되었습니다'), findsOneWidget);
+  });
+
+  testWidgets('guard records success after widget unmount during API', (
+    tester,
+  ) async {
+    final guardStorage = MemoryKakaoOAuthCallbackGuardStorage();
+    await SocialLoginReturnStorage().save(
+      SocialLoginReturnContext.fromBookingComplete(
+        result: _result(),
+        serviceLabel: 'Airport Pickup',
+        enableCustomerTools: true,
+        baseUri: Uri.parse('https://trider.taxi/booking'),
+      ),
+    );
+
+    final authController = _buildAuthController(
+      onRequest: (request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+              'user': {
+                'id': 42,
+                'email': 'kakao@example.com',
+                'role': 'CUSTOMER',
+                'name': 'Minji',
+                'phone': null,
+                'locale': 'ko',
+                'isActive': true,
+              },
+            },
+          }),
+          200,
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: KakaoOAuthCallbackPage(
+          uri: Uri.parse(
+            'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
+          ),
+          guardStorage: guardStorage,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 60));
+
+    final stored = await guardStorage.load();
+    expect(stored?.code, 'mock-kakao-code');
+    expect(stored?.outcome, KakaoOAuthCallbackOutcome.success);
+  });
+
+  test('default slow loading hint delay is 8 seconds', () {
+    expect(kKakaoCallbackLoadingHintDelay, const Duration(seconds: 8));
+  });
+
+  testWidgets('slow loading hint appears after timeout', (tester) async {
+    final guardStorage = MemoryKakaoOAuthCallbackGuardStorage();
+    await SocialLoginReturnStorage().save(
+      SocialLoginReturnContext.fromBookingComplete(
+        result: _result(),
+        serviceLabel: 'Airport Pickup',
+        enableCustomerTools: true,
+        baseUri: Uri.parse('https://trider.taxi/booking'),
+      ),
+    );
+
+    final authController = _buildAuthController(
+      onRequest: (request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+              'user': {
+                'id': 42,
+                'email': 'kakao@example.com',
+                'role': 'CUSTOMER',
+                'name': 'Minji',
+                'phone': null,
+                'locale': 'ko',
+                'isActive': true,
+              },
+            },
+          }),
+          200,
+        );
+      },
+    );
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: KakaoOAuthCallbackPage(
+          uri: Uri.parse(
+            'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
+          ),
+          guardStorage: guardStorage,
+          loadingHintDelay: const Duration(milliseconds: 100),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.'),
+      findsNothing,
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(
+      find.text('처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('kakao_callback_refresh_button')), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+  });
 }
 
 AuthController _buildAuthController({
@@ -337,6 +605,22 @@ AuthController _buildAuthController({
     tokenStorage: AuthTokenStorage(),
     googleSignInService: GoogleSignInService()..markInitializedForTest(),
   );
+}
+
+class DelayedGoogleSignInService extends GoogleSignInService {
+  DelayedGoogleSignInService({required this.initDelay});
+
+  final Duration initDelay;
+  bool _initialized = false;
+
+  @override
+  Future<void> ensureInitialized() async {
+    if (_initialized) {
+      return;
+    }
+    await Future<void>.delayed(initDelay);
+    _initialized = true;
+  }
 }
 
 BookingCreateResult _result() {

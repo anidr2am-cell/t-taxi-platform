@@ -5,6 +5,7 @@ import 'dart:html' as html;
 import 'kakao_oauth_callback_url_stub.dart';
 
 void stripKakaoCallbackCodeFromBrowserUrl(Uri uri) {
+  debugStripKakaoCallbackCodeHook?.call(uri);
   if (uri.path != '/auth/kakao/callback') {
     return;
   }
