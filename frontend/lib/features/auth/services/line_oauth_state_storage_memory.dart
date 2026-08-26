@@ -1,4 +1,5 @@
 import '../models/line_oauth_state_storage.dart';
+import 'line_oauth_state_storage_prefs.dart';
 
 class MemoryLineOAuthStateStorage implements LineOAuthStateStorage {
   MemoryLineOAuthStateStorage([this._state]);
@@ -27,5 +28,5 @@ class MemoryLineOAuthStateStorage implements LineOAuthStateStorage {
 }
 
 LineOAuthStateStorage createLineOAuthStateStorage() {
-  return MemoryLineOAuthStateStorage();
+  return SharedPreferencesLineOAuthStateStorage();
 }

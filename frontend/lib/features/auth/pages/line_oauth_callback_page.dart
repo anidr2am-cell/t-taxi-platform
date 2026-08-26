@@ -137,7 +137,7 @@ class _LineOAuthCallbackPageState extends State<LineOAuthCallbackPage> {
     }
 
     final returnedState = parseLineAuthorizationState(widget.uri);
-    final expectedState = await _stateStorage.loadAndClear();
+    final expectedState = await _stateStorage.load();
     if (returnedState == null ||
         expectedState == null ||
         returnedState != expectedState) {
@@ -183,6 +183,7 @@ class _LineOAuthCallbackPageState extends State<LineOAuthCallbackPage> {
           returnContext: savedContext,
         ),
       );
+      await _stateStorage.clear();
       if (!mounted) {
         return;
       }
@@ -197,6 +198,7 @@ class _LineOAuthCallbackPageState extends State<LineOAuthCallbackPage> {
         returnContext: savedContext,
       ),
     );
+    await _stateStorage.clear();
 
     if (!mounted) {
       return;
@@ -220,6 +222,19 @@ class _LineOAuthCallbackPageState extends State<LineOAuthCallbackPage> {
         return;
       }
       await _navigateToReturnContext(record.returnContext, authController);
+      return;
+    }
+
+    if (record.isPending) {
+      authController.setErrorMessage(null);
+      if (!mounted) {
+        return;
+      }
+      await _finishWithReplayNotice(
+        l10n.t('auth_line_callback_already_processed'),
+        record.returnContext,
+        authController,
+      );
       return;
     }
 

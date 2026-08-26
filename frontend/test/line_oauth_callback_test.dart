@@ -12,6 +12,7 @@ import 'package:frontend/features/auth/services/google_sign_in_service.dart';
 import 'package:frontend/features/auth/services/line_oauth_callback_guard_storage_memory.dart';
 import 'package:frontend/features/auth/services/line_oauth_callback_url_stub.dart';
 import 'package:frontend/features/auth/services/line_oauth_state_storage_memory.dart';
+import 'package:frontend/features/auth/services/line_oauth_state_storage_prefs.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -122,6 +123,7 @@ void main() {
     final stored = await guardStorage.load();
     expect(stored?.code, 'mock-line-code');
     expect(stored?.outcome, LineOAuthCallbackOutcome.success);
+    expect(await stateStorage.load(), isNull);
   });
 
   testWidgets('state mismatch rejects callback without API call', (
@@ -169,6 +171,101 @@ void main() {
       findsOneWidget,
     );
     expect(await guardStorage.load(), isNull);
+    expect(await stateStorage.load(), 'expected-state');
+  });
+
+  test('SharedPreferencesLineOAuthStateStorage round-trips oauth state', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = SharedPreferencesLineOAuthStateStorage();
+
+    await storage.save('csrf-state-token');
+    expect(await storage.load(), 'csrf-state-token');
+
+    final cleared = await storage.loadAndClear();
+    expect(cleared, 'csrf-state-token');
+    expect(await storage.load(), isNull);
+  });
+
+  testWidgets('double load during pending uses guard replay without state error', (
+    tester,
+  ) async {
+    final guardStorage = MemoryLineOAuthCallbackGuardStorage();
+    final stateStorage = MemoryLineOAuthStateStorage('csrf-state-token');
+    var apiCallCount = 0;
+    final returnContext = SocialLoginReturnContext.fromBookingCompleteForLine(
+      result: _result(),
+      serviceLabel: 'Airport Pickup',
+      enableCustomerTools: true,
+      baseUri: Uri.parse('https://trider.taxi/booking'),
+    );
+    await SocialLoginReturnStorage().save(returnContext);
+
+    final authController = _buildAuthController(
+      onRequest: (request) async {
+        apiCallCount += 1;
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+              'user': {
+                'id': 42,
+                'email': 'line@example.com',
+                'role': 'CUSTOMER',
+                'name': 'Minji',
+                'phone': null,
+                'locale': 'ko',
+                'isActive': true,
+              },
+            },
+          }),
+          200,
+        );
+      },
+    );
+    await authController.initialize();
+
+    final callbackUri = Uri.parse(
+      'https://trider.taxi/auth/line/callback?code=mock-line-code&state=csrf-state-token',
+    );
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: LineOAuthCallbackPage(
+          uri: callbackUri,
+          guardStorage: guardStorage,
+          stateStorage: stateStorage,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: LineOAuthCallbackPage(
+          uri: callbackUri,
+          guardStorage: guardStorage,
+          stateStorage: stateStorage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(apiCallCount, 1);
+    expect(
+      find.text('LINE 로그인을 확인할 수 없습니다. 다시 시도해 주세요.'),
+      findsNothing,
+    );
+    expect(find.text('Minji님, 연결되었습니다'), findsOneWidget);
   });
 
   testWidgets('replayed callback with same code skips second API call', (
