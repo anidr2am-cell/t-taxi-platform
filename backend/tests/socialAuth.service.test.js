@@ -17,11 +17,15 @@ const AuthService = require('../src/services/auth.service');
 const SocialAuthService = require('../src/services/socialAuth.service');
 const {
   normalizeGoogleIdTokenPayload,
+  normalizeLineIdTokenPayload,
   buildKakaoPlaceholderEmail,
+  buildLinePlaceholderEmail,
   computeTokenExpiresAt,
   buildKakaoAuthorizationCodePrefix,
   buildKakaoTokenExchangeFailureLogContext,
   buildKakaoUserMeFailureLogContext,
+  buildLineTokenExchangeFailureLogContext,
+  buildLineVerifyFailureLogContext,
 } = require('../src/services/socialAuth.service');
 const logger = require('../src/utils/logger');
 const RevokedRefreshTokenStore = require('../src/services/revokedRefreshToken.store');
@@ -34,6 +38,11 @@ const KAKAO_USER_ID = 'kakao-user-123';
 const KAKAO_EMAIL = 'kakao.test@example.com';
 const KAKAO_NAME = 'Kakao Test User';
 const KAKAO_REDIRECT_URI = 'https://trider.taxi/auth/kakao/callback';
+
+const LINE_USER_ID = 'U1234567890abcdef';
+const LINE_EMAIL = 'line.test@example.com';
+const LINE_NAME = 'LINE Test User';
+const LINE_REDIRECT_URI = 'https://trider.taxi/auth/line/callback';
 
 function createHarness() {
   let nextUserId = 1000;
@@ -197,6 +206,33 @@ function createHarness() {
           };
         }
         throw new Error('invalid kakao code');
+      },
+      exchangeLineCodeImpl: async (code, redirectUri) => {
+        if (redirectUri !== LINE_REDIRECT_URI) {
+          throw new Error('unexpected redirect uri');
+        }
+        if (code === 'valid-line-code') {
+          return {
+            providerUserId: LINE_USER_ID,
+            email: LINE_EMAIL,
+            name: LINE_NAME,
+          };
+        }
+        if (code === 'valid-line-code-no-email') {
+          return {
+            providerUserId: 'U-no-email-line-user',
+            email: null,
+            name: 'LINE No Email',
+          };
+        }
+        if (code === 'valid-line-code-relogin') {
+          return {
+            providerUserId: 'U-line-relogin-user',
+            email: 'line.relogin@example.com',
+            name: 'LINE Relogin',
+          };
+        }
+        throw new Error('invalid line code');
       },
     },
   );
@@ -577,4 +613,257 @@ test('exchangeKakaoCode includes client_secret only when configured', async () =
   });
   await withoutSecret.exchangeKakaoCode('valid-kakao-code', KAKAO_REDIRECT_URI);
   assert.doesNotMatch(String(tokenRequestBody), /client_secret=/);
+});
+
+test('loginWithLine creates user without storing OAuth tokens on first login', async () => {
+  const harness = createHarness();
+
+  const result = await harness.socialAuthService.loginWithLine(
+    'valid-line-code',
+    LINE_REDIRECT_URI,
+  );
+
+  assert.equal(result.user.email, LINE_EMAIL);
+  assert.equal(result.user.name, LINE_NAME);
+  assert.ok(result.accessToken);
+  assert.ok(result.refreshToken);
+  assert.equal(harness.socialAccounts.length, 1);
+  assert.equal(harness.socialAccounts[0].provider, SOCIAL_PROVIDERS.LINE);
+  assert.equal(harness.socialAccounts[0].provider_user_id, LINE_USER_ID);
+  assert.equal(harness.socialAccounts[0].provider_email, LINE_EMAIL);
+  assert.equal(harness.socialAccounts[0].access_token, null);
+  assert.equal(harness.socialAccounts[0].refresh_token, null);
+  assert.equal(harness.socialAccounts[0].token_expires_at, null);
+});
+
+test('loginWithLine allows signup when LINE account has no email', async () => {
+  const harness = createHarness();
+
+  const result = await harness.socialAuthService.loginWithLine(
+    'valid-line-code-no-email',
+    LINE_REDIRECT_URI,
+  );
+
+  assert.equal(result.user.email, buildLinePlaceholderEmail('U-no-email-line-user'));
+  assert.equal(result.user.name, 'LINE No Email');
+  assert.equal(harness.socialAccounts.length, 1);
+  assert.equal(harness.socialAccounts[0].provider_email, null);
+  assert.equal(harness.socialAccounts[0].access_token, null);
+});
+
+test('loginWithLine reuses the same user_id for an already linked account', async () => {
+  const harness = createHarness();
+
+  const first = await harness.socialAuthService.loginWithLine(
+    'valid-line-code-relogin',
+    LINE_REDIRECT_URI,
+  );
+  const second = await harness.socialAuthService.loginWithLine(
+    'valid-line-code-relogin',
+    LINE_REDIRECT_URI,
+  );
+
+  assert.equal(first.user.id, second.user.id);
+  assert.equal(harness.users.size, 1);
+  assert.equal(harness.socialAccounts.length, 1);
+  assert.equal(harness.socialAccounts[0].access_token, null);
+});
+
+test('loginWithLine rejects invalid authorization code', async () => {
+  const harness = createHarness();
+
+  await assert.rejects(
+    () => harness.socialAuthService.loginWithLine('bad-line-code', LINE_REDIRECT_URI),
+    (err) => {
+      assert.equal(err.statusCode, HTTP_STATUS.UNAUTHORIZED);
+      assert.equal(err.errorCode, ERROR_CODES.AUTH_INVALID);
+      return true;
+    },
+  );
+});
+
+test('normalizeLineIdTokenPayload maps sub, email, and name', () => {
+  const normalized = normalizeLineIdTokenPayload({
+    sub: LINE_USER_ID,
+    email: LINE_EMAIL,
+    name: LINE_NAME,
+  });
+
+  assert.equal(normalized.providerUserId, LINE_USER_ID);
+  assert.equal(normalized.email, LINE_EMAIL);
+  assert.equal(normalized.name, LINE_NAME);
+});
+
+test('buildLineTokenExchangeFailureLogContext keeps only safe diagnostic fields', () => {
+  const context = buildLineTokenExchangeFailureLogContext({
+    status: 400,
+    redirectUri: LINE_REDIRECT_URI,
+    authorizationCode: 'abcdefghijklmnop',
+    tokenJson: {
+      error: 'invalid_grant',
+      error_description: 'authorization code not found',
+      id_token: 'must-not-leak',
+      access_token: 'must-not-leak',
+    },
+  });
+
+  assert.deepEqual(context, {
+    status: 400,
+    redirectUri: LINE_REDIRECT_URI,
+    authorizationCodePrefix: 'abcdefgh',
+    lineError: 'invalid_grant',
+    lineErrorDescription: 'authorization code not found',
+  });
+  assert.equal(JSON.stringify(context).includes('must-not-leak'), false);
+});
+
+function createDirectLineExchangeService({ fetchImpl }) {
+  return new SocialAuthService({}, {}, {}, {
+    lineLoginChannelId: 'test-line-channel-id',
+    lineLoginChannelSecret: 'test-line-channel-secret',
+    fetchImpl,
+  });
+}
+
+test('exchangeLineCode logs LINE error fields without leaking tokens on token failure', async () => {
+  const warnCalls = [];
+  const originalWarn = logger.warn;
+  logger.warn = (...args) => {
+    warnCalls.push(args);
+  };
+
+  try {
+    const service = createDirectLineExchangeService({
+      fetchImpl: async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          error: 'invalid_grant',
+          error_description: 'authorization code not found',
+          id_token: 'must-not-leak',
+          access_token: 'must-not-leak',
+        }),
+      }),
+    });
+
+    await assert.rejects(
+      () => service.exchangeLineCode('abcdefghijklmnop', LINE_REDIRECT_URI),
+      (err) => {
+        assert.equal(err.statusCode, HTTP_STATUS.UNAUTHORIZED);
+        assert.equal(err.errorCode, ERROR_CODES.AUTH_INVALID);
+        return true;
+      },
+    );
+
+    assert.equal(warnCalls.length, 1);
+    assert.equal(warnCalls[0][0], 'LINE token exchange failed');
+    assert.deepEqual(warnCalls[0][1], {
+      status: 400,
+      redirectUri: LINE_REDIRECT_URI,
+      authorizationCodePrefix: 'abcdefgh',
+      lineError: 'invalid_grant',
+      lineErrorDescription: 'authorization code not found',
+    });
+    assert.equal(JSON.stringify(warnCalls).includes('must-not-leak'), false);
+  } finally {
+    logger.warn = originalWarn;
+  }
+});
+
+test('exchangeLineCode verifies id_token via LINE verify endpoint', async () => {
+  const calls = [];
+
+  const service = createDirectLineExchangeService({
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), body: options.body });
+
+      if (String(url).includes('/oauth2/v2.1/token')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id_token: 'line-id-token-jwt',
+            access_token: 'must-not-store',
+          }),
+        };
+      }
+
+      if (String(url).includes('/oauth2/v2.1/verify')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            sub: LINE_USER_ID,
+            email: LINE_EMAIL,
+            name: LINE_NAME,
+          }),
+        };
+      }
+
+      throw new Error(`unexpected url: ${url}`);
+    },
+  });
+
+  const profile = await service.exchangeLineCode('valid-line-code', LINE_REDIRECT_URI);
+
+  assert.equal(profile.providerUserId, LINE_USER_ID);
+  assert.equal(profile.email, LINE_EMAIL);
+  assert.equal(profile.name, LINE_NAME);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].body, /client_id=test-line-channel-id/);
+  assert.match(calls[0].body, /client_secret=test-line-channel-secret/);
+  assert.match(calls[1].body, /id_token=line-id-token-jwt/);
+  assert.match(calls[1].body, /client_id=test-line-channel-id/);
+});
+
+test('exchangeLineCode rejects verify failures', async () => {
+  const warnCalls = [];
+  const originalWarn = logger.warn;
+  logger.warn = (...args) => {
+    warnCalls.push(args);
+  };
+
+  try {
+    const service = createDirectLineExchangeService({
+      fetchImpl: async (url) => {
+        if (String(url).includes('/oauth2/v2.1/token')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ id_token: 'line-id-token-jwt' }),
+          };
+        }
+
+        return {
+          ok: false,
+          status: 400,
+          json: async () => ({
+            error: 'invalid_request',
+            error_description: 'Invalid IdToken.',
+          }),
+        };
+      },
+    });
+
+    await assert.rejects(
+      () => service.exchangeLineCode('valid-line-code', LINE_REDIRECT_URI),
+      (err) => {
+        assert.equal(err.statusCode, HTTP_STATUS.UNAUTHORIZED);
+        assert.equal(err.errorCode, ERROR_CODES.AUTH_INVALID);
+        return true;
+      },
+    );
+
+    assert.equal(warnCalls.length, 1);
+    assert.equal(warnCalls[0][0], 'LINE id_token verify failed');
+    assert.deepEqual(warnCalls[0][1], buildLineVerifyFailureLogContext({
+      status: 400,
+      verifyJson: {
+        error: 'invalid_request',
+        error_description: 'Invalid IdToken.',
+      },
+    }));
+  } finally {
+    logger.warn = originalWarn;
+  }
 });

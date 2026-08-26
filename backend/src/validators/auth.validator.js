@@ -34,6 +34,11 @@ const kakaoSocialLoginSchema = Joi.object({
   redirectUri: Joi.string().trim().uri().required(),
 });
 
+const lineSocialLoginSchema = Joi.object({
+  code: Joi.string().trim().min(1).required(),
+  redirectUri: Joi.string().trim().uri().required(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -41,4 +46,5 @@ module.exports = {
   logoutSchema,
   googleSocialLoginSchema,
   kakaoSocialLoginSchema,
+  lineSocialLoginSchema,
 };

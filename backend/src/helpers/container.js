@@ -134,6 +134,8 @@ container.register(
       googleClientId: config.external.googleOAuthClientId,
       kakaoRestApiKey: config.external.kakaoRestApiKey,
       kakaoClientSecret: config.external.kakaoClientSecret,
+      lineLoginChannelId: config.external.lineLoginChannelId,
+      lineLoginChannelSecret: config.external.lineLoginChannelSecret,
     },
   ),
 );

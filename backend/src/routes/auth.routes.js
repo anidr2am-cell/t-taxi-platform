@@ -15,6 +15,7 @@ const {
   logoutSchema,
   googleSocialLoginSchema,
   kakaoSocialLoginSchema,
+  lineSocialLoginSchema,
 } = require('../validators/auth.validator');
 
 const router = express.Router();
@@ -43,6 +44,12 @@ router.post(
   loginIpRateLimit,
   validate({ body: kakaoSocialLoginSchema }),
   authController.kakaoSocialLogin,
+);
+router.post(
+  '/social/line',
+  loginIpRateLimit,
+  validate({ body: lineSocialLoginSchema }),
+  authController.lineSocialLogin,
 );
 router.post(
   '/refresh',

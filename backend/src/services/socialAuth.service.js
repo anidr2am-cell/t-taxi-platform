@@ -8,6 +8,8 @@ const logger = require('../utils/logger');
 
 const KAKAO_TOKEN_URL = 'https://kauth.kakao.com/oauth/token';
 const KAKAO_USER_ME_URL = 'https://kapi.kakao.com/v2/user/me';
+const LINE_TOKEN_URL = 'https://api.line.me/oauth2/v2.1/token';
+const LINE_VERIFY_URL = 'https://api.line.me/oauth2/v2.1/verify';
 
 function normalizeGoogleIdTokenPayload(payload) {
   if (!payload?.sub) {
@@ -30,6 +32,20 @@ function buildKakaoPlaceholderEmail(providerUserId) {
   return `kakao_${providerUserId}@social.trider.local`;
 }
 
+function buildLinePlaceholderEmail(providerUserId) {
+  return `line_${providerUserId}@social.trider.local`;
+}
+
+function buildSocialPlaceholderEmail(provider, providerUserId) {
+  if (provider === SOCIAL_PROVIDERS.LINE) {
+    return buildLinePlaceholderEmail(providerUserId);
+  }
+  if (provider === SOCIAL_PROVIDERS.KAKAO) {
+    return buildKakaoPlaceholderEmail(providerUserId);
+  }
+  return `social_${providerUserId}@social.trider.local`;
+}
+
 function computeTokenExpiresAt(expiresIn) {
   const seconds = Number(expiresIn);
   if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -38,7 +54,7 @@ function computeTokenExpiresAt(expiresIn) {
   return new Date(Date.now() + seconds * 1000);
 }
 
-function buildKakaoAuthorizationCodePrefix(authorizationCode) {
+function buildAuthorizationCodePrefix(authorizationCode) {
   if (authorizationCode == null) {
     return null;
   }
@@ -49,6 +65,10 @@ function buildKakaoAuthorizationCodePrefix(authorizationCode) {
   }
 
   return normalized.slice(0, 8);
+}
+
+function buildKakaoAuthorizationCodePrefix(authorizationCode) {
+  return buildAuthorizationCodePrefix(authorizationCode);
 }
 
 function buildKakaoTokenExchangeFailureLogContext({
@@ -72,6 +92,49 @@ function buildKakaoUserMeFailureLogContext({ status, userJson }) {
     status,
     kakaoMsg: userJson?.msg ?? null,
     kakaoErrorCode: userJson?.code ?? null,
+  };
+}
+
+function buildLineTokenExchangeFailureLogContext({
+  status,
+  redirectUri,
+  authorizationCode,
+  tokenJson,
+}) {
+  return {
+    status,
+    redirectUri,
+    authorizationCodePrefix: buildAuthorizationCodePrefix(authorizationCode),
+    lineError: tokenJson?.error ?? null,
+    lineErrorDescription: tokenJson?.error_description ?? null,
+  };
+}
+
+function buildLineVerifyFailureLogContext({ status, verifyJson }) {
+  return {
+    status,
+    lineError: verifyJson?.error ?? null,
+    lineErrorDescription: verifyJson?.error_description ?? null,
+  };
+}
+
+function normalizeLineIdTokenPayload(payload) {
+  const providerUserId = payload?.sub != null ? String(payload.sub) : null;
+  if (!providerUserId) {
+    throw new AppError('Invalid LINE authorization code', {
+      statusCode: HTTP_STATUS.UNAUTHORIZED,
+      errorCode: ERROR_CODES.AUTH_INVALID,
+    });
+  }
+
+  const email = payload.email
+    ? payload.email.trim().toLowerCase()
+    : null;
+
+  return {
+    providerUserId,
+    email,
+    name: payload.name || null,
   };
 }
 
@@ -103,8 +166,11 @@ class SocialAuthService {
     this.googleClientId = options.googleClientId || null;
     this.kakaoRestApiKey = options.kakaoRestApiKey || null;
     this.kakaoClientSecret = options.kakaoClientSecret || null;
+    this.lineLoginChannelId = options.lineLoginChannelId || null;
+    this.lineLoginChannelSecret = options.lineLoginChannelSecret || null;
     this.verifyGoogleIdTokenImpl = options.verifyGoogleIdTokenImpl || null;
     this.exchangeKakaoCodeImpl = options.exchangeKakaoCodeImpl || null;
+    this.exchangeLineCodeImpl = options.exchangeLineCodeImpl || null;
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
   }
 
@@ -255,6 +321,108 @@ class SocialAuthService {
     };
   }
 
+  async exchangeLineCode(authorizationCode, redirectUri) {
+    if (this.exchangeLineCodeImpl) {
+      try {
+        return await this.exchangeLineCodeImpl(authorizationCode, redirectUri);
+      } catch (err) {
+        if (err instanceof AppError) {
+          throw err;
+        }
+        throw new AppError('Invalid LINE authorization code', {
+          statusCode: HTTP_STATUS.UNAUTHORIZED,
+          errorCode: ERROR_CODES.AUTH_INVALID,
+        });
+      }
+    }
+
+    if (!this.lineLoginChannelId || !this.lineLoginChannelSecret) {
+      throw new AppError('LINE sign-in is not configured', {
+        statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+        errorCode: ERROR_CODES.EXTERNAL_API_ERROR,
+      });
+    }
+
+    const tokenBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: this.lineLoginChannelId,
+      client_secret: this.lineLoginChannelSecret,
+      redirect_uri: redirectUri,
+      code: authorizationCode,
+    });
+
+    let tokenResponse;
+    try {
+      tokenResponse = await this.fetchImpl(LINE_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: tokenBody.toString(),
+      });
+    } catch (err) {
+      throw new AppError('LINE sign-in is temporarily unavailable', {
+        statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+        errorCode: ERROR_CODES.EXTERNAL_API_ERROR,
+      });
+    }
+
+    const tokenJson = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokenJson.id_token) {
+      logger.warn(
+        'LINE token exchange failed',
+        buildLineTokenExchangeFailureLogContext({
+          status: tokenResponse.status,
+          redirectUri,
+          authorizationCode,
+          tokenJson,
+        }),
+      );
+      throw new AppError('Invalid LINE authorization code', {
+        statusCode: HTTP_STATUS.UNAUTHORIZED,
+        errorCode: ERROR_CODES.AUTH_INVALID,
+      });
+    }
+
+    const verifyBody = new URLSearchParams({
+      id_token: tokenJson.id_token,
+      client_id: this.lineLoginChannelId,
+    });
+
+    let verifyResponse;
+    try {
+      verifyResponse = await this.fetchImpl(LINE_VERIFY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: verifyBody.toString(),
+      });
+    } catch (err) {
+      throw new AppError('LINE sign-in is temporarily unavailable', {
+        statusCode: HTTP_STATUS.SERVICE_UNAVAILABLE,
+        errorCode: ERROR_CODES.EXTERNAL_API_ERROR,
+      });
+    }
+
+    const verifyJson = await verifyResponse.json();
+    if (!verifyResponse.ok) {
+      logger.warn(
+        'LINE id_token verify failed',
+        buildLineVerifyFailureLogContext({
+          status: verifyResponse.status,
+          verifyJson,
+        }),
+      );
+      throw new AppError('Invalid LINE authorization code', {
+        statusCode: HTTP_STATUS.UNAUTHORIZED,
+        errorCode: ERROR_CODES.AUTH_INVALID,
+      });
+    }
+
+    return normalizeLineIdTokenPayload(verifyJson);
+  }
+
   async loginWithGoogle(idToken) {
     const profile = await this.verifyGoogleIdToken(idToken);
     return this.loginOrRegisterWithSocial({
@@ -277,6 +445,16 @@ class SocialAuthService {
         refreshToken: profile.refreshToken,
         tokenExpiresAt: computeTokenExpiresAt(profile.expiresIn),
       },
+    });
+  }
+
+  async loginWithLine(code, redirectUri) {
+    const profile = await this.exchangeLineCode(code, redirectUri);
+    return this.loginOrRegisterWithSocial({
+      provider: SOCIAL_PROVIDERS.LINE,
+      providerUserId: profile.providerUserId,
+      email: profile.email,
+      name: profile.name,
     });
   }
 
@@ -343,7 +521,8 @@ class SocialAuthService {
       }
     }
 
-    const accountEmail = normalizedEmail || buildKakaoPlaceholderEmail(providerUserId);
+    const accountEmail = normalizedEmail
+      || buildSocialPlaceholderEmail(provider, providerUserId);
     const displayName = name
       || normalizedEmail?.split('@')[0]
       || 'Customer';
@@ -397,6 +576,12 @@ module.exports.normalizeGoogleIdTokenPayload = normalizeGoogleIdTokenPayload;
 module.exports.normalizeKakaoUserPayload = normalizeKakaoUserPayload;
 module.exports.buildKakaoPlaceholderEmail = buildKakaoPlaceholderEmail;
 module.exports.computeTokenExpiresAt = computeTokenExpiresAt;
+module.exports.buildLinePlaceholderEmail = buildLinePlaceholderEmail;
+module.exports.buildSocialPlaceholderEmail = buildSocialPlaceholderEmail;
+module.exports.buildAuthorizationCodePrefix = buildAuthorizationCodePrefix;
 module.exports.buildKakaoAuthorizationCodePrefix = buildKakaoAuthorizationCodePrefix;
 module.exports.buildKakaoTokenExchangeFailureLogContext = buildKakaoTokenExchangeFailureLogContext;
 module.exports.buildKakaoUserMeFailureLogContext = buildKakaoUserMeFailureLogContext;
+module.exports.buildLineTokenExchangeFailureLogContext = buildLineTokenExchangeFailureLogContext;
+module.exports.buildLineVerifyFailureLogContext = buildLineVerifyFailureLogContext;
+module.exports.normalizeLineIdTokenPayload = normalizeLineIdTokenPayload;

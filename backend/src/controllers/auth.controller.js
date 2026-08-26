@@ -29,6 +29,12 @@ const kakaoSocialLogin = asyncHandler(async (req, res) => {
   return success(res, data, 'Login successful');
 });
 
+const lineSocialLogin = asyncHandler(async (req, res) => {
+  const { code, redirectUri } = req.body;
+  const data = await getSocialAuthService().loginWithLine(code, redirectUri);
+  return success(res, data, 'Login successful');
+});
+
 const refresh = asyncHandler(async (req, res) => {
   const data = await getAuthService().refresh(req.body.refreshToken);
   return success(res, data, 'Token refreshed');
@@ -59,6 +65,7 @@ module.exports = {
   login,
   googleSocialLogin,
   kakaoSocialLogin,
+  lineSocialLogin,
   refresh,
   logout,
   me,
