@@ -25,6 +25,7 @@ const AdminDashboardRepository = require("../repositories/adminDashboard.reposit
 const BookingNumberService = require("../services/bookingNumber.service");
 const BookingService = require("../services/booking.service");
 const GuestBookingLookupService = require("../services/guestBookingLookup.service");
+const CustomerBookingService = require("../services/customerBooking.service");
 const GuestVehiclePhotoService = require("../services/guestVehiclePhoto.service");
 const GuestNameSignPhotoService = require("../services/guestNameSignPhoto.service");
 const BookingNameSignPhotoService = require("../services/bookingNameSignPhoto.service");
@@ -302,6 +303,15 @@ container.register(
       database.pool,
       c.get("bookingRepository"),
       c.get("guestVehiclePhotoService"),
+      c.get("reviewRepository"),
+    ),
+);
+container.register(
+  "customerBookingService",
+  (c) =>
+    new CustomerBookingService(
+      c.get("bookingRepository"),
+      c.get("guestBookingLookupService"),
       c.get("reviewRepository"),
     ),
 );

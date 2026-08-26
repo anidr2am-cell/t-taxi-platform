@@ -14,7 +14,21 @@ const customerBookingClaimUserRateLimit = createRateLimit({
   keyFn: (req) => `customer:booking-claim:user:${req.user?.id ?? req.ip}`,
 });
 
+const customerBookingListIpRateLimit = createRateLimit({
+  windowMs: FIFTEEN_MINUTES_MS,
+  max: 60,
+  keyFn: (req) => `customer:booking-list:ip:${req.ip}`,
+});
+
+const customerBookingListUserRateLimit = createRateLimit({
+  windowMs: FIFTEEN_MINUTES_MS,
+  max: 120,
+  keyFn: (req) => `customer:booking-list:user:${req.user?.id ?? req.ip}`,
+});
+
 module.exports = {
   customerBookingClaimIpRateLimit,
   customerBookingClaimUserRateLimit,
+  customerBookingListIpRateLimit,
+  customerBookingListUserRateLimit,
 };

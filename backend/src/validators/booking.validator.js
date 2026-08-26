@@ -5,7 +5,7 @@ const Joi = require('joi');
 const SERVICE_TYPES = require('../constants/serviceTypes');
 const VEHICLE_TYPES = require('../constants/vehicleTypes');
 const BOOKING_STATUS = require('../constants/reservationStatus');
-const { unicodeText } = require('./common.validator');
+const { unicodeText, paginationQuery } = require('./common.validator');
 const {
   FLIGHT_NUMBER_INVALID_MESSAGE,
   isValidFlightNumber,
@@ -181,6 +181,10 @@ const claimBookingSchema = Joi.object({
   guestAccessToken: Joi.string().trim().min(1).max(512).required(),
 });
 
+const customerBookingListQuerySchema = paginationQuery.keys({
+  limit: Joi.number().integer().min(1).max(100).optional(),
+});
+
 module.exports = {
   vehicleRecommendSchema,
   createBookingSchema,
@@ -188,6 +192,7 @@ module.exports = {
   cancelBookingSchema,
   guestBookingLookupSchema,
   claimBookingSchema,
+  customerBookingListQuerySchema,
   normalizeOptionalEmail,
   normalizeOptionalCountry,
 };

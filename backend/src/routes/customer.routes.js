@@ -9,10 +9,12 @@ const {
   notificationListQuerySchema,
   notificationIdParamsSchema,
 } = require('../validators/notification.validator');
-const { claimBookingSchema } = require('../validators/booking.validator');
+const { claimBookingSchema, customerBookingListQuerySchema } = require('../validators/booking.validator');
 const {
   customerBookingClaimIpRateLimit,
   customerBookingClaimUserRateLimit,
+  customerBookingListIpRateLimit,
+  customerBookingListUserRateLimit,
 } = require('../middlewares/customerRateLimit.middleware');
 
 const router = express.Router();
@@ -42,6 +44,15 @@ router.post(
   '/notifications/read-all',
   customerOnly,
   notificationController.markCustomerReadAll,
+);
+
+router.get(
+  '/bookings',
+  customerBookingListIpRateLimit,
+  customerOnly,
+  customerBookingListUserRateLimit,
+  validate({ query: customerBookingListQuerySchema }),
+  customerBookingController.listMyBookings,
 );
 
 router.post(

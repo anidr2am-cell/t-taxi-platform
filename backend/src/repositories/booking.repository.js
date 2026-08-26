@@ -356,6 +356,18 @@ class BookingRepository {
   async findGuestLookupBookingByNumber(conn, bookingNumber) {
     const [rows] = await conn.query(
       `
+        ${this.guestLookupSelectSql()}
+        ${this.guestLookupJoinSql()}
+        WHERE b.booking_number = ? AND b.deleted_at IS NULL AND b.is_archived = 0
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] || null;
+  }
+
+  guestLookupSelectSql() {
+    return `
         SELECT
           b.id,
           b.booking_number,
@@ -431,6 +443,11 @@ class BookingRepository {
             ORDER BY daf.sort_order ASC, f.id ASC
             LIMIT 1
           ) AS driver_vehicle_photo_file_id
+    `;
+  }
+
+  guestLookupJoinSql() {
+    return `
         FROM bookings b
         INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
         INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
@@ -455,12 +472,37 @@ class BookingRepository {
         LEFT JOIN drivers d ON d.id = COALESCE(bda.driver_id, b.driver_id) AND d.deleted_at IS NULL
         LEFT JOIN driver_vehicles dv ON dv.id = bda.driver_vehicle_id AND dv.deleted_at IS NULL
         LEFT JOIN vehicle_types av ON av.id = dv.vehicle_type_id AND av.deleted_at IS NULL
-        WHERE b.booking_number = ? AND b.deleted_at IS NULL AND b.is_archived = 0
-        LIMIT 1
+    `;
+  }
+
+  async findByCustomerUserId(userId, { limit, offset }) {
+    const [rows] = await this.pool.query(
+      `
+        ${this.guestLookupSelectSql()}
+        ${this.guestLookupJoinSql()}
+        WHERE b.customer_user_id = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+        ORDER BY b.created_at DESC
+        LIMIT ? OFFSET ?
       `,
-      [bookingNumber],
+      [userId, limit, offset],
     );
-    return rows[0] || null;
+    return rows;
+  }
+
+  async countByCustomerUserId(userId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM bookings b
+        WHERE b.customer_user_id = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+      `,
+      [userId],
+    );
+    return Number(rows[0]?.total ?? 0);
   }
 
   async findByBookingNumberForUpdate(conn, bookingNumber) {
