@@ -89,4 +89,39 @@ class AuthApiService {
     final data = Map<String, dynamic>.from((decoded as Map)['data'] as Map);
     return AuthSession.fromJson(data);
   }
+
+  Future<AuthSession> loginWithLineCode({
+    required String code,
+    required String redirectUri,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_base/auth/social/line'),
+      headers: const {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'code': code,
+        'redirectUri': redirectUri,
+      }),
+    );
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode >= 400) {
+      final message = decoded is Map
+          ? decoded['message'] as String? ?? 'LINE sign-in failed'
+          : 'LINE sign-in failed';
+      final code = decoded is Map
+          ? decoded['error_code'] as String? ?? decoded['code'] as String?
+          : null;
+      throw AuthApiException(
+        message,
+        errorCode: code,
+        statusCode: response.statusCode,
+      );
+    }
+
+    final data = Map<String, dynamic>.from((decoded as Map)['data'] as Map);
+    return AuthSession.fromJson(data);
+  }
 }

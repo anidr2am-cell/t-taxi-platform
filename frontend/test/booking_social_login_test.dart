@@ -76,6 +76,34 @@ void main() {
     expect(find.text('Google로 계속하기'), findsOneWidget);
   });
 
+  testWidgets('booking complete shows LINE login button when enabled', (
+    tester,
+  ) async {
+    final authController = await prepareSignedOutAuthController();
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: BookingSocialLoginSection(
+          authController: authController,
+          showLineButton: true,
+          lineReturnContext:
+              SocialLoginReturnContext.fromBookingCompleteForLine(
+            result: _result(),
+            serviceLabel: 'Airport Pickup',
+            baseUri: Uri.parse('https://trider.taxi/booking'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('LINE으로 계속하기'), findsOneWidget);
+    expect(find.text('Google로 계속하기'), findsOneWidget);
+  });
+
   testWidgets('kakao sign-in success stores tokens via mock callback flow', (
     tester,
   ) async {

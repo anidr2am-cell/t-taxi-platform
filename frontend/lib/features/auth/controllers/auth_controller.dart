@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../config/kakao_auth_config.dart';
+import '../config/line_auth_config.dart';
 import '../models/auth_session.dart';
 import '../models/auth_user.dart';
 import '../models/social_login_return_context.dart';
@@ -12,6 +13,7 @@ import '../services/auth_api_service.dart';
 import '../services/auth_token_storage.dart';
 import '../services/google_sign_in_service.dart';
 import '../services/kakao_oauth_service.dart';
+import '../services/line_oauth_service.dart';
 
 class AuthController extends ChangeNotifier {
   AuthController({
@@ -19,11 +21,13 @@ class AuthController extends ChangeNotifier {
     AuthTokenStorage? tokenStorage,
     GoogleSignInService? googleSignInService,
     KakaoOAuthService? kakaoOAuthService,
+    LineOAuthService? lineOAuthService,
     SocialLoginReturnStorage? returnStorage,
   }) : _apiService = apiService ?? AuthApiService(),
        _tokenStorage = tokenStorage ?? AuthTokenStorage(),
        _googleSignInService = googleSignInService ?? GoogleSignInService(),
        _kakaoOAuthService = kakaoOAuthService ?? KakaoOAuthService(),
+       _lineOAuthService = lineOAuthService ?? LineOAuthService(),
        _returnStorage = returnStorage ?? SocialLoginReturnStorage() {
     unawaited(initialize());
   }
@@ -32,6 +36,7 @@ class AuthController extends ChangeNotifier {
   final AuthTokenStorage _tokenStorage;
   final GoogleSignInService _googleSignInService;
   final KakaoOAuthService _kakaoOAuthService;
+  final LineOAuthService _lineOAuthService;
   final SocialLoginReturnStorage _returnStorage;
 
   AuthSession? _session;
@@ -48,6 +53,7 @@ class AuthController extends ChangeNotifier {
   AuthUser? get user => _session?.user;
   String? get errorMessage => _errorMessage;
   bool get isKakaoSignInAvailable => KakaoAuthConfig.isConfigured;
+  bool get isLineSignInAvailable => LineAuthConfig.isConfigured;
 
   Future<void> initialize() async {
     if (_initialized) {
@@ -90,6 +96,20 @@ class AuthController extends ChangeNotifier {
     await _kakaoOAuthService.startAuthorization(returnContext.redirectUri);
   }
 
+  Future<void> beginLineSignIn(SocialLoginReturnContext returnContext) async {
+    if (!LineAuthConfig.isConfigured) {
+      _errorMessage = 'LINE sign-in is not configured';
+      notifyListeners();
+      return;
+    }
+
+    _errorMessage = null;
+    notifyListeners();
+
+    await _returnStorage.save(returnContext);
+    await _lineOAuthService.startAuthorization(returnContext.redirectUri);
+  }
+
   Future<void> completeSignInWithKakaoCode({
     required String code,
     required String redirectUri,
@@ -100,6 +120,29 @@ class AuthController extends ChangeNotifier {
 
     try {
       final session = await _apiService.loginWithKakaoCode(
+        code: code,
+        redirectUri: redirectUri,
+      );
+      await _tokenStorage.saveSession(session);
+      _session = session;
+    } catch (error) {
+      _errorMessage = error.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> completeSignInWithLineCode({
+    required String code,
+    required String redirectUri,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final session = await _apiService.loginWithLineCode(
         code: code,
         redirectUri: redirectUri,
       );
@@ -124,6 +167,14 @@ class AuthController extends ChangeNotifier {
     required String redirectUri,
   }) {
     return completeSignInWithKakaoCode(code: code, redirectUri: redirectUri);
+  }
+
+  @visibleForTesting
+  Future<void> completeSignInWithLineCodeForTest({
+    required String code,
+    required String redirectUri,
+  }) {
+    return completeSignInWithLineCode(code: code, redirectUri: redirectUri);
   }
 
   @visibleForTesting

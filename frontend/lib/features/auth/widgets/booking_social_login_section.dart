@@ -4,22 +4,28 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../config/kakao_auth_config.dart';
+import '../config/line_auth_config.dart';
 import '../controllers/auth_controller.dart';
 import '../models/social_login_return_context.dart';
 import 'google_sign_in_button.dart';
 import 'kakao_sign_in_button.dart';
+import 'line_sign_in_button.dart';
 
 class BookingSocialLoginSection extends StatefulWidget {
   const BookingSocialLoginSection({
     super.key,
     this.authController,
     this.kakaoReturnContext,
+    this.lineReturnContext,
     this.showKakaoButton,
+    this.showLineButton,
   });
 
   final AuthController? authController;
   final SocialLoginReturnContext? kakaoReturnContext;
+  final SocialLoginReturnContext? lineReturnContext;
   final bool? showKakaoButton;
+  final bool? showLineButton;
 
   @override
   State<BookingSocialLoginSection> createState() =>
@@ -40,6 +46,13 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
       return widget.showKakaoButton!;
     }
     return KakaoAuthConfig.isConfigured && widget.kakaoReturnContext != null;
+  }
+
+  bool _shouldShowLineButton(AuthController controller) {
+    if (widget.showLineButton != null) {
+      return widget.showLineButton!;
+    }
+    return LineAuthConfig.isConfigured && widget.lineReturnContext != null;
   }
 
   @override
@@ -72,6 +85,7 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
           isLoading: controller.isLoading,
           errorMessage: controller.errorMessage,
           showKakaoButton: _shouldShowKakaoButton(controller),
+          showLineButton: _shouldShowLineButton(controller),
           onLater: () => setState(() => _dismissed = true),
           onGoogleSignInPressed: controller.isLoading
               ? null
@@ -80,6 +94,10 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
                   widget.kakaoReturnContext == null
               ? null
               : () => controller.beginKakaoSignIn(widget.kakaoReturnContext!),
+          onLineSignInPressed: controller.isLoading ||
+                  widget.lineReturnContext == null
+              ? null
+              : () => controller.beginLineSignIn(widget.lineReturnContext!),
         );
       },
     );
@@ -108,18 +126,22 @@ class _PromptCard extends StatelessWidget {
     required this.isLoading,
     required this.errorMessage,
     required this.showKakaoButton,
+    required this.showLineButton,
     required this.onLater,
     required this.onGoogleSignInPressed,
     required this.onKakaoSignInPressed,
+    required this.onLineSignInPressed,
   });
 
   final AppLocalizations l10n;
   final bool isLoading;
   final String? errorMessage;
   final bool showKakaoButton;
+  final bool showLineButton;
   final VoidCallback onLater;
   final VoidCallback? onGoogleSignInPressed;
   final VoidCallback? onKakaoSignInPressed;
+  final VoidCallback? onLineSignInPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +188,14 @@ class _PromptCard extends StatelessWidget {
                   label: l10n.t('auth_kakao_continue'),
                   loading: isLoading,
                   onPressed: onKakaoSignInPressed,
+                ),
+              ],
+              if (showLineButton) ...[
+                const SizedBox(height: AppTokens.spaceSm),
+                LineSignInButton(
+                  label: l10n.t('auth_line_continue'),
+                  loading: isLoading,
+                  onPressed: onLineSignInPressed,
                 ),
               ],
               const SizedBox(height: AppTokens.spaceSm),

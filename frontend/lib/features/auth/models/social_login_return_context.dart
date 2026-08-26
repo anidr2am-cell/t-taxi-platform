@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../booking/models/booking_create_result.dart';
 import '../../booking/models/location_option.dart';
 import '../config/kakao_auth_config.dart';
+import '../config/line_auth_config.dart';
 
 class SocialLoginReturnContext {
   const SocialLoginReturnContext({
@@ -35,7 +36,7 @@ class SocialLoginReturnContext {
   final String? selectedVehicle;
   final bool enableCustomerTools;
 
-  factory SocialLoginReturnContext.fromBookingComplete({
+  factory SocialLoginReturnContext.fromBookingCompleteForLine({
     required BookingCreateResult result,
     required String serviceLabel,
     LocationOption? origin,
@@ -49,8 +50,40 @@ class SocialLoginReturnContext {
     bool enableCustomerTools = false,
     Uri? baseUri,
   }) {
+    return SocialLoginReturnContext.fromBookingComplete(
+      result: result,
+      serviceLabel: serviceLabel,
+      origin: origin,
+      destination: destination,
+      serviceTypeCode: serviceTypeCode,
+      originAirportCode: originAirportCode,
+      nameSignRequested: nameSignRequested,
+      customerPhone: customerPhone,
+      scheduledPickupAt: scheduledPickupAt,
+      selectedVehicle: selectedVehicle,
+      enableCustomerTools: enableCustomerTools,
+      baseUri: baseUri,
+      redirectUri: LineAuthConfig.buildRedirectUri(base: baseUri),
+    );
+  }
+
+  factory SocialLoginReturnContext.fromBookingComplete({
+    required BookingCreateResult result,
+    required String serviceLabel,
+    LocationOption? origin,
+    LocationOption? destination,
+    String? serviceTypeCode,
+    String? originAirportCode,
+    bool nameSignRequested = false,
+    String? customerPhone,
+    String? scheduledPickupAt,
+    String? selectedVehicle,
+    bool enableCustomerTools = false,
+    Uri? baseUri,
+    String? redirectUri,
+  }) {
     return SocialLoginReturnContext(
-      redirectUri: KakaoAuthConfig.buildRedirectUri(base: baseUri),
+      redirectUri: redirectUri ?? KakaoAuthConfig.buildRedirectUri(base: baseUri),
       result: result,
       serviceLabel: serviceLabel,
       origin: origin,

@@ -254,6 +254,20 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                   selectedVehicle: widget.selectedVehicle,
                   enableCustomerTools: widget.enableCustomerTools,
                 ),
+                lineReturnContext:
+                    SocialLoginReturnContext.fromBookingCompleteForLine(
+                  result: widget.result,
+                  serviceLabel: widget.serviceLabel,
+                  origin: widget.origin,
+                  destination: widget.destination,
+                  serviceTypeCode: widget.serviceTypeCode,
+                  originAirportCode: widget.originAirportCode,
+                  nameSignRequested: widget.nameSignRequested,
+                  customerPhone: widget.customerPhone,
+                  scheduledPickupAt: widget.scheduledPickupAt,
+                  selectedVehicle: widget.selectedVehicle,
+                  enableCustomerTools: widget.enableCustomerTools,
+                ),
               ),
               if (BookingStatusDisplay.customerGuidance(l10n, _status) !=
                   null) ...[
