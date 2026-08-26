@@ -45,6 +45,7 @@ class AuthController extends ChangeNotifier {
   bool _hadPersistedSessionAtInit = false;
   String? _errorMessage;
   StreamSubscription<GoogleSignInAuthenticationEvent>? _googleAuthSubscription;
+  SocialLoginReturnContext? _pendingClaimContext;
 
   bool get isInitialized => _initialized;
   bool get isLoading => _isLoading;
@@ -65,21 +66,50 @@ class AuthController extends ChangeNotifier {
 
     if (kIsWeb) {
       await _googleSignInService.ensureInitialized();
-      _googleAuthSubscription ??= _googleSignInService.authenticationEvents
-          .listen(_handleGoogleAuthenticationEvent);
+      _attachGoogleAuthenticationListener();
     }
 
     _initialized = true;
     notifyListeners();
   }
 
-  Future<void> signInWithGoogle() async {
+  void setPendingClaimContext(SocialLoginReturnContext? context) {
+    _pendingClaimContext = context;
+  }
+
+  void clearPendingClaimContext() {
+    _pendingClaimContext = null;
+  }
+
+  @visibleForTesting
+  SocialLoginReturnContext? get pendingClaimContextForTest => _pendingClaimContext;
+
+  @visibleForTesting
+  void attachGoogleAuthenticationListenerForTest() {
+    _attachGoogleAuthenticationListener();
+  }
+
+  void _attachGoogleAuthenticationListener() {
+    _googleAuthSubscription ??= _googleSignInService.authenticationEvents
+        .listen(_handleGoogleAuthenticationEvent);
+  }
+
+  SocialLoginReturnContext? _resolveClaimContext(
+    SocialLoginReturnContext? explicit,
+  ) {
+    return explicit ?? _pendingClaimContext;
+  }
+
+  Future<void> signInWithGoogle({SocialLoginReturnContext? claimContext}) async {
     _errorMessage = null;
     final idToken = await _googleSignInService.authenticateAndGetIdToken();
     if (idToken == null || idToken.isEmpty) {
       return;
     }
-    await _completeSignInWithIdToken(idToken);
+    await _completeSignInWithIdToken(
+      idToken,
+      claimContext: _resolveClaimContext(claimContext),
+    );
   }
 
   Future<void> beginKakaoSignIn(SocialLoginReturnContext returnContext) async {
@@ -113,6 +143,7 @@ class AuthController extends ChangeNotifier {
   Future<void> completeSignInWithKakaoCode({
     required String code,
     required String redirectUri,
+    SocialLoginReturnContext? claimContext,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -125,6 +156,7 @@ class AuthController extends ChangeNotifier {
       );
       await _tokenStorage.saveSession(session);
       _session = session;
+      await _maybeClaimGuestBooking(claimContext);
     } catch (error) {
       _errorMessage = error.toString();
     } finally {
@@ -136,6 +168,7 @@ class AuthController extends ChangeNotifier {
   Future<void> completeSignInWithLineCode({
     required String code,
     required String redirectUri,
+    SocialLoginReturnContext? claimContext,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -148,6 +181,7 @@ class AuthController extends ChangeNotifier {
       );
       await _tokenStorage.saveSession(session);
       _session = session;
+      await _maybeClaimGuestBooking(claimContext);
     } catch (error) {
       _errorMessage = error.toString();
     } finally {
@@ -157,24 +191,37 @@ class AuthController extends ChangeNotifier {
   }
 
   @visibleForTesting
-  Future<void> completeSignInWithIdTokenForTest(String idToken) {
-    return _completeSignInWithIdToken(idToken);
+  Future<void> completeSignInWithIdTokenForTest(
+    String idToken, {
+    SocialLoginReturnContext? claimContext,
+  }) {
+    return _completeSignInWithIdToken(idToken, claimContext: claimContext);
   }
 
   @visibleForTesting
   Future<void> completeSignInWithKakaoCodeForTest({
     required String code,
     required String redirectUri,
+    SocialLoginReturnContext? claimContext,
   }) {
-    return completeSignInWithKakaoCode(code: code, redirectUri: redirectUri);
+    return completeSignInWithKakaoCode(
+      code: code,
+      redirectUri: redirectUri,
+      claimContext: claimContext,
+    );
   }
 
   @visibleForTesting
   Future<void> completeSignInWithLineCodeForTest({
     required String code,
     required String redirectUri,
+    SocialLoginReturnContext? claimContext,
   }) {
-    return completeSignInWithLineCode(code: code, redirectUri: redirectUri);
+    return completeSignInWithLineCode(
+      code: code,
+      redirectUri: redirectUri,
+      claimContext: claimContext,
+    );
   }
 
   @visibleForTesting
@@ -183,7 +230,10 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _completeSignInWithIdToken(String idToken) async {
+  Future<void> _completeSignInWithIdToken(
+    String idToken, {
+    SocialLoginReturnContext? claimContext,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -192,11 +242,39 @@ class AuthController extends ChangeNotifier {
       final session = await _apiService.loginWithGoogleIdToken(idToken);
       await _tokenStorage.saveSession(session);
       _session = session;
+      await _maybeClaimGuestBooking(_resolveClaimContext(claimContext));
     } catch (error) {
       _errorMessage = error.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _maybeClaimGuestBooking(SocialLoginReturnContext? context) async {
+    if (context == null) {
+      return;
+    }
+
+    final bookingNumber = context.result.bookingNumber.trim();
+    final guestToken = context.result.guestAccessToken?.trim();
+    if (bookingNumber.isEmpty || guestToken == null || guestToken.isEmpty) {
+      return;
+    }
+
+    final accessToken = _session?.accessToken;
+    if (accessToken == null || accessToken.isEmpty) {
+      return;
+    }
+
+    try {
+      await _apiService.claimBooking(
+        accessToken: accessToken,
+        bookingNumber: bookingNumber,
+        guestAccessToken: guestToken,
+      );
+    } catch (_) {
+      // Claim failure must not affect a successful sign-in experience.
     }
   }
 
@@ -208,7 +286,12 @@ class AuthController extends ChangeNotifier {
     if (idToken == null || idToken.isEmpty) {
       return;
     }
-    unawaited(_completeSignInWithIdToken(idToken));
+    unawaited(
+      _completeSignInWithIdToken(
+        idToken,
+        claimContext: _resolveClaimContext(null),
+      ),
+    );
   }
 
   Future<void> signOut() async {

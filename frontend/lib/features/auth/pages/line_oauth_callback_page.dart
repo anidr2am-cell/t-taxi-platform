@@ -173,6 +173,7 @@ class _LineOAuthCallbackPageState extends State<LineOAuthCallbackPage> {
     await authController.completeSignInWithLineCode(
       code: code,
       redirectUri: redirectUri,
+      claimContext: savedContext,
     );
 
     if (authController.isLoggedIn) {

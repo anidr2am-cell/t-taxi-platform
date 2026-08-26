@@ -124,4 +124,38 @@ class AuthApiService {
     final data = Map<String, dynamic>.from((decoded as Map)['data'] as Map);
     return AuthSession.fromJson(data);
   }
+
+  Future<void> claimBooking({
+    required String accessToken,
+    required String bookingNumber,
+    required String guestAccessToken,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_base/customer/bookings/claim'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+      body: jsonEncode({
+        'bookingNumber': bookingNumber,
+        'guestAccessToken': guestAccessToken,
+      }),
+    );
+
+    if (response.statusCode >= 400) {
+      final decoded = jsonDecode(response.body);
+      final message = decoded is Map
+          ? decoded['message'] as String? ?? 'Unable to link booking'
+          : 'Unable to link booking';
+      final code = decoded is Map
+          ? decoded['error_code'] as String? ?? decoded['code'] as String?
+          : null;
+      throw AuthApiException(
+        message,
+        errorCode: code,
+        statusCode: response.statusCode,
+      );
+    }
+  }
 }

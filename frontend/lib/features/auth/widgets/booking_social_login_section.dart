@@ -15,6 +15,7 @@ class BookingSocialLoginSection extends StatefulWidget {
   const BookingSocialLoginSection({
     super.key,
     this.authController,
+    this.claimContext,
     this.kakaoReturnContext,
     this.lineReturnContext,
     this.showKakaoButton,
@@ -22,6 +23,7 @@ class BookingSocialLoginSection extends StatefulWidget {
   });
 
   final AuthController? authController;
+  final SocialLoginReturnContext? claimContext;
   final SocialLoginReturnContext? kakaoReturnContext;
   final SocialLoginReturnContext? lineReturnContext;
   final bool? showKakaoButton;
@@ -36,9 +38,40 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
   bool _dismissed = false;
   bool _initialLoginCaptured = false;
   bool _wasLoggedInAtMount = false;
+  AuthController? _registeredController;
 
   AuthController _resolveController(BuildContext context) {
     return widget.authController ?? AuthScope.of(context);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updatePendingClaimContext();
+  }
+
+  @override
+  void didUpdateWidget(BookingSocialLoginSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.claimContext != oldWidget.claimContext ||
+        widget.authController != oldWidget.authController) {
+      _updatePendingClaimContext();
+    }
+  }
+
+  @override
+  void dispose() {
+    _registeredController?.clearPendingClaimContext();
+    super.dispose();
+  }
+
+  void _updatePendingClaimContext() {
+    final controller = _resolveController(context);
+    if (_registeredController != null && _registeredController != controller) {
+      _registeredController!.clearPendingClaimContext();
+    }
+    _registeredController = controller;
+    controller.setPendingClaimContext(widget.claimContext);
   }
 
   bool _shouldShowKakaoButton(AuthController controller) {
@@ -89,7 +122,9 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
           onLater: () => setState(() => _dismissed = true),
           onGoogleSignInPressed: controller.isLoading
               ? null
-              : () => controller.signInWithGoogle(),
+              : () => controller.signInWithGoogle(
+                    claimContext: widget.claimContext,
+                  ),
           onKakaoSignInPressed: controller.isLoading ||
                   widget.kakaoReturnContext == null
               ? null

@@ -154,6 +154,7 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
     await authController.completeSignInWithKakaoCode(
       code: code,
       redirectUri: redirectUri,
+      claimContext: savedContext,
     );
 
     if (authController.isLoggedIn) {

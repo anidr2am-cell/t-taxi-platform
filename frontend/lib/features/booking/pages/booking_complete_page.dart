@@ -202,6 +202,32 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final result = widget.result;
+    final kakaoReturnContext = SocialLoginReturnContext.fromBookingComplete(
+      result: result,
+      serviceLabel: widget.serviceLabel,
+      origin: widget.origin,
+      destination: widget.destination,
+      serviceTypeCode: widget.serviceTypeCode,
+      originAirportCode: widget.originAirportCode,
+      nameSignRequested: widget.nameSignRequested,
+      customerPhone: widget.customerPhone,
+      scheduledPickupAt: widget.scheduledPickupAt,
+      selectedVehicle: widget.selectedVehicle,
+      enableCustomerTools: widget.enableCustomerTools,
+    );
+    final lineReturnContext = SocialLoginReturnContext.fromBookingCompleteForLine(
+      result: result,
+      serviceLabel: widget.serviceLabel,
+      origin: widget.origin,
+      destination: widget.destination,
+      serviceTypeCode: widget.serviceTypeCode,
+      originAirportCode: widget.originAirportCode,
+      nameSignRequested: widget.nameSignRequested,
+      customerPhone: widget.customerPhone,
+      scheduledPickupAt: widget.scheduledPickupAt,
+      selectedVehicle: widget.selectedVehicle,
+      enableCustomerTools: widget.enableCustomerTools,
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.t('booking_complete'))),
@@ -241,33 +267,9 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
               ),
               BookingSocialLoginSection(
                 authController: widget.authController,
-                kakaoReturnContext: SocialLoginReturnContext.fromBookingComplete(
-                  result: widget.result,
-                  serviceLabel: widget.serviceLabel,
-                  origin: widget.origin,
-                  destination: widget.destination,
-                  serviceTypeCode: widget.serviceTypeCode,
-                  originAirportCode: widget.originAirportCode,
-                  nameSignRequested: widget.nameSignRequested,
-                  customerPhone: widget.customerPhone,
-                  scheduledPickupAt: widget.scheduledPickupAt,
-                  selectedVehicle: widget.selectedVehicle,
-                  enableCustomerTools: widget.enableCustomerTools,
-                ),
-                lineReturnContext:
-                    SocialLoginReturnContext.fromBookingCompleteForLine(
-                  result: widget.result,
-                  serviceLabel: widget.serviceLabel,
-                  origin: widget.origin,
-                  destination: widget.destination,
-                  serviceTypeCode: widget.serviceTypeCode,
-                  originAirportCode: widget.originAirportCode,
-                  nameSignRequested: widget.nameSignRequested,
-                  customerPhone: widget.customerPhone,
-                  scheduledPickupAt: widget.scheduledPickupAt,
-                  selectedVehicle: widget.selectedVehicle,
-                  enableCustomerTools: widget.enableCustomerTools,
-                ),
+                claimContext: kakaoReturnContext,
+                kakaoReturnContext: kakaoReturnContext,
+                lineReturnContext: lineReturnContext,
               ),
               if (BookingStatusDisplay.customerGuidance(l10n, _status) !=
                   null) ...[

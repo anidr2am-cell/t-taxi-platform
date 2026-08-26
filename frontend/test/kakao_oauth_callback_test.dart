@@ -599,7 +599,12 @@ AuthController _buildAuthController({
 }) {
   return AuthController(
     apiService: AuthApiService(
-      client: MockClient(onRequest),
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/customer/bookings/claim')) {
+          return http.Response(jsonEncode({'success': true, 'data': {}}), 200);
+        }
+        return onRequest(request);
+      }),
       baseUrl: 'http://localhost:3000',
     ),
     tokenStorage: AuthTokenStorage(),
