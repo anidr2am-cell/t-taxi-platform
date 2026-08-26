@@ -9,8 +9,13 @@ import '../../booking/models/booking_create_result.dart';
 import '../../booking/pages/booking_complete_page.dart';
 import '../config/kakao_auth_config.dart';
 import '../controllers/auth_controller.dart';
+import '../models/kakao_oauth_callback_guard.dart';
 import '../models/social_login_return_context.dart';
+import '../services/kakao_oauth_callback_guard_storage.dart';
+import '../services/kakao_oauth_callback_url.dart';
 import '../widgets/booking_social_login_section.dart';
+
+const kBookingCompleteRouteName = '/booking/complete';
 
 @visibleForTesting
 Route<dynamic>? buildKakaoOAuthCallbackRoute(RouteSettings settings) {
@@ -26,9 +31,14 @@ Route<dynamic>? buildKakaoOAuthCallbackRoute(RouteSettings settings) {
 }
 
 class KakaoOAuthCallbackPage extends StatefulWidget {
-  const KakaoOAuthCallbackPage({super.key, required this.uri});
+  const KakaoOAuthCallbackPage({
+    super.key,
+    required this.uri,
+    this.guardStorage,
+  });
 
   final Uri uri;
+  final KakaoOAuthCallbackGuardStorage? guardStorage;
 
   @override
   State<KakaoOAuthCallbackPage> createState() => _KakaoOAuthCallbackPageState();
@@ -36,6 +46,9 @@ class KakaoOAuthCallbackPage extends StatefulWidget {
 
 class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
   bool _started = false;
+
+  KakaoOAuthCallbackGuardStorage get _guardStorage =>
+      widget.guardStorage ?? createKakaoOAuthCallbackGuardStorage();
 
   @override
   void didChangeDependencies() {
@@ -52,16 +65,13 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
   Future<void> _handleCallback() async {
     final l10n = context.l10n;
     final authController = AuthScope.of(context);
-    final returnStorage = SocialLoginReturnStorage();
-    final savedContext = await returnStorage.loadAndClear();
-    final redirectUri = savedContext?.redirectUri ??
-        KakaoAuthConfig.buildRedirectUri();
+    await authController.initialize();
 
     final oauthError = parseKakaoAuthorizationError(widget.uri);
     if (oauthError != null) {
       await _finishWithError(
         l10n.t('auth_kakao_callback_error'),
-        savedContext,
+        null,
         authController,
       );
       return;
@@ -69,13 +79,55 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
 
     final code = parseKakaoAuthorizationCode(widget.uri);
     if (code == null) {
+      final existingRecord = await _guardStorage.load();
+      if (existingRecord != null) {
+        await _handleProcessedReplay(
+          existingRecord,
+          l10n,
+          authController,
+        );
+        return;
+      }
+
       await _finishWithError(
         l10n.t('auth_kakao_callback_error'),
-        savedContext,
+        null,
         authController,
       );
       return;
     }
+
+    stripKakaoCallbackCodeFromBrowserUrl(widget.uri);
+
+    final existingRecord = await _guardStorage.load();
+    if (existingRecord != null && existingRecord.code == code) {
+      await _handleProcessedReplay(
+        existingRecord,
+        l10n,
+        authController,
+      );
+      return;
+    }
+
+    await _guardStorage.save(
+      KakaoOAuthCallbackGuardRecord(
+        code: code,
+        outcome: KakaoOAuthCallbackOutcome.pending,
+      ),
+    );
+
+    final returnStorage = SocialLoginReturnStorage();
+    final savedContext = await returnStorage.loadAndClear();
+    final redirectUri = savedContext?.redirectUri ??
+        KakaoAuthConfig.buildRedirectUri();
+
+    await _guardStorage.save(
+      KakaoOAuthCallbackGuardRecord(
+        code: code,
+        outcome: KakaoOAuthCallbackOutcome.pending,
+        returnContext: savedContext,
+      ),
+    );
 
     await authController.completeSignInWithKakaoCode(
       code: code,
@@ -87,9 +139,24 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
     }
 
     if (authController.isLoggedIn) {
+      await _guardStorage.save(
+        KakaoOAuthCallbackGuardRecord(
+          code: code,
+          outcome: KakaoOAuthCallbackOutcome.success,
+          returnContext: savedContext,
+        ),
+      );
       await _navigateToReturnContext(savedContext, authController);
       return;
     }
+
+    await _guardStorage.save(
+      KakaoOAuthCallbackGuardRecord(
+        code: code,
+        outcome: KakaoOAuthCallbackOutcome.failure,
+        returnContext: savedContext,
+      ),
+    );
 
     await _finishWithError(
       authController.errorMessage ?? l10n.t('auth_kakao_callback_error'),
@@ -98,7 +165,45 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
     );
   }
 
+  Future<void> _handleProcessedReplay(
+    KakaoOAuthCallbackGuardRecord record,
+    AppLocalizations l10n,
+    AuthController authController,
+  ) async {
+    if (record.isSuccess || authController.isLoggedIn) {
+      authController.setErrorMessage(null);
+      await _navigateToReturnContext(record.returnContext, authController);
+      return;
+    }
+
+    if (record.isPending) {
+      authController.setErrorMessage(null);
+      await _finishWithReplayNotice(
+        l10n.t('auth_kakao_callback_already_processed'),
+        record.returnContext,
+        authController,
+      );
+      return;
+    }
+
+    authController.setErrorMessage(null);
+    await _finishWithReplayNotice(
+      l10n.t('auth_kakao_callback_already_processed'),
+      record.returnContext,
+      authController,
+    );
+  }
+
   Future<void> _finishWithError(
+    String message,
+    SocialLoginReturnContext? savedContext,
+    AuthController authController,
+  ) async {
+    authController.setErrorMessage(message);
+    await _navigateToReturnContext(savedContext, authController);
+  }
+
+  Future<void> _finishWithReplayNotice(
     String message,
     SocialLoginReturnContext? savedContext,
     AuthController authController,
@@ -133,7 +238,10 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
           );
 
     await Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => destination),
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: kBookingCompleteRouteName),
+        builder: (_) => destination,
+      ),
       (_) => false,
     );
   }

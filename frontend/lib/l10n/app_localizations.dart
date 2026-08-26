@@ -1155,6 +1155,8 @@ class AppLocalizations {
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': 'Continue with Kakao',
       'auth_kakao_callback_error': 'Kakao sign-in failed. Please try again.',
+      'auth_kakao_callback_already_processed':
+          'This sign-in request was already handled. Please try again if needed.',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': 'Cancel booking',
@@ -2300,6 +2302,8 @@ class AppLocalizations {
       'auth_google_continue': 'Google로 계속하기',
       'auth_kakao_continue': '카카오로 계속하기',
       'auth_kakao_callback_error': '카카오 로그인에 실패했습니다. 다시 시도해 주세요.',
+      'auth_kakao_callback_already_processed':
+          '이미 처리된 로그인 요청입니다. 필요하면 다시 시도해 주세요.',
       'auth_social_login_later': '나중에 하기',
       'auth_social_login_connected': '{name}님, 연결되었습니다',
       'booking_cancel_section': '예약 취소',
@@ -2935,6 +2939,7 @@ class AppLocalizations {
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': '使用 Kakao 继续',
       'auth_kakao_callback_error': 'Kakao 登录失败，请重试。',
+      'auth_kakao_callback_already_processed': '该登录请求已处理。如需请重新尝试。',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': '取消预订',
@@ -3533,6 +3538,8 @@ class AppLocalizations {
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': 'Kakaoで続ける',
       'auth_kakao_callback_error': 'Kakaoログインに失敗しました。もう一度お試しください。',
+      'auth_kakao_callback_already_processed':
+          'このログイン要求はすでに処理されています。必要なら再度お試しください。',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': '予約キャンセル',
@@ -4177,6 +4184,8 @@ class AppLocalizations {
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': 'ดำเนินการต่อด้วย Kakao',
       'auth_kakao_callback_error': 'เข้าสู่ระบบ Kakao ไม่สำเร็จ โปรดลองอีกครั้ง',
+      'auth_kakao_callback_already_processed':
+          'คำขอเข้าสู่ระบบนี้ถูกดำเนินการแล้ว โปรดลองอีกครั้งหากจำเป็น',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
       'booking_cancel_section': 'ยกเลิกการจอง',
