@@ -4,6 +4,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const ROLES = require('../constants/roles');
 const SOCIAL_PROVIDERS = require('../constants/socialProviders');
+const logger = require('../utils/logger');
 
 const KAKAO_TOKEN_URL = 'https://kauth.kakao.com/oauth/token';
 const KAKAO_USER_ME_URL = 'https://kapi.kakao.com/v2/user/me';
@@ -35,6 +36,43 @@ function computeTokenExpiresAt(expiresIn) {
     return null;
   }
   return new Date(Date.now() + seconds * 1000);
+}
+
+function buildKakaoAuthorizationCodePrefix(authorizationCode) {
+  if (authorizationCode == null) {
+    return null;
+  }
+
+  const normalized = String(authorizationCode).trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized.slice(0, 8);
+}
+
+function buildKakaoTokenExchangeFailureLogContext({
+  status,
+  redirectUri,
+  authorizationCode,
+  tokenJson,
+}) {
+  return {
+    status,
+    redirectUri,
+    authorizationCodePrefix: buildKakaoAuthorizationCodePrefix(authorizationCode),
+    kakaoError: tokenJson?.error ?? null,
+    kakaoErrorDescription: tokenJson?.error_description ?? null,
+    kakaoErrorCode: tokenJson?.error_code ?? null,
+  };
+}
+
+function buildKakaoUserMeFailureLogContext({ status, userJson }) {
+  return {
+    status,
+    kakaoMsg: userJson?.msg ?? null,
+    kakaoErrorCode: userJson?.code ?? null,
+  };
 }
 
 function normalizeKakaoUserPayload(payload) {
@@ -163,6 +201,15 @@ class SocialAuthService {
 
     const tokenJson = await tokenResponse.json();
     if (!tokenResponse.ok || !tokenJson.access_token) {
+      logger.warn(
+        'Kakao token exchange failed',
+        buildKakaoTokenExchangeFailureLogContext({
+          status: tokenResponse.status,
+          redirectUri,
+          authorizationCode,
+          tokenJson,
+        }),
+      );
       throw new AppError('Invalid Kakao authorization code', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
         errorCode: ERROR_CODES.AUTH_INVALID,
@@ -186,6 +233,13 @@ class SocialAuthService {
 
     const userJson = await userResponse.json();
     if (!userResponse.ok) {
+      logger.warn(
+        'Kakao user profile fetch failed',
+        buildKakaoUserMeFailureLogContext({
+          status: userResponse.status,
+          userJson,
+        }),
+      );
       throw new AppError('Invalid Kakao authorization code', {
         statusCode: HTTP_STATUS.UNAUTHORIZED,
         errorCode: ERROR_CODES.AUTH_INVALID,
@@ -343,3 +397,6 @@ module.exports.normalizeGoogleIdTokenPayload = normalizeGoogleIdTokenPayload;
 module.exports.normalizeKakaoUserPayload = normalizeKakaoUserPayload;
 module.exports.buildKakaoPlaceholderEmail = buildKakaoPlaceholderEmail;
 module.exports.computeTokenExpiresAt = computeTokenExpiresAt;
+module.exports.buildKakaoAuthorizationCodePrefix = buildKakaoAuthorizationCodePrefix;
+module.exports.buildKakaoTokenExchangeFailureLogContext = buildKakaoTokenExchangeFailureLogContext;
+module.exports.buildKakaoUserMeFailureLogContext = buildKakaoUserMeFailureLogContext;

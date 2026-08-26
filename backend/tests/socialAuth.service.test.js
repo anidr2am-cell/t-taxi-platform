@@ -19,7 +19,11 @@ const {
   normalizeGoogleIdTokenPayload,
   buildKakaoPlaceholderEmail,
   computeTokenExpiresAt,
+  buildKakaoAuthorizationCodePrefix,
+  buildKakaoTokenExchangeFailureLogContext,
+  buildKakaoUserMeFailureLogContext,
 } = require('../src/services/socialAuth.service');
+const logger = require('../src/utils/logger');
 const RevokedRefreshTokenStore = require('../src/services/revokedRefreshToken.store');
 
 const GOOGLE_SUB = 'google-sub-123';
@@ -423,4 +427,154 @@ test('computeTokenExpiresAt returns null for invalid expiresIn', () => {
   assert.equal(computeTokenExpiresAt(null), null);
   assert.equal(computeTokenExpiresAt('not-a-number'), null);
   assert.equal(computeTokenExpiresAt(-1), null);
+});
+
+test('buildKakaoTokenExchangeFailureLogContext keeps only safe diagnostic fields', () => {
+  const context = buildKakaoTokenExchangeFailureLogContext({
+    status: 400,
+    redirectUri: KAKAO_REDIRECT_URI,
+    authorizationCode: 'abcdefghijklmnop',
+    tokenJson: {
+      error: 'invalid_grant',
+      error_description: 'authorization code not found',
+      error_code: 'KOE320',
+      access_token: 'must-not-leak',
+      refresh_token: 'must-not-leak',
+    },
+  });
+
+  assert.deepEqual(context, {
+    status: 400,
+    redirectUri: KAKAO_REDIRECT_URI,
+    authorizationCodePrefix: 'abcdefgh',
+    kakaoError: 'invalid_grant',
+    kakaoErrorDescription: 'authorization code not found',
+    kakaoErrorCode: 'KOE320',
+  });
+  assert.equal(JSON.stringify(context).includes('must-not-leak'), false);
+  assert.equal(JSON.stringify(context).includes('abcdefghijklmnop'), false);
+});
+
+test('buildKakaoUserMeFailureLogContext keeps only safe diagnostic fields', () => {
+  const context = buildKakaoUserMeFailureLogContext({
+    status: 401,
+    userJson: {
+      msg: 'invalid token',
+      code: -401,
+      access_token: 'must-not-leak',
+    },
+  });
+
+  assert.deepEqual(context, {
+    status: 401,
+    kakaoMsg: 'invalid token',
+    kakaoErrorCode: -401,
+  });
+  assert.equal(JSON.stringify(context).includes('must-not-leak'), false);
+});
+
+test('buildKakaoAuthorizationCodePrefix returns at most 8 characters', () => {
+  assert.equal(buildKakaoAuthorizationCodePrefix('abc'), 'abc');
+  assert.equal(buildKakaoAuthorizationCodePrefix('1234567890'), '12345678');
+  assert.equal(buildKakaoAuthorizationCodePrefix('   '), null);
+});
+
+function createDirectKakaoExchangeService({ kakaoClientSecret = null, fetchImpl }) {
+  return new SocialAuthService({}, {}, {}, {
+    kakaoRestApiKey: 'test-kakao-rest-api-key',
+    kakaoClientSecret,
+    fetchImpl,
+  });
+}
+
+test('exchangeKakaoCode logs Kakao error fields without leaking tokens on token failure', async () => {
+  const warnCalls = [];
+  const originalWarn = logger.warn;
+  logger.warn = (...args) => {
+    warnCalls.push(args);
+  };
+
+  try {
+    const service = createDirectKakaoExchangeService({
+      fetchImpl: async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          error: 'invalid_grant',
+          error_description: 'authorization code not found',
+          error_code: 'KOE320',
+          access_token: 'must-not-leak',
+          refresh_token: 'must-not-leak',
+        }),
+      }),
+    });
+
+    await assert.rejects(
+      () => service.exchangeKakaoCode('abcdefghijklmnop', KAKAO_REDIRECT_URI),
+      (err) => {
+        assert.equal(err.statusCode, HTTP_STATUS.UNAUTHORIZED);
+        assert.equal(err.errorCode, ERROR_CODES.AUTH_INVALID);
+        return true;
+      },
+    );
+
+    assert.equal(warnCalls.length, 1);
+    assert.equal(warnCalls[0][0], 'Kakao token exchange failed');
+    assert.deepEqual(warnCalls[0][1], {
+      status: 400,
+      redirectUri: KAKAO_REDIRECT_URI,
+      authorizationCodePrefix: 'abcdefgh',
+      kakaoError: 'invalid_grant',
+      kakaoErrorDescription: 'authorization code not found',
+      kakaoErrorCode: 'KOE320',
+    });
+    assert.equal(JSON.stringify(warnCalls).includes('must-not-leak'), false);
+    assert.equal(JSON.stringify(warnCalls).includes('abcdefghijklmnop'), false);
+  } finally {
+    logger.warn = originalWarn;
+  }
+});
+
+test('exchangeKakaoCode includes client_secret only when configured', async () => {
+  let tokenRequestBody = null;
+
+  const successFetchImpl = async (url, options) => {
+    if (String(url).includes('/oauth/token')) {
+      tokenRequestBody = options.body;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          access_token: 'kakao-access-token',
+          refresh_token: 'kakao-refresh-token',
+          expires_in: 3600,
+        }),
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: KAKAO_USER_ID,
+        kakao_account: { email: KAKAO_EMAIL },
+        properties: { nickname: KAKAO_NAME },
+      }),
+    };
+  };
+
+  const withSecret = createDirectKakaoExchangeService({
+    kakaoClientSecret: 'configured-client-secret',
+    fetchImpl: successFetchImpl,
+  });
+  await withSecret.exchangeKakaoCode('valid-kakao-code', KAKAO_REDIRECT_URI);
+  assert.match(String(tokenRequestBody), /client_secret=configured-client-secret/);
+
+  tokenRequestBody = null;
+  const withoutSecret = createDirectKakaoExchangeService({
+    kakaoClientSecret: '',
+    fetchImpl: successFetchImpl,
+  });
+  await withoutSecret.exchangeKakaoCode('valid-kakao-code', KAKAO_REDIRECT_URI);
+  assert.doesNotMatch(String(tokenRequestBody), /client_secret=/);
 });
