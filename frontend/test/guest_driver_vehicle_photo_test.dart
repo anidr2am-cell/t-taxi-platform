@@ -117,6 +117,100 @@ void main() {
     expect(find.text('Unable to load vehicle photo.'), findsNothing);
   });
 
+  testWidgets('vehicle photo widget uses JWT when useCustomerAuth is true', (
+    tester,
+  ) async {
+    final bytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GuestDriverVehiclePhoto(
+            photoPath:
+                '/api/v1/public/bookings/10/assigned-driver-vehicle-photo',
+            guestAccessToken: '',
+            customerAccessToken: 'customer-jwt',
+            useCustomerAuth: true,
+            apiBaseUrl: 'http://localhost:3000',
+            client: MockClient((request) async {
+              expect(request.headers['Authorization'], 'Bearer customer-jwt');
+              expect(request.headers['X-Guest-Access-Token'], isNull);
+              return http.Response.bytes(
+                bytes,
+                200,
+                headers: {'content-type': 'image/jpeg'},
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('fromMyBookings assigned driver card loads vehicle photo with JWT', (
+    tester,
+  ) async {
+    final bytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AssignedDriverStatusCard(
+            result: GuestBookingLookupResult.fromCustomerBookingsApiJson({
+              'bookingId': 10,
+              'bookingNumber': 'TX202607010001',
+              'status': 'DRIVER_ASSIGNED',
+              'scheduledPickupAt': '2026-07-01T09:30:00+07:00',
+              'serviceType': {'code': 'AIRPORT_PICKUP', 'name': 'Airport Pickup'},
+              'route': {
+                'origin': {'address': 'BKK Airport'},
+                'destination': {'address': 'Pattaya Hotel'},
+              },
+              'pricing': {
+                'totalAmount': 1500,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'assignedDriver': {
+                'name': 'Driver A',
+                'phone': '+66 80 000 0000',
+                'vehicle': {
+                  'typeName': 'SUV',
+                  'vehiclePhotoUrl':
+                      '/api/v1/public/bookings/10/assigned-driver-vehicle-photo',
+                },
+              },
+              'capabilities': {'notificationsAvailable': true},
+              'guestAccess': {'token': null, 'expiresAt': null},
+            }),
+            useCustomerAuth: true,
+            customerAccessToken: 'customer-jwt',
+            apiBaseUrl: 'http://localhost:3000',
+            photoHttpClient: MockClient((request) async {
+              expect(request.headers['Authorization'], 'Bearer customer-jwt');
+              expect(request.headers['X-Guest-Access-Token'], isNull);
+              return http.Response.bytes(
+                bytes,
+                200,
+                headers: {'content-type': 'image/jpeg'},
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.byType(Image), findsOneWidget);
+  });
+
   testWidgets(
     'lookup page shows driver card below booking number when assigned',
     (tester) async {

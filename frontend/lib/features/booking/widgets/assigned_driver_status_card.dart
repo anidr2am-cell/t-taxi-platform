@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
@@ -12,11 +13,17 @@ class AssignedDriverStatusCard extends StatelessWidget {
     required this.result,
     this.apiBaseUrl,
     this.allowDriverPhoneWithoutGuestToken = false,
+    this.useCustomerAuth = false,
+    this.customerAccessToken,
+    this.photoHttpClient,
   });
 
   final GuestBookingLookupResult result;
   final String? apiBaseUrl;
   final bool allowDriverPhoneWithoutGuestToken;
+  final bool useCustomerAuth;
+  final String? customerAccessToken;
+  final http.Client? photoHttpClient;
 
   bool get _canShowDriverPhone {
     const activeStatuses = {
@@ -80,7 +87,10 @@ class AssignedDriverStatusCard extends StatelessWidget {
             GuestDriverVehiclePhoto(
               photoPath: result.vehiclePhotoUrl!,
               guestAccessToken: result.guestAccessToken,
+              useCustomerAuth: useCustomerAuth,
+              customerAccessToken: customerAccessToken,
               apiBaseUrl: apiBaseUrl,
+              client: photoHttpClient,
             ),
           ],
         ],

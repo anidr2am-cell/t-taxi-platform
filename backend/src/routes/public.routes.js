@@ -4,6 +4,7 @@ const bookingController = require('../controllers/booking.controller');
 const notificationController = require('../controllers/notification.controller');
 const driverLocationController = require('../controllers/driverLocation.controller');
 const validate = require('../middlewares/validate.middleware');
+const { optionalAuthMiddleware } = require('../middlewares/auth.middleware');
 const createRateLimit = require('../middlewares/rateLimit.middleware');
 const { guestBookingLookupSchema } = require('../validators/booking.validator');
 const {
@@ -54,6 +55,7 @@ router.get(
 router.get(
   '/bookings/:bookingId/assigned-driver-vehicle-photo',
   bookingLookupRateLimit,
+  optionalAuthMiddleware,
   validate({ params: bookingIdParamsSchema }),
   bookingController.getGuestAssignedDriverVehiclePhoto,
 );

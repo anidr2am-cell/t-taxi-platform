@@ -290,7 +290,11 @@ container.register(
 );
 container.register(
   "guestVehiclePhotoService",
-  (c) => new GuestVehiclePhotoService(c.get("bookingRepository")),
+  (c) => new GuestVehiclePhotoService(
+    c.get("bookingRepository"),
+    c.get("bookingService"),
+    database.pool,
+  ),
 );
 container.register(
   "guestNameSignPhotoService",

@@ -131,6 +131,7 @@ const getGuestAssignedDriverVehiclePhoto = asyncHandler(async (req, res) => {
   const file = await getGuestVehiclePhotoService().getAssignedDriverVehiclePhotoFile(
     Number(req.params.bookingId),
     extractGuestAccessTokenFromHeader(req),
+    req.user ?? null,
   );
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.type(file.mimeType || 'application/octet-stream');

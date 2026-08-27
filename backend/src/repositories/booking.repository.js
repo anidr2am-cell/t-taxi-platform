@@ -618,6 +618,37 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  async findAssignedDriverVehiclePhotoFileByBookingId(bookingId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          f.file_path,
+          f.mime_type,
+          f.original_filename
+        FROM bookings b
+        INNER JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+          AND bda.is_active = 1
+          AND bda.deleted_at IS NULL
+        INNER JOIN drivers d ON d.id = bda.driver_id
+          AND d.deleted_at IS NULL
+        INNER JOIN driver_applications da ON da.approved_driver_id = d.id
+          AND da.status = 'APPROVED'
+          AND da.deleted_at IS NULL
+        INNER JOIN driver_application_files daf ON daf.driver_application_id = da.id
+          AND daf.category = 'DRIVER_VEHICLE_PHOTO'
+        INNER JOIN files f ON f.id = daf.file_id
+          AND f.deleted_at IS NULL
+        WHERE b.id = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+        ORDER BY daf.sort_order ASC, f.id ASC
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0] || null;
+  }
+
   async findGuestNameSignPhotoFile(bookingId, tokenHash) {
     const [rows] = await this.pool.query(
       `

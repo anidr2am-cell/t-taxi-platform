@@ -11,7 +11,9 @@ class GuestDriverVehiclePhoto extends StatefulWidget {
   const GuestDriverVehiclePhoto({
     super.key,
     required this.photoPath,
-    required this.guestAccessToken,
+    this.guestAccessToken = '',
+    this.customerAccessToken,
+    this.useCustomerAuth = false,
     this.apiBaseUrl,
     this.height = 190,
     this.client,
@@ -19,6 +21,8 @@ class GuestDriverVehiclePhoto extends StatefulWidget {
 
   final String photoPath;
   final String guestAccessToken;
+  final String? customerAccessToken;
+  final bool useCustomerAuth;
   final String? apiBaseUrl;
   final double height;
   final http.Client? client;
@@ -43,7 +47,9 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
   void didUpdateWidget(covariant GuestDriverVehiclePhoto oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.photoPath != widget.photoPath ||
-        oldWidget.guestAccessToken != widget.guestAccessToken) {
+        oldWidget.guestAccessToken != widget.guestAccessToken ||
+        oldWidget.customerAccessToken != widget.customerAccessToken ||
+        oldWidget.useCustomerAuth != widget.useCustomerAuth) {
       _load();
     }
   }
@@ -66,6 +72,36 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
     return '$base$normalizedPath';
   }
 
+  Map<String, String>? _authHeaders() {
+    final guestToken = widget.guestAccessToken.trim();
+    final customerToken = widget.customerAccessToken?.trim() ?? '';
+
+    if (widget.useCustomerAuth &&
+        guestToken.isEmpty &&
+        customerToken.isNotEmpty) {
+      return {
+        'Accept': 'image/*',
+        'Authorization': 'Bearer $customerToken',
+      };
+    }
+
+    if (guestToken.isNotEmpty) {
+      return {
+        'Accept': 'image/*',
+        'X-Guest-Access-Token': guestToken,
+      };
+    }
+
+    if (customerToken.isNotEmpty) {
+      return {
+        'Accept': 'image/*',
+        'Authorization': 'Bearer $customerToken',
+      };
+    }
+
+    return null;
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -73,13 +109,20 @@ class _GuestDriverVehiclePhotoState extends State<GuestDriverVehiclePhoto> {
       _bytes = null;
     });
 
+    final headers = _authHeaders();
+    if (headers == null) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _failed = true;
+      });
+      return;
+    }
+
     try {
       final response = await _client.get(
         Uri.parse(_resolveUrl()),
-        headers: {
-          'Accept': 'image/*',
-          'X-Guest-Access-Token': widget.guestAccessToken,
-        },
+        headers: headers,
       );
       if (!mounted) return;
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {

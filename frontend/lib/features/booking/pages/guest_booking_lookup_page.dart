@@ -445,6 +445,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           AssignedDriverStatusCard(
             result: result,
             allowDriverPhoneWithoutGuestToken: widget.fromMyBookings,
+            useCustomerAuth: widget.fromMyBookings,
+            customerAccessToken:
+                widget.fromMyBookings ? _customerAccessToken : null,
           ),
         ],
         if (BookingStatusDisplay.customerGuidance(
