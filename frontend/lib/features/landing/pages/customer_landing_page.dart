@@ -103,50 +103,74 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                LandingHeader(onLookup: () => _openBookingLookup(context)),
-                LandingHero(
-                  onBook: () => _openBookingWizard(context),
-                  desktopBookingWidget: LandingBookingWidget(
-                    draft: _draft,
-                    languageCode: languageCode,
-                    onServiceSelected: _updateService,
-                    onOriginSelected: _updateOrigin,
-                    onDestinationSelected: _updateDestination,
-                    onSubmit: () => _openBookingWizard(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTokens.surface,
+                  border: Border(
+                    bottom: BorderSide(color: AppTokens.border.withValues(alpha: 0.6)),
                   ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0D000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
-                LandingServiceCards(
-                  selectedService: _draft.serviceType,
-                  onServiceSelected: _updateService,
-                  onBook: () => _openBookingWizard(context),
-                ),
-                const LandingTrustSection(),
-                const LandingStepsSection(),
-                const LandingReassuranceCard(),
-                LandingBookingLookupCard(
+                child: LandingHeader(
                   onLookup: () => _openBookingLookup(context),
                 ),
-                const PwaInstallBanner(),
-                LandingBottomCta(onSupport: () => _openSupport(context)),
-                const LandingSocialLoginSection(),
-                LandingFooter(
-                  onAdmin: () => Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/admin',
-                    (_) => false,
-                  ),
-                  onDriver: () => Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/driver',
-                    (_) => false,
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      LandingHero(
+                        onBook: () => _openBookingWizard(context),
+                        desktopBookingWidget: LandingBookingWidget(
+                          draft: _draft,
+                          languageCode: languageCode,
+                          onServiceSelected: _updateService,
+                          onOriginSelected: _updateOrigin,
+                          onDestinationSelected: _updateDestination,
+                          onSubmit: () => _openBookingWizard(context),
+                        ),
+                      ),
+                      LandingServiceCards(
+                        selectedService: _draft.serviceType,
+                        onServiceSelected: _updateService,
+                        onBook: () => _openBookingWizard(context),
+                      ),
+                      const LandingTrustSection(),
+                      const LandingStepsSection(),
+                      const LandingReassuranceCard(),
+                      LandingBookingLookupCard(
+                        onLookup: () => _openBookingLookup(context),
+                      ),
+                      const PwaInstallBanner(),
+                      LandingBottomCta(onSupport: () => _openSupport(context)),
+                      const LandingSocialLoginSection(),
+                      LandingFooter(
+                        onAdmin: () => Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/admin',
+                          (_) => false,
+                        ),
+                        onDriver: () => Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/driver',
+                          (_) => false,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

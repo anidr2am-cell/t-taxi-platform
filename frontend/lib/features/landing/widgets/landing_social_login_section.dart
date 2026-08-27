@@ -8,9 +8,7 @@ import '../../auth/config/line_auth_config.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/models/social_login_return_context.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
-import '../../auth/widgets/google_sign_in_button.dart';
-import '../../auth/widgets/kakao_sign_in_button.dart';
-import '../../auth/widgets/line_sign_in_button.dart';
+import 'landing_social_sign_in_content.dart';
 
 class LandingSocialLoginSection extends StatefulWidget {
   const LandingSocialLoginSection({super.key, this.authController});
@@ -54,7 +52,7 @@ class _LandingSocialLoginSectionState extends State<LandingSocialLoginSection> {
                         ? null
                         : () => controller.signOut(),
                   )
-                : _SignedOutView(
+                : LandingSocialSignInContent(
                     l10n: l10n,
                     isLoading: controller.isLoading,
                     errorMessage: controller.errorMessage,
@@ -77,75 +75,6 @@ class _LandingSocialLoginSectionState extends State<LandingSocialLoginSection> {
           ),
         );
       },
-    );
-  }
-}
-
-class _SignedOutView extends StatelessWidget {
-  const _SignedOutView({
-    required this.l10n,
-    required this.isLoading,
-    required this.errorMessage,
-    required this.showKakaoButton,
-    required this.showLineButton,
-    required this.onGoogleSignInPressed,
-    required this.onKakaoSignInPressed,
-    required this.onLineSignInPressed,
-  });
-
-  final AppLocalizations l10n;
-  final bool isLoading;
-  final String? errorMessage;
-  final bool showKakaoButton;
-  final bool showLineButton;
-  final VoidCallback? onGoogleSignInPressed;
-  final VoidCallback? onKakaoSignInPressed;
-  final VoidCallback? onLineSignInPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          l10n.t('landing_login_title'),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppTokens.textPrimary,
-          ),
-        ),
-        if (errorMessage != null && errorMessage!.isNotEmpty) ...[
-          const SizedBox(height: AppTokens.spaceSm),
-          Text(
-            errorMessage!,
-            style: const TextStyle(color: AppTokens.error),
-          ),
-        ],
-        const SizedBox(height: AppTokens.spaceMd),
-        GoogleSignInButton(
-          key: const Key('landing_google_sign_in'),
-          label: l10n.t('auth_google_continue'),
-          locale: l10n.languageCode,
-          loading: isLoading,
-          onPressed: onGoogleSignInPressed,
-        ),
-        if (showKakaoButton) ...[
-          const SizedBox(height: AppTokens.spaceSm),
-          KakaoSignInButton(
-            label: l10n.t('auth_kakao_continue'),
-            loading: isLoading,
-            onPressed: onKakaoSignInPressed,
-          ),
-        ],
-        if (showLineButton) ...[
-          const SizedBox(height: AppTokens.spaceSm),
-          LineSignInButton(
-            label: l10n.t('auth_line_continue'),
-            loading: isLoading,
-            onPressed: onLineSignInPressed,
-          ),
-        ],
-      ],
     );
   }
 }

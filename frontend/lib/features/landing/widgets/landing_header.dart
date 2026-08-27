@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/booking_provider.dart';
 import '../../../theme/app_tokens.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../auth/widgets/booking_social_login_section.dart';
+import 'landing_auth_bottom_sheet.dart';
 import 'landing_clickable_styles.dart';
 
 class LandingHeader extends StatelessWidget {
@@ -30,7 +33,9 @@ class LandingHeader extends StatelessWidget {
           children: [
             Flexible(child: _BrandBlock(subtitle: l10n.t('app_subtitle'))),
             const Spacer(),
+            _AuthHeaderButton(l10n: l10n),
             _HeaderIconButton(
+              buttonKey: const Key('landing_header_lookup_button'),
               tooltip: l10n.t('landing_booking_lookup_action'),
               icon: Icons.search_outlined,
               onPressed: onLookup,
@@ -42,6 +47,47 @@ class LandingHeader extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AuthHeaderButton extends StatelessWidget {
+  const _AuthHeaderButton({required this.l10n, this.authController});
+
+  final AppLocalizations l10n;
+  final AuthController? authController;
+
+  AuthController _resolveController(BuildContext context) {
+    return authController ?? AuthScope.of(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _resolveController(context);
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        if (!controller.isInitialized) {
+          return const SizedBox.shrink();
+        }
+
+        final isLoggedIn = controller.isLoggedIn;
+        return _HeaderIconButton(
+          buttonKey: const Key('landing_header_auth_button'),
+          tooltip: isLoggedIn
+              ? l10n.t('landing_my_bookings_button')
+              : l10n.t('landing_login_sheet_title'),
+          icon: isLoggedIn ? Icons.person : Icons.person_outline,
+          onPressed: () {
+            if (isLoggedIn) {
+              Navigator.of(context).pushNamed('/my-bookings');
+              return;
+            }
+            showLandingAuthBottomSheet(context);
+          },
+        );
+      },
     );
   }
 }
@@ -101,11 +147,13 @@ class _BrandBlock extends StatelessWidget {
 }
 
 class _HeaderIconButton extends StatelessWidget {
+  final Key? buttonKey;
   final String tooltip;
   final IconData icon;
   final VoidCallback onPressed;
 
   const _HeaderIconButton({
+    this.buttonKey,
     required this.tooltip,
     required this.icon,
     required this.onPressed,
@@ -122,7 +170,7 @@ class _HeaderIconButton extends StatelessWidget {
           width: 44,
           height: 44,
           child: IconButton.filledTonal(
-            key: const Key('landing_header_lookup_button'),
+            key: buttonKey,
             onPressed: onPressed,
             style: LandingClickableStyles.iconButtonStyle(),
             icon: Icon(icon, size: 22),
