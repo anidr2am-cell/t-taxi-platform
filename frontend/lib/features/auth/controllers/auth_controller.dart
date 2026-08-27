@@ -252,12 +252,12 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> _maybeClaimGuestBooking(SocialLoginReturnContext? context) async {
-    if (context == null) {
+    if (context == null || context.result == null) {
       return;
     }
 
-    final bookingNumber = context.result.bookingNumber.trim();
-    final guestToken = context.result.guestAccessToken?.trim();
+    final bookingNumber = context.result!.bookingNumber.trim();
+    final guestToken = context.result!.guestAccessToken?.trim();
     if (bookingNumber.isEmpty || guestToken == null || guestToken.isEmpty) {
       return;
     }

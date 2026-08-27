@@ -64,14 +64,31 @@ void main() {
 
     expect(loaded, isNotNull);
     expect(loaded!.redirectUri, context.redirectUri);
-    expect(loaded.result.bookingNumber, 'TX202607010001');
+    expect(loaded.result!.bookingNumber, 'TX202607010001');
     expect(loaded.serviceLabel, 'Airport Pickup');
     expect(loaded.enableCustomerTools, isTrue);
+    expect(loaded.returnToHome, isFalse);
 
     final encoded = jsonEncode(context.toJson());
     final decoded = SocialLoginReturnContext.fromJson(
       Map<String, dynamic>.from(jsonDecode(encoded) as Map),
     );
-    expect(decoded.result.guestAccessToken, 'guest-token');
+    expect(decoded.result!.guestAccessToken, 'guest-token');
+  });
+
+  test('SocialLoginReturnStorage round-trips landing context', () async {
+    SharedPreferences.setMockInitialValues({});
+    final context = SocialLoginReturnContext.fromLanding(
+      baseUri: Uri.parse('https://trider.taxi/'),
+    );
+
+    final storage = SocialLoginReturnStorage();
+    await storage.save(context);
+    final loaded = await storage.loadAndClear();
+
+    expect(loaded, isNotNull);
+    expect(loaded!.result, isNull);
+    expect(loaded.returnToHome, isTrue);
+    expect(loaded.redirectUri, contains('/auth/kakao/callback'));
   });
 }

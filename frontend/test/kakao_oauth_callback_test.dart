@@ -154,6 +154,62 @@ void main() {
     expect(stored?.outcome, KakaoOAuthCallbackOutcome.success);
   });
 
+  testWidgets('callback with returnToHome navigates to home route', (
+    tester,
+  ) async {
+    final guardStorage = MemoryKakaoOAuthCallbackGuardStorage();
+    await SocialLoginReturnStorage().save(
+      SocialLoginReturnContext.fromLanding(
+        baseUri: Uri.parse('https://trider.taxi/'),
+      ),
+    );
+
+    final authController = _buildAuthController(
+      onRequest: (request) async {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+              'user': {
+                'id': 42,
+                'email': 'kakao@example.com',
+                'role': 'CUSTOMER',
+                'name': 'Minji',
+                'phone': null,
+                'locale': 'ko',
+                'isActive': true,
+              },
+            },
+          }),
+          200,
+        );
+      },
+    );
+    await authController.initialize();
+
+    await tester.pumpWidget(
+      wrapOAuthCallbackTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        callbackPage: KakaoOAuthCallbackPage(
+          uri: Uri.parse(
+            'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
+          ),
+          guardStorage: guardStorage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(kOAuthCallbackHomeRouteKey), findsOneWidget);
+    expect(find.text('TX202607010001'), findsNothing);
+    expect(authController.isLoggedIn, isTrue);
+  });
+
   testWidgets('replayed callback with same code skips second API call', (
     tester,
   ) async {

@@ -14,6 +14,7 @@ import '../widgets/landing_booking_lookup_card.dart';
 import '../widgets/landing_booking_widget.dart';
 import '../widgets/landing_bottom_cta.dart';
 import '../widgets/landing_footer.dart';
+import '../widgets/landing_social_login_section.dart';
 import '../widgets/landing_header.dart';
 import '../widgets/landing_hero.dart';
 import '../widgets/landing_reassurance_card.dart';
@@ -131,6 +132,7 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
                 ),
                 const PwaInstallBanner(),
                 LandingBottomCta(onSupport: () => _openSupport(context)),
+                const LandingSocialLoginSection(),
                 LandingFooter(
                   onAdmin: () => Navigator.pushNamedAndRemoveUntil(
                     context,

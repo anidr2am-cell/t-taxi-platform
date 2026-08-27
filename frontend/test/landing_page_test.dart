@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/controllers/auth_controller.dart';
+import 'package:frontend/features/auth/services/auth_api_service.dart';
+import 'package:frontend/features/auth/services/auth_token_storage.dart';
+import 'package:frontend/features/auth/services/google_sign_in_service.dart';
+import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
 import 'package:frontend/features/booking/models/booking_wizard_route_args.dart';
 import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
@@ -19,6 +24,8 @@ import 'package:frontend/features/support/pages/customer_support_page.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:frontend/theme/app_tokens.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,6 +43,7 @@ const _testDestination = LocationOption(
 
 Widget _wrapLanding({
   required Widget child,
+  required AuthController authController,
   double width = 360,
   double height = 900,
   Locale locale = const Locale('en'),
@@ -71,12 +79,28 @@ Widget _wrapLanding({
           },
           home: MediaQuery(
             data: MediaQueryData(size: Size(width, height)),
-            child: Scaffold(body: child),
+            child: AuthScope(
+              controller: authController,
+              child: Scaffold(body: child),
+            ),
           ),
         );
       },
     ),
   );
+}
+
+Future<AuthController> _landingAuthController() async {
+  final controller = AuthController(
+    apiService: AuthApiService(
+      client: MockClient((_) async => http.Response('{}', 500)),
+      baseUrl: 'http://localhost:3000',
+    ),
+    tokenStorage: AuthTokenStorage(),
+    googleSignInService: GoogleSignInService()..markInitializedForTest(),
+  );
+  await controller.initialize();
+  return controller;
 }
 
 void main() {
@@ -102,11 +126,13 @@ void main() {
       LandingBookingDraft? initialDraft,
     }) async {
       configureView(tester, width, height);
+      final authController = await _landingAuthController();
       await tester.pumpWidget(
         _wrapLanding(
           width: width,
           height: height,
           locale: locale,
+          authController: authController,
           child: CustomerLandingPage(initialDraft: initialDraft),
         ),
       );

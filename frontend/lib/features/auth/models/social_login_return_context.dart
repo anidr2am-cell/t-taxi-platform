@@ -10,7 +10,7 @@ import '../config/line_auth_config.dart';
 class SocialLoginReturnContext {
   const SocialLoginReturnContext({
     required this.redirectUri,
-    required this.result,
+    this.result,
     required this.serviceLabel,
     this.origin,
     this.destination,
@@ -21,10 +21,11 @@ class SocialLoginReturnContext {
     this.scheduledPickupAt,
     this.selectedVehicle,
     this.enableCustomerTools = false,
+    this.returnToHome = false,
   });
 
   final String redirectUri;
-  final BookingCreateResult result;
+  final BookingCreateResult? result;
   final String serviceLabel;
   final LocationOption? origin;
   final LocationOption? destination;
@@ -35,6 +36,32 @@ class SocialLoginReturnContext {
   final String? scheduledPickupAt;
   final String? selectedVehicle;
   final bool enableCustomerTools;
+  final bool returnToHome;
+
+  factory SocialLoginReturnContext.fromLanding({
+    Uri? baseUri,
+    String? redirectUri,
+  }) {
+    return SocialLoginReturnContext(
+      redirectUri: redirectUri ?? KakaoAuthConfig.buildRedirectUri(base: baseUri),
+      result: null,
+      serviceLabel: '',
+      returnToHome: true,
+    );
+  }
+
+  factory SocialLoginReturnContext.fromLandingForLine({
+    Uri? baseUri,
+    String? redirectUri,
+  }) {
+    return SocialLoginReturnContext(
+      redirectUri:
+          redirectUri ?? LineAuthConfig.buildRedirectUri(base: baseUri),
+      result: null,
+      serviceLabel: '',
+      returnToHome: true,
+    );
+  }
 
   factory SocialLoginReturnContext.fromBookingCompleteForLine({
     required BookingCreateResult result,
@@ -64,6 +91,7 @@ class SocialLoginReturnContext {
       enableCustomerTools: enableCustomerTools,
       baseUri: baseUri,
       redirectUri: LineAuthConfig.buildRedirectUri(base: baseUri),
+      returnToHome: false,
     );
   }
 
@@ -81,6 +109,7 @@ class SocialLoginReturnContext {
     bool enableCustomerTools = false,
     Uri? baseUri,
     String? redirectUri,
+    bool returnToHome = false,
   }) {
     return SocialLoginReturnContext(
       redirectUri: redirectUri ?? KakaoAuthConfig.buildRedirectUri(base: baseUri),
@@ -95,12 +124,13 @@ class SocialLoginReturnContext {
       scheduledPickupAt: scheduledPickupAt,
       selectedVehicle: selectedVehicle,
       enableCustomerTools: enableCustomerTools,
+      returnToHome: returnToHome,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'redirectUri': redirectUri,
-    'result': _resultToJson(result),
+    if (result != null) 'result': _resultToJson(result!),
     'serviceLabel': serviceLabel,
     'origin': origin?.toJson(),
     'destination': destination?.toJson(),
@@ -111,14 +141,17 @@ class SocialLoginReturnContext {
     'scheduledPickupAt': scheduledPickupAt,
     'selectedVehicle': selectedVehicle,
     'enableCustomerTools': enableCustomerTools,
+    'returnToHome': returnToHome,
   };
 
   factory SocialLoginReturnContext.fromJson(Map<String, dynamic> json) {
     return SocialLoginReturnContext(
       redirectUri: json['redirectUri'] as String? ?? '',
-      result: _resultFromJson(
-        Map<String, dynamic>.from(json['result'] as Map? ?? const {}),
-      ),
+      result: json['result'] is Map
+          ? _resultFromJson(
+              Map<String, dynamic>.from(json['result'] as Map),
+            )
+          : null,
       serviceLabel: json['serviceLabel'] as String? ?? '',
       origin: json['origin'] is Map
           ? LocationOption.fromJson(
@@ -137,6 +170,7 @@ class SocialLoginReturnContext {
       scheduledPickupAt: json['scheduledPickupAt'] as String?,
       selectedVehicle: json['selectedVehicle'] as String?,
       enableCustomerTools: json['enableCustomerTools'] == true,
+      returnToHome: json['returnToHome'] == true,
     );
   }
 

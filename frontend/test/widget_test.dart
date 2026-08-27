@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/controllers/auth_controller.dart';
+import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
 import 'package:frontend/features/landing/widgets/landing_header.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend/main.dart';
@@ -15,8 +17,14 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (_) => LocaleState()),
           ChangeNotifierProvider(create: (_) => BookingState()),
+          ChangeNotifierProvider(create: (_) => AuthController()),
         ],
-        child: const TTaxiApp(),
+        child: Builder(
+          builder: (context) => AuthScope(
+            controller: context.watch<AuthController>(),
+            child: const TTaxiApp(),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();

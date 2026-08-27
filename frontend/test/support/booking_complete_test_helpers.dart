@@ -60,6 +60,45 @@ Widget wrapBookingCompleteTestApp({
   );
 }
 
+const kOAuthCallbackHomeRouteKey = Key('oauth_callback_home_route');
+
+Widget wrapOAuthCallbackTestApp({
+  required Widget callbackPage,
+  required AuthController authController,
+  Locale locale = const Locale('en'),
+  bool includeAppLocalizations = false,
+}) {
+  final delegates = <LocalizationsDelegate<dynamic>>[
+    if (includeAppLocalizations) AppLocalizationsDelegate(locale.languageCode),
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ];
+
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: const [
+      Locale('en'),
+      Locale('ko'),
+      Locale('th'),
+      Locale('ja'),
+      Locale('zh'),
+    ],
+    localizationsDelegates: delegates,
+    initialRoute: '/oauth-callback',
+    routes: {
+      '/': (_) => const Scaffold(
+        key: kOAuthCallbackHomeRouteKey,
+        body: SizedBox.shrink(),
+      ),
+      '/oauth-callback': (_) => AuthScope(
+        controller: authController,
+        child: callbackPage,
+      ),
+    },
+  );
+}
+
 Future<void> pumpBookingCompleteTestApp(
   WidgetTester tester, {
   required Widget home,

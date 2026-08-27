@@ -126,6 +126,64 @@ void main() {
     expect(await stateStorage.load(), isNull);
   });
 
+  testWidgets('callback with returnToHome navigates to home route', (
+    tester,
+  ) async {
+    final guardStorage = MemoryLineOAuthCallbackGuardStorage();
+    final stateStorage = MemoryLineOAuthStateStorage('csrf-state-token');
+    await SocialLoginReturnStorage().save(
+      SocialLoginReturnContext.fromLandingForLine(
+        baseUri: Uri.parse('https://trider.taxi/'),
+      ),
+    );
+
+    final authController = _buildAuthController(
+      onRequest: (request) async {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+              'user': {
+                'id': 42,
+                'email': 'line@example.com',
+                'role': 'CUSTOMER',
+                'name': 'Minji',
+                'phone': null,
+                'locale': 'ko',
+                'isActive': true,
+              },
+            },
+          }),
+          200,
+        );
+      },
+    );
+    await authController.initialize();
+
+    await tester.pumpWidget(
+      wrapOAuthCallbackTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        callbackPage: LineOAuthCallbackPage(
+          uri: Uri.parse(
+            'https://trider.taxi/auth/line/callback?code=mock-line-code&state=csrf-state-token',
+          ),
+          guardStorage: guardStorage,
+          stateStorage: stateStorage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(kOAuthCallbackHomeRouteKey), findsOneWidget);
+    expect(find.text('TX202607010001'), findsNothing);
+    expect(authController.isLoggedIn, isTrue);
+  });
+
   testWidgets('state mismatch rejects callback without API call', (
     tester,
   ) async {

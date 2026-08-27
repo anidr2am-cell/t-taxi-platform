@@ -257,11 +257,16 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
       return;
     }
 
-    final destination = savedContext == null
+    if (savedContext?.returnToHome == true) {
+      await Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
+      return;
+    }
+
+    final destination = savedContext == null || savedContext.result == null
         ? const _KakaoCallbackFallbackPage()
         : BookingCompletePage(
             authController: authController,
-            result: savedContext.result,
+            result: savedContext.result!,
             serviceLabel: savedContext.serviceLabel,
             origin: savedContext.origin,
             destination: savedContext.destination,

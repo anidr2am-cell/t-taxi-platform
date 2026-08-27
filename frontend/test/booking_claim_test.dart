@@ -92,7 +92,7 @@ void main() {
 
       expect(authController.pendingClaimContextForTest, isNotNull);
       expect(
-        authController.pendingClaimContextForTest!.result.bookingNumber,
+        authController.pendingClaimContextForTest!.result!.bookingNumber,
         'TX202607010001',
       );
 
