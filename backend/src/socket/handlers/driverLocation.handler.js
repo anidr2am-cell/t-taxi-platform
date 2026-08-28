@@ -111,7 +111,12 @@ function registerDriverLocationHandlers(io, socket) {
         err.errorCode = ERROR_CODES.VALIDATION_ERROR;
         throw err;
       }
-      const result = await getService().getGuestDriverLocation(bookingId, socket.data.guestAccessToken);
+      const authUser = socket.data.authUser ?? null;
+      const guestAccessToken = socket.data.guestAccessToken ?? null;
+      const result = await getService().getDriverLocation(bookingId, {
+        authUser,
+        guestAccessToken,
+      });
       if (result.available !== true) {
         const err = new Error('Booking is not trackable');
         err.errorCode = ERROR_CODES.BOOKING_NOT_TRACKABLE;

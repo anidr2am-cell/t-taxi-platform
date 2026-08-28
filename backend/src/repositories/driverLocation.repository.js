@@ -122,47 +122,64 @@ class DriverLocationRepository {
     return rows;
   }
 
+  assignedDriverLocationSelectSql() {
+    return `
+      SELECT
+        b.id AS booking_id,
+        b.booking_number,
+        b.status AS booking_status,
+        d.id AS driver_id,
+        d.name AS driver_name,
+        d.current_lat,
+        d.current_lng,
+        d.current_accuracy_meters,
+        d.current_heading,
+        d.current_speed_kph,
+        d.location_recorded_at,
+        d.location_updated_at,
+        d.last_seen_at,
+        vt.name AS vehicle_type_name,
+        dv.plate_number AS vehicle_plate,
+        dv.model_name AS vehicle_model
+      FROM bookings b
+      LEFT JOIN booking_driver_assignments bda ON bda.booking_id = b.id
+        AND bda.is_active = 1
+        AND bda.deleted_at IS NULL
+        AND bda.status IN ('ASSIGNED', 'ACCEPTED')
+      LEFT JOIN drivers d ON d.id = bda.driver_id
+        AND d.deleted_at IS NULL
+        AND d.is_active = 1
+        AND d.is_archived = 0
+      LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id
+        AND dv.is_primary = 1
+        AND dv.is_active = 1
+        AND dv.deleted_at IS NULL
+      LEFT JOIN vehicle_types vt ON vt.id = COALESCE(dv.vehicle_type_id, d.primary_vehicle_type_id)
+        AND vt.deleted_at IS NULL
+      WHERE b.id = ? AND b.deleted_at IS NULL AND b.is_archived = 0
+      LIMIT 1
+    `;
+  }
+
+  async findAssignedDriverLocationByBookingId(bookingId) {
+    const [rows] = await this.pool.query(
+      this.assignedDriverLocationSelectSql(),
+      [bookingId],
+    );
+    return rows[0] || null;
+  }
+
   async findGuestAssignedDriverLocation(bookingId, tokenHash) {
     const [rows] = await this.pool.query(
       `
-        SELECT
-          b.id AS booking_id,
-          b.booking_number,
-          b.status AS booking_status,
-          d.id AS driver_id,
-          d.name AS driver_name,
-          d.current_lat,
-          d.current_lng,
-          d.current_accuracy_meters,
-          d.current_heading,
-          d.current_speed_kph,
-          d.location_recorded_at,
-          d.location_updated_at,
-          d.last_seen_at,
-          vt.name AS vehicle_type_name,
-          dv.plate_number AS vehicle_plate,
-          dv.model_name AS vehicle_model
-        FROM bookings b
+        ${this.assignedDriverLocationSelectSql().replace(
+          'FROM bookings b',
+          `FROM bookings b
         INNER JOIN guest_access_tokens gat ON gat.booking_id = b.id
           AND gat.token_hash = ?
           AND gat.revoked_at IS NULL
-          AND gat.expires_at > CURRENT_TIMESTAMP
-        LEFT JOIN booking_driver_assignments bda ON bda.booking_id = b.id
-          AND bda.is_active = 1
-          AND bda.deleted_at IS NULL
-          AND bda.status IN ('ASSIGNED', 'ACCEPTED')
-        LEFT JOIN drivers d ON d.id = bda.driver_id
-          AND d.deleted_at IS NULL
-          AND d.is_active = 1
-          AND d.is_archived = 0
-        LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id
-          AND dv.is_primary = 1
-          AND dv.is_active = 1
-          AND dv.deleted_at IS NULL
-        LEFT JOIN vehicle_types vt ON vt.id = COALESCE(dv.vehicle_type_id, d.primary_vehicle_type_id)
-          AND vt.deleted_at IS NULL
-        WHERE b.id = ? AND b.deleted_at IS NULL AND b.is_archived = 0
-        LIMIT 1
+          AND gat.expires_at > CURRENT_TIMESTAMP`,
+        )}
       `,
       [tokenHash, bookingId],
     );

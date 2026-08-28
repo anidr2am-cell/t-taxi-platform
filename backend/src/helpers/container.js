@@ -395,7 +395,12 @@ container.register(
 container.register(
   "driverLocationService",
   (c) =>
-    new DriverLocationService(database.pool, c.get("driverLocationRepository")),
+    new DriverLocationService(
+      database.pool,
+      c.get("driverLocationRepository"),
+      c.get("bookingRepository"),
+      c.get("bookingService"),
+    ),
 );
 container.register("settingsRepository", () => new SettingsRepository());
 container.register(

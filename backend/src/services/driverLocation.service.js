@@ -1,6 +1,7 @@
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const ROLES = require('../constants/roles');
 const { hashToken } = require('../utils/tokenHash.util');
 const {
   FRESH_LOCATION_MS,
@@ -9,9 +10,16 @@ const {
 } = require('../constants/driverLocation');
 
 class DriverLocationService {
-  constructor(pool, driverLocationRepository) {
+  constructor(
+    pool,
+    driverLocationRepository,
+    bookingRepository = null,
+    bookingService = null,
+  ) {
     this.pool = pool;
     this.driverLocationRepository = driverLocationRepository;
+    this.bookingRepository = bookingRepository;
+    this.bookingService = bookingService;
   }
 
   toSqlDateTime(date) {
@@ -246,24 +254,7 @@ class DriverLocationService {
     return { items };
   }
 
-  async getGuestDriverLocation(bookingId, guestAccessToken) {
-    const token = String(guestAccessToken ?? '').trim();
-    if (!token) {
-      throw new AppError('Booking is not accessible', {
-        statusCode: HTTP_STATUS.FORBIDDEN,
-        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
-      });
-    }
-    const row = await this.driverLocationRepository.findGuestAssignedDriverLocation(
-      bookingId,
-      hashToken(token),
-    );
-    if (!row) {
-      throw new AppError('Booking is not accessible', {
-        statusCode: HTTP_STATUS.FORBIDDEN,
-        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
-      });
-    }
+  buildDriverLocationResponse(row) {
     if (TERMINAL_BOOKING_STATUSES.has(row.booking_status) || !TRACKABLE_BOOKING_STATUSES.has(row.booking_status)) {
       return {
         available: false,
@@ -289,6 +280,85 @@ class DriverLocationService {
       bookingStatus: row.booking_status,
       driver,
     };
+  }
+
+  async getCustomerDriverLocation(bookingId, authUser) {
+    const conn = await this.pool.getConnection();
+    try {
+      const booking = await this.bookingRepository.findById(bookingId, conn);
+      if (!booking) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+
+      await this.bookingService.assertCustomerOrGuestAccess(
+        conn,
+        booking,
+        authUser,
+        null,
+      );
+    } finally {
+      conn.release();
+    }
+
+    const row = await this.driverLocationRepository.findAssignedDriverLocationByBookingId(
+      bookingId,
+    );
+    if (!row) {
+      throw new AppError('Booking is not accessible', {
+        statusCode: HTTP_STATUS.FORBIDDEN,
+        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+      });
+    }
+    return this.buildDriverLocationResponse(row);
+  }
+
+  async getDriverLocation(bookingId, { authUser = null, guestAccessToken = null } = {}) {
+    if (
+      authUser?.role === ROLES.CUSTOMER
+      && this.bookingService
+      && this.bookingRepository
+      && this.pool
+    ) {
+      const conn = await this.pool.getConnection();
+      try {
+        const booking = await this.bookingRepository.findById(bookingId, conn);
+        if (
+          booking
+          && booking.customer_user_id
+          && booking.customer_user_id === authUser.id
+        ) {
+          return this.getCustomerDriverLocation(bookingId, authUser);
+        }
+      } finally {
+        conn.release();
+      }
+    }
+
+    return this.getGuestDriverLocation(bookingId, guestAccessToken);
+  }
+
+  async getGuestDriverLocation(bookingId, guestAccessToken) {
+    const token = String(guestAccessToken ?? '').trim();
+    if (!token) {
+      throw new AppError('Booking is not accessible', {
+        statusCode: HTTP_STATUS.FORBIDDEN,
+        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+      });
+    }
+    const row = await this.driverLocationRepository.findGuestAssignedDriverLocation(
+      bookingId,
+      hashToken(token),
+    );
+    if (!row) {
+      throw new AppError('Booking is not accessible', {
+        statusCode: HTTP_STATUS.FORBIDDEN,
+        errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+      });
+    }
+    return this.buildDriverLocationResponse(row);
   }
 
   async canGuestAccessBooking(bookingId, guestAccessToken) {

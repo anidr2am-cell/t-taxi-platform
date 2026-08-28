@@ -29,6 +29,85 @@ function sign(role = 'DRIVER', id = 44) {
   );
 }
 
+function signCustomer(id = 42) {
+  return sign(ROLES.CUSTOMER, id);
+}
+
+function buildDriverLocationService({
+  customerUserId = 42,
+  locationRow = {
+    booking_number: 'TX202607010001',
+    booking_status: 'ON_ROUTE',
+    driver_id: 7,
+    driver_name: 'Somchai',
+    current_lat: 12.9,
+    current_lng: 100.8,
+    location_updated_at: new Date().toISOString(),
+  },
+} = {}) {
+  const bookingRepository = {
+    async findById(bookingId) {
+      if (bookingId !== 10) {
+        return null;
+      }
+      return {
+        id: 10,
+        booking_number: 'TX202607010001',
+        customer_user_id: customerUserId,
+      };
+    },
+  };
+  const bookingService = {
+    async assertCustomerOrGuestAccess(_conn, booking, authUser, guestAccessToken) {
+      if (
+        authUser?.role === ROLES.CUSTOMER
+        && booking.customer_user_id
+        && booking.customer_user_id === authUser.id
+      ) {
+        return;
+      }
+
+      const token = String(guestAccessToken ?? '').trim();
+      if (!token) {
+        const err = new Error('Booking is not accessible');
+        err.errorCode = ERROR_CODES.BOOKING_NOT_ACCESSIBLE;
+        throw err;
+      }
+
+      const accessErr = new Error('Booking is not accessible');
+      accessErr.errorCode = ERROR_CODES.BOOKING_NOT_ACCESSIBLE;
+      throw accessErr;
+    },
+  };
+  const pool = {
+    async getConnection() {
+      return { release() {} };
+    },
+  };
+  const driverLocationRepository = {
+    async findAssignedDriverLocationByBookingId(bookingId) {
+      if (bookingId !== 10) {
+        return null;
+      }
+      return locationRow;
+    },
+    async findGuestAssignedDriverLocation(bookingId, tokenHash) {
+      const { hashToken } = require('../src/utils/tokenHash.util');
+      if (bookingId !== 10 || tokenHash !== hashToken('guest-token')) {
+        return null;
+      }
+      return locationRow;
+    },
+  };
+
+  return new DriverLocationService(
+    pool,
+    driverLocationRepository,
+    bookingRepository,
+    bookingService,
+  );
+}
+
 function registerDriverLocationService(service) {
   container.register('driverLocationService', () => service);
 }
@@ -163,7 +242,7 @@ test('admin driver location snapshot requires ADMIN role and returns no private 
 
 test('guest can access only assigned driver for own booking', async () => {
   registerDriverLocationService({
-    async getGuestDriverLocation(bookingId, guestAccessToken) {
+    async getDriverLocation(bookingId, { guestAccessToken }) {
       assert.equal(bookingId, 99);
       assert.equal(guestAccessToken, 'guest-token');
       return {
@@ -463,7 +542,7 @@ test('socket guest cannot subscribe to another booking', async () => {
   const io = buildIo();
   const socket = buildSocket({ guestAccessToken: 'guest-token' });
   registerDriverLocationService({
-    async getGuestDriverLocation() {
+    async getDriverLocation() {
       const err = new Error('Booking is not accessible');
       err.errorCode = ERROR_CODES.BOOKING_NOT_ACCESSIBLE;
       throw err;
@@ -486,7 +565,7 @@ test('socket guest cannot subscribe before live location is trackable', async ()
   const io = buildIo();
   const socket = buildSocket({ guestAccessToken: 'guest-token' });
   registerDriverLocationService({
-    async getGuestDriverLocation(bookingId, guestAccessToken) {
+    async getDriverLocation(bookingId, { guestAccessToken }) {
       assert.equal(bookingId, 99);
       assert.equal(guestAccessToken, 'guest-token');
       return {
@@ -525,4 +604,85 @@ test('socket admin room subscription requires admin role', async () => {
   await driverSocket.handlers['driver-location:admin:subscribe']({}, (value) => { ack = value; });
   assert.equal(ack.ok, false);
   assert.equal(driverSocket.joinedRooms.has(ADMIN_DRIVER_LOCATION_ROOM), false);
+});
+
+test('driver location service allows customer JWT owner without guest token', async () => {
+  const service = buildDriverLocationService({ customerUserId: 42 });
+
+  const result = await service.getDriverLocation(10, {
+    authUser: { id: 42, role: ROLES.CUSTOMER },
+    guestAccessToken: null,
+  });
+
+  assert.equal(result.available, true);
+  assert.equal(result.driver.displayName, 'Somchai');
+});
+
+test('driver location service rejects customer JWT for another users booking', async () => {
+  const service = buildDriverLocationService({ customerUserId: 42 });
+
+  await assert.rejects(
+    () => service.getDriverLocation(10, {
+      authUser: { id: 99, role: ROLES.CUSTOMER },
+      guestAccessToken: null,
+    }),
+    (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
+  );
+});
+
+test('customer JWT driver location route returns assigned driver location', async () => {
+  registerDriverLocationService(buildDriverLocationService({ customerUserId: 42 }));
+
+  const res = await request(app)
+    .get('/api/v1/public/bookings/10/driver-location')
+    .set('Authorization', `Bearer ${signCustomer(42)}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.available, true);
+  assert.equal(res.body.data.driver.displayName, 'Somchai');
+  assert.equal(res.body.data.driver.driverId, undefined);
+});
+
+test('customer JWT driver location route rejects another users booking', async () => {
+  registerDriverLocationService(buildDriverLocationService({ customerUserId: 42 }));
+
+  const res = await request(app)
+    .get('/api/v1/public/bookings/10/driver-location')
+    .set('Authorization', `Bearer ${signCustomer(99)}`);
+
+  assert.equal(res.status, 403);
+  assert.equal(res.body.error_code, ERROR_CODES.BOOKING_NOT_ACCESSIBLE);
+});
+
+test('socket customer JWT can subscribe to own booking driver location room', async () => {
+  const io = buildIo();
+  const socket = buildSocket({ authUser: { id: 42, role: ROLES.CUSTOMER } });
+  registerDriverLocationService(buildDriverLocationService({ customerUserId: 42 }));
+  registerDriverLocationHandlers(io, socket);
+
+  let ack;
+  await socket.handlers['booking:driver-location:subscribe'](
+    { bookingId: 10 },
+    (value) => { ack = value; },
+  );
+
+  assert.equal(ack.ok, true);
+  assert.equal(socket.joinedRooms.has(bookingDriverLocationRoom(10)), true);
+});
+
+test('socket customer JWT cannot subscribe to another users booking', async () => {
+  const io = buildIo();
+  const socket = buildSocket({ authUser: { id: 99, role: ROLES.CUSTOMER } });
+  registerDriverLocationService(buildDriverLocationService({ customerUserId: 42 }));
+  registerDriverLocationHandlers(io, socket);
+
+  let ack;
+  await socket.handlers['booking:driver-location:subscribe'](
+    { bookingId: 10 },
+    (value) => { ack = value; },
+  );
+
+  assert.equal(ack.ok, false);
+  assert.equal(socket.joinedRooms.size, 0);
+  assert.equal(ack.error.code, ERROR_CODES.BOOKING_NOT_ACCESSIBLE);
 });

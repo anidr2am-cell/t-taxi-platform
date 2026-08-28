@@ -48,6 +48,7 @@ router.delete(
 router.get(
   '/bookings/:bookingId/driver-location',
   bookingLookupRateLimit,
+  optionalAuthMiddleware,
   validate({ params: bookingIdParamsSchema }),
   driverLocationController.getGuestDriverLocation,
 );

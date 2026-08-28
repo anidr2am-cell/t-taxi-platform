@@ -20,9 +20,12 @@ const listAdminDriverLocations = asyncHandler(async (req, res) => {
 });
 
 const getGuestDriverLocation = asyncHandler(async (req, res) => {
-  const data = await getDriverLocationService().getGuestDriverLocation(
+  const data = await getDriverLocationService().getDriverLocation(
     Number(req.params.bookingId),
-    extractGuestAccessTokenFromHeader(req),
+    {
+      authUser: req.user ?? null,
+      guestAccessToken: extractGuestAccessTokenFromHeader(req),
+    },
   );
   return success(res, data);
 });
