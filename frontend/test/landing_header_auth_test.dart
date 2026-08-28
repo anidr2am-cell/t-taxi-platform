@@ -110,7 +110,9 @@ void main() {
     expect(find.text('Google로 계속하기'), findsWidgets);
   });
 
-  testWidgets('signed-in auth icon navigates to my bookings', (tester) async {
+  testWidgets('signed-in auth icon opens account menu with two actions', (
+    tester,
+  ) async {
     final authController = await prepareAuthController(
       initialPrefs: {
         AuthTokenStorage.accessTokenKey: 'saved-access',
@@ -136,7 +138,71 @@ void main() {
     await tester.tap(find.byKey(const Key('landing_header_auth_button')));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('landing_header_my_bookings_menu')), findsOneWidget);
+    expect(find.byKey(const Key('landing_header_logout_menu')), findsOneWidget);
+  });
+
+  testWidgets('account menu my bookings item navigates to my bookings', (
+    tester,
+  ) async {
+    final authController = await prepareAuthController(
+      initialPrefs: {
+        AuthTokenStorage.accessTokenKey: 'saved-access',
+        AuthTokenStorage.refreshTokenKey: 'saved-refresh',
+        AuthTokenStorage.userJsonKey: jsonEncode({
+          'id': 7,
+          'email': 'saved@example.com',
+          'role': 'CUSTOMER',
+          'name': 'Saved User',
+          'phone': null,
+          'locale': 'ko',
+          'isActive': true,
+        }),
+      },
+    );
+
+    await tester.pumpWidget(wrapLanding(authController: authController));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('landing_header_auth_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('landing_header_my_bookings_menu')));
+    await tester.pumpAndSettle();
+
     expect(find.byType(MyBookingsPage), findsOneWidget);
+  });
+
+  testWidgets('account menu logout signs out and shows outline icon', (
+    tester,
+  ) async {
+    final authController = await prepareAuthController(
+      initialPrefs: {
+        AuthTokenStorage.accessTokenKey: 'saved-access',
+        AuthTokenStorage.refreshTokenKey: 'saved-refresh',
+        AuthTokenStorage.userJsonKey: jsonEncode({
+          'id': 7,
+          'email': 'saved@example.com',
+          'role': 'CUSTOMER',
+          'name': 'Saved User',
+          'phone': null,
+          'locale': 'ko',
+          'isActive': true,
+        }),
+      },
+    );
+
+    await tester.pumpWidget(wrapLanding(authController: authController));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('landing_header_auth_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('landing_header_logout_menu')));
+    await tester.pumpAndSettle();
+
+    expect(authController.isLoggedIn, isFalse);
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+    expect(find.byIcon(Icons.person), findsNothing);
+    expect(find.text('로그아웃되었습니다'), findsOneWidget);
   });
 
   testWidgets('google sign-in from bottom sheet closes sheet and fills icon', (

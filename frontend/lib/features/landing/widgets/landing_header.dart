@@ -73,21 +73,86 @@ class _AuthHeaderButton extends StatelessWidget {
         }
 
         final isLoggedIn = controller.isLoggedIn;
-        return _HeaderIconButton(
-          buttonKey: const Key('landing_header_auth_button'),
-          tooltip: isLoggedIn
-              ? l10n.t('landing_my_bookings_button')
-              : l10n.t('landing_login_sheet_title'),
-          icon: isLoggedIn ? Icons.person : Icons.person_outline,
-          onPressed: () {
-            if (isLoggedIn) {
-              Navigator.of(context).pushNamed('/my-bookings');
-              return;
-            }
-            showLandingAuthBottomSheet(context);
-          },
+        if (!isLoggedIn) {
+          return _HeaderIconButton(
+            buttonKey: const Key('landing_header_auth_button'),
+            tooltip: l10n.t('landing_login_sheet_title'),
+            icon: Icons.person_outline,
+            onPressed: () => showLandingAuthBottomSheet(context),
+          );
+        }
+
+        return _LoggedInAuthHeaderButton(
+          l10n: l10n,
+          controller: controller,
         );
       },
+    );
+  }
+}
+
+enum _AuthHeaderMenuAction { myBookings, logout }
+
+class _LoggedInAuthHeaderButton extends StatelessWidget {
+  const _LoggedInAuthHeaderButton({
+    required this.l10n,
+    required this.controller,
+  });
+
+  final AppLocalizations l10n;
+  final AuthController controller;
+
+  Future<void> _handleSelection(
+    BuildContext context,
+    _AuthHeaderMenuAction action,
+  ) async {
+    switch (action) {
+      case _AuthHeaderMenuAction.myBookings:
+        await Navigator.of(context).pushNamed('/my-bookings');
+      case _AuthHeaderMenuAction.logout:
+        await controller.signOut();
+        if (!context.mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('landing_header_logout_success'))),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: l10n.t('landing_my_bookings_button'),
+      child: PopupMenuButton<_AuthHeaderMenuAction>(
+        key: const Key('landing_header_auth_button'),
+        tooltip: l10n.t('landing_my_bookings_button'),
+        offset: const Offset(0, 44),
+        shape: RoundedRectangleBorder(borderRadius: AppTokens.borderRadiusMd),
+        onSelected: (action) => _handleSelection(context, action),
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            key: const Key('landing_header_my_bookings_menu'),
+            value: _AuthHeaderMenuAction.myBookings,
+            child: Text(l10n.t('landing_header_my_bookings_menu')),
+          ),
+          PopupMenuItem(
+            key: const Key('landing_header_logout_menu'),
+            value: _AuthHeaderMenuAction.logout,
+            child: Text(l10n.t('landing_header_logout_menu')),
+          ),
+        ],
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: IconButton.filledTonal(
+            onPressed: null,
+            style: LandingClickableStyles.iconButtonStyle(),
+            icon: const Icon(Icons.person, size: 22),
+          ),
+        ),
+      ),
     );
   }
 }
