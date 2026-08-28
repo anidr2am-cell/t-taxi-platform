@@ -108,11 +108,30 @@ class DriverLocationApiService {
 
   Future<GuestDriverLocationResult> getGuestDriverLocation({
     required int bookingId,
-    required String guestAccessToken,
+    String guestAccessToken = '',
+    String? customerAccessToken,
+    bool useCustomerAuth = false,
   }) async {
+    final headers = <String, String>{'Accept': 'application/json'};
+    final guestToken = guestAccessToken.trim();
+    final customerToken = customerAccessToken?.trim() ?? '';
+
+    if (useCustomerAuth && guestToken.isEmpty && customerToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $customerToken';
+    } else if (guestToken.isNotEmpty) {
+      headers['X-Guest-Access-Token'] = guestToken;
+    } else if (customerToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $customerToken';
+    } else {
+      throw const DriverLocationApiException(
+        'Booking is not accessible',
+        errorCode: 'BOOKING_NOT_ACCESSIBLE',
+      );
+    }
+
     final response = await _client.get(
       Uri.parse('$_base/public/bookings/$bookingId/driver-location'),
-      headers: {'Accept': 'application/json', 'X-Guest-Access-Token': guestAccessToken},
+      headers: headers,
     );
     return GuestDriverLocationResult.fromJson(
       Map<String, dynamic>.from(await _decode(response) as Map),

@@ -205,11 +205,14 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       'DRIVER_ARRIVED',
       'PICKED_UP',
     };
+    final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
+    final hasCustomerToken =
+        widget.fromMyBookings && _customerAccessToken?.trim().isNotEmpty == true;
     return widget.enableCustomerTools &&
         result.bookingId != null &&
         result.capabilities.trackingAvailable &&
         trackingStatuses.contains(result.status) &&
-        result.guestAccessToken.trim().isNotEmpty;
+        (hasGuestToken || hasCustomerToken);
   }
 
   bool _canShowNotifications(GuestBookingLookupResult result) {
@@ -238,6 +241,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           bookingId: result.bookingId!,
           guestAccessToken: result.guestAccessToken,
           bookingStatus: result.status,
+          useCustomerAuth: widget.fromMyBookings,
+          customerAccessToken:
+              widget.fromMyBookings ? _customerAccessToken : null,
         );
   }
 

@@ -9,6 +9,10 @@ import 'package:frontend/features/booking/services/customer_bookings_api_service
 import 'package:frontend/features/booking/services/guest_booking_lookup_service.dart';
 import 'package:frontend/features/booking/widgets/booking_notification_section.dart';
 import 'package:frontend/features/booking/widgets/booking_review_form.dart';
+import 'package:frontend/features/driver_location/models/driver_location.dart';
+import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
+import 'package:frontend/features/driver_location/services/driver_location_socket_service.dart';
+import 'package:frontend/features/driver_location/widgets/guest_driver_tracking_section.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -130,6 +134,40 @@ class _FakeReviewApi extends BookingReviewApi {
   }
 }
 
+class _FakeMyBookingsTrackingApi extends DriverLocationApiService {
+  _FakeMyBookingsTrackingApi(this.result);
+
+  final GuestDriverLocationResult result;
+  int calls = 0;
+  String? lastCustomerToken;
+  bool lastUseCustomerAuth = false;
+
+  @override
+  Future<GuestDriverLocationResult> getGuestDriverLocation({
+    required int bookingId,
+    String guestAccessToken = '',
+    String? customerAccessToken,
+    bool useCustomerAuth = false,
+  }) async {
+    calls += 1;
+    lastCustomerToken = customerAccessToken;
+    lastUseCustomerAuth = useCustomerAuth;
+    return result;
+  }
+}
+
+class _FakeMyBookingsTrackingSocket extends DriverLocationSocketService {
+  String? connectedAccessToken;
+
+  @override
+  Future<void> connect({String? accessToken, String? guestAccessToken}) async {
+    connectedAccessToken = accessToken;
+  }
+
+  @override
+  void subscribeGuest(int bookingId) {}
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -243,6 +281,81 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('+66 80 000 0000'), findsNothing);
+  });
+
+  testWidgets('fromMyBookings shows tracking section and uses customer JWT', (
+    tester,
+  ) async {
+    final trackingApi = _FakeMyBookingsTrackingApi(
+      GuestDriverLocationResult(
+        available: true,
+        bookingStatus: 'ON_ROUTE',
+        driver: DriverLocation(
+          driverId: 0,
+          displayName: 'Driver A',
+          vehicle: 'SUV / 1กข1234',
+          latitude: 12.9,
+          longitude: 100.8,
+          stale: false,
+        ),
+      ),
+    );
+    final trackingSocket = _FakeMyBookingsTrackingSocket();
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: createSignedOutAuthController(),
+        locale: const Locale('en'),
+        includeAppLocalizations: true,
+        home: GuestBookingLookupPage(
+          fromMyBookings: true,
+          enableCustomerTools: true,
+          initialResult: _myBookingDetail(status: 'ON_ROUTE'),
+          trackingBuilder: (result) => GuestDriverTrackingSection(
+            bookingId: result.bookingId!,
+            guestAccessToken: result.guestAccessToken,
+            bookingStatus: result.status,
+            useCustomerAuth: true,
+            customerAccessToken: 'customer-jwt',
+            api: trackingApi,
+            socket: trackingSocket,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Driver location'), findsOneWidget);
+    expect(trackingApi.calls, greaterThanOrEqualTo(1));
+    expect(trackingApi.lastCustomerToken, 'customer-jwt');
+    expect(trackingApi.lastUseCustomerAuth, isTrue);
+    expect(trackingSocket.connectedAccessToken, 'customer-jwt');
+  });
+
+  testWidgets('fromMyBookings renders default tracking section without guest token', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: createSignedOutAuthController(),
+        locale: const Locale('en'),
+        includeAppLocalizations: true,
+        home: GuestBookingLookupPage(
+          fromMyBookings: true,
+          enableCustomerTools: true,
+          initialResult: _myBookingDetail(status: 'DRIVER_ASSIGNED'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GuestDriverTrackingSection), findsOneWidget);
+    final section = tester.widget<GuestDriverTrackingSection>(
+      find.byType(GuestDriverTrackingSection),
+    );
+    expect(section.useCustomerAuth, isTrue);
+    expect(section.customerAccessToken, 'customer-jwt');
+    expect(section.guestAccessToken, isEmpty);
   });
 
   test('cancelBooking uses JWT when guest token is missing', () async {

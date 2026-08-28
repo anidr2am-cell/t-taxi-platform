@@ -16,7 +16,9 @@ class GuestDriverTrackingSection extends StatefulWidget {
   const GuestDriverTrackingSection({
     super.key,
     required this.bookingId,
-    required this.guestAccessToken,
+    this.guestAccessToken = '',
+    this.customerAccessToken,
+    this.useCustomerAuth = false,
     required this.bookingStatus,
     this.api,
     this.socket,
@@ -24,6 +26,8 @@ class GuestDriverTrackingSection extends StatefulWidget {
 
   final int bookingId;
   final String guestAccessToken;
+  final String? customerAccessToken;
+  final bool useCustomerAuth;
   final String bookingStatus;
   final DriverLocationApiService? api;
   final DriverLocationSocketService? socket;
@@ -60,6 +64,7 @@ class _GuestDriverTrackingSectionState
   Timer? _staleTimer;
   late String _currentBookingStatus;
   late String _currentGuestAccessToken;
+  String? _currentCustomerAccessToken;
   bool _loading = false;
   bool _connected = false;
   bool _locationLifecycleStarted = false;
@@ -72,18 +77,24 @@ class _GuestDriverTrackingSectionState
 
   bool get _terminal => _terminalStatuses.contains(_currentBookingStatus);
 
-  bool get _canLoadLocation =>
-      _locationStatuses.contains(_currentBookingStatus) &&
-      _currentGuestAccessToken.trim().isNotEmpty;
+  bool get _hasAuth {
+    final guestToken = _currentGuestAccessToken.trim();
+    final customerToken = _currentCustomerAccessToken?.trim() ?? '';
+    return guestToken.isNotEmpty ||
+        (widget.useCustomerAuth && customerToken.isNotEmpty);
+  }
 
-  bool get _canPollStatus =>
-      _visible && _currentGuestAccessToken.trim().isNotEmpty;
+  bool get _canLoadLocation =>
+      _locationStatuses.contains(_currentBookingStatus) && _hasAuth;
+
+  bool get _canPollStatus => _visible && _hasAuth;
 
   @override
   void initState() {
     super.initState();
     _currentBookingStatus = widget.bookingStatus;
     _currentGuestAccessToken = widget.guestAccessToken;
+    _currentCustomerAccessToken = widget.customerAccessToken;
     _syncLifecycle();
   }
 
@@ -92,10 +103,13 @@ class _GuestDriverTrackingSectionState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.bookingId != widget.bookingId ||
         oldWidget.guestAccessToken != widget.guestAccessToken ||
+        oldWidget.customerAccessToken != widget.customerAccessToken ||
+        oldWidget.useCustomerAuth != widget.useCustomerAuth ||
         oldWidget.bookingStatus != widget.bookingStatus) {
       _generation += 1;
       _currentBookingStatus = widget.bookingStatus;
       _currentGuestAccessToken = widget.guestAccessToken;
+      _currentCustomerAccessToken = widget.customerAccessToken;
       _resetLocationLifecycle();
       _statusPollingTimer?.cancel();
       _syncLifecycle();
@@ -189,6 +203,8 @@ class _GuestDriverTrackingSectionState
       final result = await _api.getGuestDriverLocation(
         bookingId: widget.bookingId,
         guestAccessToken: _currentGuestAccessToken,
+        customerAccessToken: _currentCustomerAccessToken,
+        useCustomerAuth: widget.useCustomerAuth,
       );
       if (!mounted || generation != _generation) return;
       _applyTrackingSnapshot(result);
@@ -317,7 +333,13 @@ class _GuestDriverTrackingSectionState
       if (!mounted || generation != _generation) return;
       setState(() => _connected = _socket.connected);
     };
-    await _socket.connect(guestAccessToken: _currentGuestAccessToken);
+    final guestToken = _currentGuestAccessToken.trim();
+    final customerToken = _currentCustomerAccessToken?.trim() ?? '';
+    if (guestToken.isNotEmpty) {
+      await _socket.connect(guestAccessToken: guestToken);
+    } else if (widget.useCustomerAuth && customerToken.isNotEmpty) {
+      await _socket.connect(accessToken: customerToken);
+    }
     if (!mounted || generation != _generation || !_canLoadLocation) return;
     _socket.subscribeGuest(widget.bookingId);
   }

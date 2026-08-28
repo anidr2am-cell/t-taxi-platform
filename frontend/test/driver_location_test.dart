@@ -135,6 +135,71 @@ void main() {
     expect(result.available, true);
   });
 
+  test('customer location uses bearer token when useCustomerAuth and no guest token', () async {
+    Uri? uri;
+    Map<String, String>? headers;
+    final api = DriverLocationApiService(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        uri = request.url;
+        headers = request.headers;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'available': true,
+              'driver': {
+                'displayName': 'Somchai',
+                'latitude': 12.9,
+                'longitude': 100.8,
+                'stale': false,
+              },
+            },
+          }),
+          200,
+        );
+      }),
+    );
+
+    final result = await api.getGuestDriverLocation(
+      bookingId: 10,
+      useCustomerAuth: true,
+      customerAccessToken: 'customer-jwt',
+    );
+
+    expect(uri!.path, '/api/v1/public/bookings/10/driver-location');
+    expect(headers!['Authorization'], 'Bearer customer-jwt');
+    expect(headers!.containsKey('X-Guest-Access-Token'), isFalse);
+    expect(result.available, true);
+  });
+
+  test('guest token takes precedence over customer JWT in location API headers', () async {
+    Map<String, String>? headers;
+    final api = DriverLocationApiService(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        headers = request.headers;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'available': true, 'driver': null},
+          }),
+          200,
+        );
+      }),
+    );
+
+    await api.getGuestDriverLocation(
+      bookingId: 10,
+      guestAccessToken: 'guest-token',
+      customerAccessToken: 'customer-jwt',
+      useCustomerAuth: true,
+    );
+
+    expect(headers!['X-Guest-Access-Token'], 'guest-token');
+    expect(headers!.containsKey('Authorization'), isFalse);
+  });
+
   testWidgets(
     'driver location waits in assigned status before automatic sharing',
     (tester) async {
@@ -858,10 +923,86 @@ void main() {
 
     expect(find.text('Driver location'), findsNothing);
   });
+
+  testWidgets('customer tracking uses JWT for api and socket when guest token missing', (
+    tester,
+  ) async {
+    final api = _FakeGuestLocationApi(
+      result: GuestDriverLocationResult(
+        available: true,
+        bookingNumber: 'TX202607010001',
+        bookingStatus: 'ON_ROUTE',
+        driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+      ),
+    );
+    final socket = _FakeLocationSocket();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GuestDriverTrackingSection(
+            bookingId: 99,
+            guestAccessToken: '',
+            bookingStatus: 'ON_ROUTE',
+            useCustomerAuth: true,
+            customerAccessToken: 'customer-jwt',
+            api: api,
+            socket: socket,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.calls, 1);
+    expect(api.lastGuestToken, isEmpty);
+    expect(api.lastCustomerToken, 'customer-jwt');
+    expect(api.lastUseCustomerAuth, isTrue);
+    expect(socket.connectedAccessToken, 'customer-jwt');
+    expect(socket.connectedGuestToken, isNull);
+    expect(socket.subscribedBookingId, 99);
+    expect(find.text('Driver location sharing'), findsOneWidget);
+  });
+
+  testWidgets('guest token still preferred over customer JWT when both are present', (
+    tester,
+  ) async {
+    final api = _FakeGuestLocationApi(
+      result: GuestDriverLocationResult(
+        available: true,
+        bookingStatus: 'ON_ROUTE',
+        driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+      ),
+    );
+    final socket = _FakeLocationSocket();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GuestDriverTrackingSection(
+            bookingId: 99,
+            guestAccessToken: 'guest-token',
+            bookingStatus: 'ON_ROUTE',
+            useCustomerAuth: true,
+            customerAccessToken: 'customer-jwt',
+            api: api,
+            socket: socket,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.lastGuestToken, 'guest-token');
+    expect(api.lastCustomerToken, 'customer-jwt');
+    expect(socket.connectedGuestToken, 'guest-token');
+    expect(socket.connectedAccessToken, isNull);
+  });
 }
 
 class _FakeLocationSocket extends DriverLocationSocketService {
   String? connectedGuestToken;
+  String? connectedAccessToken;
   int? subscribedBookingId;
   bool disconnected = false;
   int disconnectCalls = 0;
@@ -869,6 +1010,7 @@ class _FakeLocationSocket extends DriverLocationSocketService {
   @override
   Future<void> connect({String? accessToken, String? guestAccessToken}) async {
     connectedGuestToken = guestAccessToken;
+    connectedAccessToken = accessToken;
   }
 
   @override
@@ -926,13 +1068,21 @@ class _FakeGuestLocationApi extends DriverLocationApiService {
 
   final List<GuestDriverLocationResult> results;
   int calls = 0;
+  String lastGuestToken = '';
+  String? lastCustomerToken;
+  bool lastUseCustomerAuth = false;
 
   @override
   Future<GuestDriverLocationResult> getGuestDriverLocation({
     required int bookingId,
-    required String guestAccessToken,
+    String guestAccessToken = '',
+    String? customerAccessToken,
+    bool useCustomerAuth = false,
   }) async {
     calls += 1;
+    lastGuestToken = guestAccessToken;
+    lastCustomerToken = customerAccessToken;
+    lastUseCustomerAuth = useCustomerAuth;
     final index = (calls - 1).clamp(0, results.length - 1).toInt();
     return results[index];
   }
