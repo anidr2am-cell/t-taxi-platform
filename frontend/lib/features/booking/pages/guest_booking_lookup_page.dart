@@ -198,6 +198,15 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
   }
 
+  bool _hasGuestToken(GuestBookingLookupResult result) =>
+      result.guestAccessToken.trim().isNotEmpty;
+
+  bool _hasCustomerTokenLoaded() =>
+      widget.fromMyBookings && _customerAccessToken?.trim().isNotEmpty == true;
+
+  bool _hasBookingCustomerAuth(GuestBookingLookupResult result) =>
+      _hasGuestToken(result) || _hasCustomerTokenLoaded();
+
   bool _canShowTracking(GuestBookingLookupResult result) {
     const trackingStatuses = {
       'DRIVER_ASSIGNED',
@@ -205,23 +214,17 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       'DRIVER_ARRIVED',
       'PICKED_UP',
     };
-    final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
-    final hasCustomerToken =
-        widget.fromMyBookings && _customerAccessToken?.trim().isNotEmpty == true;
     return widget.enableCustomerTools &&
         result.bookingId != null &&
         result.capabilities.trackingAvailable &&
         trackingStatuses.contains(result.status) &&
-        (hasGuestToken || hasCustomerToken);
+        _hasBookingCustomerAuth(result);
   }
 
   bool _canShowNotifications(GuestBookingLookupResult result) {
-    final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
-    final hasCustomerToken =
-        widget.fromMyBookings && _customerAccessToken?.trim().isNotEmpty == true;
     return widget.enableCustomerTools &&
         result.capabilities.notificationsAvailable &&
-        (hasGuestToken || hasCustomerToken);
+        _hasBookingCustomerAuth(result);
   }
 
   bool _canShowDriverPhone(GuestBookingLookupResult result) {
@@ -231,12 +234,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       'DRIVER_ARRIVED',
       'PICKED_UP',
     };
-    final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
-    final hasCustomerToken =
-        widget.fromMyBookings && _customerAccessToken?.trim().isNotEmpty == true;
     return activeStatuses.contains(result.status) &&
         result.driverPhone?.trim().isNotEmpty == true &&
-        (hasGuestToken || hasCustomerToken);
+        _hasBookingCustomerAuth(result);
   }
 
   Widget _trackingSection(GuestBookingLookupResult result) {

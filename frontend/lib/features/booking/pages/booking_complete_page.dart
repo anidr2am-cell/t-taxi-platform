@@ -19,6 +19,7 @@ import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/models/social_login_return_context.dart';
+import '../../auth/services/auth_token_storage.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
 import 'guest_booking_lookup_page.dart';
 
@@ -39,6 +40,7 @@ class BookingCompletePage extends StatefulWidget {
   final bool enableCustomerTools;
   final GuestBookingLookupService? lookupService;
   final AuthController? authController;
+  final AuthTokenStorage? tokenStorage;
 
   const BookingCompletePage({
     super.key,
@@ -58,6 +60,7 @@ class BookingCompletePage extends StatefulWidget {
     this.enableCustomerTools = false,
     this.lookupService,
     this.authController,
+    this.tokenStorage,
   });
 
   @override
@@ -69,6 +72,9 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   late bool _canCancel;
   String? _cancellationDeadline;
   String? _cancellationBlockedReason;
+  late final AuthTokenStorage _tokenStorage =
+      widget.tokenStorage ?? AuthTokenStorage();
+  String? _customerAccessToken;
 
   @override
   void initState() {
@@ -81,8 +87,38 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       widget.result.bookingNumber,
       widget.result.guestAccessToken,
     );
+    _loadCustomerAccessToken();
+    widget.authController?.addListener(_handleAuthSessionChange);
     _persistGuestLookup();
   }
+
+  @override
+  void dispose() {
+    widget.authController?.removeListener(_handleAuthSessionChange);
+    super.dispose();
+  }
+
+  Future<void> _loadCustomerAccessToken() async {
+    final session = await _tokenStorage.loadSession();
+    if (!mounted) return;
+    setState(() => _customerAccessToken = session?.accessToken);
+  }
+
+  void _handleAuthSessionChange() {
+    if (widget.authController?.isLoggedIn == true) {
+      _loadCustomerAccessToken();
+    } else {
+      setState(() => _customerAccessToken = null);
+    }
+  }
+
+  bool get _hasGuestToken =>
+      widget.result.guestAccessToken?.trim().isNotEmpty == true;
+
+  bool get _useCustomerAuth =>
+      _customerAccessToken?.trim().isNotEmpty == true;
+
+  bool get _hasBookingCustomerAuth => _hasGuestToken || _useCustomerAuth;
 
   Future<void> _persistGuestLookup() async {
     final phone = widget.customerPhone?.trim();
@@ -157,7 +193,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   bool get _canShowNotifications =>
       widget.enableCustomerTools &&
       widget.result.bookingId != null &&
-      widget.result.guestAccessToken?.isNotEmpty == true;
+      _hasBookingCustomerAuth;
 
   bool get _canShowTracking {
     const statuses = {
@@ -168,7 +204,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
     };
     return widget.enableCustomerTools &&
         widget.result.bookingId != null &&
-        widget.result.guestAccessToken?.isNotEmpty == true &&
+        _hasBookingCustomerAuth &&
         widget.result.trackingAvailable &&
         statuses.contains(_status);
   }
@@ -176,10 +212,10 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   bool get _canShowReviewForm =>
       widget.enableCustomerTools &&
       _status == 'COMPLETED' &&
-      widget.result.guestAccessToken?.isNotEmpty == true &&
+      _hasBookingCustomerAuth &&
       widget.review == null;
 
-  bool get _canShowCancel => widget.result.guestAccessToken?.isNotEmpty == true;
+  bool get _canShowCancel => _hasBookingCustomerAuth;
 
   Future<void> _copyBookingNumber() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -303,6 +339,8 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 GuestBookingCancelSection(
                   booking: _cancelBookingView,
                   lookupService: widget.lookupService,
+                  customerAccessToken: _customerAccessToken,
+                  tokenStorage: _tokenStorage,
                   onCancelled: (updated) {
                     setState(() {
                       _status = updated.status;
@@ -384,7 +422,9 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 if (_canShowTracking) ...[
                   GuestDriverTrackingSection(
                     bookingId: result.bookingId!,
-                    guestAccessToken: result.guestAccessToken!,
+                    guestAccessToken: result.guestAccessToken ?? '',
+                    customerAccessToken: _customerAccessToken,
+                    useCustomerAuth: _useCustomerAuth,
                     bookingStatus: _status,
                   ),
                   const SizedBox(height: AppTokens.spaceMd),
@@ -418,6 +458,8 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                       bookingNumber: result.bookingNumber,
                       bookingId: result.bookingId,
                       guestAccessToken: result.guestAccessToken,
+                      customerAccessToken: _customerAccessToken,
+                      useCustomerPushRegistration: _useCustomerAuth,
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                   ],
@@ -425,6 +467,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                     BookingReviewForm(
                       bookingNumber: result.bookingNumber,
                       guestAccessToken: result.guestAccessToken,
+                      customerAccessToken: _customerAccessToken,
                       initialState: const {
                         'eligible': true,
                         'submitted': false,

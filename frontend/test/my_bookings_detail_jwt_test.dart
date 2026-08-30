@@ -169,18 +169,6 @@ class _FakeMyBookingsTrackingSocket extends DriverLocationSocketService {
   void subscribeGuest(int bookingId) {}
 }
 
-class _DelayedAuthTokenStorage extends AuthTokenStorage {
-  _DelayedAuthTokenStorage(this.delay);
-
-  final Duration delay;
-
-  @override
-  Future<AuthSession?> loadSession() async {
-    await Future<void>.delayed(delay);
-    return super.loadSession();
-  }
-}
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -232,7 +220,7 @@ void main() {
           fromMyBookings: true,
           enableCustomerTools: true,
           initialResult: _myBookingDetail(),
-          tokenStorage: _DelayedAuthTokenStorage(
+          tokenStorage: DelayedAuthTokenStorage(
             const Duration(milliseconds: 200),
           ),
         ),
@@ -245,6 +233,33 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('+66 80 000 0000'), findsWidgets);
+  });
+
+  testWidgets('fromMyBookings hides notifications until customer JWT loads', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: createSignedOutAuthController(),
+        locale: const Locale('en'),
+        includeAppLocalizations: true,
+        home: GuestBookingLookupPage(
+          fromMyBookings: true,
+          enableCustomerTools: true,
+          initialResult: _myBookingDetail(status: 'COMPLETED', canReview: true),
+          tokenStorage: DelayedAuthTokenStorage(
+            const Duration(milliseconds: 200),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(BookingNotificationSection), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(BookingNotificationSection), findsOneWidget);
   });
 
   testWidgets('fromMyBookings refresh uses customer bookings API', (

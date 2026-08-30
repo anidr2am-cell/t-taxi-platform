@@ -509,6 +509,72 @@ test('claimed booking notification list merges USER and GUEST_BOOKING channels',
   assert.equal(data.items[1].notificationId, 1);
 });
 
+test('claim flow merges guest driver-assigned alert with post-claim user notifications', async () => {
+  const guestDriverAssigned = {
+    id: 1,
+    type: NOTIFICATION_TYPES.DRIVER_ASSIGNED,
+    title: 'Driver assigned (guest channel)',
+    body: 'Driver A is on the way',
+    payload: { bookingNumber: 'TX202607010001' },
+    read_at: null,
+    created_at: '2026-07-01 09:00:00',
+  };
+  const postClaimUserAlert = {
+    id: 2,
+    type: NOTIFICATION_TYPES.BOOKING_CONFIRMED,
+    title: 'Booking saved to your account',
+    body: 'Your booking is now linked.',
+    payload: { bookingNumber: 'TX202607010001' },
+    read_at: null,
+    created_at: '2026-07-01 10:00:00',
+  };
+  const queriedRecipientTypes = [];
+
+  const service = makeService({
+    notificationRepository: {
+      async findByIdempotencyKey() { return null; },
+      async insert() { return 1; },
+      async insertDelivery() {},
+      async findDeliveryByNotificationAndChannel() { return null; },
+      async findDeliveriesByNotificationId() { return []; },
+      async findById(id) { return { id }; },
+      async countNotifications() { return 0; },
+      async findNotifications(filters) {
+        queriedRecipientTypes.push(filters.recipientType);
+        if (filters.recipientType === RECIPIENT_TYPES.GUEST_BOOKING) {
+          return [guestDriverAssigned];
+        }
+        if (filters.recipientType === RECIPIENT_TYPES.USER) {
+          return [postClaimUserAlert];
+        }
+        return [];
+      },
+      async countUnread() { return 0; },
+      async markRead() { return true; },
+      async markAllRead() { return 0; },
+    },
+  });
+
+  const data = await service.getBookingNotifications(
+    'TX202607010001',
+    { id: 8, role: ROLES.CUSTOMER },
+    null,
+    {},
+  );
+
+  assert.equal(queriedRecipientTypes.includes(RECIPIENT_TYPES.USER), true);
+  assert.equal(queriedRecipientTypes.includes(RECIPIENT_TYPES.GUEST_BOOKING), true);
+  assert.equal(data.total, 2);
+  assert.equal(
+    data.items.some((item) => item.title === 'Driver assigned (guest channel)'),
+    true,
+  );
+  assert.equal(
+    data.items.some((item) => item.title === 'Booking saved to your account'),
+    true,
+  );
+});
+
 test('mark read ownership enforced', async () => {
   const service = makeService({
     notificationRepository: {

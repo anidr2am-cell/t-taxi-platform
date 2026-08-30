@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/auth/services/auth_api_service.dart';
+import 'package:frontend/features/auth/models/auth_session.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
 import 'package:frontend/features/auth/services/google_sign_in_service.dart';
 import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
@@ -124,5 +125,18 @@ Future<void> pumpBookingCompleteTestApp(
 
   if (settle) {
     await tester.pumpAndSettle();
+  }
+}
+
+/// Delays [AuthTokenStorage.loadSession] for JWT load timing widget tests.
+class DelayedAuthTokenStorage extends AuthTokenStorage {
+  DelayedAuthTokenStorage(this.delay);
+
+  final Duration delay;
+
+  @override
+  Future<AuthSession?> loadSession() async {
+    await Future<void>.delayed(delay);
+    return super.loadSession();
   }
 }
