@@ -7,6 +7,8 @@ class AuthUser {
     this.phone,
     this.locale,
     this.isActive = true,
+    this.authProvider,
+    this.linkedProviders = const [],
   });
 
   final int id;
@@ -16,6 +18,8 @@ class AuthUser {
   final String? phone;
   final String? locale;
   final bool isActive;
+  final String? authProvider;
+  final List<String> linkedProviders;
 
   String get displayLabel {
     final trimmedName = name?.trim();
@@ -30,6 +34,11 @@ class AuthUser {
   }
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
+    final rawProviders = json['linkedProviders'];
+    final linkedProviders = rawProviders is List
+        ? rawProviders.map((item) => item.toString()).toList()
+        : const <String>[];
+
     return AuthUser(
       id: json['id'] as int,
       role: json['role'] as String,
@@ -38,6 +47,8 @@ class AuthUser {
       phone: json['phone'] as String?,
       locale: json['locale'] as String?,
       isActive: json['isActive'] as bool? ?? true,
+      authProvider: json['authProvider'] as String?,
+      linkedProviders: linkedProviders,
     );
   }
 
@@ -49,5 +60,7 @@ class AuthUser {
     'phone': phone,
     'locale': locale,
     'isActive': isActive,
+    if (authProvider != null) 'authProvider': authProvider,
+    if (linkedProviders.isNotEmpty) 'linkedProviders': linkedProviders,
   };
 }

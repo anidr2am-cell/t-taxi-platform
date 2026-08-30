@@ -53,6 +53,15 @@ class LandingSocialSignInContent extends StatelessWidget {
             style: const TextStyle(color: AppTokens.error),
           ),
         ],
+        const SizedBox(height: AppTokens.spaceSm),
+        Text(
+          l10n.t('auth_login_provider_hint'),
+          key: const Key('auth_login_provider_hint'),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTokens.textSecondary,
+            height: 1.45,
+          ),
+        ),
         const SizedBox(height: AppTokens.spaceMd),
         GoogleSignInButton(
           key: googleButtonKey,

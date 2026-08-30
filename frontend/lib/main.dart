@@ -13,6 +13,7 @@ import 'features/booking/models/booking_wizard_route_args.dart';
 import 'features/booking/pages/booking_contact_connect_page.dart';
 import 'features/booking/pages/booking_wizard_page.dart';
 import 'features/booking/pages/guest_booking_lookup_page.dart';
+import 'features/account/pages/account_page.dart';
 import 'features/booking/pages/my_bookings_page.dart';
 import 'features/driver/pages/driver_login_page.dart';
 import 'features/driver/pages/driver_shell_page.dart';
@@ -99,6 +100,7 @@ class TTaxiApp extends StatelessWidget {
         '/booking/lookup': (_) =>
             const GuestBookingLookupPage(enableCustomerTools: true),
         '/my-bookings': (_) => const MyBookingsPage(),
+        '/account': (_) => const AccountPage(),
         '/driver': (_) =>
             const DriverPwaInstallPromptHost(child: DriverLoginPage()),
         '/driver/login': (_) =>

@@ -42,6 +42,7 @@ void main() {
     expect(find.byKey(const Key('landing_social_login_section')), findsOneWidget);
     expect(find.text('로그인'), findsOneWidget);
     expect(find.text('Google로 계속하기'), findsOneWidget);
+    expect(find.byKey(const Key('auth_login_provider_hint')), findsOneWidget);
     expect(find.byKey(const Key('landing_logout_button')), findsNothing);
   });
 

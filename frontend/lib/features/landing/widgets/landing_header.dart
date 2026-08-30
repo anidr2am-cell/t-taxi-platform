@@ -91,7 +91,7 @@ class _AuthHeaderButton extends StatelessWidget {
   }
 }
 
-enum _AuthHeaderMenuAction { myBookings, logout }
+enum _AuthHeaderMenuAction { account, myBookings }
 
 class _LoggedInAuthHeaderButton extends StatelessWidget {
   const _LoggedInAuthHeaderButton({
@@ -107,16 +107,10 @@ class _LoggedInAuthHeaderButton extends StatelessWidget {
     _AuthHeaderMenuAction action,
   ) async {
     switch (action) {
+      case _AuthHeaderMenuAction.account:
+        await Navigator.of(context).pushNamed('/account');
       case _AuthHeaderMenuAction.myBookings:
         await Navigator.of(context).pushNamed('/my-bookings');
-      case _AuthHeaderMenuAction.logout:
-        await controller.signOut();
-        if (!context.mounted) {
-          return;
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.t('landing_header_logout_success'))),
-        );
     }
   }
 
@@ -133,14 +127,14 @@ class _LoggedInAuthHeaderButton extends StatelessWidget {
         onSelected: (action) => _handleSelection(context, action),
         itemBuilder: (context) => [
           PopupMenuItem(
+            key: const Key('landing_header_account_menu'),
+            value: _AuthHeaderMenuAction.account,
+            child: Text(l10n.t('landing_header_account_menu')),
+          ),
+          PopupMenuItem(
             key: const Key('landing_header_my_bookings_menu'),
             value: _AuthHeaderMenuAction.myBookings,
             child: Text(l10n.t('landing_header_my_bookings_menu')),
-          ),
-          PopupMenuItem(
-            key: const Key('landing_header_logout_menu'),
-            value: _AuthHeaderMenuAction.logout,
-            child: Text(l10n.t('landing_header_logout_menu')),
           ),
         ],
         child: SizedBox(

@@ -8,6 +8,7 @@ import 'package:frontend/features/auth/services/auth_api_service.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
 import 'package:frontend/features/auth/services/google_sign_in_service.dart';
 import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
+import 'package:frontend/features/account/pages/account_page.dart';
 import 'package:frontend/features/booking/pages/my_bookings_page.dart';
 import 'package:frontend/features/landing/pages/customer_landing_page.dart';
 import 'package:frontend/features/landing/widgets/landing_social_login_section.dart';
@@ -50,23 +51,24 @@ void main() {
   }) {
     return ChangeNotifierProvider(
       create: (_) => LocaleState()..setLanguage(locale.languageCode),
-      child: MaterialApp(
-        locale: locale,
-        supportedLocales: AppLocalizations.supportedLanguages
-            .map((code) => Locale(code))
-            .toList(),
-        localizationsDelegates: [
-          AppLocalizationsDelegate(locale.languageCode),
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        routes: {
-          '/my-bookings': (_) => const MyBookingsPage(),
-        },
-        home: AuthScope(
-          controller: authController,
-          child: const CustomerLandingPage(),
+      child: AuthScope(
+        controller: authController,
+        child: MaterialApp(
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLanguages
+              .map((code) => Locale(code))
+              .toList(),
+          localizationsDelegates: [
+            AppLocalizationsDelegate(locale.languageCode),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          routes: {
+            '/my-bookings': (_) => const MyBookingsPage(),
+            '/account': (_) => const AccountPage(),
+          },
+          home: const CustomerLandingPage(),
         ),
       ),
     );
@@ -110,7 +112,7 @@ void main() {
     expect(find.text('Google로 계속하기'), findsWidgets);
   });
 
-  testWidgets('signed-in auth icon opens account menu with two actions', (
+  testWidgets('signed-in auth icon opens account menu with account and bookings', (
     tester,
   ) async {
     final authController = await prepareAuthController(
@@ -138,8 +140,39 @@ void main() {
     await tester.tap(find.byKey(const Key('landing_header_auth_button')));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('landing_header_account_menu')), findsOneWidget);
     expect(find.byKey(const Key('landing_header_my_bookings_menu')), findsOneWidget);
-    expect(find.byKey(const Key('landing_header_logout_menu')), findsOneWidget);
+    expect(find.byKey(const Key('landing_header_logout_menu')), findsNothing);
+  });
+
+  testWidgets('account menu account item navigates to account page', (
+    tester,
+  ) async {
+    final authController = await prepareAuthController(
+      initialPrefs: {
+        AuthTokenStorage.accessTokenKey: 'saved-access',
+        AuthTokenStorage.refreshTokenKey: 'saved-refresh',
+        AuthTokenStorage.userJsonKey: jsonEncode({
+          'id': 7,
+          'email': 'saved@example.com',
+          'role': 'CUSTOMER',
+          'name': 'Saved User',
+          'phone': null,
+          'locale': 'ko',
+          'isActive': true,
+        }),
+      },
+    );
+
+    await tester.pumpWidget(wrapLanding(authController: authController));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('landing_header_auth_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('landing_header_account_menu')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountPage), findsOneWidget);
   });
 
   testWidgets('account menu my bookings item navigates to my bookings', (
@@ -172,37 +205,32 @@ void main() {
     expect(find.byType(MyBookingsPage), findsOneWidget);
   });
 
-  testWidgets('account menu logout signs out and shows outline icon', (
+  testWidgets('bottom sheet shows login provider hint', (
     tester,
   ) async {
-    final authController = await prepareAuthController(
-      initialPrefs: {
-        AuthTokenStorage.accessTokenKey: 'saved-access',
-        AuthTokenStorage.refreshTokenKey: 'saved-refresh',
-        AuthTokenStorage.userJsonKey: jsonEncode({
-          'id': 7,
-          'email': 'saved@example.com',
-          'role': 'CUSTOMER',
-          'name': 'Saved User',
-          'phone': null,
-          'locale': 'ko',
-          'isActive': true,
-        }),
-      },
-    );
-
+    final authController = await prepareAuthController();
     await tester.pumpWidget(wrapLanding(authController: authController));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('landing_header_auth_button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('landing_header_logout_menu')));
-    await tester.pumpAndSettle();
 
-    expect(authController.isLoggedIn, isFalse);
-    expect(find.byIcon(Icons.person_outline), findsOneWidget);
-    expect(find.byIcon(Icons.person), findsNothing);
-    expect(find.text('로그아웃되었습니다'), findsOneWidget);
+    final bottomSheet = find.byKey(const Key('landing_auth_bottom_sheet'));
+    expect(bottomSheet, findsOneWidget);
+    expect(
+      find.descendant(
+        of: bottomSheet,
+        matching: find.byKey(const Key('auth_login_provider_hint')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: bottomSheet,
+        matching: find.textContaining('마일리지 적립 내역 관리'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('google sign-in from bottom sheet closes sheet and fills icon', (
