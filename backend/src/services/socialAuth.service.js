@@ -542,7 +542,7 @@ class SocialAuthService {
         tokenExpiresAt: providerTokens?.tokenExpiresAt ?? null,
       });
       await this.userRepository.updateLastLoginAt(user.id);
-      return this.authService.buildAuthResponse(user);
+      return this.authService.buildAuthResponse(user, provider);
     } catch (err) {
       if (err.code === 'ER_DUP_ENTRY') {
         throw new AppError('Email already registered', {
@@ -567,7 +567,7 @@ class SocialAuthService {
     }
 
     await this.userRepository.updateLastLoginAt(user.id);
-    return this.authService.buildAuthResponse(user);
+    return this.authService.buildAuthResponse(user, provider);
   }
 }
 

@@ -12,9 +12,10 @@ const LOGIN_ALLOWED_ROLES = [
 ];
 
 class AuthService {
-  constructor(userRepository, tokenService) {
+  constructor(userRepository, tokenService, socialAccountRepository = null) {
     this.userRepository = userRepository;
     this.tokenService = tokenService;
+    this.socialAccountRepository = socialAccountRepository;
   }
 
   mapUser(user) {
@@ -29,12 +30,31 @@ class AuthService {
     };
   }
 
-  buildAuthResponse(user) {
+  async enrichUserWithProviders(user, primaryProvider = null) {
+    const mapped = this.mapUser(user);
+    if (!this.socialAccountRepository) {
+      return mapped;
+    }
+
+    const linkedProviders = await this.socialAccountRepository.findProvidersByUserId(user.id);
+    if (linkedProviders.length === 0) {
+      return mapped;
+    }
+
+    return {
+      ...mapped,
+      authProvider: primaryProvider || linkedProviders[0],
+      linkedProviders,
+    };
+  }
+
+  async buildAuthResponse(user, primaryProvider = null) {
+    const enrichedUser = await this.enrichUserWithProviders(user, primaryProvider);
     const accessToken = this.tokenService.signAccessToken(user);
     const { token: refreshToken } = this.tokenService.signRefreshToken(user);
 
     return {
-      user: this.mapUser(user),
+      user: enrichedUser,
       accessToken,
       refreshToken,
       expiresIn: this.tokenService.getAccessExpiresInSeconds(),
@@ -164,7 +184,7 @@ class AuthService {
         errorCode: ERROR_CODES.UNAUTHORIZED,
       });
     }
-    return this.mapUser(user);
+    return this.enrichUserWithProviders(user);
   }
 
   verifyAccessToken(token) {

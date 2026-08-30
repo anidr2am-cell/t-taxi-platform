@@ -50,6 +50,19 @@ class SocialAccountRepository {
     return decryptSocialAccountRow(rows[0] || null);
   }
 
+  async findProvidersByUserId(userId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT provider
+        FROM social_accounts
+        WHERE user_id = ?
+        ORDER BY created_at ASC, id ASC
+      `,
+      [userId],
+    );
+    return rows.map((row) => row.provider);
+  }
+
   async create({
     userId,
     provider,

@@ -134,10 +134,16 @@ function createHarness() {
       row.refresh_token = refreshToken;
       row.token_expires_at = tokenExpiresAt;
     },
+    async findProvidersByUserId(userId) {
+      return socialAccounts
+        .filter((row) => row.user_id === userId)
+        .sort((a, b) => a.id - b.id)
+        .map((row) => row.provider);
+    },
   };
 
   const tokenService = new TokenService(new RevokedRefreshTokenStore());
-  const authService = new AuthService(userRepository, tokenService);
+  const authService = new AuthService(userRepository, tokenService, socialAccountRepository);
   const socialAuthService = new SocialAuthService(
     userRepository,
     socialAccountRepository,
@@ -272,6 +278,8 @@ test('loginWithGoogle creates user, profile, and social_accounts row on first lo
   assert.equal(result.user.email, GOOGLE_EMAIL);
   assert.equal(result.user.role, 'CUSTOMER');
   assert.equal(result.user.name, GOOGLE_NAME);
+  assert.equal(result.user.authProvider, SOCIAL_PROVIDERS.GOOGLE);
+  assert.deepEqual(result.user.linkedProviders, [SOCIAL_PROVIDERS.GOOGLE]);
   assert.ok(result.accessToken);
   assert.ok(result.refreshToken);
   assert.equal(harness.users.size, 1);
@@ -387,6 +395,8 @@ test('loginWithKakao creates user and stores Kakao OAuth tokens on first login',
 
   assert.equal(result.user.email, KAKAO_EMAIL);
   assert.equal(result.user.name, KAKAO_NAME);
+  assert.equal(result.user.authProvider, SOCIAL_PROVIDERS.KAKAO);
+  assert.deepEqual(result.user.linkedProviders, [SOCIAL_PROVIDERS.KAKAO]);
   assert.ok(result.accessToken);
   assert.ok(result.refreshToken);
   assert.equal(harness.socialAccounts.length, 1);
@@ -625,6 +635,8 @@ test('loginWithLine creates user without storing OAuth tokens on first login', a
 
   assert.equal(result.user.email, LINE_EMAIL);
   assert.equal(result.user.name, LINE_NAME);
+  assert.equal(result.user.authProvider, SOCIAL_PROVIDERS.LINE);
+  assert.deepEqual(result.user.linkedProviders, [SOCIAL_PROVIDERS.LINE]);
   assert.ok(result.accessToken);
   assert.ok(result.refreshToken);
   assert.equal(harness.socialAccounts.length, 1);

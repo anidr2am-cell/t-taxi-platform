@@ -173,7 +173,7 @@ class DriverQrService {
 
     if (transition) {
       await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
-    this.bookingStatusService.emitDomainEvent(
+      this.bookingStatusService.emitDomainEvent(
         transition.domainEvent,
         transition.eventPayload,
       );
@@ -248,10 +248,17 @@ class DriverQrService {
 
     if (transition) {
       await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
-    this.bookingStatusService.emitDomainEvent(
+      this.bookingStatusService.emitDomainEvent(
         transition.domainEvent,
         transition.eventPayload,
       );
+      if (typeof this.bookingStatusService.handlePostCommitMileageEffects === 'function') {
+        await this.bookingStatusService.handlePostCommitMileageEffects({
+          bookingId: transition.bookingId,
+          fromStatus: transition.fromStatus,
+          toStatus: BOOKING_STATUS.SETTLEMENT_PENDING,
+        });
+      }
     }
 
     return this.getUpdatedDetail(driverUserId, normalizedBookingNumber, {

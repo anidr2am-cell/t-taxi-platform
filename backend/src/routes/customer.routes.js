@@ -1,5 +1,6 @@
 const express = require('express');
 const notificationController = require('../controllers/notification.controller');
+const mileageController = require('../controllers/mileage.controller');
 const customerBookingController = require('../controllers/customerBooking.controller');
 const validate = require('../middlewares/validate.middleware');
 const { authMiddleware } = require('../middlewares/auth.middleware');
@@ -44,6 +45,12 @@ router.post(
   '/notifications/read-all',
   customerOnly,
   notificationController.markCustomerReadAll,
+);
+
+router.get(
+  '/mileage',
+  customerOnly,
+  mileageController.getBalance,
 );
 
 router.get(

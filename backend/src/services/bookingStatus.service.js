@@ -11,6 +11,7 @@ const {
   evaluateCustomerCancellation,
 } = require('../policies/customerBookingCancellation.policy');
 const { emitDriverAssignmentReleased } = require('../socket/realtime');
+const logger = require('../utils/logger');
 
 const TERMINAL_STATUSES = new Set([
   BOOKING_STATUS.COMPLETED,
@@ -100,12 +101,46 @@ const CUSTOMER_CANCEL_MESSAGES = {
   INVALID_PICKUP_TIME: 'Booking pickup time is invalid for cancellation',
 };
 
+const MILEAGE_REVERSAL_FROM_STATUSES = new Set([
+  BOOKING_STATUS.SETTLEMENT_PENDING,
+  BOOKING_STATUS.COMPLETED,
+]);
+
 class BookingStatusService {
-  constructor(pool, bookingRepository, outboxRepository, outboxProcessor) {
+  constructor(pool, bookingRepository, outboxRepository, outboxProcessor, mileageService = null) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.outboxRepository = outboxRepository;
     this.outboxProcessor = outboxProcessor;
+    this.mileageService = mileageService;
+  }
+
+  shouldReverseMileage(fromStatus) {
+    return MILEAGE_REVERSAL_FROM_STATUSES.has(fromStatus);
+  }
+
+  async handlePostCommitMileageEffects({ bookingId, fromStatus, toStatus }) {
+    if (!this.mileageService || !bookingId) {
+      return;
+    }
+
+    try {
+      if (toStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
+        await this.mileageService.accrueForBooking(bookingId);
+        return;
+      }
+
+      if (toStatus === BOOKING_STATUS.CANCELLED && this.shouldReverseMileage(fromStatus)) {
+        await this.mileageService.reverseForBooking(bookingId);
+      }
+    } catch (err) {
+      logger.error('Post-commit mileage effect failed', {
+        bookingId,
+        fromStatus,
+        toStatus,
+        error: err.message,
+      });
+    }
   }
 
   validateTransition(fromStatus, toStatus, actorRole, options = {}) {
@@ -285,6 +320,9 @@ class BookingStatusService {
         eventPayload: null,
         outboxId: null,
         releasedDriverUserId: null,
+        bookingId: booking.id,
+        fromStatus,
+        toStatus,
       };
     }
 
@@ -373,6 +411,9 @@ class BookingStatusService {
         toStatus === BOOKING_STATUS.CANCELLED ? releasedDriverUserId : null,
       releaseReasonCode,
       releasedAt: toStatus === BOOKING_STATUS.CANCELLED ? occurredAt : null,
+      bookingId: booking.id,
+      fromStatus,
+      toStatus,
     };
   }
 
@@ -408,6 +449,11 @@ class BookingStatusService {
         releasedAt: transition.releasedAt || new Date().toISOString(),
       });
     }
+    await this.handlePostCommitMileageEffects({
+      bookingId: transition.bookingId,
+      fromStatus: transition.fromStatus,
+      toStatus: transition.toStatus,
+    });
     return transition.result;
   }
 
@@ -514,6 +560,9 @@ class BookingStatusService {
         outboxId,
         releasedDriverUserId,
         releasedAt: occurredAt,
+        bookingId: booking.id,
+        fromStatus,
+        toStatus,
       };
     } catch (err) {
       await conn.rollback();
@@ -532,6 +581,11 @@ class BookingStatusService {
         releasedAt: transition.releasedAt || new Date().toISOString(),
       });
     }
+    await this.handlePostCommitMileageEffects({
+      bookingId: transition.bookingId,
+      fromStatus: transition.fromStatus,
+      toStatus: transition.toStatus,
+    });
     return transition.result;
   }
 

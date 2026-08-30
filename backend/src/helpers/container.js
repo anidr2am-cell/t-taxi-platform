@@ -81,6 +81,8 @@ const SettlementReceiptIdempotencyService = require("../services/settlementRecei
 const BookingContactConnectionRepository = require("../repositories/bookingContactConnection.repository");
 const BookingContactConnectionService = require("../services/bookingContactConnection.service");
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
+const MileageRepository = require("../repositories/mileage.repository");
+const MileageService = require("../services/mileage.service");
 const config = require("../config/env");
 const database = require("../config/database");
 
@@ -123,7 +125,20 @@ container.register(
 );
 container.register(
   "authService",
-  (c) => new AuthService(c.get("userRepository"), c.get("tokenService")),
+  (c) => new AuthService(
+    c.get("userRepository"),
+    c.get("tokenService"),
+    c.get("socialAccountRepository"),
+  ),
+);
+container.register("mileageRepository", () => new MileageRepository());
+container.register(
+  "mileageService",
+  (c) => new MileageService(
+    database.pool,
+    c.get("mileageRepository"),
+    c.get("bookingRepository"),
+  ),
 );
 container.register(
   "socialAuthService",
@@ -232,6 +247,7 @@ container.register(
       c.get("bookingRepository"),
       c.get("outboxRepository"),
       c.get("outboxProcessor"),
+      c.get("mileageService"),
     ),
 );
 container.register(

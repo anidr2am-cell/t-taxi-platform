@@ -100,6 +100,13 @@ class DriverTripFlowService {
       transition.domainEvent,
       transition.eventPayload,
     );
+    if (typeof this.bookingStatusService.handlePostCommitMileageEffects === 'function') {
+      await this.bookingStatusService.handlePostCommitMileageEffects({
+        bookingId: transition.bookingId,
+        fromStatus: transition.fromStatus,
+        toStatus,
+      });
+    }
 
     if (
       toStatus === BOOKING_STATUS.COMPLETED
