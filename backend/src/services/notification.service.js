@@ -885,6 +885,55 @@ class NotificationService {
     };
   }
 
+  async listForCustomerOwnedBooking(bookingId, userId, query) {
+    const pagination = this.parsePagination(query);
+    const listFilters = this.parseListFilters(query);
+    const userFilters = {
+      ...listFilters,
+      userId,
+      recipientType: RECIPIENT_TYPES.USER,
+      audienceRole: ROLES.CUSTOMER,
+      bookingId,
+    };
+    const guestFilters = {
+      ...listFilters,
+      bookingId,
+      recipientType: RECIPIENT_TYPES.GUEST_BOOKING,
+    };
+    const fetchAll = { limit: 1000, offset: 0 };
+    const [userRows, guestRows] = await Promise.all([
+      this.notificationRepository.findNotifications(userFilters, fetchAll),
+      this.notificationRepository.findNotifications(guestFilters, fetchAll),
+    ]);
+
+    const seen = new Set();
+    const merged = [];
+    for (const row of [...userRows, ...guestRows]) {
+      if (seen.has(row.id)) {
+        continue;
+      }
+      seen.add(row.id);
+      merged.push(row);
+    }
+    merged.sort((a, b) => {
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
+      if (bTime !== aTime) {
+        return bTime - aTime;
+      }
+      return b.id - a.id;
+    });
+
+    const total = merged.length;
+    const pageRows = merged.slice(pagination.offset, pagination.offset + pagination.limit);
+    return {
+      page: pagination.page,
+      pageSize: pagination.limit,
+      total,
+      items: pageRows.map((row) => this.mapListItem(row)),
+    };
+  }
+
   async unreadCountForUser(userId, audienceRole) {
     const count = await this.notificationRepository.countUnread({
       userId,
@@ -980,29 +1029,12 @@ class NotificationService {
       });
     }
 
-    if (authUser?.role === ROLES.CUSTOMER) {
-      if (!booking.customer_user_id || booking.customer_user_id !== authUser.id) {
-        throw new AppError('Booking is not accessible', {
-          statusCode: HTTP_STATUS.FORBIDDEN,
-          errorCode: ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
-        });
-      }
-      const pagination = this.parsePagination(query);
-      const filters = {
-        ...this.parseListFilters(query),
-        userId: authUser.id,
-        recipientType: RECIPIENT_TYPES.USER,
-        audienceRole: ROLES.CUSTOMER,
-        bookingId: booking.id,
-      };
-      const total = await this.notificationRepository.countNotifications(filters);
-      const rows = await this.notificationRepository.findNotifications(filters, pagination);
-      return {
-        page: pagination.page,
-        pageSize: pagination.limit,
-        total,
-        items: rows.map((row) => this.mapListItem(row)),
-      };
+    if (
+      authUser?.role === ROLES.CUSTOMER
+      && booking.customer_user_id
+      && booking.customer_user_id === authUser.id
+    ) {
+      return this.listForCustomerOwnedBooking(booking.id, authUser.id, query);
     }
 
     const conn = await this.pool.getConnection();

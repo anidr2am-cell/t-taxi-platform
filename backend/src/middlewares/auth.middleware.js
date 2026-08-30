@@ -30,11 +30,19 @@ function authMiddleware(req, res, next) {
 
 function optionalAuthMiddleware(req, res, next) {
   const header = req.headers.authorization;
-  if (!header) {
+  if (!header || !header.startsWith('Bearer ')) {
     req.user = null;
     return next();
   }
-  return authMiddleware(req, res, next);
+
+  const token = header.slice(7);
+  try {
+    const authService = container.get('authService');
+    req.user = authService.verifyAccessToken(token);
+  } catch {
+    req.user = null;
+  }
+  return next();
 }
 
 module.exports = {

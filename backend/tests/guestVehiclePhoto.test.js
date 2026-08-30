@@ -3,6 +3,8 @@ process.env.DB_USER = process.env.DB_USER || 'test';
 process.env.DB_NAME = process.env.DB_NAME || 'ttaxi_test';
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret-value';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-value';
+process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY
+  || Buffer.alloc(32, 3).toString('base64');
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -29,6 +31,14 @@ function signCustomer(id = 42) {
     { sub: id, email: 'customer@example.com', role: ROLES.CUSTOMER, type: 'access' },
     process.env.JWT_ACCESS_SECRET,
     { expiresIn: '1h' },
+  );
+}
+
+function signExpiredCustomer(id = 42) {
+  return jwt.sign(
+    { sub: id, email: 'customer@example.com', role: ROLES.CUSTOMER, type: 'access' },
+    process.env.JWT_ACCESS_SECRET,
+    { expiresIn: '-1h' },
   );
 }
 
@@ -161,6 +171,30 @@ test('guest vehicle photo service rejects customer JWT for another users booking
   );
 });
 
+test('guest vehicle photo service allows logged-in customer with guest token on unclaimed booking', async () => {
+  const service = buildPhotoService({ customerUserId: null });
+
+  const file = await service.getAssignedDriverVehiclePhotoFile(
+    10,
+    'guest-token',
+    { id: 42, role: ROLES.CUSTOMER },
+  );
+
+  assert.equal(file.mimeType, 'image/jpeg');
+});
+
+test('guest vehicle photo service allows non-owner customer JWT with valid guest token', async () => {
+  const service = buildPhotoService({ customerUserId: 42 });
+
+  const file = await service.getAssignedDriverVehiclePhotoFile(
+    10,
+    'guest-token',
+    { id: 99, role: ROLES.CUSTOMER },
+  );
+
+  assert.equal(file.mimeType, 'image/jpeg');
+});
+
 test('guest vehicle photo route requires guest access token header', async () => {
   container.register('guestVehiclePhotoService', () => buildPhotoService());
 
@@ -205,6 +239,30 @@ test('guest vehicle photo route rejects customer JWT for another users booking',
 
   assert.equal(res.statusCode, 403);
   assert.equal(res.body.error_code, 'BOOKING_NOT_ACCESSIBLE');
+});
+
+test('guest vehicle photo route falls back to guest token when JWT is expired', async () => {
+  container.register('guestVehiclePhotoService', () => buildPhotoService({ customerUserId: null }));
+
+  const res = await request(app)
+    .get('/api/v1/public/bookings/10/assigned-driver-vehicle-photo')
+    .set('Authorization', `Bearer ${signExpiredCustomer(42)}`)
+    .set('X-Guest-Access-Token', 'guest-token');
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers['content-type'], 'image/jpeg');
+});
+
+test('guest vehicle photo route allows non-owner JWT with valid guest token', async () => {
+  container.register('guestVehiclePhotoService', () => buildPhotoService({ customerUserId: 42 }));
+
+  const res = await request(app)
+    .get('/api/v1/public/bookings/10/assigned-driver-vehicle-photo')
+    .set('Authorization', `Bearer ${signCustomer(99)}`)
+    .set('X-Guest-Access-Token', 'guest-token');
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(Buffer.from(res.body).toString(), 'fake-jpeg-bytes');
 });
 
 test('guest vehicle photo route returns not found when photo unavailable', async () => {

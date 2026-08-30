@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/models/auth_session.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
@@ -168,6 +169,18 @@ class _FakeMyBookingsTrackingSocket extends DriverLocationSocketService {
   void subscribeGuest(int bookingId) {}
 }
 
+class _DelayedAuthTokenStorage extends AuthTokenStorage {
+  _DelayedAuthTokenStorage(this.delay);
+
+  final Duration delay;
+
+  @override
+  Future<AuthSession?> loadSession() async {
+    await Future<void>.delayed(delay);
+    return super.loadSession();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -203,6 +216,33 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('+66 80 000 0000'), findsWidgets);
+  });
+
+  testWidgets('fromMyBookings hides driver phone until customer JWT loads', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: createSignedOutAuthController(),
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: GuestBookingLookupPage(
+          fromMyBookings: true,
+          enableCustomerTools: true,
+          initialResult: _myBookingDetail(),
+          tokenStorage: _DelayedAuthTokenStorage(
+            const Duration(milliseconds: 200),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('+66 80 000 0000'), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('+66 80 000 0000'), findsWidgets);
   });

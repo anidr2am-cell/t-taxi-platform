@@ -217,9 +217,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
 
   bool _canShowNotifications(GuestBookingLookupResult result) {
     final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
+    final hasCustomerToken =
+        widget.fromMyBookings && _customerAccessToken?.trim().isNotEmpty == true;
     return widget.enableCustomerTools &&
         result.capabilities.notificationsAvailable &&
-        (hasGuestToken || widget.fromMyBookings);
+        (hasGuestToken || hasCustomerToken);
   }
 
   bool _canShowDriverPhone(GuestBookingLookupResult result) {
@@ -230,9 +232,11 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       'PICKED_UP',
     };
     final hasGuestToken = result.guestAccessToken.trim().isNotEmpty;
+    final hasCustomerToken =
+        widget.fromMyBookings && _customerAccessToken?.trim().isNotEmpty == true;
     return activeStatuses.contains(result.status) &&
         result.driverPhone?.trim().isNotEmpty == true &&
-        (hasGuestToken || widget.fromMyBookings);
+        (hasGuestToken || hasCustomerToken);
   }
 
   Widget _trackingSection(GuestBookingLookupResult result) {
@@ -450,7 +454,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           const SizedBox(height: AppTokens.spaceMd),
           AssignedDriverStatusCard(
             result: result,
-            allowDriverPhoneWithoutGuestToken: widget.fromMyBookings,
+            allowDriverPhoneWithoutGuestToken: widget.fromMyBookings &&
+                _customerAccessToken?.trim().isNotEmpty == true,
             useCustomerAuth: widget.fromMyBookings,
             customerAccessToken:
                 widget.fromMyBookings ? _customerAccessToken : null,

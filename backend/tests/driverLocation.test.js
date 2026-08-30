@@ -3,6 +3,8 @@ process.env.DB_USER = process.env.DB_USER || 'test';
 process.env.DB_NAME = process.env.DB_NAME || 'ttaxi_test';
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret-value';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-value';
+process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY
+  || Buffer.alloc(32, 3).toString('base64');
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -628,6 +630,28 @@ test('driver location service rejects customer JWT for another users booking', a
     }),
     (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
   );
+});
+
+test('driver location service allows logged-in customer with guest token on unclaimed booking', async () => {
+  const service = buildDriverLocationService({ customerUserId: null });
+
+  const result = await service.getDriverLocation(10, {
+    authUser: { id: 42, role: ROLES.CUSTOMER },
+    guestAccessToken: 'guest-token',
+  });
+
+  assert.equal(result.available, true);
+});
+
+test('driver location service allows non-owner customer JWT with valid guest token', async () => {
+  const service = buildDriverLocationService({ customerUserId: 42 });
+
+  const result = await service.getDriverLocation(10, {
+    authUser: { id: 99, role: ROLES.CUSTOMER },
+    guestAccessToken: 'guest-token',
+  });
+
+  assert.equal(result.available, true);
 });
 
 test('customer JWT driver location route returns assigned driver location', async () => {

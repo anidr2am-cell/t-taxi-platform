@@ -3,6 +3,8 @@ process.env.DB_USER = process.env.DB_USER || 'test';
 process.env.DB_NAME = process.env.DB_NAME || 'ttaxi_test';
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret-value';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-value';
+process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY
+  || Buffer.alloc(32, 3).toString('base64');
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -402,6 +404,109 @@ test('guest booking notifications require authorization', async () => {
     () => service.getBookingNotifications('TX202607010001', null, 'bad-token', {}),
     (err) => err.errorCode === ERROR_CODES.BOOKING_NOT_ACCESSIBLE,
   );
+});
+
+test('logged-in customer with guest token on unclaimed booking uses guest notification channel', async () => {
+  const recipientTypes = [];
+  const service = makeService({
+    bookingRepository: {
+      async findByBookingNumber() {
+        return {
+          id: 10,
+          booking_number: 'TX202607010001',
+          customer_user_id: null,
+        };
+      },
+    },
+    notificationRepository: {
+      async findByIdempotencyKey() { return null; },
+      async insert() { return 1; },
+      async insertDelivery() {},
+      async findDeliveryByNotificationAndChannel() { return null; },
+      async findDeliveriesByNotificationId() { return []; },
+      async findById(id) { return { id }; },
+      async countNotifications() { return 1; },
+      async findNotifications(filters) {
+        recipientTypes.push(filters.recipientType);
+        return [{
+          id: 1,
+          type: NOTIFICATION_TYPES.DRIVER_ASSIGNED,
+          title: 'Driver assigned',
+          body: 'Body',
+          payload: { bookingNumber: 'TX202607010001' },
+          read_at: null,
+          created_at: '2026-07-02 10:00:00',
+        }];
+      },
+      async countUnread() { return 0; },
+      async markRead() { return true; },
+      async markAllRead() { return 0; },
+    },
+  });
+
+  const data = await service.getBookingNotifications(
+    'TX202607010001',
+    { id: 42, role: ROLES.CUSTOMER },
+    'guest-token',
+    {},
+  );
+
+  assert.deepEqual(recipientTypes, [RECIPIENT_TYPES.GUEST_BOOKING]);
+  assert.equal(data.items.length, 1);
+});
+
+test('claimed booking notification list merges USER and GUEST_BOOKING channels', async () => {
+  const recipientTypes = [];
+  const service = makeService({
+    notificationRepository: {
+      async findByIdempotencyKey() { return null; },
+      async insert() { return 1; },
+      async insertDelivery() {},
+      async findDeliveryByNotificationAndChannel() { return null; },
+      async findDeliveriesByNotificationId() { return []; },
+      async findById(id) { return { id }; },
+      async countNotifications() { return 0; },
+      async findNotifications(filters) {
+        recipientTypes.push(filters.recipientType);
+        if (filters.recipientType === RECIPIENT_TYPES.USER) {
+          return [{
+            id: 2,
+            type: NOTIFICATION_TYPES.BOOKING_CONFIRMED,
+            title: 'After claim',
+            body: 'Body',
+            payload: { bookingNumber: 'TX202607010001' },
+            read_at: null,
+            created_at: '2026-07-02 11:00:00',
+          }];
+        }
+        return [{
+          id: 1,
+          type: NOTIFICATION_TYPES.DRIVER_ASSIGNED,
+          title: 'Before claim',
+          body: 'Body',
+          payload: { bookingNumber: 'TX202607010001' },
+          read_at: null,
+          created_at: '2026-07-02 10:00:00',
+        }];
+      },
+      async countUnread() { return 0; },
+      async markRead() { return true; },
+      async markAllRead() { return 0; },
+    },
+  });
+
+  const data = await service.getBookingNotifications(
+    'TX202607010001',
+    { id: 8, role: ROLES.CUSTOMER },
+    null,
+    {},
+  );
+
+  assert.equal(recipientTypes.includes(RECIPIENT_TYPES.USER), true);
+  assert.equal(recipientTypes.includes(RECIPIENT_TYPES.GUEST_BOOKING), true);
+  assert.equal(data.total, 2);
+  assert.equal(data.items[0].notificationId, 2);
+  assert.equal(data.items[1].notificationId, 1);
 });
 
 test('mark read ownership enforced', async () => {

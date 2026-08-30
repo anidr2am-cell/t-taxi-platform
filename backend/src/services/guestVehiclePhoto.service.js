@@ -36,7 +36,19 @@ class GuestVehiclePhotoService {
       && this.bookingService
       && this.pool
     ) {
-      return this.getAssignedDriverVehiclePhotoFileForCustomer(bookingId, authUser);
+      const conn = await this.pool.getConnection();
+      try {
+        const booking = await this.bookingRepository.findById(bookingId, conn);
+        if (
+          booking
+          && booking.customer_user_id
+          && booking.customer_user_id === authUser.id
+        ) {
+          return this.getAssignedDriverVehiclePhotoFileForCustomer(bookingId, authUser);
+        }
+      } finally {
+        conn.release();
+      }
     }
 
     return this.getAssignedDriverVehiclePhotoFileForGuest(
