@@ -74,8 +74,16 @@ class AuthSession {
   final String? refreshToken;
   final int? expiresIn;
 
-  AuthTokens get tokens =>
-      AuthTokens(accessToken: accessToken, refreshToken: refreshToken);
+  AuthTokens get tokens {
+    final expiresAt = expiresIn != null
+        ? DateTime.now().toUtc().add(Duration(seconds: expiresIn!))
+        : null;
+    return AuthTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      accessTokenExpiresAt: expiresAt,
+    );
+  }
 }
 
 Map<String, dynamic> buildLoginRequest({

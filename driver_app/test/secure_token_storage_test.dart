@@ -5,6 +5,22 @@ import 'package:tride_driver/core/storage/secure_token_storage.dart';
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
+  test('writes and reads access refresh and expiry securely', () async {
+    final storage = SecureTokenStorage();
+    final expiresAt = DateTime.utc(2026, 8, 30, 12);
+    await storage.write(
+      AuthTokens(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        accessTokenExpiresAt: expiresAt,
+      ),
+    );
+    final tokens = await storage.read();
+    expect(tokens?.accessToken, 'access');
+    expect(tokens?.refreshToken, 'refresh');
+    expect(tokens?.accessTokenExpiresAt, expiresAt);
+  });
+
   test('writes and reads access and refresh tokens securely', () async {
     final storage = SecureTokenStorage();
     await storage.write(

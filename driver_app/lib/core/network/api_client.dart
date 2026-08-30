@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../../config/app_config.dart';
+import '../auth/auth_token_refresher.dart';
 import 'api_exception.dart';
 
 class ApiClient {
@@ -12,12 +13,15 @@ class ApiClient {
     required AppConfig config,
     http.Client? httpClient,
     this.timeout = const Duration(seconds: 15),
+    AuthTokenRefresher? tokenRefresher,
   }) : _config = config,
-       _httpClient = httpClient ?? http.Client();
+       _httpClient = httpClient ?? http.Client(),
+       _tokenRefresher = tokenRefresher;
 
   final AppConfig _config;
   final http.Client _httpClient;
   final Duration timeout;
+  final AuthTokenRefresher? _tokenRefresher;
 
   Future<Map<String, dynamic>> postJson(
     String path, {
@@ -25,9 +29,11 @@ class ApiClient {
     String? bearerToken,
   }) async {
     return _request(
-      () => _httpClient.post(
+      path: path,
+      bearerToken: bearerToken,
+      send: (token) => _httpClient.post(
         _endpoint(path),
-        headers: _headers(bearerToken),
+        headers: _headers(token),
         body: body == null ? null : jsonEncode(body),
       ),
     );
@@ -39,23 +45,25 @@ class ApiClient {
     Map<String, String>? queryParameters,
   }) async {
     return _request(
-      () => _httpClient.get(
+      path: path,
+      bearerToken: bearerToken,
+      send: (token) => _httpClient.get(
         _endpoint(path).replace(queryParameters: queryParameters),
-        headers: _headers(bearerToken),
+        headers: _headers(token),
       ),
     );
   }
 
   Future<List<int>> getBytes(String path, {String? bearerToken}) async {
     try {
-      final response = await _httpClient
-          .get(_assetEndpoint(path), headers: _headers(bearerToken))
-          .timeout(timeout);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return response.bodyBytes;
-      }
-      _decodeResponse(response);
-      throw const ApiException(ApiFailureKind.unknown);
+      return await _requestBytes(
+        path: path,
+        bearerToken: bearerToken,
+        send: (token) => _httpClient.get(
+          _assetEndpoint(path),
+          headers: _headers(token),
+        ),
+      );
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -75,9 +83,11 @@ class ApiClient {
     required String bearerToken,
   }) async {
     return _request(
-      () => _httpClient.patch(
+      path: path,
+      bearerToken: bearerToken,
+      send: (token) => _httpClient.patch(
         _endpoint(path),
-        headers: _headers(bearerToken),
+        headers: _headers(token),
         body: jsonEncode(body),
       ),
     );
@@ -88,9 +98,11 @@ class ApiClient {
     required String bearerToken,
   }) async {
     return _request(
-      () => _httpClient.delete(
+      path: path,
+      bearerToken: bearerToken,
+      send: (token) => _httpClient.delete(
         _endpoint(path),
-        headers: _headers(bearerToken),
+        headers: _headers(token),
       ),
     );
   }
@@ -103,28 +115,13 @@ class ApiClient {
     Map<String, String> headers = const {},
   }) async {
     try {
-      final request = http.MultipartRequest('POST', _endpoint(path))
-        ..headers['Accept'] = 'application/json'
-        ..headers.addAll(headers)
-        ..fields.addAll(fields);
-      if (bearerToken != null && bearerToken.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $bearerToken';
-      }
-      for (final file in files) {
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            file.field,
-            file.bytes,
-            filename: file.filename,
-            contentType: file.contentType == null
-                ? null
-                : MediaType.parse(file.contentType!),
-          ),
-        );
-      }
-      final streamed = await _httpClient.send(request).timeout(timeout);
-      final response = await http.Response.fromStream(streamed);
-      return _decodeResponse(response);
+      return await _requestMultipart(
+        path: path,
+        bearerToken: bearerToken,
+        fields: fields,
+        files: files,
+        headers: headers,
+      );
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -160,12 +157,29 @@ class ApiClient {
     if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
   };
 
-  Future<Map<String, dynamic>> _request(
-    Future<http.Response> Function() send,
-  ) async {
+  Future<Map<String, dynamic>> _request({
+    required String path,
+    required Future<http.Response> Function(String? bearerToken) send,
+    String? bearerToken,
+  }) async {
     try {
-      final response = await send().timeout(timeout);
-      return _decodeResponse(response);
+      var token = bearerToken;
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final response = await send(token).timeout(timeout);
+        if (response.statusCode == 401 &&
+            attempt == 0 &&
+            token != null &&
+            token.isNotEmpty &&
+            _shouldAttemptTokenRefresh(path)) {
+          final refreshed = await _tokenRefresher?.refreshAccessToken();
+          if (refreshed != null && refreshed.isNotEmpty) {
+            token = refreshed;
+            continue;
+          }
+        }
+        return _decodeResponse(response);
+      }
+      throw const ApiException(ApiFailureKind.unauthorized);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -177,6 +191,88 @@ class ApiClient {
     } catch (_) {
       throw const ApiException(ApiFailureKind.unknown);
     }
+  }
+
+  Future<List<int>> _requestBytes({
+    required String path,
+    required Future<http.Response> Function(String? bearerToken) send,
+    String? bearerToken,
+  }) async {
+    var token = bearerToken;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final response = await send(token).timeout(timeout);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+      if (response.statusCode == 401 &&
+          attempt == 0 &&
+          token != null &&
+          token.isNotEmpty &&
+          _shouldAttemptTokenRefresh(path)) {
+        final refreshed = await _tokenRefresher?.refreshAccessToken();
+        if (refreshed != null && refreshed.isNotEmpty) {
+          token = refreshed;
+          continue;
+        }
+      }
+      _decodeResponse(response);
+      throw const ApiException(ApiFailureKind.unknown);
+    }
+    throw const ApiException(ApiFailureKind.unauthorized);
+  }
+
+  Future<Map<String, dynamic>> _requestMultipart({
+    required String path,
+    String? bearerToken,
+    Map<String, String> fields = const {},
+    List<ApiMultipartFile> files = const [],
+    Map<String, String> headers = const {},
+  }) async {
+    var token = bearerToken;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final request = http.MultipartRequest('POST', _endpoint(path))
+        ..headers['Accept'] = 'application/json'
+        ..headers.addAll(headers)
+        ..fields.addAll(fields);
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      for (final file in files) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            file.field,
+            file.bytes,
+            filename: file.filename,
+            contentType: file.contentType == null
+                ? null
+                : MediaType.parse(file.contentType!),
+          ),
+        );
+      }
+      final streamed = await _httpClient.send(request).timeout(timeout);
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 401 &&
+          attempt == 0 &&
+          token != null &&
+          token.isNotEmpty &&
+          _shouldAttemptTokenRefresh(path)) {
+        final refreshed = await _tokenRefresher?.refreshAccessToken();
+        if (refreshed != null && refreshed.isNotEmpty) {
+          token = refreshed;
+          continue;
+        }
+      }
+      return _decodeResponse(response);
+    }
+    throw const ApiException(ApiFailureKind.unauthorized);
+  }
+
+  bool _shouldAttemptTokenRefresh(String path) {
+    if (_tokenRefresher == null) return false;
+    final normalized = path.split('?').first;
+    return normalized != '/api/v1/auth/login' &&
+        normalized != '/api/v1/auth/refresh' &&
+        normalized != '/api/v1/auth/register';
   }
 
   String absoluteUrl(String path) => _endpoint(path).toString();

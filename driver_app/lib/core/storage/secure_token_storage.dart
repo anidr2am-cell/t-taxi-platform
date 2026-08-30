@@ -1,10 +1,15 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthTokens {
-  const AuthTokens({required this.accessToken, this.refreshToken});
+  const AuthTokens({
+    required this.accessToken,
+    this.refreshToken,
+    this.accessTokenExpiresAt,
+  });
 
   final String accessToken;
   final String? refreshToken;
+  final DateTime? accessTokenExpiresAt;
 }
 
 class DriverApplicationStoredInfo {
@@ -41,6 +46,7 @@ class SecureTokenStorage implements TokenStorage {
 
   static const accessTokenKey = 'auth_access_token';
   static const refreshTokenKey = 'auth_refresh_token';
+  static const accessTokenExpiresAtKey = 'auth_access_token_expires_at';
   static const notificationDeviceIdKey = 'notification_device_id';
   static const driverApplicationNumberKey = 'driver_application_number';
   static const driverApplicationStatusTokenKey =
@@ -54,10 +60,22 @@ class SecureTokenStorage implements TokenStorage {
   Future<AuthTokens?> read() async {
     final accessToken = await _storage.read(key: accessTokenKey);
     if (accessToken == null || accessToken.isEmpty) return null;
+    final expiresAtRaw = await _storage.read(key: accessTokenExpiresAtKey);
     return AuthTokens(
       accessToken: accessToken,
       refreshToken: await _storage.read(key: refreshTokenKey),
+      accessTokenExpiresAt: _parseExpiresAt(expiresAtRaw),
     );
+  }
+
+  DateTime? _parseExpiresAt(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toUtc();
+  }
+
+  String? _formatExpiresAt(DateTime? value) {
+    if (value == null) return null;
+    return value.toUtc().toIso8601String();
   }
 
   @override
@@ -69,12 +87,19 @@ class SecureTokenStorage implements TokenStorage {
     } else {
       await _storage.write(key: refreshTokenKey, value: refreshToken);
     }
+    final expiresAt = _formatExpiresAt(tokens.accessTokenExpiresAt);
+    if (expiresAt == null || expiresAt.isEmpty) {
+      await _storage.delete(key: accessTokenExpiresAtKey);
+    } else {
+      await _storage.write(key: accessTokenExpiresAtKey, value: expiresAt);
+    }
   }
 
   @override
   Future<void> clear() async {
     await _storage.delete(key: accessTokenKey);
     await _storage.delete(key: refreshTokenKey);
+    await _storage.delete(key: accessTokenExpiresAtKey);
     await clearNotificationDeviceId();
   }
 

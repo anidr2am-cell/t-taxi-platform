@@ -9,6 +9,7 @@ import '../core/firebase/fcm_message_service.dart';
 import '../core/firebase/fcm_token_service.dart';
 import '../core/locale/locale_controller.dart';
 import '../core/locale/locale_preferences.dart';
+import '../core/auth/auth_token_refresher.dart';
 import '../core/network/api_client.dart';
 import '../core/storage/secure_token_storage.dart';
 import '../features/auth/data/auth_api.dart';
@@ -32,8 +33,18 @@ Future<void> runDriverApp(AppEnvironment environment) async {
   final config = AppConfig.forEnvironment(environment);
   final localePreferences = await LocalePreferences.create();
   final localeController = LocaleController(localePreferences);
-  final apiClient = ApiClient(config: config, httpClient: http.Client());
+  final apiHttpClient = http.Client();
+  final refreshClient = ApiClient(config: config, httpClient: apiHttpClient);
   final storage = SecureTokenStorage();
+  final tokenRefresher = AuthTokenRefresher(
+    storage: storage,
+    client: refreshClient,
+  );
+  final apiClient = ApiClient(
+    config: config,
+    httpClient: apiHttpClient,
+    tokenRefresher: tokenRefresher,
+  );
   final notificationApi = NotificationApi(client: apiClient, storage: storage);
   final fcmTokenService = FcmTokenService(
     messaging: FirebaseFcmMessagingClient(),

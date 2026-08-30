@@ -16,6 +16,7 @@ void main() {
     expect(storage.writeCount, 1);
     expect(storage.tokens?.accessToken, 'test-access-token');
     expect(storage.tokens?.refreshToken, 'test-refresh-token');
+    expect(storage.tokens?.accessTokenExpiresAt, isNotNull);
   });
 
   test('restore reads tokens and verifies them with auth me', () async {
