@@ -135,7 +135,7 @@ class _CaptureClient extends http.BaseClient {
 }
 
 class _FakeDriverApi extends DriverApiService {
-  const _FakeDriverApi();
+  _FakeDriverApi();
 
   @override
   Future<String?> getSavedToken() async => null;
@@ -744,7 +744,7 @@ void main() {
 
   testWidgets('driver login shows only application CTA', (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(_app(const DriverLoginPage(api: _FakeDriverApi())));
+    await tester.pumpWidget(_app(DriverLoginPage(api: _FakeDriverApi())));
     await tester.pumpAndSettle();
 
     expect(find.text('기사 등록 신청 / สมัครคนขับ'), findsOneWidget);
@@ -756,7 +756,7 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(_app(const DriverLoginPage(api: _FakeDriverApi())));
+    await tester.pumpWidget(_app(DriverLoginPage(api: _FakeDriverApi())));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('기사 등록 신청 / สมัครคนขับ'));
@@ -772,7 +772,7 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        _app(const DriverLoginPage(api: _FakeDriverApi())),
+        _app(DriverLoginPage(api: _FakeDriverApi())),
       );
       await tester.pumpAndSettle();
 
@@ -1472,7 +1472,7 @@ void main() {
       'driver_application_number': 'DA260703A1B2C3D4',
       'driver_application_status_token': 'raw-token',
     });
-    await tester.pumpWidget(_app(const DriverLoginPage(api: _FakeDriverApi())));
+    await tester.pumpWidget(_app(DriverLoginPage(api: _FakeDriverApi())));
     await tester.pumpAndSettle();
 
     expect(find.text('기사 등록 신청 / สมัครคนขับ'), findsOneWidget);

@@ -28,7 +28,7 @@ import '../widgets/driver_urgent_negotiation_banner.dart';
 import '../widgets/driver_workflow_widgets.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
-  const DriverBookingDetailPage({
+  DriverBookingDetailPage({
     super.key,
     required this.bookingNumber,
     DriverApiService? api,
@@ -37,7 +37,7 @@ class DriverBookingDetailPage extends StatefulWidget {
     this.positionProvider,
     this.settlementApi,
     this.callSocket,
-  }) : api = api ?? const DriverApiService();
+  }) : api = api ?? DriverApiService();
 
   final String bookingNumber;
   final DriverApiService api;
@@ -64,7 +64,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
   bool _showingEndedDialog = false;
 
   DriverSettlementApiService get _settlementApi =>
-      widget.settlementApi ?? const DriverSettlementApiService();
+      widget.settlementApi ?? DriverSettlementApiService();
 
   @override
   void initState() {
@@ -89,7 +89,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
     final socket = DriverCallSocketService()
       ..onAssignmentReleased = _onAssignmentReleasedPayload;
     _ownedCallSocket = socket;
-    await socket.connect(accessToken: token);
+    await socket.connect(accessTokenLoader: widget.api.getSavedToken);
   }
 
   void _onAssignmentReleasedPayload(Map<String, dynamic> payload) {

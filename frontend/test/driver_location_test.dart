@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
+import 'package:frontend/core/network/api_client.dart';
+import 'package:frontend/core/network/token_storage.dart';
+import 'package:frontend/features/driver/services/driver_session.dart';
+import 'package:frontend/features/driver/services/driver_token_storage.dart';
 import 'package:frontend/features/driver_location/models/driver_location.dart';
 import 'package:frontend/features/driver_location/pages/admin_driver_monitor_page.dart';
 import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
@@ -18,27 +22,33 @@ void main() {
   test(
     'driver location update uses /api/v1/driver/location and bearer token',
     () async {
-      SharedPreferences.setMockInitialValues({
-        'driver_access_token': 'driver-token',
-      });
+      SharedPreferences.setMockInitialValues({});
+      final storage = DriverTokenStorage();
+      await storage.write(
+        const AuthTokens(accessToken: 'driver-token'),
+      );
       Uri? uri;
       Map<String, String>? headers;
       Map<String, dynamic>? body;
-      final api = DriverLocationApiService(
-        baseUrl: 'http://localhost:3000',
-        client: MockClient((request) async {
-          uri = request.url;
-          headers = request.headers;
-          body = jsonDecode(request.body) as Map<String, dynamic>;
-          return http.Response(
-            jsonEncode({
-              'success': true,
-              'data': {'accepted': true},
-            }),
-            200,
-          );
-        }),
+      final session = DriverSession(
+        tokenStorage: storage,
+        apiClient: ApiClient(
+          baseUrl: 'http://localhost:3000',
+          httpClient: MockClient((request) async {
+            uri = request.url;
+            headers = request.headers;
+            body = jsonDecode(request.body) as Map<String, dynamic>;
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {'accepted': true},
+              }),
+              200,
+            );
+          }),
+        ),
       );
+      final api = DriverLocationApiService(session: session);
 
       await api.updateDriverLocation(
         latitude: 12.9236,

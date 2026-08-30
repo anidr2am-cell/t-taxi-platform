@@ -8,6 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_config.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
+import '../../driver/services/driver_session.dart';
 
 enum NotificationDeviceRegistrationStatus {
   registered,
@@ -83,13 +86,16 @@ class NotificationDeviceRegistrationService {
     http.Client? client,
     PushMessagingClient? messagingClient,
     String? baseUrl,
+    DriverSession? driverSession,
   })  : _client = client ?? http.Client(),
         _messagingClient = messagingClient ?? FirebasePushMessagingClient(),
-        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+        _driverSession = driverSession ?? DriverSession();
 
   final http.Client _client;
   final PushMessagingClient _messagingClient;
   final String _baseUrl;
+  final DriverSession _driverSession;
   StreamSubscription<String>? _refreshSubscription;
 
   static const _authDeviceIdKey = 'notification_device_id_authenticated';
@@ -107,7 +113,11 @@ class NotificationDeviceRegistrationService {
       }
       final deviceId = await _registerAuthenticated(token, accessToken);
       await _rememberDevice(_authDeviceIdKey, deviceId);
-      _watchRefresh((newToken) => _registerAuthenticated(newToken, accessToken));
+      _watchRefresh((newToken) async {
+        final freshAccessToken = await accessTokenLoader();
+        if (freshAccessToken == null || freshAccessToken.isEmpty) return 0;
+        return _registerAuthenticated(newToken, freshAccessToken);
+      });
       return const NotificationDeviceRegistrationResult(
         NotificationDeviceRegistrationStatus.registered,
       );
@@ -165,16 +175,20 @@ class NotificationDeviceRegistrationService {
   }
 
   Future<int> _registerAuthenticated(String token, String accessToken) async {
-    final response = await _client.post(
-      Uri.parse('$_baseUrl/api/v1/notifications/devices'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      },
-      body: jsonEncode(_body(token)),
-    );
-    return _parseDeviceResponse(response);
+    try {
+      final decoded = await _driverSession.apiClient.postJson(
+        '/notifications/devices',
+        bearerToken: accessToken,
+        body: _body(token),
+      );
+      final data = Map<String, dynamic>.from(decoded['data'] as Map);
+      return data['deviceId'] as int? ?? 0;
+    } on ApiException catch (err) {
+      if (err.kind == ApiFailureKind.unauthorized) {
+        await _driverSession.expireSession();
+      }
+      throw err.message ?? 'Notification registration failed';
+    }
   }
 
   Future<int> _registerGuest(String token, int bookingId, String guestAccessToken) async {
@@ -220,10 +234,16 @@ class NotificationDeviceRegistrationService {
     final deviceId = prefs.getInt(_authDeviceIdKey);
     final accessToken = await accessTokenLoader();
     if (deviceId == null || accessToken == null || accessToken.isEmpty) return;
-    await _client.delete(
-      Uri.parse('$_baseUrl/api/v1/notifications/devices/$deviceId'),
-      headers: {'Authorization': 'Bearer $accessToken', 'Accept': 'application/json'},
-    );
+    try {
+      await _driverSession.apiClient.deleteJson(
+        '/notifications/devices/$deviceId',
+        bearerToken: accessToken,
+      );
+    } on ApiException catch (err) {
+      if (err.kind == ApiFailureKind.unauthorized) {
+        await _driverSession.expireSession();
+      }
+    }
     await prefs.remove(_authDeviceIdKey);
   }
 

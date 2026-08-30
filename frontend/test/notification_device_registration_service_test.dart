@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/core/network/api_client.dart';
+import 'package:frontend/features/driver/services/driver_session.dart';
 import 'package:frontend/features/notification/services/notification_device_registration_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -13,20 +15,25 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    DriverSession.resetSharedForTesting();
   });
 
   test('authenticated registration posts token and stores device id', () async {
     final requests = <http.Request>[];
     final service = NotificationDeviceRegistrationService(
-      baseUrl: 'http://localhost:3000',
       messagingClient: _FakeMessagingClient(token: 'fcm-token-value-for-service-test'),
-      client: MockClient((request) async {
-        requests.add(request);
-        return http.Response(jsonEncode({
-          'success': true,
-          'data': {'deviceId': 42, 'platform': 'WEB', 'token': 'abcd1234...'},
-        }), 201);
-      }),
+      driverSession: DriverSession(
+        apiClient: ApiClient(
+          baseUrl: 'http://localhost:3000',
+          httpClient: MockClient((request) async {
+            requests.add(request);
+            return http.Response(jsonEncode({
+              'success': true,
+              'data': {'deviceId': 42, 'platform': 'WEB', 'token': 'abcd1234...'},
+            }), 201);
+          }),
+        ),
+      ),
     );
 
     final result = await service.enableAuthenticated(
@@ -118,14 +125,18 @@ void main() {
 
   test('registration failure returns controlled failed state', () async {
     final service = NotificationDeviceRegistrationService(
-      baseUrl: 'http://localhost:3000',
       messagingClient: _FakeMessagingClient(token: 'fcm-token-value-for-failure'),
-      client: MockClient((request) async {
-        return http.Response(jsonEncode({
-          'success': false,
-          'message': 'Registration failed',
-        }), 500);
-      }),
+      driverSession: DriverSession(
+        apiClient: ApiClient(
+          baseUrl: 'http://localhost:3000',
+          httpClient: MockClient((request) async {
+            return http.Response(jsonEncode({
+              'success': false,
+              'message': 'Registration failed',
+            }), 500);
+          }),
+        ),
+      ),
     );
 
     final result = await service.enableAuthenticated(

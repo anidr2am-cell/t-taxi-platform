@@ -270,7 +270,7 @@ class DriverE2ESettlementDetailRoute extends StatelessWidget {
         }
         return DriverSettlementDetailPage(
           bookingNumber: bookingNumber,
-          api: const DriverSettlementApiService(),
+          api: DriverSettlementApiService(),
           receiptPicker: kIsWeb ? e2eWebReceiptFilePicker() : null,
         );
       },

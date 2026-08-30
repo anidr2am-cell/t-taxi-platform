@@ -7,6 +7,7 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../driver_auth.dart';
+import '../driver_ux.dart';
 import '../services/driver_api_service.dart';
 import '../widgets/driver_status_control.dart';
 
@@ -135,6 +136,10 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       widget.onStatusChanged?.call();
     } catch (err) {
       if (!mounted) return;
+      if (driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -171,6 +176,10 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       _loadProfile();
     } catch (err) {
       if (!mounted) return;
+      if (driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -204,6 +213,10 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
       _loadProfile();
     } catch (err) {
       if (!mounted) return;
+      if (driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -245,6 +258,13 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                 return AppUi.loadingState();
               }
               if (snapshot.hasError) {
+                if (driverIsAuthError(snapshot.error!)) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      driverHandleApiError(context, snapshot.error!);
+                    }
+                  });
+                }
                 return AppUi.surfaceCard(
                   child: Text(l10n.t('driver_rating_error')),
                 );
@@ -277,6 +297,13 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
                 return AppUi.loadingState();
               }
               if (snapshot.hasError) {
+                if (driverIsAuthError(snapshot.error!)) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      driverHandleApiError(context, snapshot.error!);
+                    }
+                  });
+                }
                 return AppUi.errorState(
                   message: userFacingError(
                     snapshot.error!,

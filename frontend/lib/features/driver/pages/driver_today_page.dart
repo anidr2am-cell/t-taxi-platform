@@ -58,7 +58,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
   void initState() {
     super.initState();
     _api = widget.api ?? DriverApiService();
-    _settlementApi = widget.settlementApi ?? const DriverSettlementApiService();
+    _settlementApi = widget.settlementApi ?? DriverSettlementApiService();
     _loadData();
     if (widget.enableCallSocket) {
       _connectCallSocket();
@@ -136,7 +136,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
         _handleUrgentSocketEvent('unlocked', payload);
       };
     _callSocket = socket;
-    await socket.connect(accessToken: token);
+    await socket.connect(accessTokenLoader: _api.getSavedToken);
   }
 
   void _handleUrgentSocketEvent(

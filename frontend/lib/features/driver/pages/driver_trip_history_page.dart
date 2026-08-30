@@ -32,7 +32,7 @@ class DriverTripHistoryPage extends StatefulWidget {
 class _DriverTripHistoryPageState extends State<DriverTripHistoryPage> {
   late final DriverApiService _api = widget.api ?? DriverApiService();
   late final DriverSettlementApiService _settlementApi =
-      widget.settlementApi ?? const DriverSettlementApiService();
+      widget.settlementApi ?? DriverSettlementApiService();
   _HistoryRange _range = _HistoryRange.last7Days;
   bool _loading = true;
   String? _error;

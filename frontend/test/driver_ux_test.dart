@@ -14,6 +14,7 @@ import 'package:frontend/features/driver/pages/driver_jobs_page.dart';
 import 'package:frontend/features/driver/pages/driver_login_page.dart';
 import 'package:frontend/features/driver/pages/driver_qr_scan_page.dart';
 import 'package:frontend/features/driver/pages/driver_shell_page.dart';
+import 'package:frontend/features/driver_location/services/driver_location_api_service.dart';
 import 'package:frontend/features/driver/services/driver_api_service.dart';
 import 'package:frontend/features/driver/services/driver_urgent_negotiation_controller.dart';
 import 'package:frontend/features/driver/widgets/driver_status_control.dart';
@@ -25,6 +26,35 @@ void main() {
 
   tearDown(() {
     DriverUrgentNegotiationController.instance.clear();
+  });
+
+  group('driverIsAuthError', () {
+    test('detects driver, settlement, and location 401 errors', () {
+      expect(
+        driverIsAuthError(
+          const DriverApiException('Unauthorized', statusCode: 401),
+        ),
+        isTrue,
+      );
+      expect(
+        driverIsAuthError(
+          const DriverSettlementApiException('Unauthorized', statusCode: 401),
+        ),
+        isTrue,
+      );
+      expect(
+        driverIsAuthError(
+          const DriverLocationApiException('Unauthorized', statusCode: 401),
+        ),
+        isTrue,
+      );
+      expect(
+        driverIsAuthError(
+          const DriverSettlementApiException('Server error', statusCode: 500),
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('DriverUx grouping', () {

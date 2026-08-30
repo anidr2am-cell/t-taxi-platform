@@ -6,6 +6,7 @@ typedef DriverCallPayloadHandler = void Function(Map<String, dynamic> payload);
 
 class DriverCallSocketService {
   io.Socket? _socket;
+  Future<String?> Function()? _accessTokenLoader;
   DriverCallPayloadHandler? onNewCall;
   DriverCallPayloadHandler? onClaimed;
   DriverCallPayloadHandler? onConfirmed;
@@ -20,14 +21,19 @@ class DriverCallSocketService {
   DriverCallPayloadHandler? onUrgentCallUnlocked;
   VoidCallback? onReconnect;
 
-  Future<void> connect({required String accessToken}) async {
+  Future<void> connect({
+    String? accessToken,
+    Future<String?> Function()? accessTokenLoader,
+  }) async {
+    _accessTokenLoader = accessTokenLoader;
+    final token = accessToken ?? await _accessTokenLoader?.call() ?? '';
     disconnect();
-    if (accessToken.isEmpty) return;
+    if (token.isEmpty) return;
     _socket = io.io(
       AppConfig.socketUrl,
       io.OptionBuilder()
           .setTransports(['websocket'])
-          .setAuth({'token': accessToken})
+          .setAuth({'token': token})
           .enableAutoConnect()
           .enableReconnection()
           .build(),
@@ -36,7 +42,8 @@ class DriverCallSocketService {
       _socket?.emit('driver:calls:subscribe');
       onReconnect?.call();
     });
-    _socket!.onReconnect((_) {
+    _socket!.onReconnect((_) async {
+      await _applyLatestAuthToken();
       _socket?.emit('driver:calls:subscribe');
       onReconnect?.call();
     });
@@ -64,6 +71,16 @@ class DriverCallSocketService {
     _listenUrgent('driver:urgent-call:confirmed', onUrgentCallConfirmed);
     _listenUrgent('driver:urgent-call:cancelled', onUrgentCallCancelled);
     _listenUrgent('driver:urgent-call:unlocked', onUrgentCallUnlocked);
+  }
+
+  Future<void> _applyLatestAuthToken() async {
+    final loader = _accessTokenLoader;
+    if (loader == null) return;
+    final freshToken = await loader();
+    if (freshToken == null || freshToken.isEmpty) return;
+    final socket = _socket;
+    if (socket == null) return;
+    socket.io.options?['auth'] = {'token': freshToken};
   }
 
   void _listenUrgent(String event, DriverCallPayloadHandler? handler) {

@@ -7,6 +7,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../../utils/user_facing_error.dart';
+import '../../driver/driver_auth.dart';
+import '../../driver/driver_ux.dart';
 import '../services/driver_location_api_service.dart';
 
 typedef DriverPositionProvider = Future<Position> Function();
@@ -332,6 +334,10 @@ class _DriverLiveLocationControlState extends State<DriverLiveLocationControl> {
       return true;
     } catch (err) {
       if (!mounted || generation != _lifecycleGeneration) return false;
+      if (driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return false;
+      }
       final message = userFacingError(
         err,
         fallback: context.l10n.t('driver_location_error'),

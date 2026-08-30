@@ -61,7 +61,7 @@ void main() {
               'year': 2021,
             },
           }),
-          settlementApi: const DriverSettlementApiService(),
+          settlementApi: DriverSettlementApiService(),
         ),
       ),
     );
@@ -86,7 +86,7 @@ void main() {
             'email': 'driver@example.com',
             'vehicle': null,
           }),
-          settlementApi: const DriverSettlementApiService(),
+          settlementApi: DriverSettlementApiService(),
         ),
       ),
     );

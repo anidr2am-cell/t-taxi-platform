@@ -1,58 +1,45 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../config/app_config.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
+import '../../driver/services/driver_session.dart';
 
 class DriverSettlementApiException implements Exception {
-  const DriverSettlementApiException(this.message, {this.errorCode});
+  const DriverSettlementApiException(
+    this.message, {
+    this.errorCode,
+    this.statusCode,
+  });
 
   final String message;
   final String? errorCode;
+  final int? statusCode;
+
   @override
   String toString() => message;
 }
 
 class DriverSettlementApiService {
-  const DriverSettlementApiService();
+  DriverSettlementApiService({DriverSession? session})
+    : _session = session ?? DriverSession();
 
-  static const _tokenKey = 'driver_access_token';
-  String get _base => '${AppConfig.apiBaseUrl}/api/v1';
-
-  Future<String?> getSavedToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
-  }
+  final DriverSession _session;
 
   Future<dynamic> _get(String path) async {
-    final token = await getSavedToken();
-    if (token == null || token.isEmpty) {
-      throw const DriverSettlementApiException('Please log in again');
+    final token = await _requireAccessToken();
+    try {
+      final decoded = await _session.apiClient.getJson(
+        path,
+        bearerToken: token,
+      );
+      return decoded['data'];
+    } on ApiException catch (err) {
+      throw await _mapApiException(err);
     }
-    final response = await http.get(
-      Uri.parse('$_base$path'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-    final decoded = jsonDecode(response.body);
-    if (response.statusCode >= 400) {
-      final message = decoded is Map
-          ? decoded['message'] as String? ?? 'Request failed'
-          : 'Request failed';
-      final errorCode = decoded is Map
-          ? decoded['error_code'] as String?
-          : null;
-      throw DriverSettlementApiException(message, errorCode: errorCode);
-    }
-    return decoded is Map ? decoded['data'] : decoded;
   }
 
   Future<dynamic> _postFile(String path, List<int> bytes, String filename) async {
-    final token = await getSavedToken();
-    if (token == null || token.isEmpty) {
-      throw const DriverSettlementApiException('Please log in again');
-    }
+    final token = await _requireAccessToken();
     final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
     final mimeType = switch (ext) {
       'jpg' || 'jpeg' => 'image/jpeg',
@@ -60,28 +47,42 @@ class DriverSettlementApiService {
       'pdf' => 'application/pdf',
       _ => 'application/octet-stream',
     };
-    final uri = Uri.parse('$_base$path');
-    final request = http.MultipartRequest('POST', uri);
-    request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(http.MultipartFile.fromBytes(
-      'file',
-      bytes,
-      filename: filename,
-      contentType: MediaType.parse(mimeType),
-    ));
-    final streamed = await request.send();
-    final body = await streamed.stream.bytesToString();
-    final decoded = jsonDecode(body);
-    if (streamed.statusCode >= 400) {
-      final message = decoded is Map
-          ? decoded['message'] as String? ?? 'Upload failed'
-          : 'Upload failed';
-      final errorCode = decoded is Map
-          ? decoded['error_code'] as String?
-          : null;
-      throw DriverSettlementApiException(message, errorCode: errorCode);
+    try {
+      final decoded = await _session.apiClient.postMultipart(
+        path,
+        bearerToken: token,
+        files: [
+          ApiMultipartFile(
+            field: 'file',
+            filename: filename,
+            bytes: bytes,
+            contentType: mimeType,
+          ),
+        ],
+      );
+      return decoded['data'];
+    } on ApiException catch (err) {
+      throw await _mapApiException(err);
     }
-    return decoded is Map ? decoded['data'] : decoded;
+  }
+
+  Future<String> _requireAccessToken() async {
+    final token = await _session.tokenStorage.readAccessToken();
+    if (token == null || token.isEmpty) {
+      throw const DriverSettlementApiException('Please log in again');
+    }
+    return token;
+  }
+
+  Future<DriverSettlementApiException> _mapApiException(ApiException err) async {
+    if (err.kind == ApiFailureKind.unauthorized) {
+      await _session.expireSession();
+    }
+    return DriverSettlementApiException(
+      err.message ?? 'Request failed',
+      errorCode: err.errorCode,
+      statusCode: err.statusCode,
+    );
   }
 
   Future<List<dynamic>> listSettlements() async {
@@ -95,8 +96,16 @@ class DriverSettlementApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<Map<String, dynamic>> uploadReceipt(String bookingNumber, List<int> bytes, String filename) async {
-    final data = await _postFile('/driver/settlements/$bookingNumber/receipt', bytes, filename);
+  Future<Map<String, dynamic>> uploadReceipt(
+    String bookingNumber,
+    List<int> bytes,
+    String filename,
+  ) async {
+    final data = await _postFile(
+      '/driver/settlements/$bookingNumber/receipt',
+      bytes,
+      filename,
+    );
     return Map<String, dynamic>.from(data as Map);
   }
 }

@@ -32,7 +32,7 @@ class _DriverShellPageState extends State<DriverShellPage> {
   int _index = 0;
   late final DriverApiService _api = widget.api ?? DriverApiService();
   late final DriverSettlementApiService _settlementApi =
-      widget.settlementApi ?? const DriverSettlementApiService();
+      widget.settlementApi ?? DriverSettlementApiService();
   int _settlementBadge = 0;
 
   @override

@@ -1,13 +1,11 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../../config/app_config.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 import '../models/driver_booking.dart';
 import '../models/driver_status.dart';
 import '../models/driver_vehicle.dart';
+import 'driver_session.dart';
+import 'driver_token_storage.dart';
 
 class DriverApiException implements Exception {
   const DriverApiException(
@@ -48,66 +46,32 @@ class DriverApiException implements Exception {
 }
 
 class DriverApiService {
-  const DriverApiService();
+  DriverApiService({DriverSession? session})
+    : _session = session ?? DriverSession();
 
-  static const _tokenKey = 'driver_access_token';
-  static const _driverNameKey = 'driver_display_name';
+  final DriverSession _session;
 
-  String get _base => '${AppConfig.apiBaseUrl}/api/v1';
+  DriverSession get session => _session;
+  ApiClient get apiClient => _session.apiClient;
+  DriverTokenStorage get tokenStorage => _session.tokenStorage;
 
-  Future<String?> getSavedToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
-  }
+  Future<String?> getSavedToken() => _session.tokenStorage.readAccessToken();
 
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_tokenKey);
-    if (token != null && token.isNotEmpty) {
-      try {
-        await http
-            .post(
-              Uri.parse('$_base/auth/logout'),
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode({}),
-            )
-            .timeout(const Duration(seconds: 5));
-      } catch (_) {
-        // Logout is best effort; local session cleanup must still happen.
-      }
-    }
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_driverNameKey);
-  }
+  Future<void> logout() => _session.expireSession();
 
-  Future<String?> getDriverDisplayName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_driverNameKey);
-  }
+  Future<String?> getDriverDisplayName() =>
+      _session.tokenStorage.readDisplayName();
 
   Future<void> login({required String email, required String password}) async {
     final loginId = email.trim();
     final isPhone = !loginId.contains('@');
-    final response = await http.post(
-      Uri.parse('$_base/auth/login'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({
+    final decoded = await _session.apiClient.postJson(
+      '/auth/login',
+      body: {
         if (isPhone) 'phone': loginId else 'email': loginId,
         'password': password,
-      }),
+      },
     );
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-
-    if (response.statusCode >= 400) {
-      throw DriverApiException(decoded['message'] as String? ?? 'Login failed');
-    }
 
     final data = Map<String, dynamic>.from(decoded['data'] as Map);
     final user = Map<String, dynamic>.from(data['user'] as Map);
@@ -115,79 +79,114 @@ class DriverApiService {
       throw const DriverApiException('Driver account required');
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, data['accessToken'] as String);
     final displayName =
         user['name'] as String? ??
         user['phone'] as String? ??
         user['email'] as String? ??
         '';
-    if (displayName.isNotEmpty) {
-      await prefs.setString(_driverNameKey, displayName);
-    }
+    final refreshToken = data['refreshToken'] as String?;
+    final expiresIn = data['expiresIn'];
+    await _session.tokenStorage.saveLoginSession(
+      accessToken: data['accessToken'] as String,
+      refreshToken: refreshToken,
+      expiresIn: expiresIn is num ? expiresIn.toInt() : null,
+      displayName: displayName,
+    );
   }
 
   Future<dynamic> _get(String path) async {
-    final token = await getSavedToken();
-    if (token == null || token.isEmpty) {
-      throw const DriverApiException('Please log in again');
-    }
-
-    final response = await http.get(
-      Uri.parse('$_base$path'),
-      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-
-    if (response.statusCode >= 400) {
-      if (response.statusCode == 401) {
-        await logout();
-      }
-      throw DriverApiException(
-        decoded['message'] as String? ?? 'Request failed',
-        errorCode: decoded['error_code'] as String? ?? decoded['code'] as String?,
-        statusCode: response.statusCode,
-        details: decoded['details'] is Map
-            ? Map<String, dynamic>.from(decoded['details'] as Map)
-            : null,
+    final token = await _requireAccessToken();
+    try {
+      final decoded = await _session.apiClient.getJson(
+        path,
+        bearerToken: token,
       );
+      return decoded['data'];
+    } on ApiException catch (err) {
+      throw await _mapApiException(err);
     }
-
-    return decoded['data'];
   }
 
   Future<dynamic> _post(String path, {Map<String, dynamic>? body}) async {
+    final token = await _requireAccessToken();
+    try {
+      final decoded = await _session.apiClient.postJson(
+        path,
+        bearerToken: token,
+        body: body ?? {},
+      );
+      return decoded['data'];
+    } on ApiException catch (err) {
+      throw await _mapApiException(err);
+    }
+  }
+
+  Future<dynamic> _patch(String path, {Map<String, dynamic>? body}) async {
+    final token = await _requireAccessToken();
+    try {
+      final decoded = await _session.apiClient.patchJson(
+        path,
+        bearerToken: token,
+        body: body ?? {},
+      );
+      return decoded['data'];
+    } on ApiException catch (err) {
+      throw await _mapApiException(err);
+    }
+  }
+
+  Future<dynamic> _postFile(
+    String path,
+    List<int> bytes,
+    String filename,
+  ) async {
+    final token = await _requireAccessToken();
+    final ext = filename.contains('.')
+        ? filename.split('.').last.toLowerCase()
+        : '';
+    final mimeType = switch (ext) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'application/octet-stream',
+    };
+    try {
+      final decoded = await _session.apiClient.postMultipart(
+        path,
+        bearerToken: token,
+        files: [
+          ApiMultipartFile(
+            field: 'file',
+            filename: filename,
+            bytes: bytes,
+            contentType: mimeType,
+          ),
+        ],
+      );
+      return decoded['data'];
+    } on ApiException catch (err) {
+      throw await _mapApiException(err);
+    }
+  }
+
+  Future<String> _requireAccessToken() async {
     final token = await getSavedToken();
     if (token == null || token.isEmpty) {
       throw const DriverApiException('Please log in again');
     }
+    return token;
+  }
 
-    final response = await http.post(
-      Uri.parse('$_base$path'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body ?? {}),
-    );
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-
-    if (response.statusCode >= 400) {
-      if (response.statusCode == 401) {
-        await logout();
-      }
-      throw DriverApiException(
-        decoded['message'] as String? ?? 'Request failed',
-        errorCode: decoded['error_code'] as String? ?? decoded['code'] as String?,
-        statusCode: response.statusCode,
-        details: decoded['details'] is Map
-            ? Map<String, dynamic>.from(decoded['details'] as Map)
-            : null,
-      );
+  Future<DriverApiException> _mapApiException(ApiException err) async {
+    if (err.kind == ApiFailureKind.unauthorized) {
+      await logout();
     }
-
-    return decoded['data'];
+    return DriverApiException(
+      err.message ?? 'Request failed',
+      errorCode: err.errorCode,
+      statusCode: err.statusCode,
+      details: err.details,
+    );
   }
 
   Future<Map<String, dynamic>> getRatingSummary() async {
@@ -208,81 +207,6 @@ class DriverApiService {
   Future<DriverStatus> goOffline() async {
     final data = await _post('/driver/offline');
     return DriverStatus.fromJson(Map<String, dynamic>.from(data as Map));
-  }
-
-  Future<dynamic> _patch(String path, {Map<String, dynamic>? body}) async {
-    final token = await getSavedToken();
-    if (token == null || token.isEmpty) {
-      throw const DriverApiException('Please log in again');
-    }
-
-    final response = await http.patch(
-      Uri.parse('$_base$path'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body ?? {}),
-    );
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-
-    if (response.statusCode >= 400) {
-      if (response.statusCode == 401) {
-        await logout();
-      }
-      throw DriverApiException(
-        decoded['message'] as String? ?? 'Request failed',
-        errorCode: decoded['error_code'] as String?,
-        statusCode: response.statusCode,
-      );
-    }
-
-    return decoded['data'];
-  }
-
-  Future<dynamic> _postFile(
-    String path,
-    List<int> bytes,
-    String filename,
-  ) async {
-    final token = await getSavedToken();
-    if (token == null || token.isEmpty) {
-      throw const DriverApiException('Please log in again');
-    }
-    final ext = filename.contains('.')
-        ? filename.split('.').last.toLowerCase()
-        : '';
-    final mimeType = switch (ext) {
-      'jpg' || 'jpeg' => 'image/jpeg',
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      _ => 'application/octet-stream',
-    };
-    final request = http.MultipartRequest('POST', Uri.parse('$_base$path'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: filename,
-        contentType: MediaType.parse(mimeType),
-      ),
-    );
-    final streamed = await request.send();
-    final body = await streamed.stream.bytesToString();
-    final decoded = jsonDecode(body) as Map<String, dynamic>;
-    if (streamed.statusCode >= 400) {
-      if (streamed.statusCode == 401) {
-        await logout();
-      }
-      throw DriverApiException(
-        decoded['message'] as String? ?? 'Upload failed',
-        errorCode: decoded['error_code'] as String?,
-        statusCode: streamed.statusCode,
-      );
-    }
-    return decoded['data'];
   }
 
   String resolveProfileAssetUrl(String? path) {
@@ -437,8 +361,7 @@ class DriverApiService {
     final profile = Map<String, dynamic>.from(data as Map);
     final name = profile['name'] as String?;
     if (name != null && name.trim().isNotEmpty) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_driverNameKey, name.trim());
+      await _session.tokenStorage.saveDisplayName(name.trim());
     }
     return profile;
   }
@@ -483,23 +406,8 @@ class DriverApiService {
     String? color,
     required List<({String field, String filename, List<int> bytes})> files,
   }) async {
-    final token = await getSavedToken();
-    if (token == null || token.isEmpty) {
-      throw const DriverApiException('Please log in again');
-    }
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_base/driver/vehicles'),
-    );
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['vehicleTypeId'] = '$vehicleTypeId';
-    request.fields['plateNumber'] = plateNumber.trim();
-    if (modelName != null && modelName.trim().isNotEmpty) {
-      request.fields['modelName'] = modelName.trim();
-    }
-    if (color != null && color.trim().isNotEmpty) {
-      request.fields['color'] = color.trim();
-    }
+    final token = await _requireAccessToken();
+    final multipartFiles = <ApiMultipartFile>[];
     for (final file in files) {
       final ext = file.filename.contains('.')
           ? file.filename.split('.').last.toLowerCase()
@@ -511,34 +419,34 @@ class DriverApiService {
         'pdf' => 'application/pdf',
         _ => 'application/octet-stream',
       };
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          file.field,
-          file.bytes,
+      multipartFiles.add(
+        ApiMultipartFile(
+          field: file.field,
           filename: file.filename,
-          contentType: MediaType.parse(mimeType),
+          bytes: file.bytes,
+          contentType: mimeType,
         ),
       );
     }
-    final streamed = await request.send().timeout(const Duration(seconds: 60));
-    final response = await http.Response.fromStream(streamed);
-    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      if (response.statusCode == 401) {
-        await logout();
-      }
-      throw DriverApiException(
-        decoded is Map
-            ? decoded['message'] as String? ?? 'Request failed'
-            : 'Request failed',
-        errorCode: decoded is Map
-            ? decoded['error_code'] as String?
-            : null,
-        statusCode: response.statusCode,
+    try {
+      final decoded = await _session.apiClient.postMultipart(
+        '/driver/vehicles',
+        bearerToken: token,
+        timeout: const Duration(seconds: 60),
+        fields: {
+          'vehicleTypeId': '$vehicleTypeId',
+          'plateNumber': plateNumber.trim(),
+          if (modelName != null && modelName.trim().isNotEmpty)
+            'modelName': modelName.trim(),
+          if (color != null && color.trim().isNotEmpty) 'color': color.trim(),
+        },
+        files: multipartFiles,
       );
+      return DriverVehicleItem.fromJson(
+        Map<String, dynamic>.from((decoded['data'] as Map)),
+      );
+    } on ApiException catch (err) {
+      throw await _mapApiException(err);
     }
-    return DriverVehicleItem.fromJson(
-      Map<String, dynamic>.from((decoded as Map)['data'] as Map),
-    );
   }
 }

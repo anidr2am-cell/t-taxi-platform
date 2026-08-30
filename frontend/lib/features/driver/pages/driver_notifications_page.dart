@@ -32,7 +32,7 @@ class DriverNotificationsPage extends StatefulWidget {
 }
 
 class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
-  late final DriverApiService _api = widget.api ?? const DriverApiService();
+  late final DriverApiService _api = widget.api ?? DriverApiService();
   late final NotificationDeviceRegistrationService _deviceRegistration =
       widget.deviceRegistrationService ??
       NotificationDeviceRegistrationService();
@@ -154,7 +154,7 @@ class _DriverNotificationsPageState extends State<DriverNotificationsPage> {
           MaterialPageRoute(
             builder: (_) => DriverSettlementDetailPage(
               bookingNumber: bookingNumber,
-              api: const DriverSettlementApiService(),
+              api: DriverSettlementApiService(),
             ),
           ),
         );

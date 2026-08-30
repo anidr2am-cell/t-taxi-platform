@@ -7,6 +7,8 @@ import '../../../widgets/app_ui.dart';
 import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../driver/utils/driver_money_format.dart';
+import '../../driver/driver_auth.dart';
+import '../../driver/driver_ux.dart';
 import '../services/driver_settlement_api_service.dart';
 import '../../settlement/utils/settlement_receipt.dart';
 
@@ -54,7 +56,7 @@ class DriverSettlementListPage extends StatefulWidget {
 
 class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
   late final DriverSettlementApiService _api =
-      widget.api ?? const DriverSettlementApiService();
+      widget.api ?? DriverSettlementApiService();
   bool _loading = true;
   String? _error;
   List<dynamic> _items = [];
@@ -77,6 +79,10 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
         _loading = false;
       });
     } catch (err) {
+      if (mounted && driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
       setState(() {
         _error = _settlementErrorMessage(err);
         _loading = false;
@@ -318,6 +324,10 @@ class _DriverSettlementDetailPageState
         _loading = false;
       });
     } catch (err) {
+      if (mounted && driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
       setState(() {
         _error = _settlementErrorMessage(err);
         _loading = false;
@@ -510,6 +520,10 @@ class _DriverSettlementDetailPageState
         );
       }
     } catch (err) {
+      if (mounted && driverIsAuthError(err)) {
+        driverHandleApiError(context, err);
+        return;
+      }
       setState(
         () => _uploadError = userFacingError(
           err,

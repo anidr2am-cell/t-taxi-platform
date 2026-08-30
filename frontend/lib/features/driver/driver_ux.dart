@@ -1,3 +1,5 @@
+import '../driver_location/services/driver_location_api_service.dart';
+import '../driver_settlement/services/driver_settlement_api_service.dart';
 import '../booking/utils/booking_status_display.dart';
 import '../settlement/utils/settlement_receipt.dart';
 import 'driver_trip_contact.dart';
@@ -430,9 +432,15 @@ class DriverUx {
 }
 
 bool driverIsAuthError(Object err) {
-  if (err is DriverApiException) {
-    return err.statusCode == 401 ||
-        err.message.toLowerCase().contains('log in');
+  final statusCode = switch (err) {
+    DriverApiException(:final statusCode) => statusCode,
+    DriverSettlementApiException(:final statusCode) => statusCode,
+    DriverLocationApiException(:final statusCode) => statusCode,
+    _ => null,
+  };
+  if (statusCode == 401) {
+    return true;
   }
-  return false;
+  final message = err.toString().toLowerCase();
+  return message.contains('log in') || message.contains('login');
 }

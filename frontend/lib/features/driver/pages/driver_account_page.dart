@@ -41,7 +41,7 @@ class DriverAccountPage extends StatefulWidget {
 class _DriverAccountPageState extends State<DriverAccountPage> {
   late final DriverApiService _api = widget.api ?? DriverApiService();
   late final DriverSettlementApiService _settlementApi =
-      widget.settlementApi ?? const DriverSettlementApiService();
+      widget.settlementApi ?? DriverSettlementApiService();
   late final NotificationDeviceRegistrationService _deviceRegistration =
       widget.deviceRegistrationService ??
       NotificationDeviceRegistrationService();
@@ -347,6 +347,13 @@ class _AccountHeader extends StatelessWidget {
                 return Text(l10n.t('driver_rating_loading'));
               }
               if (snapshot.hasError) {
+                if (driverIsAuthError(snapshot.error!)) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      driverHandleApiError(context, snapshot.error!);
+                    }
+                  });
+                }
                 return Text(
                   l10n.t('driver_rating_error'),
                   style: const TextStyle(color: AppTokens.error),
@@ -412,6 +419,13 @@ class _AccountVehicleSection extends StatelessWidget {
           );
         }
         if (snapshot.hasError) {
+          if (driverIsAuthError(snapshot.error!)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                driverHandleApiError(context, snapshot.error!);
+              }
+            });
+          }
           return AppUi.surfaceCard(
             child: Text(
               userFacingError(
