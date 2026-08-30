@@ -4,6 +4,7 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const { uploadDir } = require('../config/multer');
+const { assertImageUploadSignature } = require('../utils/fileSignatureValidation.util');
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -265,6 +266,7 @@ class DriverProfileService {
 
   async uploadAvatar(driverUserId, file) {
     this.validateImageFile(file, 'avatar');
+    await assertImageUploadSignature(file);
     const row = await this.driverRepository.findProfileByUserId(driverUserId);
     if (!row) this.notFound();
 
@@ -317,6 +319,7 @@ class DriverProfileService {
 
   async uploadVehiclePhoto(driverUserId, file) {
     this.validateImageFile(file, 'vehiclePhoto');
+    await assertImageUploadSignature(file);
     const row = await this.driverRepository.findProfileByUserId(driverUserId);
     if (!row?.application_id) {
       throw new AppError('Vehicle photo cannot be updated for this account', {

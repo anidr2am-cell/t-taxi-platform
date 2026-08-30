@@ -52,6 +52,12 @@ test('resolveClientErrorMessage hides raw database text', () => {
   );
 });
 
+test('resolveClientErrorMessage hides generic library errors in production', () => {
+  const err = new Error('ECONNREFUSED: connect failed at internal-host:3306');
+  assert.equal(resolveClientErrorMessage(err, { production: true }), GENERIC_INTERNAL_MESSAGE);
+  assert.equal(resolveClientErrorMessage(err, { production: false }), err.message);
+});
+
 test('isTripEndRequest matches driver end-trip route', () => {
   assert.equal(
     isTripEndRequest({ path: '/api/v1/driver/bookings/TX202607120002/end-trip' }),

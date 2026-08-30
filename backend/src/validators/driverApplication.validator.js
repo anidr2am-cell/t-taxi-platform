@@ -105,6 +105,11 @@ const adminDriverApplicationIdParamsSchema = Joi.object({
   id: Joi.number().integer().positive().required(),
 });
 
+const adminDriverApplicationFileParamsSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+  fileId: Joi.number().integer().positive().required(),
+});
+
 const adminDriverApplicationApproveSchema = Joi.object({
   adminNote: unicodeText({ max: 2000, allowEmpty: true }).default(null),
 });
@@ -121,6 +126,7 @@ module.exports = {
   driverApplicationResubmitSchema,
   adminDriverApplicationListQuerySchema,
   adminDriverApplicationIdParamsSchema,
+  adminDriverApplicationFileParamsSchema,
   adminDriverApplicationApproveSchema,
   adminDriverApplicationRejectSchema,
 };

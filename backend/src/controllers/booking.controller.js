@@ -4,7 +4,7 @@ const { success } = require('../utils/apiResponse');
 const HTTP_STATUS = require('../constants/httpStatus');
 const container = require('../helpers/container');
 const { extractGuestAccessTokenFromHeader } = require('../utils/guestAccess.util');
-const { uploadDir } = require('../config/multer');
+const { resolveUploadAbsolutePath } = require('../utils/uploadPath.util');
 
 const getVehicleRecommendationService = () => container.get('vehicleRecommendationService');
 const getBookingService = () => container.get('bookingService');
@@ -135,7 +135,7 @@ const getGuestAssignedDriverVehiclePhoto = asyncHandler(async (req, res) => {
   );
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.type(file.mimeType || 'application/octet-stream');
-  return res.sendFile(path.resolve(uploadDir, file.filePath));
+  return res.sendFile(resolveUploadAbsolutePath(file.filePath));
 });
 
 module.exports = {

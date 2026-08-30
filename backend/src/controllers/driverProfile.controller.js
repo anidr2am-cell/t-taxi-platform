@@ -2,10 +2,10 @@ const path = require('path');
 const fs = require('fs');
 const asyncHandler = require('../utils/asyncHandler');
 const { success } = require('../utils/apiResponse');
-const { uploadDir } = require('../config/multer');
 const container = require('../helpers/container');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const { resolveUploadAbsolutePath } = require('../utils/uploadPath.util');
 
 const getDriverProfileService = () => container.get('driverProfileService');
 
@@ -31,7 +31,7 @@ const uploadVehiclePhoto = asyncHandler(async (req, res) => {
 
 const streamAvatar = asyncHandler(async (req, res) => {
   const file = await getDriverProfileService().streamAvatar(req.user.id);
-  const absolutePath = path.join(uploadDir, file.file_path);
+  const absolutePath = resolveUploadAbsolutePath(file.file_path);
   if (!fs.existsSync(absolutePath)) {
     return res.status(HTTP_STATUS.NOT_FOUND).json({
       success: false,
@@ -45,7 +45,7 @@ const streamAvatar = asyncHandler(async (req, res) => {
 
 const streamVehiclePhoto = asyncHandler(async (req, res) => {
   const file = await getDriverProfileService().streamVehiclePhoto(req.user.id);
-  const absolutePath = path.join(uploadDir, file.file_path);
+  const absolutePath = resolveUploadAbsolutePath(file.file_path);
   if (!fs.existsSync(absolutePath)) {
     return res.status(HTTP_STATUS.NOT_FOUND).json({
       success: false,

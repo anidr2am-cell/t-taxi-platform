@@ -21,6 +21,12 @@ class PlacesService {
         errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
     }
+    if (value.length > 200) {
+      throw new AppError('Place search input must be at most 200 characters', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
     return value;
   }
 

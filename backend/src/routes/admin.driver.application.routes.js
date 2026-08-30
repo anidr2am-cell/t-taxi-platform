@@ -7,6 +7,7 @@ const ROLES = require('../constants/roles');
 const {
   adminDriverApplicationListQuerySchema,
   adminDriverApplicationIdParamsSchema,
+  adminDriverApplicationFileParamsSchema,
   adminDriverApplicationApproveSchema,
   adminDriverApplicationRejectSchema,
 } = require('../validators/driverApplication.validator');
@@ -31,6 +32,7 @@ router.get(
 router.get(
   '/driver-applications/:id/files/:fileId',
   adminOnly,
+  validate({ params: adminDriverApplicationFileParamsSchema }),
   driverApplicationController.getAdminFile,
 );
 

@@ -81,6 +81,16 @@ describe('Places routes', () => {
     assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
   });
 
+  test('input longer than 200 characters returns validation error', async () => {
+    const res = await request(app)
+      .get('/api/v1/places/autocomplete')
+      .query({ input: 'a'.repeat(201), language: 'ko' })
+      .expect(400);
+
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+  });
+
   test('missing Google configuration returns controlled service error instead of route 404', async () => {
     const res = await request(app)
       .get('/api/v1/places/autocomplete')

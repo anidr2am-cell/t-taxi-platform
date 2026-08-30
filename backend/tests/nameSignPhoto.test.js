@@ -40,7 +40,10 @@ function createConn() {
   };
 }
 
-function tmpUploadFile(name, content = 'fake-image') {
+const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const PDF_BYTES = Buffer.from('%PDF-1.7\n');
+
+function tmpUploadFile(name, content = JPEG_BYTES) {
   const filePath = path.join(uploadDir, `tmp-${Date.now()}-${Math.round(Math.random() * 1e9)}-${name}`);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content);

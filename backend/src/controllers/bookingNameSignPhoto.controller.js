@@ -6,7 +6,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const container = require('../helpers/container');
 const { extractGuestAccessTokenFromHeader } = require('../utils/guestAccess.util');
-const { uploadDir } = require('../config/multer');
+const { resolveUploadAbsolutePath } = require('../utils/uploadPath.util');
 
 const getBookingNameSignPhotoService = () => container.get('bookingNameSignPhotoService');
 const getGuestNameSignPhotoService = () => container.get('guestNameSignPhotoService');
@@ -37,7 +37,7 @@ const getGuestNameSignPhoto = asyncHandler(async (req, res) => {
   );
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.type(file.mimeType || 'application/octet-stream');
-  return res.sendFile(path.resolve(uploadDir, file.filePath));
+  return res.sendFile(resolveUploadAbsolutePath(file.filePath));
 });
 
 const handleUploadError = (err, req, res, next) => {

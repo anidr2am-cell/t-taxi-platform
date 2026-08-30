@@ -395,6 +395,10 @@ describe('SupportInquiryService', () => {
       },
     };
 
+    const attachmentPath = path.join(uploadDir, '2026-07-08', 'stored.JPG');
+    fs.mkdirSync(path.dirname(attachmentPath), { recursive: true });
+    fs.writeFileSync(attachmentPath, Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]));
+
     const result = await new SupportInquiryService(pool, repository).create(
       { message: ' Need pickup help ', locale: 'ko' },
       {
@@ -402,7 +406,7 @@ describe('SupportInquiryService', () => {
           fieldname: 'attachments',
           originalname: 'ticket.JPG',
           filename: 'stored.JPG',
-          path: 'C:/TTaxi/backend/uploads/2026-07-08/stored.JPG',
+          path: attachmentPath,
           mimetype: 'application/octet-stream',
           size: 123,
         }],

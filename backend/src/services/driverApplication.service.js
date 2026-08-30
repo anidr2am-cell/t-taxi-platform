@@ -6,6 +6,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
 const { uploadDir } = require('../config/multer');
+const { assertDocumentUploadSignature } = require('../utils/fileSignatureValidation.util');
 
 const REVIEWABLE_STATUS = 'PENDING';
 const REJECTED_STATUS = 'REJECTED';
@@ -173,7 +174,7 @@ class DriverApplicationService {
     }
   }
 
-  validateRequiredFiles(files) {
+  async validateRequiredFiles(files) {
     const normalized = this.normalizeFiles(files);
     if (normalized.vehiclePhotos.length > 0) {
       if (normalized.vehiclePhotos.length < 3) {
@@ -189,10 +190,15 @@ class DriverApplicationService {
       }
     }
     for (const [key, list] of Object.entries(normalized)) {
-      list.forEach((file) => this.validateFile(file, {
-        imageOnly: key === 'lineQr' || key === 'vehiclePhotos',
-        field: key,
-      }));
+      for (const file of list) {
+        this.validateFile(file, {
+          imageOnly: key === 'lineQr' || key === 'vehiclePhotos',
+          field: key,
+        });
+        await assertDocumentUploadSignature(file, {
+          imageOnly: key === 'lineQr' || key === 'vehiclePhotos',
+        });
+      }
     }
     return normalized;
   }
@@ -280,7 +286,7 @@ class DriverApplicationService {
 
   async saveApplicationFiles(conn, applicationId, files) {
     if (!this.fileRepository) return;
-    const normalized = this.validateRequiredFiles(files);
+    const normalized = await this.validateRequiredFiles(files);
     for (const [field, list] of Object.entries(normalized)) {
       for (const [index, file] of list.entries()) {
         const relativePath = path.relative(uploadDir, file.path).replace(/\\/g, '/');

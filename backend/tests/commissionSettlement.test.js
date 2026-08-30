@@ -21,6 +21,8 @@ const CommissionSettlementService = require('../src/services/commissionSettlemen
 const container = require('../src/helpers/container');
 const app = require('../src/app');
 
+const PDF_BYTES = Buffer.from('%PDF-1.7\n');
+
 function sign(role = 'DRIVER', id = 44) {
   return jwt.sign(
     { sub: id, email: `${role.toLowerCase()}@example.com`, role, type: 'access' },
@@ -218,7 +220,7 @@ test('upload rejects after APPROVED', async () => {
   const service = new CommissionSettlementService(pool, bookingRepo, driverRepo, {}, {});
 
   const tmp = path.join(uploadDir, 'test-upload.bin');
-  fs.writeFileSync(tmp, 'data');
+  fs.writeFileSync(tmp, PDF_BYTES);
   await assert.rejects(
     () => service.uploadReceipt(44, 'TX202607010001', {
       path: tmp,
@@ -231,9 +233,9 @@ test('upload rejects after APPROVED', async () => {
   if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
 });
 
-test('invalid MIME rejected', () => {
+test('invalid MIME rejected', async () => {
   const service = new CommissionSettlementService({}, {}, {}, {}, {});
-  assert.throws(
+  await assert.rejects(
     () => service.validateUploadedFile({ mimetype: 'text/plain', originalname: 'a.txt' }),
     (err) => err.errorCode === ERROR_CODES.INVALID_FILE_TYPE,
   );
@@ -994,9 +996,9 @@ test('getDriverSettlement reconciles missing obligation on access', async () => 
   });
 });
 
-test('extension MIME mismatch rejected', () => {
+test('extension MIME mismatch rejected', async () => {
   const service = new CommissionSettlementService({}, {}, {}, {}, {});
-  assert.throws(
+  await assert.rejects(
     () => service.validateUploadedFile({
       mimetype: 'image/png',
       originalname: 'receipt.pdf',
@@ -1078,7 +1080,7 @@ test('upload failure does not orphan booking receipt reference', async () => {
   const service = new CommissionSettlementService(pool, bookingRepo, driverRepo, fileRepo, {});
 
   const tmp = path.join(uploadDir, 'test-upload-fail.bin');
-  fs.writeFileSync(tmp, 'data');
+  fs.writeFileSync(tmp, PDF_BYTES);
   await assert.rejects(
     () => service.uploadReceipt(44, 'TX202607010001', {
       path: tmp,

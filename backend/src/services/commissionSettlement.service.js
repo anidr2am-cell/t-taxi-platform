@@ -15,6 +15,7 @@ const {
   computeSettlementReceiptFingerprint,
   computeIdempotencyExpiresAt,
 } = require('../utils/settlementReceiptIdempotency.util');
+const { assertReceiptUploadSignature } = require('../utils/fileSignatureValidation.util');
 
 const ADMIN_RECONCILE_BATCH_LIMIT = 100;
 const APPROVAL_MODES = {
@@ -574,7 +575,7 @@ class CommissionSettlementService {
     };
   }
 
-  validateUploadedFile(file) {
+  async validateUploadedFile(file) {
     if (!file) {
       throw new AppError('Receipt file is required', {
         statusCode: HTTP_STATUS.BAD_REQUEST,
@@ -601,6 +602,7 @@ class CommissionSettlementService {
         errorCode: ERROR_CODES.INVALID_FILE_TYPE,
       });
     }
+    await assertReceiptUploadSignature(file);
   }
 
   safeStoredFilename(file) {
@@ -665,7 +667,7 @@ class CommissionSettlementService {
   }
 
   async uploadReceipt(driverUserId, bookingNumber, file, options = {}) {
-    this.validateUploadedFile(file);
+    await this.validateUploadedFile(file);
     const driver = await this.resolveDriver(driverUserId);
     const idempotencyKey = this.assertReceiptIdempotencyKey(options.idempotencyKey);
     const contentHash = hashFileContent(file.path);

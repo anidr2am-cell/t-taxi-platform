@@ -3,6 +3,7 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const { uploadDir } = require('../config/multer');
+const { assertDocumentUploadSignature } = require('../utils/fileSignatureValidation.util');
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const DOCUMENT_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.pdf']);
@@ -190,7 +191,7 @@ class DriverVehicleService {
     }
   }
 
-  validateRequiredFiles(files) {
+  async validateRequiredFiles(files) {
     const normalized = this.normalizeFiles(files);
     if (normalized.vehiclePhotos.length < 3) {
       this.validation('At least 3 vehicle photos are required', 'vehiclePhotos');
@@ -207,10 +208,15 @@ class DriverVehicleService {
       this.validation('At most 1 tax certificate is allowed', 'taxCertificate');
     }
     for (const [key, list] of Object.entries(normalized)) {
-      list.forEach((file) => this.validateFile(file, {
-        imageOnly: key === 'vehiclePhotos',
-        field: key,
-      }));
+      for (const file of list) {
+        this.validateFile(file, {
+          imageOnly: key === 'vehiclePhotos',
+          field: key,
+        });
+        await assertDocumentUploadSignature(file, {
+          imageOnly: key === 'vehiclePhotos',
+        });
+      }
     }
     return normalized;
   }
@@ -251,7 +257,7 @@ class DriverVehicleService {
   }
 
   async saveVehicleFiles(conn, vehicleId, files, actorUserId) {
-    const normalized = this.validateRequiredFiles(files);
+    const normalized = await this.validateRequiredFiles(files);
     for (const [field, list] of Object.entries(normalized)) {
       for (const [index, file] of list.entries()) {
         const relativePath = path.relative(uploadDir, file.path).replace(/\\/g, '/');
@@ -286,7 +292,7 @@ class DriverVehicleService {
     }
 
     // Validate files before opening a DB transaction.
-    this.validateRequiredFiles(files);
+    await this.validateRequiredFiles(files);
 
     const vehicleType = await this.vehicleRepository.findTypeById(vehicleTypeId);
     if (!vehicleType) {

@@ -11,6 +11,7 @@ const errorMiddleware = require('../src/middlewares/error.middleware');
 const ERROR_CODES = require('../src/constants/errorCodes');
 const AppError = require('../src/utils/AppError');
 const config = require('../src/config');
+const { GENERIC_INTERNAL_MESSAGE } = require('../src/utils/clientErrorMessage.util');
 
 function createResponse() {
   const res = {
@@ -49,6 +50,24 @@ test('error middleware hides mysql truncation text on end-trip route', () => {
   );
   assert.equal(res.body.message.includes('status'), false);
   assert.equal(res.body.stack, undefined);
+});
+
+test('error middleware hides non-operational errors in production', () => {
+  const originalNodeEnv = config.server.nodeEnv;
+  config.server.nodeEnv = 'production';
+  try {
+    const err = new Error('Internal provider failure: secret-hostname.example');
+    const req = { path: '/api/v1/bookings', method: 'POST' };
+    const res = createResponse();
+
+    errorMiddleware(err, req, res, () => {});
+
+    assert.equal(res.statusCode, 500);
+    assert.equal(res.body.message, GENERIC_INTERNAL_MESSAGE);
+    assert.equal(res.body.message.includes('secret-hostname'), false);
+  } finally {
+    config.server.nodeEnv = originalNodeEnv;
+  }
 });
 
 test('error middleware keeps operational validation messages', () => {

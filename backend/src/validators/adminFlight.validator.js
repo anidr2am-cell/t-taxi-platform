@@ -16,7 +16,12 @@ const bookingIdParamsSchema = Joi.object({
   bookingId: Joi.number().integer().positive().required(),
 });
 
+const adminFlightSyncStatusQuerySchema = Joi.object({}).unknown(false);
+const adminFlightRunSyncCycleBodySchema = Joi.object({}).unknown(false);
+
 module.exports = {
   adminFlightListQuerySchema,
   bookingIdParamsSchema,
+  adminFlightSyncStatusQuerySchema,
+  adminFlightRunSyncCycleBodySchema,
 };

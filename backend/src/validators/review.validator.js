@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { paginationQuery, bookingNumberParam } = require('./common.validator');
+const { paginationQuery, bookingNumberParam, unicodeText } = require('./common.validator');
 
 const bookingNumberParamsSchema = Joi.object({
   bookingNumber: bookingNumberParam.required(),
@@ -7,7 +7,7 @@ const bookingNumberParamsSchema = Joi.object({
 
 const submitReviewSchema = Joi.object({
   rating: Joi.number().integer().min(1).max(5).required(),
-  comment: Joi.string().trim().max(500).allow('', null).optional(),
+  comment: unicodeText({ max: 500, allowEmpty: true }).default(null),
   tags: Joi.array().items(Joi.string().trim().uppercase().max(64)).max(12).optional(),
   guestAccessToken: Joi.string().trim().min(1).max(512).optional(),
 }).unknown(false);
@@ -29,7 +29,7 @@ const adminReviewListQuerySchema = paginationQuery.keys({
 });
 
 const reviewHideSchema = Joi.object({
-  reason: Joi.string().trim().min(1).max(500).required(),
+  reason: unicodeText({ max: 500 }),
 });
 
 module.exports = {

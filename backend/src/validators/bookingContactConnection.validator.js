@@ -1,8 +1,9 @@
 const Joi = require('joi');
 const CONTACT_CHANNEL = require('../constants/contactChannel');
+const { bookingNumberParam } = require('./common.validator');
 
 const bookingNumberParamsSchema = Joi.object({
-  bookingNumber: Joi.string().trim().uppercase().max(20).required(),
+  bookingNumber: bookingNumberParam.required(),
 });
 
 const startContactConnectionSchema = Joi.object({

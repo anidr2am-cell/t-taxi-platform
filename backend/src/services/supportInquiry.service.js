@@ -5,6 +5,7 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const { uploadDir } = require('../config/multer');
+const { assertImageUploadSignature } = require('../utils/fileSignatureValidation.util');
 
 const STATUS_VALUES = ['NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
@@ -110,7 +111,10 @@ class SupportInquiryService {
   async create(input, options = {}) {
     const normalized = this.normalizeInput(input);
     const files = options.files ?? [];
-    files.forEach((file) => this.validateAttachment(file));
+    for (const file of files) {
+      this.validateAttachment(file);
+      await assertImageUploadSignature(file);
+    }
 
     const conn = await this.pool.getConnection();
     try {

@@ -4,7 +4,7 @@ const { success, paginate } = require('../utils/apiResponse');
 const container = require('../helpers/container');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
-const { uploadDir } = require('../config/multer');
+const { resolveUploadAbsolutePath } = require('../utils/uploadPath.util');
 
 const getDriverVehicleService = () => container.get('driverVehicleService');
 
@@ -42,7 +42,7 @@ const getAdminFile = asyncHandler(async (req, res) => {
     Number(req.params.id),
     Number(req.params.fileId),
   );
-  const absolute = path.join(uploadDir, file.filePath);
+  const absolute = resolveUploadAbsolutePath(file.filePath);
   return res.sendFile(absolute, {
     headers: {
       'Content-Type': file.mimeType || 'application/octet-stream',

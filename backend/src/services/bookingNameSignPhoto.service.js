@@ -4,6 +4,8 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const { uploadDir } = require('../config/multer');
+const { resolveUploadAbsolutePath } = require('../utils/uploadPath.util');
+const { assertImageUploadSignature } = require('../utils/fileSignatureValidation.util');
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -61,15 +63,7 @@ class BookingNameSignPhotoService {
   }
 
   resolveAbsolutePath(relativePath) {
-    const normalized = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
-    const absolute = path.join(uploadDir, normalized);
-    if (!absolute.startsWith(uploadDir)) {
-      throw new AppError('Invalid file path', {
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        errorCode: ERROR_CODES.FILE_NOT_FOUND,
-      });
-    }
-    return absolute;
+    return resolveUploadAbsolutePath(relativePath);
   }
 
   sanitizeFilename(name) {
@@ -80,6 +74,7 @@ class BookingNameSignPhotoService {
   async upload(driverUserId, bookingNumber, file) {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
     this.validateImageFile(file);
+    await assertImageUploadSignature(file);
 
     const conn = await this.pool.getConnection();
     let stagedFinalPath = null;

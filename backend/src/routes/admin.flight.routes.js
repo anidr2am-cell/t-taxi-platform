@@ -7,6 +7,8 @@ const ROLES = require('../constants/roles');
 const {
   adminFlightListQuerySchema,
   bookingIdParamsSchema,
+  adminFlightSyncStatusQuerySchema,
+  adminFlightRunSyncCycleBodySchema,
 } = require('../validators/adminFlight.validator');
 
 const router = express.Router();
@@ -22,12 +24,14 @@ router.get(
 router.get(
   '/flights/sync-status',
   adminOnly,
+  validate({ query: adminFlightSyncStatusQuerySchema }),
   adminFlightController.getSyncStatus,
 );
 
 router.post(
   '/flights/run-sync-cycle',
   adminOnly,
+  validate({ body: adminFlightRunSyncCycleBodySchema }),
   adminFlightController.runSyncCycle,
 );
 

@@ -1,4 +1,5 @@
 const HTTP_STATUS = require('../constants/httpStatus');
+const config = require('../config');
 
 const MYSQL_ERROR_PREFIX = 'ER_';
 
@@ -40,6 +41,11 @@ function resolveClientErrorMessage(err, options = {}) {
 
   if (isDatabaseOrInternalError(err)) {
     return options.tripEndFailure ? TRIP_END_FAILURE_MESSAGE : GENERIC_INTERNAL_MESSAGE;
+  }
+
+  const isProduction = options.production ?? config.server.nodeEnv === 'production';
+  if (isProduction) {
+    return GENERIC_INTERNAL_MESSAGE;
   }
 
   if (err?.message) {
