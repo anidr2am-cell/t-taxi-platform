@@ -14,7 +14,8 @@ abstract final class AppFonts {
   static TextTheme textTheme(TextTheme base) => base;
 
   /// Language menu labels need an explicit Thai family when the active locale
-  /// is not Thai — CanvasKit does not reliably repaint fallback glyphs otherwise.
+  /// is not Thai — CanvasKit + PopupMenu DefaultTextStyle merge can ignore
+  /// per-item fontFamily unless [inherit] is false.
   static String? familyForLanguageLabel(String languageCode) {
     return switch (languageCode) {
       'th' => thaiFamily,
@@ -22,20 +23,35 @@ abstract final class AppFonts {
     };
   }
 
+  /// Per-item language menu style. Does not inherit [Theme] or [DefaultTextStyle]
+  /// fontFamily — PopupMenuItem merges parent styles, which breaks Thai glyphs on
+  /// CanvasKit when the active app locale is not Thai.
+  static TextStyle languageLabelStyle({
+    required String languageCode,
+    Color? color,
+    double fontSize = 13,
+    FontWeight fontWeight = FontWeight.w600,
+  }) {
+    final family = familyForLanguageLabel(languageCode);
+    return TextStyle(
+      inherit: false,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      fontFamily: family,
+      fontFamilyFallback: languageCode == 'th'
+          ? const [primaryFamily, 'sans-serif']
+          : fallbackFamilies,
+    );
+  }
+
   static TextStyle languageLabel(
     BuildContext context, {
     required String languageCode,
   }) {
-    final base = Theme.of(context).textTheme.bodyMedium!.copyWith(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurface,
-        );
-    final family = familyForLanguageLabel(languageCode);
-    return base.copyWith(
-      fontFamily: family,
-      fontFamilyFallback:
-          languageCode == 'th' ? const [primaryFamily, 'sans-serif'] : fallbackFamilies,
+    return languageLabelStyle(
+      languageCode: languageCode,
+      color: Theme.of(context).colorScheme.onSurface,
     );
   }
 }

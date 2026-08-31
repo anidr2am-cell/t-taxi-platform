@@ -20,10 +20,13 @@ class LanguageNameLabel extends StatelessWidget {
     final resolvedStyle = style ??
         AppFonts.languageLabel(context, languageCode: languageCode);
 
-    return Text(
-      label,
-      overflow: TextOverflow.ellipsis,
+    return DefaultTextStyle(
       style: resolvedStyle,
+      child: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+        style: resolvedStyle,
+      ),
     );
   }
 }
