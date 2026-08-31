@@ -442,6 +442,26 @@ class BookingService {
     if (input.originLocationCode) body.originLocationCode = input.originLocationCode;
     if (input.destinationLocationCode) body.destinationLocationCode = input.destinationLocationCode;
 
+    const origin = input.origin ?? {};
+    const destination = input.destination ?? {};
+    const originLat = input.originLat ?? origin.lat;
+    const originLng = input.originLng ?? origin.lng;
+    const destinationLat = input.destinationLat ?? destination.lat;
+    const destinationLng = input.destinationLng ?? destination.lng;
+
+    if (originLat != null && Number.isFinite(Number(originLat))) {
+      body.originLat = Number(originLat);
+    }
+    if (originLng != null && Number.isFinite(Number(originLng))) {
+      body.originLng = Number(originLng);
+    }
+    if (destinationLat != null && Number.isFinite(Number(destinationLat))) {
+      body.destinationLat = Number(destinationLat);
+    }
+    if (destinationLng != null && Number.isFinite(Number(destinationLng))) {
+      body.destinationLng = Number(destinationLng);
+    }
+
     return body;
   }
 

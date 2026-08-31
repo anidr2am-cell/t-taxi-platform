@@ -1,3 +1,5 @@
+const { ROAD_DISTANCE_CORRECTION_FACTOR } = require('../constants/cityTransferDistance.constants');
+
 const EARTH_RADIUS_KM = 6371;
 
 function toRadians(degrees) {
@@ -24,6 +26,16 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return Math.round(distance * 100) / 100;
 }
 
+function estimateRoadDistanceKm(lat1, lng1, lat2, lng2) {
+  const straightLineKm = haversineKm(lat1, lng1, lat2, lng2);
+  if (straightLineKm == null) {
+    return null;
+  }
+  const estimated = straightLineKm * ROAD_DISTANCE_CORRECTION_FACTOR;
+  return Math.round(estimated * 100) / 100;
+}
+
 module.exports = {
   haversineKm,
+  estimateRoadDistanceKm,
 };

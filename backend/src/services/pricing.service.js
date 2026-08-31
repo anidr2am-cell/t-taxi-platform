@@ -25,6 +25,7 @@ class PricingService {
     vehiclePriceRepository,
     chargePolicyRepository,
     vehicleRepository,
+    cityTransferDistancePricingService = null,
   ) {
     this.serviceTypeRepository = serviceTypeRepository;
     this.locationRepository = locationRepository;
@@ -32,6 +33,160 @@ class PricingService {
     this.vehiclePriceRepository = vehiclePriceRepository;
     this.chargePolicyRepository = chargePolicyRepository;
     this.vehicleRepository = vehicleRepository;
+    this.cityTransferDistancePricingService = cityTransferDistancePricingService;
+  }
+
+  extractPricingCoordinates(input) {
+    const originLat = input.originLat ?? input.origin?.lat ?? null;
+    const originLng = input.originLng ?? input.origin?.lng ?? null;
+    const destinationLat = input.destinationLat ?? input.destination?.lat ?? null;
+    const destinationLng = input.destinationLng ?? input.destination?.lng ?? null;
+
+    const coords = [originLat, originLng, destinationLat, destinationLng].map((value) => {
+      if (value == null || value === '') {
+        return null;
+      }
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : null;
+    });
+
+    if (coords.some((value) => value == null)) {
+      return null;
+    }
+
+    return {
+      originLat: coords[0],
+      originLng: coords[1],
+      destinationLat: coords[2],
+      destinationLng: coords[3],
+    };
+  }
+
+  shouldUseCityTransferDistanceFallback(err, input, serviceType) {
+    if (serviceType.code !== SERVICE_TYPES.CITY_TRANSFER) {
+      return false;
+    }
+    if (!this.cityTransferDistancePricingService) {
+      return false;
+    }
+    if (err?.errorCode !== ERROR_CODES.NOT_FOUND) {
+      return false;
+    }
+    return this.extractPricingCoordinates(input) != null;
+  }
+
+  mapQuoteChargeItems(chargeItems) {
+    return chargeItems.map((item) => ({
+      chargeType: item.chargeType,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+      referenceType: item.referenceType ?? null,
+      referenceId: item.referenceId ?? null,
+    }));
+  }
+
+  formatCalculateResponse(quote) {
+    return {
+      currency: quote.currency,
+      chargeItems: this.mapQuoteChargeItems(quote.chargeItems),
+      totalAmount: quote.totalAmount,
+      appliedPricingRuleId: quote.appliedPricingRuleId ?? quote.route?.id ?? null,
+      routeId: quote.route?.id ?? null,
+      vehiclePriceId: quote.vehiclePrice?.id ?? null,
+    };
+  }
+
+  async appendPolicyChargeItems({
+    chargeItems,
+    baseAmount,
+    options,
+    serviceTypeCode,
+    scheduledPickupAt,
+    customerFacing,
+  }) {
+    let subtotal = baseAmount;
+    const policies = await this.chargePolicyRepository.findActivePolicies();
+    const context = {
+      options,
+      serviceTypeCode,
+      scheduledPickupAt,
+    };
+    const at = scheduledPickupAt ? new Date(scheduledPickupAt) : new Date();
+
+    for (const policy of policies) {
+      if (customerFacing && CUSTOMER_EXCLUDED_POLICY_TYPES.has(policy.chargeType)) {
+        continue;
+      }
+      if (!isEffectiveAt(policy, at) || !this.shouldApplyPolicy(policy, context)) {
+        continue;
+      }
+
+      const policyAmount = this.calculatePolicyAmount(policy, baseAmount, subtotal);
+      if (policyAmount === 0) {
+        continue;
+      }
+
+      chargeItems.push({
+        chargeType: mapPolicyTypeToChargeType(policy.chargeType),
+        description: this.buildPolicyDescription(policy),
+        quantity: 1,
+        unitPrice: policyAmount,
+        amount: policyAmount,
+        referenceType: 'CHARGE_POLICY',
+        referenceId: policy.id,
+      });
+      subtotal = roundMoney(subtotal + policyAmount);
+    }
+
+    const discount = 0;
+    return {
+      chargeItems,
+      subtotal,
+      discount,
+      totalAmount: roundMoney(subtotal - discount),
+    };
+  }
+
+  async calculateCityTransferDistanceQuote(input, serviceType, vehicleType) {
+    const coords = this.extractPricingCoordinates(input);
+    const distanceResult = await this.cityTransferDistancePricingService.calculateByDistance(
+      coords.originLat,
+      coords.originLng,
+      coords.destinationLat,
+      coords.destinationLng,
+      vehicleType.code,
+    );
+
+    const vehicleCount = input.vehicleCount ?? 1;
+    const baseUnitPrice = roundMoney(distanceResult.price);
+    const baseAmount = roundMoney(baseUnitPrice * vehicleCount);
+    const chargeItems = [{
+      chargeType: CHARGE_TYPES.VEHICLE_BASE,
+      description: `${vehicleType.code} ${serviceType.code} (${distanceResult.estimatedDistanceKm} km est.)`,
+      quantity: vehicleCount,
+      unitPrice: baseUnitPrice,
+      amount: baseAmount,
+      referenceType: 'CITY_TRANSFER_DISTANCE_BAND',
+      referenceId: distanceResult.band.id,
+    }];
+
+    const priced = await this.appendPolicyChargeItems({
+      chargeItems,
+      baseAmount,
+      options: input.options ?? {},
+      serviceTypeCode: serviceType.code,
+      scheduledPickupAt: input.scheduledPickupAt,
+      customerFacing: true,
+    });
+
+    return this.formatCalculateResponse({
+      currency: distanceResult.currency,
+      chargeItems: priced.chargeItems,
+      totalAmount: priced.totalAmount,
+      appliedPricingRuleId: distanceResult.band.id,
+    });
   }
 
   normalizeRegionCode(value) {
@@ -271,51 +426,24 @@ class PricingService {
       referenceId: vehiclePrice.id,
     }];
 
-    let subtotal = baseAmount;
-    const policies = await this.chargePolicyRepository.findActivePolicies();
-    const context = {
+    const priced = await this.appendPolicyChargeItems({
+      chargeItems,
+      baseAmount,
       options,
       serviceTypeCode: serviceType.code,
       scheduledPickupAt,
-    };
-
-    for (const policy of policies) {
-      if (customerFacing && CUSTOMER_EXCLUDED_POLICY_TYPES.has(policy.chargeType)) {
-        continue;
-      }
-      if (!isEffectiveAt(policy, at) || !this.shouldApplyPolicy(policy, context)) {
-        continue;
-      }
-
-      const policyAmount = this.calculatePolicyAmount(policy, baseAmount, subtotal);
-      if (policyAmount === 0) {
-        continue;
-      }
-
-      chargeItems.push({
-        chargeType: mapPolicyTypeToChargeType(policy.chargeType),
-        description: this.buildPolicyDescription(policy),
-        quantity: 1,
-        unitPrice: policyAmount,
-        amount: policyAmount,
-        referenceType: 'CHARGE_POLICY',
-        referenceId: policy.id,
-      });
-      subtotal = roundMoney(subtotal + policyAmount);
-    }
-
-    const discount = 0;
-    const totalAmount = roundMoney(subtotal - discount);
+      customerFacing,
+    });
 
     return {
       route,
       vehiclePrice,
       vehicleType,
       serviceType,
-      chargeItems,
-      subtotal,
-      discount,
-      totalAmount,
+      chargeItems: priced.chargeItems,
+      subtotal: priced.subtotal,
+      discount: priced.discount,
+      totalAmount: priced.totalAmount,
       currency: vehiclePrice.currency,
     };
   }
@@ -396,43 +524,33 @@ class PricingService {
       });
     }
 
-    const { origin, destination } = await this.resolveLocations(input);
-    if (!origin || !destination) {
-      throw new AppError('Origin or destination location not found', {
-        statusCode: HTTP_STATUS.NOT_FOUND,
-        errorCode: ERROR_CODES.NOT_FOUND,
+    try {
+      const { origin, destination } = await this.resolveLocations(input);
+      if (!origin || !destination) {
+        throw new AppError('Origin or destination location not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.NOT_FOUND,
+        });
+      }
+
+      const quote = await this.computeQuote({
+        serviceType,
+        vehicleType,
+        originLocationId: origin.id,
+        destinationLocationId: destination.id,
+        vehicleCount: input.vehicleCount ?? 1,
+        options: input.options ?? {},
+        scheduledPickupAt: input.scheduledPickupAt,
+        customerFacing: true,
       });
+
+      return this.formatCalculateResponse(quote);
+    } catch (err) {
+      if (!this.shouldUseCityTransferDistanceFallback(err, input, serviceType)) {
+        throw err;
+      }
+      return this.calculateCityTransferDistanceQuote(input, serviceType, vehicleType);
     }
-
-    const quote = await this.computeQuote({
-      serviceType,
-      vehicleType,
-      originLocationId: origin.id,
-      destinationLocationId: destination.id,
-      vehicleCount: input.vehicleCount ?? 1,
-      options: input.options ?? {},
-      scheduledPickupAt: input.scheduledPickupAt,
-      customerFacing: true,
-    });
-
-    const responseItems = quote.chargeItems.map((item) => ({
-      chargeType: item.chargeType,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      amount: item.amount,
-      referenceType: item.referenceType ?? null,
-      referenceId: item.referenceId ?? null,
-    }));
-
-    return {
-      currency: quote.currency,
-      chargeItems: responseItems,
-      totalAmount: quote.totalAmount,
-      appliedPricingRuleId: quote.route.id,
-      routeId: quote.route.id,
-      vehiclePriceId: quote.vehiclePrice.id,
-    };
   }
 }
 

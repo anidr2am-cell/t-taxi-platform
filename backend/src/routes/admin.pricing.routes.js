@@ -17,6 +17,7 @@ const {
   chargePolicyListQuerySchema,
   pricingSimulateSchema,
   idParamSchema,
+  cityTransferDistanceBandUpdateSchema,
 } = require('../validators/pricing.validator');
 
 const router = express.Router();
@@ -131,6 +132,19 @@ router.delete(
   adminOnly,
   validate({ params: idParamSchema }),
   pricingController.deleteChargePolicy,
+);
+
+router.get(
+  '/city-transfer-distance-bands',
+  adminOnly,
+  validate({ query: chargePolicyListQuerySchema }),
+  pricingController.listCityTransferDistanceBands,
+);
+router.put(
+  '/city-transfer-distance-bands/:id',
+  adminOnly,
+  validate({ params: idParamSchema, body: cityTransferDistanceBandUpdateSchema }),
+  pricingController.updateCityTransferDistanceBand,
 );
 
 module.exports = router;

@@ -19,6 +19,9 @@ const PricingService = require("../services/pricing.service");
 const RouteAdminService = require("../services/routeAdmin.service");
 const VehiclePriceAdminService = require("../services/vehiclePriceAdmin.service");
 const ChargePolicyAdminService = require("../services/chargePolicyAdmin.service");
+const CityTransferDistanceBandRepository = require("../repositories/cityTransferDistanceBand.repository");
+const CityTransferDistancePricingService = require("../services/cityTransferDistancePricing.service");
+const CityTransferDistanceBandAdminService = require("../services/cityTransferDistanceBandAdmin.service");
 const PricingAdminService = require("../services/pricingAdmin.service");
 const BookingRepository = require("../repositories/booking.repository");
 const AdminDashboardRepository = require("../repositories/adminDashboard.repository");
@@ -176,6 +179,16 @@ container.register(
   () => new ChargePolicyRepository(),
 );
 container.register(
+  "cityTransferDistanceBandRepository",
+  () => new CityTransferDistanceBandRepository(),
+);
+container.register(
+  "cityTransferDistancePricingService",
+  (c) => new CityTransferDistancePricingService(
+    c.get("cityTransferDistanceBandRepository"),
+  ),
+);
+container.register(
   "pricingService",
   (c) =>
     new PricingService(
@@ -185,6 +198,7 @@ container.register(
       c.get("vehiclePriceRepository"),
       c.get("chargePolicyRepository"),
       c.get("vehicleRepository"),
+      c.get("cityTransferDistancePricingService"),
     ),
 );
 container.register(
@@ -209,6 +223,12 @@ container.register(
 container.register(
   "chargePolicyAdminService",
   (c) => new ChargePolicyAdminService(c.get("chargePolicyRepository")),
+);
+container.register(
+  "cityTransferDistanceBandAdminService",
+  (c) => new CityTransferDistanceBandAdminService(
+    c.get("cityTransferDistanceBandRepository"),
+  ),
 );
 container.register(
   "pricingAdminService",

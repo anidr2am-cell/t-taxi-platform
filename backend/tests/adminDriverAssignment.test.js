@@ -64,6 +64,14 @@ test('haversineKm returns distance for valid coordinates', () => {
   assert.ok(km != null && km > 0 && km < 20);
 });
 
+test('estimateRoadDistanceKm applies configured correction factor', () => {
+  const { estimateRoadDistanceKm: estimate } = require('../src/utils/geo.util');
+  const straight = haversineKm(13.69, 100.75, 13.70, 100.76);
+  const estimated = estimate(13.69, 100.75, 13.70, 100.76);
+  assert.ok(straight != null && estimated != null);
+  assert.equal(estimated, Math.round(straight * 1.3 * 100) / 100);
+});
+
 test('vehicle mismatch excludes candidate', () => {
   const service = new DriverCandidateScoringService();
   const result = service.buildCandidate(

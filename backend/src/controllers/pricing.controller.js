@@ -8,6 +8,9 @@ const getPricingAdminService = () => container.get('pricingAdminService');
 const getRouteAdminService = () => container.get('routeAdminService');
 const getVehiclePriceAdminService = () => container.get('vehiclePriceAdminService');
 const getChargePolicyAdminService = () => container.get('chargePolicyAdminService');
+const getCityTransferDistanceBandAdminService = () => (
+  container.get('cityTransferDistanceBandAdminService')
+);
 
 const calculatePricing = asyncHandler(async (req, res) => {
   const data = await getPricingService().calculate(req.body);
@@ -127,6 +130,26 @@ const deleteChargePolicy = asyncHandler(async (req, res) => {
   return success(res, null, 'Charge policy deleted');
 });
 
+const listCityTransferDistanceBands = asyncHandler(async (req, res) => {
+  const data = await getCityTransferDistanceBandAdminService().list({
+    includeInactive: Boolean(req.query.includeInactive),
+  });
+  return success(res, data, 'OK');
+});
+
+const updateCityTransferDistanceBand = asyncHandler(async (req, res) => {
+  const data = await getCityTransferDistanceBandAdminService().update(
+    Number(req.params.id),
+    {
+      sedanPrice: req.body.sedanPrice,
+      suvPrice: req.body.suvPrice,
+      vanPrice: req.body.vanPrice,
+      isActive: req.body.isActive,
+    },
+  );
+  return success(res, data, 'City transfer distance band updated');
+});
+
 module.exports = {
   calculatePricing,
   simulatePricing,
@@ -147,4 +170,6 @@ module.exports = {
   createChargePolicy,
   updateChargePolicy,
   deleteChargePolicy,
+  listCityTransferDistanceBands,
+  updateCityTransferDistanceBand,
 };

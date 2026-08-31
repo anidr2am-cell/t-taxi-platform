@@ -183,6 +183,10 @@ test('createBooking recalculates pricing server-side via buildPricingInput', asy
     scheduledPickupAt: CREATE_INPUT.scheduledPickupAt,
     originAirportIata: 'BKK',
     destinationLocationCode: 'PATTAYA',
+    originLat: 13.69,
+    originLng: 100.75,
+    destinationLat: 12.92,
+    destinationLng: 100.88,
   });
   assert.equal(Object.hasOwn(calls.pricingInputs[0], 'totalAmount'), false);
 });

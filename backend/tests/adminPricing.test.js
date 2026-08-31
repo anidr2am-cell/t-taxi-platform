@@ -143,6 +143,33 @@ function registerPricingMocks(overrides = {}) {
     },
   }));
 
+  container.register('cityTransferDistanceBandAdminService', () => ({
+    async list() {
+      return overrides.distanceBands ?? [{
+        id: 2,
+        minKm: 13,
+        maxKm: 50,
+        sedanPrice: 900,
+        suvPrice: 1100,
+        vanPrice: 1400,
+        currency: 'THB',
+        isActive: true,
+      }];
+    },
+    async update(id, input) {
+      return {
+        id,
+        minKm: 13,
+        maxKm: 50,
+        sedanPrice: input.sedanPrice ?? 900,
+        suvPrice: input.suvPrice ?? 1100,
+        vanPrice: input.vanPrice ?? 1400,
+        currency: 'THB',
+        isActive: input.isActive ?? true,
+      };
+    },
+  }));
+
   container.register('pricingService', () => ({
     async simulate() {
       return {
@@ -398,6 +425,23 @@ test('charge policy CRUD endpoints work for admin', async () => {
     .send({ isActive: false });
   assert.equal(updated.status, 200);
   assert.equal(updated.body.data.isActive, false);
+});
+
+test('city transfer distance band admin endpoints list and update prices', async () => {
+  registerPricingMocks();
+  const list = await request(app)
+    .get('/api/v1/admin/city-transfer-distance-bands')
+    .set('Authorization', `Bearer ${sign('ADMIN')}`);
+  assert.equal(list.status, 200);
+  assert.equal(list.body.data.length, 1);
+  assert.equal(list.body.data[0].sedanPrice, 900);
+
+  const updated = await request(app)
+    .put('/api/v1/admin/city-transfer-distance-bands/2')
+    .set('Authorization', `Bearer ${sign('ADMIN')}`)
+    .send({ sedanPrice: 950 });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.data.sedanPrice, 950);
 });
 
 test('pricing simulate endpoint returns quote breakdown', async () => {

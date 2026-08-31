@@ -33,6 +33,10 @@ const pricingCalculateSchema = Joi.object({
   destinationRegion: Joi.string().trim().optional(),
   originLocationCode: Joi.string().trim().uppercase().optional(),
   destinationLocationCode: Joi.string().trim().uppercase().optional(),
+  originLat: Joi.number().optional(),
+  originLng: Joi.number().optional(),
+  destinationLat: Joi.number().optional(),
+  destinationLng: Joi.number().optional(),
   options: bookingOptionsDto.optional(),
   passengers: passengersDto.optional(),
   luggage: luggageDto.optional(),
@@ -152,6 +156,13 @@ const idParamSchema = Joi.object({
   id: Joi.number().integer().positive().required(),
 });
 
+const cityTransferDistanceBandUpdateSchema = Joi.object({
+  sedanPrice: Joi.number().positive().allow(null).optional(),
+  suvPrice: Joi.number().positive().allow(null).optional(),
+  vanPrice: Joi.number().positive().allow(null).optional(),
+  isActive: Joi.boolean().optional(),
+}).min(1);
+
 module.exports = {
   pricingCalculateSchema,
   routeCreateSchema,
@@ -166,5 +177,6 @@ module.exports = {
   chargePolicyListQuerySchema,
   pricingSimulateSchema,
   idParamSchema,
+  cityTransferDistanceBandUpdateSchema,
   LOCATION_TYPES,
 };
