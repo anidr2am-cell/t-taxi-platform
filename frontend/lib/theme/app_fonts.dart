@@ -1,48 +1,41 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-/// Multilingual font setup for customer-facing surfaces (incl. Thai/CJK labels).
+/// Bundled multilingual font families (no runtime google_fonts fetch on web).
 abstract final class AppFonts {
-  static Future<void> ensureLoaded() async {
-    if (kIsWeb) {
-      GoogleFonts.config.allowRuntimeFetching = true;
-    }
+  static const primaryFamily = 'NotoSans';
+  static const thaiFamily = 'NotoSansThai';
 
-    await GoogleFonts.pendingFonts([
-      GoogleFonts.notoSans(),
-      GoogleFonts.notoSansThai(),
-      GoogleFonts.notoSansJp(),
-      GoogleFonts.notoSansSc(),
-      GoogleFonts.notoSansKr(),
-    ]);
+  static const fallbackFamilies = [thaiFamily, 'sans-serif'];
+
+  static Future<void> ensureLoaded() async {}
+
+  static void disableRuntimeFetchingForTests() {}
+
+  static TextTheme textTheme(TextTheme base) => base;
+
+  /// Language menu labels need an explicit Thai family when the active locale
+  /// is not Thai — CanvasKit does not reliably repaint fallback glyphs otherwise.
+  static String? familyForLanguageLabel(String languageCode) {
+    return switch (languageCode) {
+      'th' => thaiFamily,
+      _ => primaryFamily,
+    };
   }
 
-  static void disableRuntimeFetchingForTests() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  }
-
-  static String? get primaryFamily => GoogleFonts.notoSans().fontFamily;
-
-  static List<String> get fallbackFamilies => [
-        for (final family in [
-          GoogleFonts.notoSansThai().fontFamily,
-          GoogleFonts.notoSansJp().fontFamily,
-          GoogleFonts.notoSansSc().fontFamily,
-          GoogleFonts.notoSansKr().fontFamily,
-        ])
-          if (family != null) family,
-        'sans-serif',
-      ];
-
-  static TextTheme textTheme(TextTheme base) =>
-      GoogleFonts.notoSansTextTheme(base);
-
-  static TextStyle languageLabel(BuildContext context) {
-    return Theme.of(context).textTheme.bodyMedium!.copyWith(
+  static TextStyle languageLabel(
+    BuildContext context, {
+    required String languageCode,
+  }) {
+    final base = Theme.of(context).textTheme.bodyMedium!.copyWith(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: Theme.of(context).colorScheme.onSurface,
         );
+    final family = familyForLanguageLabel(languageCode);
+    return base.copyWith(
+      fontFamily: family,
+      fontFamilyFallback:
+          languageCode == 'th' ? const [primaryFamily, 'sans-serif'] : fallbackFamilies,
+    );
   }
 }

@@ -32,7 +32,6 @@ import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/widgets/booking_social_login_section.dart';
 import 'screens/admin/admin_screen.dart';
 import 'screens/home_screen.dart';
-import 'theme/app_fonts.dart';
 import 'theme/app_theme.dart';
 
 const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
@@ -43,7 +42,6 @@ Future<void> main() async {
   if (kIsWeb) {
     usePathUrlStrategy();
   }
-  await AppFonts.ensureLoaded();
   runApp(
     MultiProvider(
       providers: [

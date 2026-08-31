@@ -17,7 +17,8 @@ class LanguageNameLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = AppLocalizations.languageNames[languageCode] ?? languageCode;
-    final resolvedStyle = style ?? AppFonts.languageLabel(context);
+    final resolvedStyle = style ??
+        AppFonts.languageLabel(context, languageCode: languageCode);
 
     return Text(
       label,

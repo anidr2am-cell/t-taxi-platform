@@ -283,7 +283,10 @@ class _LanguageButton extends StatelessWidget {
               Flexible(
                 child: LanguageNameLabel(
                   languageCode: locale.languageCode,
-                  style: AppFonts.languageLabel(context).copyWith(
+                  style: AppFonts.languageLabel(
+                    context,
+                    languageCode: locale.languageCode,
+                  ).copyWith(
                     color: AppTokens.textPrimary,
                   ),
                 ),
