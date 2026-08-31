@@ -52,8 +52,3 @@ flutter:
     - family: NotoSansThai
       fonts:
         - asset: assets/fonts/NotoSansThai.ttf
-    # CanvasKit still tries to fetch Roboto from the engine font CDN unless a local
-    # Roboto family is declared. Reuse NotoSans to block that request.
-    - family: Roboto
-      fonts:
-        - asset: assets/fonts/NotoSans.ttf
