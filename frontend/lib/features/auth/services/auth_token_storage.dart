@@ -16,21 +16,37 @@ class AuthTokenStorage implements TokenStorage {
   Future<AuthTokens?> read() async {
     final prefs = await SharedPreferences.getInstance();
     final accessToken = prefs.getString(accessTokenKey);
-    if (accessToken == null || accessToken.isEmpty) {
+    final refreshToken = prefs.getString(refreshTokenKey);
+    final hasAccess = accessToken != null && accessToken.isNotEmpty;
+    final hasRefresh = refreshToken != null && refreshToken.isNotEmpty;
+    if (!hasAccess && !hasRefresh) {
       return null;
     }
     return AuthTokens(
-      accessToken: accessToken,
-      refreshToken: prefs.getString(refreshTokenKey),
+      accessToken: hasAccess ? accessToken : '',
+      refreshToken: hasRefresh ? refreshToken : null,
       accessTokenExpiresAt: _parseExpiresAt(
         prefs.getString(accessTokenExpiresAtKey),
       ),
     );
   }
 
+  Future<String?> readRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final refreshToken = prefs.getString(refreshTokenKey)?.trim();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return null;
+    }
+    return refreshToken;
+  }
+
   Future<String?> readAccessToken() async {
-    final tokens = await read();
-    return tokens?.accessToken;
+    final prefs = await SharedPreferences.getInstance();
+    final accessToken = prefs.getString(accessTokenKey)?.trim();
+    if (accessToken == null || accessToken.isEmpty) {
+      return null;
+    }
+    return accessToken;
   }
 
   Future<AuthSession?> loadSession() async {

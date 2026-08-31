@@ -49,12 +49,12 @@ class CustomerSession {
     http.Client? httpClient,
     String? baseUrl,
   }) {
-    final storage = tokenStorage ?? AuthTokenStorage();
-    if (tokenStorage != null ||
-        apiClient != null ||
+    final hasCustomTransport = apiClient != null ||
         tokenRefresher != null ||
         httpClient != null ||
-        baseUrl != null) {
+        baseUrl != null;
+    if (hasCustomTransport) {
+      final storage = tokenStorage ?? AuthTokenStorage();
       return CustomerSession._(
         storage,
         apiClient: apiClient,
@@ -63,7 +63,13 @@ class CustomerSession {
         baseUrl: baseUrl,
       );
     }
-    return _shared ??= CustomerSession._(AuthTokenStorage());
+
+    if (_shared != null) {
+      return _shared!;
+    }
+
+    final storage = tokenStorage ?? AuthTokenStorage();
+    return _shared = CustomerSession._(storage);
   }
 
   static CustomerSession? _shared;

@@ -80,4 +80,32 @@ void main() {
     expect(loaded!.accessToken, 'fresh-access');
     expect(loaded.user.email, 'customer@example.com');
   });
+
+  test('read returns refresh token even when access token is missing', () async {
+    final storage = AuthTokenStorage();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AuthTokenStorage.refreshTokenKey, 'refresh-only');
+
+    final tokens = await storage.read();
+    expect(tokens, isNotNull);
+    expect(tokens!.accessToken, '');
+    expect(tokens.refreshToken, 'refresh-only');
+    expect(await storage.readRefreshToken(), 'refresh-only');
+  });
+
+  test('loadSession requires refresh token and rejects access-only storage', () async {
+    final storage = AuthTokenStorage();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AuthTokenStorage.accessTokenKey, 'access-only');
+    await prefs.setString(
+      AuthTokenStorage.userJsonKey,
+      jsonEncode(
+        const AuthUser(id: 1, role: 'CUSTOMER', email: 'customer@example.com')
+            .toJson(),
+      ),
+    );
+
+    expect(await storage.loadSession(), isNull);
+    expect(await storage.readAccessToken(), 'access-only');
+  });
 }

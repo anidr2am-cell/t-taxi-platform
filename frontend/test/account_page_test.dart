@@ -132,7 +132,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('account_mileage_error')), findsOneWidget);
-    expect(find.text('불러오기 실패'), findsOneWidget);
+    expect(find.text('failed'), findsOneWidget);
   });
 
   testWidgets('account page my bookings menu navigates to my bookings', (

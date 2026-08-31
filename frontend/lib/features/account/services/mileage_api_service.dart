@@ -26,15 +26,15 @@ class MileageApiService {
   final CustomerSession _session;
 
   Future<MileageBalanceResult> getMileageBalance() async {
-    final accessToken = await _session.tokenStorage.readAccessToken();
-    if (accessToken == null || accessToken.isEmpty) {
+    final session = await _session.tokenStorage.loadSession();
+    if (session == null) {
       throw const MileageApiException('Authentication required');
     }
 
     try {
       final decoded = await _session.apiClient.getJson(
         '/customer/mileage',
-        bearerToken: accessToken,
+        bearerToken: session.accessToken,
       );
       final data = decoded['data'] as Map?;
       if (data == null) {

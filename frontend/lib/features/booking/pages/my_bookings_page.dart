@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../../auth/services/customer_session.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../pages/guest_booking_lookup_page.dart';
@@ -21,8 +22,7 @@ class MyBookingsPage extends StatefulWidget {
 }
 
 class _MyBookingsPageState extends State<MyBookingsPage> {
-  late final CustomerBookingsApiService _apiService =
-      widget.apiService ?? CustomerBookingsApiService();
+  CustomerBookingsApiService? _apiService;
 
   List<GuestBookingLookupResult> _bookings = const [];
   bool _loading = true;
@@ -32,10 +32,21 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
   @override
   void initState() {
     super.initState();
-    _loadBookings();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBookings();
+    });
+  }
+
+  CustomerBookingsApiService _resolveApiService() {
+    return widget.apiService ??
+        CustomerBookingsApiService(
+          session:
+              AuthScope.maybeOf(context)?.customerSession ?? CustomerSession(),
+        );
   }
 
   Future<void> _loadBookings({bool refreshing = false}) async {
+    _apiService ??= _resolveApiService();
     if (!refreshing) {
       setState(() {
         _loading = true;
@@ -49,7 +60,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
     }
 
     try {
-      final result = await _apiService.listMyBookings();
+      final result = await _apiService!.listMyBookings();
       if (!mounted) return;
       setState(() {
         _bookings = result.bookings;

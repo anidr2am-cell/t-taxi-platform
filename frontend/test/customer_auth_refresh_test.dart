@@ -253,4 +253,35 @@ void main() {
     expect(refreshCalls, 1);
     expect(await tokenStorage.readAccessToken(), 'fresh-token');
   });
+
+  test('getMileageBalance rejects access-only storage without refresh token', () async {
+    final tokenStorage = AuthTokenStorage();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AuthTokenStorage.accessTokenKey, 'access-only');
+    await prefs.setString(
+      AuthTokenStorage.userJsonKey,
+      jsonEncode(
+        const AuthUser(id: 1, role: 'CUSTOMER', email: 'user@example.com').toJson(),
+      ),
+    );
+
+    final service = MileageApiService(
+      session: CustomerSession(
+        tokenStorage: tokenStorage,
+        httpClient: MockClient((_) async => http.Response('{}', 500)),
+        baseUrl: 'http://localhost:3000',
+      ),
+    );
+
+    expect(
+      () => service.getMileageBalance(),
+      throwsA(
+        isA<MileageApiException>().having(
+          (error) => error.message,
+          'message',
+          'Authentication required',
+        ),
+      ),
+    );
+  });
 }

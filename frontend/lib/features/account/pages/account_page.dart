@@ -24,15 +24,17 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
-  late final MileageApiService _mileageApiService =
-      widget.mileageApiService ?? MileageApiService();
-
   bool _loadingMileage = true;
   int? _mileageBalance;
   String? _mileageError;
 
   AuthController _resolveController(BuildContext context) {
     return widget.authController ?? AuthScope.of(context);
+  }
+
+  MileageApiService _resolveMileageApiService(AuthController controller) {
+    return widget.mileageApiService ??
+        MileageApiService(session: controller.customerSession);
   }
 
   @override
@@ -61,7 +63,8 @@ class _AccountPageState extends State<AccountPage> {
     });
 
     try {
-      final result = await _mileageApiService.getMileageBalance();
+      final result =
+          await _resolveMileageApiService(controller).getMileageBalance();
       if (!mounted) return;
       setState(() {
         _mileageBalance = result.balance;
@@ -339,7 +342,7 @@ class _MileageCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      l10n.t('account_mileage_load_failed'),
+                      errorMessage!,
                       style: const TextStyle(color: AppTokens.error),
                     ),
                   ),

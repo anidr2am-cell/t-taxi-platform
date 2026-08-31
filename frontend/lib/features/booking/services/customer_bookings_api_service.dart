@@ -38,15 +38,15 @@ class CustomerBookingsApiService {
     int page = 1,
     int limit = 20,
   }) async {
-    final accessToken = await _session.tokenStorage.readAccessToken();
-    if (accessToken == null || accessToken.isEmpty) {
+    final session = await _session.tokenStorage.loadSession();
+    if (session == null) {
       throw const CustomerBookingsApiException('Authentication required');
     }
 
     try {
       final decoded = await _session.apiClient.getJson(
         '/customer/bookings',
-        bearerToken: accessToken,
+        bearerToken: session.accessToken,
         queryParameters: {
           'page': '$page',
           'limit': '$limit',
