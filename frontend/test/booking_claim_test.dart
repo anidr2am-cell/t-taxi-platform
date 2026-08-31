@@ -6,6 +6,7 @@ import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/auth/models/social_login_return_context.dart';
 import 'package:frontend/features/auth/services/auth_api_service.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
+import 'package:frontend/features/auth/services/customer_session.dart';
 import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:http/http.dart' as http;
@@ -37,12 +38,20 @@ void main() {
     required http.Client client,
     FakeGoogleSignInService? googleSignInService,
   }) {
+    final tokenStorage = AuthTokenStorage();
+    final customerSession = CustomerSession(
+      tokenStorage: tokenStorage,
+      httpClient: client,
+      baseUrl: 'http://localhost:3000',
+    );
     return AuthController(
       apiService: AuthApiService(
         client: client,
         baseUrl: 'http://localhost:3000',
+        customerSession: customerSession,
       ),
-      tokenStorage: AuthTokenStorage(),
+      tokenStorage: tokenStorage,
+      customerSession: customerSession,
       googleSignInService: googleSignInService ?? FakeGoogleSignInService(),
     );
   }
@@ -193,27 +202,36 @@ void main() {
     tester,
   ) async {
     final googleSignInService = FakeGoogleSignInService();
+    final tokenStorage = AuthTokenStorage();
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/auth/social/google')) {
+        return _sessionResponse('access-token');
+      }
+      if (request.url.path.endsWith('/customer/bookings/claim')) {
+        return http.Response(
+          jsonEncode({
+            'success': false,
+            'error_code': 'BOOKING_ALREADY_CLAIMED',
+            'message': 'Already linked',
+          }),
+          409,
+        );
+      }
+      return http.Response('{}', 500);
+    });
+    final customerSession = CustomerSession(
+      tokenStorage: tokenStorage,
+      httpClient: client,
+      baseUrl: 'http://localhost:3000',
+    );
     final authController = AuthController(
       apiService: AuthApiService(
-        client: MockClient((request) async {
-          if (request.url.path.endsWith('/auth/social/google')) {
-            return _sessionResponse('access-token');
-          }
-          if (request.url.path.endsWith('/customer/bookings/claim')) {
-            return http.Response(
-              jsonEncode({
-                'success': false,
-                'error_code': 'BOOKING_ALREADY_CLAIMED',
-                'message': 'Already linked',
-              }),
-              409,
-            );
-          }
-          return http.Response('{}', 500);
-        }),
+        client: client,
         baseUrl: 'http://localhost:3000',
+        customerSession: customerSession,
       ),
-      tokenStorage: AuthTokenStorage(),
+      tokenStorage: tokenStorage,
+      customerSession: customerSession,
       googleSignInService: googleSignInService,
     );
     await authController.initialize();

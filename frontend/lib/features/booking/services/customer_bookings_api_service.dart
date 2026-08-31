@@ -1,10 +1,7 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
-import '../../../config/app_config.dart';
-import '../../booking/models/guest_booking_lookup_result.dart';
-import '../../auth/services/auth_token_storage.dart';
+import '../../../core/network/api_exception.dart';
+import '../../auth/services/customer_api_errors.dart';
+import '../../auth/services/customer_session.dart';
+import '../models/guest_booking_lookup_result.dart';
 
 class CustomerBookingsApiException implements Exception {
   const CustomerBookingsApiException(this.message, {this.statusCode});
@@ -32,78 +29,59 @@ class CustomerBookingsPageResult {
 
 class CustomerBookingsApiService {
   CustomerBookingsApiService({
-    http.Client? client,
-    AuthTokenStorage? tokenStorage,
-    String? baseUrl,
-  }) : _client = client ?? http.Client(),
-       _tokenStorage = tokenStorage ?? AuthTokenStorage(),
-       _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+    CustomerSession? session,
+  }) : _session = session ?? CustomerSession();
 
-  final http.Client _client;
-  final AuthTokenStorage _tokenStorage;
-  final String _baseUrl;
-
-  String get _base => '$_baseUrl/api/v1';
+  final CustomerSession _session;
 
   Future<CustomerBookingsPageResult> listMyBookings({
     int page = 1,
     int limit = 20,
   }) async {
-    final session = await _tokenStorage.loadSession();
-    final accessToken = session?.accessToken;
+    final accessToken = await _session.tokenStorage.readAccessToken();
     if (accessToken == null || accessToken.isEmpty) {
       throw const CustomerBookingsApiException('Authentication required');
     }
 
-    final uri = Uri.parse('$_base/customer/bookings').replace(
-      queryParameters: {
-        'page': '$page',
-        'limit': '$limit',
-      },
-    );
+    try {
+      final decoded = await _session.apiClient.getJson(
+        '/customer/bookings',
+        bearerToken: accessToken,
+        queryParameters: {
+          'page': '$page',
+          'limit': '$limit',
+        },
+      );
 
-    final response = await _client.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      },
-    );
+      final data = decoded['data'] as Map?;
+      if (data == null) {
+        throw const CustomerBookingsApiException('Invalid bookings response');
+      }
 
-    final decoded = jsonDecode(response.body);
-    if (response.statusCode >= 400) {
-      final message = decoded is Map
-          ? decoded['message'] as String? ?? 'Unable to load bookings'
-          : 'Unable to load bookings';
+      final rawBookings = data['bookings'];
+      final bookings = rawBookings is List
+          ? rawBookings
+              .whereType<Map>()
+              .map(
+                (item) => GuestBookingLookupResult.fromCustomerBookingsApiJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList()
+          : <GuestBookingLookupResult>[];
+
+      return CustomerBookingsPageResult(
+        bookings: bookings,
+        total: data['total'] as int? ?? bookings.length,
+        page: data['page'] as int? ?? page,
+        limit: data['limit'] as int? ?? limit,
+      );
+    } on ApiException catch (error) {
       throw CustomerBookingsApiException(
-        message,
-        statusCode: response.statusCode,
+        customerApiErrorMessage(error, fallback: 'Unable to load bookings'),
+        statusCode: error.statusCode,
       );
     }
-
-    final data = decoded is Map ? decoded['data'] as Map? : null;
-    if (data == null) {
-      throw const CustomerBookingsApiException('Invalid bookings response');
-    }
-
-    final rawBookings = data['bookings'];
-    final bookings = rawBookings is List
-        ? rawBookings
-            .whereType<Map>()
-            .map(
-              (item) => GuestBookingLookupResult.fromCustomerBookingsApiJson(
-                Map<String, dynamic>.from(item),
-              ),
-            )
-            .toList()
-        : <GuestBookingLookupResult>[];
-
-    return CustomerBookingsPageResult(
-      bookings: bookings,
-      total: data['total'] as int? ?? bookings.length,
-      page: data['page'] as int? ?? page,
-      limit: data['limit'] as int? ?? limit,
-    );
   }
 
   Future<GuestBookingLookupResult> findMyBookingByNumber(

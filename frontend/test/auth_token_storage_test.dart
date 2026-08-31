@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/core/network/token_storage.dart';
 import 'package:frontend/features/auth/models/auth_session.dart';
 import 'package:frontend/features/auth/models/auth_user.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
@@ -55,5 +56,28 @@ void main() {
     final loaded = await storage.loadSession();
 
     expect(loaded, isNull);
+  });
+
+  test('write updates access token for refresh without clearing user json', () async {
+    final storage = AuthTokenStorage();
+    await storage.saveSession(
+      const AuthSession(
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        user: AuthUser(id: 1, role: 'CUSTOMER', email: 'customer@example.com'),
+      ),
+    );
+
+    await storage.write(
+      const AuthTokens(
+        accessToken: 'fresh-access',
+        refreshToken: 'refresh-token',
+      ),
+    );
+
+    final loaded = await storage.loadSession();
+    expect(loaded, isNotNull);
+    expect(loaded!.accessToken, 'fresh-access');
+    expect(loaded.user.email, 'customer@example.com');
   });
 }

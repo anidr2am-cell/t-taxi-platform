@@ -152,6 +152,12 @@ class AuthScope extends InheritedWidget {
     return scope!.controller;
   }
 
+  static AuthController? maybeOf(BuildContext context) {
+    return context
+        .getInheritedWidgetOfExactType<AuthScope>()
+        ?.controller;
+  }
+
   @override
   bool updateShouldNotify(AuthScope oldWidget) =>
       oldWidget.controller != controller;

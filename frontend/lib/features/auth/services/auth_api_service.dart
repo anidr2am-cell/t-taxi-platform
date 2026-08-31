@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../config/app_config.dart';
+import '../../../core/network/api_exception.dart';
 import '../models/auth_session.dart';
+import 'customer_api_errors.dart';
+import 'customer_session.dart';
 
 class AuthApiException implements Exception {
   const AuthApiException(this.message, {this.errorCode, this.statusCode});
@@ -17,12 +20,17 @@ class AuthApiException implements Exception {
 }
 
 class AuthApiService {
-  AuthApiService({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
-      _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+  AuthApiService({
+    http.Client? client,
+    String? baseUrl,
+    CustomerSession? customerSession,
+  }) : _client = client ?? http.Client(),
+       _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+       _customerSession = customerSession ?? CustomerSession();
 
   final http.Client _client;
   final String _baseUrl;
+  final CustomerSession _customerSession;
 
   String get _base => '$_baseUrl/api/v1';
 
@@ -126,35 +134,33 @@ class AuthApiService {
   }
 
   Future<void> claimBooking({
-    required String accessToken,
     required String bookingNumber,
     required String guestAccessToken,
+    String? accessToken,
   }) async {
-    final response = await _client.post(
-      Uri.parse('$_base/customer/bookings/claim'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      },
-      body: jsonEncode({
-        'bookingNumber': bookingNumber,
-        'guestAccessToken': guestAccessToken,
-      }),
-    );
+    final bearerToken =
+        accessToken ?? await _customerSession.tokenStorage.readAccessToken();
+    if (bearerToken == null || bearerToken.isEmpty) {
+      throw const AuthApiException(
+        'Authentication required',
+        statusCode: 401,
+      );
+    }
 
-    if (response.statusCode >= 400) {
-      final decoded = jsonDecode(response.body);
-      final message = decoded is Map
-          ? decoded['message'] as String? ?? 'Unable to link booking'
-          : 'Unable to link booking';
-      final code = decoded is Map
-          ? decoded['error_code'] as String? ?? decoded['code'] as String?
-          : null;
+    try {
+      await _customerSession.apiClient.postJson(
+        '/customer/bookings/claim',
+        bearerToken: bearerToken,
+        body: {
+          'bookingNumber': bookingNumber,
+          'guestAccessToken': guestAccessToken,
+        },
+      );
+    } on ApiException catch (error) {
       throw AuthApiException(
-        message,
-        errorCode: code,
-        statusCode: response.statusCode,
+        customerApiErrorMessage(error, fallback: 'Unable to link booking'),
+        errorCode: error.errorCode,
+        statusCode: error.statusCode,
       );
     }
   }

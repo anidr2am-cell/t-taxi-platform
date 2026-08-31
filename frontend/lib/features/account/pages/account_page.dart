@@ -69,6 +69,14 @@ class _AccountPageState extends State<AccountPage> {
       });
     } on MileageApiException catch (error) {
       if (!mounted) return;
+      final authController = _resolveController(context);
+      if (await authController.handleUnauthorizedApi(error)) {
+        setState(() {
+          _loadingMileage = false;
+          _mileageError = context.l10n.t('account_mileage_load_failed');
+        });
+        return;
+      }
       setState(() {
         _loadingMileage = false;
         _mileageError = error.message;

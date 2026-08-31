@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
+import '../../auth/widgets/booking_social_login_section.dart';
 import '../models/guest_booking_lookup_result.dart';
 import '../pages/guest_booking_lookup_page.dart';
 import '../services/customer_bookings_api_service.dart';
@@ -57,6 +58,16 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
       });
     } on CustomerBookingsApiException catch (error) {
       if (!mounted) return;
+      final authController = AuthScope.maybeOf(context);
+      if (authController != null &&
+          await authController.handleUnauthorizedApi(error)) {
+        setState(() {
+          _loading = false;
+          _refreshing = false;
+          _errorMessage = context.l10n.t('my_bookings_load_error');
+        });
+        return;
+      }
       setState(() {
         _loading = false;
         _refreshing = false;

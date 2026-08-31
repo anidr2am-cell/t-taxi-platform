@@ -11,20 +11,48 @@ import '../models/auth_user.dart';
 import '../models/social_login_return_context.dart';
 import '../services/auth_api_service.dart';
 import '../services/auth_token_storage.dart';
+import '../services/customer_api_errors.dart';
+import '../services/customer_session.dart';
 import '../services/google_sign_in_service.dart';
 import '../services/kakao_oauth_service.dart';
 import '../services/line_oauth_service.dart';
 
 class AuthController extends ChangeNotifier {
-  AuthController({
+  factory AuthController({
     AuthApiService? apiService,
     AuthTokenStorage? tokenStorage,
+    CustomerSession? customerSession,
     GoogleSignInService? googleSignInService,
     KakaoOAuthService? kakaoOAuthService,
     LineOAuthService? lineOAuthService,
     SocialLoginReturnStorage? returnStorage,
-  }) : _apiService = apiService ?? AuthApiService(),
-       _tokenStorage = tokenStorage ?? AuthTokenStorage(),
+  }) {
+    final resolvedSession = customerSession ??
+        (tokenStorage != null
+            ? CustomerSession(tokenStorage: tokenStorage)
+            : CustomerSession());
+    return AuthController._(
+      apiService: apiService ?? AuthApiService(customerSession: resolvedSession),
+      customerSession: resolvedSession,
+      tokenStorage: tokenStorage ?? resolvedSession.tokenStorage,
+      googleSignInService: googleSignInService,
+      kakaoOAuthService: kakaoOAuthService,
+      lineOAuthService: lineOAuthService,
+      returnStorage: returnStorage,
+    );
+  }
+
+  AuthController._({
+    required AuthApiService apiService,
+    required CustomerSession customerSession,
+    required AuthTokenStorage tokenStorage,
+    GoogleSignInService? googleSignInService,
+    KakaoOAuthService? kakaoOAuthService,
+    LineOAuthService? lineOAuthService,
+    SocialLoginReturnStorage? returnStorage,
+  }) : _apiService = apiService,
+       _customerSession = customerSession,
+       _tokenStorage = tokenStorage,
        _googleSignInService = googleSignInService ?? GoogleSignInService(),
        _kakaoOAuthService = kakaoOAuthService ?? KakaoOAuthService(),
        _lineOAuthService = lineOAuthService ?? LineOAuthService(),
@@ -33,6 +61,7 @@ class AuthController extends ChangeNotifier {
   }
 
   final AuthApiService _apiService;
+  final CustomerSession _customerSession;
   final AuthTokenStorage _tokenStorage;
   final GoogleSignInService _googleSignInService;
   final KakaoOAuthService _kakaoOAuthService;
@@ -262,19 +291,16 @@ class AuthController extends ChangeNotifier {
       return;
     }
 
-    final accessToken = _session?.accessToken;
-    if (accessToken == null || accessToken.isEmpty) {
-      return;
-    }
-
     try {
       await _apiService.claimBooking(
-        accessToken: accessToken,
         bookingNumber: bookingNumber,
         guestAccessToken: guestToken,
       );
-    } catch (_) {
+      await syncSessionFromStorage();
+    } catch (error, stackTrace) {
       // Claim failure must not affect a successful sign-in experience.
+      debugPrint('Guest booking claim failed for $bookingNumber: $error');
+      debugPrintStack(stackTrace: stackTrace);
     }
   }
 
@@ -292,6 +318,21 @@ class AuthController extends ChangeNotifier {
         claimContext: _resolveClaimContext(null),
       ),
     );
+  }
+
+  CustomerSession get customerSession => _customerSession;
+
+  Future<void> syncSessionFromStorage() async {
+    _session = await _tokenStorage.loadSession();
+    notifyListeners();
+  }
+
+  Future<bool> handleUnauthorizedApi(Object error) async {
+    if (!isCustomerUnauthorized(error)) {
+      return false;
+    }
+    await signOut();
+    return true;
   }
 
   Future<void> signOut() async {

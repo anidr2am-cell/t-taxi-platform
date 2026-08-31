@@ -2,9 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/auth/models/auth_session.dart';
+import 'package:frontend/features/auth/models/auth_user.dart';
 import 'package:frontend/features/auth/models/social_login_return_context.dart';
 import 'package:frontend/features/auth/services/auth_api_service.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
+import 'package:frontend/features/auth/services/customer_session.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
 import 'package:frontend/l10n/app_localizations.dart';
@@ -359,11 +362,30 @@ void main() {
       }),
     });
 
+    final storage = AuthTokenStorage();
+    await storage.saveSession(
+      const AuthSession(
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        user: AuthUser(
+          id: 42,
+          email: 'guest@example.com',
+          role: 'CUSTOMER',
+          name: 'Minji',
+          phone: null,
+          locale: 'ko',
+          isActive: true,
+        ),
+      ),
+    );
+
     final service = CustomerBookingsApiService(
-      client: MockClient((request) async {
-        expect(request.url.path, '/api/v1/customer/bookings');
-        expect(request.headers['Authorization'], 'Bearer access-token');
-        return http.Response(
+      session: CustomerSession(
+        tokenStorage: storage,
+        httpClient: MockClient((request) async {
+          expect(request.url.path, '/api/v1/customer/bookings');
+          expect(request.headers['Authorization'], 'Bearer access-token');
+          return http.Response(
           jsonEncode({
             'success': true,
             'data': {
@@ -394,8 +416,9 @@ void main() {
           }),
           200,
         );
-      }),
-      baseUrl: 'http://localhost:3000',
+        }),
+        baseUrl: 'http://localhost:3000',
+      ),
     );
 
     final result = await service.listMyBookings();
