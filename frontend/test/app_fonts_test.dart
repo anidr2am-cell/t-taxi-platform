@@ -17,4 +17,10 @@ void main() {
     expect(thaiStyle.fontFamily, AppFonts.thaiFamily);
     expect(koStyle.fontFamily, AppFonts.primaryFamily);
   });
+
+  test('ensureLoaded is idempotent for tests', () async {
+    AppFonts.disableRuntimeFetchingForTests();
+    await AppFonts.ensureLoaded();
+    await AppFonts.ensureLoaded();
+  });
 }

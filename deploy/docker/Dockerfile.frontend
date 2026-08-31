@@ -50,13 +50,13 @@ RUN EFFECTIVE_API_BASE_URL="${API_BASE_URL:-http://localhost:3100}" \
       LINE_DEFINE="--dart-define=LINE_LOGIN_CHANNEL_ID=${LINE_LOGIN_CHANNEL_ID}"; \
     fi \
     && if [ -n "$SOCKET_URL" ]; then \
-      flutter build web --release \
+      flutter build web --release --no-web-resources-cdn \
         --dart-define=APP_ENV=${APP_ENV} \
         --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
         --dart-define=SOCKET_URL=${SOCKET_URL} \
         $KAKAO_DEFINE $LINE_DEFINE; \
     else \
-      flutter build web --release \
+      flutter build web --release --no-web-resources-cdn \
         --dart-define=APP_ENV=${APP_ENV} \
         --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
         $KAKAO_DEFINE $LINE_DEFINE; \

@@ -1,21 +1,45 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// Bundled multilingual font families (no runtime google_fonts fetch on web).
+/// Bundled multilingual font families (no runtime external font CDN fetch on web).
 abstract final class AppFonts {
   static const primaryFamily = 'NotoSans';
   static const thaiFamily = 'NotoSansThai';
+  static const _primaryAsset = 'assets/fonts/NotoSans.ttf';
+  static const _thaiAsset = 'assets/fonts/NotoSansThai.ttf';
 
   static const fallbackFamilies = [thaiFamily, 'sans-serif'];
 
-  static Future<void> ensureLoaded() async {}
+  static bool _loaded = false;
 
-  static void disableRuntimeFetchingForTests() {}
+  /// Ensures bundled fonts are registered with the engine before first paint.
+  static Future<void> ensureLoaded() async {
+    if (_loaded) return;
+
+    if (kIsWeb) {
+      await _loadFamily(primaryFamily, _primaryAsset);
+      await _loadFamily(thaiFamily, _thaiAsset);
+    }
+
+    _loaded = true;
+  }
+
+  static Future<void> _loadFamily(String family, String assetPath) async {
+    final loader = FontLoader(family);
+    loader.addFont(rootBundle.load(assetPath));
+    await loader.load();
+  }
+
+  static void disableRuntimeFetchingForTests() {
+    _loaded = true;
+  }
 
   static TextTheme textTheme(TextTheme base) => base;
 
   /// Language menu labels need an explicit Thai family when the active locale
-  /// is not Thai — CanvasKit + PopupMenu DefaultTextStyle merge can ignore
-  /// per-item fontFamily unless [inherit] is false.
+  /// is not Thai — PopupMenuItem merges parent styles, which breaks Thai glyphs on
+  /// CanvasKit when the active app locale is not Thai.
   static String? familyForLanguageLabel(String languageCode) {
     return switch (languageCode) {
       'th' => thaiFamily,
