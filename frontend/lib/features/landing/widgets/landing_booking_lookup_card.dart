@@ -17,7 +17,7 @@ class LandingBookingLookupCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: AppUi.surfaceCard(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTokens.cardPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

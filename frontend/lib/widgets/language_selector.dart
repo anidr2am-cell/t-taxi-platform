@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/booking_provider.dart';
+import '../theme/app_fonts.dart';
+import 'language_name_label.dart';
 import 'package:provider/provider.dart';
 
 class LanguageSelector extends StatelessWidget {
@@ -21,7 +23,7 @@ class LanguageSelector extends StatelessWidget {
                     if (locale.languageCode == code)
                       const Icon(Icons.check, size: 18, color: Colors.green),
                     if (locale.languageCode == code) const SizedBox(width: 8),
-                    Text(AppLocalizations.languageNames[code] ?? code),
+                    LanguageNameLabel(languageCode: code),
                   ],
                 ),
               ))

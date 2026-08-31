@@ -20,17 +20,16 @@ class LandingLoginPromptBanner extends StatelessWidget {
         child: InkWell(
           key: const Key('landing_login_prompt_banner'),
           onTap: () => showLandingAuthBottomSheet(context),
-          borderRadius: AppTokens.borderRadiusMd,
+          borderRadius: AppTokens.cardRadius,
           child: Ink(
-            decoration: BoxDecoration(
+            decoration: AppTokens.cardDecorationFlat(
               color: AppTokens.primaryLight,
-              borderRadius: AppTokens.borderRadiusMd,
-              border: Border.all(color: AppTokens.primary.withValues(alpha: 0.15)),
+              borderColor: AppTokens.primary.withValues(alpha: 0.15),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: AppTokens.spaceMd,
-                vertical: AppTokens.spaceMd,
+                horizontal: AppTokens.cardPadding,
+                vertical: AppTokens.cardPadding,
               ),
               child: Row(
                 children: [

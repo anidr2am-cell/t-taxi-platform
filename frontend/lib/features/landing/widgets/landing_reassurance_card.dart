@@ -14,11 +14,10 @@ class LandingReassuranceCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+        padding: const EdgeInsets.all(AppTokens.cardPadding),
+        decoration: AppTokens.cardDecorationFlat(
           color: AppTokens.accentLight,
-          borderRadius: AppTokens.borderRadiusMd,
-          border: Border.all(color: AppTokens.accent.withValues(alpha: 0.25)),
+          borderColor: AppTokens.accent.withValues(alpha: 0.25),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -305,18 +305,19 @@ void main() {
       );
       expect(
         find.text(AppLocalizations('ko').t('app_subtitle')),
-        findsOneWidget,
+        findsNothing,
       );
     });
 
-    testWidgets('header keeps localized subtitle when language changes', (
+    testWidgets('header language switch keeps logo and action buttons', (
       tester,
     ) async {
       await pumpLanding(tester, locale: const Locale('en'));
 
+      expect(find.byKey(const Key('landing_header_logo')), findsOneWidget);
       expect(
         find.text(AppLocalizations('en').t('app_subtitle')),
-        findsOneWidget,
+        findsNothing,
       );
 
       await tester.tap(find.byKey(const Key('landing_language_button')));
@@ -324,9 +325,10 @@ void main() {
       await tester.tap(find.text(AppLocalizations.languageNames['ko']!).last);
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const Key('landing_header_logo')), findsOneWidget);
       expect(
         find.text(AppLocalizations('ko').t('app_subtitle')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.byKey(const Key('landing_header_lookup_button')),

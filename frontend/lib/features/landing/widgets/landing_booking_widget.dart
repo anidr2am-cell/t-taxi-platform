@@ -35,17 +35,9 @@ class LandingBookingWidget extends StatelessWidget {
     return Container(
       key: const Key('landing_booking_widget'),
       width: 360,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(AppTokens.cardPadding),
+      decoration: AppTokens.cardDecoration(
         color: Colors.white.withValues(alpha: 0.96),
-        borderRadius: AppTokens.borderRadiusLg,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

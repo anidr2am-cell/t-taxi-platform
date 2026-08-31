@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/booking_provider.dart';
+import '../../../theme/app_fonts.dart';
 import '../../../theme/app_tokens.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
 import 'landing_auth_bottom_sheet.dart';
+import '../../../widgets/language_name_label.dart';
 import 'landing_clickable_styles.dart';
 
 class LandingHeader extends StatelessWidget {
@@ -31,7 +33,7 @@ class LandingHeader extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
-            Flexible(child: _BrandBlock(subtitle: l10n.t('app_subtitle'))),
+            Flexible(child: const _BrandBlock()),
             const Spacer(),
             _AuthHeaderButton(l10n: l10n),
             _HeaderIconButton(
@@ -152,9 +154,7 @@ class _LoggedInAuthHeaderButton extends StatelessWidget {
 }
 
 class _BrandBlock extends StatelessWidget {
-  final String subtitle;
-
-  const _BrandBlock({required this.subtitle});
+  const _BrandBlock();
 
   @override
   Widget build(BuildContext context) {
@@ -168,37 +168,20 @@ class _BrandBlock extends StatelessWidget {
       label: 'T-Rider',
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: logoMaxWidth),
-        child: Column(
+        child: SizedBox(
           key: const Key('landing_brand_block'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: logoHeight,
-              width: logoMaxWidth,
-              child: Image.asset(
-                LandingHeader.logoAssetPath,
-                key: const Key('landing_header_logo'),
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-                semanticLabel: 'T-Rider',
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: isCompact ? 10 : 11,
-                color: AppTokens.textSecondary,
-                height: 1.15,
-              ),
-            ),
-          ],
+          height: logoHeight,
+          width: logoMaxWidth,
+          child: Image.asset(
+            LandingHeader.logoAssetPath,
+            key: const Key('landing_header_logo'),
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            semanticLabel: 'T-Rider',
+            errorBuilder: (context, error, stackTrace) {
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
@@ -273,7 +256,7 @@ class _LanguageButton extends StatelessWidget {
                     else
                       const SizedBox(width: 18),
                     const SizedBox(width: 8),
-                    Text(AppLocalizations.languageNames[code] ?? code),
+                    LanguageNameLabel(languageCode: code),
                   ],
                 ),
               ),
@@ -298,12 +281,9 @@ class _LanguageButton extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Flexible(
-                child: Text(
-                  languageName,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                child: LanguageNameLabel(
+                  languageCode: locale.languageCode,
+                  style: AppFonts.languageLabel(context).copyWith(
                     color: AppTokens.textPrimary,
                   ),
                 ),

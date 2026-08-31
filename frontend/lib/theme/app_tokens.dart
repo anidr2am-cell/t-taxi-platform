@@ -48,6 +48,37 @@ abstract final class AppTokens {
 
   static const double maxContentWidth = 720;
 
+  // Card
+  static const double cardPadding = spaceMd;
+  static BorderRadius get cardRadius => borderRadiusLg;
+
+  static List<BoxShadow> cardBoxShadow({Color? color}) =>
+      cardShadow(color: color);
+
+  static BoxDecoration cardDecoration({
+    Color? color,
+    Color? borderColor,
+    List<BoxShadow>? boxShadow,
+    BorderRadius? borderRadius,
+  }) =>
+      BoxDecoration(
+        color: color ?? surface,
+        borderRadius: borderRadius ?? cardRadius,
+        border: Border.all(color: borderColor ?? border),
+        boxShadow: boxShadow ?? cardBoxShadow(),
+      );
+
+  static BoxDecoration cardDecorationFlat({
+    Color? color,
+    Color? borderColor,
+    BorderRadius? borderRadius,
+  }) =>
+      BoxDecoration(
+        color: color ?? surface,
+        borderRadius: borderRadius ?? cardRadius,
+        border: Border.all(color: borderColor ?? border),
+      );
+
   static List<BoxShadow> cardShadow({Color? color}) => [
         BoxShadow(
           color: (color ?? Colors.black).withValues(alpha: 0.06),

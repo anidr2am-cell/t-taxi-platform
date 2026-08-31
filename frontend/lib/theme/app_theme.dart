@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_fonts.dart';
 import 'app_tokens.dart';
 
 class AppTheme {
@@ -26,6 +27,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      fontFamily: AppFonts.primaryFamily,
+      fontFamilyFallback: AppFonts.fallbackFamilies,
       scaffoldBackgroundColor: AppTokens.background,
       dividerColor: AppTokens.border,
       appBarTheme: const AppBarTheme(
@@ -39,7 +42,8 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
-      textTheme: const TextTheme(
+      textTheme: AppFonts.textTheme(
+        const TextTheme(
         headlineMedium: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w700,
@@ -80,6 +84,7 @@ class AppTheme {
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: AppTokens.textPrimary,
+        ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -135,7 +140,7 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: AppTokens.borderRadiusLg,
+          borderRadius: AppTokens.cardRadius,
           side: const BorderSide(color: AppTokens.border),
         ),
       ),

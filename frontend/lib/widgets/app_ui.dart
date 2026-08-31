@@ -41,18 +41,19 @@ abstract final class AppUi {
 
   static Widget surfaceCard({
     required Widget child,
-    EdgeInsetsGeometry padding = const EdgeInsets.all(AppTokens.spaceMd),
+    EdgeInsetsGeometry padding = const EdgeInsets.all(AppTokens.cardPadding),
     Color? backgroundColor,
     VoidCallback? onTap,
+    List<BoxShadow>? boxShadow,
+    BorderRadius? borderRadius,
   }) {
     final card = Container(
       width: double.infinity,
       padding: padding,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? AppTokens.surface,
-        borderRadius: AppTokens.borderRadiusLg,
-        border: Border.all(color: AppTokens.border),
-        boxShadow: AppTokens.cardShadow(),
+      decoration: AppTokens.cardDecoration(
+        color: backgroundColor,
+        boxShadow: boxShadow,
+        borderRadius: borderRadius,
       ),
       child: child,
     );
@@ -61,7 +62,7 @@ abstract final class AppUi {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: AppTokens.borderRadiusLg,
+        borderRadius: borderRadius ?? AppTokens.cardRadius,
         child: card,
       ),
     );

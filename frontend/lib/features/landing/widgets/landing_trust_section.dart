@@ -83,7 +83,7 @@ class _TrustCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppUi.surfaceCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(AppTokens.cardPadding),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
