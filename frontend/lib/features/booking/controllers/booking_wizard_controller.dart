@@ -695,23 +695,26 @@ class BookingWizardController extends ChangeNotifier {
     );
   }
 
-  Future<BookingCreateResult?> submitBooking() async {
+  Future<BookingCreateResult?> submitBooking({String? accessToken}) async {
     return _submitBooking(
       bookingMode: 'STANDARD',
       validatePickup: isStandardPickupAllowed,
+      accessToken: accessToken,
     );
   }
 
-  Future<BookingCreateResult?> submitUrgentBooking() async {
+  Future<BookingCreateResult?> submitUrgentBooking({String? accessToken}) async {
     return _submitBooking(
       bookingMode: 'URGENT',
       validatePickup: isUrgentPickupWindow,
+      accessToken: accessToken,
     );
   }
 
   Future<BookingCreateResult?> _submitBooking({
     required String bookingMode,
     required bool Function(DateTime value) validatePickup,
+    String? accessToken,
   }) async {
     if (_isSubmitting || _isLoading) return null;
     if (!canSubmitAll(validatePickup: validatePickup)) return null;
@@ -731,6 +734,7 @@ class BookingWizardController extends ChangeNotifier {
           final result = await _api.createBooking(
             buildCreatePayload(bookingMode: bookingMode),
             idempotencyKey: idempotencyKey,
+            accessToken: accessToken,
           );
           _analytics.trackBookingCreated(
             bookingId: result.bookingNumber,

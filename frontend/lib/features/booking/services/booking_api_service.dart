@@ -205,14 +205,22 @@ class BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
+    final headers = <String, String>{};
+    if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    final bearer = accessToken?.trim();
+    if (bearer != null && bearer.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $bearer';
+    }
+
     final data = await _request(
       'POST',
       '/bookings',
       body: _normalizeCreateBookingBody(body),
-      headers: idempotencyKey != null && idempotencyKey.isNotEmpty
-          ? {'Idempotency-Key': idempotencyKey}
-          : null,
+      headers: headers.isEmpty ? null : headers,
     );
     return BookingCreateResult.fromJson(Map<String, dynamic>.from(data as Map));
   }

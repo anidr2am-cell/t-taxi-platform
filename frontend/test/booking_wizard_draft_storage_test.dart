@@ -73,6 +73,7 @@ class DraftTrackingApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     throw UnimplementedError();
   }
@@ -121,6 +122,7 @@ class SuccessCreateApi extends DraftTrackingApi {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
     onCreate(body, idempotencyKey);
     return BookingCreateResult(
@@ -145,6 +147,7 @@ class FailingCreateApi extends DraftTrackingApi {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
     throw BookingApiException('Create failed');
   }

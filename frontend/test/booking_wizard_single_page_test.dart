@@ -568,6 +568,7 @@ class _TrackingRecommendApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     throw UnimplementedError();
   }
@@ -665,6 +666,7 @@ class _CountingBookingApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     throw UnimplementedError();
   }
@@ -757,6 +759,7 @@ class _CapturingBookingApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     throw UnimplementedError();
   }

@@ -30,6 +30,7 @@ import '../widgets/step_route_select.dart';
 import '../widgets/step_vehicle_select.dart';
 import '../widgets/wizard_compact.dart';
 import '../widgets/wizard_status_views.dart';
+import '../../auth/widgets/booking_social_login_section.dart';
 
 class BookingWizardPage extends StatefulWidget {
   const BookingWizardPage({
@@ -227,6 +228,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     await _submitBooking(bookingMode: 'URGENT');
   }
 
+  Future<String?> _customerAccessTokenForSubmit() async {
+    final authController = AuthScope.maybeOf(context);
+    if (authController == null || !authController.isLoggedIn) {
+      return null;
+    }
+    return authController.customerSession.tokenStorage.readAccessToken();
+  }
+
   Future<void> _submitBooking({required String bookingMode}) async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
@@ -248,10 +257,11 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final review = _controller.buildCompleteReview();
     final serviceLabel = l10n.t(snapshot.serviceType?.labelKey ?? '');
     final scheduledPickupAt = _controller.scheduledPickupAtIsoFor(snapshot);
+    final accessToken = await _customerAccessTokenForSubmit();
 
     final result = bookingMode == 'URGENT'
-        ? await _controller.submitUrgentBooking()
-        : await _controller.submitBooking();
+        ? await _controller.submitUrgentBooking(accessToken: accessToken)
+        : await _controller.submitBooking(accessToken: accessToken);
     if (result == null) {
       if (_controller.state.errorMessage != null) {
         messenger.showSnackBar(

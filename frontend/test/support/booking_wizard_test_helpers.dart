@@ -103,13 +103,17 @@ class CapturingBookingApi implements BookingApiService {
     );
   }
 
+  String? lastCreateAccessToken;
+
   @override
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     lastCreateRequest = Map<String, dynamic>.from(body);
     lastCreateIdempotencyKey = idempotencyKey;
+    lastCreateAccessToken = accessToken;
     throw UnimplementedError();
   }
 

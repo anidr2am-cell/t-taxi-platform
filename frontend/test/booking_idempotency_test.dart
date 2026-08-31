@@ -85,6 +85,7 @@ class IdempotencyTrackingApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
     createCallCount += 1;
     lastCreateRequest = Map<String, dynamic>.from(body);
@@ -150,6 +151,7 @@ class FailingThenSuccessfulApi extends IdempotencyTrackingApi {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
     createCallCount += 1;
     idempotencyKeys.add(idempotencyKey);
@@ -185,6 +187,7 @@ class InProgressThenSuccessfulApi extends IdempotencyTrackingApi {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
     createCallCount += 1;
     idempotencyKeys.add(idempotencyKey);

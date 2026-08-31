@@ -1457,6 +1457,7 @@ class _CapturingBookingApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     throw UnimplementedError();
   }
@@ -1505,6 +1506,7 @@ class _FailingCreateBookingApi extends _CapturingBookingApi {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     throw error;
   }
@@ -1608,6 +1610,7 @@ class _SuccessfulCreateBookingApi extends _CapturingBookingApi {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
     lastCreateRequest = Map<String, dynamic>.from(body);
     return const BookingCreateResult(

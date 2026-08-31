@@ -276,6 +276,7 @@ class _SuccessBookingApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) async {
     return const BookingCreateResult(
       bookingId: 1,

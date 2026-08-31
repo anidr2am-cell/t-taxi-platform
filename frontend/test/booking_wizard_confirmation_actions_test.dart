@@ -220,6 +220,7 @@ class _StubBookingApi implements BookingApiService {
   Future<BookingCreateResult> createBooking(
     Map<String, dynamic> body, {
     String? idempotencyKey,
+    String? accessToken,
   }) {
     throw UnimplementedError();
   }
