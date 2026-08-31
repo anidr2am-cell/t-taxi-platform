@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'social_brand_icons.dart';
+
 class LineSignInButton extends StatelessWidget {
   const LineSignInButton({
     super.key,
@@ -14,11 +16,12 @@ class LineSignInButton extends StatelessWidget {
 
   static const _lineGreen = Color(0xFF06C755);
   static const _lineText = Colors.white;
+  static const _buttonHeight = 50.0;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: _buttonHeight,
       width: double.infinity,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
@@ -41,8 +44,11 @@ class LineSignInButton extends StatelessWidget {
                   color: _lineText,
                 ),
               )
-            : const Icon(Icons.chat),
-        label: Text(label),
+            : const LineBrandIcon(size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

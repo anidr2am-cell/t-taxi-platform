@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/service_type_option.dart';
-import 'package:frontend/features/landing/widgets/landing_clickable_styles.dart';
 import 'package:frontend/features/landing/widgets/landing_service_cards.dart';
 import 'package:frontend/l10n/app_localizations.dart';
+import 'package:frontend/theme/app_tokens.dart';
 
 Widget _wrap({
   required Widget child,
@@ -85,58 +85,54 @@ void main() {
     });
 
     testWidgets(
-      'service tiles expose unselected and selected clickable surfaces',
+      'service tiles use circular pastel icons with primary ring when selected',
       (tester) async {
-        BookingServiceType? selected;
-
         await tester.pumpWidget(
           _wrap(
             child: LandingServiceCards(
-              selectedService: selected,
-              onServiceSelected: (type) => selected = type,
+              selectedService: BookingServiceType.airportPickup,
+              onServiceSelected: (_) {},
               onBook: () {},
             ),
           ),
         );
         await tester.pumpAndSettle();
 
-        ShapeDecoration decorationFor(String key) {
-          final ink = tester.widget<Ink>(
-            find.descendant(
-              of: find.byKey(Key(key)),
-              matching: find.byType(Ink),
+        Finder circleIconFor(String key) {
+          return find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Container &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration as BoxDecoration).shape == BoxShape.circle,
             ),
           );
-          return ink.decoration! as ShapeDecoration;
         }
 
-        expect(
-          decorationFor('landing_service_airportPickup').color,
-          LandingClickableStyles.background,
+        expect(circleIconFor('landing_service_airportPickup'), findsOneWidget);
+        expect(circleIconFor('landing_service_airportDropoff'), findsOneWidget);
+
+        final selectedCircle = tester.widget<Container>(
+          circleIconFor('landing_service_airportPickup'),
         );
+        final selectedDecoration = selectedCircle.decoration! as BoxDecoration;
+        expect(selectedDecoration.border?.top.color, AppTokens.primary);
 
-        await tester.tap(find.text('Airport Pickup'));
-        await tester.pumpAndSettle();
+        final unselectedCircle = tester.widget<Container>(
+          circleIconFor('landing_service_airportDropoff'),
+        );
+        final unselectedDecoration =
+            unselectedCircle.decoration! as BoxDecoration;
+        expect(unselectedDecoration.border, isNull);
 
-        await tester.pumpWidget(
-          _wrap(
-            child: LandingServiceCards(
-              selectedService: selected,
-              onServiceSelected: (type) => selected = type,
-              onBook: () {},
-            ),
+        final selectedLabel = tester.widget<Text>(
+          find.descendant(
+            of: find.byKey(const Key('landing_service_airportPickup')),
+            matching: find.byType(Text),
           ),
         );
-        await tester.pumpAndSettle();
-
-        expect(
-          decorationFor('landing_service_airportPickup').color,
-          LandingClickableStyles.selectedBackground,
-        );
-        expect(
-          decorationFor('landing_service_airportDropoff').color,
-          LandingClickableStyles.background,
-        );
+        expect(selectedLabel.style?.color, AppTokens.primary);
       },
     );
 

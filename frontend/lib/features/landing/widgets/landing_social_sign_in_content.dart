@@ -20,6 +20,7 @@ class LandingSocialSignInContent extends StatelessWidget {
     required this.onLineSignInPressed,
     this.titleKey = 'landing_login_title',
     this.googleButtonKey = const Key('landing_google_sign_in'),
+    this.showSupportLink = false,
   });
 
   final AppLocalizations l10n;
@@ -32,6 +33,9 @@ class LandingSocialSignInContent extends StatelessWidget {
   final VoidCallback? onLineSignInPressed;
   final String titleKey;
   final Key googleButtonKey;
+  final bool showSupportLink;
+
+  static const _buttonSpacing = 12.0;
 
   @override
   Widget build(BuildContext context) {
@@ -41,28 +45,31 @@ class LandingSocialSignInContent extends StatelessWidget {
       children: [
         Text(
           l10n.t(titleKey),
+          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppTokens.textPrimary,
           ),
         ),
+        const SizedBox(height: AppTokens.spaceLg),
         if (errorMessage != null && errorMessage!.isNotEmpty) ...[
-          const SizedBox(height: AppTokens.spaceSm),
           Text(
             errorMessage!,
+            textAlign: TextAlign.center,
             style: const TextStyle(color: AppTokens.error),
           ),
+          const SizedBox(height: AppTokens.spaceLg),
         ],
-        const SizedBox(height: AppTokens.spaceSm),
         Text(
           l10n.t('auth_login_provider_hint'),
           key: const Key('auth_login_provider_hint'),
+          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: AppTokens.textSecondary,
             height: 1.45,
           ),
         ),
-        const SizedBox(height: AppTokens.spaceMd),
+        const SizedBox(height: AppTokens.spaceLg),
         GoogleSignInButton(
           key: googleButtonKey,
           label: l10n.t('auth_google_continue'),
@@ -71,7 +78,7 @@ class LandingSocialSignInContent extends StatelessWidget {
           onPressed: onGoogleSignInPressed,
         ),
         if (showKakaoButton) ...[
-          const SizedBox(height: AppTokens.spaceSm),
+          const SizedBox(height: _buttonSpacing),
           KakaoSignInButton(
             label: l10n.t('auth_kakao_continue'),
             loading: isLoading,
@@ -79,13 +86,54 @@ class LandingSocialSignInContent extends StatelessWidget {
           ),
         ],
         if (showLineButton) ...[
-          const SizedBox(height: AppTokens.spaceSm),
+          const SizedBox(height: _buttonSpacing),
           LineSignInButton(
             label: l10n.t('auth_line_continue'),
             loading: isLoading,
             onPressed: onLineSignInPressed,
           ),
         ],
+        if (showSupportLink) ...[
+          const SizedBox(height: AppTokens.spaceLg),
+          _SupportLinkRow(l10n: l10n),
+        ],
+      ],
+    );
+  }
+}
+
+class _SupportLinkRow extends StatelessWidget {
+  const _SupportLinkRow({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      key: const Key('landing_login_support_link'),
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      children: [
+        Text(
+          l10n.t('landing_login_support_prompt'),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTokens.textSecondary,
+          ),
+        ),
+        TextButton(
+          key: const Key('landing_login_support_button'),
+          onPressed: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).pushNamed('/support');
+          },
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(l10n.t('landing_login_support_link')),
+        ),
       ],
     );
   }

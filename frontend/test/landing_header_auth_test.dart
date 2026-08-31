@@ -94,22 +94,34 @@ void main() {
     expect(find.byKey(const Key('landing_header_logo')), findsOneWidget);
   });
 
+  Future<void> useMobileViewport(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
   testWidgets('signed-out auth icon opens bottom sheet with sign-in buttons', (
     tester,
   ) async {
+    await useMobileViewport(tester);
     final authController = await prepareAuthController();
     await tester.pumpWidget(wrapLanding(authController: authController));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+    expect(find.byKey(const Key('landing_header_auth_button')), findsOneWidget);
     expect(find.byKey(const Key('landing_social_login_section')), findsOneWidget);
+    expect(find.byKey(const Key('landing_login_prompt_banner')), findsOneWidget);
+    expect(find.text('Google로 계속하기'), findsNothing);
 
     await tester.tap(find.byKey(const Key('landing_header_auth_button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('landing_auth_bottom_sheet')), findsOneWidget);
+    expect(find.byKey(const Key('landing_auth_sheet_handle')), findsOneWidget);
+    expect(find.byKey(const Key('landing_auth_sheet_close')), findsOneWidget);
     expect(find.text('T-Rider 로그인'), findsOneWidget);
-    expect(find.text('Google로 계속하기'), findsWidgets);
+    expect(find.text('Google로 계속하기'), findsOneWidget);
   });
 
   testWidgets('signed-in auth icon opens account menu with account and bookings', (
@@ -205,9 +217,26 @@ void main() {
     expect(find.byType(MyBookingsPage), findsOneWidget);
   });
 
+  testWidgets('close button dismisses auth bottom sheet', (tester) async {
+    await useMobileViewport(tester);
+    final authController = await prepareAuthController();
+    await tester.pumpWidget(wrapLanding(authController: authController));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('landing_header_auth_button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('landing_auth_bottom_sheet')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('landing_auth_sheet_close')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('landing_auth_bottom_sheet')), findsNothing);
+  });
+
   testWidgets('bottom sheet shows login provider hint', (
     tester,
   ) async {
+    await useMobileViewport(tester);
     final authController = await prepareAuthController();
     await tester.pumpWidget(wrapLanding(authController: authController));
     await tester.pumpAndSettle();
@@ -236,6 +265,7 @@ void main() {
   testWidgets('google sign-in from bottom sheet closes sheet and fills icon', (
     tester,
   ) async {
+    await useMobileViewport(tester);
     final authController = await prepareAuthController(
       client: MockClient((request) async {
         if (request.url.path.endsWith('/auth/social/google')) {

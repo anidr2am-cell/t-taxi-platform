@@ -50,6 +50,8 @@ class LandingServiceCards extends StatelessWidget {
                     ),
                     label: l10n.t(landingServiceOptions[index].type.labelKey),
                     icon: landingServiceOptions[index].icon,
+                    iconBackground: _ServiceTile.iconBackgrounds[index],
+                    iconColor: _ServiceTile.iconColors[index],
                     selected: selectedService == landingServiceOptions[index].type,
                     onTap: () => _onServiceTap(landingServiceOptions[index].type),
                   ),
@@ -66,6 +68,8 @@ class LandingServiceCards extends StatelessWidget {
 class _ServiceTile extends StatelessWidget {
   final String label;
   final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
   final bool selected;
   final VoidCallback onTap;
 
@@ -73,9 +77,25 @@ class _ServiceTile extends StatelessWidget {
     super.key,
     required this.label,
     required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
     required this.selected,
     required this.onTap,
   });
+
+  static const iconBackgrounds = [
+    AppTokens.primaryLight,
+    AppTokens.infoLight,
+    AppTokens.warningLight,
+    AppTokens.successLight,
+  ];
+
+  static const iconColors = [
+    AppTokens.primary,
+    AppTokens.info,
+    AppTokens.warning,
+    AppTokens.success,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -85,60 +105,53 @@ class _ServiceTile extends StatelessWidget {
       label: label,
       child: Material(
         color: Colors.transparent,
-        child: Ink(
-          decoration: ShapeDecoration(
-            color: selected
-                ? LandingClickableStyles.selectedBackground
-                : LandingClickableStyles.background,
-            shape: RoundedRectangleBorder(
-              borderRadius: AppTokens.borderRadiusMd,
-              side: BorderSide(
-                color: selected
-                    ? LandingClickableStyles.selectedBackground
-                    : LandingClickableStyles.border,
-                width: selected ? 2 : 1,
+        child: InkWell(
+          onTap: onTap,
+          hoverColor: LandingClickableStyles.hover,
+          focusColor: LandingClickableStyles.hover,
+          splashColor: LandingClickableStyles.pressed,
+          highlightColor: LandingClickableStyles.pressed,
+          borderRadius: AppTokens.borderRadiusMd,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 10,
               ),
-            ),
-          ),
-          child: InkWell(
-            onTap: onTap,
-            hoverColor: LandingClickableStyles.hover,
-            focusColor: LandingClickableStyles.hover,
-            splashColor: LandingClickableStyles.pressed,
-            highlightColor: LandingClickableStyles.pressed,
-            borderRadius: AppTokens.borderRadiusMd,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 10,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: iconBackground,
+                      shape: BoxShape.circle,
+                      border: selected
+                          ? Border.all(color: AppTokens.primary, width: 2)
+                          : null,
+                    ),
+                    child: Icon(
                       icon,
                       size: 22,
-                      color: selected
-                          ? Colors.white
-                          : LandingClickableStyles.icon,
+                      color: iconColor,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.25,
-                        fontWeight: FontWeight.w600,
-                        color: selected ? Colors.white : AppTokens.textPrimary,
-                      ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.25,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? AppTokens.primary : AppTokens.textPrimary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

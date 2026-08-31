@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'social_brand_icons.dart';
+
 class KakaoSignInButton extends StatelessWidget {
   const KakaoSignInButton({
     super.key,
@@ -14,11 +16,12 @@ class KakaoSignInButton extends StatelessWidget {
 
   static const _kakaoYellow = Color(0xFFFEE500);
   static const _kakaoText = Color(0xFF191919);
+  static const _buttonHeight = 50.0;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: _buttonHeight,
       width: double.infinity,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
@@ -41,8 +44,11 @@ class KakaoSignInButton extends StatelessWidget {
                   color: _kakaoText,
                 ),
               )
-            : const Icon(Icons.chat_bubble_outline),
-        label: Text(label),
+            : const KakaoBrandIcon(size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

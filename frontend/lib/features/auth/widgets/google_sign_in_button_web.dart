@@ -41,13 +41,17 @@ class GoogleSignInButton extends StatelessWidget {
             : 320.0;
         return SizedBox(
           width: width,
-          child: renderButton(
-            configuration: GSIButtonConfiguration(
-              text: GSIButtonText.continueWith,
-              size: GSIButtonSize.large,
-              theme: GSIButtonTheme.outline,
-              minimumWidth: width.clamp(200, 400),
-              locale: locale,
+          height: 50,
+          child: Align(
+            alignment: Alignment.center,
+            child: renderButton(
+              configuration: GSIButtonConfiguration(
+                text: GSIButtonText.continueWith,
+                size: GSIButtonSize.large,
+                theme: GSIButtonTheme.outline,
+                minimumWidth: width.clamp(200, 400),
+                locale: locale,
+              ),
             ),
           ),
         );

@@ -24,7 +24,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('landing login section shows sign-in controls when signed out', (
+  testWidgets('landing login section shows prompt banner when signed out', (
     tester,
   ) async {
     final authController = await prepareSignedOutAuthController();
@@ -40,10 +40,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('landing_social_login_section')), findsOneWidget);
-    expect(find.text('로그인'), findsOneWidget);
-    expect(find.text('Google로 계속하기'), findsOneWidget);
-    expect(find.byKey(const Key('auth_login_provider_hint')), findsOneWidget);
+    expect(find.byKey(const Key('landing_login_prompt_banner')), findsOneWidget);
+    expect(find.text('로그인하고 마일리지 적립받기'), findsOneWidget);
+    expect(find.text('Google로 계속하기'), findsNothing);
     expect(find.byKey(const Key('landing_logout_button')), findsNothing);
+  });
+
+  testWidgets('prompt banner opens auth bottom sheet', (tester) async {
+    final authController = await prepareSignedOutAuthController();
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        home: const LandingSocialLoginSection(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('landing_login_prompt_banner')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('landing_auth_bottom_sheet')), findsOneWidget);
+    expect(find.text('Google로 계속하기'), findsOneWidget);
   });
 
   testWidgets('google inline sign-in switches landing section to logged-in UI', (
@@ -87,6 +107,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('landing_login_prompt_banner')));
+    await tester.pumpAndSettle();
     await authController.completeSignInWithIdTokenForTest(
       'mock-google-id-token',
     );
@@ -141,8 +163,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(authController.isLoggedIn, isFalse);
-    expect(find.text('로그인'), findsOneWidget);
-    expect(find.text('Google로 계속하기'), findsOneWidget);
+    expect(find.byKey(const Key('landing_login_prompt_banner')), findsOneWidget);
+    expect(find.text('Google로 계속하기'), findsNothing);
   });
 
   testWidgets('my bookings button opens my bookings route', (tester) async {

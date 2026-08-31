@@ -3,12 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
-import '../../auth/config/kakao_auth_config.dart';
-import '../../auth/config/line_auth_config.dart';
 import '../../auth/controllers/auth_controller.dart';
-import '../../auth/models/social_login_return_context.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
-import 'landing_social_sign_in_content.dart';
+import 'landing_login_prompt_banner.dart';
 
 class LandingSocialLoginSection extends StatefulWidget {
   const LandingSocialLoginSection({super.key, this.authController});
@@ -40,9 +37,9 @@ class _LandingSocialLoginSectionState extends State<LandingSocialLoginSection> {
         return Padding(
           key: const Key('landing_social_login_section'),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: AppUi.surfaceCard(
-            child: controller.isLoggedIn
-                ? _LoggedInView(
+          child: controller.isLoggedIn
+              ? AppUi.surfaceCard(
+                  child: _LoggedInView(
                     l10n: l10n,
                     displayName: controller.user!.displayLabel,
                     isLoading: controller.isLoading,
@@ -51,28 +48,9 @@ class _LandingSocialLoginSectionState extends State<LandingSocialLoginSection> {
                     onSignOut: controller.isLoading
                         ? null
                         : () => controller.signOut(),
-                  )
-                : LandingSocialSignInContent(
-                    l10n: l10n,
-                    isLoading: controller.isLoading,
-                    errorMessage: controller.errorMessage,
-                    showKakaoButton: KakaoAuthConfig.isConfigured,
-                    showLineButton: LineAuthConfig.isConfigured,
-                    onGoogleSignInPressed: controller.isLoading
-                        ? null
-                        : () => controller.signInWithGoogle(),
-                    onKakaoSignInPressed: controller.isLoading
-                        ? null
-                        : () => controller.beginKakaoSignIn(
-                              SocialLoginReturnContext.fromLanding(),
-                            ),
-                    onLineSignInPressed: controller.isLoading
-                        ? null
-                        : () => controller.beginLineSignIn(
-                              SocialLoginReturnContext.fromLandingForLine(),
-                            ),
                   ),
-          ),
+                )
+              : const LandingLoginPromptBanner(),
         );
       },
     );
