@@ -8,6 +8,9 @@ class PricingDisplay {
     if (item.chargeType == 'NAME_SIGN') {
       return l10n.t('pricing_name_sign_with_picket');
     }
+    if (item.chargeType == 'VEHICLE_BASE') {
+      return l10n.t('base_price');
+    }
     return item.description;
   }
 }

@@ -152,6 +152,10 @@ class BookingApiService {
     int luggage24 = 0,
     int golfBags = 0,
     int specialLuggageCount = 0,
+    double? originLat,
+    double? originLng,
+    double? destinationLat,
+    double? destinationLng,
   }) async {
     final body = <String, dynamic>{
       'serviceTypeCode': serviceTypeCode,
@@ -185,6 +189,10 @@ class BookingApiService {
     if (scheduledPickupAt != null) {
       body['scheduledPickupAt'] = scheduledPickupAt;
     }
+    if (originLat != null) body['originLat'] = originLat;
+    if (originLng != null) body['originLng'] = originLng;
+    if (destinationLat != null) body['destinationLat'] = destinationLat;
+    if (destinationLng != null) body['destinationLng'] = destinationLng;
 
     final data = await _request(
       'POST',

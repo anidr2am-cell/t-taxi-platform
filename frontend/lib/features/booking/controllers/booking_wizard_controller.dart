@@ -1106,6 +1106,31 @@ class BookingWizardController extends ChangeNotifier {
     return null;
   }
 
+  Map<String, double?> _pricingCoordinateParams() {
+    if (_state.serviceType != BookingServiceType.cityTransfer) {
+      return const {};
+    }
+
+    final origin = _state.origin;
+    final destination = _state.destination;
+    final params = <String, double?>{};
+
+    if (origin?.latitude != null) {
+      params['originLat'] = origin!.latitude;
+    }
+    if (origin?.longitude != null) {
+      params['originLng'] = origin!.longitude;
+    }
+    if (destination?.latitude != null) {
+      params['destinationLat'] = destination!.latitude;
+    }
+    if (destination?.longitude != null) {
+      params['destinationLng'] = destination!.longitude;
+    }
+
+    return params;
+  }
+
   Future<void> loadPricing() async {
     if (!canLoadPricing()) return;
     if (_state.serviceType == null || _state.selectedVehicle == null) return;
@@ -1123,6 +1148,7 @@ class BookingWizardController extends ChangeNotifier {
     }
 
     final locations = _pricingLocationParams();
+    final coordinates = _pricingCoordinateParams();
     final requestVehicle = _state.selectedVehicle!;
     _setLoading(true);
     try {
@@ -1133,6 +1159,10 @@ class BookingWizardController extends ChangeNotifier {
         destinationRegion: locations['destinationRegion'],
         originLocationCode: locations['originLocationCode'],
         destinationLocationCode: locations['destinationLocationCode'],
+        originLat: coordinates['originLat'],
+        originLng: coordinates['originLng'],
+        destinationLat: coordinates['destinationLat'],
+        destinationLng: coordinates['destinationLng'],
         scheduledPickupAt: scheduledPickupAt,
         nameSign: _state.nameSign,
         adults: _state.adults,
@@ -1436,6 +1466,9 @@ class BookingWizardController extends ChangeNotifier {
 
 String? bookingPricingInquiryMessage(Object err) {
   if (err is! BookingApiException) return null;
+  if (err.errorCode == 'INQUIRY_REQUIRED') {
+    return 'pricing_inquiry_required';
+  }
   if (err.errorCode != 'NOT_FOUND') return null;
   final message = err.message;
   if (message.contains('Route not found') ||

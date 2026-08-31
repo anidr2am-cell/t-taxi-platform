@@ -204,6 +204,10 @@ class _StubBookingApi implements BookingApiService {
     int luggage24 = 0,
     int golfBags = 0,
     int specialLuggageCount = 0,
+    double? originLat,
+    double? originLng,
+    double? destinationLat,
+    double? destinationLng,
   }) async {
     return const PricingResult(
       currency: 'THB',

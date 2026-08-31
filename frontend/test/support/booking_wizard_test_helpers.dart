@@ -54,6 +54,10 @@ class CapturingBookingApi implements BookingApiService {
     int luggage24 = 0,
     int golfBags = 0,
     int specialLuggageCount = 0,
+    double? originLat,
+    double? originLng,
+    double? destinationLat,
+    double? destinationLng,
   }) async {
     final request = <String, dynamic>{
       'serviceTypeCode': serviceTypeCode,
@@ -87,6 +91,10 @@ class CapturingBookingApi implements BookingApiService {
     if (scheduledPickupAt != null) {
       request['scheduledPickupAt'] = scheduledPickupAt;
     }
+    if (originLat != null) request['originLat'] = originLat;
+    if (originLng != null) request['originLng'] = originLng;
+    if (destinationLat != null) request['destinationLat'] = destinationLat;
+    if (destinationLng != null) request['destinationLng'] = destinationLng;
     lastPricingRequest = request;
     return const PricingResult(
       currency: 'THB',

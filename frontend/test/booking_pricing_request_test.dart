@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
@@ -13,10 +14,12 @@ import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
+import 'package:frontend/features/booking/widgets/step_vehicle_select.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   test(
     'calculatePricing sends contract body with passengers, luggage, and options',
     () async {
@@ -815,6 +818,305 @@ void main() {
     expect(message, isNull);
   });
 
+  test('bookingPricingInquiryMessage maps INQUIRY_REQUIRED to inquiry key', () {
+    final message = bookingPricingInquiryMessage(
+      BookingApiException(
+        'Pricing inquiry required for long distance',
+        'INQUIRY_REQUIRED',
+      ),
+    );
+    expect(message, 'pricing_inquiry_required');
+  });
+
+  test(
+    'loadPricing maps INQUIRY_REQUIRED to pricing inquiry message',
+    () async {
+      final controller = BookingWizardController(
+        apiService: _InquiryPricingApi(),
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        LocationOption.fromCoordinates(
+          latitude: 13.759,
+          longitude: 100.4977,
+          address: 'Bangkok, Thailand',
+        ),
+      );
+      await controller.setDestination(
+        LocationOption.fromCoordinates(
+          latitude: 13.80,
+          longitude: 100.5018,
+          address: 'Nearby Hotel, Bangkok',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SEDAN');
+      await controller.loadPricing();
+
+      expect(controller.state.errorMessage, 'pricing_inquiry_required');
+      expect(controller.state.pricing, isNull);
+    },
+  );
+
+  test(
+    'loadPricing sends coordinates for CITY_TRANSFER when locations have lat/lng',
+    () async {
+      final api = _CapturingBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        LocationOption.fromCoordinates(
+          latitude: 13.759,
+          longitude: 100.4977,
+          address: 'Bangkok, Thailand',
+        ),
+      );
+      await controller.setDestination(
+        LocationOption.fromCoordinates(
+          latitude: 12.9236,
+          longitude: 100.8825,
+          address: 'Solyn Hotel, Pattaya, Thailand',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SEDAN');
+      await controller.loadPricing();
+
+      expect(api.lastPricingRequest, isNotNull);
+      expect(api.lastPricingRequest!['serviceTypeCode'], 'CITY_TRANSFER');
+      expect(api.lastPricingRequest!['originLat'], 13.759);
+      expect(api.lastPricingRequest!['originLng'], 100.4977);
+      expect(api.lastPricingRequest!['destinationLat'], 12.9236);
+      expect(api.lastPricingRequest!['destinationLng'], 100.8825);
+    },
+  );
+
+  test(
+    'loadPricing omits coordinates for AIRPORT_PICKUP even when places have lat/lng',
+    () async {
+      final api = _CapturingBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.airportPickup);
+      await controller.setOrigin(
+        LocationOption.fromPlaceDetails(
+          const PlaceDetails(
+            placeId: 'google-bkk',
+            name: 'Suvarnabhumi Airport',
+            address: 'Bang Phli, Samut Prakan, Thailand',
+            latitude: 13.69,
+            longitude: 100.7501,
+          ),
+        ),
+      );
+      await controller.setDestination(
+        LocationOption.fromPlaceDetails(
+          const PlaceDetails(
+            placeId: 'google-pattaya',
+            name: 'Pattaya',
+            address: 'Pattaya, Chon Buri, Thailand',
+            latitude: 12.9236,
+            longitude: 100.8825,
+          ),
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+      await controller.loadPricing();
+
+      expect(api.lastPricingRequest, isNotNull);
+      expect(api.lastPricingRequest!['serviceTypeCode'], 'AIRPORT_PICKUP');
+      expect(api.lastPricingRequest!.containsKey('originLat'), isFalse);
+      expect(api.lastPricingRequest!.containsKey('destinationLat'), isFalse);
+    },
+  );
+
+  test(
+    'loadPricing keeps fixed-route location codes for CITY_TRANSFER with known region codes',
+    () async {
+      final api = _CapturingBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'origin',
+          displayName: 'Bangkok',
+          kind: LocationKind.city,
+          code: 'BANGKOK',
+          latitude: 13.7563,
+          longitude: 100.5018,
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'destination',
+          displayName: 'Pattaya',
+          kind: LocationKind.city,
+          code: 'PATTAYA',
+          latitude: 12.9236,
+          longitude: 100.8825,
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+      await controller.loadPricing();
+
+      expect(api.lastPricingRequest!['originLocationCode'], 'BANGKOK');
+      expect(api.lastPricingRequest!['destinationLocationCode'], 'PATTAYA');
+      expect(api.lastPricingRequest!['originLat'], 13.7563);
+      expect(api.lastPricingRequest!['destinationLat'], 12.9236);
+    },
+  );
+
+  test(
+    'submitBooking completes with distance-based pricing and place coordinates in payload',
+    () async {
+      final api = _SuccessfulCreateBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        LocationOption.fromCoordinates(
+          latitude: 13.759,
+          longitude: 100.4977,
+          address: 'Bangkok, Thailand',
+        ),
+      );
+      await controller.setDestination(
+        LocationOption.fromCoordinates(
+          latitude: 12.9236,
+          longitude: 100.8825,
+          address: 'Solyn Hotel, Pattaya, Thailand',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SEDAN');
+      await controller.updateCustomerInfo(
+        name: 'Kim',
+        phone: '+66123456789',
+      );
+
+      final result = await controller.submitBooking();
+
+      expect(result, isNotNull);
+      expect(result!.totalAmount, 1300);
+      expect(api.lastPricingRequest!['originLat'], 13.759);
+      expect(api.lastPricingRequest!['destinationLat'], 12.9236);
+      final destination = Map<String, dynamic>.from(
+        api.lastCreateRequest!['destination'] as Map,
+      );
+      expect(destination['lat'], 12.9236);
+      expect(destination['lng'], 100.8825);
+    },
+  );
+
+  testWidgets(
+    'vehicle step shows customer-facing base price without km estimate text',
+    (tester) async {
+      final api = _SuccessfulCreateBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        LocationOption.fromCoordinates(
+          latitude: 13.759,
+          longitude: 100.4977,
+          address: 'Bangkok, Thailand',
+        ),
+      );
+      await controller.setDestination(
+        LocationOption.fromCoordinates(
+          latitude: 12.9236,
+          longitude: 100.8825,
+          address: 'Solyn Hotel, Pattaya, Thailand',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SEDAN');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) => StepVehicleSelect(
+                state: controller.state,
+                controller: controller,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('km est'), findsNothing);
+      expect(find.textContaining('132.34'), findsNothing);
+      expect(find.text('Base price'), findsOneWidget);
+      expect(find.textContaining('1300 THB'), findsAtLeastNWidgets(1));
+    },
+  );
+
   test(
     'booking create payload fails before submission when pickup time is missing',
     () async {
@@ -1102,6 +1404,10 @@ class _CapturingBookingApi implements BookingApiService {
     int luggage24 = 0,
     int golfBags = 0,
     int specialLuggageCount = 0,
+    double? originLat,
+    double? originLng,
+    double? destinationLat,
+    double? destinationLng,
   }) async {
     final request = <String, dynamic>{
       'serviceTypeCode': serviceTypeCode,
@@ -1135,6 +1441,10 @@ class _CapturingBookingApi implements BookingApiService {
     if (scheduledPickupAt != null) {
       request['scheduledPickupAt'] = scheduledPickupAt;
     }
+    if (originLat != null) request['originLat'] = originLat;
+    if (originLng != null) request['originLng'] = originLng;
+    if (destinationLat != null) request['destinationLat'] = destinationLat;
+    if (destinationLng != null) request['destinationLng'] = destinationLng;
     lastPricingRequest = request;
     return const PricingResult(
       currency: 'THB',
@@ -1197,6 +1507,119 @@ class _FailingCreateBookingApi extends _CapturingBookingApi {
     String? idempotencyKey,
   }) {
     throw error;
+  }
+}
+
+class _InquiryPricingApi extends _CapturingBookingApi {
+  @override
+  Future<PricingResult> calculatePricing({
+    required String serviceTypeCode,
+    required String vehicleTypeCode,
+    int vehicleCount = 1,
+    String? originAirportIata,
+    String? destinationRegion,
+    String? originLocationCode,
+    String? destinationLocationCode,
+    bool nameSign = false,
+    String? scheduledPickupAt,
+    int adults = 1,
+    int children = 0,
+    int infants = 0,
+    int luggage20 = 0,
+    int luggage24 = 0,
+    int golfBags = 0,
+    int specialLuggageCount = 0,
+    double? originLat,
+    double? originLng,
+    double? destinationLat,
+    double? destinationLng,
+  }) {
+    throw BookingApiException(
+      'Pricing inquiry required for short distance',
+      'INQUIRY_REQUIRED',
+    );
+  }
+}
+
+class _SuccessfulCreateBookingApi extends _CapturingBookingApi {
+  Map<String, dynamic>? lastCreateRequest;
+
+  @override
+  Future<PricingResult> calculatePricing({
+    required String serviceTypeCode,
+    required String vehicleTypeCode,
+    int vehicleCount = 1,
+    String? originAirportIata,
+    String? destinationRegion,
+    String? originLocationCode,
+    String? destinationLocationCode,
+    bool nameSign = false,
+    String? scheduledPickupAt,
+    int adults = 1,
+    int children = 0,
+    int infants = 0,
+    int luggage20 = 0,
+    int luggage24 = 0,
+    int golfBags = 0,
+    int specialLuggageCount = 0,
+    double? originLat,
+    double? originLng,
+    double? destinationLat,
+    double? destinationLng,
+  }) async {
+    await super.calculatePricing(
+      serviceTypeCode: serviceTypeCode,
+      vehicleTypeCode: vehicleTypeCode,
+      vehicleCount: vehicleCount,
+      originAirportIata: originAirportIata,
+      destinationRegion: destinationRegion,
+      originLocationCode: originLocationCode,
+      destinationLocationCode: destinationLocationCode,
+      nameSign: nameSign,
+      scheduledPickupAt: scheduledPickupAt,
+      adults: adults,
+      children: children,
+      infants: infants,
+      luggage20: luggage20,
+      luggage24: luggage24,
+      golfBags: golfBags,
+      specialLuggageCount: specialLuggageCount,
+      originLat: originLat,
+      originLng: originLng,
+      destinationLat: destinationLat,
+      destinationLng: destinationLng,
+    );
+    return const PricingResult(
+      currency: 'THB',
+      chargeItems: [
+        ChargeLineItem(
+          chargeType: 'VEHICLE_BASE',
+          description: 'SEDAN CITY_TRANSFER (132.34 km est.)',
+          quantity: 1,
+          unitPrice: 1300,
+          amount: 1300,
+        ),
+      ],
+      totalAmount: 1300,
+    );
+  }
+
+  @override
+  Future<BookingCreateResult> createBooking(
+    Map<String, dynamic> body, {
+    String? idempotencyKey,
+  }) async {
+    lastCreateRequest = Map<String, dynamic>.from(body);
+    return const BookingCreateResult(
+      bookingNumber: 'TX202607010001',
+      status: 'OPEN',
+      paymentMethod: 'PAY_DRIVER',
+      paymentStatus: 'UNPAID',
+      totalAmount: 1300,
+      currency: 'THB',
+      boardingQrToken: 'boarding-token',
+      trustMessage: 'Pay the driver directly.',
+    );
   }
 }
 

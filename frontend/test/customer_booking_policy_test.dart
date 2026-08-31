@@ -35,6 +35,22 @@ void main() {
     expect(label, 'Name sign service (Picket)');
   });
 
+  test('pricing display hides internal distance estimate from VEHICLE_BASE label', () {
+    final l10n = AppLocalizations('en');
+    final label = PricingDisplay.chargeItemLabel(
+      l10n,
+      const ChargeLineItem(
+        chargeType: 'VEHICLE_BASE',
+        description: 'SEDAN CITY_TRANSFER (132.34 km est.)',
+        quantity: 1,
+        unitPrice: 1300,
+        amount: 1300,
+      ),
+    );
+    expect(label, 'Base price');
+    expect(label.contains('km'), isFalse);
+  });
+
   testWidgets('required labels are visible before focus', (tester) async {
     await tester.pumpWidget(
       ChangeNotifierProvider(

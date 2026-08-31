@@ -52,6 +52,10 @@ class IdempotencyTrackingApi implements BookingApiService {
     int luggage24 = 0,
     int golfBags = 0,
     int specialLuggageCount = 0,
+    double? originLat,
+    double? originLng,
+    double? destinationLat,
+    double? destinationLng,
   }) {
     return CapturingBookingApi().calculatePricing(
       serviceTypeCode: serviceTypeCode,
@@ -70,6 +74,10 @@ class IdempotencyTrackingApi implements BookingApiService {
       luggage24: luggage24,
       golfBags: golfBags,
       specialLuggageCount: specialLuggageCount,
+      originLat: originLat,
+      originLng: originLng,
+      destinationLat: destinationLat,
+      destinationLng: destinationLng,
     );
   }
 
