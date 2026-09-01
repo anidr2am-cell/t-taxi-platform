@@ -67,9 +67,9 @@ void main() {
     });
 
     test('submit_attempted dedupes rapid clicks', () {
-      analytics.trackBookingSubmitAttempted(vehicleType: 'SUV');
-      analytics.trackBookingSubmitAttempted(vehicleType: 'SUV');
-      expect(sink.named('booking_submit_attempted'), hasLength(1));
+      analytics.trackBookingSubmitted(vehicleType: 'SUV');
+      analytics.trackBookingSubmitted(vehicleType: 'SUV');
+      expect(sink.named('booking_submitted'), hasLength(1));
     });
 
     test('booking_completed only after success and dedupes replay', () {
@@ -98,7 +98,7 @@ void main() {
         errorCategory: 'validation',
       );
       analytics.trackBookingSubmitAttempted(vehicleType: 'SUV');
-      expect(sink.named('booking_submit_attempted'), hasLength(2));
+      expect(sink.named('booking_submitted'), hasLength(2));
     });
 
     test('booking_created and booking_completed fire on submit success', () {
@@ -212,7 +212,7 @@ void main() {
       expect(result, isNotNull);
 
       expect(sink.named('vehicle_selected'), isNotEmpty);
-      expect(sink.named('booking_submit_attempted'), hasLength(1));
+      expect(sink.named('booking_submitted'), hasLength(1));
       expect(sink.named('booking_created'), hasLength(1));
       expect(sink.named('booking_completed'), hasLength(1));
       expect(

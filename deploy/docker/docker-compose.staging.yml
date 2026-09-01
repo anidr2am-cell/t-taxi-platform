@@ -86,6 +86,7 @@ services:
         SOCKET_URL: ${TRIDE_SOCKET_URL:-}
         KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
         LINE_LOGIN_CHANNEL_ID: ${LINE_LOGIN_CHANNEL_ID:-}
+        GA4_MEASUREMENT_ID: ${GA4_MEASUREMENT_ID:-G-1BRG6R9LWY}
     container_name: tride-frontend
     restart: unless-stopped
     depends_on:

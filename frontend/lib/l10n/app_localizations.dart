@@ -109,6 +109,14 @@ class AppLocalizations {
       'privacy_policy_title': 'Privacy policy',
       'privacy_policy_load_failed':
           'Privacy policy could not be loaded. Please try again later.',
+      'analytics_consent_title': 'Analytics cookies',
+      'analytics_consent_body':
+          'We use Google Analytics to measure visits and booking conversion. No name, phone, or email is sent. Marketing attribution is stored only if you allow analytics. You can change this anytime in Privacy settings.',
+      'analytics_consent_allow': 'Allow analytics',
+      'analytics_consent_deny': 'Decline',
+      'analytics_consent_privacy': 'Privacy policy',
+      'analytics_consent_settings': 'Analytics settings',
+      'analytics_consent_settings_title': 'Analytics consent',
       'landing_language_label': 'Language',
       'support_title': 'Customer center',
       'support_page_intro':
@@ -1806,6 +1814,14 @@ class AppLocalizations {
       'privacy_policy_title': '개인정보처리방침',
       'privacy_policy_load_failed':
           '개인정보처리방침을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      'analytics_consent_title': '분석 쿠키',
+      'analytics_consent_body':
+          '방문 및 예약 전환 측정을 위해 Google Analytics를 사용합니다. 이름·전화·이메일은 전송하지 않습니다. 마케팅 유입 정보는 분석 허용 시에만 저장됩니다. 개인정보 설정에서 언제든 변경할 수 있습니다.',
+      'analytics_consent_allow': '분석 허용',
+      'analytics_consent_deny': '거부',
+      'analytics_consent_privacy': '개인정보처리방침',
+      'analytics_consent_settings': '분석 설정',
+      'analytics_consent_settings_title': '분석 동의 설정',
       'landing_language_label': '언어',
       'support_title': '고객센터',
       'support_page_intro':
@@ -2878,6 +2894,14 @@ class AppLocalizations {
       'landing_privacy_policy_link': '隐私政策',
       'privacy_policy_title': '隐私政策',
       'privacy_policy_load_failed': '无法加载隐私政策。请稍后重试。',
+      'analytics_consent_title': '分析 Cookie',
+      'analytics_consent_body':
+          '我们使用 Google Analytics 衡量访问和预约转化，不会发送姓名、电话或电子邮件。您可在隐私设置中随时更改。',
+      'analytics_consent_allow': '允许分析',
+      'analytics_consent_deny': '拒绝',
+      'analytics_consent_privacy': '隐私政策',
+      'analytics_consent_settings': '分析设置',
+      'analytics_consent_settings_title': '分析同意设置',
       'landing_language_label': '语言',
       'support_title': '客服中心',
       'support_page_intro': '如果预约有困难或需要咨询，请联系客户中心。也可以附加机票、酒店凭证或预约截图。',
@@ -3512,6 +3536,14 @@ class AppLocalizations {
       'privacy_policy_title': 'プライバシーポリシー',
       'privacy_policy_load_failed':
           'プライバシーポリシーを読み込めませんでした。しばらくしてから再度お試しください。',
+      'analytics_consent_title': '分析 Cookie',
+      'analytics_consent_body':
+          'Google Analytics で訪問と予約コンバージョンを測定します。氏名・電話・メールは送信しません。プライバシー設定でいつでも変更できます。',
+      'analytics_consent_allow': '分析を許可',
+      'analytics_consent_deny': '拒否',
+      'analytics_consent_privacy': 'プライバシーポリシー',
+      'analytics_consent_settings': '分析設定',
+      'analytics_consent_settings_title': '分析同意設定',
       'landing_language_label': '言語',
       'support_title': 'カスタマーセンター',
       'support_page_intro':
@@ -4218,6 +4250,14 @@ class AppLocalizations {
       'privacy_policy_title': 'นโยบายความเป็นส่วนตัว',
       'privacy_policy_load_failed':
           'ไม่สามารถโหลดนโยบายความเป็นส่วนตัวได้ กรุณาลองใหม่อีกครั้ง',
+      'analytics_consent_title': 'คุกกี้วิเคราะห์',
+      'analytics_consent_body':
+          'เราใช้ Google Analytics เพื่อวัดการเข้าชมและการแปลงการจอง ไม่ส่งชื่อ โทรศัพท์ หรืออีเมล คุณสามารถเปลี่ยนได้ในการตั้งค่าความเป็นส่วนตัว',
+      'analytics_consent_allow': 'อนุญาตการวิเคราะห์',
+      'analytics_consent_deny': 'ปฏิเสธ',
+      'analytics_consent_privacy': 'นโยบายความเป็นส่วนตัว',
+      'analytics_consent_settings': 'การตั้งค่าการวิเคราะห์',
+      'analytics_consent_settings_title': 'การยินยอมการวิเคราะห์',
       'landing_language_label': 'ภาษา',
       'support_title': 'ศูนย์บริการลูกค้า',
       'support_page_intro':

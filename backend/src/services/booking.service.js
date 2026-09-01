@@ -1,3 +1,4 @@
+const { normalizeMarketingAttribution } = require('../utils/marketingAttribution.util');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
@@ -1004,6 +1005,11 @@ class BookingService {
       }
       if (destinationLocationMetadata) {
         metadata.destinationLocation = destinationLocationMetadata;
+      }
+
+      const marketingAttribution = normalizeMarketingAttribution(input.marketingAttribution);
+      if (marketingAttribution) {
+        metadata.marketing_attribution = marketingAttribution;
       }
 
       const originAddress = this.resolvePlaceAddress(origin);

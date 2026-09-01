@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../config/ga4_config.dart';
+import '../../../core/analytics/analytics_consent_provider.dart';
+import '../../../core/analytics/ga4_booking_analytics_sink.dart';
 import '../models/booking_wizard_steps.dart';
 import '../models/service_type_option.dart';
 
@@ -37,6 +40,19 @@ class DebugBookingAnalyticsSink implements BookingAnalyticsSink {
   }
 }
 
+class CompositeBookingAnalyticsSink implements BookingAnalyticsSink {
+  CompositeBookingAnalyticsSink(this._sinks);
+
+  final List<BookingAnalyticsSink> _sinks;
+
+  @override
+  void emit(BookingAnalyticsEvent event) {
+    for (final sink in _sinks) {
+      sink.emit(event);
+    }
+  }
+}
+
 /// In-memory sink for widget/unit tests.
 class RecordingBookingAnalyticsSink implements BookingAnalyticsSink {
   final List<BookingAnalyticsEvent> events = [];
@@ -56,13 +72,29 @@ class RecordingBookingAnalyticsSink implements BookingAnalyticsSink {
 class BookingAnalytics {
   BookingAnalytics(this._sink);
 
-  static BookingAnalytics instance = BookingAnalytics(
-    kDebugMode
-        ? DebugBookingAnalyticsSink()
-        : const NoOpBookingAnalyticsSink(),
-  );
+  static BookingAnalytics instance = BookingAnalytics(_buildDefaultSink());
+
+  static BookingAnalyticsSink _buildDefaultSink() {
+    if (kIsWeb && Ga4Config.isEnabled) {
+      final ga4Sink = Ga4BookingAnalyticsSink(
+        consentService: AnalyticsConsentProvider.instance,
+      );
+      if (kDebugMode) {
+        return CompositeBookingAnalyticsSink([
+          DebugBookingAnalyticsSink(),
+          ga4Sink,
+        ]);
+      }
+      return ga4Sink;
+    }
+    if (kDebugMode) {
+      return DebugBookingAnalyticsSink();
+    }
+    return const NoOpBookingAnalyticsSink();
+  }
 
   final BookingAnalyticsSink _sink;
+  Map<String, Object?> _sessionContext = {};
 
   static const blockedPropertyKeys = {
     'customerName',
@@ -103,10 +135,25 @@ class BookingAnalytics {
     _bookingStarted = false;
     _submitAttemptTracked = false;
     _completedBookingIds.clear();
+    _sessionContext = {};
+  }
+
+  void setSessionContext(Map<String, Object?> context) {
+    _sessionContext = Map<String, Object?>.from(context);
+  }
+
+  void mergeSessionContext(Map<String, Object?> context) {
+    _sessionContext.addAll(context);
   }
 
   void track(String name, Map<String, Object?> properties) {
-    _sink.emit(BookingAnalyticsEvent(name: name, properties: _sanitize(properties)));
+    final merged = <String, Object?>{
+      ..._sessionContext,
+      ...properties,
+    };
+    _sink.emit(
+      BookingAnalyticsEvent(name: name, properties: _sanitize(merged)),
+    );
   }
 
   Map<String, Object?> _sanitize(Map<String, Object?> properties) {
@@ -191,16 +238,29 @@ class BookingAnalytics {
     });
   }
 
+  void trackBookingSubmitted({
+    String? vehicleType,
+    String paymentMethod = 'PAY_DRIVER',
+    String? bookingMode,
+  }) {
+    if (_submitAttemptTracked) return;
+    _submitAttemptTracked = true;
+    track('booking_submitted', {
+      if (vehicleType != null) 'vehicle_type': vehicleType,
+      'payment_method': paymentMethod,
+      if (bookingMode != null) 'booking_mode': bookingMode,
+    });
+  }
+
+  @Deprecated('Use trackBookingSubmitted')
   void trackBookingSubmitAttempted({
     String? vehicleType,
     String paymentMethod = 'PAY_DRIVER',
   }) {
-    if (_submitAttemptTracked) return;
-    _submitAttemptTracked = true;
-    track('booking_submit_attempted', {
-      if (vehicleType != null) 'vehicle_type': vehicleType,
-      'payment_method': paymentMethod,
-    });
+    trackBookingSubmitted(
+      vehicleType: vehicleType,
+      paymentMethod: paymentMethod,
+    );
   }
 
   void trackBookingCompleted({
@@ -214,6 +274,7 @@ class BookingAnalytics {
       'booking_id': bookingId,
       if (vehicleType != null) 'vehicle_type': vehicleType,
       if (totalPrice != null) 'total_price': totalPrice.round(),
+      'currency': 'THB',
     });
   }
 

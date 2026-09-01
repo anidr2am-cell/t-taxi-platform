@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import '../../../widgets/analytics_consent_banner.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
@@ -109,12 +110,18 @@ class _PrivacyPolicyBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scrollbar(
-      child: Markdown(
-        data: markdown,
-        selectable: true,
-        styleSheet: PrivacyPolicyPage.styleSheet(context),
-        extensionSet: md.ExtensionSet.gitHubFlavored,
+      child: ListView(
         padding: AppUi.pagePadding(context),
+        children: [
+          MarkdownBody(
+            data: markdown,
+            selectable: true,
+            styleSheet: PrivacyPolicyPage.styleSheet(context),
+            extensionSet: md.ExtensionSet.gitHubFlavored,
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
+          const AnalyticsConsentSettingsButton(),
+        ],
       ),
     );
   }

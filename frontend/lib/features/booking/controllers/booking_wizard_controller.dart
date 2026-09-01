@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/analytics/marketing_attribution_provider.dart';
 import '../../../utils/user_facing_error.dart';
 import '../models/booking_wizard_steps.dart';
 import '../models/booking_wizard_state.dart';
@@ -32,6 +33,33 @@ class BookingWizardController extends ChangeNotifier {
   final DateTime Function() _now;
 
   BookingAnalytics get analytics => _analytics;
+
+  void syncAnalyticsContext({
+    required String locale,
+    required String deviceType,
+  }) {
+    final locations = _pricingLocationParams();
+    final airportIata = _airportIataForTransfer();
+    final attribution =
+        MarketingAttributionProvider.snapshotForAnalytics()?.analyticsParams() ??
+        const {};
+    _analytics.setSessionContext({
+      'locale': locale,
+      'device_type': deviceType,
+      'passenger_count': _state.adults + _state.children + _state.infants,
+      'luggage_count':
+          _state.luggage20 + _state.luggage24 + _state.golfBags + _state.specialLuggageCount,
+      if (_state.serviceType != null)
+        'route_type': BookingAnalytics.routeTypeFor(_state.serviceType),
+      if (_state.selectedVehicle != null) 'vehicle_type': _state.selectedVehicle,
+      if (locations['originLocationCode'] != null)
+        'origin_location_code': locations['originLocationCode'],
+      if (locations['destinationLocationCode'] != null)
+        'destination_location_code': locations['destinationLocationCode'],
+      if (airportIata != null) 'origin_airport_iata': airportIata,
+      ...attribution,
+    });
+  }
 
   BookingWizardState _state = const BookingWizardState();
   bool _isLoading = false;
@@ -612,6 +640,9 @@ class BookingWizardController extends ChangeNotifier {
       throw StateError('Pickup date and time are required');
     }
 
+    final attribution =
+        MarketingAttributionProvider.snapshotForBooking()?.toApiJson() ?? {};
+
     return {
       'bookingMode': bookingMode,
       'serviceTypeCode': _state.serviceType!.apiCode,
@@ -657,6 +688,7 @@ class BookingWizardController extends ChangeNotifier {
       },
       if (_state.additionalRequests.trim().isNotEmpty)
         'additionalRequests': _state.additionalRequests.trim(),
+      if (attribution.isNotEmpty) 'marketingAttribution': attribution,
     };
   }
 
@@ -719,9 +751,10 @@ class BookingWizardController extends ChangeNotifier {
     if (_isSubmitting || _isLoading) return null;
     if (!canSubmitAll(validatePickup: validatePickup)) return null;
 
-    _analytics.trackBookingSubmitAttempted(
+    _analytics.trackBookingSubmitted(
       vehicleType: _state.selectedVehicle,
       paymentMethod: 'PAY_DRIVER',
+      bookingMode: bookingMode,
     );
 
     _isSubmitting = true;

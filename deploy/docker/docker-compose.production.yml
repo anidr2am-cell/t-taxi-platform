@@ -101,6 +101,7 @@ services:
         APP_ENV: production
         API_BASE_URL: ${TRIDE_API_BASE_URL:-https://ride.example.com}
         SOCKET_URL: ${TRIDE_SOCKET_URL:-https://ride.example.com}
+        GA4_MEASUREMENT_ID: ${GA4_MEASUREMENT_ID:-G-1BRG6R9LWY}
     container_name: tride-prod-frontend
     restart: unless-stopped
     logging: *default-logging

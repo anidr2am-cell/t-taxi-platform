@@ -15,6 +15,7 @@ ARG API_BASE_URL
 ARG SOCKET_URL
 ARG KAKAO_REST_API_KEY
 ARG LINE_LOGIN_CHANNEL_ID
+ARG GA4_MEASUREMENT_ID
 
 RUN test -n "$APP_ENV" \
     && if [ "$APP_ENV" = "production" ]; then \
@@ -49,17 +50,21 @@ RUN EFFECTIVE_API_BASE_URL="${API_BASE_URL:-http://localhost:3100}" \
     && if [ -n "$LINE_LOGIN_CHANNEL_ID" ]; then \
       LINE_DEFINE="--dart-define=LINE_LOGIN_CHANNEL_ID=${LINE_LOGIN_CHANNEL_ID}"; \
     fi \
+    && GA4_DEFINE="" \
+    && if [ -n "$GA4_MEASUREMENT_ID" ]; then \
+      GA4_DEFINE="--dart-define=GA4_MEASUREMENT_ID=${GA4_MEASUREMENT_ID}"; \
+    fi \
     && if [ -n "$SOCKET_URL" ]; then \
       flutter build web --release \
         --dart-define=APP_ENV=${APP_ENV} \
         --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
         --dart-define=SOCKET_URL=${SOCKET_URL} \
-        $KAKAO_DEFINE $LINE_DEFINE; \
+        $KAKAO_DEFINE $LINE_DEFINE $GA4_DEFINE; \
     else \
       flutter build web --release \
         --dart-define=APP_ENV=${APP_ENV} \
         --dart-define=API_BASE_URL=${EFFECTIVE_API_BASE_URL} \
-        $KAKAO_DEFINE $LINE_DEFINE; \
+        $KAKAO_DEFINE $LINE_DEFINE $GA4_DEFINE; \
     fi
 
 FROM nginx:1.27-alpine

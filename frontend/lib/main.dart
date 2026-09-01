@@ -5,6 +5,12 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/analytics/analytics_consent_provider.dart';
+import 'core/analytics/ga4_booking_analytics_sink.dart';
+import 'core/analytics/ga4_bridge_stub.dart'
+    if (dart.library.js_interop) 'core/analytics/ga4_bridge_web.dart';
+import 'core/analytics/ga4_route_observer.dart';
+import 'core/analytics/marketing_attribution_provider.dart';
 import 'core/pwa/driver_pwa_install_prompt.dart';
 import 'features/admin/widgets/admin_auth_gate.dart';
 import 'features/admin_settlement/pages/admin_settlement_queue_page.dart';
@@ -33,14 +39,17 @@ import 'features/auth/widgets/booking_social_login_section.dart';
 import 'screens/admin/admin_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
+import 'widgets/analytics_consent_banner.dart';
 
 const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+final Ga4RouteObserver _ga4RouteObserver = Ga4RouteObserver();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
     usePathUrlStrategy();
+    _bootstrapWebAnalytics();
   }
   runApp(
     MultiProvider(
@@ -52,6 +61,17 @@ Future<void> main() async {
       child: const _AppRoot(),
     ),
   );
+}
+
+void _bootstrapWebAnalytics() {
+  MarketingAttributionProvider.captureLanding(
+    uri: Uri.base,
+    documentReferrer: Ga4Bridge.documentReferrer,
+  );
+  Ga4AnalyticsBootstrap.ensureInitialized(
+    consentService: AnalyticsConsentProvider.instance,
+  );
+  _ga4RouteObserver.trackInitialRoute(Uri.base.path.isEmpty ? '/' : Uri.base.path);
 }
 
 class _AppRoot extends StatelessWidget {
@@ -75,9 +95,18 @@ class TTaxiApp extends StatelessWidget {
 
     return MaterialApp(
       navigatorKey: _navigatorKey,
+      navigatorObservers: [_ga4RouteObserver],
       title: 'T-Rider',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      builder: (context, child) {
+        return Column(
+          children: [
+            Expanded(child: child ?? const SizedBox.shrink()),
+            const AnalyticsConsentBanner(),
+          ],
+        );
+      },
       locale: Locale(locale.languageCode),
       supportedLocales: AppLocalizations.supportedLanguages
           .map((code) => Locale(code))

@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /driver/login
+Disallow: /driver/home
+Disallow: /driver/jobs
+Disallow: /driver/e2e/
+Disallow: /my-bookings
+Disallow: /account
+Disallow: /booking/lookup
+Disallow: /booking/contact-connect
+Disallow: /auth/
+
+Sitemap: https://trider.taxi/sitemap.xml

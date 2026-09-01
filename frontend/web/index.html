@@ -17,6 +17,46 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <title>T-Rider</title>
   <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      wait_for_update: 500
+    });
+    window.trideGa4Init = function (measurementId) {
+      if (!measurementId || window.trideGa4MeasurementId) return;
+      window.trideGa4MeasurementId = measurementId;
+      var script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
+      document.head.appendChild(script);
+      gtag('js', new Date());
+      gtag('config', measurementId, { send_page_view: false });
+    };
+    window.trideGa4UpdateConsent = function (granted) {
+      gtag('consent', 'update', {
+        analytics_storage: granted ? 'granted' : 'denied',
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied'
+      });
+    };
+    window.trideGa4Event = function (name, params) {
+      if (!window.trideGa4MeasurementId) return;
+      gtag('event', name, params || {});
+    };
+    window.trideGa4PageView = function (path, title) {
+      if (!window.trideGa4MeasurementId) return;
+      gtag('event', 'page_view', {
+        page_path: path,
+        page_title: title || document.title
+      });
+    };
+  </script>
+  <script>
     (function () {
       const isDriverRoute =
         window.location.pathname === '/driver' ||

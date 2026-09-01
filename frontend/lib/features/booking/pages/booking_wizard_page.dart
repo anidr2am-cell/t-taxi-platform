@@ -66,6 +66,10 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     if (!_controller.isInitialized) return;
     final width = MediaQuery.sizeOf(context).width;
     final locale = context.read<LocaleState>().languageCode;
+    _controller.syncAnalyticsContext(
+      locale: locale,
+      deviceType: BookingAnalytics.deviceTypeForWidth(width),
+    );
     if (!_sessionStartedTracked) {
       _sessionStartedTracked = true;
       _controller.analytics.trackBookingStarted(

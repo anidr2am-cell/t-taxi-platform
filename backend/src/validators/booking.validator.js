@@ -11,6 +11,7 @@ const {
   isValidFlightNumber,
   normalizeFlightNumber,
 } = require('../utils/flightNumber.util');
+const { marketingAttributionSchema } = require('../utils/marketingAttribution.util');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 const nameSignTextField = Joi.string().trim().min(1).max(100);
@@ -157,6 +158,7 @@ const createBookingSchema = Joi.object({
   }).required(),
   additionalRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   specialRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
+  marketingAttribution: marketingAttributionSchema,
 });
 
 const updateBookingStatusSchema = Joi.object({
