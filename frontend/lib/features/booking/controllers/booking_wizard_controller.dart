@@ -793,6 +793,21 @@ class BookingWizardController extends ChangeNotifier {
     final idempotencyKey = _ensureSubmitIdempotencyKey();
     const maxInProgressRetries = 3;
     try {
+      if (!await _ensureCityTransferCoordinates()) {
+        _analytics.trackBookingFailed(
+          stepName: BookingAnalytics.stepNameFor(
+            _state.step == BookingWizardSteps.review
+                ? BookingWizardSteps.review
+                : _state.step,
+          ),
+          errorCategory: 'validation',
+        );
+        _state = _state.copyWith(
+          errorMessage: 'booking_location_reselect_required',
+        );
+        notifyListeners();
+        return null;
+      }
       for (var attempt = 0; attempt <= maxInProgressRetries; attempt++) {
         try {
           final result = await _api.createBooking(
@@ -1174,15 +1189,15 @@ class BookingWizardController extends ChangeNotifier {
     return null;
   }
 
-  Future<Map<String, double>?> _pricingCoordinateParams() async {
+  Future<bool> _ensureCityTransferCoordinates() async {
     if (_state.serviceType != BookingServiceType.cityTransfer) {
-      return null;
+      return true;
     }
 
     var origin = _state.origin;
     var destination = _state.destination;
     if (origin == null || destination == null) {
-      return null;
+      return false;
     }
 
     if (!origin.hasCoordinates) {
@@ -1197,7 +1212,55 @@ class BookingWizardController extends ChangeNotifier {
       await _persist();
     }
 
-    if (!origin.hasCoordinates || !destination.hasCoordinates) {
+    if (origin.hasCoordinates && destination.hasCoordinates) {
+      return true;
+    }
+
+    return _hasKnownCityTransferLocationCodes();
+  }
+
+  bool _hasKnownCityTransferLocationCodes() {
+    final locations = _pricingLocationParams();
+    final originKey =
+        locations['originAirportIata'] ?? locations['originLocationCode'];
+    final destinationKey =
+        locations['destinationLocationCode'] ?? locations['destinationRegion'];
+    if (originKey == null || destinationKey == null) {
+      return false;
+    }
+    return _isKnownPricingLocationCode(originKey) &&
+        _isKnownPricingLocationCode(destinationKey);
+  }
+
+  bool _isKnownPricingLocationCode(String value) {
+    final normalized = value.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '_');
+    const knownCodes = {
+      'BANGKOK',
+      'PATTAYA',
+      'BKK',
+      'DMK',
+      'HUA_HIN',
+      'RAYONG',
+      'AYUTTHAYA',
+    };
+    return knownCodes.contains(normalized);
+  }
+
+  Future<Map<String, double>?> _pricingCoordinateParams() async {
+    if (_state.serviceType != BookingServiceType.cityTransfer) {
+      return null;
+    }
+
+    if (!await _ensureCityTransferCoordinates()) {
+      return null;
+    }
+
+    final origin = _state.origin;
+    final destination = _state.destination;
+    if (origin == null ||
+        destination == null ||
+        !origin.hasCoordinates ||
+        !destination.hasCoordinates) {
       return null;
     }
 

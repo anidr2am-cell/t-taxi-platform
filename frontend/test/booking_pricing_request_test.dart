@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/controllers/booking_wizard_controller.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
+import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
 import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/models/place_prediction.dart';
 import 'package:frontend/features/booking/models/pricing_result.dart';
@@ -1208,6 +1209,182 @@ void main() {
     },
   );
 
+  test(
+    'submitBooking hydrates origin.lat/lng before CITY_TRANSFER create (Solyn -> Centric Sea)',
+    () async {
+      final api = _SuccessfulCreateBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        placesApiService: _solynCentricPlacesApi(),
+        storage: _MemoryBookingStateStorage()
+          ..value = _cityTransferSubmitReadyState(
+            origin: _solynHotelWithoutCoords(),
+            destination: _centricSeaWithoutCoords(),
+          ),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.loadRecommendation();
+      await controller.loadPricing();
+      final result = await controller.submitBooking();
+
+      expect(result, isNotNull);
+      expect(api.lastCreateRequest, isNotNull);
+      final origin = Map<String, dynamic>.from(
+        api.lastCreateRequest!['origin'] as Map,
+      );
+      final destination = Map<String, dynamic>.from(
+        api.lastCreateRequest!['destination'] as Map,
+      );
+      expect(origin['lat'], 13.7730064);
+      expect(origin['lng'], 100.5601678);
+      expect(destination['lat'], 12.9395321);
+      expect(destination['lng'], 100.8883189);
+    },
+  );
+
+  test(
+    'submitBooking hydrates origin.lat/lng before CITY_TRANSFER create (Centric Sea -> Solyn)',
+    () async {
+      final api = _SuccessfulCreateBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        placesApiService: _solynCentricPlacesApi(),
+        storage: _MemoryBookingStateStorage()
+          ..value = _cityTransferSubmitReadyState(
+            origin: _centricSeaWithoutCoords(),
+            destination: _solynHotelWithoutCoords(),
+          ),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.loadRecommendation();
+      await controller.loadPricing();
+      await controller.submitBooking();
+
+      final origin = Map<String, dynamic>.from(
+        api.lastCreateRequest!['origin'] as Map,
+      );
+      final destination = Map<String, dynamic>.from(
+        api.lastCreateRequest!['destination'] as Map,
+      );
+      expect(origin['lat'], 12.9395321);
+      expect(origin['lng'], 100.8883189);
+      expect(destination['lat'], 13.7730064);
+      expect(destination['lng'], 100.5601678);
+    },
+  );
+
+  test(
+    'submitBooking blocks CITY_TRANSFER create when coordinates cannot be resolved',
+    () async {
+      final api = _SuccessfulCreateBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage()
+          ..value = _cityTransferSubmitReadyState(
+            origin: const LocationOption(
+              id: 'origin:custom',
+              displayName: 'Custom origin',
+              kind: LocationKind.place,
+              name: 'Custom origin',
+              address: 'Unknown street, Nonthaburi, Thailand',
+            ),
+            destination: const LocationOption(
+              id: 'destination:custom',
+              displayName: 'Custom destination',
+              kind: LocationKind.place,
+              name: 'Custom destination',
+              address: 'Unknown road, Chiang Mai, Thailand',
+            ),
+          ),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.loadRecommendation();
+      await controller.loadPricing();
+      final result = await controller.submitBooking();
+
+      expect(result, isNull);
+      expect(api.lastCreateRequest, isNull);
+      expect(
+        controller.state.errorMessage,
+        'booking_location_reselect_required',
+      );
+    },
+  );
+
+  test(
+    'submitBooking AIRPORT_PICKUP create payload keeps nested lat/lng without CITY_TRANSFER hydration',
+    () async {
+      final api = _SuccessfulCreateBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.airportPickup);
+      await controller.setOrigin(
+        LocationOption.fromPlaceDetails(
+          const PlaceDetails(
+            placeId: 'google-bkk',
+            name: 'Suvarnabhumi Airport',
+            address: 'Bang Phli, Samut Prakan, Thailand',
+            latitude: 13.6900,
+            longitude: 100.7501,
+          ),
+        ),
+      );
+      await controller.setDestination(
+        LocationOption.fromPlaceDetails(
+          const PlaceDetails(
+            placeId: 'google-pattaya',
+            name: 'Pattaya',
+            address: 'Pattaya, Chon Buri, Thailand',
+            latitude: 12.9236,
+            longitude: 100.8825,
+          ),
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SUV');
+      await controller.updateCustomerInfo(
+        name: 'Kim',
+        phone: '+66123456789',
+      );
+
+      final result = await controller.submitBooking();
+
+      expect(result, isNotNull);
+      expect(api.lastCreateRequest!['serviceTypeCode'], 'AIRPORT_PICKUP');
+      final origin = Map<String, dynamic>.from(
+        api.lastCreateRequest!['origin'] as Map,
+      );
+      expect(origin['lat'], 13.6900);
+      expect(origin['lng'], 100.7501);
+      expect(api.lastCreateRequest!.containsKey('originLat'), isFalse);
+    },
+  );
+
   testWidgets(
     'vehicle step shows customer-facing base price without km estimate text',
     (tester) async {
@@ -1800,4 +1977,93 @@ class _MemoryRecentLocationsRepository implements RecentLocationsRepository {
 
   @override
   Future<List<LocationOption>> load() async => items;
+}
+
+PlacesApiService _solynCentricPlacesApi() {
+  return PlacesApiService.test(
+    baseUrl: 'http://localhost:3000',
+    client: MockClient((request) async {
+      final uri = request.url;
+      if (uri.path.endsWith('/places/details') &&
+          uri.queryParameters['placeId'] == 'ChIJJciWWI6f4jARooYEqzN19NA') {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'placeId': 'ChIJJciWWI6f4jARooYEqzN19NA',
+              'name': 'Solyn Hotel',
+              'formattedAddress': 'Bangkok, Thailand',
+              'lat': 13.7730064,
+              'lng': 100.5601678,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      if (uri.path.endsWith('/places/details') &&
+          uri.queryParameters['placeId'] == 'ChIJZVKZKQGWAjERHntnx3WtANQ') {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'placeId': 'ChIJZVKZKQGWAjERHntnx3WtANQ',
+              'name': 'Centric Sea Pattaya',
+              'formattedAddress': 'Pattaya, Thailand',
+              'lat': 12.9395321,
+              'lng': 100.8883189,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response('{"success":false,"message":"not found"}', 404);
+    }),
+  );
+}
+
+LocationOption _solynHotelWithoutCoords() {
+  return const LocationOption(
+    id: 'place:ChIJJciWWI6f4jARooYEqzN19NA',
+    displayName: 'Solyn Hotel',
+    kind: LocationKind.place,
+    placeId: 'ChIJJciWWI6f4jARooYEqzN19NA',
+    name: 'Solyn Hotel',
+    address: 'Bangkok, Thailand',
+  );
+}
+
+LocationOption _centricSeaWithoutCoords() {
+  return const LocationOption(
+    id: 'place:ChIJZVKZKQGWAjERHntnx3WtANQ',
+    displayName: 'Centric Sea Pattaya',
+    kind: LocationKind.place,
+    placeId: 'ChIJZVKZKQGWAjERHntnx3WtANQ',
+    name: 'Centric Sea Pattaya',
+    address: 'Pattaya, Thailand',
+  );
+}
+
+BookingWizardState _cityTransferSubmitReadyState({
+  required LocationOption origin,
+  required LocationOption destination,
+}) {
+  return BookingWizardState(
+    step: BookingWizardSteps.review,
+    serviceType: BookingServiceType.cityTransfer,
+    origin: origin,
+    destination: destination,
+    pickupDate: '2026-07-01',
+    pickupTime: '09:30',
+    selectedVehicle: 'SEDAN',
+    adults: 2,
+    customerName: 'Kim',
+    customerPhone: '+66123456789',
+    pricing: const PricingResult(
+      currency: 'THB',
+      chargeItems: [],
+      totalAmount: 1300,
+    ),
+  );
 }

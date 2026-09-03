@@ -1531,6 +1531,8 @@ class AppLocalizations {
           'Please enter the name to display on the name sign.',
       'wizard_customer_email_invalid': 'Please enter a valid email address.',
       'pickup_datetime_required': 'Pickup date and time are required',
+      'booking_location_reselect_required':
+          'Location coordinates are unavailable. Please select the place again.',
       'ui_generic_error': 'Something went wrong. Please try again.',
       'ui_retry': 'Retry',
       'flight_number_hint': 'TG401, 7C2203',
@@ -2007,6 +2009,7 @@ class AppLocalizations {
       'wizard_required_name_sign_text': '피켓에 표시할 이름을 입력해 주세요.',
       'wizard_customer_email_invalid': '올바른 이메일 주소를 입력해 주세요.',
       'pickup_datetime_required': '픽업 날짜와 시간을 입력해 주세요',
+      'booking_location_reselect_required': '장소 좌표를 확인할 수 없습니다. 출발지/도착지를 다시 선택해 주세요.',
       'ui_generic_error': '문제가 발생했습니다. 다시 시도해 주세요.',
       'ui_retry': '다시 시도',
       'flight_number_hint': 'TG401, 7C2203',
@@ -3281,6 +3284,7 @@ class AppLocalizations {
       'wizard_required_name_sign_text': '请输入举牌上显示的姓名。',
       'wizard_customer_email_invalid': '请输入有效的电子邮箱地址。',
       'pickup_datetime_required': '请填写接送日期和时间',
+      'booking_location_reselect_required': '无法获取地点坐标，请重新选择出发地/目的地。',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid': '请检查航班号。例如：TG401, 7C2203',
       'flight_lookup_search': '查询',
@@ -3951,6 +3955,8 @@ class AppLocalizations {
           'ネームボードに表示する名前を入力してください。',
       'wizard_customer_email_invalid': '有効なメールアドレスを入力してください。',
       'pickup_datetime_required': 'ピックアップ日時を入力してください',
+      'booking_location_reselect_required':
+          '場所の座標を取得できません。出発地/目的地を再度選択してください。',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid': '便名を確認してください。例: TG401, 7C2203',
       'flight_lookup_search': '検索',
@@ -4716,6 +4722,8 @@ class AppLocalizations {
       'wizard_required_name_sign_text': 'กรุณากรอกชื่อที่จะแสดงบนป้าย',
       'wizard_customer_email_invalid': 'กรุณากรอกอีเมลที่ถูกต้อง',
       'pickup_datetime_required': 'กรุณากรอกวันและเวลารับ',
+      'booking_location_reselect_required':
+          'ไม่สามารถระบุพิกัดสถานที่ได้ กรุณาเลือกจุดรับ/จุดหมายอีกครั้ง',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid':
           'กรุณาตรวจสอบหมายเลขเที่ยวบิน เช่น TG401 หรือ 7C2203',
