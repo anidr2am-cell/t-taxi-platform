@@ -11,6 +11,7 @@ import '../models/service_type_option.dart';
 import '../services/booking_analytics.dart';
 import '../services/booking_api_service.dart';
 import '../services/booking_state_storage.dart';
+import '../services/places_api_service.dart';
 import '../services/recent_locations_storage.dart';
 
 class BookingWizardController extends ChangeNotifier {
@@ -18,19 +19,25 @@ class BookingWizardController extends ChangeNotifier {
     BookingApiService? apiService,
     BookingStateStorage? storage,
     RecentLocationsStorage? recentLocationsStorage,
+    PlacesApiService? placesApiService,
     BookingAnalytics? analytics,
     DateTime Function()? now,
+    String placesLanguageCode = 'en',
   }) : _api = apiService ?? BookingApiService(),
        _storage = storage ?? BookingStateStorage(),
        _recentLocations = recentLocationsStorage ?? RecentLocationsStorage(),
+       _placesApi = placesApiService ?? PlacesApiService(),
        _analytics = analytics ?? BookingAnalytics.instance,
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now,
+       _placesLanguageCode = placesLanguageCode;
 
   final BookingApiService _api;
   final BookingStateStorage _storage;
   final RecentLocationsStorage _recentLocations;
+  final PlacesApiService _placesApi;
   final BookingAnalytics _analytics;
   final DateTime Function() _now;
+  final String _placesLanguageCode;
 
   BookingAnalytics get analytics => _analytics;
 
@@ -311,31 +318,55 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<void> setOrigin(LocationOption location) async {
+    final resolved = await _resolveLocationCoordinates(location);
     _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
-      origin: location,
+      origin: resolved,
       clearRecommendation: true,
       clearPricing: true,
       clearError: true,
     );
-    await _recentLocations.add(location);
+    await _recentLocations.add(resolved);
     await _persist();
     notifyListeners();
     await syncDerivedData();
   }
 
   Future<void> setDestination(LocationOption location) async {
+    final resolved = await _resolveLocationCoordinates(location);
     _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
-      destination: location,
+      destination: resolved,
       clearRecommendation: true,
       clearPricing: true,
       clearError: true,
     );
-    await _recentLocations.add(location);
+    await _recentLocations.add(resolved);
     await _persist();
     notifyListeners();
     await syncDerivedData();
+  }
+
+  Future<LocationOption> _resolveLocationCoordinates(LocationOption location) async {
+    if (_state.serviceType != BookingServiceType.cityTransfer) {
+      return location;
+    }
+    if (location.hasCoordinates) {
+      return location;
+    }
+    final placeId = location.placeId;
+    if (placeId == null || placeId.isEmpty) {
+      return location;
+    }
+    try {
+      final details = await _placesApi.getPlaceDetails(
+        placeId: placeId,
+        language: _placesLanguageCode,
+      );
+      return LocationOption.fromPlaceDetails(details);
+    } catch (_) {
+      return location;
+    }
   }
 
   DateTime _bangkokWallTime(DateTime value) {
@@ -1143,29 +1174,39 @@ class BookingWizardController extends ChangeNotifier {
     return null;
   }
 
-  Map<String, double?> _pricingCoordinateParams() {
+  Future<Map<String, double>?> _pricingCoordinateParams() async {
     if (_state.serviceType != BookingServiceType.cityTransfer) {
-      return const {};
+      return null;
     }
 
-    final origin = _state.origin;
-    final destination = _state.destination;
-    final params = <String, double?>{};
-
-    if (origin?.latitude != null) {
-      params['originLat'] = origin!.latitude;
-    }
-    if (origin?.longitude != null) {
-      params['originLng'] = origin!.longitude;
-    }
-    if (destination?.latitude != null) {
-      params['destinationLat'] = destination!.latitude;
-    }
-    if (destination?.longitude != null) {
-      params['destinationLng'] = destination!.longitude;
+    var origin = _state.origin;
+    var destination = _state.destination;
+    if (origin == null || destination == null) {
+      return null;
     }
 
-    return params;
+    if (!origin.hasCoordinates) {
+      origin = await _resolveLocationCoordinates(origin);
+    }
+    if (!destination.hasCoordinates) {
+      destination = await _resolveLocationCoordinates(destination);
+    }
+
+    if (origin != _state.origin || destination != _state.destination) {
+      _state = _state.copyWith(origin: origin, destination: destination);
+      await _persist();
+    }
+
+    if (!origin.hasCoordinates || !destination.hasCoordinates) {
+      return null;
+    }
+
+    return {
+      'originLat': origin.latitude!,
+      'originLng': origin.longitude!,
+      'destinationLat': destination.latitude!,
+      'destinationLng': destination.longitude!,
+    };
   }
 
   Future<void> loadPricing() async {
@@ -1185,7 +1226,7 @@ class BookingWizardController extends ChangeNotifier {
     }
 
     final locations = _pricingLocationParams();
-    final coordinates = _pricingCoordinateParams();
+    final coordinates = await _pricingCoordinateParams();
     final requestVehicle = _state.selectedVehicle!;
     _setLoading(true);
     try {
@@ -1196,10 +1237,10 @@ class BookingWizardController extends ChangeNotifier {
         destinationRegion: locations['destinationRegion'],
         originLocationCode: locations['originLocationCode'],
         destinationLocationCode: locations['destinationLocationCode'],
-        originLat: coordinates['originLat'],
-        originLng: coordinates['originLng'],
-        destinationLat: coordinates['destinationLat'],
-        destinationLng: coordinates['destinationLng'],
+        originLat: coordinates?['originLat'],
+        originLng: coordinates?['originLng'],
+        destinationLat: coordinates?['destinationLat'],
+        destinationLng: coordinates?['destinationLng'],
         scheduledPickupAt: scheduledPickupAt,
         nameSign: _state.nameSign,
         adults: _state.adults,

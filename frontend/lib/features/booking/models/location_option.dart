@@ -27,6 +27,12 @@ class LocationOption {
     this.longitude,
   });
 
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      latitude!.isFinite &&
+      longitude!.isFinite;
+
   factory LocationOption.fromPlaceDetails(PlaceDetails details) {
     final label = details.name.isNotEmpty ? details.name : details.address;
     final internalCode = _knownInternalCodeForText(

@@ -13,6 +13,7 @@ import 'package:frontend/features/booking/models/urgent_negotiation_status.dart'
 import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
 import 'package:frontend/features/booking/services/booking_api_service.dart';
 import 'package:frontend/features/booking/services/booking_state_storage.dart';
+import 'package:frontend/features/booking/services/places_api_service.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
 import 'package:frontend/features/booking/widgets/step_vehicle_select.dart';
 import 'package:http/http.dart' as http;
@@ -908,6 +909,152 @@ void main() {
       expect(api.lastPricingRequest!['originLng'], 100.4977);
       expect(api.lastPricingRequest!['destinationLat'], 12.9236);
       expect(api.lastPricingRequest!['destinationLng'], 100.8825);
+    },
+  );
+
+  test(
+    'loadPricing sends coordinates for CITY_TRANSFER place-search selections (Solyn ↔ Centric Sea)',
+    () async {
+      final api = _CapturingBookingApi();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        LocationOption.fromPlaceDetails(
+          const PlaceDetails(
+            placeId: 'ChIJJciWWI6f4jARooYEqzN19NA',
+            name: 'Solyn Hotel',
+            address:
+                '4969 Pracha Songkhro Rd, Din Daeng, Krung Thep Maha Nakhon, Thailand',
+            latitude: 13.7730064,
+            longitude: 100.5601678,
+          ),
+        ),
+      );
+      await controller.setDestination(
+        LocationOption.fromPlaceDetails(
+          const PlaceDetails(
+            placeId: 'ChIJZVKZKQGWAjERHntnx3WtANQ',
+            name: 'Centric Sea Pattaya',
+            address: 'Pattaya Sai Song Road, Pattaya, Thailand',
+            latitude: 12.9395321,
+            longitude: 100.8883189,
+          ),
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SEDAN');
+      await controller.loadPricing();
+
+      expect(api.lastPricingRequest, isNotNull);
+      expect(api.lastPricingRequest!['originLocationCode'], 'Solyn Hotel');
+      expect(api.lastPricingRequest!['destinationLocationCode'], 'PATTAYA');
+      expect(api.lastPricingRequest!['originLat'], 13.7730064);
+      expect(api.lastPricingRequest!['originLng'], 100.5601678);
+      expect(api.lastPricingRequest!['destinationLat'], 12.9395321);
+      expect(api.lastPricingRequest!['destinationLng'], 100.8883189);
+    },
+  );
+
+  test(
+    'loadPricing hydrates missing coordinates from placeId before CITY_TRANSFER pricing',
+    () async {
+      final api = _CapturingBookingApi();
+      final placesApi = PlacesApiService.test(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          final uri = request.url;
+          if (uri.path.endsWith('/places/details') &&
+              uri.queryParameters['placeId'] == 'ChIJJciWWI6f4jARooYEqzN19NA') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'placeId': 'ChIJJciWWI6f4jARooYEqzN19NA',
+                  'name': 'Solyn Hotel',
+                  'formattedAddress': 'Bangkok, Thailand',
+                  'lat': 13.7730064,
+                  'lng': 100.5601678,
+                },
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (uri.path.endsWith('/places/details') &&
+              uri.queryParameters['placeId'] == 'ChIJZVKZKQGWAjERHntnx3WtANQ') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'placeId': 'ChIJZVKZKQGWAjERHntnx3WtANQ',
+                  'name': 'Centric Sea Pattaya',
+                  'formattedAddress': 'Pattaya, Thailand',
+                  'lat': 12.9395321,
+                  'lng': 100.8883189,
+                },
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{"success":false,"message":"not found"}', 404);
+        }),
+      );
+      final controller = BookingWizardController(
+        apiService: api,
+        placesApiService: placesApi,
+        storage: _MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: _MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'place:ChIJJciWWI6f4jARooYEqzN19NA',
+          displayName: 'Solyn Hotel',
+          kind: LocationKind.place,
+          placeId: 'ChIJJciWWI6f4jARooYEqzN19NA',
+          name: 'Solyn Hotel',
+          address: 'Bangkok, Thailand',
+        ),
+      );
+      await controller.setDestination(
+        const LocationOption(
+          id: 'place:ChIJZVKZKQGWAjERHntnx3WtANQ',
+          displayName: 'Centric Sea Pattaya',
+          kind: LocationKind.place,
+          placeId: 'ChIJZVKZKQGWAjERHntnx3WtANQ',
+          name: 'Centric Sea Pattaya',
+          address: 'Pattaya, Thailand',
+        ),
+      );
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+      await controller.updatePassengersAndLuggage(adults: 2);
+      await controller.loadRecommendation();
+      await controller.selectVehicle('SEDAN');
+      await controller.loadPricing();
+
+      expect(api.lastPricingRequest!['originLat'], 13.7730064);
+      expect(api.lastPricingRequest!['originLng'], 100.5601678);
+      expect(api.lastPricingRequest!['destinationLat'], 12.9395321);
+      expect(api.lastPricingRequest!['destinationLng'], 100.8883189);
+      expect(controller.state.origin?.hasCoordinates, isTrue);
+      expect(controller.state.destination?.hasCoordinates, isTrue);
     },
   );
 

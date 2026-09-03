@@ -134,6 +134,37 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
     _loadRecents();
   }
 
+  Future<void> _selectRecentLocation(LocationOption location) async {
+    if (location.placeId != null &&
+        location.placeId!.isNotEmpty &&
+        !location.hasCoordinates) {
+      setState(() {
+        _loadingDetails = true;
+        _error = null;
+      });
+      try {
+        final details = await _placesApi.getPlaceDetails(
+          placeId: location.placeId!,
+          language: widget.languageCode,
+        );
+        if (!mounted) return;
+        _applyLocation(LocationOption.fromPlaceDetails(details));
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _loadingDetails = false;
+          _error = userFacingError(e, fallback: 'ui_load_failed');
+        });
+        widget.onSearchFailed?.call(
+          BookingAnalytics.placeErrorCategory(e, noResults: false),
+        );
+        return;
+      }
+    }
+    _applyLocation(location);
+  }
+
   void _selectShortcut(LocationOption airport) {
     setState(() {
       _error = null;
@@ -350,7 +381,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: AppUi.surfaceCard(
-              onTap: _loadingDetails ? null : () => _applyLocation(location),
+              onTap: _loadingDetails ? null : () => _selectRecentLocation(location),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
