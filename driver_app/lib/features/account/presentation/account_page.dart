@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/locale/locale_controller.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/app_localizations_extensions.dart';
+import '../../auth/presentation/language_selector.dart';
 import '../../dispatch/data/dispatch_models.dart';
 import '../../dispatch/data/dispatch_repository.dart';
 import '../data/account_api.dart';
@@ -15,12 +17,14 @@ class AccountPage extends StatefulWidget {
     super.key,
     required this.accountApi,
     required this.dispatchRepository,
+    required this.localeController,
     required this.onUnauthorized,
     required this.onLogout,
   });
 
   final AccountDataSource accountApi;
   final DispatchReader dispatchRepository;
+  final LocaleController localeController;
   final Future<void> Function() onUnauthorized;
   final Future<void> Function() onLogout;
 
@@ -209,6 +213,25 @@ class _AccountPageState extends State<AccountPage> {
                         ),
                       ),
                     ),
+                  ),
+                  ListenableBuilder(
+                    listenable: widget.localeController,
+                    builder: (context, _) {
+                      final currentLanguage =
+                          widget.localeController.locale.languageCode == 'ko'
+                          ? l10n.languageKorean
+                          : l10n.languageThai;
+                      return ListTile(
+                        key: const Key('openLanguageSettings'),
+                        leading: const Icon(Icons.language),
+                        title: Text(l10n.languageSettings),
+                        subtitle: Text(currentLanguage),
+                        trailing: LanguageSelector(
+                          controller: widget.localeController,
+                          compact: false,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   ListTile(

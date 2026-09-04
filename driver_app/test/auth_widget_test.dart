@@ -196,6 +196,45 @@ void main() {
     expect(storage.clearCount, 1);
   });
 
+  testWidgets('account language selector switches locale after login', (
+    tester,
+  ) async {
+    final storage = FakeTokenStorage(
+      const AuthTokens(accessToken: 'saved', refreshToken: 'refresh'),
+    );
+    final localeController = await createTestLocaleController(localeCode: 'ko');
+    await pumpApp(
+      tester,
+      storage: storage,
+      accountApi: FakeAccountApi(),
+      localeController: localeController,
+    );
+    await tester.tap(find.text('계정'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('openLanguageSettings')),
+      240,
+      scrollable: find.byType(Scrollable),
+    );
+
+    expect(find.text('언어 설정'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('languageSelectorMenu')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(Overlay),
+        matching: find.text('ไทย'),
+      ),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(localeController.locale.languageCode, 'th');
+    expect(find.text('ตั้งค่าภาษา'), findsOneWidget);
+    expect(storage.clearCount, 0);
+    expect(find.text('บัญชี'), findsWidgets);
+  });
+
   testWidgets('login screen shows signup and status check buttons', (
     tester,
   ) async {

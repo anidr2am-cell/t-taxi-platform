@@ -461,6 +461,7 @@ void main() {
         home: DriverHomeShell(
           bookingRepository: FakeBookingReader(),
           dispatchRepository: dispatch,
+          localeController: await createTestLocaleController(),
           onUnauthorized: () async {},
           onLogout: () async {},
         ),

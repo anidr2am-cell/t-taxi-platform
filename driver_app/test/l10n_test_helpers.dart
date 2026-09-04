@@ -44,3 +44,18 @@ Future<void> pumpLocalizedWidget(
   );
   await tester.pumpAndSettle();
 }
+
+Widget materialAppWithLocaleController({
+  required LocaleController localeController,
+  required Widget home,
+  ThemeData? theme,
+}) {
+  return ListenableBuilder(
+    listenable: localeController,
+    builder: (context, _) => localizedMaterialApp(
+      locale: localeController.locale,
+      home: home,
+      theme: theme,
+    ),
+  );
+}

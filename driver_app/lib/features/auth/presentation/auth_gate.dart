@@ -73,6 +73,7 @@ class _AuthGateState extends State<AuthGate> {
           AuthStatus.signedIn => DriverHomeShell(
             bookingRepository: widget.bookingRepository,
             dispatchRepository: widget.dispatchRepository,
+            localeController: widget.localeController,
             accountApi: widget.accountApi,
             settlementApi: widget.settlementApi,
             driverSocket: widget.driverSocket,

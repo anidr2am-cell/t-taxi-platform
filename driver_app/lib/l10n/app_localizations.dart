@@ -52,6 +52,7 @@ class AppLocalizations {
   String get languageKorean => _s('한국어', '한국어');
   String get languageThai => _s('ไทย', 'ไทย');
   String get selectLanguage => _s('언어 선택', 'เลือกภาษา');
+  String get languageSettings => _s('언어 설정', 'ตั้งค่าภาษา');
 
   // Auth
   String get driverLogin => _s('기사 로그인', 'เข้าสู่ระบบคนขับ');

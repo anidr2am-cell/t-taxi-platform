@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/firebase/fcm_token_service.dart';
 import '../../../core/firebase/fcm_message_service.dart';
+import '../../../core/locale/locale_controller.dart';
 import '../../account/data/account_api.dart';
 import '../../account/presentation/account_page.dart';
 import '../../bookings/data/booking_repository.dart';
@@ -21,6 +22,7 @@ class DriverHomeShell extends StatefulWidget {
     super.key,
     required this.bookingRepository,
     required this.dispatchRepository,
+    required this.localeController,
     required this.onUnauthorized,
     required this.onLogout,
     this.accountApi,
@@ -32,6 +34,7 @@ class DriverHomeShell extends StatefulWidget {
 
   final BookingReader bookingRepository;
   final DispatchReader dispatchRepository;
+  final LocaleController localeController;
   final Future<void> Function() onUnauthorized;
   final Future<void> Function() onLogout;
   final DriverSocketConnection? driverSocket;
@@ -198,6 +201,7 @@ class _DriverHomeShellState extends State<DriverHomeShell>
               child: AccountPage(
                 accountApi: widget.accountApi!,
                 dispatchRepository: widget.dispatchRepository,
+                localeController: widget.localeController,
                 onUnauthorized: widget.onUnauthorized,
                 onLogout: widget.onLogout,
               ),

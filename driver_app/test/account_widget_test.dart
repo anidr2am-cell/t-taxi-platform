@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tride_driver/core/locale/locale_controller.dart';
 import 'package:tride_driver/core/network/api_exception.dart';
 import 'package:tride_driver/features/account/data/account_models.dart';
 import 'package:tride_driver/features/account/presentation/account_page.dart';
@@ -17,11 +18,14 @@ void main() {
       final account = FakeAccountApi()
         ..rating = const RatingSummary(averageRating: null, reviewCount: 0);
       final dispatch = FakeDispatchReader();
+      final localeController = await createTestLocaleController();
       await tester.pumpWidget(
-        localizedMaterialApp(
+        materialAppWithLocaleController(
+          localeController: localeController,
           home: AccountPage(
             accountApi: account,
             dispatchRepository: dispatch,
+            localeController: localeController,
             onUnauthorized: () async {},
             onLogout: () async {},
           ),
@@ -35,6 +39,44 @@ void main() {
       expect(dispatch.onlineCount, 1);
     },
   );
+
+  testWidgets('account language selector switches locale immediately', (
+    tester,
+  ) async {
+    final localeController = await createTestLocaleController(localeCode: 'ko');
+    await tester.pumpWidget(
+      materialAppWithLocaleController(
+        localeController: localeController,
+        home: AccountPage(
+          accountApi: FakeAccountApi(),
+          dispatchRepository: FakeDispatchReader(),
+          localeController: localeController,
+          onUnauthorized: () async {},
+          onLogout: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('openLanguageSettings')), findsOneWidget);
+    expect(find.text('언어 설정'), findsOneWidget);
+    expect(find.text('한국어'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('languageSelectorMenu')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(Overlay),
+        matching: find.text('ไทย'),
+      ),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(localeController.locale.languageCode, 'th');
+    expect(find.text('ตั้งค่าภาษา'), findsOneWidget);
+    expect(find.text('ไทย'), findsWidgets);
+  });
 
   testWidgets('profile save sends changed fields only', (tester) async {
     _useTallView(tester);
