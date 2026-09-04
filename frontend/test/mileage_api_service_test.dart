@@ -98,4 +98,50 @@ void main() {
       ),
     );
   });
+
+  test('getTransactions returns paginated mileage history', () async {
+    final storage = AuthTokenStorage();
+    await storage.saveSession(
+      const AuthSession(
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        user: AuthUser(id: 1, role: 'CUSTOMER', email: 'user@example.com'),
+      ),
+    );
+
+    final service = MileageApiService(
+      session: CustomerSession(
+        tokenStorage: storage,
+        httpClient: MockClient((request) async {
+          expect(request.url.path, '/api/v1/customer/mileage/transactions');
+          expect(request.url.queryParameters['page'], '1');
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'data': [
+                  {
+                    'date': '2026-07-01T09:30:00+07:00',
+                    'amount': 80,
+                    'type': 'ACCRUE',
+                    'bookingNumber': 'TX202607010001',
+                  },
+                ],
+                'page': 1,
+                'limit': 20,
+                'total': 1,
+              },
+            }),
+            200,
+          );
+        }),
+        baseUrl: 'http://localhost:3000',
+      ),
+    );
+
+    final result = await service.getTransactions();
+    expect(result.total, 1);
+    expect(result.items.single.bookingNumber, 'TX202607010001');
+    expect(result.items.single.amount, 80);
+  });
 }

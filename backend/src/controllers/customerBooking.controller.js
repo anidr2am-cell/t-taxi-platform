@@ -19,7 +19,13 @@ const listMyBookings = asyncHandler(async (req, res) => {
   return success(res, data);
 });
 
+const getBookingStatusCounts = asyncHandler(async (req, res) => {
+  const data = await getCustomerBookingService().getBookingStatusCounts(req.user.id);
+  return success(res, data);
+});
+
 module.exports = {
   claimBooking,
   listMyBookings,
+  getBookingStatusCounts,
 };

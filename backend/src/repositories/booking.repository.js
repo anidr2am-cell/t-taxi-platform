@@ -505,6 +505,41 @@ class BookingRepository {
     return Number(rows[0]?.total ?? 0);
   }
 
+  async countStatusGroupsByCustomerUserId(userId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          SUM(CASE WHEN b.status IN ('PENDING', 'OPEN', 'CONFIRMED') THEN 1 ELSE 0 END) AS waiting,
+          SUM(CASE WHEN b.status IN ('DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED') THEN 1 ELSE 0 END) AS assigned,
+          SUM(CASE WHEN b.status = 'PICKED_UP' THEN 1 ELSE 0 END) AS inProgress,
+          SUM(CASE WHEN b.status = 'SETTLEMENT_PENDING' THEN 1 ELSE 0 END) AS settlementPending,
+          SUM(CASE WHEN b.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed,
+          SUM(
+            CASE
+              WHEN b.status = 'COMPLETED' AND r.id IS NULL THEN 1
+              ELSE 0
+            END
+          ) AS reviewPending
+        FROM bookings b
+        LEFT JOIN reviews r ON r.booking_id = b.id
+        WHERE b.customer_user_id = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+          AND b.status NOT IN ('CANCELLED', 'NO_SHOW')
+      `,
+      [userId],
+    );
+    const row = rows[0] || {};
+    return {
+      waiting: Number(row.waiting ?? 0),
+      assigned: Number(row.assigned ?? 0),
+      inProgress: Number(row.inProgress ?? 0),
+      settlementPending: Number(row.settlementPending ?? 0),
+      completed: Number(row.completed ?? 0),
+      reviewPending: Number(row.reviewPending ?? 0),
+    };
+  }
+
   async findByBookingNumberForUpdate(conn, bookingNumber) {
     const [rows] = await conn.query(
       `

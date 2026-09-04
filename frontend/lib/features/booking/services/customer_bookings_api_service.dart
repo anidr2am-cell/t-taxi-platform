@@ -27,6 +27,35 @@ class CustomerBookingsPageResult {
   final int limit;
 }
 
+class CustomerBookingStatusCounts {
+  const CustomerBookingStatusCounts({
+    required this.waiting,
+    required this.assigned,
+    required this.inProgress,
+    required this.settlementPending,
+    required this.completed,
+    required this.reviewPending,
+  });
+
+  final int waiting;
+  final int assigned;
+  final int inProgress;
+  final int settlementPending;
+  final int completed;
+  final int reviewPending;
+
+  factory CustomerBookingStatusCounts.fromJson(Map<String, dynamic> json) {
+    return CustomerBookingStatusCounts(
+      waiting: json['waiting'] as int? ?? 0,
+      assigned: json['assigned'] as int? ?? 0,
+      inProgress: json['inProgress'] as int? ?? 0,
+      settlementPending: json['settlementPending'] as int? ?? 0,
+      completed: json['completed'] as int? ?? 0,
+      reviewPending: json['reviewPending'] as int? ?? 0,
+    );
+  }
+}
+
 class CustomerBookingsApiService {
   CustomerBookingsApiService({
     CustomerSession? session,
@@ -108,5 +137,31 @@ class CustomerBookingsApiService {
       'Booking not found',
       statusCode: 404,
     );
+  }
+
+  Future<CustomerBookingStatusCounts> getStatusCounts() async {
+    final session = await _session.tokenStorage.loadSession();
+    if (session == null) {
+      throw const CustomerBookingsApiException('Authentication required');
+    }
+
+    try {
+      final decoded = await _session.apiClient.getJson(
+        '/customer/bookings/status-counts',
+        bearerToken: session.accessToken,
+      );
+      final data = decoded['data'] as Map?;
+      if (data == null) {
+        throw const CustomerBookingsApiException('Invalid status counts response');
+      }
+      return CustomerBookingStatusCounts.fromJson(
+        Map<String, dynamic>.from(data),
+      );
+    } on ApiException catch (error) {
+      throw CustomerBookingsApiException(
+        customerApiErrorMessage(error, fallback: 'Unable to load booking counts'),
+        statusCode: error.statusCode,
+      );
+    }
   }
 }

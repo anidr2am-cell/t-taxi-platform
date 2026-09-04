@@ -45,6 +45,10 @@ class CustomerBookingService {
       limit: pagination.limit,
     };
   }
+
+  async getBookingStatusCounts(userId) {
+    return this.bookingRepository.countStatusGroupsByCustomerUserId(userId);
+  }
 }
 
 module.exports = CustomerBookingService;

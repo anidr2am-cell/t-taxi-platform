@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const { formatServiceDateTimeForApi } = require('../utils/serviceDateTime.util');
 const { MILEAGE_TYPES } = require('../repositories/mileage.repository');
 
 const ACCRUAL_RATE = 0.05;
@@ -213,6 +214,32 @@ class MileageService {
 
   async getTransactionHistory(userId, options = {}) {
     return this.mileageRepository.getTransactionHistory(userId, options);
+  }
+
+  normalizePagination(query = {}) {
+    const page = Math.max(Number(query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(query.limit ?? query.page_size) || 20, 1), 100);
+    return { page, limit };
+  }
+
+  mapTransactionRow(row) {
+    return {
+      date: formatServiceDateTimeForApi(row.created_at),
+      amount: Number(row.amount),
+      type: row.type,
+      bookingNumber: row.booking_number,
+    };
+  }
+
+  async getTransactionHistoryForCustomer(userId, query = {}) {
+    const pagination = this.normalizePagination(query);
+    const result = await this.mileageRepository.getTransactionHistoryWithBooking(userId, pagination);
+    return {
+      data: result.items.map((row) => this.mapTransactionRow(row)),
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+    };
   }
 }
 

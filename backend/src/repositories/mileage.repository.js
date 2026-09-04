@@ -162,6 +162,54 @@ class MileageRepository {
       total,
     };
   }
+
+  async getTransactionHistoryWithBooking(userId, { page = 1, limit = 20 } = {}) {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+    const offset = (safePage - 1) * safeLimit;
+
+    const joinFilter = `
+      FROM mileage_transactions mt
+      INNER JOIN bookings b
+        ON b.id = mt.booking_id
+       AND b.deleted_at IS NULL
+      WHERE mt.user_id = ?
+    `;
+
+    const [countRows] = await this.pool.query(
+      `
+        SELECT COUNT(*) AS total
+        ${joinFilter}
+      `,
+      [userId],
+    );
+    const total = Number(countRows[0]?.total ?? 0);
+
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          mt.id,
+          mt.user_id,
+          mt.booking_id,
+          mt.type,
+          mt.amount,
+          mt.balance_after,
+          mt.created_at,
+          b.booking_number
+        ${joinFilter}
+        ORDER BY mt.created_at DESC, mt.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [userId, safeLimit, offset],
+    );
+
+    return {
+      items: rows,
+      page: safePage,
+      limit: safeLimit,
+      total,
+    };
+  }
 }
 
 module.exports = MileageRepository;

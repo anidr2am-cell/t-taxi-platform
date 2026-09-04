@@ -11,6 +11,7 @@ const {
   notificationIdParamsSchema,
 } = require('../validators/notification.validator');
 const { claimBookingSchema, customerBookingListQuerySchema } = require('../validators/booking.validator');
+const { mileageTransactionListQuerySchema } = require('../validators/mileage.validator');
 const {
   customerBookingClaimIpRateLimit,
   customerBookingClaimUserRateLimit,
@@ -51,6 +52,19 @@ router.get(
   '/mileage',
   customerOnly,
   mileageController.getBalance,
+);
+
+router.get(
+  '/mileage/transactions',
+  customerOnly,
+  validate({ query: mileageTransactionListQuerySchema }),
+  mileageController.getTransactions,
+);
+
+router.get(
+  '/bookings/status-counts',
+  customerOnly,
+  customerBookingController.getBookingStatusCounts,
 );
 
 router.get(

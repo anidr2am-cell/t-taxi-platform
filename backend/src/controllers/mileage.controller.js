@@ -9,6 +9,15 @@ const getBalance = asyncHandler(async (req, res) => {
   return success(res, { balance }, 'OK');
 });
 
+const getTransactions = asyncHandler(async (req, res) => {
+  const data = await getMileageService().getTransactionHistoryForCustomer(
+    req.user.id,
+    req.query,
+  );
+  return success(res, data, 'OK');
+});
+
 module.exports = {
   getBalance,
+  getTransactions,
 };
