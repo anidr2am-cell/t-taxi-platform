@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../account/services/coupon_api_service.dart';
 import '../utils/customer_booking_format.dart';
 import '../utils/location_display.dart';
 import '../models/booking_wizard_state.dart';
@@ -13,21 +14,32 @@ class StepConfirmation extends StatelessWidget {
   final BookingWizardState state;
   final bool embedded;
   final ValueChanged<int>? onEditStep;
+  final List<CustomerCouponItem> availableCoupons;
+  final bool loadingCoupons;
+  final ValueChanged<int?>? onCouponSelected;
+  final num? estimatedTotal;
+  final num? couponDiscount;
 
   const StepConfirmation({
     super.key,
     required this.state,
     this.embedded = false,
     this.onEditStep,
+    this.availableCoupons = const [],
+    this.loadingCoupons = false,
+    this.onCouponSelected,
+    this.estimatedTotal,
+    this.couponDiscount,
   });
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final pricing = state.pricing;
-    final total = pricing == null
+    final displayTotal = estimatedTotal ?? pricing?.totalAmount;
+    final total = displayTotal == null
         ? '-'
-        : CustomerBookingFormat.money(pricing.totalAmount, pricing.currency);
+        : CustomerBookingFormat.money(displayTotal, pricing?.currency ?? 'THB');
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,6 +165,48 @@ class StepConfirmation extends StatelessWidget {
                     item.amount,
                     pricing.currency,
                   ),
+                ),
+              if (couponDiscount != null && couponDiscount! > 0)
+                AppUi.summaryRow(
+                  label: l10n.t('booking_coupon_discount_label'),
+                  value: '-${CustomerBookingFormat.money(couponDiscount!, pricing.currency)}',
+                ),
+            ],
+            if (availableCoupons.isNotEmpty || loadingCoupons) ...[
+              const Divider(height: 24),
+              Text(
+                l10n.t('booking_coupon_section_title'),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              if (loadingCoupons)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: LinearProgressIndicator(minHeight: 2),
+                )
+              else
+                DropdownButtonFormField<int?>(
+                  value: state.selectedCouponId,
+                  decoration: InputDecoration(
+                    labelText: l10n.t('booking_coupon_section_title'),
+                  ),
+                  items: [
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text(l10n.t('booking_coupon_none')),
+                    ),
+                    ...availableCoupons.map(
+                      (coupon) => DropdownMenuItem<int?>(
+                        value: coupon.id,
+                        child: Text(
+                          '${coupon.title} (-${coupon.discountAmount} ${l10n.t('thb')})',
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: onCouponSelected,
                 ),
             ],
             const Divider(height: 24),

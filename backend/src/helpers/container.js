@@ -86,6 +86,8 @@ const BookingContactConnectionService = require("../services/bookingContactConne
 const AdminBookingNoteService = require("../services/adminBookingNote.service");
 const MileageRepository = require("../repositories/mileage.repository");
 const MileageService = require("../services/mileage.service");
+const CouponRepository = require("../repositories/coupon.repository");
+const CouponService = require("../services/coupon.service");
 const config = require("../config/env");
 const database = require("../config/database");
 
@@ -142,6 +144,11 @@ container.register(
     c.get("mileageRepository"),
     c.get("bookingRepository"),
   ),
+);
+container.register("couponRepository", () => new CouponRepository());
+container.register(
+  "couponService",
+  (c) => new CouponService(c.get("couponRepository"), database.pool),
 );
 container.register(
   "socialAuthService",
@@ -307,6 +314,7 @@ container.register(
       c.get("urgentNegotiationRepository"),
       c.get("placesService"),
       c.get("bookingIdempotencyService"),
+      c.get("couponService"),
     ),
 );
 container.register(

@@ -66,6 +66,7 @@ class BookingService {
     urgentNegotiationRepository = null,
     placesService = null,
     bookingIdempotencyService = null,
+    couponService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -82,6 +83,7 @@ class BookingService {
     this.urgentNegotiationRepository = urgentNegotiationRepository;
     this.placesService = placesService;
     this.bookingIdempotencyService = bookingIdempotencyService;
+    this.couponService = couponService;
   }
 
   buildOpenCallPayload({
@@ -937,6 +939,35 @@ class BookingService {
 
       const pricingInput = this.buildPricingInput(input);
       const pricing = await this.pricingService.calculate(pricingInput);
+
+      if (input.couponId != null) {
+        if (this.couponService) {
+          this.couponService.assertCouponAuthRequired(input.couponId, authUser);
+        } else if (!authUser) {
+          throw new AppError('Login is required to use a coupon', {
+            statusCode: HTTP_STATUS.UNAUTHORIZED,
+            errorCode: ERROR_CODES.COUPON_AUTH_REQUIRED,
+          });
+        }
+      }
+
+      let coupon = null;
+      if (input.couponId != null && authUser && this.couponService) {
+        coupon = await this.couponService.resolveAvailableCoupon(
+          conn,
+          input.couponId,
+          authUser.id,
+        );
+      }
+
+      const chargeItems = [...pricing.chargeItems];
+      if (coupon) {
+        const couponItem = this.couponService.buildCouponChargeItem(coupon, pricing.subtotal);
+        if (couponItem) {
+          chargeItems.push(couponItem);
+        }
+      }
+
       const serviceType = await this.pricingService.resolveServiceType(input.serviceTypeCode);
 
       const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
@@ -1088,7 +1119,7 @@ class BookingService {
         driverIncluded: Boolean(input.transfer?.driverIncluded),
       });
 
-      for (const item of pricing.chargeItems) {
+      for (const item of chargeItems) {
         await this.bookingRepository.insertChargeItem(conn, bookingId, {
           chargeType: item.chargeType,
           description: item.description,
@@ -1098,6 +1129,10 @@ class BookingService {
           referenceType: item.referenceType ?? null,
           referenceId: item.referenceId ?? null,
         }, createdBy);
+      }
+
+      if (coupon) {
+        await this.couponService.markCouponUsed(conn, coupon.id, bookingId, authUser.id);
       }
 
       await this.bookingRepository.insertStatusLog(conn, bookingId, {

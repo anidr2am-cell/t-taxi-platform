@@ -2,6 +2,7 @@ const express = require('express');
 const notificationController = require('../controllers/notification.controller');
 const mileageController = require('../controllers/mileage.controller');
 const customerBookingController = require('../controllers/customerBooking.controller');
+const couponController = require('../controllers/coupon.controller');
 const validate = require('../middlewares/validate.middleware');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
@@ -83,6 +84,12 @@ router.post(
   customerBookingClaimUserRateLimit,
   validate({ body: claimBookingSchema }),
   customerBookingController.claimBooking,
+);
+
+router.get(
+  '/coupons',
+  customerOnly,
+  couponController.listMyCoupons,
 );
 
 module.exports = router;

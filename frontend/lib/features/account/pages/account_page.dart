@@ -12,8 +12,10 @@ import '../../booking/services/customer_bookings_api_service.dart';
 import '../../booking/utils/booking_status_display.dart';
 import '../../booking/utils/customer_booking_format.dart';
 import '../services/mileage_api_service.dart';
+import '../services/coupon_api_service.dart';
 import '../utils/auth_provider_display.dart';
 import 'mileage_history_page.dart';
+import 'coupons_page.dart';
 import 'my_reviews_page.dart';
 
 class AccountPage extends StatefulWidget {
@@ -21,11 +23,13 @@ class AccountPage extends StatefulWidget {
     super.key,
     this.mileageApiService,
     this.customerBookingsApiService,
+    this.couponApiService,
     this.authController,
   });
 
   final MileageApiService? mileageApiService;
   final CustomerBookingsApiService? customerBookingsApiService;
+  final CouponApiService? couponApiService;
   final AuthController? authController;
 
   @override
@@ -282,6 +286,25 @@ class _AccountPageState extends State<AccountPage> {
       );
   }
 
+  CouponApiService _resolveCouponApiService(AuthController controller) {
+    return widget.couponApiService ??
+        CouponApiService(session: controller.customerSession);
+  }
+
+  void _openCoupons() {
+    final controller = _resolveController(context);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AuthScope(
+          controller: controller,
+          child: CouponsPage(
+            couponApiService: _resolveCouponApiService(controller),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openRecentBooking(GuestBookingLookupResult booking) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -373,7 +396,7 @@ class _AccountPageState extends State<AccountPage> {
                         leading: const Icon(Icons.local_offer_outlined),
                         title: Text(l10n.t('account_coupon_menu')),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: _showComingSoon,
+                        onTap: _openCoupons,
                       ),
                       const Divider(height: 1),
                       ListTile(

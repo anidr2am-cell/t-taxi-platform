@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/account/pages/coupons_page.dart';
 import 'package:frontend/features/account/pages/account_page.dart';
 import 'package:frontend/features/account/pages/mileage_history_page.dart';
+import 'package:frontend/features/account/services/coupon_api_service.dart';
 import 'package:frontend/features/account/services/mileage_api_service.dart';
 import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/auth/services/auth_api_service.dart';
@@ -105,10 +107,16 @@ Future<AuthController> _prepareLoggedInController() async {
   return controller;
 }
 
+class _FakeCouponApiService extends CouponApiService {
+  @override
+  Future<List<CustomerCouponItem>> listCoupons() async => const [];
+}
+
 Widget _wrapAccountPage({
   required AuthController authController,
   MileageApiService? mileageApiService,
   CustomerBookingsApiService? customerBookingsApiService,
+  CouponApiService? couponApiService,
 }) {
   return MaterialApp(
     locale: const Locale('ko'),
@@ -128,6 +136,7 @@ Widget _wrapAccountPage({
       child: AccountPage(
         mileageApiService: mileageApiService,
         customerBookingsApiService: customerBookingsApiService,
+        couponApiService: couponApiService,
       ),
     ),
   );
@@ -278,7 +287,7 @@ void main() {
     expect(find.byType(CustomerSupportPage), findsOneWidget);
   });
 
-  testWidgets('account coupon menu shows coming soon snackbar', (
+  testWidgets('account coupon menu opens coupons page', (
     tester,
   ) async {
     final authController = await _prepareLoggedInController();
@@ -290,6 +299,7 @@ void main() {
           const MileageBalanceResult(balance: 0),
         ),
         customerBookingsApiService: _FakeCustomerBookingsApiService(),
+        couponApiService: _FakeCouponApiService(),
       ),
     );
     await tester.pumpAndSettle();
@@ -297,7 +307,7 @@ void main() {
     await _tapVisible(tester, find.byKey(const Key('account_coupon_menu')));
     await tester.pumpAndSettle();
 
-    expect(find.text('준비 중입니다'), findsOneWidget);
+    expect(find.byType(CouponsPage), findsOneWidget);
   });
 
   testWidgets('account page logout signs out and shows snackbar', (

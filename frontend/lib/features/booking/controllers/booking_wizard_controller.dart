@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/analytics/marketing_attribution_provider.dart';
 import '../../../utils/user_facing_error.dart';
+import '../../account/services/coupon_api_service.dart';
 import '../models/booking_wizard_steps.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/booking_complete_review.dart';
@@ -23,13 +24,15 @@ class BookingWizardController extends ChangeNotifier {
     BookingAnalytics? analytics,
     DateTime Function()? now,
     String placesLanguageCode = 'en',
+    CouponApiService? couponApiService,
   }) : _api = apiService ?? BookingApiService(),
        _storage = storage ?? BookingStateStorage(),
        _recentLocations = recentLocationsStorage ?? RecentLocationsStorage(),
        _placesApi = placesApiService ?? PlacesApiService(),
        _analytics = analytics ?? BookingAnalytics.instance,
        _now = now ?? DateTime.now,
-       _placesLanguageCode = placesLanguageCode;
+       _placesLanguageCode = placesLanguageCode,
+       _couponApi = couponApiService ?? CouponApiService();
 
   final BookingApiService _api;
   final BookingStateStorage _storage;
@@ -38,6 +41,13 @@ class BookingWizardController extends ChangeNotifier {
   final BookingAnalytics _analytics;
   final DateTime Function() _now;
   final String _placesLanguageCode;
+  final CouponApiService _couponApi;
+
+  List<CustomerCouponItem> _availableCoupons = const [];
+  bool _loadingCoupons = false;
+
+  List<CustomerCouponItem> get availableCoupons => _availableCoupons;
+  bool get loadingCoupons => _loadingCoupons;
 
   BookingAnalytics get analytics => _analytics;
 
@@ -720,7 +730,72 @@ class BookingWizardController extends ChangeNotifier {
       if (_state.additionalRequests.trim().isNotEmpty)
         'additionalRequests': _state.additionalRequests.trim(),
       if (attribution.isNotEmpty) 'marketingAttribution': attribution,
+      if (_state.selectedCouponId != null) 'couponId': _state.selectedCouponId,
     };
+  }
+
+  CustomerCouponItem? selectedCoupon() {
+    final selectedId = _state.selectedCouponId;
+    if (selectedId == null) return null;
+    for (final coupon in _availableCoupons) {
+      if (coupon.id == selectedId) return coupon;
+    }
+    return null;
+  }
+
+  num? estimatedTotalAfterCoupon() {
+    final pricing = _state.pricing;
+    if (pricing == null) return null;
+    final coupon = selectedCoupon();
+    if (coupon == null) return pricing.totalAmount;
+    final discount = coupon.discountAmount > pricing.totalAmount
+        ? pricing.totalAmount
+        : coupon.discountAmount;
+    return pricing.totalAmount - discount;
+  }
+
+  num? appliedCouponDiscount() {
+    final pricing = _state.pricing;
+    final coupon = selectedCoupon();
+    if (pricing == null || coupon == null) return null;
+    final discount = coupon.discountAmount > pricing.totalAmount
+        ? pricing.totalAmount
+        : coupon.discountAmount;
+    return discount > 0 ? discount : null;
+  }
+
+  Future<void> loadAvailableCoupons({String? accessToken}) async {
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      _availableCoupons = const [];
+      _state = _state.copyWith(clearSelectedCoupon: true);
+      notifyListeners();
+      return;
+    }
+
+    _loadingCoupons = true;
+    notifyListeners();
+    try {
+      final coupons = await _couponApi.listCoupons();
+      _availableCoupons = coupons.where((item) => item.isAvailable).toList();
+      if (_state.selectedCouponId != null &&
+          !_availableCoupons.any((item) => item.id == _state.selectedCouponId)) {
+        _state = _state.copyWith(clearSelectedCoupon: true);
+      }
+    } catch (_) {
+      _availableCoupons = const [];
+      _state = _state.copyWith(clearSelectedCoupon: true);
+    } finally {
+      _loadingCoupons = false;
+      notifyListeners();
+    }
+  }
+
+  void selectCoupon(int? couponId) {
+    _state = _state.copyWith(
+      selectedCouponId: couponId,
+      clearSelectedCoupon: couponId == null,
+    );
+    notifyListeners();
   }
 
   String formatLocationLabel(LocationOption? location) {

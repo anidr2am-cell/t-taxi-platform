@@ -32,6 +32,7 @@ class BookingWizardState {
   final String messengerId;
   final String additionalRequests;
   final String flightNumber;
+  final int? selectedCouponId;
 
   const BookingWizardState({
     this.step = 0,
@@ -62,6 +63,7 @@ class BookingWizardState {
     this.messengerId = '',
     this.additionalRequests = '',
     this.flightNumber = '',
+    this.selectedCouponId,
   });
 
   static const int stepCount = 5;
@@ -102,6 +104,8 @@ class BookingWizardState {
     String? messengerId,
     String? additionalRequests,
     String? flightNumber,
+    int? selectedCouponId,
+    bool clearSelectedCoupon = false,
   }) {
     return BookingWizardState(
       step: step ?? this.step,
@@ -136,6 +140,9 @@ class BookingWizardState {
       messengerId: messengerId ?? this.messengerId,
       additionalRequests: additionalRequests ?? this.additionalRequests,
       flightNumber: flightNumber ?? this.flightNumber,
+      selectedCouponId: clearSelectedCoupon
+          ? null
+          : (selectedCouponId ?? this.selectedCouponId),
     );
   }
 

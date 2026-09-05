@@ -91,6 +91,10 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         vehicleType: state.selectedVehicle,
         routeType: BookingAnalytics.routeTypeFor(state.serviceType),
       );
+      _customerAccessTokenForSubmit().then((accessToken) {
+        if (!mounted) return;
+        _controller.loadAvailableCoupons(accessToken: accessToken);
+      });
     }
   }
 
@@ -472,6 +476,11 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           embedded: true,
           state: state,
           onEditStep: (editStep) => _controller.goToStepForEdit(editStep),
+          availableCoupons: _controller.availableCoupons,
+          loadingCoupons: _controller.loadingCoupons,
+          onCouponSelected: _controller.selectCoupon,
+          estimatedTotal: _controller.estimatedTotalAfterCoupon(),
+          couponDiscount: _controller.appliedCouponDiscount(),
         );
       default:
         return const SizedBox.shrink();

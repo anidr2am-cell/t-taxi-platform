@@ -159,6 +159,7 @@ const createBookingSchema = Joi.object({
   additionalRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   specialRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   marketingAttribution: marketingAttributionSchema,
+  couponId: Joi.number().integer().positive().optional(),
 });
 
 const updateBookingStatusSchema = Joi.object({
