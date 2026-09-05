@@ -16,18 +16,30 @@ import '../widgets/landing_bottom_cta.dart';
 import '../widgets/landing_footer.dart';
 import '../widgets/landing_social_login_section.dart';
 import '../widgets/landing_header.dart';
-import '../widgets/landing_hero.dart';
+import '../services/home_banner_api_service.dart';
+import '../widgets/landing_hero_carousel.dart';
 import '../widgets/landing_reassurance_card.dart';
 import '../widgets/landing_service_cards.dart';
 import '../widgets/landing_steps_section.dart';
 import '../widgets/landing_trust_section.dart';
 
 class CustomerLandingPage extends StatefulWidget {
-  const CustomerLandingPage({super.key, this.initialDraft});
+  const CustomerLandingPage({
+    super.key,
+    this.initialDraft,
+    this.homeBannerApiService,
+    this.initialHomeBanners,
+  });
 
   /// Seeds draft state for widget tests.
   @visibleForTesting
   final LandingBookingDraft? initialDraft;
+
+  @visibleForTesting
+  final HomeBannerApiService? homeBannerApiService;
+
+  @visibleForTesting
+  final List<HomeBannerItem>? initialHomeBanners;
 
   @override
   State<CustomerLandingPage> createState() => _CustomerLandingPageState();
@@ -129,8 +141,10 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      LandingHero(
+                      LandingHeroCarousel(
                         onBook: () => _openBookingWizard(context),
+                        homeBannerApiService: widget.homeBannerApiService,
+                        initialBanners: widget.initialHomeBanners,
                         desktopBookingWidget: LandingBookingWidget(
                           draft: _draft,
                           languageCode: languageCode,

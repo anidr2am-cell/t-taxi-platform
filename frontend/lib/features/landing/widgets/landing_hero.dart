@@ -7,6 +7,7 @@ import 'landing_clickable_styles.dart';
 class LandingHero extends StatelessWidget {
   final VoidCallback onBook;
   final Widget? desktopBookingWidget;
+  final bool embeddedInCarousel;
 
   static const pattayaHeroAssetPath = 'assets/images/pattaya_hero.jpg';
   static const hasPattayaHeroAsset = true;
@@ -18,6 +19,7 @@ class LandingHero extends StatelessWidget {
     super.key,
     required this.onBook,
     this.desktopBookingWidget,
+    this.embeddedInCarousel = false,
   });
 
   @override
@@ -29,10 +31,12 @@ class LandingHero extends StatelessWidget {
     return Container(
       key: const Key('landing_hero'),
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      margin: embeddedInCarousel
+          ? EdgeInsets.zero
+          : const EdgeInsets.fromLTRB(16, 8, 16, 0),
       decoration: BoxDecoration(
         gradient: AppTokens.heroGradient,
-        borderRadius: AppTokens.borderRadiusLg,
+        borderRadius: embeddedInCarousel ? BorderRadius.zero : AppTokens.borderRadiusLg,
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(

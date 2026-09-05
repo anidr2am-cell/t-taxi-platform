@@ -12,6 +12,8 @@ const {
   guestNotificationDeviceParamsSchema,
 } = require('../validators/notification.validator');
 const { bookingIdParamsSchema } = require('../validators/driverLocation.validator');
+const homeBannerController = require('../controllers/homeBanner.controller');
+const { bannerIdParamSchema } = require('../validators/homeBanner.validator');
 
 const router = express.Router();
 const bookingLookupRateLimit = createRateLimit({
@@ -66,6 +68,17 @@ router.get(
   bookingLookupRateLimit,
   validate({ params: bookingIdParamsSchema }),
   require('../controllers/bookingNameSignPhoto.controller').getGuestNameSignPhoto,
+);
+
+router.get(
+  '/home-banners',
+  homeBannerController.listPublicBanners,
+);
+
+router.get(
+  '/home-banners/:id/image',
+  validate({ params: bannerIdParamSchema }),
+  homeBannerController.streamPublicBannerImage,
 );
 
 module.exports = router;

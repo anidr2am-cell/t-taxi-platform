@@ -10,6 +10,7 @@ const adminDriverApplicationRoutes = require('./admin.driver.application.routes'
 const adminDriverVehicleRoutes = require('./admin.driver.vehicle.routes');
 const adminSettingsRoutes = require('./admin.settings.routes');
 const adminCouponRoutes = require('./admin.coupon.routes');
+const adminHomeBannerRoutes = require('./admin.homeBanner.routes');
 
 const router = express.Router();
 
@@ -24,6 +25,7 @@ router.use(adminDriverApplicationRoutes);
 router.use(adminDriverVehicleRoutes);
 router.use(adminSettingsRoutes);
 router.use(adminCouponRoutes);
+router.use(adminHomeBannerRoutes);
 
 // TODO: golf, airports, users, translations, settings
 
