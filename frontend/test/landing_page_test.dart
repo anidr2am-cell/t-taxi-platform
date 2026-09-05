@@ -165,6 +165,22 @@ void main() {
       expect(find.byKey(const Key('landing_service_row')), findsOneWidget);
     });
 
+    testWidgets('has no overflow at 360px on short viewport (640px tall)', (
+      tester,
+    ) async {
+      await pumpLanding(tester, width: 360, height: 640);
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('landing_hero_carousel')), findsOneWidget);
+    });
+
+    testWidgets('has no overflow at 360px on short viewport (568px tall)', (
+      tester,
+    ) async {
+      await pumpLanding(tester, width: 360, height: 568);
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('landing_hero_carousel')), findsOneWidget);
+    });
+
     testWidgets('has no overflow at 768px', (tester) async {
       await pumpLanding(tester, width: 768);
       expect(tester.takeException(), isNull);

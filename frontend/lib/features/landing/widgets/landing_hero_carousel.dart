@@ -5,6 +5,37 @@ import '../../../theme/app_tokens.dart';
 import '../services/home_banner_api_service.dart';
 import 'landing_hero.dart';
 
+/// Layout constants for the landing hero carousel [AspectRatio] frame.
+///
+/// Flutter [AspectRatio.aspectRatio] is width / height. The carousel applies
+/// 16px horizontal margin on each side, so the aspect ratio width is
+/// `viewportWidth - 32`, not the full viewport width.
+abstract final class LandingHeroCarouselLayout {
+  static const carouselHorizontalMargin = 32.0;
+
+  static const mobileReferenceViewportWidth = 360.0;
+  static const mobileReferenceHeroHeight = 520.0;
+
+  static const desktopReferenceViewportWidth = 1100.0;
+  static const desktopHeroHeightWithBookingWidget = 680.0;
+  static const desktopHeroHeightWithoutBookingWidget = 480.0;
+
+  /// Matches the pre-carousel fixed 520px hero at a 360px-wide viewport.
+  /// 360px viewport − 32px margin → 328px content width → 328 / 520 ≈ 0.631.
+  static double get mobileAspectRatio =>
+      (mobileReferenceViewportWidth - carouselHorizontalMargin) /
+      mobileReferenceHeroHeight;
+
+  static double desktopAspectRatio({required bool hasDesktopBookingWidget}) {
+    final referenceContentWidth =
+        desktopReferenceViewportWidth - carouselHorizontalMargin;
+    final referenceHeight = hasDesktopBookingWidget
+        ? desktopHeroHeightWithBookingWidget
+        : desktopHeroHeightWithoutBookingWidget;
+    return referenceContentWidth / referenceHeight;
+  }
+}
+
 class LandingHeroCarousel extends StatefulWidget {
   const LandingHeroCarousel({
     super.key,
@@ -104,15 +135,15 @@ class _LandingHeroCarouselState extends State<LandingHeroCarousel> {
     setState(() => _currentPage = index);
   }
 
-  /// Width / height for the carousel frame. Derived from the pre-carousel hero
-  /// card proportions at typical breakpoints so height scales with viewport width.
+  /// Width / height for the carousel frame (see [LandingHeroCarouselLayout]).
   double _carouselAspectRatio(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     if (width >= 900) {
-      return widget.desktopBookingWidget != null ? 1.57 : 2.22;
+      return LandingHeroCarouselLayout.desktopAspectRatio(
+        hasDesktopBookingWidget: widget.desktopBookingWidget != null,
+      );
     }
-    // ~520px tall at 360px viewport width; scales proportionally on other phones.
-    return 0.63;
+    return LandingHeroCarouselLayout.mobileAspectRatio;
   }
 
   @override
