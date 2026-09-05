@@ -1969,7 +1969,7 @@ class AppLocalizations {
       'analytics_consent_title': '분석 쿠키',
       'analytics_consent_body':
           '방문 및 예약 전환 측정을 위해 Google Analytics를 사용합니다. 이름·전화·이메일은 전송하지 않습니다. 마케팅 유입 정보는 분석 허용 시에만 저장됩니다. 개인정보 설정에서 언제든 변경할 수 있습니다.',
-      'analytics_consent_allow': '분석 허용',
+      'analytics_consent_allow': '쿠키 허용',
       'analytics_consent_deny': '거부',
       'analytics_consent_privacy': '개인정보처리방침',
       'analytics_consent_settings': '분석 설정',
