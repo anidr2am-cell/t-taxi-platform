@@ -40,6 +40,7 @@ class LandingHero extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
+        fit: embeddedInCarousel ? StackFit.expand : StackFit.loose,
         children: [
           const Positioned.fill(child: _HeroBackgroundImage()),
           Positioned.fill(
@@ -73,7 +74,9 @@ class LandingHero extends StatelessWidget {
             ),
             child: isWide
                 ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: embeddedInCarousel
+                        ? CrossAxisAlignment.stretch
+                        : CrossAxisAlignment.center,
                     children: [
                       Expanded(child: _heroCopy(l10n, compact: false)),
                       const SizedBox(width: 32),
@@ -88,9 +91,12 @@ class LandingHero extends StatelessWidget {
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: embeddedInCarousel
+                        ? MainAxisAlignment.spaceBetween
+                        : MainAxisAlignment.start,
                     children: [
                       _heroCopy(l10n, compact: true),
-                      const SizedBox(height: 20),
+                      if (!embeddedInCarousel) const SizedBox(height: 20),
                       _ctaColumn(l10n, onBook, fullWidth: true, compact: true),
                     ],
                   ),

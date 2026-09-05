@@ -12,12 +12,17 @@ class LandingHeroCarousel extends StatefulWidget {
     this.desktopBookingWidget,
     this.homeBannerApiService,
     this.initialBanners,
+    @visibleForTesting this.testBannerAssetPath,
   });
 
   final VoidCallback onBook;
   final Widget? desktopBookingWidget;
   final HomeBannerApiService? homeBannerApiService;
   final List<HomeBannerItem>? initialBanners;
+
+  /// When set (widget tests only), promo slides render this asset instead of network URLs.
+  @visibleForTesting
+  final String? testBannerAssetPath;
 
   @override
   State<LandingHeroCarousel> createState() => _LandingHeroCarouselState();
@@ -99,17 +104,19 @@ class _LandingHeroCarouselState extends State<LandingHeroCarousel> {
     setState(() => _currentPage = index);
   }
 
-  double _carouselHeight(BuildContext context) {
+  /// Width / height for the carousel frame. Derived from the pre-carousel hero
+  /// card proportions at typical breakpoints so height scales with viewport width.
+  double _carouselAspectRatio(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     if (width >= 900) {
-      return widget.desktopBookingWidget != null ? 680 : 480;
+      return widget.desktopBookingWidget != null ? 1.57 : 2.22;
     }
-    return 520;
+    // ~520px tall at 360px viewport width; scales proportionally on other phones.
+    return 0.63;
   }
 
   @override
   Widget build(BuildContext context) {
-    final height = _carouselHeight(context);
     final showIndicators = _pageCount > 1;
 
     return Container(
@@ -117,8 +124,8 @@ class _LandingHeroCarouselState extends State<LandingHeroCarousel> {
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
         children: [
-          SizedBox(
-            height: height,
+          AspectRatio(
+            aspectRatio: _carouselAspectRatio(context),
             child: ClipRRect(
               borderRadius: AppTokens.borderRadiusLg,
               child: _loadingBanners && widget.initialBanners == null
@@ -129,19 +136,17 @@ class _LandingHeroCarouselState extends State<LandingHeroCarousel> {
                       onPageChanged: _onPageChanged,
                       itemBuilder: (context, index) {
                         if (index == 0) {
-                          return SingleChildScrollView(
-                            physics: const ClampingScrollPhysics(),
-                            child: LandingHero(
-                              onBook: widget.onBook,
-                              desktopBookingWidget: widget.desktopBookingWidget,
-                              embeddedInCarousel: true,
-                            ),
+                          return LandingHero(
+                            onBook: widget.onBook,
+                            desktopBookingWidget: widget.desktopBookingWidget,
+                            embeddedInCarousel: true,
                           );
                         }
                         final banner = _banners[index - 1];
                         return _PromoBannerSlide(
                           banner: banner,
                           onTap: widget.onBook,
+                          testAssetPath: widget.testBannerAssetPath,
                         );
                       },
                     ),
@@ -164,33 +169,47 @@ class _PromoBannerSlide extends StatelessWidget {
   const _PromoBannerSlide({
     required this.banner,
     required this.onTap,
+    this.testAssetPath,
   });
 
   final HomeBannerItem banner;
   final VoidCallback onTap;
+  final String? testAssetPath;
 
   @override
   Widget build(BuildContext context) {
+    final image = testAssetPath != null
+        ? Image.asset(
+            testAssetPath!,
+            fit: BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+          )
+        : Image.network(
+            banner.resolveImageUrl(),
+            fit: BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: AppTokens.surface,
+                alignment: Alignment.center,
+                child: const Icon(Icons.broken_image_outlined),
+              );
+            },
+          );
+
     return Semantics(
       button: true,
       label: 'Promotional banner',
       child: Material(
         key: Key('landing_promo_banner_${banner.id}'),
-        color: AppTokens.surfaceMuted,
+        color: AppTokens.surface,
         child: InkWell(
           onTap: onTap,
-          child: Image.network(
-            banner.resolveImageUrl(),
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: AppTokens.surfaceMuted,
-                alignment: Alignment.center,
-                child: const Icon(Icons.broken_image_outlined),
-              );
-            },
+          child: ColoredBox(
+            color: AppTokens.surface,
+            child: Center(child: image),
           ),
         ),
       ),
