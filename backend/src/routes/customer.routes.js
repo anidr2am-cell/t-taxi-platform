@@ -13,6 +13,7 @@ const {
 } = require('../validators/notification.validator');
 const { claimBookingSchema, customerBookingListQuerySchema } = require('../validators/booking.validator');
 const { mileageTransactionListQuerySchema } = require('../validators/mileage.validator');
+const { couponIdParamSchema } = require('../validators/coupon.validator');
 const {
   customerBookingClaimIpRateLimit,
   customerBookingClaimUserRateLimit,
@@ -90,6 +91,13 @@ router.get(
   '/coupons',
   customerOnly,
   couponController.listMyCoupons,
+);
+
+router.get(
+  '/coupons/:id/image',
+  customerOnly,
+  validate({ params: couponIdParamSchema }),
+  couponController.streamCustomerCouponImage,
 );
 
 module.exports = router;

@@ -107,4 +107,27 @@ void main() {
     expect(find.text('사용 가능한 쿠폰'), findsOneWidget);
     expect(find.text('사용한 쿠폰'), findsOneWidget);
   });
+
+  testWidgets('coupons page renders legacy coupons without imageUrl', (tester) async {
+    final authController = await _prepareLoggedInController();
+
+    await tester.pumpWidget(
+      _wrapCouponsPage(
+        authController: authController,
+        couponApiService: _FakeCouponApiService(const [
+          CustomerCouponItem(
+            id: 3,
+            title: 'Legacy only',
+            discountAmount: 100,
+            status: 'AVAILABLE',
+            imageUrl: null,
+          ),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Legacy only'), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
+  });
 }

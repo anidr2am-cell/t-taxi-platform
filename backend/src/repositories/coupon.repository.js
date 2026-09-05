@@ -66,6 +66,8 @@ class CouponRepository {
     customerUserId,
     title,
     discountAmount,
+    templateId = null,
+    imagePath = null,
     issuedByAdminId = null,
   }) {
     const [result] = await conn.query(
@@ -74,14 +76,18 @@ class CouponRepository {
           customer_user_id,
           title,
           discount_amount,
+          template_id,
+          image_path,
           status,
           issued_by_admin_id
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
         customerUserId,
         title,
         discountAmount,
+        templateId,
+        imagePath,
         COUPON_STATUS.AVAILABLE,
         issuedByAdminId,
       ],
@@ -97,6 +103,8 @@ class CouponRepository {
           customer_user_id,
           title,
           discount_amount,
+          template_id,
+          image_path,
           status,
           issued_by_admin_id,
           issued_at,
@@ -121,6 +129,8 @@ class CouponRepository {
           customer_user_id,
           title,
           discount_amount,
+          template_id,
+          image_path,
           status,
           issued_by_admin_id,
           issued_at,
@@ -144,6 +154,8 @@ class CouponRepository {
           cc.id,
           cc.title,
           cc.discount_amount,
+          cc.template_id,
+          cc.image_path,
           cc.status,
           cc.issued_at,
           cc.used_at,
@@ -225,6 +237,61 @@ class CouponRepository {
       ],
     );
     return result.affectedRows;
+  }
+
+  async findOwnedById(couponId, customerUserId) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          id,
+          customer_user_id,
+          title,
+          discount_amount,
+          template_id,
+          image_path,
+          status,
+          issued_by_admin_id,
+          issued_at,
+          used_at,
+          used_booking_id
+        FROM customer_coupons
+        WHERE id = ?
+          AND customer_user_id = ?
+        LIMIT 1
+      `,
+      [couponId, customerUserId],
+    );
+    return rows[0] || null;
+  }
+
+  async listRecentCompletedCustomers(limit = 20) {
+    const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 50);
+    const [rows] = await this.pool.query(
+      `
+        SELECT
+          b.customer_user_id AS id,
+          u.email,
+          u.phone,
+          up.display_name AS name,
+          MAX(b.completed_at) AS last_completed_at
+        FROM bookings b
+        INNER JOIN users u
+          ON u.id = b.customer_user_id
+          AND u.deleted_at IS NULL
+          AND u.is_active = 1
+        LEFT JOIN user_profiles up
+          ON up.user_id = u.id AND up.deleted_at IS NULL
+        WHERE b.status = 'COMPLETED'
+          AND b.deleted_at IS NULL
+          AND b.customer_user_id IS NOT NULL
+          AND u.role = 'CUSTOMER'
+        GROUP BY b.customer_user_id, u.email, u.phone, up.display_name
+        ORDER BY last_completed_at DESC
+        LIMIT ?
+      `,
+      [safeLimit],
+    );
+    return rows;
   }
 }
 

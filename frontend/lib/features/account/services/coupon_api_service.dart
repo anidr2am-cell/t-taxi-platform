@@ -21,6 +21,7 @@ class CustomerCouponItem {
     this.issuedAt,
     this.usedAt,
     this.bookingNumber,
+    this.imageUrl,
   });
 
   final int id;
@@ -30,6 +31,7 @@ class CustomerCouponItem {
   final String? issuedAt;
   final String? usedAt;
   final String? bookingNumber;
+  final String? imageUrl;
 
   bool get isAvailable => status == 'AVAILABLE';
 
@@ -42,6 +44,7 @@ class CustomerCouponItem {
       issuedAt: json['issuedAt'] as String?,
       usedAt: json['usedAt'] as String?,
       bookingNumber: json['bookingNumber'] as String?,
+      imageUrl: json['imageUrl'] as String?,
     );
   }
 }

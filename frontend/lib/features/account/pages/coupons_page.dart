@@ -4,8 +4,10 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../auth/services/auth_token_storage.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
 import '../services/coupon_api_service.dart';
+import '../widgets/customer_coupon_image.dart';
 
 class CouponsPage extends StatefulWidget {
   const CouponsPage({super.key, this.couponApiService});
@@ -20,6 +22,7 @@ class _CouponsPageState extends State<CouponsPage> {
   bool _loading = true;
   String? _errorMessage;
   List<CustomerCouponItem> _coupons = const [];
+  String? _accessToken;
 
   CouponApiService _resolveApiService() {
     return widget.couponApiService ??
@@ -41,10 +44,13 @@ class _CouponsPageState extends State<CouponsPage> {
     });
 
     try {
-      final coupons = await _resolveApiService().listCoupons();
+      final api = _resolveApiService();
+      final session = await AuthTokenStorage().loadSession();
+      final coupons = await api.listCoupons();
       if (!mounted) return;
       setState(() {
         _coupons = coupons;
+        _accessToken = session?.accessToken;
         _loading = false;
       });
     } on CouponApiException catch (error) {
@@ -112,6 +118,7 @@ class _CouponsPageState extends State<CouponsPage> {
                       coupon: coupon,
                       l10n: l10n,
                       muted: false,
+                      accessToken: _accessToken,
                     )),
               const SizedBox(height: AppTokens.spaceLg),
               AppUi.sectionHeader(
@@ -127,6 +134,7 @@ class _CouponsPageState extends State<CouponsPage> {
                       coupon: coupon,
                       l10n: l10n,
                       muted: true,
+                      accessToken: _accessToken,
                     )),
             ],
           ],
@@ -141,18 +149,24 @@ class _CouponTile extends StatelessWidget {
     required this.coupon,
     required this.l10n,
     required this.muted,
+    this.accessToken,
   });
 
   final CustomerCouponItem coupon;
   final AppLocalizations l10n;
   final bool muted;
+  final String? accessToken;
 
   @override
   Widget build(BuildContext context) {
     final textColor = muted ? AppTokens.textSecondary : AppTokens.textPrimary;
     final subtitleStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: muted ? AppTokens.textSecondary : AppTokens.textSecondary,
+          color: AppTokens.textSecondary,
         );
+    final showImage = coupon.imageUrl != null &&
+        coupon.imageUrl!.isNotEmpty &&
+        accessToken != null &&
+        accessToken!.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
@@ -162,6 +176,13 @@ class _CouponTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (showImage) ...[
+                CustomerCouponImage(
+                  imageUrl: coupon.imageUrl!,
+                  accessToken: accessToken!,
+                ),
+                const SizedBox(height: AppTokens.spaceSm),
+              ],
               Text(
                 coupon.title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(

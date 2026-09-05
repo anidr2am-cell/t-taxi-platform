@@ -483,6 +483,83 @@ describe('Customer coupon API', () => {
     assert.equal(response.body.data.length, 1);
     assert.equal(response.body.data[0].bookingNumber, 'TX202609020001');
   });
+
+  test('GET /api/v1/customer/coupons returns imageUrl null for legacy coupons without image', async () => {
+    registerCustomerAuth();
+
+    container.register('couponService', () => ({
+      async listCouponsForCustomer() {
+        return [{
+          id: 2,
+          title: 'Legacy promo',
+          discountAmount: 100,
+          status: COUPON_STATUS.AVAILABLE,
+          issuedAt: '2026-09-01T10:00:00+07:00',
+          usedAt: null,
+          usedBookingId: null,
+          bookingNumber: null,
+          templateId: null,
+          imageUrl: null,
+        }];
+      },
+    }));
+
+    const response = await request(app)
+      .get('/api/v1/customer/coupons')
+      .set('Authorization', 'Bearer test-token');
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.data[0].imageUrl, null);
+    assert.equal(response.body.data[0].title, 'Legacy promo');
+  });
+
+  test('GET /api/v1/customer/coupons/:id/image rejects access to another customer coupon', async () => {
+    registerCustomerAuth(CUSTOMER_ID);
+
+    container.register('couponService', () => ({
+      async getCustomerCouponImagePath(couponId, customerUserId) {
+        assert.equal(couponId, 99);
+        assert.equal(customerUserId, CUSTOMER_ID);
+        const AppError = require('../src/utils/AppError');
+        const HTTP_STATUS = require('../src/constants/httpStatus');
+        const ERROR_CODES = require('../src/constants/errorCodes');
+        throw new AppError('Coupon not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.COUPON_NOT_FOUND,
+        });
+      },
+    }));
+
+    const response = await request(app)
+      .get('/api/v1/customer/coupons/99/image')
+      .set('Authorization', 'Bearer test-token');
+
+    assert.equal(response.statusCode, 404);
+  });
+
+  test('GET /api/v1/customer/coupons/:id/image returns 404 when coupon has no image', async () => {
+    registerCustomerAuth(CUSTOMER_ID);
+
+    container.register('couponService', () => ({
+      async getCustomerCouponImagePath(couponId, customerUserId) {
+        assert.equal(couponId, 5);
+        assert.equal(customerUserId, CUSTOMER_ID);
+        const AppError = require('../src/utils/AppError');
+        const HTTP_STATUS = require('../src/constants/httpStatus');
+        const ERROR_CODES = require('../src/constants/errorCodes');
+        throw new AppError('File not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.FILE_NOT_FOUND,
+        });
+      },
+    }));
+
+    const response = await request(app)
+      .get('/api/v1/customer/coupons/5/image')
+      .set('Authorization', 'Bearer test-token');
+
+    assert.equal(response.statusCode, 404);
+  });
 });
 
 describe('Admin coupon API', () => {
@@ -492,6 +569,32 @@ describe('Admin coupon API', () => {
       .get('/api/v1/admin/customers/search')
       .query({ query: 'kim' })
       .set('Authorization', 'Bearer test-token');
+    assert.equal(response.statusCode, 403);
+  });
+
+  test('GET /api/v1/admin/customers/recent requires admin auth', async () => {
+    registerCustomerAuth();
+    const response = await request(app)
+      .get('/api/v1/admin/customers/recent')
+      .query({ limit: 20 })
+      .set('Authorization', 'Bearer test-token');
+    assert.equal(response.statusCode, 403);
+  });
+
+  test('GET /api/v1/admin/coupon-templates requires admin auth', async () => {
+    registerCustomerAuth();
+    const response = await request(app)
+      .get('/api/v1/admin/coupon-templates')
+      .set('Authorization', 'Bearer test-token');
+    assert.equal(response.statusCode, 403);
+  });
+
+  test('PATCH /api/v1/admin/coupon-templates/:id requires admin auth', async () => {
+    registerCustomerAuth();
+    const response = await request(app)
+      .patch('/api/v1/admin/coupon-templates/1')
+      .set('Authorization', 'Bearer test-token')
+      .send({ isActive: false });
     assert.equal(response.statusCode, 403);
   });
 
@@ -527,6 +630,80 @@ describe('Admin coupon API', () => {
 
     assert.equal(response.statusCode, 201);
     assert.equal(response.body.data.id, 12);
+  });
+
+  test('POST /api/v1/admin/coupons issues coupon from template', async () => {
+    registerAdminAuth();
+
+    container.register('couponService', () => ({
+      async issueCoupon(payload) {
+        assert.equal(payload.customerUserId, 10);
+        assert.equal(payload.templateId, 3);
+        assert.equal(payload.issuedByAdminId, ADMIN_ID);
+        return {
+          id: 13,
+          title: 'Template promo',
+          discountAmount: 150,
+          status: COUPON_STATUS.AVAILABLE,
+          issuedAt: '2026-09-01T10:00:00+07:00',
+          usedAt: null,
+          usedBookingId: null,
+          bookingNumber: null,
+          templateId: 3,
+          imageUrl: '/api/v1/customer/coupons/13/image',
+        };
+      },
+    }));
+
+    const response = await request(app)
+      .post('/api/v1/admin/coupons')
+      .set('Authorization', 'Bearer admin-token')
+      .send({
+        customerUserId: 10,
+        templateId: 3,
+      });
+
+    assert.equal(response.statusCode, 201);
+    assert.equal(response.body.data.templateId, 3);
+    assert.match(response.body.data.imageUrl, /\/customer\/coupons\/13\/image$/);
+  });
+});
+
+describe('CouponService.mapCouponRow imageUrl', () => {
+  test('returns imageUrl when image_path is present', () => {
+    const service = new CouponService({}, {});
+    const mapped = service.mapCouponRow({
+      id: 7,
+      title: 'Promo',
+      discount_amount: 100,
+      status: COUPON_STATUS.AVAILABLE,
+      issued_at: '2026-09-01 10:00:00',
+      used_at: null,
+      used_booking_id: null,
+      booking_number: null,
+      template_id: 2,
+      image_path: 'coupon-templates/promo.png',
+    });
+    assert.equal(mapped.imageUrl, '/api/v1/customer/coupons/7/image');
+    assert.equal(mapped.templateId, 2);
+  });
+
+  test('returns null imageUrl for legacy coupons without image_path', () => {
+    const service = new CouponService({}, {});
+    const mapped = service.mapCouponRow({
+      id: 8,
+      title: 'Legacy',
+      discount_amount: 50,
+      status: COUPON_STATUS.AVAILABLE,
+      issued_at: '2026-09-01 10:00:00',
+      used_at: null,
+      used_booking_id: null,
+      booking_number: null,
+      template_id: null,
+      image_path: null,
+    });
+    assert.equal(mapped.imageUrl, null);
+    assert.equal(mapped.templateId, null);
   });
 });
 
