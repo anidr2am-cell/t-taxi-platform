@@ -45,16 +45,25 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('compact banner renders without overflow at 360px', (tester) async {
+  testWidgets('compact banner renders without overflow at 360px', (
+    tester,
+  ) async {
     await pumpBanner(tester, width: 360);
 
     expect(tester.takeException(), isNull);
+    expect(find.text('쿠키 사용 안내'), findsOneWidget);
+    expect(
+      find.text('서비스 개선을 위해 분석 쿠키를 사용합니다. 거부해도 예약할 수 있습니다.'),
+      findsOneWidget,
+    );
     expect(find.text('쿠키 허용'), findsOneWidget);
     expect(find.text('거부'), findsOneWidget);
     expect(find.text('개인정보처리방침'), findsOneWidget);
   });
 
-  testWidgets('compact banner renders without overflow at 390px', (tester) async {
+  testWidgets('compact banner renders without overflow at 390px', (
+    tester,
+  ) async {
     await pumpBanner(tester, width: 390);
     expect(tester.takeException(), isNull);
   });
@@ -72,7 +81,9 @@ void main() {
   ) async {
     await pumpBanner(tester, width: 360);
 
-    final denyButton = tester.widget<TextButton>(find.widgetWithText(TextButton, '거부'));
+    final denyButton = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, '거부'),
+    );
     final allowButton = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, '쿠키 허용'),
     );

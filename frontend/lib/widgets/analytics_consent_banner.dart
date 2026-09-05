@@ -8,7 +8,7 @@ import '../../theme/app_tokens.dart';
 
 /// Compact layout tokens for the bottom analytics consent banner.
 abstract final class AnalyticsConsentBannerLayout {
-  static const desktopBreakpoint = 900.0;
+  static const desktopBreakpoint = 600.0;
   static const mobilePadding = 12.0;
   static const desktopPadding = 16.0;
   static const titleFontSize = 14.0;
@@ -38,7 +38,8 @@ class _AnalyticsConsentBannerState extends State<AnalyticsConsentBanner> {
   @override
   void initState() {
     super.initState();
-    _consentService = widget.consentService ?? AnalyticsConsentProvider.instance;
+    _consentService =
+        widget.consentService ?? AnalyticsConsentProvider.instance;
   }
 
   void _applyConsent(AnalyticsConsentStatus status) {
@@ -88,11 +89,7 @@ class _AnalyticsConsentBannerState extends State<AnalyticsConsentBanner> {
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    copy,
-                    const SizedBox(height: 8),
-                    actions,
-                  ],
+                  children: [copy, const SizedBox(height: 8), actions],
                 ),
         ),
       ),
@@ -229,14 +226,20 @@ class AnalyticsConsentSettingsButton extends StatelessWidget {
             children: [
               Text(
                 l10n.t('analytics_consent_settings_title'),
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: AppTokens.spaceSm),
               Text(l10n.t('analytics_consent_body')),
               const SizedBox(height: AppTokens.spaceMd),
               FilledButton(
                 onPressed: () {
-                  applyAnalyticsConsent(service, AnalyticsConsentStatus.granted);
+                  applyAnalyticsConsent(
+                    service,
+                    AnalyticsConsentStatus.granted,
+                  );
                   Navigator.of(context).pop();
                 },
                 child: Text(l10n.t('analytics_consent_allow')),

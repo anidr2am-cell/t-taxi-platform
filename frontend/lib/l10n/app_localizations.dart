@@ -646,7 +646,8 @@ class AppLocalizations {
       'admin_dispatch_assign_driver': 'Assign driver',
       'admin_dispatch_reassign_driver': 'Reassign driver',
       'admin_dispatch_unassign_driver': 'Unassign driver (reopen)',
-      'admin_dispatch_unassign_driver_title': 'Unassign driver and reopen booking',
+      'admin_dispatch_unassign_driver_title':
+          'Unassign driver and reopen booking',
       'admin_dispatch_unassign_driver_message':
           'The booking will return to OPEN and become available to other drivers.',
       'admin_dispatch_unassign_driver_warning':
@@ -1289,17 +1290,18 @@ class AppLocalizations {
           'No linked bookings yet. Complete a booking and sign in to see it here.',
       'my_bookings_view_button': 'View my bookings',
       'my_bookings_driver_summary': 'Driver: {name}',
-      'my_bookings_load_error': 'Unable to load your bookings. Please try again.',
+      'my_bookings_load_error':
+          'Unable to load your bookings. Please try again.',
       'booking_cancel_section': 'Cancel booking',
       'booking_cancel_action': 'Cancel booking',
       'booking_cancel_policy_hint':
           'You can cancel until 2 hours before pickup.',
       'booking_cancel_confirm_title': 'Cancel this booking?',
       'booking_cancel_confirm_action': 'Confirm cancellation',
-      'booking_cancel_confirm_irreversible':
-          'Cancellation cannot be undone.',
+      'booking_cancel_confirm_irreversible': 'Cancellation cannot be undone.',
       'booking_cancel_success': 'Your booking has been cancelled.',
-      'booking_cancel_failed': 'Unable to cancel this booking. Please try again.',
+      'booking_cancel_failed':
+          'Unable to cancel this booking. Please try again.',
       'booking_cancel_blocked_within_two_hours':
           'Bookings cannot be cancelled within 2 hours of the scheduled pickup time.',
       'booking_cancel_blocked_trip_started':
@@ -1308,8 +1310,7 @@ class AppLocalizations {
           'This booking is already cancelled.',
       'booking_cancel_blocked_completed':
           'Completed bookings cannot be cancelled.',
-      'booking_cancel_blocked_no_show':
-          'No-show bookings cannot be cancelled.',
+      'booking_cancel_blocked_no_show': 'No-show bookings cannot be cancelled.',
       'booking_cancel_blocked_invalid_pickup':
           'This booking cannot be cancelled because the pickup time is invalid.',
       'booking_cancel_blocked_locked':
@@ -1326,7 +1327,8 @@ class AppLocalizations {
       'admin_ops_severity_critical': 'Critical',
       'admin_ops_reason_critical_reassignment': 'Critical reassignment',
       'admin_ops_reason_urgent_reassignment': 'Urgent reassignment',
-      'admin_ops_reason_driver_released_reassignment': 'Driver released · reassignment',
+      'admin_ops_reason_driver_released_reassignment':
+          'Driver released · reassignment',
       'admin_ops_reason_critical_unassigned': 'Critical · unassigned',
       'admin_ops_reason_urgent_unassigned': 'Urgent · unassigned',
       'guest_status_guidance_driver_assigned':
@@ -1647,8 +1649,7 @@ class AppLocalizations {
       'wizard_cta_vehicle_selected': 'Enter passenger info · {price}',
       'wizard_cta_customer': 'Review booking · {price}',
       'wizard_cta_confirm': 'Confirm booking · {price}',
-      'wizard_same_place_error':
-          'Origin and destination cannot be the same.',
+      'wizard_same_place_error': 'Origin and destination cannot be the same.',
       'wizard_swap_route': 'Swap locations',
       'wizard_trust_toll_included': 'Highway tolls included',
       'wizard_trust_no_airport_parking': 'No airport parking fees',
@@ -1714,16 +1715,14 @@ class AppLocalizations {
       'special_luggage': '특수 수하물',
       'name_sign': '피켓 서비스 (+100 THB)',
       'booking_prefer_female_driver': '여성 기사 선호',
-      'booking_preference_disclaimer':
-          '배정 시 최대한 반영하며, 100% 보장되지 않습니다',
+      'booking_preference_disclaimer': '배정 시 최대한 반영하며, 100% 보장되지 않습니다',
       'next': '다음',
       'back': '뒤로',
       'confirm': '예약 확정',
       'customer_review_booking': '예약 내용 확인하기',
       'customer_confirm_booking': '예약 확정하기',
       'customer_booking_processing': '예약을 처리하고 있습니다',
-      'customer_urgent_pickup_hint':
-          '픽업 요청시간이 2시간 이내인 경우 긴급요청을 클릭하셔서 진행 가능합니다',
+      'customer_urgent_pickup_hint': '픽업 요청시간이 2시간 이내인 경우 긴급요청을 클릭하셔서 진행 가능합니다',
       'customer_urgent_request': '긴급요청',
       'customer_urgent_confirm_title': '긴급 요청 확인',
       'customer_urgent_confirm_body':
@@ -1733,8 +1732,7 @@ class AppLocalizations {
       'customer_urgent_searching_title': '기사를 찾고 있습니다',
       'customer_urgent_searching_body': '주변에서 배차 가능한 기사를 찾고 있습니다.',
       'customer_urgent_eta_title': '기사님이 약 {minutes}분 후 도착 예정입니다',
-      'customer_urgent_eta_body':
-          '도착 시간이 괜찮으시면 수락을, 더 빠른 기사를 원하시면 거절을 눌러주세요.',
+      'customer_urgent_eta_body': '도착 시간이 괜찮으시면 수락을, 더 빠른 기사를 원하시면 거절을 눌러주세요.',
       'customer_urgent_accept_eta': '수락',
       'customer_urgent_reject_eta': '거절',
       'customer_urgent_retry_title': '더 빠른 기사를 찾아볼까요?',
@@ -1744,8 +1742,7 @@ class AppLocalizations {
       'customer_urgent_confirmed_title': '배차가 확정되었습니다',
       'customer_urgent_confirmed_body': '기사님이 배정되었습니다. 예약 상세 화면으로 이동합니다.',
       'customer_urgent_exhausted_title': '대기 중인 기사가 없습니다',
-      'customer_urgent_exhausted_body':
-          '가까운 곳에 대기중인 기사가 없습니다. 예약을 취소하겠습니다',
+      'customer_urgent_exhausted_body': '가까운 곳에 대기중인 기사가 없습니다. 예약을 취소하겠습니다',
       'customer_urgent_go_home': '홈으로',
       'origin': '출발지',
       'destination': '도착지',
@@ -1964,11 +1961,9 @@ class AppLocalizations {
       'account_mileage_type_reversal': '회수',
       'landing_privacy_policy_link': '개인정보처리방침',
       'privacy_policy_title': '개인정보처리방침',
-      'privacy_policy_load_failed':
-          '개인정보처리방침을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-      'analytics_consent_title': '분석 쿠키',
-      'analytics_consent_body':
-          '방문 및 예약 전환 측정을 위해 Google Analytics를 사용합니다. 이름·전화·이메일은 전송하지 않습니다. 마케팅 유입 정보는 분석 허용 시에만 저장됩니다. 개인정보 설정에서 언제든 변경할 수 있습니다.',
+      'privacy_policy_load_failed': '개인정보처리방침을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      'analytics_consent_title': '쿠키 사용 안내',
+      'analytics_consent_body': '서비스 개선을 위해 분석 쿠키를 사용합니다. 거부해도 예약할 수 있습니다.',
       'analytics_consent_allow': '쿠키 허용',
       'analytics_consent_deny': '거부',
       'analytics_consent_privacy': '개인정보처리방침',
@@ -2083,8 +2078,7 @@ class AppLocalizations {
           'T-Rider 예약이 생성되었습니다. 기사·차량 안내를 받으려면 메신저로 연결해 주세요.',
       'contact_connect_choose_channel': '메신저 선택',
       'contact_connect_email_soon': '이메일 (준비 중)',
-      'contact_connect_after_launch':
-          '예약번호가 포함된 메시지를 보낸 뒤 아래 버튼을 눌러 주세요.',
+      'contact_connect_after_launch': '예약번호가 포함된 메시지를 보낸 뒤 아래 버튼을 눌러 주세요.',
       'contact_connect_confirm_sent': '메시지를 보냈습니다',
       'contact_connect_waiting': 'T-Rider에서 메시지 확인 중입니다',
       'contact_connect_waiting_hint': '보통 몇 분 정도 걸립니다. 이 화면을 유지해 주세요.',
@@ -2159,14 +2153,14 @@ class AppLocalizations {
       'wizard_required_name_sign_text': '피켓에 표시할 이름을 입력해 주세요.',
       'wizard_customer_email_invalid': '올바른 이메일 주소를 입력해 주세요.',
       'pickup_datetime_required': '픽업 날짜와 시간을 입력해 주세요',
-      'booking_location_reselect_required': '장소 좌표를 확인할 수 없습니다. 출발지/도착지를 다시 선택해 주세요.',
+      'booking_location_reselect_required':
+          '장소 좌표를 확인할 수 없습니다. 출발지/도착지를 다시 선택해 주세요.',
       'ui_generic_error': '문제가 발생했습니다. 다시 시도해 주세요.',
       'ui_retry': '다시 시도',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid': '항공편 번호를 확인해 주세요. 예: TG401, 7C2203',
       'flight_lookup_search': '조회',
-      'flight_lookup_not_found':
-          '해당 편명의 항공편을 찾을 수 없습니다. 편명을 다시 확인해 주세요.',
+      'flight_lookup_not_found': '해당 편명의 항공편을 찾을 수 없습니다. 편명을 다시 확인해 주세요.',
       'flight_lookup_invalid_date':
           '픽업 날짜로 항공편 조회를 할 수 없습니다. 편명은 그대로 입력하셔도 예약 진행에는 문제없습니다.',
       'flight_lookup_provider_unavailable':
@@ -2247,15 +2241,12 @@ class AppLocalizations {
           '이 작업은 되돌릴 수 없으며, 배정된 기사에게 즉시 알림이 전송됩니다.',
       'admin_dispatch_unassign_driver_reason': '배정 해제 사유',
       'admin_dispatch_unassign_driver_confirm': '배정 해제 및 재오픈',
-      'admin_dispatch_unassign_success':
-          '기사 배정이 해제되었습니다. 예약이 다시 배차 대기 상태입니다.',
+      'admin_dispatch_unassign_success': '기사 배정이 해제되었습니다. 예약이 다시 배차 대기 상태입니다.',
       'admin_dispatch_unassign_failed': '기사 배정을 해제하지 못했습니다.',
       'admin_dispatch_unassign_error_invalid_status':
           '현재 상태에서는 배정을 해제할 수 없습니다. 새로고침 후 다시 시도해 주세요.',
-      'admin_dispatch_unassign_error_no_assignment':
-          '활성 기사 배정이 없습니다.',
-      'admin_dispatch_unassign_error_validation':
-          '배정 해제 사유를 올바르게 입력해 주세요.',
+      'admin_dispatch_unassign_error_no_assignment': '활성 기사 배정이 없습니다.',
+      'admin_dispatch_unassign_error_validation': '배정 해제 사유를 올바르게 입력해 주세요.',
       'admin_ops_search': '예약번호, 고객, 전화번호, 기사, 차량번호 검색',
       'admin_ops_filters': '필터',
       'admin_ops_filter_apply': '적용',
@@ -2544,24 +2535,20 @@ class AppLocalizations {
       'guest_lookup_refresh_needs_phone': '새로고침하려면 조회 화면에서 전화번호를 입력해 주세요.',
       'booking_complete_track_cta': '예약 상태 확인',
       'auth_social_login_title': '계정을 만들면 다음 예약이 더 편해집니다',
-      'auth_social_login_description':
-          '예약 내역 조회, 정보 자동입력이 가능해집니다',
+      'auth_social_login_description': '예약 내역 조회, 정보 자동입력이 가능해집니다',
       'auth_google_continue': 'Google로 계속하기',
       'auth_kakao_continue': '카카오로 계속하기',
       'auth_kakao_callback_error': '카카오 로그인에 실패했습니다. 다시 시도해 주세요.',
       'auth_kakao_callback_already_processed':
           '이미 처리된 로그인 요청입니다. 필요하면 다시 시도해 주세요.',
-      'auth_kakao_callback_slow_loading':
-          '처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.',
+      'auth_kakao_callback_slow_loading': '처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.',
       'auth_kakao_callback_refresh': '새로고침',
       'auth_line_continue': 'LINE으로 계속하기',
       'auth_line_callback_error': 'LINE 로그인에 실패했습니다. 다시 시도해 주세요.',
-      'auth_line_callback_state_mismatch':
-          'LINE 로그인을 확인할 수 없습니다. 다시 시도해 주세요.',
+      'auth_line_callback_state_mismatch': 'LINE 로그인을 확인할 수 없습니다. 다시 시도해 주세요.',
       'auth_line_callback_already_processed':
           '이미 처리된 로그인 요청입니다. 필요하면 다시 시도해 주세요.',
-      'auth_line_callback_slow_loading':
-          '처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.',
+      'auth_line_callback_slow_loading': '처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.',
       'auth_line_callback_refresh': '새로고침',
       'auth_social_login_later': '나중에 하기',
       'auth_social_login_connected': '{name}님, 연결되었습니다',
@@ -2584,8 +2571,7 @@ class AppLocalizations {
       'booking_cancel_blocked_already_cancelled': '이미 취소된 예약입니다.',
       'booking_cancel_blocked_completed': '완료된 예약은 취소할 수 없습니다.',
       'booking_cancel_blocked_no_show': '노쇼 처리된 예약은 취소할 수 없습니다.',
-      'booking_cancel_blocked_invalid_pickup':
-          '픽업 시각이 올바르지 않아 예약을 취소할 수 없습니다.',
+      'booking_cancel_blocked_invalid_pickup': '픽업 시각이 올바르지 않아 예약을 취소할 수 없습니다.',
       'booking_cancel_blocked_locked': '이 예약은 잠겨 있어 취소할 수 없습니다.',
       'booking_cancel_driver_assigned': '기사 배정됨: {name}',
       'booking_cancel_driver_assigned_generic': '기사 배정됨',
@@ -2602,15 +2588,12 @@ class AppLocalizations {
       'admin_ops_reason_urgent_unassigned': '주의 · 미배차',
       'driver_release_assignment': '배정 반납',
       'driver_release_assignment_title': '이 예약의 배정을 반납하시겠습니까?',
-      'driver_release_assignment_message':
-          '고객 예약은 유지되며 다른 기사를 다시 배정합니다.',
+      'driver_release_assignment_message': '고객 예약은 유지되며 다른 기사를 다시 배정합니다.',
       'driver_release_assignment_cancel': '유지',
       'driver_release_assignment_confirm': '배정 반납',
       'driver_release_assignment_success': '배정이 해제되었습니다.',
-      'driver_release_assignment_failed':
-          '배정 반납에 실패했습니다. 다시 시도해 주세요.',
-      'driver_release_assignment_blocked':
-          '현재 상태에서는 배정을 반납할 수 없습니다.',
+      'driver_release_assignment_failed': '배정 반납에 실패했습니다. 다시 시도해 주세요.',
+      'driver_release_assignment_blocked': '현재 상태에서는 배정을 반납할 수 없습니다.',
       'driver_release_assignment_emergency_hint':
           '픽업까지 2시간 이내에는 일반 배정 반납이 제한됩니다. 긴급 상황인 경우에만 배정을 반납할 수 있습니다.',
       'driver_release_assignment_irreversible': '반납 후에는 되돌릴 수 없습니다.',
@@ -2636,8 +2619,7 @@ class AppLocalizations {
       'driver_assignment_ended_customer_snackbar':
           '고객 취소로 예약 {bookingNumber} 배정이 해제되었습니다.',
       'driver_assignment_ended_admin_title': '관리자가 예약을 취소했습니다',
-      'driver_assignment_ended_admin_message':
-          '관리자가 예약을 취소하여 배정이 해제되었습니다.',
+      'driver_assignment_ended_admin_message': '관리자가 예약을 취소하여 배정이 해제되었습니다.',
       'driver_assignment_ended_admin_snackbar':
           '관리자 취소로 예약 {bookingNumber} 배정이 해제되었습니다.',
       'driver_assignment_ended_released_title': '배정 반납이 완료되었습니다',
@@ -2646,8 +2628,7 @@ class AppLocalizations {
       'driver_assignment_ended_released_snackbar':
           '예약 {bookingNumber} 배정 반납이 완료되었습니다.',
       'driver_assignment_ended_reassigned_title': '다른 기사에게 배정되었습니다',
-      'driver_assignment_ended_reassigned_message':
-          '이 예약은 다른 기사에게 배정되었습니다.',
+      'driver_assignment_ended_reassigned_message': '이 예약은 다른 기사에게 배정되었습니다.',
       'driver_assignment_ended_reassigned_snackbar':
           '예약 {bookingNumber}이(가) 다른 기사에게 배정되었습니다.',
       'driver_assignment_ended_completed_title': '운행이 완료되었습니다',
@@ -3026,8 +3007,7 @@ class AppLocalizations {
       'landing_logged_in_greeting': '已登录：{name}',
       'landing_my_bookings_button': '我的预约',
       'landing_logout_button': '退出登录',
-      'auth_login_provider_hint':
-          '为管理里程积分，请始终使用同一种登录方式（Google、Kakao 或 LINE）。',
+      'auth_login_provider_hint': '为管理里程积分，请始终使用同一种登录方式（Google、Kakao 或 LINE）。',
       'landing_header_account_menu': '我的账户',
       'account_page_title': '我的账户',
       'account_menu_section_title': '账户',
@@ -3220,8 +3200,7 @@ class AppLocalizations {
           '预约完成后，我们会通过 SNS 提前联系您，告知车辆和司机等信息。如无法联系，预约可能会被取消，请务必填写可通过 SNS 添加好友的联系方式或 SNS 账号。',
       'contact_connect_title': '连接 Messenger',
       'contact_connect_booking_number': '预订号',
-      'contact_connect_intro':
-          '您的 T-Rider 预订已创建。请通过 Messenger 连接，以便接收司机和车辆更新。',
+      'contact_connect_intro': '您的 T-Rider 预订已创建。请通过 Messenger 连接，以便接收司机和车辆更新。',
       'contact_connect_choose_channel': '选择 Messenger',
       'contact_connect_email_soon': '电子邮件（即将推出）',
       'contact_connect_after_launch': '发送包含预订参考号的消息后，请点击下方按钮。',
@@ -3310,7 +3289,8 @@ class AppLocalizations {
       'guest_lookup_refresh': '刷新',
       'guest_lookup_refresh_needs_phone': '请在查询表单中输入电话号码以刷新此预订。',
       'booking_complete_track_cta': '查看我的预订',
-      'auth_social_login_title': 'Create an account to make your next booking easier',
+      'auth_social_login_title':
+          'Create an account to make your next booking easier',
       'auth_social_login_description':
           'View booking history and auto-fill your details on future trips.',
       'auth_google_continue': 'Continue with Google',
@@ -3340,8 +3320,7 @@ class AppLocalizations {
       'booking_cancel_confirm_irreversible': '取消后无法恢复。',
       'booking_cancel_success': '您的预订已取消。',
       'booking_cancel_failed': '无法取消此预订，请重试。',
-      'booking_cancel_blocked_within_two_hours':
-          '距预定上车时间不足 2 小时时无法取消预订。',
+      'booking_cancel_blocked_within_two_hours': '距预定上车时间不足 2 小时时无法取消预订。',
       'booking_cancel_blocked_trip_started': '行程已开始的预订无法取消。',
       'booking_cancel_blocked_already_cancelled': '此预订已取消。',
       'booking_cancel_blocked_completed': '已完成的预订无法取消。',
@@ -3352,8 +3331,7 @@ class AppLocalizations {
       'booking_cancel_driver_assigned_generic': '已分配司机',
       'guest_status_guidance_pending': '您的预订已收到，我们将尽快确认。',
       'guest_status_guidance_confirmed': '您的预订已确认，接客前将分配司机。',
-      'guest_status_guidance_reassignment':
-          '原定司机因故无法接送，正在为您重新安排司机。行程时间与费用不变。',
+      'guest_status_guidance_reassignment': '原定司机因故无法接送，正在为您重新安排司机。行程时间与费用不变。',
       'status_reassignment_in_progress': '正在重新安排司机',
       'admin_ops_severity_critical': '紧急',
       'admin_ops_reason_critical_reassignment': '紧急再派车',
@@ -3514,10 +3492,8 @@ class AppLocalizations {
       'flight_number_invalid': '请检查航班号。例如：TG401, 7C2203',
       'flight_lookup_search': '查询',
       'flight_lookup_not_found': '未找到该航班号。请再次确认航班号。',
-      'flight_lookup_invalid_date':
-          '当前接送日期无法查询航班。您仍可继续预订并保留已输入的航班号。',
-      'flight_lookup_provider_unavailable':
-          '航班查询服务暂时不可用。您仍可继续预订并保留已输入的航班号。',
+      'flight_lookup_invalid_date': '当前接送日期无法查询航班。您仍可继续预订并保留已输入的航班号。',
+      'flight_lookup_provider_unavailable': '航班查询服务暂时不可用。您仍可继续预订并保留已输入的航班号。',
       'flight_lookup_departure': '出发',
       'flight_lookup_arrival': '到达',
       'flight_lookup_estimated_arrival': '预计到达',
@@ -3620,8 +3596,7 @@ class AppLocalizations {
       'special_luggage': '特殊荷物',
       'name_sign': '名前看板サービス (+100 THB)',
       'booking_prefer_female_driver': '女性ドライバー希望',
-      'booking_preference_disclaimer':
-          '配車の際できる限り反映いたしますが、100%保証するものではありません。',
+      'booking_preference_disclaimer': '配車の際できる限り反映いたしますが、100%保証するものではありません。',
       'next': '次へ',
       'back': '戻る',
       'confirm': '予約確定',
@@ -3838,8 +3813,7 @@ class AppLocalizations {
       'account_mileage_type_reversal': '取消',
       'landing_privacy_policy_link': 'プライバシーポリシー',
       'privacy_policy_title': 'プライバシーポリシー',
-      'privacy_policy_load_failed':
-          'プライバシーポリシーを読み込めませんでした。しばらくしてから再度お試しください。',
+      'privacy_policy_load_failed': 'プライバシーポリシーを読み込めませんでした。しばらくしてから再度お試しください。',
       'analytics_consent_title': '分析 Cookie',
       'analytics_consent_body':
           'Google Analytics で訪問と予約コンバージョンを測定します。氏名・電話・メールは送信しません。プライバシー設定でいつでも変更できます。',
@@ -3884,8 +3858,7 @@ class AppLocalizations {
       'customer_review_booking': '予約内容を確認',
       'customer_confirm_booking': '予約を確定',
       'customer_booking_processing': '予約を処理しています',
-      'customer_urgent_pickup_hint':
-          'ピックアップ時間が2時間以内の場合は、緊急リクエストをタップして進めてください。',
+      'customer_urgent_pickup_hint': 'ピックアップ時間が2時間以内の場合は、緊急リクエストをタップして進めてください。',
       'customer_urgent_request': '緊急リクエスト',
       'customer_urgent_confirm_title': '緊急リクエストの確認',
       'customer_urgent_confirm_body':
@@ -3895,8 +3868,7 @@ class AppLocalizations {
       'customer_urgent_searching_title': 'ドライバーを探しています',
       'customer_urgent_searching_body': '近くで対応可能なドライバーを探しています。',
       'customer_urgent_eta_title': 'ドライバーは約{minutes}分後に到着予定です',
-      'customer_urgent_eta_body':
-          '到着時間で問題なければ承認、より早いドライバーを希望する場合は拒否を押してください。',
+      'customer_urgent_eta_body': '到着時間で問題なければ承認、より早いドライバーを希望する場合は拒否を押してください。',
       'customer_urgent_accept_eta': '承認',
       'customer_urgent_reject_eta': '拒否',
       'customer_urgent_retry_title': 'より早いドライバーを探しますか？',
@@ -3904,11 +3876,9 @@ class AppLocalizations {
       'customer_urgent_retry_accept': '探す',
       'customer_urgent_retry_cancel': '予約をキャンセル',
       'customer_urgent_confirmed_title': '配車が確定しました',
-      'customer_urgent_confirmed_body':
-          'ドライバーが割り当てられました。予約詳細画面を開いています。',
+      'customer_urgent_confirmed_body': 'ドライバーが割り当てられました。予約詳細画面を開いています。',
       'customer_urgent_exhausted_title': '近くに待機中のドライバーがいません',
-      'customer_urgent_exhausted_body':
-          '近くに待機中のドライバーがいません。予約をキャンセルします。',
+      'customer_urgent_exhausted_body': '近くに待機中のドライバーがいません。予約をキャンセルします。',
       'customer_urgent_go_home': 'ホームへ',
       'selected_location': '選択した場所',
       'customer_payment_method': '支払方法',
@@ -3960,7 +3930,8 @@ class AppLocalizations {
       'contact_connect_unsafe_url': 'このメッセンジャーリンクは許可されていません',
       'contact_connect_load_failed': '連携状態を読み込めませんでした',
       'contact_connect_wechat_title': 'WeChat',
-      'contact_connect_wechat_body': 'QR コードをスキャンするか WeChat ID をコピーし、予約参照番号を送信してください。',
+      'contact_connect_wechat_body':
+          'QR コードをスキャンするか WeChat ID をコピーし、予約参照番号を送信してください。',
       'contact_connect_wechat_id_copied': 'WeChat ID をコピーしました',
       'contact_connect_invalid_link': '連携リンクが無効です',
       'additional_requests': '追加リクエスト',
@@ -4036,7 +4007,8 @@ class AppLocalizations {
       'guest_lookup_refresh': '更新',
       'guest_lookup_refresh_needs_phone': '更新するには検索フォームで電話番号を入力してください。',
       'booking_complete_track_cta': '予約状況を確認',
-      'auth_social_login_title': 'Create an account to make your next booking easier',
+      'auth_social_login_title':
+          'Create an account to make your next booking easier',
       'auth_social_login_description':
           'View booking history and auto-fill your details on future trips.',
       'auth_google_continue': 'Continue with Google',
@@ -4044,17 +4016,14 @@ class AppLocalizations {
       'auth_kakao_callback_error': 'Kakaoログインに失敗しました。もう一度お試しください。',
       'auth_kakao_callback_already_processed':
           'このログイン要求はすでに処理されています。必要なら再度お試しください。',
-      'auth_kakao_callback_slow_loading':
-          '処理に時間がかかっています。ページを更新してください。',
+      'auth_kakao_callback_slow_loading': '処理に時間がかかっています。ページを更新してください。',
       'auth_kakao_callback_refresh': 'ページを更新',
       'auth_line_continue': 'LINEで続ける',
       'auth_line_callback_error': 'LINEログインに失敗しました。もう一度お試しください。',
-      'auth_line_callback_state_mismatch':
-          'LINEログインを確認できませんでした。もう一度お試しください。',
+      'auth_line_callback_state_mismatch': 'LINEログインを確認できませんでした。もう一度お試しください。',
       'auth_line_callback_already_processed':
           'このログイン要求はすでに処理されています。必要なら再度お試しください。',
-      'auth_line_callback_slow_loading':
-          '処理に時間がかかっています。ページを更新してください。',
+      'auth_line_callback_slow_loading': '処理に時間がかかっています。ページを更新してください。',
       'auth_line_callback_refresh': 'ページを更新',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
@@ -4095,8 +4064,7 @@ class AppLocalizations {
       'admin_ops_reason_urgent_unassigned': '至急 · 未配車',
       'driver_release_assignment': '配車を返却',
       'driver_release_assignment_title': 'この予約の配車を返却しますか？',
-      'driver_release_assignment_message':
-          'お客様の予約は維持され、別のドライバーを再手配します。',
+      'driver_release_assignment_message': 'お客様の予約は維持され、別のドライバーを再手配します。',
       'driver_release_assignment_cancel': '配車を維持',
       'driver_release_assignment_confirm': '配車を返却',
       'driver_release_assignment_success': '配車を解除しました。',
@@ -4127,8 +4095,7 @@ class AppLocalizations {
       'driver_assignment_ended_customer_snackbar':
           'お客様キャンセルにより予約 {bookingNumber} の配車が解除されました。',
       'driver_assignment_ended_admin_title': '管理者が予約をキャンセルしました',
-      'driver_assignment_ended_admin_message':
-          '管理者が予約をキャンセルしたため、配車が解除されました。',
+      'driver_assignment_ended_admin_message': '管理者が予約をキャンセルしたため、配車が解除されました。',
       'driver_assignment_ended_admin_snackbar':
           '管理者キャンセルにより予約 {bookingNumber} の配車が解除されました。',
       'driver_assignment_ended_released_title': '配車の返却が完了しました',
@@ -4137,8 +4104,7 @@ class AppLocalizations {
       'driver_assignment_ended_released_snackbar':
           '予約 {bookingNumber} の配車返却が完了しました。',
       'driver_assignment_ended_reassigned_title': '他のドライバーに割り当てられました',
-      'driver_assignment_ended_reassigned_message':
-          'この予約は他のドライバーに割り当てられました。',
+      'driver_assignment_ended_reassigned_message': 'この予約は他のドライバーに割り当てられました。',
       'driver_assignment_ended_reassigned_snackbar':
           '予約 {bookingNumber} は他のドライバーに割り当てられました。',
       'driver_assignment_ended_completed_title': '運行が完了しました',
@@ -4251,17 +4217,14 @@ class AppLocalizations {
       'name_sign_service_gate_highlight': '3番ゲート',
       'name_sign_text_label': 'ネームボードに表示する名前',
       'name_sign_text_hint': '例: TANAKA YUKI',
-      'wizard_required_name_sign_text':
-          'ネームボードに表示する名前を入力してください。',
+      'wizard_required_name_sign_text': 'ネームボードに表示する名前を入力してください。',
       'wizard_customer_email_invalid': '有効なメールアドレスを入力してください。',
       'pickup_datetime_required': 'ピックアップ日時を入力してください',
-      'booking_location_reselect_required':
-          '場所の座標を取得できません。出発地/目的地を再度選択してください。',
+      'booking_location_reselect_required': '場所の座標を取得できません。出発地/目的地を再度選択してください。',
       'flight_number_hint': 'TG401, 7C2203',
       'flight_number_invalid': '便名を確認してください。例: TG401, 7C2203',
       'flight_lookup_search': '検索',
-      'flight_lookup_not_found':
-          '該当する便名のフライトが見つかりません。便名を再度ご確認ください。',
+      'flight_lookup_not_found': '該当する便名のフライトが見つかりません。便名を再度ご確認ください。',
       'flight_lookup_invalid_date':
           'このピックアップ日では便情報を照会できません。便名を入力したまま予約を続行できます。',
       'flight_lookup_provider_unavailable':
@@ -4297,8 +4260,7 @@ class AppLocalizations {
       'wizard_trust_no_night_surcharge': '深夜・早朝追加料金なし',
       'wizard_trust_flight_delay_wait': 'フライト遅延時は無料待機',
       'wizard_places_searching': '場所を検索中…',
-      'wizard_places_no_results_hint':
-          '該当する場所がありません。別のキーワードを試すか、地図から選択してください。',
+      'wizard_places_no_results_hint': '該当する場所がありません。別のキーワードを試すか、地図から選択してください。',
       'wizard_summary_expand': '予約概要を表示',
       'wizard_summary_collapse': '予約概要を非表示',
       'wizard_required_origin': '出発地を選択してください。',
@@ -4386,9 +4348,9 @@ class AppLocalizations {
       'customer_urgent_confirm_submit': 'ยืนยัน',
       'customer_urgent_flow_title': 'คำขอด่วน',
       'customer_urgent_searching_title': 'กำลังค้นหาคนขับ',
-      'customer_urgent_searching_body': 'เรากำลังค้นหาคนขับที่พร้อมให้บริการใกล้คุณ',
-      'customer_urgent_eta_title':
-          'คนขับคาดว่าจะถึงในอีกประมาณ {minutes} นาที',
+      'customer_urgent_searching_body':
+          'เรากำลังค้นหาคนขับที่พร้อมให้บริการใกล้คุณ',
+      'customer_urgent_eta_title': 'คนขับคาดว่าจะถึงในอีกประมาณ {minutes} นาที',
       'customer_urgent_eta_body':
           'หากเวลานี้เหมาะสม กรุณากด ยอมรับ หากต้องการคนขับที่ถึงเร็วกว่า กรุณากด ปฏิเสธ',
       'customer_urgent_accept_eta': 'ยอมรับ',
@@ -4724,7 +4686,8 @@ class AppLocalizations {
           'หลังส่งข้อความพร้อมหมายเลขอ้างอิงการจอง ให้แตะปุ่มด้านล่าง',
       'contact_connect_confirm_sent': 'ฉันส่งข้อความแล้ว',
       'contact_connect_waiting': 'T-Rider กำลังยืนยันข้อความของคุณ',
-      'contact_connect_waiting_hint': 'โดยปกติใช้เวลาไม่กี่นาที กรุณาเปิดหน้านี้ไว้',
+      'contact_connect_waiting_hint':
+          'โดยปกติใช้เวลาไม่กี่นาที กรุณาเปิดหน้านี้ไว้',
       'contact_connect_step_created': 'สร้างการจองแล้ว',
       'contact_connect_step_connecting': 'กำลังเชื่อมต่อ',
       'contact_connect_step_complete': 'เสร็จสิ้น',
@@ -4814,16 +4777,17 @@ class AppLocalizations {
       'guest_lookup_refresh_needs_phone':
           'กรุณากรอกเบอร์โทรในแบบฟอร์มค้นหาเพื่อรีเฟรชการจองนี้',
       'booking_complete_track_cta': 'ติดตามการจองของฉัน',
-      'auth_social_login_title': 'Create an account to make your next booking easier',
+      'auth_social_login_title':
+          'Create an account to make your next booking easier',
       'auth_social_login_description':
           'View booking history and auto-fill your details on future trips.',
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': 'ดำเนินการต่อด้วย Kakao',
-      'auth_kakao_callback_error': 'เข้าสู่ระบบ Kakao ไม่สำเร็จ โปรดลองอีกครั้ง',
+      'auth_kakao_callback_error':
+          'เข้าสู่ระบบ Kakao ไม่สำเร็จ โปรดลองอีกครั้ง',
       'auth_kakao_callback_already_processed':
           'คำขอเข้าสู่ระบบนี้ถูกดำเนินการแล้ว โปรดลองอีกครั้งหากจำเป็น',
-      'auth_kakao_callback_slow_loading':
-          'ใช้เวลานานกว่าปกติ โปรดรีเฟรชหน้า',
+      'auth_kakao_callback_slow_loading': 'ใช้เวลานานกว่าปกติ โปรดรีเฟรชหน้า',
       'auth_kakao_callback_refresh': 'รีเฟรชหน้า',
       'auth_line_continue': 'ดำเนินการต่อด้วย LINE',
       'auth_line_callback_error': 'เข้าสู่ระบบ LINE ไม่สำเร็จ โปรดลองอีกครั้ง',
@@ -4831,8 +4795,7 @@ class AppLocalizations {
           'ไม่สามารถยืนยันการเข้าสู่ระบบ LINE ได้ โปรดลองอีกครั้ง',
       'auth_line_callback_already_processed':
           'คำขอเข้าสู่ระบบนี้ถูกดำเนินการแล้ว โปรดลองอีกครั้งหากจำเป็น',
-      'auth_line_callback_slow_loading':
-          'ใช้เวลานานกว่าปกติ โปรดรีเฟรชหน้า',
+      'auth_line_callback_slow_loading': 'ใช้เวลานานกว่าปกติ โปรดรีเฟรชหน้า',
       'auth_line_callback_refresh': 'รีเฟรชหน้า',
       'auth_social_login_later': 'Maybe later',
       'auth_social_login_connected': '{name}, your account is connected.',
@@ -4851,22 +4814,19 @@ class AppLocalizations {
       'booking_cancel_confirm_irreversible':
           'เมื่อยกเลิกแล้วจะไม่สามารถย้อนกลับได้',
       'booking_cancel_success': 'ยกเลิกการจองของคุณแล้ว',
-      'booking_cancel_failed':
-          'ไม่สามารถยกเลิกการจองนี้ได้ กรุณาลองอีกครั้ง',
+      'booking_cancel_failed': 'ไม่สามารถยกเลิกการจองนี้ได้ กรุณาลองอีกครั้ง',
       'booking_cancel_blocked_within_two_hours':
           'ไม่สามารถยกเลิกการจองภายใน 2 ชั่วโมงก่อนเวลารับที่กำหนด',
       'booking_cancel_blocked_trip_started':
           'ไม่สามารถยกเลิกการจองที่เริ่มการเดินทางแล้ว',
-      'booking_cancel_blocked_already_cancelled':
-          'การจองนี้ถูกยกเลิกแล้ว',
+      'booking_cancel_blocked_already_cancelled': 'การจองนี้ถูกยกเลิกแล้ว',
       'booking_cancel_blocked_completed':
           'ไม่สามารถยกเลิกการจองที่เสร็จสิ้นแล้ว',
       'booking_cancel_blocked_no_show':
           'ไม่สามารถยกเลิกการจองที่ถูกทำเครื่องหมายว่าไม่มา',
       'booking_cancel_blocked_invalid_pickup':
           'ไม่สามารถยกเลิกการจองนี้ได้เนื่องจากเวลารับไม่ถูกต้อง',
-      'booking_cancel_blocked_locked':
-          'การจองนี้ถูกล็อกและไม่สามารถยกเลิกได้',
+      'booking_cancel_blocked_locked': 'การจองนี้ถูกล็อกและไม่สามารถยกเลิกได้',
       'booking_cancel_driver_assigned': 'มอบหมายคนขับแล้ว: {name}',
       'booking_cancel_driver_assigned_generic': 'มอบหมายคนขับแล้ว',
       'guest_status_guidance_pending':
@@ -4879,11 +4839,13 @@ class AppLocalizations {
       'admin_ops_severity_critical': 'เร่งด่วนมาก',
       'admin_ops_reason_critical_reassignment': 'จัดคนขับใหม่เร่งด่วนมาก',
       'admin_ops_reason_urgent_reassignment': 'จัดคนขับใหม่เร่งด่วน',
-      'admin_ops_reason_driver_released_reassignment': 'คนขับคืนงาน · จัดคนขับใหม่',
+      'admin_ops_reason_driver_released_reassignment':
+          'คนขับคืนงาน · จัดคนขับใหม่',
       'admin_ops_reason_critical_unassigned': 'เร่งด่วนมาก · ยังไม่มอบหมาย',
       'admin_ops_reason_urgent_unassigned': 'เร่งด่วน · ยังไม่มอบหมาย',
       'driver_release_assignment': 'คืนงาน',
-      'driver_release_assignment_title': 'ต้องการคืนงานที่ได้รับมอบหมายนี้หรือไม่?',
+      'driver_release_assignment_title':
+          'ต้องการคืนงานที่ได้รับมอบหมายนี้หรือไม่?',
       'driver_release_assignment_message':
           'การจองของลูกค้ายังคงอยู่ และจะมอบหมายคนขับคนอื่น',
       'driver_release_assignment_cancel': 'เก็บงานไว้',
@@ -4891,8 +4853,7 @@ class AppLocalizations {
       'driver_release_assignment_success': 'ยกเลิกการมอบหมายงานแล้ว',
       'driver_release_assignment_failed':
           'คืนงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
-      'driver_release_assignment_blocked':
-          'สถานะปัจจุบันไม่สามารถคืนงานได้',
+      'driver_release_assignment_blocked': 'สถานะปัจจุบันไม่สามารถคืนงานได้',
       'driver_release_assignment_emergency_hint':
           'ภายใน 2 ชั่วโมงก่อนเวลารับ การคืนงานปกติถูกจำกัด คืนงานได้เฉพาะกรณีฉุกเฉินเท่านั้น',
       'driver_release_assignment_irreversible':
@@ -4935,8 +4896,7 @@ class AppLocalizations {
       'driver_assignment_ended_reassigned_snackbar':
           '{bookingNumber} ถูกมอบหมายให้คนขับคนอื่นแล้ว',
       'driver_assignment_ended_completed_title': 'การเดินทางเสร็จสิ้นแล้ว',
-      'driver_assignment_ended_completed_message':
-          'การจองนี้เสร็จสิ้นแล้ว',
+      'driver_assignment_ended_completed_message': 'การจองนี้เสร็จสิ้นแล้ว',
       'guest_status_guidance_driver_assigned':
           'มอบหมายคนขับแล้ว และจะออกเดินทางไปจุดรับเร็วๆ นี้',
       'guest_status_guidance_on_route': 'คนขับกำลังเดินทางไปจุดรับ',
@@ -5718,8 +5678,7 @@ class AppLocalizations {
       'admin_driver_vehicle_approve': '승인',
       'admin_driver_vehicle_reject': '거절',
       'admin_driver_vehicle_approve_title': '차량 승인',
-      'admin_driver_vehicle_approve_help':
-          '차량이 활성화되어 콜 매칭 대상이 됩니다.',
+      'admin_driver_vehicle_approve_help': '차량이 활성화되어 콜 매칭 대상이 됩니다.',
       'admin_driver_vehicle_reject_title': '차량 거절',
       'admin_driver_vehicle_reject_help': '거절 사유는 기사 차량 목록에 표시됩니다.',
       'admin_driver_vehicle_rejection_reason': '거절 사유',
@@ -5828,8 +5787,7 @@ class AppLocalizations {
       'admin_driver_application_view_all': 'ทั้งหมด',
       'admin_driver_vehicle_menu': 'อนุมัติรถ',
       'admin_driver_vehicle_title': 'อนุมัติรถ',
-      'admin_driver_vehicle_subtitle':
-          'ตรวจสอบรถเพิ่มเติมที่คนขับส่งมา',
+      'admin_driver_vehicle_subtitle': 'ตรวจสอบรถเพิ่มเติมที่คนขับส่งมา',
       'admin_driver_vehicle_search': 'ค้นหาชื่อคนขับ ทะเบียน ประเภทรถ',
       'admin_driver_vehicle_empty': 'ไม่พบรถ',
       'admin_driver_vehicle_approve': 'อนุมัติ',
@@ -5944,11 +5902,9 @@ class AppLocalizations {
       'admin_driver_vehicle_approve': '承認',
       'admin_driver_vehicle_reject': '却下',
       'admin_driver_vehicle_approve_title': '車両を承認',
-      'admin_driver_vehicle_approve_help':
-          '車両が有効になり、コールマッチング対象になります。',
+      'admin_driver_vehicle_approve_help': '車両が有効になり、コールマッチング対象になります。',
       'admin_driver_vehicle_reject_title': '車両を却下',
-      'admin_driver_vehicle_reject_help':
-          '却下理由はドライバーの車両一覧に表示されます。',
+      'admin_driver_vehicle_reject_help': '却下理由はドライバーの車両一覧に表示されます。',
       'admin_driver_vehicle_rejection_reason': '却下理由',
       'admin_driver_vehicle_approved': '車両を承認しました',
       'admin_driver_vehicle_rejected': '車両を却下しました',
@@ -6132,8 +6088,7 @@ class AppLocalizations {
     'driver_open_calls_empty': '배차 가능한 콜이 없습니다.\n(ไม่มีงานที่พร้อมให้รับ)',
     'driver_urgent_badge': '긴급\n(ด่วน)',
     'driver_urgent_section_title': '긴급 요청 콜\n(งานเร่งด่วน)',
-    'driver_urgent_call_new_arrived':
-        '긴급 요청 콜이 도착했습니다.\n(มีงานเร่งด่วนเข้ามา)',
+    'driver_urgent_call_new_arrived': '긴급 요청 콜이 도착했습니다.\n(มีงานเร่งด่วนเข้ามา)',
     'driver_urgent_accept': '수락 / รับงาน',
     'driver_urgent_already_locked':
         '다른 기사가 이미 수락한 콜입니다.\n(คนขับคนอื่นรับงานนี้แล้ว)',
@@ -6159,8 +6114,7 @@ class AppLocalizations {
         '이전 거절보다 더 빠른 도착 예상 시간을 입력해 주세요.\n(กรุณากรอกเวลาที่จะถึงให้เร็วกว่าครั้งก่อน)',
     'driver_urgent_round_ended':
         '고객이 거절했거나 협상 라운드가 종료되었습니다.\n(ลูกค้าปฏิเสธหรือรอบการเจรจาจบแล้ว)',
-    'driver_urgent_cancelled':
-        '긴급 요청 콜이 취소되었습니다.\n(งานเร่งด่วนถูกยกเลิกแล้ว)',
+    'driver_urgent_cancelled': '긴급 요청 콜이 취소되었습니다.\n(งานเร่งด่วนถูกยกเลิกแล้ว)',
     'driver_settlement_block_title':
         '아직 신규 업무를 받을 수 없습니다\n(ยังไม่สามารถรับงานใหม่ได้)',
     'driver_settlement_block_message':
@@ -6241,15 +6195,13 @@ class AppLocalizations {
     'driver_account_profile': '내 프로필\n(โปรไฟล์ของฉัน)',
     'driver_vehicles_menu': '차량 관리\n(จัดการรถ)',
     'driver_vehicles_title': '차량 관리\n(จัดการรถ)',
-    'driver_vehicles_empty':
-        '등록된 차량이 없습니다.\n(ยังไม่มีรถที่ลงทะเบียน)',
+    'driver_vehicles_empty': '등록된 차량이 없습니다.\n(ยังไม่มีรถที่ลงทะเบียน)',
     'driver_vehicle_add': '차량 추가 / เพิ่มรถ',
     'driver_vehicle_add_title': '차량 추가\n(เพิ่มรถ)',
     'driver_vehicle_submit': '승인 요청 / ส่งคำขออนุมัติ',
     'driver_vehicle_add_success':
         '차량이 승인 대기로 등록되었습니다.\n(ลงทะเบียนรถแล้ว รอการอนุมัติ)',
-    'driver_vehicle_add_failed':
-        '차량을 등록하지 못했습니다.\n(ไม่สามารถลงทะเบียนรถได้)',
+    'driver_vehicle_add_failed': '차량을 등록하지 못했습니다.\n(ไม่สามารถลงทะเบียนรถได้)',
     'driver_vehicle_type_label': '차종 / ประเภทรถ',
     'driver_vehicle_plate_label': '번호판 / ทะเบียนรถ',
     'driver_vehicle_photos_title': '차량 사진\n(รูปรถ)',
@@ -6316,8 +6268,7 @@ class AppLocalizations {
         '고객 예약은 유지되며 다른 기사를 다시 배정합니다.\n(การจองของลูกค้ายังคงอยู่ และจะมอบหมายให้คนขับท่านอื่น)',
     'driver_release_assignment_cancel': '유지 / คงไว้',
     'driver_release_assignment_confirm': '배정 반납 / คืนงาน',
-    'driver_release_assignment_success':
-        '배정이 해제되었습니다.\n(คืนงานเรียบร้อยแล้ว)',
+    'driver_release_assignment_success': '배정이 해제되었습니다.\n(คืนงานเรียบร้อยแล้ว)',
     'driver_release_assignment_failed':
         '배정 반납에 실패했습니다. 다시 시도해 주세요.\n(ไม่สามารถคืนงานได้ กรุณาลองอีกครั้ง)',
     'driver_release_assignment_blocked':
@@ -6333,8 +6284,7 @@ class AppLocalizations {
     'driver_release_reason_VEHICLE_BREAKDOWN': '차량 고장 / รถเสีย',
     'driver_release_reason_ACCIDENT': '사고 / อุบัติเหตุ',
     'driver_release_reason_DRIVER_ILLNESS': '질병 / คนขับป่วย',
-    'driver_release_reason_FAMILY_EMERGENCY':
-        '가족 긴급 상황 / เหตุฉุกเฉินครอบครัว',
+    'driver_release_reason_FAMILY_EMERGENCY': '가족 긴급 상황 / เหตุฉุกเฉินครอบครัว',
     'driver_release_reason_SCHEDULE_CONFLICT': '일정 충돌 / ตารางงานซ้ำซ้อน',
     'driver_release_reason_LOCATION_TOO_FAR': '거리 문제 / จุดรับอยู่ไกลเกินไป',
     'driver_release_reason_OTHER': '기타 / อื่นๆ',
