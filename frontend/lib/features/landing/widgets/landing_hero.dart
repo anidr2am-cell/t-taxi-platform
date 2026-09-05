@@ -69,8 +69,8 @@ class LandingHero extends StatelessWidget {
             ),
           Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: isWide ? 36 : 20,
-              vertical: isWide ? 40 : 24,
+              horizontal: isWide ? 36 : (embeddedInCarousel ? 16 : 20),
+              vertical: isWide ? 40 : (embeddedInCarousel ? 14 : 24),
             ),
             child: isWide
                 ? Row(
@@ -78,7 +78,13 @@ class LandingHero extends StatelessWidget {
                         ? CrossAxisAlignment.stretch
                         : CrossAxisAlignment.center,
                     children: [
-                      Expanded(child: _heroCopy(l10n, compact: false)),
+                      Expanded(
+                        child: _heroCopy(
+                          l10n,
+                          compact: false,
+                          compressForCarousel: false,
+                        ),
+                      ),
                       const SizedBox(width: 32),
                       desktopBookingWidget ??
                           _ctaColumn(
@@ -86,6 +92,7 @@ class LandingHero extends StatelessWidget {
                             onBook,
                             fullWidth: false,
                             compact: false,
+                            compressForCarousel: false,
                           ),
                     ],
                   )
@@ -95,9 +102,19 @@ class LandingHero extends StatelessWidget {
                         ? MainAxisAlignment.spaceBetween
                         : MainAxisAlignment.start,
                     children: [
-                      _heroCopy(l10n, compact: true),
+                      _heroCopy(
+                        l10n,
+                        compact: true,
+                        compressForCarousel: embeddedInCarousel,
+                      ),
                       if (!embeddedInCarousel) const SizedBox(height: 20),
-                      _ctaColumn(l10n, onBook, fullWidth: true, compact: true),
+                      _ctaColumn(
+                        l10n,
+                        onBook,
+                        fullWidth: true,
+                        compact: true,
+                        compressForCarousel: embeddedInCarousel,
+                      ),
                     ],
                   ),
           ),
@@ -106,7 +123,11 @@ class LandingHero extends StatelessWidget {
     );
   }
 
-  Widget _heroCopy(AppLocalizations l10n, {required bool compact}) {
+  Widget _heroCopy(
+    AppLocalizations l10n, {
+    required bool compact,
+    required bool compressForCarousel,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -114,20 +135,26 @@ class LandingHero extends StatelessWidget {
           l10n.t('landing_hero_eyebrow'),
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.82),
-            fontSize: 12,
+            fontSize: compressForCarousel ? 11 : 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
-            height: 1.3,
+            height: compressForCarousel ? 1.2 : 1.3,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: compressForCarousel ? 6 : 10),
         Text(
           l10n.t('landing_hero_title'),
+          maxLines: compressForCarousel ? 2 : null,
+          overflow: compressForCarousel ? TextOverflow.ellipsis : null,
           style: TextStyle(
             color: Colors.white,
-            fontSize: compact ? 24 : 30,
+            fontSize: compressForCarousel
+                ? 20
+                : compact
+                ? 24
+                : 30,
             fontWeight: FontWeight.w700,
-            height: 1.2,
+            height: compressForCarousel ? 1.15 : 1.2,
             shadows: const [
               Shadow(
                 color: Color(0x66000000),
@@ -137,23 +164,25 @@ class LandingHero extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          l10n.t('landing_hero_body'),
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.9),
-            fontSize: compact ? 14 : 15,
-            height: 1.45,
-            shadows: const [
-              Shadow(
-                color: Color(0x55000000),
-                blurRadius: 8,
-                offset: Offset(0, 1),
-              ),
-            ],
+        if (!compressForCarousel) ...[
+          const SizedBox(height: 10),
+          Text(
+            l10n.t('landing_hero_body'),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: compact ? 14 : 15,
+              height: 1.45,
+              shadows: const [
+                Shadow(
+                  color: Color(0x55000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
           ),
-        ),
-        if (!compact) ...[
+        ],
+        if (!compact && !compressForCarousel) ...[
           const SizedBox(height: 12),
           Row(
             children: [
@@ -185,6 +214,7 @@ class LandingHero extends StatelessWidget {
     VoidCallback onBook, {
     required bool fullWidth,
     required bool compact,
+    required bool compressForCarousel,
   }) {
     final button = Semantics(
       button: true,
@@ -216,8 +246,10 @@ class LandingHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(width: double.infinity, child: button),
-          const SizedBox(height: 8),
-          helper,
+          if (!compressForCarousel) ...[
+            const SizedBox(height: 8),
+            helper,
+          ],
         ],
       );
     }
@@ -227,8 +259,10 @@ class LandingHero extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         IntrinsicWidth(child: button),
-        const SizedBox(height: 8),
-        helper,
+        if (!compressForCarousel) ...[
+          const SizedBox(height: 8),
+          helper,
+        ],
       ],
     );
   }

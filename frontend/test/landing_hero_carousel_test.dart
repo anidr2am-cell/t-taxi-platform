@@ -69,6 +69,14 @@ Widget _wrapLanding({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('mobile carousel frame targets ~300px at 328px content width', () {
+    expect(LandingHeroCarouselLayout.mobileReferenceHeroHeight, 300);
+    expect(
+      LandingHeroCarouselLayout.mobileAspectRatio,
+      closeTo(328 / 300, 0.001),
+    );
+  });
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });

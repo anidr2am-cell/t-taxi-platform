@@ -14,14 +14,19 @@ abstract final class LandingHeroCarouselLayout {
   static const carouselHorizontalMargin = 32.0;
 
   static const mobileReferenceViewportWidth = 360.0;
-  static const mobileReferenceHeroHeight = 520.0;
+  /// ~57% of the legacy 520px hero; fits promo banners at 328px content width.
+  static const mobileReferenceHeroHeight = 300.0;
 
   static const desktopReferenceViewportWidth = 1100.0;
+  /// Target ~388px (57% of legacy 680). Not used while [LandingBookingWidget]
+  /// overflows the shorter frame (~269px); kept for banner-aspect reference.
+  static const desktopHeroHeightWithBookingWidgetTarget = 388.0;
+  /// ~57% of legacy 480px — used when no desktop booking widget is shown.
+  static const desktopHeroHeightWithoutBookingWidget = 274.0;
+  /// Legacy desktop frame height when the booking widget is present.
   static const desktopHeroHeightWithBookingWidget = 680.0;
-  static const desktopHeroHeightWithoutBookingWidget = 480.0;
 
-  /// Matches the pre-carousel fixed 520px hero at a 360px-wide viewport.
-  /// 360px viewport − 32px margin → 328px content width → 328 / 520 ≈ 0.631.
+  /// 360px viewport − 32px margin → 328px content width → 328 / 300 ≈ 1.093.
   static double get mobileAspectRatio =>
       (mobileReferenceViewportWidth - carouselHorizontalMargin) /
       mobileReferenceHeroHeight;

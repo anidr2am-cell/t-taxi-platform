@@ -181,6 +181,27 @@ void main() {
       expect(find.byKey(const Key('landing_hero_carousel')), findsOneWidget);
     });
 
+    testWidgets('carousel mobile hero omits body and helper copy', (tester) async {
+      await pumpLanding(tester, width: 360, locale: const Locale('ko'));
+
+      expect(
+        find.text(AppLocalizations('ko').t('landing_hero_title')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizations('ko').t('landing_hero_cta')),
+        findsWidgets,
+      );
+      expect(
+        find.text(AppLocalizations('ko').t('landing_hero_body')),
+        findsNothing,
+      );
+      expect(
+        find.text(AppLocalizations('ko').t('landing_hero_helper')),
+        findsNothing,
+      );
+    });
+
     testWidgets('has no overflow at 768px', (tester) async {
       await pumpLanding(tester, width: 768);
       expect(tester.takeException(), isNull);
