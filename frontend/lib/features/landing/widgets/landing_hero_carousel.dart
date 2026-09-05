@@ -42,6 +42,8 @@ abstract final class LandingHeroCarouselLayout {
 }
 
 class LandingHeroCarousel extends StatefulWidget {
+  static const autoSlideInterval = Duration(seconds: 5);
+
   const LandingHeroCarousel({
     super.key,
     required this.onBook,
@@ -125,7 +127,7 @@ class _LandingHeroCarouselState extends State<LandingHeroCarousel> {
 
   void _startAutoSlide() {
     _autoSlideTimer?.cancel();
-    _autoSlideTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+    _autoSlideTimer = Timer.periodic(LandingHeroCarousel.autoSlideInterval, (_) {
       if (!mounted || !_pageController.hasClients || _pageCount <= 1) return;
       final nextPage = (_currentPage + 1) % _pageCount;
       _pageController.animateToPage(
