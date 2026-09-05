@@ -79,11 +79,7 @@ class LandingHero extends StatelessWidget {
                         : CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        child: _heroCopy(
-                          l10n,
-                          compact: false,
-                          compressForCarousel: false,
-                        ),
+                        child: _heroCopy(l10n, compact: false),
                       ),
                       const SizedBox(width: 32),
                       desktopBookingWidget ??
@@ -92,28 +88,51 @@ class LandingHero extends StatelessWidget {
                             onBook,
                             fullWidth: false,
                             compact: false,
-                            compressForCarousel: false,
                           ),
                     ],
                   )
-                : Column(
+                : embeddedInCarousel
+                ? Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: embeddedInCarousel
-                        ? MainAxisAlignment.spaceBetween
-                        : MainAxisAlignment.start,
                     children: [
-                      _heroCopy(
-                        l10n,
-                        compact: true,
-                        compressForCarousel: embeddedInCarousel,
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.topLeft,
+                              child: SizedBox(
+                                width: constraints.maxWidth,
+                                child: _heroCopy(
+                                  l10n,
+                                  compact: true,
+                                  titleMaxLines: 2,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                      if (!embeddedInCarousel) const SizedBox(height: 20),
+                      const SizedBox(height: 8),
                       _ctaColumn(
                         l10n,
                         onBook,
                         fullWidth: true,
                         compact: true,
-                        compressForCarousel: embeddedInCarousel,
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      _heroCopy(l10n, compact: true),
+                      const SizedBox(height: 20),
+                      _ctaColumn(
+                        l10n,
+                        onBook,
+                        fullWidth: true,
+                        compact: true,
                       ),
                     ],
                   ),
@@ -126,7 +145,7 @@ class LandingHero extends StatelessWidget {
   Widget _heroCopy(
     AppLocalizations l10n, {
     required bool compact,
-    required bool compressForCarousel,
+    int? titleMaxLines,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,26 +154,22 @@ class LandingHero extends StatelessWidget {
           l10n.t('landing_hero_eyebrow'),
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.82),
-            fontSize: compressForCarousel ? 11 : 12,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
-            height: compressForCarousel ? 1.2 : 1.3,
+            height: 1.3,
           ),
         ),
-        SizedBox(height: compressForCarousel ? 6 : 10),
+        const SizedBox(height: 10),
         Text(
           l10n.t('landing_hero_title'),
-          maxLines: compressForCarousel ? 2 : null,
-          overflow: compressForCarousel ? TextOverflow.ellipsis : null,
+          maxLines: titleMaxLines,
+          overflow: titleMaxLines != null ? TextOverflow.ellipsis : null,
           style: TextStyle(
             color: Colors.white,
-            fontSize: compressForCarousel
-                ? 20
-                : compact
-                ? 24
-                : 30,
+            fontSize: compact ? 24 : 30,
             fontWeight: FontWeight.w700,
-            height: compressForCarousel ? 1.15 : 1.2,
+            height: 1.2,
             shadows: const [
               Shadow(
                 color: Color(0x66000000),
@@ -164,25 +179,23 @@ class LandingHero extends StatelessWidget {
             ],
           ),
         ),
-        if (!compressForCarousel) ...[
-          const SizedBox(height: 10),
-          Text(
-            l10n.t('landing_hero_body'),
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: compact ? 14 : 15,
-              height: 1.45,
-              shadows: const [
-                Shadow(
-                  color: Color(0x55000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
+        const SizedBox(height: 10),
+        Text(
+          l10n.t('landing_hero_body'),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontSize: compact ? 14 : 15,
+            height: 1.45,
+            shadows: const [
+              Shadow(
+                color: Color(0x55000000),
+                blurRadius: 8,
+                offset: Offset(0, 1),
+              ),
+            ],
           ),
-        ],
-        if (!compact && !compressForCarousel) ...[
+        ),
+        if (!compact) ...[
           const SizedBox(height: 12),
           Row(
             children: [
@@ -214,7 +227,6 @@ class LandingHero extends StatelessWidget {
     VoidCallback onBook, {
     required bool fullWidth,
     required bool compact,
-    required bool compressForCarousel,
   }) {
     final button = Semantics(
       button: true,
@@ -246,10 +258,8 @@ class LandingHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(width: double.infinity, child: button),
-          if (!compressForCarousel) ...[
-            const SizedBox(height: 8),
-            helper,
-          ],
+          const SizedBox(height: 6),
+          helper,
         ],
       );
     }
@@ -259,10 +269,8 @@ class LandingHero extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         IntrinsicWidth(child: button),
-        if (!compressForCarousel) ...[
-          const SizedBox(height: 8),
-          helper,
-        ],
+        const SizedBox(height: 8),
+        helper,
       ],
     );
   }

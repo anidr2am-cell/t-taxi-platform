@@ -181,7 +181,7 @@ void main() {
       expect(find.byKey(const Key('landing_hero_carousel')), findsOneWidget);
     });
 
-    testWidgets('carousel mobile hero omits body and helper copy', (tester) async {
+    testWidgets('carousel mobile hero shows body and helper copy', (tester) async {
       await pumpLanding(tester, width: 360, locale: const Locale('ko'));
 
       expect(
@@ -189,17 +189,36 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text(AppLocalizations('ko').t('landing_hero_cta')),
-        findsWidgets,
-      );
-      expect(
         find.text(AppLocalizations('ko').t('landing_hero_body')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(
         find.text(AppLocalizations('ko').t('landing_hero_helper')),
-        findsNothing,
+        findsOneWidget,
       );
+      expect(
+        find.text(AppLocalizations('ko').t('landing_hero_cta')),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('carousel mobile hero copy fits without overflow for all locales', (
+      tester,
+    ) async {
+      for (final code in AppLocalizations.supportedLanguages) {
+        await pumpLanding(tester, width: 360, locale: Locale(code));
+        expect(tester.takeException(), isNull, reason: 'overflow at $code');
+        expect(
+          find.text(AppLocalizations(code).t('landing_hero_body')),
+          findsOneWidget,
+          reason: 'body for $code',
+        );
+        expect(
+          find.text(AppLocalizations(code).t('landing_hero_helper')),
+          findsOneWidget,
+          reason: 'helper for $code',
+        );
+      }
     });
 
     testWidgets('has no overflow at 768px', (tester) async {
