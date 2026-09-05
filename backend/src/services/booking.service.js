@@ -961,10 +961,22 @@ class BookingService {
       }
 
       const chargeItems = [...pricing.chargeItems];
+      let appliedCouponItem = null;
       if (coupon) {
-        const couponItem = this.couponService.buildCouponChargeItem(coupon, pricing.subtotal);
+        const discountBase = Number(
+          pricing.subtotal
+          ?? pricing.totalAmount
+          ?? chargeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+        );
+        const couponItem = this.couponService.buildCouponChargeItem(coupon, discountBase);
         if (couponItem) {
           chargeItems.push(couponItem);
+          appliedCouponItem = couponItem;
+        } else {
+          throw new AppError('Coupon discount could not be applied to this booking', {
+            statusCode: HTTP_STATUS.BAD_REQUEST,
+            errorCode: ERROR_CODES.COUPON_NOT_AVAILABLE,
+          });
         }
       }
 
@@ -1131,7 +1143,7 @@ class BookingService {
         }, createdBy);
       }
 
-      if (coupon) {
+      if (appliedCouponItem) {
         await this.couponService.markCouponUsed(conn, coupon.id, bookingId, authUser.id);
       }
 

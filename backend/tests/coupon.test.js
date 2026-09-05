@@ -190,7 +190,7 @@ const CREATE_INPUT = {
   },
 };
 
-function createBookingHarness({ couponService, authUser = { id: CUSTOMER_ID, role: 'CUSTOMER' }, conn } = {}) {
+function createBookingHarness({ couponService, authUser = { id: CUSTOMER_ID, role: 'CUSTOMER' }, conn, pricingService } = {}) {
   const calls = {
     chargeItems: [],
     markUsed: [],
@@ -265,16 +265,18 @@ function createBookingHarness({ couponService, authUser = { id: CUSTOMER_ID, rol
     },
   };
 
-  const service = new BookingService(
-    { async getConnection() { return resolvedConn; } },
-    bookingRepository,
-    { async generateNext() { return 'TX202607130001'; } },
-    {
+  const resolvedPricingService = pricingService ?? {
       async calculate() { return SERVER_PRICE; },
       async resolveServiceType() {
         return { id: 1, code: 'AIRPORT_PICKUP', name: 'Airport Pickup' };
       },
-    },
+    };
+
+  const service = new BookingService(
+    { async getConnection() { return resolvedConn; } },
+    bookingRepository,
+    { async generateNext() { return 'TX202607130001'; } },
+    resolvedPricingService,
     { async recommend() { return { recommendedVehicle: 'SUV' }; } },
     { async findTypeByCode() { return { id: 2, code: 'SUV', name: 'SUV' }; } },
     {
@@ -319,6 +321,33 @@ describe('BookingService.createBooking with coupon', () => {
       () => service.createBooking({ ...CREATE_INPUT, couponId: 3 }, null),
       (err) => err.errorCode === 'COUPON_AUTH_REQUIRED',
     );
+  });
+
+  test('applies coupon when pricing response omits subtotal', async () => {
+    const { service, calls, authUser } = createBookingHarness({
+      pricingService: {
+        async calculate() {
+          return {
+            currency: 'THB',
+            totalAmount: 1400,
+            chargeItems: SERVER_PRICE.chargeItems,
+          };
+        },
+        async resolveServiceType() {
+          return { id: 1, code: 'AIRPORT_PICKUP', name: 'Airport Pickup' };
+        },
+      },
+    });
+
+    const result = await service.createBooking(
+      { ...CREATE_INPUT, couponId: 3 },
+      authUser,
+    );
+
+    const couponItem = calls.chargeItems.find((item) => item.chargeType === 'COUPON');
+    assert.ok(couponItem);
+    assert.equal(couponItem.amount, -500);
+    assert.equal(result.data.totalAmount, 900);
   });
 
   test('adds COUPON charge item, marks coupon used, and accrual uses discounted total', async () => {
