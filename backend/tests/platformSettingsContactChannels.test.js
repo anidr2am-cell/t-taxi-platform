@@ -110,3 +110,71 @@ test('updateContactChannels persists guest lookup banner settings', async () => 
     '',
   );
 });
+
+test('getGuestLookupInquiryPublic returns banner with KAKAO/LINE channels only', async () => {
+  const service = new PlatformSettingsService({
+    async findByGroup(groupName) {
+      if (groupName !== 'contact_channels') return [];
+      return [
+        { key_name: 'guestLookupInquiryBannerEnabled', value: 'true' },
+        { key_name: 'guestLookupInquiryBannerMessage', value: '관리자에게 문의하세요' },
+        { key_name: 'contactKakaoEnabled', value: 'true' },
+        { key_name: 'contactKakaoDisplayName', value: 'KakaoTalk' },
+        { key_name: 'contactKakaoAddUrl', value: 'https://open.kakao.com/o/s/example' },
+        { key_name: 'contactLineEnabled', value: 'true' },
+        { key_name: 'contactLineDisplayName', value: 'LINE' },
+        { key_name: 'contactLineAddUrl', value: 'https://line.me/R/ti/p/@example' },
+      ];
+    },
+    async upsert() {},
+  });
+
+  const settings = await service.getGuestLookupInquiryPublic();
+
+  assert.equal(settings.enabled, true);
+  assert.equal(settings.message, '관리자에게 문의하세요');
+  assert.equal(settings.channels.length, 2);
+  assert.deepEqual(settings.channels.map((channel) => channel.code), ['KAKAO', 'LINE']);
+});
+
+test('getGuestLookupInquiryPublic excludes disabled or empty URL channels', async () => {
+  const service = new PlatformSettingsService({
+    async findByGroup(groupName) {
+      if (groupName !== 'contact_channels') return [];
+      return [
+        { key_name: 'guestLookupInquiryBannerEnabled', value: 'true' },
+        { key_name: 'guestLookupInquiryBannerMessage', value: 'LINE만 가능' },
+        { key_name: 'contactKakaoEnabled', value: 'true' },
+        { key_name: 'contactKakaoAddUrl', value: '' },
+        { key_name: 'contactLineEnabled', value: 'true' },
+        { key_name: 'contactLineAddUrl', value: 'https://line.me/R/ti/p/@example' },
+      ];
+    },
+    async upsert() {},
+  });
+
+  const settings = await service.getGuestLookupInquiryPublic();
+
+  assert.equal(settings.enabled, true);
+  assert.equal(settings.channels.length, 1);
+  assert.equal(settings.channels[0].code, 'LINE');
+});
+
+test('getGuestLookupInquiryPublic returns enabled false when banner disabled', async () => {
+  const service = new PlatformSettingsService({
+    async findByGroup(groupName) {
+      if (groupName !== 'contact_channels') return [];
+      return [
+        { key_name: 'guestLookupInquiryBannerEnabled', value: 'false' },
+        { key_name: 'contactLineEnabled', value: 'true' },
+        { key_name: 'contactLineAddUrl', value: 'https://line.me/R/ti/p/@example' },
+      ];
+    },
+    async upsert() {},
+  });
+
+  const settings = await service.getGuestLookupInquiryPublic();
+
+  assert.equal(settings.enabled, false);
+  assert.equal(settings.channels.length, 1);
+});

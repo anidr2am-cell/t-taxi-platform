@@ -354,6 +354,13 @@ describe('platform settings routes', () => {
           _userId: userId,
         };
       },
+      async getGuestLookupInquiryPublic() {
+        return {
+          enabled: false,
+          message: '',
+          channels: [],
+        };
+      },
     }));
   });
 
@@ -448,5 +455,15 @@ describe('platform settings routes', () => {
     assert.equal(res.body.data.guestLookupInquiryBannerMessage, '실시간 문의');
     assert.equal(res.body.data.contactLineAddUrl, 'https://line.me/R/ti/p/@example');
     assert.equal(res.body.data.contactKakaoAddUrl, '');
+  });
+
+  test('guest lookup inquiry public endpoint requires no auth', async () => {
+    const res = await request(app)
+      .get('/api/v1/settings/guest-lookup-inquiry')
+      .expect(200);
+
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.data.enabled, false);
+    assert.deepEqual(res.body.data.channels, []);
   });
 });

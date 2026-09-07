@@ -8,6 +8,9 @@ const ERROR_CODES = require('../constants/errorCodes');
 const service = () => container.get('platformSettingsService');
 
 const getPublic = asyncHandler(async (_req, res) => success(res, await service().getPublic()));
+const getGuestLookupInquiryPublic = asyncHandler(async (_req, res) => success(
+  res, await service().getGuestLookupInquiryPublic(),
+));
 const getAdmin = asyncHandler(async (_req, res) => success(res, await service().getAdmin()));
 const updateAdmin = asyncHandler(async (req, res) => success(
   res, await service().update(req.body, req.user.id), 'Settings updated',
@@ -52,6 +55,7 @@ const handleUploadError = (err, req, res, next) => {
 
 module.exports = {
   getPublic,
+  getGuestLookupInquiryPublic,
   getAdmin,
   updateAdmin,
   getContactChannelsAdmin,

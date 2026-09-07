@@ -16,6 +16,9 @@ class PlatformSettingsApiService {
 
   Future<Map<String, dynamic>> getPublic() => _get('/settings/public');
 
+  Future<Map<String, dynamic>> getGuestLookupInquiry() =>
+      _get('/settings/guest-lookup-inquiry');
+
   Future<Map<String, dynamic>> getAdmin() =>
       _get('/admin/settings', admin: true);
 

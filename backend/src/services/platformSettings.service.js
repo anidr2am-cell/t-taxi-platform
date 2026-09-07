@@ -71,6 +71,37 @@ class PlatformSettingsService {
     return { channels: await this.buildContactChannelsPublic(values) };
   }
 
+  async getGuestLookupInquiryPublic() {
+    const values = await this.getContactChannelValues();
+    const channelDefs = [
+      {
+        code: 'KAKAO',
+        enabled: this.truthy(values.contactKakaoEnabled),
+        displayName: values.contactKakaoDisplayName || 'KakaoTalk',
+        addUrl: values.contactKakaoAddUrl || '',
+      },
+      {
+        code: 'LINE',
+        enabled: this.truthy(values.contactLineEnabled),
+        displayName: values.contactLineDisplayName || 'LINE',
+        addUrl: values.contactLineAddUrl || '',
+      },
+    ];
+    const channels = channelDefs
+      .filter((channel) => channel.enabled && String(channel.addUrl).trim())
+      .map(({ code, displayName, addUrl }) => ({
+        code,
+        displayName,
+        addUrl: String(addUrl).trim(),
+        enabled: true,
+      }));
+    return {
+      enabled: this.truthy(values.guestLookupInquiryBannerEnabled),
+      message: values.guestLookupInquiryBannerMessage || '',
+      channels,
+    };
+  }
+
   truthy(value) {
     return String(value ?? '').trim().toLowerCase() === 'true' || value === '1';
   }

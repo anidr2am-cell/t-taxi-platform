@@ -12,6 +12,7 @@ import '../../auth/services/auth_token_storage.dart';
 import '../utils/booking_status_display.dart';
 import '../utils/customer_booking_format.dart';
 import '../utils/location_display.dart';
+import '../widgets/guest_booking_lookup_inquiry_banner.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/assigned_driver_status_card.dart';
@@ -411,6 +412,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const GuestBookingLookupInquiryBanner(),
+        const SizedBox(height: AppTokens.spaceMd),
         AppUi.surfaceCard(
           backgroundColor: AppTokens.primaryLight,
           child: Column(
