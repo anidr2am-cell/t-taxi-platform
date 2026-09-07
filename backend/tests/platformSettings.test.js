@@ -312,6 +312,48 @@ describe('platform settings routes', () => {
         fs.writeFileSync(filePath, PNG_BYTES);
         return filePath;
       },
+      async getContactChannelsAdmin() {
+        return {
+          guestLookupInquiryBannerEnabled: false,
+          guestLookupInquiryBannerMessage: '',
+          contactLineEnabled: false,
+          contactLineDisplayName: '',
+          contactLineAddUrl: '',
+          contactLineAccountId: '',
+          contactKakaoEnabled: false,
+          contactKakaoDisplayName: '',
+          contactKakaoAddUrl: '',
+          contactKakaoAccountId: '',
+          contactWhatsappEnabled: false,
+          contactWhatsappDisplayName: '',
+          contactWhatsappPhoneNumber: '',
+          contactWechatEnabled: false,
+          contactWechatDisplayName: '',
+          contactWechatAccountId: '',
+        };
+      },
+      async updateContactChannels(body, userId) {
+        return {
+          guestLookupInquiryBannerEnabled: body.guestLookupInquiryBannerEnabled === true
+            || body.guestLookupInquiryBannerEnabled === 'true',
+          guestLookupInquiryBannerMessage: body.guestLookupInquiryBannerMessage || '',
+          contactLineEnabled: false,
+          contactLineDisplayName: '',
+          contactLineAddUrl: body.contactLineAddUrl || '',
+          contactLineAccountId: '',
+          contactKakaoEnabled: false,
+          contactKakaoDisplayName: '',
+          contactKakaoAddUrl: body.contactKakaoAddUrl || '',
+          contactKakaoAccountId: '',
+          contactWhatsappEnabled: false,
+          contactWhatsappDisplayName: '',
+          contactWhatsappPhoneNumber: '',
+          contactWechatEnabled: false,
+          contactWechatDisplayName: '',
+          contactWechatAccountId: '',
+          _userId: userId,
+        };
+      },
     }));
   });
 
@@ -374,5 +416,37 @@ describe('platform settings routes', () => {
     await request(app)
       .get('/api/v1/settings/assets/unknown')
       .expect(404);
+  });
+
+  test('admin contact-channels GET requires admin auth', async () => {
+    await request(app)
+      .get('/api/v1/admin/settings/contact-channels')
+      .expect(401);
+
+    const res = await request(app)
+      .get('/api/v1/admin/settings/contact-channels')
+      .set('Authorization', `Bearer ${sign('ADMIN', 1)}`)
+      .expect(200);
+
+    assert.equal(res.body.data.guestLookupInquiryBannerEnabled, false);
+    assert.equal(res.body.data.contactKakaoAddUrl, '');
+  });
+
+  test('admin contact-channels PUT saves banner and messenger URLs', async () => {
+    const res = await request(app)
+      .put('/api/v1/admin/settings/contact-channels')
+      .set('Authorization', `Bearer ${sign('ADMIN', 1)}`)
+      .send({
+        guestLookupInquiryBannerEnabled: true,
+        guestLookupInquiryBannerMessage: '실시간 문의',
+        contactKakaoAddUrl: '',
+        contactLineAddUrl: 'https://line.me/R/ti/p/@example',
+      })
+      .expect(200);
+
+    assert.equal(res.body.data.guestLookupInquiryBannerEnabled, true);
+    assert.equal(res.body.data.guestLookupInquiryBannerMessage, '실시간 문의');
+    assert.equal(res.body.data.contactLineAddUrl, 'https://line.me/R/ti/p/@example');
+    assert.equal(res.body.data.contactKakaoAddUrl, '');
   });
 });

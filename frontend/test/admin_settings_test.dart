@@ -428,11 +428,57 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('admin settings loads contact channel settings', (tester) async {
+    final api = _FakePlatformSettingsApi();
+
+    await tester.pumpWidget(_wrap(api: api, height: 1400));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(api.contactChannelsRequested, isTrue);
+    expect(find.text('Admin LINE QR'), findsOneWidget);
+  });
+
+  testWidgets('guest lookup inquiry save sends contact channel payload', (
+    tester,
+  ) async {
+    final api = _FakePlatformSettingsApi();
+
+    await tester.pumpWidget(_wrap(api: api, height: 1400));
+    await tester.pumpAndSettle();
+
+    final saved = await api.updateContactChannels({
+      'guestLookupInquiryBannerEnabled': true,
+      'guestLookupInquiryBannerMessage': 'Send us a message for live updates',
+      'contactKakaoAddUrl': '',
+      'contactLineAddUrl': 'https://line.me/R/ti/p/@example',
+      'contactLineEnabled': false,
+      'contactLineDisplayName': '',
+      'contactLineAccountId': '',
+      'contactKakaoEnabled': false,
+      'contactKakaoDisplayName': '',
+      'contactKakaoAccountId': '',
+      'contactWhatsappEnabled': false,
+      'contactWhatsappDisplayName': '',
+      'contactWhatsappPhoneNumber': '',
+      'contactWechatEnabled': false,
+      'contactWechatDisplayName': '',
+      'contactWechatAccountId': '',
+    });
+
+    expect(saved['guestLookupInquiryBannerEnabled'], isTrue);
+    expect(saved['guestLookupInquiryBannerMessage'],
+        'Send us a message for live updates');
+    expect(saved['contactLineAddUrl'], 'https://line.me/R/ti/p/@example');
+    expect(api.savedContactChannels, isNotNull);
+  });
 }
 
 class _FakePlatformSettingsApi extends PlatformSettingsApiService {
   _FakePlatformSettingsApi({
     Map<String, dynamic>? initial,
+    Map<String, dynamic>? initialContactChannels,
     this.uploadError,
     this.uploadCompleter,
   }) : settings = {
@@ -444,15 +490,52 @@ class _FakePlatformSettingsApi extends PlatformSettingsApiService {
          'lineQrImageUrl': null,
          'promptPayQrImageUrl': null,
          ...?initial,
+       },
+       contactChannels = {
+         'guestLookupInquiryBannerEnabled': false,
+         'guestLookupInquiryBannerMessage': '',
+         'contactLineEnabled': false,
+         'contactLineDisplayName': '',
+         'contactLineAddUrl': '',
+         'contactLineAccountId': '',
+         'contactKakaoEnabled': false,
+         'contactKakaoDisplayName': '',
+         'contactKakaoAddUrl': '',
+         'contactKakaoAccountId': '',
+         'contactWhatsappEnabled': false,
+         'contactWhatsappDisplayName': '',
+         'contactWhatsappPhoneNumber': '',
+         'contactWechatEnabled': false,
+         'contactWechatDisplayName': '',
+         'contactWechatAccountId': '',
+         ...?initialContactChannels,
        };
 
   Map<String, dynamic> settings;
+  Map<String, dynamic> contactChannels;
+  Map<String, dynamic>? savedContactChannels;
+  bool contactChannelsRequested = false;
   final Object? uploadError;
   final Completer<Map<String, dynamic>>? uploadCompleter;
   final uploadedKinds = <String>[];
 
   @override
   Future<Map<String, dynamic>> getAdmin() async => settings;
+
+  @override
+  Future<Map<String, dynamic>> getContactChannelsAdmin() async {
+    contactChannelsRequested = true;
+    return Map<String, dynamic>.from(contactChannels);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateContactChannels(
+    Map<String, dynamic> values,
+  ) async {
+    savedContactChannels = Map<String, dynamic>.from(values);
+    contactChannels = {...contactChannels, ...values};
+    return Map<String, dynamic>.from(contactChannels);
+  }
 
   @override
   Future<Map<String, dynamic>> update(Map<String, String> values) async =>

@@ -19,6 +19,25 @@ class PlatformSettingsApiService {
   Future<Map<String, dynamic>> getAdmin() =>
       _get('/admin/settings', admin: true);
 
+  Future<Map<String, dynamic>> getContactChannelsAdmin() =>
+      _get('/admin/settings/contact-channels', admin: true);
+
+  Future<Map<String, dynamic>> updateContactChannels(
+    Map<String, dynamic> values,
+  ) async {
+    final token = await _adminToken();
+    final response = await http.put(
+      Uri.parse('$_base/admin/settings/contact-channels'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(values),
+    );
+    return _decode(response);
+  }
+
   Future<Map<String, dynamic>> update(Map<String, String> values) async {
     final token = await _adminToken();
     final response = await http.put(

@@ -31,9 +31,16 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     ])
       key: TextEditingController(),
   };
+  final _guestLookupBannerMessageController = TextEditingController();
+  final _contactKakaoUrlController = TextEditingController();
+  final _contactLineUrlController = TextEditingController();
+
   Map<String, dynamic>? _settings;
+  Map<String, dynamic>? _contactChannels;
+  bool _guestLookupBannerEnabled = false;
   bool _loading = true;
   bool _saving = false;
+  bool _savingContactChannels = false;
   String? _error;
   final _localImagePreviews = <String, Uint8List>{};
 
@@ -48,18 +55,27 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     for (final value in _controllers.values) {
       value.dispose();
     }
+    _guestLookupBannerMessageController.dispose();
+    _contactKakaoUrlController.dispose();
+    _contactLineUrlController.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
     try {
-      final data = await widget.api.getAdmin();
+      final results = await Future.wait([
+        widget.api.getAdmin(),
+        widget.api.getContactChannelsAdmin(),
+      ]);
+      final data = results[0];
+      final contactChannels = results[1];
       for (final entry in _controllers.entries) {
         entry.value.text = data[entry.key] as String? ?? '';
       }
       if (mounted) {
         setState(() {
           _settings = data;
+          _applyContactChannels(contactChannels);
           _loading = false;
           _error = null;
           _localImagePreviews.clear();
@@ -73,6 +89,31 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         });
       }
     }
+  }
+
+  void _applyContactChannels(Map<String, dynamic> contactChannels) {
+    _contactChannels = Map<String, dynamic>.from(contactChannels);
+    _guestLookupBannerEnabled =
+        contactChannels['guestLookupInquiryBannerEnabled'] == true;
+    _guestLookupBannerMessageController.text =
+        contactChannels['guestLookupInquiryBannerMessage'] as String? ?? '';
+    _contactKakaoUrlController.text =
+        contactChannels['contactKakaoAddUrl'] as String? ?? '';
+    _contactLineUrlController.text =
+        contactChannels['contactLineAddUrl'] as String? ?? '';
+  }
+
+  Map<String, dynamic> _contactChannelsPayload() {
+    final current = Map<String, dynamic>.from(_contactChannels ?? {});
+    return {
+      ...current,
+      'guestLookupInquiryBannerEnabled': _guestLookupBannerEnabled,
+      'guestLookupInquiryBannerMessage': _guestLookupBannerMessageController
+          .text
+          .trim(),
+      'contactKakaoAddUrl': _contactKakaoUrlController.text.trim(),
+      'contactLineAddUrl': _contactLineUrlController.text.trim(),
+    };
   }
 
   Future<void> _save() async {
@@ -95,6 +136,29 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _saveContactChannels() async {
+    setState(() => _savingContactChannels = true);
+    try {
+      final data = await widget.api.updateContactChannels(
+        _contactChannelsPayload(),
+      );
+      if (mounted) {
+        setState(() => _applyContactChannels(data));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.t('admin_settings_saved'))),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$err')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingContactChannels = false);
     }
   }
 
@@ -181,7 +245,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               _field('lineQrDescription', l10n.t('admin_settings_description')),
               _image('lineQrImageUrl'),
               KeyedSubtree(
-                key: const Key('admin_settings_upload_line_qr'),
+                key: const ValueKey('admin_settings_upload_line_qr'),
                 child: AppUi.secondaryButton(
                   label: l10n.t('admin_settings_upload_line_qr'),
                   icon: Icons.qr_code,
@@ -204,12 +268,74 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               _field('promptPayNumber', 'PromptPay'),
               _image('promptPayQrImageUrl'),
               KeyedSubtree(
-                key: const Key('admin_settings_upload_promptpay_qr'),
+                key: const ValueKey('admin_settings_upload_promptpay_qr'),
                 child: AppUi.secondaryButton(
                   label: l10n.t('admin_settings_upload_promptpay'),
                   icon: Icons.qr_code_2,
                   onPressed: _saving ? null : () => _upload('promptPayQr'),
                   fullWidth: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        AppUi.adminDetailSection(
+          context: context,
+          title: l10n.t('admin_settings_guest_lookup_inquiry'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              KeyedSubtree(
+                key: const ValueKey('admin_settings_guest_lookup_banner_toggle'),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    l10n.t('admin_settings_guest_lookup_banner_enabled'),
+                  ),
+                  value: _guestLookupBannerEnabled,
+                  onChanged: _savingContactChannels
+                      ? null
+                      : (value) =>
+                            setState(() => _guestLookupBannerEnabled = value),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                key: const ValueKey(
+                  'admin_settings_guest_lookup_banner_message',
+                ),
+                controller: _guestLookupBannerMessageController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: l10n.t(
+                    'admin_settings_guest_lookup_banner_message',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('admin_settings_guest_lookup_kakao_url'),
+                controller: _contactKakaoUrlController,
+                decoration: InputDecoration(
+                  labelText: l10n.t('admin_settings_guest_lookup_kakao_url'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('admin_settings_guest_lookup_line_url'),
+                controller: _contactLineUrlController,
+                decoration: InputDecoration(
+                  labelText: l10n.t('admin_settings_guest_lookup_line_url'),
+                ),
+              ),
+              const SizedBox(height: 12),
+              KeyedSubtree(
+                key: const ValueKey('admin_settings_guest_lookup_save'),
+                child: AppUi.primaryButton(
+                  label: l10n.t('admin_settings_guest_lookup_save'),
+                  loading: _savingContactChannels,
+                  onPressed: _savingContactChannels ? null : _saveContactChannels,
                 ),
               ),
             ],
@@ -232,6 +358,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       decoration: InputDecoration(labelText: label),
     ),
   );
+
   Widget _image(String key) {
     final previewBytes = _localImagePreviews[key];
     if (previewBytes != null) {

@@ -7,6 +7,7 @@ const ROLES = require('../constants/roles');
 const { upload } = require('../config/multer');
 const {
   adminSettingsUpdateSchema,
+  adminContactChannelsUpdateSchema,
   adminSettingsImageKindParamsSchema,
 } = require('../validators/platformSettings.validator');
 
@@ -19,6 +20,17 @@ router.put(
   adminOnly,
   validate({ body: adminSettingsUpdateSchema }),
   controller.updateAdmin,
+);
+router.get(
+  '/settings/contact-channels',
+  adminOnly,
+  controller.getContactChannelsAdmin,
+);
+router.put(
+  '/settings/contact-channels',
+  adminOnly,
+  validate({ body: adminContactChannelsUpdateSchema }),
+  controller.updateContactChannelsAdmin,
 );
 router.post(
   '/settings/images/:kind',

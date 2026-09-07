@@ -15,6 +15,7 @@ const GROUP = 'operations';
 const CONTACT_GROUP = 'contact_channels';
 const TEXT_KEYS = ['lineQrDescription', 'bankName', 'accountName', 'accountNumber', 'promptPayNumber'];
 const CONTACT_TEXT_KEYS = [
+  'guestLookupInquiryBannerEnabled', 'guestLookupInquiryBannerMessage',
   'contactLineEnabled', 'contactLineDisplayName', 'contactLineAddUrl', 'contactLineAccountId',
   'contactKakaoEnabled', 'contactKakaoDisplayName', 'contactKakaoAddUrl', 'contactKakaoAccountId',
   'contactWhatsappEnabled', 'contactWhatsappDisplayName', 'contactWhatsappPhoneNumber',
@@ -74,6 +75,40 @@ class PlatformSettingsService {
     return String(value ?? '').trim().toLowerCase() === 'true' || value === '1';
   }
 
+  toStorageBoolean(value) {
+    return this.truthy(value) ? 'true' : 'false';
+  }
+
+  async getContactChannelValues() {
+    const rows = await this.settingsRepository.findByGroup(CONTACT_GROUP);
+    return Object.fromEntries(rows.map((row) => [row.key_name, row.value]));
+  }
+
+  mapContactChannelsAdmin(values = {}) {
+    return {
+      guestLookupInquiryBannerEnabled: this.truthy(values.guestLookupInquiryBannerEnabled),
+      guestLookupInquiryBannerMessage: values.guestLookupInquiryBannerMessage || '',
+      contactLineEnabled: this.truthy(values.contactLineEnabled),
+      contactLineDisplayName: values.contactLineDisplayName || '',
+      contactLineAddUrl: values.contactLineAddUrl || '',
+      contactLineAccountId: values.contactLineAccountId || '',
+      contactKakaoEnabled: this.truthy(values.contactKakaoEnabled),
+      contactKakaoDisplayName: values.contactKakaoDisplayName || '',
+      contactKakaoAddUrl: values.contactKakaoAddUrl || '',
+      contactKakaoAccountId: values.contactKakaoAccountId || '',
+      contactWhatsappEnabled: this.truthy(values.contactWhatsappEnabled),
+      contactWhatsappDisplayName: values.contactWhatsappDisplayName || '',
+      contactWhatsappPhoneNumber: values.contactWhatsappPhoneNumber || '',
+      contactWechatEnabled: this.truthy(values.contactWechatEnabled),
+      contactWechatDisplayName: values.contactWechatDisplayName || '',
+      contactWechatAccountId: values.contactWechatAccountId || '',
+    };
+  }
+
+  async getContactChannelsAdmin() {
+    return this.mapContactChannelsAdmin(await this.getContactChannelValues());
+  }
+
   async buildContactChannelsPublic(values = {}) {
     const channels = [
       {
@@ -110,11 +145,23 @@ class PlatformSettingsService {
   }
 
   async updateContactChannels(input, userId) {
-    this.validateContactChannelUrls(input);
+    const normalized = { ...input };
+    for (const key of [
+      'guestLookupInquiryBannerEnabled',
+      'contactLineEnabled',
+      'contactKakaoEnabled',
+      'contactWhatsappEnabled',
+      'contactWechatEnabled',
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(normalized, key)) {
+        normalized[key] = this.toStorageBoolean(normalized[key]);
+      }
+    }
+    this.validateContactChannelUrls(normalized);
     await Promise.all(CONTACT_TEXT_KEYS.map((key) => this.settingsRepository.upsert(
-      CONTACT_GROUP, key, String(input[key] ?? '').trim(), userId,
+      CONTACT_GROUP, key, String(normalized[key] ?? '').trim(), userId,
     )));
-    return this.getContactChannelsPublic();
+    return this.getContactChannelsAdmin();
   }
 
   validateContactChannelUrls(input = {}) {

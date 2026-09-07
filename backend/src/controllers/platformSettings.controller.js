@@ -12,6 +12,14 @@ const getAdmin = asyncHandler(async (_req, res) => success(res, await service().
 const updateAdmin = asyncHandler(async (req, res) => success(
   res, await service().update(req.body, req.user.id), 'Settings updated',
 ));
+const getContactChannelsAdmin = asyncHandler(async (_req, res) => success(
+  res, await service().getContactChannelsAdmin(),
+));
+const updateContactChannelsAdmin = asyncHandler(async (req, res) => success(
+  res,
+  await service().updateContactChannels(req.body, req.user.id),
+  'Contact channel settings updated',
+));
 const uploadImage = asyncHandler(async (req, res) => success(
   res, await service().saveImage(req.params.kind, req.file, req.user.id), 'Image updated',
 ));
@@ -46,6 +54,8 @@ module.exports = {
   getPublic,
   getAdmin,
   updateAdmin,
+  getContactChannelsAdmin,
+  updateContactChannelsAdmin,
   uploadImage,
   getAsset,
   handleUploadError,
