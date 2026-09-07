@@ -63,4 +63,28 @@ class AuthUser {
     if (authProvider != null) 'authProvider': authProvider,
     if (linkedProviders.isNotEmpty) 'linkedProviders': linkedProviders,
   };
+
+  AuthUser copyWith({
+    int? id,
+    String? role,
+    String? email,
+    String? name,
+    String? phone,
+    String? locale,
+    bool? isActive,
+    String? authProvider,
+    List<String>? linkedProviders,
+  }) {
+    return AuthUser(
+      id: id ?? this.id,
+      role: role ?? this.role,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      locale: locale ?? this.locale,
+      isActive: isActive ?? this.isActive,
+      authProvider: authProvider ?? this.authProvider,
+      linkedProviders: linkedProviders ?? this.linkedProviders,
+    );
+  }
 }

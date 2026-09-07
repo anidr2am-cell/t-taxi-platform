@@ -235,16 +235,30 @@ class ApiClient {
     final errorCode =
         decoded['error_code'] as String? ?? decoded['code'] as String?;
     final message = decoded['message'] as String?;
-    final details = decoded['details'] is Map
-        ? Map<String, dynamic>.from(decoded['details'] as Map)
-        : null;
+    final details = <String, dynamic>{};
+    if (decoded['details'] is Map) {
+      details.addAll(Map<String, dynamic>.from(decoded['details'] as Map));
+    }
+    if (decoded['errors'] is List) {
+      details['errors'] = decoded['errors'];
+    }
+    final normalizedDetails = details.isEmpty ? null : details;
     if (response.statusCode == 401) {
       throw ApiException(
         ApiFailureKind.unauthorized,
         statusCode: response.statusCode,
         errorCode: errorCode,
         message: message,
-        details: details,
+        details: normalizedDetails,
+      );
+    }
+    if (response.statusCode == 400) {
+      throw ApiException(
+        ApiFailureKind.validation,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+        message: message,
+        details: normalizedDetails,
       );
     }
     if (response.statusCode == 403) {
@@ -253,7 +267,7 @@ class ApiClient {
         statusCode: response.statusCode,
         errorCode: errorCode,
         message: message,
-        details: details,
+        details: normalizedDetails,
       );
     }
     if (response.statusCode == 404) {
@@ -262,7 +276,7 @@ class ApiClient {
         statusCode: response.statusCode,
         errorCode: errorCode,
         message: message,
-        details: details,
+        details: normalizedDetails,
       );
     }
     if (response.statusCode == 409) {
@@ -271,7 +285,7 @@ class ApiClient {
         statusCode: response.statusCode,
         errorCode: errorCode,
         message: message,
-        details: details,
+        details: normalizedDetails,
       );
     }
     if (response.statusCode >= 500) {
@@ -280,7 +294,7 @@ class ApiClient {
         statusCode: response.statusCode,
         errorCode: errorCode,
         message: message,
-        details: details,
+        details: normalizedDetails,
       );
     }
     throw ApiException(
@@ -288,7 +302,7 @@ class ApiClient {
       statusCode: response.statusCode,
       errorCode: errorCode,
       message: message,
-      details: details,
+      details: normalizedDetails,
     );
   }
 }

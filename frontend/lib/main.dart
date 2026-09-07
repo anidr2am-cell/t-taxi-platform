@@ -34,8 +34,10 @@ import 'l10n/app_localizations.dart';
 import 'providers/booking_provider.dart';
 import 'features/auth/pages/kakao_oauth_callback_page.dart';
 import 'features/auth/pages/line_oauth_callback_page.dart';
+import 'features/auth/pages/profile_completion_page.dart';
 import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/widgets/booking_social_login_section.dart';
+import 'features/auth/widgets/profile_completion_gate.dart';
 import 'screens/admin/admin_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -102,7 +104,11 @@ class TTaxiApp extends StatelessWidget {
       builder: (context, child) {
         return Column(
           children: [
-            Expanded(child: child ?? const SizedBox.shrink()),
+            Expanded(
+              child: ProfileCompletionGate(
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
             const AnalyticsConsentBanner(),
           ],
         );
@@ -131,6 +137,14 @@ class TTaxiApp extends StatelessWidget {
             const GuestBookingLookupPage(enableCustomerTools: true),
         '/my-bookings': (_) => const MyBookingsPage(),
         '/account': (_) => const AccountPage(),
+        ProfileCompletionPage.routeName: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          return ProfileCompletionPage(
+            returnContext: args is ProfileCompletionRouteArgs
+                ? args.returnContext
+                : null,
+          );
+        },
         '/driver': (_) =>
             const DriverPwaInstallPromptHost(child: DriverLoginPage()),
         '/driver/login': (_) =>

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
-import '../../booking/pages/booking_complete_page.dart';
 import '../config/line_auth_config.dart';
 import '../controllers/auth_controller.dart';
 import '../models/line_oauth_callback_guard.dart';
@@ -15,8 +14,8 @@ import '../services/line_oauth_callback_guard_storage.dart';
 import '../services/line_oauth_callback_url.dart';
 import '../services/line_oauth_page_reload.dart';
 import '../services/line_oauth_state_storage.dart';
+import '../services/social_login_navigation.dart';
 import '../widgets/booking_social_login_section.dart';
-import 'kakao_oauth_callback_page.dart';
 
 @visibleForTesting
 const kLineCallbackLoadingHintDelay = Duration(seconds: 8);
@@ -278,34 +277,10 @@ class _LineOAuthCallbackPageState extends State<LineOAuthCallbackPage> {
       return;
     }
 
-    if (savedContext?.returnToHome == true) {
-      await Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
-      return;
-    }
-
-    final destination = savedContext == null || savedContext.result == null
-        ? const _LineCallbackFallbackPage()
-        : BookingCompletePage(
-            authController: authController,
-            result: savedContext.result!,
-            serviceLabel: savedContext.serviceLabel,
-            origin: savedContext.origin,
-            destination: savedContext.destination,
-            serviceTypeCode: savedContext.serviceTypeCode,
-            originAirportCode: savedContext.originAirportCode,
-            nameSignRequested: savedContext.nameSignRequested,
-            customerPhone: savedContext.customerPhone,
-            scheduledPickupAt: savedContext.scheduledPickupAt,
-            selectedVehicle: savedContext.selectedVehicle,
-            enableCustomerTools: savedContext.enableCustomerTools,
-          );
-
-    await Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        settings: const RouteSettings(name: kBookingCompleteRouteName),
-        builder: (_) => destination,
-      ),
-      (_) => false,
+    await navigateAfterAuthenticatedSession(
+      context,
+      authController: authController,
+      returnContext: savedContext,
     );
   }
 
@@ -335,26 +310,6 @@ class _LineOAuthCallbackPageState extends State<LineOAuthCallbackPage> {
                 ),
               ],
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LineCallbackFallbackPage extends StatelessWidget {
-  const _LineCallbackFallbackPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('T-Rider')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTokens.spaceLg),
-          child: Text(
-            context.l10n.t('auth_line_callback_error'),
-            textAlign: TextAlign.center,
           ),
         ),
       ),

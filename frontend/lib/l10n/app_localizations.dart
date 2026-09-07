@@ -1296,6 +1296,15 @@ class AppLocalizations {
       'auth_kakao_callback_slow_loading':
           'This is taking longer than expected. Please refresh the page.',
       'auth_kakao_callback_refresh': 'Refresh page',
+      'profile_completion_title': 'Complete your profile',
+      'profile_completion_body':
+          'Please enter your name and phone number to continue using T-Rider.',
+      'profile_completion_submit': 'Save and continue',
+      'profile_completion_name_required': 'Name is required.',
+      'profile_completion_phone_required':
+          'Enter a valid phone number (at least 5 characters).',
+      'profile_completion_phone_duplicate':
+          'This phone number is already used by another account.',
       'auth_line_continue': 'Continue with LINE',
       'auth_line_callback_error': 'LINE sign-in failed. Please try again.',
       'auth_line_callback_state_mismatch':
@@ -2586,6 +2595,15 @@ class AppLocalizations {
           '이미 처리된 로그인 요청입니다. 필요하면 다시 시도해 주세요.',
       'auth_kakao_callback_slow_loading': '처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.',
       'auth_kakao_callback_refresh': '새로고침',
+      'profile_completion_title': '프로필 완성',
+      'profile_completion_body':
+          'T-Rider 이용을 위해 이름과 전화번호를 입력해 주세요.',
+      'profile_completion_submit': '저장하고 계속',
+      'profile_completion_name_required': '이름을 입력해 주세요.',
+      'profile_completion_phone_required':
+          '올바른 전화번호를 입력해 주세요(5자 이상).',
+      'profile_completion_phone_duplicate':
+          '이미 다른 계정에서 사용 중인 전화번호입니다.',
       'auth_line_continue': 'LINE으로 계속하기',
       'auth_line_callback_error': 'LINE 로그인에 실패했습니다. 다시 시도해 주세요.',
       'auth_line_callback_state_mismatch': 'LINE 로그인을 확인할 수 없습니다. 다시 시도해 주세요.',
@@ -3340,6 +3358,12 @@ class AppLocalizations {
       'auth_kakao_callback_already_processed': '该登录请求已处理。如需请重新尝试。',
       'auth_kakao_callback_slow_loading': '处理时间较长，请刷新页面。',
       'auth_kakao_callback_refresh': '刷新页面',
+      'profile_completion_title': '完善个人资料',
+      'profile_completion_body': '请输入姓名和电话号码以继续使用 T-Rider。',
+      'profile_completion_submit': '保存并继续',
+      'profile_completion_name_required': '请输入姓名。',
+      'profile_completion_phone_required': '请输入有效的电话号码（至少5位）。',
+      'profile_completion_phone_duplicate': '该电话号码已被其他账户使用。',
       'auth_line_continue': '使用 LINE 继续',
       'auth_line_callback_error': 'LINE 登录失败，请重试。',
       'auth_line_callback_state_mismatch': '无法验证 LINE 登录，请重试。',
@@ -4057,6 +4081,15 @@ class AppLocalizations {
           'このログイン要求はすでに処理されています。必要なら再度お試しください。',
       'auth_kakao_callback_slow_loading': '処理に時間がかかっています。ページを更新してください。',
       'auth_kakao_callback_refresh': 'ページを更新',
+      'profile_completion_title': 'プロフィールを完成',
+      'profile_completion_body':
+          'T-Riderをご利用いただくために、お名前と電話番号を入力してください。',
+      'profile_completion_submit': '保存して続行',
+      'profile_completion_name_required': '名前を入力してください。',
+      'profile_completion_phone_required':
+          '有効な電話番号を入力してください（5文字以上）。',
+      'profile_completion_phone_duplicate':
+          'この電話番号は別のアカウントですでに使用されています。',
       'auth_line_continue': 'LINEで続ける',
       'auth_line_callback_error': 'LINEログインに失敗しました。もう一度お試しください。',
       'auth_line_callback_state_mismatch': 'LINEログインを確認できませんでした。もう一度お試しください。',
@@ -4826,6 +4859,15 @@ class AppLocalizations {
           'คำขอเข้าสู่ระบบนี้ถูกดำเนินการแล้ว โปรดลองอีกครั้งหากจำเป็น',
       'auth_kakao_callback_slow_loading': 'ใช้เวลานานกว่าปกติ โปรดรีเฟรชหน้า',
       'auth_kakao_callback_refresh': 'รีเฟรชหน้า',
+      'profile_completion_title': 'กรอกข้อมูลโปรไฟล์',
+      'profile_completion_body':
+          'กรุณากรอกชื่อและหมายเลขโทรศัพท์เพื่อใช้งาน T-Rider ต่อ',
+      'profile_completion_submit': 'บันทึกและดำเนินการต่อ',
+      'profile_completion_name_required': 'กรุณากรอกชื่อ',
+      'profile_completion_phone_required':
+          'กรุณากรอกหมายเลขโทรศัพท์ที่ถูกต้อง (อย่างน้อย 5 ตัวอักษร)',
+      'profile_completion_phone_duplicate':
+          'หมายเลขโทรศัพท์นี้ถูกใช้งานโดยบัญชีอื่นแล้ว',
       'auth_line_continue': 'ดำเนินการต่อด้วย LINE',
       'auth_line_callback_error': 'เข้าสู่ระบบ LINE ไม่สำเร็จ โปรดลองอีกครั้ง',
       'auth_line_callback_state_mismatch':

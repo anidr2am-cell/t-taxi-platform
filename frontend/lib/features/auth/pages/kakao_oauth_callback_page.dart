@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../booking/models/booking_create_result.dart';
-import '../../booking/pages/booking_complete_page.dart';
 import '../config/kakao_auth_config.dart';
 import '../controllers/auth_controller.dart';
 import '../models/kakao_oauth_callback_guard.dart';
@@ -14,9 +13,10 @@ import '../models/social_login_return_context.dart';
 import '../services/kakao_oauth_callback_guard_storage.dart';
 import '../services/kakao_oauth_callback_url.dart';
 import '../services/kakao_oauth_page_reload.dart';
+import '../services/social_login_navigation.dart';
 import '../widgets/booking_social_login_section.dart';
 
-const kBookingCompleteRouteName = '/booking/complete';
+export '../services/social_login_navigation.dart' show kBookingCompleteRouteName;
 
 @visibleForTesting
 const kKakaoCallbackLoadingHintDelay = Duration(seconds: 8);
@@ -257,34 +257,10 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
       return;
     }
 
-    if (savedContext?.returnToHome == true) {
-      await Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
-      return;
-    }
-
-    final destination = savedContext == null || savedContext.result == null
-        ? const _KakaoCallbackFallbackPage()
-        : BookingCompletePage(
-            authController: authController,
-            result: savedContext.result!,
-            serviceLabel: savedContext.serviceLabel,
-            origin: savedContext.origin,
-            destination: savedContext.destination,
-            serviceTypeCode: savedContext.serviceTypeCode,
-            originAirportCode: savedContext.originAirportCode,
-            nameSignRequested: savedContext.nameSignRequested,
-            customerPhone: savedContext.customerPhone,
-            scheduledPickupAt: savedContext.scheduledPickupAt,
-            selectedVehicle: savedContext.selectedVehicle,
-            enableCustomerTools: savedContext.enableCustomerTools,
-          );
-
-    await Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        settings: const RouteSettings(name: kBookingCompleteRouteName),
-        builder: (_) => destination,
-      ),
-      (_) => false,
+    await navigateAfterAuthenticatedSession(
+      context,
+      authController: authController,
+      returnContext: savedContext,
     );
   }
 
@@ -314,26 +290,6 @@ class _KakaoOAuthCallbackPageState extends State<KakaoOAuthCallbackPage> {
                 ),
               ],
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _KakaoCallbackFallbackPage extends StatelessWidget {
-  const _KakaoCallbackFallbackPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('T-Rider')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTokens.spaceLg),
-          child: Text(
-            context.l10n.t('auth_kakao_callback_error'),
-            textAlign: TextAlign.center,
           ),
         ),
       ),

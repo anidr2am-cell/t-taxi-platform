@@ -12,10 +12,12 @@ import '../models/social_login_return_context.dart';
 import '../services/auth_api_service.dart';
 import '../services/auth_token_storage.dart';
 import '../services/customer_api_errors.dart';
+import '../services/customer_profile_api_service.dart';
 import '../services/customer_session.dart';
 import '../services/google_sign_in_service.dart';
 import '../services/kakao_oauth_service.dart';
 import '../services/line_oauth_service.dart';
+import '../utils/profile_completion.dart';
 
 class AuthController extends ChangeNotifier {
   factory AuthController({
@@ -81,6 +83,8 @@ class AuthController extends ChangeNotifier {
   bool get isLoggedIn => _session != null;
   bool get hadPersistedSessionAtInit => _hadPersistedSessionAtInit;
   AuthUser? get user => _session?.user;
+  bool get needsProfileCompletion =>
+      isLoggedIn && authUserNeedsProfileCompletion(user);
   String? get errorMessage => _errorMessage;
   bool get isKakaoSignInAvailable => KakaoAuthConfig.isConfigured;
   bool get isLineSignInAvailable => LineAuthConfig.isConfigured;
@@ -324,6 +328,36 @@ class AuthController extends ChangeNotifier {
 
   Future<void> syncSessionFromStorage() async {
     _session = await _tokenStorage.loadSession();
+    notifyListeners();
+  }
+
+  Future<void> updateCustomerProfile({
+    required String name,
+    required String phone,
+    String? phoneCountryCode,
+    CustomerProfileApiService? apiService,
+  }) async {
+    final currentSession = _session;
+    if (currentSession == null) {
+      throw StateError('Sign in is required');
+    }
+
+    final updatedUser = await (apiService ?? CustomerProfileApiService(
+      session: _customerSession,
+    )).updateProfile(
+      name: name,
+      phone: phone,
+      phoneCountryCode: phoneCountryCode,
+    );
+
+    final nextSession = AuthSession(
+      accessToken: currentSession.accessToken,
+      refreshToken: currentSession.refreshToken,
+      user: updatedUser,
+      expiresIn: currentSession.expiresIn,
+    );
+    await _tokenStorage.saveSession(nextSession);
+    _session = nextSession;
     notifyListeners();
   }
 
