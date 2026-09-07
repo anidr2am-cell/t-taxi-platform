@@ -108,6 +108,19 @@ Widget _wrapApp({
   );
 }
 
+class _DelayedLoadSessionTokenStorage extends AuthTokenStorage {
+  _DelayedLoadSessionTokenStorage(this._session, this._delay);
+
+  final AuthSession _session;
+  final Duration _delay;
+
+  @override
+  Future<AuthSession?> loadSession() async {
+    await Future<void>.delayed(_delay);
+    return _session;
+  }
+}
+
 class _RecordingProfileApiService extends CustomerProfileApiService {
   _RecordingProfileApiService(this.onUpdate)
     : super(session: CustomerSession(baseUrl: 'http://localhost:3000'));
@@ -269,6 +282,43 @@ void main() {
 
     expect(find.text('Home landing'), findsOneWidget);
     expect(find.text('프로필 완성'), findsNothing);
+  });
+
+  testWidgets('gate rebuilds after async auth initialization on cold start', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = AuthController(
+      apiService: AuthApiService(
+        client: MockClient((_) async => http.Response('{}', 500)),
+        baseUrl: 'http://localhost:3000',
+      ),
+      tokenStorage: _DelayedLoadSessionTokenStorage(
+        AuthSession(
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+          user: _user(phone: null),
+          expiresIn: 3600,
+        ),
+        const Duration(milliseconds: 100),
+      ),
+      googleSignInService: GoogleSignInService()..markInitializedForTest(),
+    );
+    await tester.pumpWidget(
+      _wrapApp(
+        authController: controller,
+        home: const Scaffold(body: Text('Home landing')),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Home landing'), findsOneWidget);
+    expect(find.text('프로필 완성'), findsNothing);
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home landing'), findsNothing);
+    expect(find.text('프로필 완성'), findsOneWidget);
   });
 
   testWidgets('restored session with null phone shows profile completion gate', (
