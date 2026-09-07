@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_config.dart';
 import '../models/guest_booking_lookup_result.dart';
+import '../models/guest_contact_lookup_item.dart';
 import '../widgets/booking_review_form.dart';
 import 'booking_api_service.dart';
 
@@ -49,6 +50,33 @@ class GuestBookingLookupService {
     ).copyWith(customerPhone: phone.trim());
     await persist(result);
     return result;
+  }
+
+  Future<GuestContactLookupResponse> lookupByContact({
+    required String name,
+    required String phone,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_base/public/bookings/lookup-by-contact'),
+      headers: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({'name': name, 'phone': phone}),
+    );
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode >= 400) {
+      final message = decoded is Map
+          ? decoded['message'] as String? ?? 'Booking not found'
+          : 'Booking not found';
+      final code = decoded is Map ? decoded['error_code'] as String? : null;
+      throw BookingApiException(message, code);
+    }
+
+    return GuestContactLookupResponse.fromJson(
+      Map<String, dynamic>.from((decoded as Map)['data'] as Map),
+    );
   }
 
   Future<void> persistFromCreateSummary(GuestBookingLookupResult result) async {

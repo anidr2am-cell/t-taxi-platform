@@ -179,6 +179,11 @@ const guestBookingLookupSchema = Joi.object({
   phone: Joi.string().trim().min(4).max(30).required(),
 });
 
+const guestBookingLookupByContactSchema = Joi.object({
+  name: unicodeText({ max: 100 }).required(),
+  phone: Joi.string().trim().min(4).max(30).required(),
+});
+
 const claimBookingSchema = Joi.object({
   bookingNumber: Joi.string().trim().uppercase().pattern(/^TX\d{12}$/).required(),
   guestAccessToken: Joi.string().trim().min(1).max(512).required(),
@@ -194,6 +199,7 @@ module.exports = {
   updateBookingStatusSchema,
   cancelBookingSchema,
   guestBookingLookupSchema,
+  guestBookingLookupByContactSchema,
   claimBookingSchema,
   customerBookingListQuerySchema,
   normalizeOptionalEmail,

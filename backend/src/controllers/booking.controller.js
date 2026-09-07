@@ -127,6 +127,11 @@ const lookupGuestBooking = asyncHandler(async (req, res) => {
   return success(res, data, 'Booking found');
 });
 
+const lookupGuestBookingByContact = asyncHandler(async (req, res) => {
+  const data = await getGuestBookingLookupService().lookupByContact(req.body);
+  return success(res, data, 'Bookings found');
+});
+
 const getGuestAssignedDriverVehiclePhoto = asyncHandler(async (req, res) => {
   const file = await getGuestVehiclePhotoService().getAssignedDriverVehiclePhotoFile(
     Number(req.params.bookingId),
@@ -148,5 +153,6 @@ module.exports = {
   issueDropoffQr,
   issueBoardingQr,
   lookupGuestBooking,
+  lookupGuestBookingByContact,
   getGuestAssignedDriverVehiclePhoto,
 };

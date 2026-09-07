@@ -6,7 +6,7 @@ const driverLocationController = require('../controllers/driverLocation.controll
 const validate = require('../middlewares/validate.middleware');
 const { optionalAuthMiddleware } = require('../middlewares/auth.middleware');
 const createRateLimit = require('../middlewares/rateLimit.middleware');
-const { guestBookingLookupSchema } = require('../validators/booking.validator');
+const { guestBookingLookupSchema, guestBookingLookupByContactSchema } = require('../validators/booking.validator');
 const {
   registerNotificationDeviceSchema,
   guestNotificationDeviceParamsSchema,
@@ -20,14 +20,29 @@ const bookingLookupRateLimit = createRateLimit({
   windowMs: 60_000,
   max: process.env.NODE_ENV === 'production' ? 10 : 30,
 });
+const bookingLookupBurstRateLimit = createRateLimit({
+  windowMs: 60_000,
+  max: 20,
+  penaltyWindowMs: 300_000,
+  keyFn: (req) => `public:booking-lookup-burst:ip:${req.ip}`,
+});
 const guestDeviceRateLimit = createRateLimit({ windowMs: 60_000, max: 10 });
 
 router.get('/flights/search', flightController.searchFlights);
 router.post(
   '/bookings/lookup',
   bookingLookupRateLimit,
+  bookingLookupBurstRateLimit,
   validate({ body: guestBookingLookupSchema }),
   bookingController.lookupGuestBooking,
+);
+
+router.post(
+  '/bookings/lookup-by-contact',
+  bookingLookupRateLimit,
+  bookingLookupBurstRateLimit,
+  validate({ body: guestBookingLookupByContactSchema }),
+  bookingController.lookupGuestBookingByContact,
 );
 
 router.post(

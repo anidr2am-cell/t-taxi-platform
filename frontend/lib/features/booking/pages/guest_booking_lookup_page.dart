@@ -5,6 +5,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/guest_booking_lookup_result.dart';
+import '../models/guest_contact_lookup_item.dart';
 import '../services/booking_api_service.dart';
 import '../services/customer_bookings_api_service.dart';
 import '../services/guest_booking_lookup_service.dart';
@@ -19,6 +20,8 @@ import '../widgets/assigned_driver_status_card.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
+
+enum _GuestLookupMode { bookingNumber, contactName }
 
 class GuestBookingLookupPage extends StatefulWidget {
   const GuestBookingLookupPage({
@@ -50,6 +53,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   final _formKey = GlobalKey<FormState>();
   final _bookingNumberController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _nameController = TextEditingController();
   late final GuestBookingLookupService _lookupService =
       widget.lookupService ?? GuestBookingLookupService();
   late final CustomerBookingsApiService _customerBookingsApiService =
@@ -57,7 +61,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   late final AuthTokenStorage _tokenStorage =
       widget.tokenStorage ?? AuthTokenStorage();
 
+  _GuestLookupMode _lookupMode = _GuestLookupMode.bookingNumber;
   GuestBookingLookupResult? _result;
+  List<GuestContactLookupItem>? _contactResults;
+  GuestContactLookupItem? _selectedContact;
   bool _loading = true;
   bool _refreshing = false;
   String? _error;
@@ -98,6 +105,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   void dispose() {
     _bookingNumberController.dispose();
     _phoneController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -287,15 +295,90 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
   }
 
+  Future<void> _lookupByContact() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _contactResults = null;
+      _selectedContact = null;
+    });
+
+    try {
+      final response = await _lookupService.lookupByContact(
+        name: _nameController.text,
+        phone: _phoneController.text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _contactResults = response.bookings;
+        _loading = false;
+        if (response.bookings.length == 1) {
+          _selectedContact = response.bookings.first;
+          _contactResults = null;
+        }
+      });
+    } on BookingApiException catch (err) {
+      if (!mounted) return;
+      final l10n = context.l10n;
+      setState(() {
+        _loading = false;
+        _error = err.errorCode == 'BOOKING_NOT_FOUND'
+            ? l10n.t('guest_lookup_not_found')
+            : userFacingError(err, fallback: l10n.t('guest_lookup_load_error'));
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = context.l10n.t('guest_lookup_load_error');
+      });
+    }
+  }
+
   Future<void> _clear() async {
     await _lookupService.clearCached();
     if (!mounted) return;
     setState(() {
       _result = null;
+      _contactResults = null;
+      _selectedContact = null;
       _error = null;
       _bookingNumberController.clear();
       _phoneController.clear();
+      _nameController.clear();
     });
+  }
+
+  void _switchLookupMode(_GuestLookupMode mode) {
+    if (_lookupMode == mode) return;
+    setState(() {
+      _lookupMode = mode;
+      _error = null;
+      _contactResults = null;
+      _selectedContact = null;
+    });
+  }
+
+  String _pickupPeriodLabel(AppLocalizations l10n, String? period) {
+    switch (period) {
+      case 'MORNING':
+        return l10n.t('guest_lookup_pickup_period_morning');
+      case 'AFTERNOON':
+        return l10n.t('guest_lookup_pickup_period_afternoon');
+      case 'EVENING':
+        return l10n.t('guest_lookup_pickup_period_evening');
+      default:
+        return '';
+    }
+  }
+
+  String _maskedPickupLabel(AppLocalizations l10n, GuestContactLookupItem item) {
+    final date = item.scheduledPickupDate?.trim();
+    final period = _pickupPeriodLabel(l10n, item.pickupTimePeriod);
+    if (date == null || date.isEmpty) return period;
+    if (period.isEmpty) return date;
+    return '$date · $period';
   }
 
   @override
@@ -330,7 +413,13 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
       body: AppUi.centeredContent(
         child: SingleChildScrollView(
           padding: AppUi.pagePadding(context),
-          child: _result == null ? _lookupForm() : _bookingDetail(_result!),
+          child: _result != null
+              ? _bookingDetail(_result!)
+              : _selectedContact != null
+              ? _contactLookupDetail(_selectedContact!)
+              : _contactResults != null
+              ? _contactLookupList(_contactResults!)
+              : _lookupForm(),
         ),
       ),
     );
@@ -338,6 +427,7 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
 
   Widget _lookupForm() {
     final l10n = context.l10n;
+    final isContactMode = _lookupMode == _GuestLookupMode.contactName;
     return Form(
       key: _formKey,
       child: Column(
@@ -346,28 +436,67 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           AppUi.sectionHeader(
             context,
             title: l10n.t('guest_lookup_title'),
-            subtitle: l10n.t('guest_lookup_subtitle'),
+            subtitle: isContactMode
+                ? l10n.t('guest_lookup_contact_subtitle')
+                : l10n.t('guest_lookup_subtitle'),
           ),
+          SegmentedButton<_GuestLookupMode>(
+            key: const ValueKey('guest_lookup_mode_switch'),
+            segments: [
+              ButtonSegment(
+                value: _GuestLookupMode.bookingNumber,
+                label: Text(l10n.t('guest_lookup_mode_booking_number')),
+                icon: const Icon(Icons.confirmation_number_outlined),
+              ),
+              ButtonSegment(
+                value: _GuestLookupMode.contactName,
+                label: Text(l10n.t('guest_lookup_mode_contact_name')),
+                icon: const Icon(Icons.person_outline),
+              ),
+            ],
+            selected: {_lookupMode},
+            onSelectionChanged: (selection) =>
+                _switchLookupMode(selection.first),
+          ),
+          const SizedBox(height: AppTokens.spaceMd),
           AppUi.surfaceCard(
             child: Column(
               children: [
-                TextFormField(
-                  key: const ValueKey('guest_lookup_booking_number'),
-                  controller: _bookingNumberController,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    labelText: l10n.t('guest_lookup_booking_number'),
-                    hintText: l10n.t('guest_lookup_booking_number_hint'),
-                    prefixIcon: const Icon(Icons.confirmation_number_outlined),
+                if (!isContactMode)
+                  TextFormField(
+                    key: const ValueKey('guest_lookup_booking_number'),
+                    controller: _bookingNumberController,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      labelText: l10n.t('guest_lookup_booking_number'),
+                      hintText: l10n.t('guest_lookup_booking_number_hint'),
+                      prefixIcon: const Icon(Icons.confirmation_number_outlined),
+                    ),
+                    validator: (value) {
+                      if (isContactMode) return null;
+                      final normalized = (value ?? '').trim().toUpperCase();
+                      return RegExp(r'^TX\d{12}$').hasMatch(normalized)
+                          ? null
+                          : l10n.t('guest_lookup_invalid_number');
+                    },
+                  )
+                else
+                  TextFormField(
+                    key: const ValueKey('guest_lookup_name'),
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: l10n.t('guest_lookup_name'),
+                      prefixIcon: const Icon(Icons.person_outline),
+                    ),
+                    validator: (value) {
+                      if (!isContactMode) return null;
+                      return (value ?? '').trim().isNotEmpty
+                          ? null
+                          : l10n.t('guest_lookup_invalid_name');
+                    },
                   ),
-                  validator: (value) {
-                    final normalized = (value ?? '').trim().toUpperCase();
-                    return RegExp(r'^TX\d{12}$').hasMatch(normalized)
-                        ? null
-                        : l10n.t('guest_lookup_invalid_number');
-                  },
-                ),
-                const SizedBox(height: AppTokens.spaceMd),
+                if (!isContactMode) const SizedBox(height: AppTokens.spaceMd),
                 TextFormField(
                   key: const ValueKey('guest_lookup_phone'),
                   controller: _phoneController,
@@ -395,10 +524,196 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             label: l10n.t('guest_lookup_find'),
             icon: Icons.search,
             loading: _loading,
-            onPressed: _loading ? null : _lookup,
+            onPressed: _loading
+                ? null
+                : (isContactMode ? _lookupByContact : _lookup),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _contactLookupList(List<GuestContactLookupItem> items) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppUi.sectionHeader(
+          context,
+          title: l10n.t('guest_lookup_contact_results_title'),
+          subtitle: l10n.t('guest_lookup_contact_detail_guidance'),
+        ),
+        for (final item in items) ...[
+          AppUi.surfaceCard(
+            child: InkWell(
+              key: Key('guest_lookup_contact_card_${item.bookingNumber}'),
+              onTap: () => setState(() => _selectedContact = item),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppTokens.spaceSm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.bookingNumber,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    AppUi.statusBadge(
+                      BookingStatusDisplay.label(
+                        l10n,
+                        item.status,
+                        reassignmentInProgress: item.reassignmentInProgress,
+                      ),
+                      tone: item.reassignmentInProgress
+                          ? AppStatusTone.warning
+                          : AppUi.toneForBookingStatus(item.status),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(item.serviceTypeName),
+                    if (_maskedPickupLabel(l10n, item).isNotEmpty)
+                      Text(
+                        _maskedPickupLabel(l10n, item),
+                        style: const TextStyle(color: AppTokens.textSecondary),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceSm),
+        ],
+        AppUi.secondaryButton(
+          label: l10n.t('guest_lookup_another'),
+          icon: Icons.search,
+          onPressed: _clear,
+          fullWidth: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _contactLookupDetail(GuestContactLookupItem item) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppUi.surfaceCard(
+          backgroundColor: AppTokens.primaryLight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.t('guest_lookup_booking_number'),
+                style: const TextStyle(
+                  color: AppTokens.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SelectableText(
+                item.bookingNumber,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                  color: AppTokens.primaryDark,
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.statusBadge(
+                BookingStatusDisplay.label(
+                  l10n,
+                  item.status,
+                  reassignmentInProgress: item.reassignmentInProgress,
+                ),
+                tone: item.reassignmentInProgress
+                    ? AppStatusTone.warning
+                    : AppUi.toneForBookingStatus(item.status),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceMd),
+        AppUi.surfaceCard(
+          backgroundColor: AppTokens.infoLight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.info_outline, color: AppTokens.info, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.t('guest_lookup_contact_detail_guidance'),
+                  style: const TextStyle(
+                    color: AppTokens.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceMd),
+        AppUi.sectionHeader(
+          context,
+          title: l10n.t('guest_lookup_trip_details'),
+        ),
+        AppUi.surfaceCard(
+          child: Column(
+            children: [
+              if (_maskedPickupLabel(l10n, item).isNotEmpty)
+                AppUi.summaryRow(
+                  label: l10n.t('guest_lookup_pickup'),
+                  value: _maskedPickupLabel(l10n, item),
+                ),
+              AppUi.summaryRow(
+                label: l10n.t('guest_lookup_service'),
+                value: item.serviceTypeName,
+              ),
+              if (item.originName != null || item.originCode != null)
+                AppUi.summaryRow(
+                  label: l10n.t('guest_lookup_from'),
+                  value: item.originName ?? item.originCode ?? '',
+                ),
+              if (item.destinationName != null || item.destinationCode != null)
+                AppUi.summaryRow(
+                  label: l10n.t('guest_lookup_to'),
+                  value: item.destinationName ?? item.destinationCode ?? '',
+                ),
+              if (item.passengerTotal != null)
+                AppUi.summaryRow(
+                  label: l10n.t('guest_lookup_passengers'),
+                  value: '${item.passengerTotal}',
+                ),
+              if (item.luggageTotalPieces != null && item.luggageTotalPieces! > 0)
+                AppUi.summaryRow(
+                  label: l10n.t('guest_lookup_luggage'),
+                  value: '${item.luggageTotalPieces}',
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceLg),
+        if (_contactResults != null && _contactResults!.length > 1)
+          AppUi.secondaryButton(
+            label: l10n.t('guest_lookup_contact_back_to_list'),
+            icon: Icons.list,
+            onPressed: () => setState(() {
+              _selectedContact = null;
+            }),
+            fullWidth: true,
+          ),
+        AppUi.secondaryButton(
+          label: l10n.t('guest_lookup_another'),
+          icon: Icons.search,
+          onPressed: _clear,
+          fullWidth: true,
+        ),
+      ],
     );
   }
 

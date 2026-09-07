@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/booking/models/guest_contact_lookup_item.dart';
 import 'package:frontend/features/booking/models/guest_booking_lookup_result.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
 import 'package:frontend/features/booking/pages/guest_booking_lookup_page.dart';
@@ -1011,6 +1012,94 @@ void main() {
       findsWidgets,
     );
   });
+
+  test('lookupByContact parses masked contact lookup response', () async {
+    final service = GuestBookingLookupService(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/v1/public/bookings/lookup-by-contact');
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['name'], 'Kim Test');
+        expect(body['phone'], '+66 81 234 5678');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'privacyLevel': 'CONTACT_LOOKUP',
+              'bookings': [
+                {
+                  'bookingNumber': 'TX202607010001',
+                  'status': 'OPEN',
+                  'privacyLevel': 'CONTACT_LOOKUP',
+                  'scheduledPickupAt': '2026-07-01',
+                  'pickupTimePeriod': 'MORNING',
+                  'serviceType': {
+                    'name': 'Airport Pickup',
+                    'code': 'AIRPORT_PICKUP',
+                  },
+                  'route': {
+                    'origin': {
+                      'code': 'BKK',
+                      'name': 'BKK Airport',
+                      'address': null,
+                    },
+                    'destination': {
+                      'code': 'PATTAYA',
+                      'name': 'Pattaya',
+                      'address': null,
+                    },
+                  },
+                  'passengers': {'total': 2},
+                  'guestAccess': {'token': null, 'expiresAt': null},
+                },
+              ],
+            },
+          }),
+          200,
+        );
+      }),
+    );
+
+    final response = await service.lookupByContact(
+      name: 'Kim Test',
+      phone: '+66 81 234 5678',
+    );
+
+    expect(response.bookings.length, 1);
+    expect(response.bookings.first.bookingNumber, 'TX202607010001');
+    expect(response.bookings.first.pickupTimePeriod, 'MORNING');
+    expect(response.bookings.first.originCode, 'BKK');
+  });
+
+  testWidgets('contact lookup mode shows name field and result guidance', (
+    tester,
+  ) async {
+    final service = _FakeContactLookupService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuestBookingLookupPage(lookupService: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('By name'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('guest_lookup_name')), findsOneWidget);
+    expect(find.byKey(const ValueKey('guest_lookup_booking_number')), findsNothing);
+
+    await tester.enterText(find.byKey(const ValueKey('guest_lookup_name')), 'Kim Test');
+    await tester.enterText(find.byKey(const ValueKey('guest_lookup_phone')), '+66812345678');
+    await tester.tap(find.text('Find booking'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('TX202607010001'), findsOneWidget);
+    expect(
+      find.textContaining('look up again using your booking number'),
+      findsOneWidget,
+    );
+  });
 }
 
 Widget _localizedApp({required Locale locale, required Widget home}) {
@@ -1203,5 +1292,36 @@ class _CountingBookingApi extends BookingApiService {
   }) async {
     dropoffIssueCalls += 1;
     throw UnimplementedError();
+  }
+}
+
+class _FakeContactLookupService extends GuestBookingLookupService {
+  _FakeContactLookupService()
+    : super(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((_) async => http.Response('{}', 500)),
+      );
+
+  @override
+  Future<GuestContactLookupResponse> lookupByContact({
+    required String name,
+    required String phone,
+  }) async {
+    return GuestContactLookupResponse.fromJson({
+      'bookings': [
+        {
+          'bookingNumber': 'TX202607010001',
+          'status': 'OPEN',
+          'scheduledPickupAt': '2026-07-01',
+          'pickupTimePeriod': 'MORNING',
+          'serviceType': {'name': 'Airport Pickup'},
+          'route': {
+            'origin': {'code': 'BKK', 'name': 'BKK Airport'},
+            'destination': {'code': 'PATTAYA', 'name': 'Pattaya'},
+          },
+          'passengers': {'total': 2},
+        },
+      ],
+    });
   }
 }

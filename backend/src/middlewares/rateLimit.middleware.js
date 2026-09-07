@@ -8,7 +8,8 @@ function defaultKeyFn(req) {
 
 function purgeExpiredBuckets(buckets, now) {
   for (const [key, bucket] of buckets.entries()) {
-    if (bucket.resetAt <= now) {
+    const blocked = bucket.blockedUntil && bucket.blockedUntil > now;
+    if (!blocked && bucket.resetAt <= now) {
       buckets.delete(key);
     }
   }
@@ -20,6 +21,7 @@ function createRateLimit({
   keyFn = defaultKeyFn,
   nowFn = () => Date.now(),
   buckets = new Map(),
+  penaltyWindowMs = null,
 } = {}) {
   return (req, res, next) => {
     const now = nowFn();
@@ -28,14 +30,29 @@ function createRateLimit({
     const key = keyFn(req);
     const bucket = buckets.get(key);
 
+    if (bucket?.blockedUntil && bucket.blockedUntil > now) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((bucket.blockedUntil - now) / 1000));
+      res.set('Retry-After', String(retryAfterSeconds));
+      return next(
+        new AppError('Too many requests', {
+          statusCode: HTTP_STATUS.TOO_MANY_REQUESTS,
+          errorCode: ERROR_CODES.RATE_LIMIT,
+        }),
+      );
+    }
+
     if (!bucket || bucket.resetAt <= now) {
-      buckets.set(key, { count: 1, resetAt: now + windowMs });
+      buckets.set(key, { count: 1, resetAt: now + windowMs, blockedUntil: null });
       return next();
     }
 
     bucket.count += 1;
     if (bucket.count > max) {
-      const retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+      if (penaltyWindowMs) {
+        bucket.blockedUntil = now + penaltyWindowMs;
+      }
+      const retryMs = penaltyWindowMs ?? (bucket.resetAt - now);
+      const retryAfterSeconds = Math.max(1, Math.ceil(retryMs / 1000));
       res.set('Retry-After', String(retryAfterSeconds));
       return next(
         new AppError('Too many requests', {

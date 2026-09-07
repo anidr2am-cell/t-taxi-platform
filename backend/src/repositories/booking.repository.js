@@ -366,6 +366,23 @@ class BookingRepository {
     return rows[0] || null;
   }
 
+  async findGuestLookupBookingsByPhoneDigits(conn, normalizedPhoneDigits, { limit = 20 } = {}) {
+    const [rows] = await conn.query(
+      `
+        ${this.guestLookupSelectSql()}
+        , b.customer_name
+        ${this.guestLookupJoinSql()}
+        WHERE REGEXP_REPLACE(b.customer_phone, '[^0-9]', '') = ?
+          AND b.deleted_at IS NULL
+          AND b.is_archived = 0
+        ORDER BY b.scheduled_pickup_at DESC
+        LIMIT ?
+      `,
+      [normalizedPhoneDigits, limit],
+    );
+    return rows;
+  }
+
   guestLookupSelectSql() {
     return `
         SELECT

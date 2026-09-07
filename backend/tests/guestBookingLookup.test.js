@@ -10,6 +10,7 @@ const request = require('supertest');
 const app = require('../src/app');
 const container = require('../src/helpers/container');
 const GuestBookingLookupService = require('../src/services/guestBookingLookup.service');
+const createRateLimit = require('../src/middlewares/rateLimit.middleware');
 const { hashToken } = require('../src/utils/tokenHash.util');
 
 function bookingRow(overrides = {}) {
@@ -21,6 +22,7 @@ function bookingRow(overrides = {}) {
     origin_address: 'BKK Airport',
     destination_address: 'Pattaya Hotel',
     customer_phone: '+66 81 234 5678',
+    customer_name: 'Kim  Test',
     customer_country_code: 'TH',
     payment_method: 'PAY_DRIVER',
     payment_status: 'UNPAID',
@@ -82,6 +84,13 @@ function buildService(row = bookingRow(), reviewRow = null) {
     async findGuestLookupBookingByNumber(_conn, bookingNumber) {
       calls.lookups.push(bookingNumber);
       return row;
+    },
+    async findGuestLookupBookingsByPhoneDigits(_conn, phoneDigits) {
+      calls.phoneLookups = calls.phoneLookups || [];
+      calls.phoneLookups.push(phoneDigits);
+      const storedPhone = String(row.customer_phone ?? '').replace(/\D/g, '');
+      if (storedPhone !== phoneDigits) return [];
+      return [row];
     },
     async insertGuestToken(_conn, bookingId, tokenHash, expiresAt) {
       calls.insertedTokens.push({ bookingId, tokenHash, expiresAt });
@@ -563,4 +572,121 @@ test('guest lookup DRIVER_ASSIGNED cancellation uses pickup time instead of inva
   assert.equal(result.scheduledPickupAt, '2026-12-01T09:30:00+07:00');
   assert.equal(result.canCancel, true);
   assert.equal(result.cancellationBlockedReason, null);
+});
+
+test('contact lookup matches normalized name and phone without issuing guest token', async () => {
+  const { service, calls } = buildService(bookingRow({
+    customer_name: '  Kim   Test  ',
+    scheduled_pickup_at_text: '2026-07-01 14:30:00',
+  }));
+
+  const result = await service.lookupByContact({
+    name: ' kim test ',
+    phone: '+66 (81) 234-5678',
+  });
+
+  assert.equal(calls.phoneLookups[0], '66812345678');
+  assert.equal(result.privacyLevel, 'CONTACT_LOOKUP');
+  assert.equal(result.bookings.length, 1);
+  const booking = result.bookings[0];
+  assert.equal(booking.privacyLevel, 'CONTACT_LOOKUP');
+  assert.equal(booking.bookingNumber, 'TX202607010001');
+  assert.equal(booking.scheduledPickupAt, '2026-07-01');
+  assert.equal(booking.pickupTimePeriod, 'AFTERNOON');
+  assert.equal(booking.route.origin.address, null);
+  assert.equal(booking.route.destination.address, null);
+  assert.equal(booking.route.origin.code, 'BKK');
+  assert.equal(booking.pricing.masked, true);
+  assert.equal(booking.assignedDriver, null);
+  assert.equal(booking.guestAccess.token, null);
+  assert.equal(booking.review, null);
+  assert.equal(booking.capabilities.trackingAvailable, false);
+  assert.ok(!JSON.stringify(result).includes('guest-token'));
+  assert.ok(!JSON.stringify(result).includes('Driver A'));
+});
+
+test('contact lookup rejects fuzzy name matches', async () => {
+  const { service } = buildService(bookingRow({ customer_name: 'Kim Test' }));
+
+  await assert.rejects(
+    () => service.lookupByContact({ name: 'Kim', phone: '+66 81 234 5678' }),
+    (err) => err.errorCode === 'BOOKING_NOT_FOUND',
+  );
+});
+
+test('contact lookup morning period resolves before noon', async () => {
+  const { service } = buildService(bookingRow({
+    customer_name: 'Kim Test',
+    scheduled_pickup_at_text: '2026-07-01 09:30:00',
+  }));
+
+  const result = await service.lookupByContact({
+    name: 'Kim Test',
+    phone: '+66 81 234 5678',
+  });
+
+  assert.equal(result.bookings[0].pickupTimePeriod, 'MORNING');
+});
+
+test('contact lookup route validates and returns public envelope', async () => {
+  container.register('guestBookingLookupService', () => ({
+    async lookupByContact(input) {
+      assert.deepEqual(input, { name: 'Kim Test', phone: '+66 81 234 5678' });
+      return {
+        privacyLevel: 'CONTACT_LOOKUP',
+        bookings: [{
+          bookingNumber: 'TX202607010001',
+          privacyLevel: 'CONTACT_LOOKUP',
+          guestAccess: { token: null, expiresAt: null },
+        }],
+      };
+    },
+  }));
+
+  const res = await request(app)
+    .post('/api/v1/public/bookings/lookup-by-contact')
+    .send({ name: 'Kim Test', phone: '+66 81 234 5678' });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.data.privacyLevel, 'CONTACT_LOOKUP');
+  assert.equal(res.body.data.bookings[0].bookingNumber, 'TX202607010001');
+});
+
+test('contact lookup burst limit returns 429 with Retry-After 300 after 20 requests per minute', async () => {
+  let now = 1_000_000;
+  const burstBuckets = new Map();
+  const burstLimiter = createRateLimit({
+    windowMs: 60_000,
+    max: 20,
+    penaltyWindowMs: 300_000,
+    keyFn: () => 'burst:test',
+    nowFn: () => now,
+    buckets: burstBuckets,
+  });
+  const req = { ip: '1.2.3.4' };
+  const res = {
+    headers: {},
+    set(name, value) {
+      this.headers[name.toLowerCase()] = value;
+    },
+  };
+
+  for (let i = 0; i < 20; i += 1) {
+    await new Promise((resolve, reject) => {
+      burstLimiter(req, res, (err) => (err ? reject(err) : resolve()));
+    });
+  }
+
+  let blocked;
+  try {
+    await new Promise((resolve, reject) => {
+      burstLimiter(req, res, (err) => (err ? reject(err) : resolve()));
+    });
+  } catch (err) {
+    blocked = err;
+  }
+
+  assert.ok(blocked);
+  assert.equal(blocked.statusCode, 429);
+  assert.equal(res.headers['retry-after'], '300');
 });

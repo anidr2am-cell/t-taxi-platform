@@ -31,6 +31,32 @@ class GuestBookingLookupService {
     return String(value ?? '').replace(/\D/g, '');
   }
 
+  normalizeName(value) {
+    return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  namesMatch(inputName, storedName) {
+    return this.normalizeName(inputName) === this.normalizeName(storedName);
+  }
+
+  resolvePickupTimePeriod(scheduledPickupAtRaw) {
+    if (!scheduledPickupAtRaw) return null;
+    const text = String(scheduledPickupAtRaw).trim();
+    const parts = text.includes('T') ? text.split('T') : text.split(' ');
+    const timePart = parts[1] ?? '';
+    const hour = Number.parseInt(timePart.split(':')[0] ?? '', 10);
+    if (Number.isNaN(hour)) return null;
+    if (hour < 12) return 'MORNING';
+    if (hour < 18) return 'AFTERNOON';
+    return 'EVENING';
+  }
+
+  formatPickupDateOnly(scheduledPickupAtRaw) {
+    if (!scheduledPickupAtRaw) return null;
+    const text = String(scheduledPickupAtRaw).trim();
+    return text.slice(0, 10);
+  }
+
   addHours(date, hours) {
     const result = new Date(date);
     result.setHours(result.getHours() + hours);
@@ -295,6 +321,110 @@ class GuestBookingLookupService {
     } catch (err) {
       await conn.rollback();
       throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  mapContactLookupBooking(row) {
+    const adults = Number(row.adults ?? 0);
+    const children = Number(row.children ?? 0);
+    const infants = Number(row.infants ?? 0);
+    const scheduledPickupAtRaw = row.scheduled_pickup_at_text ?? row.scheduled_pickup_at;
+    const metadata = this.parseBookingMetadata(row.metadata);
+    const originLocationMeta = metadata.originLocation ?? {};
+    const destinationLocationMeta = metadata.destinationLocation ?? {};
+    const pickupLocation = this.locationDetails({
+      name: originLocationMeta.name,
+      address: row.origin_address,
+    });
+    const destinationLocation = this.locationDetails({
+      name: destinationLocationMeta.name,
+      address: row.destination_address,
+    });
+    const assignedDriver = row.driver_name
+      ? { name: row.driver_name }
+      : null;
+    const reassignmentInProgress = Boolean(row.has_driver_release_history)
+      && !assignedDriver
+      && [
+        BOOKING_STATUS.PENDING,
+        BOOKING_STATUS.OPEN,
+        BOOKING_STATUS.CONFIRMED,
+      ].includes(row.status);
+
+    return {
+      privacyLevel: 'CONTACT_LOOKUP',
+      bookingId: row.id,
+      bookingNumber: row.booking_number,
+      status: row.status,
+      reassignmentInProgress,
+      scheduledPickupAt: this.formatPickupDateOnly(scheduledPickupAtRaw),
+      pickupTimePeriod: this.resolvePickupTimePeriod(scheduledPickupAtRaw),
+      serviceType: {
+        code: row.service_type_code,
+        name: row.service_type_name,
+      },
+      route: {
+        origin: {
+          code: row.origin_location_code ?? null,
+          address: null,
+          name: pickupLocation.name,
+        },
+        destination: {
+          code: row.destination_location_code ?? null,
+          address: null,
+          name: destinationLocation.name,
+        },
+      },
+      passengers: {
+        total: adults + children + infants,
+      },
+      luggage: {
+        totalPieces: Number(row.carriers_20_inch ?? 0) + Number(row.carriers_24_inch_plus ?? 0),
+      },
+      pricing: { masked: true },
+      assignedDriver: null,
+      capabilities: {
+        notificationsAvailable: false,
+        dropoffQrIssueAvailable: false,
+        reviewAvailable: false,
+        trackingAvailable: false,
+        boardingQrRecoverable: false,
+        boardingQrPreviouslyIssued: false,
+        cancelAvailable: false,
+      },
+      review: null,
+      guestAccess: {
+        token: null,
+        expiresAt: null,
+      },
+      canReview: false,
+      canCancel: false,
+    };
+  }
+
+  async lookupByContact(input) {
+    const phone = this.normalizePhone(input.phone);
+    const normalizedName = this.normalizeName(input.name);
+    if (!phone || !normalizedName) {
+      throw this.notFound();
+    }
+
+    const conn = await this.pool.getConnection();
+    try {
+      const rows = await this.bookingRepository.findGuestLookupBookingsByPhoneDigits(
+        conn,
+        phone,
+      );
+      const matches = rows.filter((row) => this.namesMatch(input.name, row.customer_name));
+      if (matches.length === 0) {
+        throw this.notFound();
+      }
+      return {
+        privacyLevel: 'CONTACT_LOOKUP',
+        bookings: matches.map((row) => this.mapContactLookupBooking(row)),
+      };
     } finally {
       conn.release();
     }
