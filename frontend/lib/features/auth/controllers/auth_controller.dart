@@ -96,14 +96,14 @@ class AuthController extends ChangeNotifier {
 
     _session = await _tokenStorage.loadSession();
     _hadPersistedSessionAtInit = _session != null;
+    _initialized = true;
+    notifyListeners();
 
     if (kIsWeb) {
       await _googleSignInService.ensureInitialized();
       _attachGoogleAuthenticationListener();
+      notifyListeners();
     }
-
-    _initialized = true;
-    notifyListeners();
   }
 
   void setPendingClaimContext(SocialLoginReturnContext? context) {
