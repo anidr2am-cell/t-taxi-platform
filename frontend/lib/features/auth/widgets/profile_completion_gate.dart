@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../pages/profile_completion_page.dart';
+import '../controllers/auth_controller.dart';
+import '../services/profile_completion_navigation.dart';
 import '../utils/profile_completion.dart';
 import '../widgets/booking_social_login_section.dart';
 
-class ProfileCompletionGate extends StatelessWidget {
+class ProfileCompletionGate extends StatefulWidget {
   const ProfileCompletionGate({
     super.key,
     required this.child,
@@ -13,24 +14,40 @@ class ProfileCompletionGate extends StatelessWidget {
   final Widget child;
 
   @override
+  State<ProfileCompletionGate> createState() => _ProfileCompletionGateState();
+}
+
+class _ProfileCompletionGateState extends State<ProfileCompletionGate> {
+  bool _redirectScheduled = false;
+
+  void _scheduleRedirect(AuthController authController) {
+    if (_redirectScheduled) {
+      return;
+    }
+    _redirectScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _redirectScheduled = false;
+      if (!mounted) {
+        return;
+      }
+      await redirectToProfileCompletionIfNeeded(
+        authController: authController,
+        returnContext: authController.pendingProfileCompletionReturnContext,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final authController = AuthScope.of(context);
     return ListenableBuilder(
       listenable: authController,
       builder: (context, _) {
-        if (!authController.isInitialized) {
-          return child;
+        if (authController.isInitialized &&
+            authNeedsProfileCompletion(authController)) {
+          _scheduleRedirect(authController);
         }
-
-        if (authNeedsProfileCompletion(authController)) {
-          final routeArgs = ModalRoute.of(context)?.settings.arguments;
-          final returnContext = routeArgs is ProfileCompletionRouteArgs
-              ? routeArgs.returnContext
-              : null;
-          return ProfileCompletionPage(returnContext: returnContext);
-        }
-
-        return child;
+        return widget.child;
       },
     );
   }

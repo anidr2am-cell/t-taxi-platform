@@ -14,6 +14,8 @@ import 'package:frontend/features/auth/services/auth_token_storage.dart';
 import 'package:frontend/features/auth/services/customer_profile_api_service.dart';
 import 'package:frontend/features/auth/services/customer_session.dart';
 import 'package:frontend/features/auth/services/google_sign_in_service.dart';
+import 'package:frontend/core/navigation/app_navigator.dart';
+import 'package:frontend/features/auth/services/profile_completion_navigation.dart';
 import 'package:frontend/features/auth/services/social_login_navigation.dart';
 import 'package:frontend/features/auth/utils/profile_completion.dart';
 import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
@@ -93,17 +95,36 @@ final _testLocalizationDelegates = <LocalizationsDelegate<dynamic>>[
   GlobalCupertinoLocalizations.delegate,
 ];
 
-Widget _wrapApp({
+Widget _wrapMainLikeApp({
   required AuthController authController,
-  required Widget home,
+  CustomerProfileApiService? profileApiService,
+  Map<String, WidgetBuilder>? extraRoutes,
+  String initialRoute = '/',
 }) {
-  return MaterialApp(
-    locale: const Locale('ko'),
-    supportedLocales: const [Locale('ko'), Locale('en')],
-    localizationsDelegates: _testLocalizationDelegates,
-    home: AuthScope(
-      controller: authController,
-      child: ProfileCompletionGate(child: home),
+  return AuthScope(
+    controller: authController,
+    child: MaterialApp(
+      navigatorKey: appNavigatorKey,
+      locale: const Locale('ko'),
+      supportedLocales: const [Locale('ko'), Locale('en')],
+      localizationsDelegates: _testLocalizationDelegates,
+      builder: (context, child) => ProfileCompletionGate(
+        child: child ?? const SizedBox.shrink(),
+      ),
+      routes: {
+        '/': (_) => const Scaffold(body: Text('Home landing')),
+        ProfileCompletionPage.routeName: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          return ProfileCompletionPage(
+            returnContext: args is ProfileCompletionRouteArgs
+                ? args.returnContext
+                : null,
+            apiService: profileApiService,
+          );
+        },
+        ...?extraRoutes,
+      },
+      initialRoute: initialRoute,
     ),
   );
 }
@@ -149,6 +170,10 @@ class _RecordingProfileApiService extends CustomerProfileApiService {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() {
+    profileCompletionRedirectInFlight = false;
+  });
+
   test('authNeedsProfileCompletion is true only when phone is null or blank', () {
     expect(authUserNeedsProfileCompletion(null), isFalse);
     expect(authUserNeedsProfileCompletion(_user(phone: null)), isTrue);
@@ -189,10 +214,7 @@ void main() {
     await controller.initialize();
 
     await tester.pumpWidget(
-      _wrapApp(
-        authController: controller,
-        home: const Scaffold(body: Text('Home landing')),
-      ),
+      _wrapMainLikeApp(authController: controller),
     );
     await tester.pumpAndSettle();
 
@@ -221,10 +243,7 @@ void main() {
     expect(controller.user?.phone, isNull);
 
     await tester.pumpWidget(
-      _wrapApp(
-        authController: controller,
-        home: const Scaffold(body: Text('Home landing')),
-      ),
+      _wrapMainLikeApp(authController: controller),
     );
     await tester.pumpAndSettle();
 
@@ -249,10 +268,7 @@ void main() {
     expect(controller.user?.phone, isNull);
 
     await tester.pumpWidget(
-      _wrapApp(
-        authController: controller,
-        home: const Scaffold(body: Text('Home landing')),
-      ),
+      _wrapMainLikeApp(authController: controller),
     );
     await tester.pumpAndSettle();
 
@@ -273,10 +289,7 @@ void main() {
     });
 
     await tester.pumpWidget(
-      _wrapApp(
-        authController: controller,
-        home: const Scaffold(body: Text('Home landing')),
-      ),
+      _wrapMainLikeApp(authController: controller),
     );
     await tester.pumpAndSettle();
 
@@ -305,10 +318,7 @@ void main() {
       googleSignInService: GoogleSignInService()..markInitializedForTest(),
     );
     await tester.pumpWidget(
-      _wrapApp(
-        authController: controller,
-        home: const Scaffold(body: Text('Home landing')),
-      ),
+      _wrapMainLikeApp(authController: controller),
     );
     await tester.pump();
 
@@ -327,10 +337,7 @@ void main() {
     final controller = await _controllerWithSession(phone: null);
 
     await tester.pumpWidget(
-      _wrapApp(
-        authController: controller,
-        home: const Scaffold(body: Text('Home landing')),
-      ),
+      _wrapMainLikeApp(authController: controller),
     );
     await tester.pumpAndSettle();
 
@@ -339,16 +346,35 @@ void main() {
     expect(find.byKey(const Key('profile_completion_submit_button')), findsOneWidget);
   });
 
+  testWidgets(
+    'main-like MaterialApp.builder gate enables submit button after typing',
+    (tester) async {
+      final controller = await _controllerWithSession(phone: null);
+
+      await tester.pumpWidget(_wrapMainLikeApp(authController: controller));
+      await tester.pumpAndSettle();
+
+      expect(find.text('프로필 완성'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).at(0), 'Alice Kim');
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).at(1), '+821012345678');
+      await tester.pump();
+
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('profile_completion_submit_button')),
+      );
+      expect(button.onPressed, isNotNull);
+    },
+  );
+
   testWidgets('restored session with phone skips profile completion gate', (
     tester,
   ) async {
     final controller = await _controllerWithSession(phone: '+821012345678');
 
     await tester.pumpWidget(
-      _wrapApp(
-        authController: controller,
-        home: const Scaffold(body: Text('Home landing')),
-      ),
+      _wrapMainLikeApp(authController: controller),
     );
     await tester.pumpAndSettle();
 
@@ -359,7 +385,17 @@ void main() {
   testWidgets('navigateAfterAuthenticatedSession routes null-phone user to onboarding', (
     tester,
   ) async {
-    final controller = await _controllerWithSession(phone: null);
+    SharedPreferences.setMockInitialValues({});
+    final tokenStorage = AuthTokenStorage();
+    final controller = AuthController(
+      apiService: AuthApiService(
+        client: MockClient((_) async => http.Response('{}', 500)),
+        baseUrl: 'http://localhost:3000',
+      ),
+      tokenStorage: tokenStorage,
+      googleSignInService: GoogleSignInService()..markInitializedForTest(),
+    );
+    await controller.initialize();
     const returnContext = SocialLoginReturnContext(
       redirectUri: 'https://trider.taxi/auth/kakao/callback',
       serviceLabel: '',
@@ -367,45 +403,37 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('ko'),
-        supportedLocales: const [Locale('ko'), Locale('en')],
-        localizationsDelegates: _testLocalizationDelegates,
-        routes: {
-          ProfileCompletionPage.routeName: (context) {
-            final args = ModalRoute.of(context)?.settings.arguments;
-            return AuthScope(
-              controller: controller,
-              child: ProfileCompletionPage(
-                returnContext: args is ProfileCompletionRouteArgs
-                    ? args.returnContext
-                    : null,
-              ),
-            );
-          },
-        },
-        home: AuthScope(
-          controller: controller,
-          child: Builder(
-            builder: (context) {
-              return Scaffold(
-                body: FilledButton(
-                  onPressed: () {
-                    navigateAfterAuthenticatedSession(
-                      context,
-                      authController: controller,
-                      returnContext: returnContext,
-                    );
-                  },
-                  child: const Text('Continue login'),
-                ),
-              );
-            },
+      _wrapMainLikeApp(
+        authController: controller,
+        initialRoute: '/start',
+        extraRoutes: {
+          '/start': (_) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                await tokenStorage.saveSession(
+                  AuthSession(
+                    accessToken: 'access-token',
+                    refreshToken: 'refresh-token',
+                    user: _user(phone: null),
+                    expiresIn: 3600,
+                  ),
+                );
+                await controller.syncSessionFromStorage();
+                await navigateAfterAuthenticatedSession(
+                  appNavigatorKey.currentContext!,
+                  authController: controller,
+                  returnContext: returnContext,
+                );
+              },
+              child: const Text('Continue login'),
+            ),
           ),
-        ),
+        },
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('Continue login'), findsOneWidget);
 
     await tester.tap(find.text('Continue login'));
     await tester.pumpAndSettle();
@@ -415,7 +443,17 @@ void main() {
   });
 
   testWidgets('phone user continues to home without onboarding', (tester) async {
-    final controller = await _controllerWithSession(phone: '+821012345678');
+    SharedPreferences.setMockInitialValues({});
+    final tokenStorage = AuthTokenStorage();
+    final controller = AuthController(
+      apiService: AuthApiService(
+        client: MockClient((_) async => http.Response('{}', 500)),
+        baseUrl: 'http://localhost:3000',
+      ),
+      tokenStorage: tokenStorage,
+      googleSignInService: GoogleSignInService()..markInitializedForTest(),
+    );
+    await controller.initialize();
     const returnContext = SocialLoginReturnContext(
       redirectUri: 'https://trider.taxi/auth/kakao/callback',
       serviceLabel: '',
@@ -423,33 +461,32 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('ko'),
-        supportedLocales: const [Locale('ko'), Locale('en')],
-        localizationsDelegates: _testLocalizationDelegates,
-        routes: {
-          '/start': (_) => AuthScope(
-            controller: controller,
-            child: Builder(
-              builder: (context) {
-                return Scaffold(
-                  body: FilledButton(
-                    onPressed: () {
-                      navigateAfterAuthenticatedSession(
-                        context,
-                        authController: controller,
-                        returnContext: returnContext,
-                      );
-                    },
-                    child: const Text('Continue login'),
+      _wrapMainLikeApp(
+        authController: controller,
+        initialRoute: '/start',
+        extraRoutes: {
+          '/start': (_) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                await tokenStorage.saveSession(
+                  AuthSession(
+                    accessToken: 'access-token',
+                    refreshToken: 'refresh-token',
+                    user: _user(phone: '+821012345678'),
+                    expiresIn: 3600,
                   ),
                 );
+                await controller.syncSessionFromStorage();
+                await navigateAfterAuthenticatedSession(
+                  appNavigatorKey.currentContext!,
+                  authController: controller,
+                  returnContext: returnContext,
+                );
               },
+              child: const Text('Continue login'),
             ),
           ),
-          '/': (_) => const Scaffold(body: Text('Home landing')),
         },
-        initialRoute: '/start',
       ),
     );
     await tester.pumpAndSettle();
@@ -470,25 +507,16 @@ void main() {
       serviceLabel: '',
       returnToHome: true,
     );
+    controller.setPendingProfileCompletionReturnContext(returnContext);
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('ko'),
-        supportedLocales: const [Locale('ko'), Locale('en')],
-        localizationsDelegates: _testLocalizationDelegates,
-        routes: {
-          '/': (_) => const Scaffold(body: Text('Home landing')),
-          ProfileCompletionPage.routeName: (_) => AuthScope(
-            controller: controller,
-            child: ProfileCompletionPage(
-              returnContext: returnContext,
-              apiService: _RecordingProfileApiService(({required name, required phone, phoneCountryCode}) async {
-                return _user(phone: phone).copyWith(name: name);
-              }),
-            ),
-          ),
-        },
-        initialRoute: ProfileCompletionPage.routeName,
+      _wrapMainLikeApp(
+        authController: controller,
+        profileApiService: _RecordingProfileApiService(
+          ({required name, required phone, phoneCountryCode}) async {
+            return _user(phone: phone).copyWith(name: name);
+          },
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -512,21 +540,16 @@ void main() {
     final controller = await _controllerWithSession(phone: null);
 
     await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('ko'),
-        supportedLocales: const [Locale('ko'), Locale('en')],
-        localizationsDelegates: _testLocalizationDelegates,
-        home: AuthScope(
-          controller: controller,
-          child: ProfileCompletionPage(
-            apiService: _RecordingProfileApiService(({required name, required phone, phoneCountryCode}) async {
-              throw const CustomerProfileApiException(
-                '이미 다른 계정에서 사용 중인 전화번호입니다',
-                statusCode: 409,
-                field: 'phone',
-              );
-            }),
-          ),
+      _wrapMainLikeApp(
+        authController: controller,
+        profileApiService: _RecordingProfileApiService(
+          ({required name, required phone, phoneCountryCode}) async {
+            throw const CustomerProfileApiException(
+              '이미 다른 계정에서 사용 중인 전화번호입니다',
+              statusCode: 409,
+              field: 'phone',
+            );
+          },
         ),
       ),
     );

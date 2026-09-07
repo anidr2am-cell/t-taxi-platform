@@ -77,6 +77,7 @@ class AuthController extends ChangeNotifier {
   String? _errorMessage;
   StreamSubscription<GoogleSignInAuthenticationEvent>? _googleAuthSubscription;
   SocialLoginReturnContext? _pendingClaimContext;
+  SocialLoginReturnContext? _pendingProfileCompletionReturnContext;
 
   bool get isInitialized => _initialized;
   bool get isLoading => _isLoading;
@@ -112,6 +113,19 @@ class AuthController extends ChangeNotifier {
 
   void clearPendingClaimContext() {
     _pendingClaimContext = null;
+  }
+
+  void setPendingProfileCompletionReturnContext(
+    SocialLoginReturnContext? context,
+  ) {
+    _pendingProfileCompletionReturnContext = context;
+  }
+
+  SocialLoginReturnContext? get pendingProfileCompletionReturnContext =>
+      _pendingProfileCompletionReturnContext;
+
+  void clearPendingProfileCompletionReturnContext() {
+    _pendingProfileCompletionReturnContext = null;
   }
 
   @visibleForTesting

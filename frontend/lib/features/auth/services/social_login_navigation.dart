@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../booking/pages/booking_complete_page.dart';
 import '../controllers/auth_controller.dart';
 import '../models/social_login_return_context.dart';
-import '../pages/profile_completion_page.dart';
+import '../services/profile_completion_navigation.dart';
 import '../utils/profile_completion.dart';
 
 const kBookingCompleteRouteName = '/booking/complete';
@@ -18,18 +18,18 @@ Future<void> navigateAfterAuthenticatedSession(
   }
 
   if (authNeedsProfileCompletion(authController)) {
-    await Navigator.of(context).pushNamedAndRemoveUntil(
-      ProfileCompletionPage.routeName,
-      (_) => false,
-      arguments: ProfileCompletionRouteArgs(returnContext: returnContext),
+    authController.setPendingProfileCompletionReturnContext(returnContext);
+    await redirectToProfileCompletionIfNeeded(
+      authController: authController,
+      returnContext: returnContext,
     );
     return;
   }
 
   await navigateToSocialLoginReturnContext(
     context,
-    returnContext: returnContext,
     authController: authController,
+    returnContext: returnContext,
   );
 }
 
@@ -41,6 +41,8 @@ Future<void> navigateToSocialLoginReturnContext(
   if (!context.mounted) {
     return;
   }
+
+  authController.clearPendingProfileCompletionReturnContext();
 
   if (returnContext?.returnToHome == true) {
     await Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);

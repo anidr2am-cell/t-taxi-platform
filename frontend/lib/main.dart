@@ -5,6 +5,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/navigation/app_navigator.dart';
 import 'core/analytics/analytics_consent_provider.dart';
 import 'core/analytics/ga4_booking_analytics_sink.dart';
 import 'core/analytics/ga4_bridge_stub.dart'
@@ -44,7 +45,6 @@ import 'theme/app_theme.dart';
 import 'widgets/analytics_consent_banner.dart';
 
 const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
-final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 final Ga4RouteObserver _ga4RouteObserver = Ga4RouteObserver();
 
 Future<void> main() async {
@@ -96,7 +96,7 @@ class TTaxiApp extends StatelessWidget {
     final locale = context.watch<LocaleState>();
 
     return MaterialApp(
-      navigatorKey: _navigatorKey,
+      navigatorKey: appNavigatorKey,
       navigatorObservers: [_ga4RouteObserver],
       title: 'T-Rider',
       debugShowCheckedModeBanner: false,
@@ -188,7 +188,7 @@ class TTaxiApp extends StatelessWidget {
         final e2eRoute = buildE2ERoute(RouteSettings(name: initialRoute));
         if (e2eRoute != null) return [e2eRoute];
 
-        final navigator = _navigatorKey.currentState;
+        final navigator = appNavigatorKey.currentState;
         if (navigator != null) {
           return Navigator.defaultGenerateInitialRoutes(
             navigator,
