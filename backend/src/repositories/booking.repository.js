@@ -372,7 +372,7 @@ class BookingRepository {
         ${this.guestLookupSelectSql()}
         , b.customer_name
         ${this.guestLookupJoinSql()}
-        WHERE REGEXP_REPLACE(b.customer_phone, '[^0-9]', '') = ?
+        WHERE b.customer_phone_digits = ?
           AND b.deleted_at IS NULL
           AND b.is_archived = 0
         ORDER BY b.scheduled_pickup_at DESC
