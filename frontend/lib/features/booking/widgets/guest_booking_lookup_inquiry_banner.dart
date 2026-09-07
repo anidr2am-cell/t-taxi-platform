@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../auth/widgets/social_brand_icons.dart';
@@ -62,11 +63,13 @@ class _GuestBookingLookupInquiryBannerState
           return const SizedBox.shrink();
         }
 
+        final l10n = context.l10n;
         final message = settings.message.trim();
         final channels = settings.channels;
         if (message.isEmpty && channels.isEmpty) {
           return const SizedBox.shrink();
         }
+        final showChannelHint = channels.isNotEmpty && message.isEmpty;
 
         return KeyedSubtree(
           key: const Key('guest_lookup_inquiry_banner'),
@@ -84,20 +87,32 @@ class _GuestBookingLookupInquiryBannerState
                       height: 1.45,
                     ),
                   ),
-                if (message.isNotEmpty && channels.isNotEmpty)
-                  const SizedBox(height: AppTokens.spaceSm),
-                if (channels.isNotEmpty)
+                if (showChannelHint) ...[
+                  if (message.isNotEmpty) const SizedBox(height: AppTokens.spaceSm),
+                  Text(
+                    l10n.t('guest_lookup_inquiry_channels_hint'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTokens.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+                if (channels.isNotEmpty) ...[
+                  if (message.isNotEmpty || showChannelHint)
+                    const SizedBox(height: AppTokens.spaceSm),
                   Wrap(
-                    spacing: AppTokens.spaceSm,
+                    spacing: AppTokens.spaceMd,
                     runSpacing: AppTokens.spaceSm,
                     children: [
                       for (final channel in channels)
                         _ChannelIconButton(
                           channel: channel,
+                          label: _channelLabel(l10n, channel.code),
                           onTap: () => _openChannel(channel),
                         ),
                     ],
                   ),
+                ],
               ],
             ),
           ),
@@ -105,15 +120,28 @@ class _GuestBookingLookupInquiryBannerState
       },
     );
   }
+
+  String _channelLabel(AppLocalizations l10n, String code) {
+    switch (code.toUpperCase()) {
+      case 'KAKAO':
+        return l10n.t('guest_lookup_inquiry_channel_kakao');
+      case 'LINE':
+        return l10n.t('guest_lookup_inquiry_channel_line');
+      default:
+        return code;
+    }
+  }
 }
 
 class _ChannelIconButton extends StatelessWidget {
   const _ChannelIconButton({
     required this.channel,
+    required this.label,
     required this.onTap,
   });
 
   final ContactChannel channel;
+  final String label;
   final VoidCallback onTap;
 
   static const _kakaoYellow = Color(0xFFFEE500);
@@ -128,22 +156,41 @@ class _ChannelIconButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: channel.displayName,
-      child: Material(
-        color: isKakao ? _kakaoYellow : _lineGreen,
+      label: label,
+      child: InkWell(
+        key: Key('guest_lookup_inquiry_channel_$code'),
+        onTap: onTap,
         borderRadius: AppTokens.borderRadiusMd,
-        child: InkWell(
-          key: Key('guest_lookup_inquiry_channel_$code'),
-          onTap: onTap,
-          borderRadius: AppTokens.borderRadiusMd,
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: Center(
-              child: isKakao
-                  ? const KakaoBrandIcon(size: 24)
-                  : const LineBrandIcon(size: 24),
-            ),
+        child: SizedBox(
+          width: 72,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Material(
+                color: isKakao ? _kakaoYellow : _lineGreen,
+                borderRadius: AppTokens.borderRadiusMd,
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                    child: isKakao
+                        ? const KakaoBrandIcon(size: 24)
+                        : const LineBrandIcon(size: 24),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                key: Key('guest_lookup_inquiry_channel_label_$code'),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTokens.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
