@@ -144,8 +144,8 @@ class _ChannelIconButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  static const _kakaoYellow = Color(0xFFFEE500);
-  static const _lineGreen = Color(0xFF06C755);
+  static const _iconSize = 48.0;
+  static const _columnWidth = 72.0;
 
   @override
   Widget build(BuildContext context) {
@@ -162,23 +162,19 @@ class _ChannelIconButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppTokens.borderRadiusMd,
         child: SizedBox(
-          width: 72,
+          width: _columnWidth,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Material(
-                color: isKakao ? _kakaoYellow : _lineGreen,
-                borderRadius: AppTokens.borderRadiusMd,
-                child: SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Center(
-                    child: isKakao
-                        ? const KakaoBrandIcon(size: 24)
-                        : const LineBrandIcon(size: 24),
-                  ),
-                ),
-              ),
+              isKakao
+                  ? const KakaoBrandIcon(
+                      size: _iconSize,
+                      style: SocialBrandIconStyle.appIcon,
+                    )
+                  : const LineBrandIcon(
+                      size: _iconSize,
+                      style: SocialBrandIconStyle.appIcon,
+                    ),
               const SizedBox(height: 4),
               Text(
                 label,

@@ -128,6 +128,48 @@ void main() {
     expect(find.text('라인'), findsOneWidget);
   });
 
+  testWidgets('shows app-icon style channel buttons when enabled', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: [
+          AppLocalizationsDelegate('ko'),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLanguages
+            .map((code) => Locale(code))
+            .toList(),
+        locale: const Locale('ko'),
+        home: Scaffold(
+          body: GuestBookingLookupInquiryBanner(
+            api: _FakeGuestLookupInquiryApi({
+              'enabled': true,
+              'message': '관리자에게 문의하세요',
+              'channels': [
+                {
+                  'code': 'KAKAO',
+                  'displayName': 'KakaoTalk',
+                  'addUrl': 'https://open.kakao.com/o/s/example',
+                  'enabled': true,
+                },
+              ],
+            }),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('guest_lookup_inquiry_channel_KAKAO')),
+        matching: find.byType(Image),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('channel icon tap launches addUrl', (tester) async {
     Uri? launchedUri;
     await tester.pumpWidget(

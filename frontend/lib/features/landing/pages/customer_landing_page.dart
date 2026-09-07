@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/booking_provider.dart';
 import '../../../theme/app_tokens.dart';
-import '../../../widgets/pwa_install_banner.dart';
 import '../../booking/models/booking_wizard_route_args.dart';
 import '../../booking/models/booking_wizard_steps.dart';
 import '../../booking/models/location_option.dart';
@@ -165,7 +164,6 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
                       LandingBookingLookupCard(
                         onLookup: () => _openBookingLookup(context),
                       ),
-                      const PwaInstallBanner(),
                       LandingBottomCta(onSupport: () => _openSupport(context)),
                       const LandingSocialLoginSection(),
                       LandingFooter(

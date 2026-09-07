@@ -1,18 +1,41 @@
 import 'package:flutter/material.dart';
 
-/// Kakao Talk brand bubble (black fill) for sign-in buttons.
+enum SocialBrandIconStyle {
+  /// Bubble mark only — for sign-in buttons that already provide brand color.
+  mark,
+
+  /// Official brand artwork — for inquiry/contact entry points.
+  appIcon,
+}
+
+/// Kakao Talk brand icon.
 class KakaoBrandIcon extends StatelessWidget {
   const KakaoBrandIcon({
     super.key,
     this.size = 20,
     this.color = const Color(0xFF191919),
+    this.style = SocialBrandIconStyle.mark,
   });
 
   final double size;
   final Color color;
+  final SocialBrandIconStyle style;
+
+  /// Official KakaoTalk app icon artwork.
+  static const _appIconAsset = 'assets/images/brands/kakao_talk_app_icon.png';
 
   @override
   Widget build(BuildContext context) {
+    if (style == SocialBrandIconStyle.appIcon) {
+      return Image.asset(
+        _appIconAsset,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        semanticLabel: 'KakaoTalk',
+      );
+    }
+
     return CustomPaint(
       size: Size.square(size),
       painter: _KakaoBubblePainter(color: color),
@@ -52,19 +75,35 @@ class _KakaoBubblePainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-/// LINE brand speech-bubble mark (white on green buttons).
+/// LINE brand icon.
 class LineBrandIcon extends StatelessWidget {
   const LineBrandIcon({
     super.key,
     this.size = 20,
     this.color = Colors.white,
+    this.style = SocialBrandIconStyle.mark,
   });
 
   final double size;
   final Color color;
+  final SocialBrandIconStyle style;
+
+  /// LINE APP ICON GUIDELINE > iPhone APP ICON PNG.
+  static const _appIconAsset = 'assets/images/brands/line_app_icon_ios.png';
 
   @override
   Widget build(BuildContext context) {
+    if (style == SocialBrandIconStyle.appIcon) {
+      // LINE guidelines: use downloadable files as-is without alteration.
+      return Image.asset(
+        _appIconAsset,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        semanticLabel: 'LINE',
+      );
+    }
+
     return CustomPaint(
       size: Size.square(size),
       painter: _LineBubblePainter(color: color),

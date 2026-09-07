@@ -163,6 +163,8 @@ void main() {
       await pumpLanding(tester, width: 360);
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('landing_service_row')), findsOneWidget);
+      expect(find.text('Install App'), findsNothing);
+      expect(find.text('앱 설치'), findsNothing);
     });
 
     testWidgets('has no overflow at 360px on short viewport (640px tall)', (
