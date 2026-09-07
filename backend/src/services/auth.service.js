@@ -3,6 +3,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const ROLES = require('../constants/roles');
 const { hashPassword, verifyPassword } = require('../utils/passwordHash.util');
+const { isDuplicateEmailEntry, isDuplicatePhoneEntry } = require('../utils/duplicateEntry.util');
 
 const LOGIN_ALLOWED_ROLES = [
   ROLES.CUSTOMER,
@@ -86,6 +87,20 @@ class AuthService {
 
       return this.buildAuthResponse(user);
     } catch (err) {
+      if (isDuplicatePhoneEntry(err)) {
+        const message = '이미 사용 중인 전화번호입니다';
+        throw new AppError(message, {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+          errors: [{ field: 'phone', message }],
+        });
+      }
+      if (isDuplicateEmailEntry(err)) {
+        throw new AppError('Email already registered', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.DUPLICATE_BOOKING,
+        });
+      }
       if (err.code === 'ER_DUP_ENTRY') {
         throw new AppError('Email already registered', {
           statusCode: HTTP_STATUS.CONFLICT,

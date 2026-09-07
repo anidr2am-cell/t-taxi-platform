@@ -29,6 +29,7 @@ const BookingNumberService = require("../services/bookingNumber.service");
 const BookingService = require("../services/booking.service");
 const GuestBookingLookupService = require("../services/guestBookingLookup.service");
 const CustomerBookingService = require("../services/customerBooking.service");
+const CustomerProfileService = require("../services/customerProfile.service");
 const GuestVehiclePhotoService = require("../services/guestVehiclePhoto.service");
 const GuestNameSignPhotoService = require("../services/guestNameSignPhoto.service");
 const BookingNameSignPhotoService = require("../services/bookingNameSignPhoto.service");
@@ -374,6 +375,14 @@ container.register(
       c.get("bookingRepository"),
       c.get("guestBookingLookupService"),
       c.get("reviewRepository"),
+    ),
+);
+container.register(
+  "customerProfileService",
+  (c) =>
+    new CustomerProfileService(
+      database.pool,
+      c.get("userRepository"),
     ),
 );
 container.register(

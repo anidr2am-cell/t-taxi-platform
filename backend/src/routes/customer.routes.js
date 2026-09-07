@@ -3,6 +3,7 @@ const notificationController = require('../controllers/notification.controller')
 const mileageController = require('../controllers/mileage.controller');
 const customerBookingController = require('../controllers/customerBooking.controller');
 const couponController = require('../controllers/coupon.controller');
+const customerProfileController = require('../controllers/customerProfile.controller');
 const validate = require('../middlewares/validate.middleware');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
@@ -14,6 +15,7 @@ const {
 const { claimBookingSchema, customerBookingListQuerySchema } = require('../validators/booking.validator');
 const { mileageTransactionListQuerySchema } = require('../validators/mileage.validator');
 const { couponIdParamSchema } = require('../validators/coupon.validator');
+const { updateCustomerProfileSchema } = require('../validators/customerProfile.validator');
 const {
   customerBookingClaimIpRateLimit,
   customerBookingClaimUserRateLimit,
@@ -85,6 +87,13 @@ router.post(
   customerBookingClaimUserRateLimit,
   validate({ body: claimBookingSchema }),
   customerBookingController.claimBooking,
+);
+
+router.patch(
+  '/profile',
+  customerOnly,
+  validate({ body: updateCustomerProfileSchema }),
+  customerProfileController.updateProfile,
 );
 
 router.get(

@@ -153,6 +153,69 @@ class UserRepository {
     }
   }
 
+  async findByIdForUpdate(conn, id) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          u.id,
+          u.email,
+          u.password_hash,
+          u.role,
+          u.phone,
+          u.phone_country_code,
+          u.country_code,
+          u.locale,
+          u.is_active,
+          up.display_name AS name
+        FROM users u
+        LEFT JOIN user_profiles up
+          ON up.user_id = u.id AND up.deleted_at IS NULL
+        WHERE u.id = ? AND u.deleted_at IS NULL
+        FOR UPDATE
+      `,
+      [id],
+    );
+    return rows[0] || null;
+  }
+
+  async updateCustomerProfile(conn, { userId, name, phone, phoneCountryCode }) {
+    await conn.query(
+      `
+        UPDATE users
+        SET phone = ?, phone_country_code = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [phone, phoneCountryCode, userId],
+    );
+
+    const [existing] = await conn.query(
+      `
+        SELECT id
+        FROM user_profiles
+        WHERE user_id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [userId],
+    );
+
+    if (existing[0]) {
+      await conn.query(
+        `
+          UPDATE user_profiles
+          SET display_name = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ? AND deleted_at IS NULL
+        `,
+        [name, userId],
+      );
+      return;
+    }
+
+    await conn.query(
+      `INSERT INTO user_profiles (user_id, display_name) VALUES (?, ?)`,
+      [userId, name],
+    );
+  }
+
   async updateLastLoginAt(userId) {
     await this.pool.query(
       `UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?`,
