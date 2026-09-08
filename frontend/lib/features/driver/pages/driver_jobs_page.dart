@@ -49,6 +49,7 @@ class _DriverJobsPageState extends State<DriverJobsPage>
     _api = widget.api ?? DriverApiService();
     _tabController = TabController(length: 3, vsync: this);
     DriverCallSocketBridge.instance.onUrgentEvent = _handleUrgentSocketEvent;
+    DriverCallSocketBridge.instance.onCallEvent = _handleCallSocketEvent;
     _loadData();
   }
 
@@ -57,6 +58,10 @@ class _DriverJobsPageState extends State<DriverJobsPage>
     if (DriverCallSocketBridge.instance.onUrgentEvent ==
         _handleUrgentSocketEvent) {
       DriverCallSocketBridge.instance.onUrgentEvent = null;
+    }
+    if (DriverCallSocketBridge.instance.onCallEvent ==
+        _handleCallSocketEvent) {
+      DriverCallSocketBridge.instance.onCallEvent = null;
     }
     _tabController.dispose();
     super.dispose();
@@ -112,6 +117,14 @@ class _DriverJobsPageState extends State<DriverJobsPage>
               !_hiddenUrgentCalls.contains(call.bookingNumber),
         )
         .toList(growable: false);
+  }
+
+  void _handleCallSocketEvent(
+    String event,
+    Map<String, dynamic> payload,
+  ) {
+    if (!mounted) return;
+    _refresh();
   }
 
   void _handleUrgentSocketEvent(

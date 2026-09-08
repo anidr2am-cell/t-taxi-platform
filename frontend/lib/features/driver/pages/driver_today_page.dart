@@ -76,6 +76,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
     if (!mounted || token == null || token.isEmpty) return;
     final socket = DriverCallSocketService()
       ..onNewCall = (payload) {
+        DriverCallSocketBridge.instance.dispatchCall('new', payload);
         final bookingNumber = payload['bookingNumber']?.toString();
         final shouldAlert =
             bookingNumber == null || _notifiedOpenCalls.add(bookingNumber);
@@ -89,13 +90,19 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
           _refresh();
         }
       }
-      ..onClaimed = (_) {
+      ..onClaimed = (payload) {
+        DriverCallSocketBridge.instance.dispatchCall('claimed', payload);
         if (mounted) _refresh();
       }
-      ..onConfirmed = (_) {
+      ..onConfirmed = (payload) {
+        DriverCallSocketBridge.instance.dispatchCall('confirmed', payload);
         if (mounted) _refresh();
       }
       ..onAssignmentReleased = (payload) {
+        DriverCallSocketBridge.instance.dispatchCall(
+          'assignment-released',
+          payload,
+        );
         if (!mounted) return;
         final bookingNumber = payload['bookingNumber']?.toString();
         final reasonCode = payload['reasonCode']?.toString() ??
@@ -111,6 +118,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
           ..showSnackBar(SnackBar(content: Text(text)));
       }
       ..onReconnect = () {
+        DriverCallSocketBridge.instance.dispatchCall('reconnect', const {});
         if (mounted) _refresh();
       };
     socket
