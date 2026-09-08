@@ -602,12 +602,6 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
           AppUi.sectionHeader(
             context,
             title: l10n.t('pickup_datetime'),
-            subtitle: l10n.t('pickup_minimum_notice'),
-          ),
-        if (widget.embedded)
-          Text(
-            l10n.t('pickup_minimum_notice'),
-            style: WizardCompact.hintTextStyle,
           ),
         if (showUrgentHint) ...[
           if (widget.embedded) const SizedBox(height: WizardCompact.fieldGap),
