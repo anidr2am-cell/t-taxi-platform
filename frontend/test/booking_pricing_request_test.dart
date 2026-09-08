@@ -525,7 +525,7 @@ void main() {
     expect(controller.state.errorMessage, contains('past'));
   });
 
-  test('pickup within two hours is allowed as urgent window', () {
+  test('near-future pickup is standard allowed and not urgent window', () {
     final controller = BookingWizardController(
       apiService: _CapturingBookingApi(),
       storage: _MemoryBookingStateStorage(),
@@ -537,11 +537,11 @@ void main() {
 
     expect(
       controller.isUrgentPickupWindow(DateTime(2026, 6, 29, 11, 30)),
-      isTrue,
+      isFalse,
     );
     expect(
       controller.isStandardPickupAllowed(DateTime(2026, 6, 29, 11, 30)),
-      isFalse,
+      isTrue,
     );
   });
 
@@ -1605,7 +1605,7 @@ void main() {
               source: 'body',
               field: 'scheduledPickupAt',
               type: 'any.custom',
-              message: 'scheduledPickupAt must be at least 2 hours from now',
+              message: 'scheduledPickupAt must be in the future',
             ),
           ]),
         ),

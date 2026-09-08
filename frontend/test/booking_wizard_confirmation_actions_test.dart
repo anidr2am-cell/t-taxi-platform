@@ -20,8 +20,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final fixedUtc = DateTime.utc(2026, 7, 23, 3, 0); // 10:00 Bangkok
-  final urgentPickup = DateTime(2026, 7, 23, 11, 0);
-  final standardPickup = DateTime(2026, 7, 23, 13, 0);
+  final nearPickup = DateTime(2026, 7, 23, 10, 30);
+  final laterPickup = DateTime(2026, 7, 23, 13, 0);
 
   group('booking wizard confirmation actions', () {
     Future<BookingWizardController> buildCompleteController({
@@ -86,31 +86,32 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    testWidgets('urgent pickup on review step shows urgent request button', (
+    testWidgets('near-future pickup on review step shows confirm button only', (
       tester,
     ) async {
-      final controller = await buildCompleteController(pickup: urgentPickup);
+      final controller = await buildCompleteController(pickup: nearPickup);
       await pumpWizard(tester, controller);
 
-      expect(find.text('Urgent request'), findsOneWidget);
-      expect(find.text('Confirm booking'), findsNothing);
+      expect(find.textContaining('Confirm booking'), findsOneWidget);
+      expect(find.text('Urgent request'), findsNothing);
+      expect(find.textContaining('Urgent Request'), findsNothing);
     });
 
-    testWidgets('standard pickup on review step shows confirm button', (
+    testWidgets('later pickup on review step shows confirm button only', (
       tester,
     ) async {
-      final controller = await buildCompleteController(pickup: standardPickup);
+      final controller = await buildCompleteController(pickup: laterPickup);
       await pumpWizard(tester, controller);
 
       expect(find.textContaining('Confirm booking'), findsOneWidget);
       expect(find.text('Urgent request'), findsNothing);
     });
 
-    testWidgets('review step pickup change to urgent switches primary action', (
+    testWidgets('review step pickup change keeps standard confirm action', (
       tester,
     ) async {
       final controller = await buildCompleteController(
-        pickup: standardPickup,
+        pickup: laterPickup,
         step: BookingWizardSteps.review,
       );
       await pumpWizard(tester, controller);
@@ -118,26 +119,7 @@ void main() {
       expect(find.textContaining('Confirm booking'), findsOneWidget);
       expect(find.text('Urgent request'), findsNothing);
 
-      await controller.setPickupDateTime(urgentPickup);
-      await tester.pump();
-
-      expect(find.text('Urgent request'), findsOneWidget);
-      expect(find.textContaining('Confirm booking'), findsNothing);
-    });
-
-    testWidgets('review step pickup change to standard switches primary action', (
-      tester,
-    ) async {
-      final controller = await buildCompleteController(
-        pickup: urgentPickup,
-        step: BookingWizardSteps.review,
-      );
-      await pumpWizard(tester, controller);
-
-      expect(find.text('Urgent request'), findsOneWidget);
-      expect(find.textContaining('Confirm booking'), findsNothing);
-
-      await controller.setPickupDateTime(standardPickup);
+      await controller.setPickupDateTime(nearPickup);
       await tester.pump();
 
       expect(find.textContaining('Confirm booking'), findsOneWidget);
@@ -148,7 +130,7 @@ void main() {
       tester,
     ) async {
       final controller = await buildCompleteController(
-        pickup: urgentPickup,
+        pickup: nearPickup,
         step: BookingWizardSteps.review,
       );
       await pumpWizard(tester, controller);
@@ -162,7 +144,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.state.step, BookingWizardSteps.review);
-      expect(find.text('Urgent request'), findsOneWidget);
+      expect(find.textContaining('Confirm booking'), findsOneWidget);
+      expect(find.text('Urgent request'), findsNothing);
     });
   });
 }

@@ -49,12 +49,9 @@ function validateStandardScheduledPickupAt(value, helpers) {
   if (Number.isNaN(timestamp)) {
     return helpers.error('date.format');
   }
-
-  const minimum = Date.now() + (2 * 60 * 60 * 1000);
-  if (timestamp < minimum) {
-    return helpers.message('scheduledPickupAt must be at least 2 hours from now');
+  if (timestamp < Date.now()) {
+    return helpers.message('scheduledPickupAt must be in the future');
   }
-
   return value;
 }
 

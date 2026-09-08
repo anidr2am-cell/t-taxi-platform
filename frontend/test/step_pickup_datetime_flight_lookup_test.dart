@@ -253,6 +253,8 @@ void main() {
       );
       await controller.initialize();
       await controller.selectService(BookingServiceType.airportPickup);
+      // Keep a stable manual pickup for conflict scenarios (independent of default UX).
+      await controller.setPickupDateTime(DateTime(2026, 7, 1, 11, 0));
     });
 
     Future<void> lookupAndConfirm(WidgetTester tester) async {

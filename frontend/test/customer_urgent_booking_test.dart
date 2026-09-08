@@ -26,18 +26,25 @@ void main() {
       return BookingWizardController(now: () => fixedNow);
     }
 
-    test('detects pickup within two hours as urgent window', () {
+    test('near-future pickup is standard allowed and not urgent window', () {
       final c = controller();
-      final urgentPickup = DateTime(2026, 7, 23, 11, 30);
-      expect(c.isUrgentPickupWindow(urgentPickup), isTrue);
-      expect(c.isStandardPickupAllowed(urgentPickup), isFalse);
+      final nearPickup = DateTime(2026, 7, 23, 10, 30);
+      expect(c.isUrgentPickupWindow(nearPickup), isFalse);
+      expect(c.isStandardPickupAllowed(nearPickup), isTrue);
     });
 
-    test('detects pickup after two hours as standard only', () {
+    test('future pickup beyond old urgent window remains standard allowed', () {
       final c = controller();
-      final standardPickup = DateTime(2026, 7, 23, 12, 30);
+      final standardPickup = DateTime(2026, 7, 23, 13, 0);
       expect(c.isUrgentPickupWindow(standardPickup), isFalse);
       expect(c.isStandardPickupAllowed(standardPickup), isTrue);
+    });
+
+    test('past pickup is not standard allowed', () {
+      final c = controller();
+      final pastPickup = DateTime(2026, 7, 23, 9, 0);
+      expect(c.isStandardPickupAllowed(pastPickup), isFalse);
+      expect(c.isUrgentPickupWindow(pastPickup), isFalse);
     });
   });
 

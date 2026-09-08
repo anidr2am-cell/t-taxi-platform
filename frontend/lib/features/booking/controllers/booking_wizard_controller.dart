@@ -397,9 +397,7 @@ class BookingWizardController extends ChangeNotifier {
     return _bangkokWallTime(adjusted);
   }
 
-  DateTime minimumPickupDateTime() {
-    return thailandNow().add(const Duration(hours: 2));
-  }
+  DateTime minimumPickupDateTime() => thailandNow();
 
   DateTime earliestSelectablePickupDateTime() => thailandNow();
 
@@ -407,19 +405,15 @@ class BookingWizardController extends ChangeNotifier {
     return thailandNow().add(const Duration(hours: 2));
   }
 
-  DateTime defaultPickupDateTime() => minimumPickupDateTime();
+  DateTime defaultPickupDateTime() {
+    return thailandNow().add(const Duration(minutes: 30));
+  }
 
   bool isStandardPickupAllowed(DateTime value) {
     return !_bangkokWallTime(value).isBefore(minimumPickupDateTime());
   }
 
-  bool isUrgentPickupWindow(DateTime? value) {
-    if (value == null) return false;
-    final pickup = _bangkokWallTime(value);
-    final now = thailandNow();
-    final urgentMax = maximumUrgentPickupDateTime();
-    return !pickup.isBefore(now) && pickup.isBefore(urgentMax);
-  }
+  bool isUrgentPickupWindow(DateTime? value) => false;
 
   bool isUrgentPickupWindowSelected() {
     return isUrgentPickupWindow(selectedPickupDateTime());

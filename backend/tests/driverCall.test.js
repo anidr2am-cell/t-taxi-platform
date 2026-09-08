@@ -1201,6 +1201,46 @@ test('claimOpenCall still works for non-urgent open bookings', async () => {
   setRealtimeIo(null);
 });
 
+function nearFuturePickupParts(minutesAhead = 10) {
+  const d = new Date(Date.now() + minutesAhead * 60 * 1000);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const hour = String(d.getUTCHours()).padStart(2, '0');
+  const minute = String(d.getUTCMinutes()).padStart(2, '0');
+  return {
+    scheduledPickupAt: `${year}-${month}-${day} ${hour}:${minute}:00`,
+    pickupDate: `${year}-${month}-${day}`,
+    pickupTime: `${hour}:${minute}`,
+  };
+}
+
+test('near-term STANDARD open call is listed and claimable', async () => {
+  setRealtimeIo({ to() { return { emit() {} }; } });
+  const pickup = nearFuturePickupParts(10);
+  const { service, conn, calls } = createHarness({
+    booking: {
+      is_urgent_request: 0,
+      status: BOOKING_STATUS.OPEN,
+      scheduled_pickup_at: pickup.scheduledPickupAt,
+    },
+    openRows: [openCallRow({
+      pickup_date: pickup.pickupDate,
+      pickup_time: pickup.pickupTime,
+    })],
+  });
+
+  const listed = await service.listOpenCalls(42);
+  assert.equal(listed.items.length, 1);
+  assert.equal(listed.items[0].bookingNumber, 'TX202607130001');
+
+  const result = await service.claimOpenCall(42, 'TX202607130001');
+  assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
+  assert.equal(conn.committed, true);
+  assert.equal(calls.assignments.length, 1);
+  setRealtimeIo(null);
+});
+
 test('releaseAssignment on urgent booking restarts negotiation and emits driver:urgent-call:new', async () => {
   const emitted = [];
   setRealtimeIo({

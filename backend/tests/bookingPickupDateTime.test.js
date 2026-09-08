@@ -57,15 +57,27 @@ test('booking validator requires scheduledPickupAt', () => {
   assert.match(error.message, /scheduledPickupAt/);
 });
 
-test('booking validator rejects pickup less than 2 hours from now', () => {
-  const nearFuture = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+test('booking validator accepts STANDARD pickup 10 minutes from now', () => {
+  const nearFuture = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  const { error } = createBookingSchema.validate(validPayload({
+  const { error, value } = createBookingSchema.validate(validPayload({
+    bookingMode: 'STANDARD',
     scheduledPickupAt: nearFuture,
   }));
 
+  assert.equal(error, undefined);
+  assert.equal(value.bookingMode, 'STANDARD');
+});
+
+test('booking validator rejects pickup in the past', () => {
+  const past = new Date(Date.now() - 60 * 1000).toISOString();
+
+  const { error } = createBookingSchema.validate(validPayload({
+    scheduledPickupAt: past,
+  }));
+
   assert.ok(error);
-  assert.match(error.message, /2 hours/);
+  assert.match(error.message, /future/);
 });
 
 test('booking validator accepts future scheduledPickupAt ISO-8601', () => {
