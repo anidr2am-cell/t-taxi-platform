@@ -1,8 +1,18 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../driver/services/driver_session.dart';
+
+@visibleForTesting
+String computeReceiptIdempotencyKey(String bookingNumber, List<int> bytes) {
+  final digest = sha256.convert([...utf8.encode('$bookingNumber:'), ...bytes]);
+  return digest.toString();
+}
 
 class DriverSettlementApiException implements Exception {
   const DriverSettlementApiException(
@@ -38,7 +48,12 @@ class DriverSettlementApiService {
     }
   }
 
-  Future<dynamic> _postFile(String path, List<int> bytes, String filename) async {
+  Future<dynamic> _postFile(
+    String path,
+    List<int> bytes,
+    String filename, {
+    Map<String, String> headers = const {},
+  }) async {
     final token = await _requireAccessToken();
     final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
     final mimeType = switch (ext) {
@@ -51,6 +66,7 @@ class DriverSettlementApiService {
       final decoded = await _session.apiClient.postMultipart(
         path,
         bearerToken: token,
+        headers: headers,
         files: [
           ApiMultipartFile(
             field: 'file',
@@ -101,10 +117,12 @@ class DriverSettlementApiService {
     List<int> bytes,
     String filename,
   ) async {
+    final idempotencyKey = computeReceiptIdempotencyKey(bookingNumber, bytes);
     final data = await _postFile(
       '/driver/settlements/$bookingNumber/receipt',
       bytes,
       filename,
+      headers: {'Idempotency-Key': idempotencyKey},
     );
     return Map<String, dynamic>.from(data as Map);
   }
