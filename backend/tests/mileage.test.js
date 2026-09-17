@@ -438,7 +438,7 @@ test('bookingStatusService triggers mileage accrue after SETTLEMENT_PENDING', as
   assert.deepEqual(calls, [['accrue', 501]]);
 });
 
-test('bookingStatusService triggers mileage reversal when cancelling accrued booking', async () => {
+test('bookingStatusService triggers accrual reversal and redemption refund when cancelling accrued booking', async () => {
   const calls = [];
   const mileageService = {
     async accrueForBooking(bookingId) {
@@ -446,6 +446,9 @@ test('bookingStatusService triggers mileage reversal when cancelling accrued boo
     },
     async reverseForBooking(bookingId) {
       calls.push(['reverse', bookingId]);
+    },
+    async reverseRedemptionForBooking(bookingId) {
+      calls.push(['reverseRedemption', bookingId]);
     },
   };
   const bookingStatusService = new BookingStatusService({}, {}, {}, {}, mileageService);
@@ -456,10 +459,10 @@ test('bookingStatusService triggers mileage reversal when cancelling accrued boo
     toStatus: BOOKING_STATUS.CANCELLED,
   });
 
-  assert.deepEqual(calls, [['reverse', 502]]);
+  assert.deepEqual(calls, [['reverse', 502], ['reverseRedemption', 502]]);
 });
 
-test('bookingStatusService skips mileage reversal for pre-accrual cancellation', async () => {
+test('bookingStatusService refunds redeemed mileage on pre-settlement cancellation', async () => {
   const calls = [];
   const mileageService = {
     async accrueForBooking(bookingId) {
@@ -468,14 +471,42 @@ test('bookingStatusService skips mileage reversal for pre-accrual cancellation',
     async reverseForBooking(bookingId) {
       calls.push(['reverse', bookingId]);
     },
+    async reverseRedemptionForBooking(bookingId) {
+      calls.push(['reverseRedemption', bookingId]);
+    },
   };
   const bookingStatusService = new BookingStatusService({}, {}, {}, {}, mileageService);
 
   await bookingStatusService.handlePostCommitMileageEffects({
     bookingId: 503,
-    fromStatus: BOOKING_STATUS.PICKED_UP,
+    fromStatus: BOOKING_STATUS.DRIVER_ASSIGNED,
     toStatus: BOOKING_STATUS.CANCELLED,
   });
 
-  assert.deepEqual(calls, []);
+  assert.deepEqual(calls, [['reverseRedemption', 503]]);
+});
+
+test('bookingStatusService skips accrual reversal but still attempts redemption refund on early cancellation', async () => {
+  const calls = [];
+  const mileageService = {
+    async accrueForBooking(bookingId) {
+      calls.push(['accrue', bookingId]);
+    },
+    async reverseForBooking(bookingId) {
+      calls.push(['reverse', bookingId]);
+    },
+    async reverseRedemptionForBooking(bookingId) {
+      calls.push(['reverseRedemption', bookingId]);
+      return { skipped: true, reason: 'NO_REDEEM' };
+    },
+  };
+  const bookingStatusService = new BookingStatusService({}, {}, {}, {}, mileageService);
+
+  await bookingStatusService.handlePostCommitMileageEffects({
+    bookingId: 504,
+    fromStatus: BOOKING_STATUS.OPEN,
+    toStatus: BOOKING_STATUS.CANCELLED,
+  });
+
+  assert.deepEqual(calls, [['reverseRedemption', 504]]);
 });
