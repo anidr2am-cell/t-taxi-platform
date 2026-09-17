@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/analytics/marketing_attribution_provider.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../account/services/coupon_api_service.dart';
+import '../../account/services/mileage_api_service.dart';
 import '../models/booking_wizard_steps.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/booking_complete_review.dart';
@@ -25,6 +26,7 @@ class BookingWizardController extends ChangeNotifier {
     DateTime Function()? now,
     String placesLanguageCode = 'en',
     CouponApiService? couponApiService,
+    MileageApiService? mileageApiService,
   }) : _api = apiService ?? BookingApiService(),
        _storage = storage ?? BookingStateStorage(),
        _recentLocations = recentLocationsStorage ?? RecentLocationsStorage(),
@@ -32,7 +34,8 @@ class BookingWizardController extends ChangeNotifier {
        _analytics = analytics ?? BookingAnalytics.instance,
        _now = now ?? DateTime.now,
        _placesLanguageCode = placesLanguageCode,
-       _couponApi = couponApiService ?? CouponApiService();
+       _couponApi = couponApiService ?? CouponApiService(),
+       _mileageApi = mileageApiService ?? MileageApiService();
 
   final BookingApiService _api;
   final BookingStateStorage _storage;
@@ -42,12 +45,17 @@ class BookingWizardController extends ChangeNotifier {
   final DateTime Function() _now;
   final String _placesLanguageCode;
   final CouponApiService _couponApi;
+  final MileageApiService _mileageApi;
 
   List<CustomerCouponItem> _availableCoupons = const [];
   bool _loadingCoupons = false;
+  int _mileageBalance = 0;
+  bool _loadingMileage = false;
 
   List<CustomerCouponItem> get availableCoupons => _availableCoupons;
   bool get loadingCoupons => _loadingCoupons;
+  int get mileageBalance => _mileageBalance;
+  bool get loadingMileage => _loadingMileage;
 
   BookingAnalytics get analytics => _analytics;
 
@@ -725,6 +733,8 @@ class BookingWizardController extends ChangeNotifier {
         'additionalRequests': _state.additionalRequests.trim(),
       if (attribution.isNotEmpty) 'marketingAttribution': attribution,
       if (_state.selectedCouponId != null) 'couponId': _state.selectedCouponId,
+      if (_state.mileageAmountToUse > 0)
+        'mileageAmount': _state.mileageAmountToUse,
     };
   }
 
@@ -790,6 +800,49 @@ class BookingWizardController extends ChangeNotifier {
       clearSelectedCoupon: couponId == null,
     );
     notifyListeners();
+  }
+
+  Future<void> loadMileageBalance({String? accessToken}) async {
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      _mileageBalance = 0;
+      _state = _state.copyWith(mileageAmountToUse: 0);
+      notifyListeners();
+      return;
+    }
+    _loadingMileage = true;
+    notifyListeners();
+    try {
+      final result = await _mileageApi.getMileageBalance();
+      _mileageBalance = result.balance;
+      if (_state.mileageAmountToUse > maxMileageUsable()) {
+        _state = _state.copyWith(mileageAmountToUse: maxMileageUsable());
+      }
+    } catch (_) {
+      _mileageBalance = 0;
+      _state = _state.copyWith(mileageAmountToUse: 0);
+    } finally {
+      _loadingMileage = false;
+      notifyListeners();
+    }
+  }
+
+  int maxMileageUsable() {
+    final afterCoupon = estimatedTotalAfterCoupon();
+    if (afterCoupon == null) return 0;
+    final cap = afterCoupon.floor();
+    return cap < _mileageBalance ? (cap < 0 ? 0 : cap) : _mileageBalance;
+  }
+
+  void setMileageAmountToUse(int amount) {
+    final clamped = amount.clamp(0, maxMileageUsable());
+    _state = _state.copyWith(mileageAmountToUse: clamped);
+    notifyListeners();
+  }
+
+  num? estimatedTotalAfterMileage() {
+    final afterCoupon = estimatedTotalAfterCoupon();
+    if (afterCoupon == null) return null;
+    return afterCoupon - _state.mileageAmountToUse;
   }
 
   String formatLocationLabel(LocationOption? location) {

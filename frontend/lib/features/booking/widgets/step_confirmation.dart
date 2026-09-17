@@ -17,8 +17,12 @@ class StepConfirmation extends StatelessWidget {
   final List<CustomerCouponItem> availableCoupons;
   final bool loadingCoupons;
   final ValueChanged<int?>? onCouponSelected;
+  final int mileageBalance;
+  final int mileageAmountToUse;
+  final ValueChanged<int>? onMileageAmountChanged;
   final num? estimatedTotal;
   final num? couponDiscount;
+  final num? mileageDiscount;
 
   const StepConfirmation({
     super.key,
@@ -28,8 +32,12 @@ class StepConfirmation extends StatelessWidget {
     this.availableCoupons = const [],
     this.loadingCoupons = false,
     this.onCouponSelected,
+    this.mileageBalance = 0,
+    this.mileageAmountToUse = 0,
+    this.onMileageAmountChanged,
     this.estimatedTotal,
     this.couponDiscount,
+    this.mileageDiscount,
   });
 
   @override
@@ -171,6 +179,11 @@ class StepConfirmation extends StatelessWidget {
                   label: l10n.t('booking_coupon_discount_label'),
                   value: '-${CustomerBookingFormat.money(couponDiscount!, pricing.currency)}',
                 ),
+              if (mileageDiscount != null && mileageDiscount! > 0)
+                AppUi.summaryRow(
+                  label: l10n.t('booking_mileage_discount_label'),
+                  value: '-${CustomerBookingFormat.money(mileageDiscount!, pricing.currency)}',
+                ),
             ],
             if (availableCoupons.isNotEmpty || loadingCoupons) ...[
               const Divider(height: 24),
@@ -208,6 +221,46 @@ class StepConfirmation extends StatelessWidget {
                   ],
                   onChanged: onCouponSelected,
                 ),
+            ],
+            if (mileageBalance > 0) ...[
+              const Divider(height: 24),
+              Text(
+                l10n.t('booking_mileage_section_title'),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.t('booking_mileage_available')
+                    .replaceAll('{balance}', '$mileageBalance'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      key: ValueKey('mileage-input-$mileageAmountToUse'),
+                      initialValue: '$mileageAmountToUse',
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('booking_mileage_section_title'),
+                      ),
+                      onChanged: (value) {
+                        final parsed = int.tryParse(value) ?? 0;
+                        onMileageAmountChanged?.call(parsed);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () =>
+                        onMileageAmountChanged?.call(mileageBalance),
+                    child: Text(l10n.t('booking_mileage_use_all')),
+                  ),
+                ],
+              ),
             ],
             const Divider(height: 24),
             AppUi.summaryRow(

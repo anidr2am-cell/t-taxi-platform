@@ -130,8 +130,11 @@ class BookingStatusService {
         return;
       }
 
-      if (toStatus === BOOKING_STATUS.CANCELLED && this.shouldReverseMileage(fromStatus)) {
-        await this.mileageService.reverseForBooking(bookingId);
+      if (toStatus === BOOKING_STATUS.CANCELLED) {
+        if (this.shouldReverseMileage(fromStatus)) {
+          await this.mileageService.reverseForBooking(bookingId);
+        }
+        await this.mileageService.reverseRedemptionForBooking(bookingId);
       }
     } catch (err) {
       logger.error('Post-commit mileage effect failed', {

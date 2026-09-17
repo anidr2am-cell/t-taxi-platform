@@ -8,6 +8,8 @@ process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = process.env.SOCIAL_TOKEN_ENCRYPTION_KE
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 const ROLES = require('../src/constants/roles');
@@ -19,6 +21,14 @@ const {
   authMiddleware,
   optionalAuthMiddleware,
 } = require('../src/middlewares/auth.middleware');
+
+const vehiclePhotoRelativePath = 'driver-applications/vehicle-photo.jpg';
+const vehiclePhotoAbsolutePath = path.join(
+  path.resolve(process.cwd(), 'uploads'),
+  vehiclePhotoRelativePath,
+);
+fs.mkdirSync(path.dirname(vehiclePhotoAbsolutePath), { recursive: true });
+fs.writeFileSync(vehiclePhotoAbsolutePath, Buffer.from('fake-jpeg-bytes'));
 
 function signCustomer(id = 42, expiresIn = '1h') {
   return jwt.sign(
@@ -73,12 +83,11 @@ test('authMiddleware still rejects expired JWT', async () => {
 });
 
 test('optionalAuth route accepts expired JWT with valid guest token', async () => {
-  const photoRelativePath = 'driver-applications/vehicle-photo.jpg';
   container.register('guestVehiclePhotoService', () => new GuestVehiclePhotoService({
     async findGuestAssignedDriverVehiclePhotoFile(bookingId, tokenHash) {
       if (bookingId === 10 && tokenHash === hashToken('guest-token')) {
         return {
-          file_path: photoRelativePath,
+          file_path: vehiclePhotoRelativePath,
           mime_type: 'image/jpeg',
           original_filename: 'vehicle-photo.jpg',
         };

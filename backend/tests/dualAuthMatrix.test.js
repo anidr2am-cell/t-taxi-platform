@@ -8,6 +8,8 @@ process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = process.env.SOCIAL_TOKEN_ENCRYPTION_KE
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 
@@ -25,6 +27,14 @@ const NOTIFICATION_TYPES = require('../src/constants/notificationTypes');
 const RECIPIENT_TYPES = require('../src/constants/notificationRecipientTypes');
 const MODERATION_STATUS = require('../src/constants/reviewModerationStatus');
 const { hashToken } = require('../src/utils/tokenHash.util');
+
+const vehiclePhotoRelativePath = 'driver-applications/vehicle-photo.jpg';
+const vehiclePhotoAbsolutePath = path.join(
+  path.resolve(process.cwd(), 'uploads'),
+  vehiclePhotoRelativePath,
+);
+fs.mkdirSync(path.dirname(vehiclePhotoAbsolutePath), { recursive: true });
+fs.writeFileSync(vehiclePhotoAbsolutePath, Buffer.from('fake-jpeg-bytes'));
 
 function signCustomer(id = 42, expiresIn = '1h') {
   return jwt.sign(
@@ -63,7 +73,7 @@ function assertAccessError(promise) {
 
 function buildPhotoService({ customerUserId = null } = {}) {
   const fileRow = {
-    file_path: 'driver-applications/vehicle-photo.jpg',
+    file_path: vehiclePhotoRelativePath,
     mime_type: 'image/jpeg',
     original_filename: 'vehicle-photo.jpg',
   };

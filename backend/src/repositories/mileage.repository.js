@@ -3,6 +3,8 @@ const database = require('../config/database');
 const MILEAGE_TYPES = {
   ACCRUE: 'ACCRUE',
   REVERSAL: 'REVERSAL',
+  REDEEM: 'REDEEM',
+  REDEEM_REVERSAL: 'REDEEM_REVERSAL',
 };
 
 class MileageRepository {

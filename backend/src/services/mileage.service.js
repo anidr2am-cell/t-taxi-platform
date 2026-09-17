@@ -1,4 +1,7 @@
 const logger = require('../utils/logger');
+const AppError = require('../utils/AppError');
+const ERROR_CODES = require('../constants/errorCodes');
+const HTTP_STATUS = require('../constants/httpStatus');
 const { formatServiceDateTimeForApi } = require('../utils/serviceDateTime.util');
 const { MILEAGE_TYPES } = require('../repositories/mileage.repository');
 
@@ -14,6 +17,14 @@ function computeAccrualAmount(totalAmount) {
     return 0;
   }
   return Math.floor(normalizedTotal * ACCRUAL_RATE);
+}
+
+function normalizeRedeemAmount(amount) {
+  const normalized = Number(amount);
+  if (!Number.isInteger(normalized) || normalized <= 0) {
+    return null;
+  }
+  return normalized;
 }
 
 class MileageService {
@@ -102,6 +113,185 @@ class MileageService {
       return {
         accrued: true,
         amount,
+        balanceAfter,
+        userId,
+        bookingId,
+      };
+    } catch (err) {
+      if (ownConnection) {
+        await conn.rollback();
+      }
+      throw err;
+    } finally {
+      if (ownConnection) {
+        conn.release();
+      }
+    }
+  }
+
+  async redeemForBooking(bookingId, userId, amount, connOrPool = null) {
+    const redeemAmount = normalizeRedeemAmount(amount);
+    if (!redeemAmount) {
+      return { skipped: true, reason: 'ZERO_AMOUNT' };
+    }
+
+    const executor = connOrPool || this.pool;
+    const ownConnection = isPoolConnection(executor);
+    const conn = ownConnection ? await executor.getConnection() : executor;
+
+    try {
+      if (ownConnection) {
+        await conn.beginTransaction();
+      }
+
+      const existing = await this.mileageRepository.findTransactionByBookingIdAndType(
+        conn,
+        bookingId,
+        MILEAGE_TYPES.REDEEM,
+      );
+      if (existing) {
+        if (ownConnection) await conn.rollback();
+        return {
+          skipped: true,
+          reason: 'ALREADY_REDEEMED',
+          idempotent: true,
+          amount: Math.abs(Number(existing.amount)),
+          balanceAfter: existing.balance_after,
+        };
+      }
+
+      let account = await this.mileageRepository.getAccountForUpdate(conn, userId);
+      if (!account) {
+        await this.mileageRepository.createAccount(conn, userId, 0);
+        account = { user_id: userId, balance: 0 };
+      }
+
+      if (Number(account.balance) < redeemAmount) {
+        if (ownConnection) await conn.rollback();
+        throw new AppError('Insufficient mileage balance', {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.MILEAGE_INSUFFICIENT_BALANCE,
+        });
+      }
+
+      const ledgerAmount = -redeemAmount;
+      let transactionId;
+      try {
+        transactionId = await this.mileageRepository.insertTransaction(conn, {
+          userId,
+          bookingId,
+          type: MILEAGE_TYPES.REDEEM,
+          amount: ledgerAmount,
+          balanceAfter: 0,
+        });
+      } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          if (ownConnection) await conn.rollback();
+          return { skipped: true, reason: 'ALREADY_REDEEMED', idempotent: true };
+        }
+        throw err;
+      }
+
+      const balanceAfter = Number(account.balance) - redeemAmount;
+      await this.mileageRepository.updateAccountBalance(conn, userId, balanceAfter);
+      await this.mileageRepository.updateTransactionBalanceAfter(conn, transactionId, balanceAfter);
+
+      if (ownConnection) {
+        await conn.commit();
+      }
+
+      return {
+        redeemed: true,
+        amount: redeemAmount,
+        balanceAfter,
+        userId,
+        bookingId,
+      };
+    } catch (err) {
+      if (ownConnection) {
+        await conn.rollback();
+      }
+      throw err;
+    } finally {
+      if (ownConnection) {
+        conn.release();
+      }
+    }
+  }
+
+  async reverseRedemptionForBooking(bookingId, connOrPool = null) {
+    const executor = connOrPool || this.pool;
+    const ownConnection = isPoolConnection(executor);
+    const conn = ownConnection ? await executor.getConnection() : executor;
+
+    try {
+      if (ownConnection) {
+        await conn.beginTransaction();
+      }
+
+      const redeemTxn = await this.mileageRepository.findTransactionByBookingIdAndType(
+        conn,
+        bookingId,
+        MILEAGE_TYPES.REDEEM,
+      );
+      if (!redeemTxn) {
+        if (ownConnection) await conn.rollback();
+        return { skipped: true, reason: 'NO_REDEEM' };
+      }
+
+      const existingReversal = await this.mileageRepository.findTransactionByBookingIdAndType(
+        conn,
+        bookingId,
+        MILEAGE_TYPES.REDEEM_REVERSAL,
+      );
+      if (existingReversal) {
+        if (ownConnection) await conn.rollback();
+        return {
+          skipped: true,
+          reason: 'ALREADY_REVERSED',
+          idempotent: true,
+          amount: existingReversal.amount,
+          balanceAfter: existingReversal.balance_after,
+        };
+      }
+
+      const userId = redeemTxn.user_id;
+      const reversalAmount = Math.abs(Number(redeemTxn.amount));
+
+      let account = await this.mileageRepository.getAccountForUpdate(conn, userId);
+      if (!account) {
+        await this.mileageRepository.createAccount(conn, userId, 0);
+        account = { user_id: userId, balance: 0 };
+      }
+
+      let transactionId;
+      try {
+        transactionId = await this.mileageRepository.insertTransaction(conn, {
+          userId,
+          bookingId,
+          type: MILEAGE_TYPES.REDEEM_REVERSAL,
+          amount: reversalAmount,
+          balanceAfter: 0,
+        });
+      } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          if (ownConnection) await conn.rollback();
+          return { skipped: true, reason: 'ALREADY_REVERSED', idempotent: true };
+        }
+        throw err;
+      }
+
+      const balanceAfter = Number(account.balance) + reversalAmount;
+      await this.mileageRepository.updateAccountBalance(conn, userId, balanceAfter);
+      await this.mileageRepository.updateTransactionBalanceAfter(conn, transactionId, balanceAfter);
+
+      if (ownConnection) {
+        await conn.commit();
+      }
+
+      return {
+        reversed: true,
+        amount: reversalAmount,
         balanceAfter,
         userId,
         bookingId,
