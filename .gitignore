@@ -28,4 +28,9 @@ database/.mysql-repro-data/
 database/_mysql_clean_*/
 
 tmp/
+tmp_*.txt
+tmp_*.sql
+frontend/test_output/
+frontend/test/failures/
+frontend/test/fixtures/
 .pr72-*

@@ -1,6 +1,8 @@
 -- T-Ride settlement confirmation flow.
 -- Adds a booking state between dropoff QR scan and final completion.
 
+USE ttaxi;
+
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ALTER TABLE bookings MODIFY COLUMN status ENUM(
