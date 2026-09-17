@@ -33,6 +33,7 @@ class BookingWizardState {
   final String additionalRequests;
   final String flightNumber;
   final int? selectedCouponId;
+  final int mileageAmountToUse;
 
   const BookingWizardState({
     this.step = 0,
@@ -64,6 +65,7 @@ class BookingWizardState {
     this.additionalRequests = '',
     this.flightNumber = '',
     this.selectedCouponId,
+    this.mileageAmountToUse = 0,
   });
 
   static const int stepCount = 5;
@@ -106,6 +108,7 @@ class BookingWizardState {
     String? flightNumber,
     int? selectedCouponId,
     bool clearSelectedCoupon = false,
+    int? mileageAmountToUse,
   }) {
     return BookingWizardState(
       step: step ?? this.step,
@@ -143,6 +146,7 @@ class BookingWizardState {
       selectedCouponId: clearSelectedCoupon
           ? null
           : (selectedCouponId ?? this.selectedCouponId),
+      mileageAmountToUse: mileageAmountToUse ?? this.mileageAmountToUse,
     );
   }
 

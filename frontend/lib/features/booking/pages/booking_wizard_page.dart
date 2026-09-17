@@ -94,6 +94,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       _customerAccessTokenForSubmit().then((accessToken) {
         if (!mounted) return;
         _controller.loadAvailableCoupons(accessToken: accessToken);
+        _controller.loadMileageBalance(accessToken: accessToken);
       });
     }
   }
@@ -479,8 +480,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           availableCoupons: _controller.availableCoupons,
           loadingCoupons: _controller.loadingCoupons,
           onCouponSelected: _controller.selectCoupon,
-          estimatedTotal: _controller.estimatedTotalAfterCoupon(),
+          mileageBalance: _controller.mileageBalance,
+          mileageAmountToUse: state.mileageAmountToUse,
+          onMileageAmountChanged: _controller.setMileageAmountToUse,
+          estimatedTotal: _controller.estimatedTotalAfterMileage(),
           couponDiscount: _controller.appliedCouponDiscount(),
+          mileageDiscount: state.mileageAmountToUse > 0
+              ? state.mileageAmountToUse
+              : null,
         );
       default:
         return const SizedBox.shrink();
