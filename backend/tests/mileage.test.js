@@ -10,6 +10,8 @@ const assert = require('node:assert/strict');
 const MileageService = require('../src/services/mileage.service');
 const { computeAccrualAmount, ACCRUAL_RATE } = require('../src/services/mileage.service');
 const { MILEAGE_TYPES } = require('../src/repositories/mileage.repository');
+const AppError = require('../src/utils/AppError');
+const ERROR_CODES = require('../src/constants/errorCodes');
 const AuthService = require('../src/services/auth.service');
 const TokenService = require('../src/services/token.service');
 const RevokedRefreshTokenStore = require('../src/services/revokedRefreshToken.store');
@@ -252,6 +254,105 @@ test('reverseForBooking never drives balance below zero', async () => {
   const reversed = await service.reverseForBooking(107);
   assert.equal(reversed.balanceAfter, 0);
   assert.equal(await service.getBalance(17), 0);
+});
+
+test('redeemForBooking deducts mileage from account balance', async () => {
+  const { service, mileageRepository } = createMileageServiceHarness();
+  await mileageRepository.createAccount(null, 30, 500);
+
+  const result = await service.redeemForBooking(301, 30, 200);
+  assert.equal(result.redeemed, true);
+  assert.equal(result.amount, 200);
+  assert.equal(result.balanceAfter, 300);
+  assert.equal(await service.getBalance(30), 300);
+
+  const txns = mileageRepository.listTransactions();
+  assert.equal(txns.length, 1);
+  assert.equal(txns[0].type, MILEAGE_TYPES.REDEEM);
+  assert.equal(txns[0].amount, -200);
+  assert.equal(txns[0].balance_after, 300);
+});
+
+test('redeemForBooking rejects insufficient balance', async () => {
+  const { service, mileageRepository } = createMileageServiceHarness();
+  await mileageRepository.createAccount(null, 31, 100);
+
+  await assert.rejects(
+    () => service.redeemForBooking(302, 31, 150),
+    (err) => {
+      assert.ok(err instanceof AppError);
+      assert.equal(err.errorCode, ERROR_CODES.MILEAGE_INSUFFICIENT_BALANCE);
+      return true;
+    },
+  );
+  assert.equal(await service.getBalance(31), 100);
+  assert.equal(mileageRepository.listTransactions().length, 0);
+});
+
+test('redeemForBooking skips zero or invalid amounts', async () => {
+  const { service, mileageRepository } = createMileageServiceHarness();
+  await mileageRepository.createAccount(null, 32, 100);
+
+  const zero = await service.redeemForBooking(303, 32, 0);
+  assert.equal(zero.skipped, true);
+  assert.equal(zero.reason, 'ZERO_AMOUNT');
+
+  const negative = await service.redeemForBooking(304, 32, -50);
+  assert.equal(negative.skipped, true);
+  assert.equal(negative.reason, 'ZERO_AMOUNT');
+});
+
+test('duplicate redeemForBooking calls are idempotent', async () => {
+  const { service, mileageRepository } = createMileageServiceHarness();
+  await mileageRepository.createAccount(null, 33, 400);
+
+  const first = await service.redeemForBooking(305, 33, 150);
+  const second = await service.redeemForBooking(305, 33, 150);
+
+  assert.equal(first.redeemed, true);
+  assert.equal(second.skipped, true);
+  assert.equal(second.idempotent, true);
+  assert.equal(second.reason, 'ALREADY_REDEEMED');
+  assert.equal(await service.getBalance(33), 250);
+  assert.equal(mileageRepository.listTransactions().length, 1);
+});
+
+test('reverseRedemptionForBooking restores redeemed mileage', async () => {
+  const { service, mileageRepository } = createMileageServiceHarness();
+  await mileageRepository.createAccount(null, 34, 500);
+
+  await service.redeemForBooking(306, 34, 200);
+  assert.equal(await service.getBalance(34), 300);
+
+  const reversed = await service.reverseRedemptionForBooking(306);
+  assert.equal(reversed.reversed, true);
+  assert.equal(reversed.amount, 200);
+  assert.equal(reversed.balanceAfter, 500);
+  assert.equal(await service.getBalance(34), 500);
+
+  const txns = mileageRepository.listTransactions();
+  assert.equal(txns.length, 2);
+  assert.equal(txns.find((row) => row.type === MILEAGE_TYPES.REDEEM_REVERSAL).amount, 200);
+});
+
+test('reverseRedemptionForBooking is idempotent and skips when no redeem exists', async () => {
+  const { service, mileageRepository } = createMileageServiceHarness();
+  await mileageRepository.createAccount(null, 35, 300);
+
+  const missing = await service.reverseRedemptionForBooking(307);
+  assert.equal(missing.skipped, true);
+  assert.equal(missing.reason, 'NO_REDEEM');
+
+  await service.redeemForBooking(308, 35, 100);
+  const first = await service.reverseRedemptionForBooking(308);
+  const second = await service.reverseRedemptionForBooking(308);
+
+  assert.equal(first.reversed, true);
+  assert.equal(second.skipped, true);
+  assert.equal(second.idempotent, true);
+  assert.equal(second.reason, 'ALREADY_REVERSED');
+  assert.equal(await service.getBalance(35), 300);
+  assert.equal(mileageRepository.listTransactions().length, 2);
 });
 
 test('getTransactionHistory returns paginated ledger rows', async () => {
