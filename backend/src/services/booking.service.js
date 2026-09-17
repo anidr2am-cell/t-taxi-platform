@@ -67,6 +67,7 @@ class BookingService {
     placesService = null,
     bookingIdempotencyService = null,
     couponService = null,
+    mileageService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -84,6 +85,7 @@ class BookingService {
     this.placesService = placesService;
     this.bookingIdempotencyService = bookingIdempotencyService;
     this.couponService = couponService;
+    this.mileageService = mileageService;
   }
 
   buildOpenCallPayload({
@@ -681,7 +683,11 @@ class BookingService {
     };
   }
 
-  buildCreateBookingResult(booking, { guestAccessToken = null, boardingQrToken = null } = {}) {
+  buildCreateBookingResult(booking, {
+    guestAccessToken = null,
+    boardingQrToken = null,
+    mileageUsed = 0,
+  } = {}) {
     const cancellation = evaluateCustomerCancellation({
       status: booking.status,
       scheduledPickupAt: booking.scheduled_pickup_at,
@@ -703,6 +709,7 @@ class BookingService {
       cancellationBlockedReason: cancellation.cancellationBlockedReason,
       contactStatus: booking.contact_status ?? CONTACT_STATUS.VERIFIED,
       contactConnectionRequired: isContactConnectionRequired(),
+      mileageUsed: Number(mileageUsed) || 0,
     };
   }
 
@@ -980,6 +987,33 @@ class BookingService {
         }
       }
 
+      const requestedMileageAmount = Number(input.mileageAmount ?? 0);
+      let appliedMileageAmount = 0;
+      if (requestedMileageAmount > 0) {
+        if (!authUser) {
+          throw new AppError('Login is required to use mileage', {
+            statusCode: HTTP_STATUS.UNAUTHORIZED,
+            errorCode: ERROR_CODES.MILEAGE_AUTH_REQUIRED,
+          });
+        }
+        const payableSoFar = chargeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const balance = this.mileageService
+          ? await this.mileageService.getBalance(authUser.id)
+          : 0;
+        appliedMileageAmount = Math.max(0, Math.min(requestedMileageAmount, payableSoFar, balance));
+        if (appliedMileageAmount > 0) {
+          chargeItems.push({
+            chargeType: 'MILEAGE',
+            description: 'Mileage redemption',
+            quantity: 1,
+            unitPrice: -appliedMileageAmount,
+            amount: -appliedMileageAmount,
+            referenceType: 'MILEAGE',
+            referenceId: null,
+          });
+        }
+      }
+
       const serviceType = await this.pricingService.resolveServiceType(input.serviceTypeCode);
 
       const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
@@ -1147,6 +1181,15 @@ class BookingService {
         await this.couponService.markCouponUsed(conn, coupon.id, bookingId, authUser.id);
       }
 
+      if (appliedMileageAmount > 0) {
+        await this.mileageService.redeemForBooking(
+          bookingId,
+          authUser.id,
+          appliedMileageAmount,
+          conn,
+        );
+      }
+
       await this.bookingRepository.insertStatusLog(conn, bookingId, {
         fromStatus: null,
         toStatus: BOOKING_STATUS.OPEN,
@@ -1240,6 +1283,7 @@ class BookingService {
       const response = this.buildCreateBookingResult(booking, {
         guestAccessToken,
         boardingQrToken,
+        mileageUsed: appliedMileageAmount,
       });
 
       if (idempotencyKey && this.bookingIdempotencyService) {

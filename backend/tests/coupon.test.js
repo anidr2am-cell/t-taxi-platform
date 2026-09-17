@@ -190,10 +190,17 @@ const CREATE_INPUT = {
   },
 };
 
-function createBookingHarness({ couponService, authUser = { id: CUSTOMER_ID, role: 'CUSTOMER' }, conn, pricingService } = {}) {
+function createBookingHarness({
+  couponService,
+  mileageService,
+  authUser = { id: CUSTOMER_ID, role: 'CUSTOMER' },
+  conn,
+  pricingService,
+} = {}) {
   const calls = {
     chargeItems: [],
     markUsed: [],
+    redeem: [],
     booking: null,
   };
   const resolvedConn = conn ?? {
@@ -222,7 +229,9 @@ function createBookingHarness({ couponService, authUser = { id: CUSTOMER_ID, rol
     },
     async findById() {
       const couponItem = calls.chargeItems.find((item) => item.chargeType === 'COUPON');
-      const discount = couponItem ? Math.abs(Number(couponItem.amount)) : 0;
+      const mileageItem = calls.chargeItems.find((item) => item.chargeType === 'MILEAGE');
+      const discount = (couponItem ? Math.abs(Number(couponItem.amount)) : 0)
+        + (mileageItem ? Math.abs(Number(mileageItem.amount)) : 0);
       return {
         id: 10,
         booking_number: 'TX202607130001',
@@ -265,6 +274,22 @@ function createBookingHarness({ couponService, authUser = { id: CUSTOMER_ID, rol
     },
   };
 
+  const resolvedMileageService = mileageService ?? {
+    async getBalance() {
+      return 0;
+    },
+    async redeemForBooking(bookingId, userId, amount, conn) {
+      calls.redeem.push({ bookingId, userId, amount, conn });
+      return {
+        redeemed: true,
+        amount,
+        balanceAfter: 0,
+        userId,
+        bookingId,
+      };
+    },
+  };
+
   const resolvedPricingService = pricingService ?? {
       async calculate() { return SERVER_PRICE; },
       async resolveServiceType() {
@@ -291,6 +316,7 @@ function createBookingHarness({ couponService, authUser = { id: CUSTOMER_ID, rol
     null,
     null,
     resolvedCouponService,
+    resolvedMileageService,
   );
 
   setRealtimeIo({ to() { return { emit() {} }; } });
@@ -452,6 +478,142 @@ describe('BookingService.createBooking with coupon', () => {
       (err) => err.message === '이미 사용됐거나 유효하지 않은 쿠폰입니다',
     );
     assert.equal(rolledBack, true);
+  });
+});
+
+describe('BookingService.createBooking with mileage', () => {
+  test('applies mileage redemption and redeems within the same transaction', async () => {
+    const { service, calls, authUser } = createBookingHarness({
+      mileageService: {
+        async getBalance(userId) {
+          assert.equal(userId, CUSTOMER_ID);
+          return 300;
+        },
+        async redeemForBooking(bookingId, userId, amount, conn) {
+          calls.redeem.push({ bookingId, userId, amount, conn });
+          return {
+            redeemed: true,
+            amount,
+            balanceAfter: 100,
+            userId,
+            bookingId,
+          };
+        },
+      },
+    });
+
+    const result = await service.createBooking(
+      { ...CREATE_INPUT, mileageAmount: 200 },
+      authUser,
+    );
+
+    const mileageItem = calls.chargeItems.find((item) => item.chargeType === 'MILEAGE');
+    assert.ok(mileageItem);
+    assert.equal(mileageItem.amount, -200);
+    assert.equal(mileageItem.referenceType, 'MILEAGE');
+    assert.deepEqual(calls.redeem, [{
+      bookingId: 10,
+      userId: CUSTOMER_ID,
+      amount: 200,
+      conn: calls.redeem[0].conn,
+    }]);
+    assert.equal(result.data.totalAmount, 1200);
+    assert.equal(result.data.mileageUsed, 200);
+  });
+
+  test('rejects mileage usage for guest bookings', async () => {
+    const { service } = createBookingHarness({
+      mileageService: {
+        async getBalance() {
+          return 500;
+        },
+        async redeemForBooking() {
+          throw new Error('redeem should not run');
+        },
+      },
+    });
+
+    await assert.rejects(
+      () => service.createBooking({ ...CREATE_INPUT, mileageAmount: 100 }, null),
+      (err) => err.errorCode === 'MILEAGE_AUTH_REQUIRED',
+    );
+  });
+
+  test('caps mileage usage to available balance', async () => {
+    const { service, calls } = createBookingHarness({
+      mileageService: {
+        async getBalance() {
+          return 100;
+        },
+        async redeemForBooking(bookingId, userId, amount, conn) {
+          calls.redeem.push({ bookingId, userId, amount, conn });
+          return { redeemed: true, amount, balanceAfter: 0, userId, bookingId };
+        },
+      },
+    });
+
+    const result = await service.createBooking(
+      { ...CREATE_INPUT, mileageAmount: 500 },
+      { id: CUSTOMER_ID, role: 'CUSTOMER' },
+    );
+
+    const mileageItem = calls.chargeItems.find((item) => item.chargeType === 'MILEAGE');
+    assert.equal(mileageItem.amount, -100);
+    assert.equal(calls.redeem[0].amount, 100);
+    assert.equal(result.data.totalAmount, 1300);
+    assert.equal(result.data.mileageUsed, 100);
+  });
+
+  test('caps mileage usage to remaining payable amount', async () => {
+    const { service, calls } = createBookingHarness({
+      mileageService: {
+        async getBalance() {
+          return 2000;
+        },
+        async redeemForBooking(bookingId, userId, amount, conn) {
+          calls.redeem.push({ bookingId, userId, amount, conn });
+          return { redeemed: true, amount, balanceAfter: 0, userId, bookingId };
+        },
+      },
+    });
+
+    const result = await service.createBooking(
+      { ...CREATE_INPUT, mileageAmount: 2000 },
+      { id: CUSTOMER_ID, role: 'CUSTOMER' },
+    );
+
+    const mileageItem = calls.chargeItems.find((item) => item.chargeType === 'MILEAGE');
+    assert.equal(mileageItem.amount, -1400);
+    assert.equal(calls.redeem[0].amount, 1400);
+    assert.equal(result.data.totalAmount, 0);
+    assert.equal(result.data.mileageUsed, 1400);
+  });
+
+  test('applies coupon first then mileage on the remaining payable amount', async () => {
+    const { service, calls } = createBookingHarness({
+      mileageService: {
+        async getBalance() {
+          return 400;
+        },
+        async redeemForBooking(bookingId, userId, amount, conn) {
+          calls.redeem.push({ bookingId, userId, amount, conn });
+          return { redeemed: true, amount, balanceAfter: 100, userId, bookingId };
+        },
+      },
+    });
+
+    const result = await service.createBooking(
+      { ...CREATE_INPUT, couponId: 3, mileageAmount: 350 },
+      { id: CUSTOMER_ID, role: 'CUSTOMER' },
+    );
+
+    const couponItem = calls.chargeItems.find((item) => item.chargeType === 'COUPON');
+    const mileageItem = calls.chargeItems.find((item) => item.chargeType === 'MILEAGE');
+    assert.equal(couponItem.amount, -500);
+    assert.equal(mileageItem.amount, -350);
+    assert.equal(calls.redeem[0].amount, 350);
+    assert.equal(result.data.totalAmount, 550);
+    assert.equal(result.data.mileageUsed, 350);
   });
 });
 
