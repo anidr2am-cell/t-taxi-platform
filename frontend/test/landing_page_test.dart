@@ -327,6 +327,23 @@ void main() {
       );
     });
 
+    testWidgets('hero one-click support CTA opens customer support page', (
+      tester,
+    ) async {
+      final l10n = AppLocalizations('en');
+      await pumpLanding(tester);
+
+      expect(
+        find.text(l10n.t('landing_support_one_click_cta')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('landing_support_one_click_cta')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(CustomerSupportPage), findsOneWidget);
+    });
+
     testWidgets('header lookup opens lookup page', (tester) async {
       await pumpLanding(tester);
 
