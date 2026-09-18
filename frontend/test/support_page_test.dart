@@ -1,20 +1,16 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/features/platform_settings/services/platform_settings_api_service.dart';
+import 'package:frontend/features/booking/models/contact_channel.dart';
+import 'package:frontend/features/booking/services/booking_contact_connection_service.dart';
 import 'package:frontend/features/support/pages/customer_support_page.dart';
-import 'package:frontend/features/support/services/support_inquiry_api_service.dart';
 import 'package:frontend/l10n/app_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrapSupport({
   Locale locale = const Locale('ko'),
   double width = 360,
   double height = 900,
-  SupportInquiryApiService? api,
-  PlatformSettingsApiService? settingsApi,
+  BookingContactConnectionService? contactService,
 }) {
   return MaterialApp(
     locale: locale,
@@ -29,371 +25,103 @@ Widget _wrapSupport({
     ],
     home: MediaQuery(
       data: MediaQueryData(size: Size(width, height)),
-      child: CustomerSupportPage(
-        api: api,
-        settingsApi: settingsApi ?? _FakePlatformSettingsApi(),
-      ),
+      child: CustomerSupportPage(contactService: contactService),
     ),
   );
 }
+
+const _allChannels = [
+  ContactChannel(
+    code: 'KAKAO',
+    displayName: 'KakaoTalk',
+    addUrl: 'https://open.kakao.com/o/example',
+  ),
+  ContactChannel(
+    code: 'LINE',
+    displayName: 'LINE',
+    addUrl: 'https://line.me/R/ti/p/@example',
+  ),
+  ContactChannel(
+    code: 'WHATSAPP',
+    displayName: 'WhatsApp',
+    phoneNumber: '66815693445',
+  ),
+  ContactChannel(
+    code: 'WECHAT',
+    displayName: 'WeChat',
+    qrImageUrl: 'https://example.test/wechat-qr.png',
+  ),
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('CustomerSupportPage', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({});
-    });
-
-    testWidgets(
-      'renders support landing content without inline inquiry input',
-      (tester) async {
-        final l10n = AppLocalizations('ko');
-
-        await tester.pumpWidget(_wrapSupport());
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.t('support_title')), findsWidgets);
-        expect(find.text(l10n.t('support_page_intro')), findsOneWidget);
-        expect(find.text(l10n.t('support_inquiry_button')), findsOneWidget);
-        expect(find.byKey(const Key('support_message_input')), findsNothing);
-
-        await tester.drag(find.byType(ListView), const Offset(0, -500));
-        await tester.pumpAndSettle();
-        expect(find.text(l10n.t('support_faq_placeholder')), findsOneWidget);
-      },
-    );
-
-    testWidgets('inquiry button opens popup with contact fields and input', (
+    testWidgets('renders contact channels section with four icons', (
       tester,
     ) async {
       final l10n = AppLocalizations('ko');
+      final service = _FakeContactService(channels: _allChannels);
 
-      await tester.pumpWidget(_wrapSupport());
+      await tester.pumpWidget(_wrapSupport(contactService: service));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.t('support_dialog_title')), findsOneWidget);
-      expect(find.text(l10n.t('support_default_guide')), findsOneWidget);
-      expect(
-        find.byKey(const Key('support_customer_name_input')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('support_customer_phone_input')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('support_kakao_input')), findsOneWidget);
-      expect(find.byKey(const Key('support_line_input')), findsOneWidget);
-      expect(find.byKey(const Key('support_email_input')), findsNothing);
-      expect(find.byKey(const Key('support_message_input')), findsOneWidget);
-      expect(find.byKey(const Key('support_attach_button')), findsOneWidget);
-      expect(find.byKey(const Key('support_send_button')), findsOneWidget);
-      expect(find.text(l10n.t('support_attachment_help')), findsOneWidget);
+      expect(find.text(l10n.t('support_contact_channels_title')), findsOneWidget);
+      expect(find.text(l10n.t('support_contact_channels_hint')), findsOneWidget);
+      expect(find.byKey(const Key('support_contact_channel_KAKAO')), findsOneWidget);
+      expect(find.byKey(const Key('support_contact_channel_LINE')), findsOneWidget);
+      expect(find.byKey(const Key('support_contact_channel_WHATSAPP')), findsOneWidget);
+      expect(find.byKey(const Key('support_contact_channel_WECHAT')), findsOneWidget);
+      expect(find.byKey(const Key('support_open_inquiry_button')), findsNothing);
+      expect(find.text(l10n.t('support_faq_placeholder')), findsNothing);
     });
 
-    testWidgets('sending a message includes contact fields and receipt', (
+    testWidgets('WeChat tap opens QR dialog instead of launching URL', (
       tester,
     ) async {
       final l10n = AppLocalizations('ko');
-      final api = _FakeSupportApi();
+      final service = _FakeContactService(channels: _allChannels);
 
-      await tester.pumpWidget(_wrapSupport(api: api));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
+      await tester.pumpWidget(_wrapSupport(contactService: service));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('support_customer_phone_input')),
-        '+66810000000',
-      );
-      await tester.enterText(
-        find.byKey(const Key('support_kakao_input')),
-        'test-kakao',
-      );
-      await tester.enterText(
-        find.byKey(const Key('support_line_input')),
-        'test-line',
-      );
-      await tester.enterText(
-        find.byKey(const Key('support_message_input')),
-        'BKK to Pattaya inquiry',
-      );
-      await tester.ensureVisible(find.byKey(const Key('support_send_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_send_button')));
+      await tester.tap(find.byKey(const Key('support_contact_channel_WECHAT')));
       await tester.pumpAndSettle();
 
-      expect(api.messages, ['BKK to Pattaya inquiry']);
-      expect(api.phone, '+66810000000');
-      expect(api.kakaoId, 'test-kakao');
-      expect(api.lineId, 'test-line');
-      expect(api.savedLookup, true);
-      expect(find.text('BKK to Pattaya inquiry'), findsOneWidget);
-      expect(
-        find.textContaining(l10n.t('support_auto_receipt')),
-        findsOneWidget,
-      );
-      expect(find.textContaining('SUP-260708-ABC123'), findsOneWidget);
-      final input = tester.widget<TextField>(
-        find.byKey(const Key('support_message_input')),
-      );
-      expect(input.controller?.text, isEmpty);
+      expect(find.text(l10n.t('support_wechat_qr_dialog_title')), findsOneWidget);
+      expect(find.text(l10n.t('support_wechat_qr_dialog_hint')), findsOneWidget);
     });
 
-    testWidgets('opening popup loads stored inquiry thread', (tester) async {
-      final api = _FakeSupportApi(
-        lookup: const SupportInquiryLookup(
-          publicId: 'SUP-260708-ABC123',
-          token: 'lookup-token',
-        ),
-        thread: const SupportInquiryThread(
-          publicId: 'SUP-260708-ABC123',
-          status: 'IN_PROGRESS',
-          messages: [
-            SupportInquiryMessage(
-              senderType: 'CUSTOMER',
-              message: 'Customer question',
-            ),
-            SupportInquiryMessage(senderType: 'ADMIN', message: 'Admin reply'),
-          ],
-        ),
-      );
-
-      await tester.pumpWidget(_wrapSupport(api: api));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
-      await tester.pumpAndSettle();
-
-      expect(api.loadedThread, true);
-      expect(find.text('Customer question'), findsOneWidget);
-      expect(find.text('Admin reply'), findsOneWidget);
-    });
-
-    testWidgets('submit shows loading state while API is pending', (
-      tester,
-    ) async {
+    testWidgets('hides section when no channels are enabled', (tester) async {
       final l10n = AppLocalizations('ko');
-      final completer = Completer<SupportInquiryReceipt>();
-      final api = _FakeSupportApi(completer: completer);
+      final service = _FakeContactService(channels: const []);
 
-      await tester.pumpWidget(_wrapSupport(api: api));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('support_message_input')),
-        'Loading inquiry',
-      );
-      await tester.ensureVisible(find.byKey(const Key('support_send_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_send_button')));
-      await tester.pump();
-
-      expect(find.text(l10n.t('support_sending')), findsOneWidget);
-
-      completer.complete(
-        const SupportInquiryReceipt(
-          publicId: 'SUP-260708-LOADING',
-          lookupToken: 'lookup-token',
-          status: 'NEW',
-        ),
-      );
+      await tester.pumpWidget(_wrapSupport(contactService: service));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('SUP-260708-LOADING'), findsOneWidget);
-    });
-
-    testWidgets('submit failure keeps typed message visible for retry', (
-      tester,
-    ) async {
-      final l10n = AppLocalizations('ko');
-      final api = _FakeSupportApi(
-        error: const SupportInquiryApiException('Network error'),
-      );
-
-      await tester.pumpWidget(_wrapSupport(api: api));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('support_message_input')),
-        'Retry this message',
-      );
-      await tester.ensureVisible(find.byKey(const Key('support_send_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_send_button')));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('support_error_message')), findsOneWidget);
-      expect(find.text('Network error'), findsOneWidget);
-      expect(find.textContaining(l10n.t('support_auto_receipt')), findsNothing);
-      final input = tester.widget<TextField>(
-        find.byKey(const Key('support_message_input')),
-      );
-      expect(input.controller?.text, 'Retry this message');
-    });
-
-    testWidgets('inquiry popup can be closed', (tester) async {
-      final l10n = AppLocalizations('ko');
-
-      await tester.pumpWidget(_wrapSupport());
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.t('support_dialog_title')), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('support_close_button')));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.t('support_dialog_title')), findsNothing);
-      expect(find.byKey(const Key('support_message_input')), findsNothing);
+      expect(find.text(l10n.t('support_contact_channels_title')), findsNothing);
     });
 
     testWidgets('has no overflow at common widths', (tester) async {
+      final service = _FakeContactService(channels: _allChannels);
+
       for (final width in [360.0, 768.0, 1440.0]) {
-        await tester.pumpWidget(_wrapSupport(width: width));
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull, reason: 'Page at $width');
-
-        await tester.tap(find.byKey(const Key('support_open_inquiry_button')));
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull, reason: 'Popup at $width');
-        expect(find.byKey(const Key('support_message_input')), findsOneWidget);
-
-        await tester.tap(find.byKey(const Key('support_close_button')));
-        await tester.pumpAndSettle();
-      }
-    });
-
-    testWidgets(
-      'renders public LINE description without settlement account data',
-      (tester) async {
         await tester.pumpWidget(
-          _wrapSupport(
-            settingsApi: _FakePlatformSettingsApi(
-              publicSettings: {
-                'lineQrDescription': 'LINE 상담 안내\n운영팀이 확인합니다.',
-                'lineQrImageUrl': '/api/v1/settings/assets/lineQr',
-                'bankName': 'SCB',
-                'accountName': 'T-Ride Ops',
-                'accountNumber': '1234567890',
-                'promptPayNumber': '0999999999',
-              },
-            ),
-          ),
+          _wrapSupport(width: width, contactService: service),
         );
         await tester.pumpAndSettle();
 
-        await tester.drag(find.byType(ListView), const Offset(0, -600));
-        await tester.pumpAndSettle();
-
-        expect(find.text('LINE 상담 안내\n운영팀이 확인합니다.'), findsOneWidget);
-        expect(find.textContaining('1234567890'), findsNothing);
-        expect(find.textContaining('SCB'), findsNothing);
-        final image = tester.widget<Image>(find.byType(Image).last);
-        expect(image.errorBuilder, isNotNull);
-      },
-    );
-
-    testWidgets('shows LINE QR fallback when public URL is missing', (
-      tester,
-    ) async {
-      final l10n = AppLocalizations('ko');
-
-      await tester.pumpWidget(
-        _wrapSupport(
-          settingsApi: _FakePlatformSettingsApi(
-            publicSettings: {'lineQrDescription': 'LINE 안내'},
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.drag(find.byType(ListView), const Offset(0, -600));
-      await tester.pumpAndSettle();
-
-      expect(find.text('LINE 안내'), findsOneWidget);
-      expect(find.text(l10n.t('support_line_qr_missing')), findsOneWidget);
+        expect(tester.takeException(), isNull, reason: 'Page at $width');
+      }
     });
   });
 }
 
-class _FakePlatformSettingsApi extends PlatformSettingsApiService {
-  _FakePlatformSettingsApi({Map<String, dynamic>? publicSettings})
-    : publicSettings = publicSettings ?? const {'lineQrImageUrl': null};
+class _FakeContactService extends BookingContactConnectionService {
+  _FakeContactService({required this.channels}) : super(baseUrl: 'http://test');
 
-  final Map<String, dynamic> publicSettings;
-
-  @override
-  Future<Map<String, dynamic>> getPublic() async => publicSettings;
+  final List<ContactChannel> channels;
 
   @override
-  Uri assetUri(String path) => Uri.parse('https://example.test$path');
-}
-
-class _FakeSupportApi extends SupportInquiryApiService {
-  _FakeSupportApi({this.error, this.completer, this.lookup, this.thread})
-    : super(baseUrl: 'http://test.local');
-
-  final Object? error;
-  final Completer<SupportInquiryReceipt>? completer;
-  final SupportInquiryLookup? lookup;
-  final SupportInquiryThread? thread;
-  final List<String> messages = [];
-  String? phone;
-  String? kakaoId;
-  String? lineId;
-  bool savedLookup = false;
-  bool loadedThread = false;
-
-  @override
-  Future<SupportInquiryReceipt> submit({
-    required String message,
-    String? customerName,
-    String? customerPhone,
-    String? kakaoId,
-    String? lineId,
-    String? locale,
-    List<SupportInquiryAttachmentDraft> attachments = const [],
-  }) async {
-    messages.add(message);
-    phone = customerPhone;
-    this.kakaoId = kakaoId;
-    this.lineId = lineId;
-    if (error != null) throw error!;
-    if (completer != null) return completer!.future;
-    return const SupportInquiryReceipt(
-      publicId: 'SUP-260708-ABC123',
-      lookupToken: 'lookup-token',
-      status: 'NEW',
-    );
-  }
-
-  @override
-  Future<void> saveLatestLookup(SupportInquiryReceipt receipt) async {
-    savedLookup = true;
-  }
-
-  @override
-  Future<SupportInquiryLookup?> loadLatestLookup() async => lookup;
-
-  @override
-  Future<SupportInquiryThread> getThread({
-    required String publicId,
-    required String lookupToken,
-  }) async {
-    loadedThread = true;
-    return thread ??
-        const SupportInquiryThread(
-          publicId: 'SUP-260708-ABC123',
-          status: 'NEW',
-          messages: [],
-        );
-  }
+  Future<List<ContactChannel>> getPublicChannels() async => channels;
 }

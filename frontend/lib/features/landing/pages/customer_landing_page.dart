@@ -19,6 +19,7 @@ import '../services/home_banner_api_service.dart';
 import '../widgets/landing_hero_carousel.dart';
 import '../widgets/landing_reassurance_card.dart';
 import '../widgets/landing_service_cards.dart';
+import '../widgets/landing_support_one_click_cta.dart';
 import '../widgets/landing_steps_section.dart';
 import '../widgets/landing_trust_section.dart';
 
@@ -152,6 +153,9 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
                           onDestinationSelected: _updateDestination,
                           onSubmit: () => _openBookingWizard(context),
                         ),
+                      ),
+                      LandingSupportOneClickCta(
+                        onPressed: () => _openSupport(context),
                       ),
                       LandingServiceCards(
                         selectedService: _draft.serviceType,

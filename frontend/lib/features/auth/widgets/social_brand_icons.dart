@@ -145,3 +145,57 @@ class _LineBubblePainter extends CustomPainter {
   bool shouldRepaint(covariant _LineBubblePainter oldDelegate) =>
       oldDelegate.color != color;
 }
+
+/// WhatsApp brand icon.
+class WhatsappBrandIcon extends StatelessWidget {
+  const WhatsappBrandIcon({
+    super.key,
+    this.size = 20,
+    this.semanticLabel = 'WhatsApp',
+    this.style = SocialBrandIconStyle.appIcon,
+  });
+
+  final double size;
+  final String semanticLabel;
+  final SocialBrandIconStyle style;
+
+  static const _appIconAsset = 'assets/images/brands/whatsapp_app_icon.png';
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      _appIconAsset,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      semanticLabel: semanticLabel,
+    );
+  }
+}
+
+/// WeChat brand icon.
+class WechatBrandIcon extends StatelessWidget {
+  const WechatBrandIcon({
+    super.key,
+    this.size = 20,
+    this.semanticLabel = 'WeChat',
+    this.style = SocialBrandIconStyle.appIcon,
+  });
+
+  final double size;
+  final String semanticLabel;
+  final SocialBrandIconStyle style;
+
+  static const _appIconAsset = 'assets/images/brands/wechat_app_icon.png';
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      _appIconAsset,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      semanticLabel: semanticLabel,
+    );
+  }
+}
