@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations_extensions.dart';
 import '../data/booking_models.dart';
 import '../data/booking_repository.dart';
 import '../../dispatch/data/driver_socket_service.dart';
+import '../../dispatch/presentation/driver_admin_manual_call_notice.dart';
 import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
 import 'booking_meeting_gate.dart';
@@ -777,6 +778,14 @@ class _DetailBody extends StatelessWidget {
             uploading: uploadingNameSignPhoto,
             photoLoad: nameSignPhotoLoad,
             onUploadPressed: onNameSignPhotoPressed,
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (detail.isAdminManualCall) ...[
+          DriverAdminManualCallNotice(
+            isAdminManualCall: detail.isAdminManualCall,
+            requiresBankAccountConfirmation:
+                detail.requiresBankAccountConfirmation,
           ),
           const SizedBox(height: 12),
         ],

@@ -5,6 +5,7 @@ const container = require('../helpers/container');
 const getAdminDispatchService = () => container.get('adminDispatchService');
 const getAdminQrReissueService = () => container.get('adminQrReissueService');
 const getAdminBookingNoteService = () => container.get('adminBookingNoteService');
+const getBookingService = () => container.get('bookingService');
 
 const listBookings = asyncHandler(async (req, res) => {
   const data = await getAdminDispatchService().listBookings(req.query, req.user);
@@ -137,6 +138,11 @@ const processBookingNoShow = asyncHandler(async (req, res) => {
   return success(res, data, 'Booking marked as no-show');
 });
 
+const createManualBooking = asyncHandler(async (req, res) => {
+  const data = await getBookingService().createAdminManualBooking(req.body, req.user);
+  return success(res, data, 'Admin manual booking created', 201);
+});
+
 module.exports = {
   listBookings,
   getBookingsSummary,
@@ -156,4 +162,5 @@ module.exports = {
   archiveBookings,
   restoreBookings,
   processBookingNoShow,
+  createManualBooking,
 };

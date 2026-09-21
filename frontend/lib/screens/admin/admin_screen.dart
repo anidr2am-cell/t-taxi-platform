@@ -15,6 +15,7 @@ import '../../features/driver_location/pages/admin_driver_monitor_page.dart';
 import '../../features/admin_pricing/pages/admin_pricing_manager_page.dart';
 import '../../features/admin_coupon/pages/admin_coupon_issue_page.dart';
 import '../../features/admin_home_banner/pages/admin_home_banner_page.dart';
+import '../../features/admin_dispatch/pages/admin_manual_booking_create_page.dart';
 import '../../features/admin_settings/pages/admin_settings_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_tokens.dart';
@@ -36,12 +37,12 @@ class _AdminScreenState extends State<AdminScreen> {
   int _sessionEpoch = 0;
   final _drawerKey = GlobalKey<ScaffoldState>();
 
-  static const _authGatedIndices = {0, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15};
+  static const _authGatedIndices = {0, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTab.clamp(0, 15);
+    _selectedIndex = widget.initialTab.clamp(0, 16);
   }
 
   Future<void> _logout() async {
@@ -76,6 +77,7 @@ class _AdminScreenState extends State<AdminScreen> {
       l10n.t('admin_settings'),
       l10n.t('admin_coupons_menu'),
       l10n.t('admin_home_banner_menu'),
+      l10n.t('admin_manual_booking_menu'),
     ];
 
     final icons = [
@@ -95,6 +97,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.settings_outlined,
       Icons.local_offer_outlined,
       Icons.view_carousel_outlined,
+      Icons.add_call_outlined,
     ];
 
     final selectedIcons = [
@@ -114,6 +117,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.settings,
       Icons.local_offer,
       Icons.view_carousel,
+      Icons.add_call,
     ];
 
     void selectIndex(int index) {
@@ -278,6 +282,8 @@ class _AdminScreenState extends State<AdminScreen> {
         return const AdminAuthGate(child: AdminCouponIssuePage());
       case 15:
         return const AdminAuthGate(child: AdminHomeBannerPage());
+      case 16:
+        return const AdminAuthGate(child: AdminManualBookingCreatePage());
       default:
         return const SizedBox.shrink();
     }

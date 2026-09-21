@@ -346,9 +346,12 @@ class BookingStatusService {
     });
 
     if (toStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
+      const commissionExempt = booking.commission_exempt === 1
+        || booking.commission_exempt === true
+        || booking.commission_exempt === '1';
       await this.bookingRepository.updateCommissionFields(conn, booking.id, {
-        commissionStatus: 'DUE',
-        commissionAmount: 200,
+        commissionStatus: commissionExempt ? 'WAIVED' : 'DUE',
+        commissionAmount: commissionExempt ? 0 : 200,
         commissionDueAt: null,
         updatedBy: actor.id,
       });

@@ -135,6 +135,8 @@ class OpenCall {
     required this.isUrgentRequest,
     required this.negotiationId,
     required this.minRequiredEtaMinutes,
+    required this.isAdminManualCall,
+    required this.requiresBankAccountConfirmation,
   });
 
   factory OpenCall.fromJson(Map<String, dynamic> json) {
@@ -206,6 +208,9 @@ class OpenCall {
       isUrgentRequest: json['isUrgentRequest'] == true,
       negotiationId: _optionalInt(json['negotiationId']),
       minRequiredEtaMinutes: _optionalInt(json['minRequiredEtaMinutes']),
+      isAdminManualCall: json['isAdminManualCall'] == true,
+      requiresBankAccountConfirmation:
+          json['requiresBankAccountConfirmation'] == true,
     );
   }
 
@@ -242,6 +247,8 @@ class OpenCall {
   final bool isUrgentRequest;
   final int? negotiationId;
   final int? minRequiredEtaMinutes;
+  final bool isAdminManualCall;
+  final bool requiresBankAccountConfirmation;
 }
 
 class OpenCallLuggage {

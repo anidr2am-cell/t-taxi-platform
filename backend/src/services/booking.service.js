@@ -22,6 +22,7 @@ const {
   isContactConnectionRequired,
 } = require('../policies/bookingDispatchEligibility.policy');
 const CONTACT_STATUS = require('../constants/contactStatus');
+const SERVICE_TYPES = require('../constants/serviceTypes');
 const {
   getThailandAirportNameTh,
   normalizeAirportIata,
@@ -1348,6 +1349,316 @@ class BookingService {
           });
         }
       }
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async resolveAdminManualCustomer(customerInput = {}) {
+    const customerUserId = customerInput.customerUserId ?? null;
+    if (customerUserId != null) {
+      const repository = this.couponService?.couponRepository;
+      if (!repository) {
+        throw new AppError('Customer lookup is unavailable', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+      const customer = await repository.findCustomerById(customerUserId);
+      if (!customer || customer.role !== ROLES.CUSTOMER) {
+        throw new AppError('Customer not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.CUSTOMER_NOT_FOUND,
+        });
+      }
+      return {
+        customerUserId: customer.id,
+        customerName: customer.name || customerInput.name?.trim() || 'Customer',
+        customerPhone: customer.phone || customerInput.phone?.trim(),
+        customerEmail: customer.email || customerInput.email?.trim() || null,
+      };
+    }
+
+    const customerName = customerInput.name?.trim();
+    const customerPhone = customerInput.phone?.trim();
+    if (!customerName || !customerPhone) {
+      throw new AppError('Customer name and phone are required for guest bookings', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    return {
+      customerUserId: null,
+      customerName,
+      customerPhone,
+      customerEmail: customerInput.email?.trim() || null,
+    };
+  }
+
+  buildAdminManualOpenCallPayload(basePayload, {
+    paymentMethod,
+    commissionExempt = true,
+    isAdminManualCall = true,
+    requiresBankAccountConfirmation = false,
+  } = {}) {
+    return {
+      ...basePayload,
+      paymentMethod,
+      commissionExempt,
+      isAdminManualCall,
+      requiresBankAccountConfirmation,
+    };
+  }
+
+  async createAdminManualBooking(input, adminUser) {
+    const payoutAmount = Number(input.payoutAmount);
+    if (!Number.isFinite(payoutAmount) || payoutAmount <= 0) {
+      throw new AppError('Payout amount must be a positive number', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
+    const paymentCollection = String(input.paymentCollection ?? '').trim().toUpperCase();
+    const isAdminCollected = paymentCollection === 'ADMIN_COLLECTED';
+    const paymentMethod = isAdminCollected
+      ? PAYMENT_METHODS.ADMIN_COLLECTED
+      : PAYMENT_METHODS.PAY_DRIVER;
+    const paymentStatus = isAdminCollected ? 'PAID' : 'UNPAID';
+
+    const customer = await this.resolveAdminManualCustomer(input.customer ?? {});
+    const serviceType = await this.pricingService.resolveServiceType(
+      input.serviceTypeCode || SERVICE_TYPES.CITY_TRANSFER,
+    );
+    const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
+    if (!vehicleType) {
+      throw new AppError('Vehicle type not found', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
+    const conn = await this.pool.getConnection();
+    const boardingQrToken = generateSecureToken();
+
+    try {
+      await conn.beginTransaction();
+      let outboxId = null;
+
+      const bookingNumber = await this.bookingNumberService.generateNext(conn);
+      const scheduledPickupAtIso = input.scheduledPickupAt;
+      const scheduledPickupAt = this.formatThailandDateTime(scheduledPickupAtIso);
+      const now = new Date();
+      const boardingExpires = scheduledPickupAt
+        ? this.addHours(new Date(scheduledPickupAtIso), BOARDING_QR_TTL_HOURS)
+        : this.addDays(now, 30);
+
+      const origin = input.origin ?? {};
+      const destination = input.destination ?? {};
+      const [originLocationMetadata, destinationLocationMetadata] = await Promise.all([
+        this.buildLocationMetadata({
+          name: origin.name,
+          placeId: origin.placeId,
+        }),
+        this.buildLocationMetadata({
+          name: destination.name,
+          placeId: destination.placeId,
+        }),
+      ]);
+      const metadata = {};
+      if (originLocationMetadata) metadata.originLocation = originLocationMetadata;
+      if (destinationLocationMetadata) metadata.destinationLocation = destinationLocationMetadata;
+
+      const originAddress = this.resolvePlaceAddress(origin);
+      const destinationAddress = this.resolvePlaceAddress(destination);
+      const chargeItem = {
+        chargeType: 'OTHER',
+        description: '관리자 등록 콜 (고객센터 협의 금액)',
+        quantity: 1,
+        unitPrice: payoutAmount,
+        amount: payoutAmount,
+      };
+
+      const bookingId = await this.bookingRepository.insertBooking(conn, {
+        bookingNumber,
+        status: BOOKING_STATUS.OPEN,
+        contactStatus: CONTACT_STATUS.VERIFIED,
+        serviceTypeId: serviceType.id,
+        bookingSource: 'ADMIN_MANUAL',
+        commissionExempt: true,
+        originAddress,
+        originPlaceId: origin.placeId ?? null,
+        originLat: origin.lat ?? null,
+        originLng: origin.lng ?? null,
+        destinationAddress,
+        destinationPlaceId: destination.placeId ?? null,
+        destinationLat: destination.lat ?? null,
+        destinationLng: destination.lng ?? null,
+        scheduledPickupAt,
+        vehicleTypeId: vehicleType.id,
+        recommendedVehicleTypeId: null,
+        vehicleCount: 1,
+        routeId: null,
+        totalAmount: 0,
+        currency: 'THB',
+        paymentStatus,
+        paymentMethod,
+        commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
+        customerUserId: customer.customerUserId,
+        customerName: customer.customerName,
+        nameSignText: input.nameSignText?.trim() || null,
+        customerEmail: customer.customerEmail,
+        customerPhone: customer.customerPhone,
+        customerCountryCode: null,
+        specialRequests: input.memo?.trim() || null,
+        preferFemaleDriver: Boolean(input.preferFemaleDriver),
+        metadata: Object.keys(metadata).length ? metadata : null,
+        boardingQrTokenHash: hashToken(boardingQrToken),
+        boardingQrExpiresAt: this.formatDateTime(boardingExpires),
+        isUrgentRequest: false,
+        createdBy: adminUser.id,
+        updatedBy: adminUser.id,
+      });
+
+      await this.bookingRepository.insertPassengers(conn, bookingId, {
+        adults: input.passengers?.adults ?? 1,
+        children: input.passengers?.children ?? 0,
+        infants: input.passengers?.infants ?? 0,
+      });
+
+      await this.bookingRepository.insertLuggage(conn, bookingId, {
+        carriers20Inch: 0,
+        carriers24InchPlus: 0,
+        golfBags: 0,
+        specialItems: null,
+      });
+
+      await this.bookingRepository.insertChargeItem(conn, bookingId, chargeItem, adminUser.id);
+
+      await this.bookingRepository.insertStatusLog(conn, bookingId, {
+        fromStatus: null,
+        toStatus: BOOKING_STATUS.OPEN,
+        changedByUserId: adminUser.id,
+        changedByRole: adminUser.role,
+        reason: 'BOOKING_CREATED_ADMIN_MANUAL',
+      });
+
+      await this.bookingRepository.insertActivityLog(conn, bookingId, {
+        activityType: 'BOOKING_CREATED',
+        actorUserId: adminUser.id,
+        actorRole: adminUser.role,
+        description: 'Admin manual open call created',
+        payload: {
+          bookingNumber,
+          paymentMethod,
+          payoutAmount,
+          paymentCollection,
+        },
+      });
+
+      const pricing = {
+        routeId: null,
+        currency: 'THB',
+        totalAmount: payoutAmount,
+        chargeItems: [chargeItem],
+      };
+
+      const openCallPayload = this.buildAdminManualOpenCallPayload(
+        this.buildOpenCallPayload({
+          bookingNumber,
+          scheduledPickupAt,
+          originAddress,
+          destinationAddress,
+          metadata: Object.keys(metadata).length ? metadata : null,
+          serviceType,
+          vehicleType,
+          pricing,
+          luggage: {
+            carriers20Inch: 0,
+            carriers24InchPlus: 0,
+            golfBags: 0,
+            specialItems: null,
+          },
+        }),
+        {
+          paymentMethod,
+          commissionExempt: true,
+          isAdminManualCall: true,
+          requiresBankAccountConfirmation: isAdminCollected,
+        },
+      );
+
+      const eligibleDrivers = await this.getEligibleDriversForOpenBooking(
+        conn,
+        vehicleType.id,
+        scheduledPickupAt,
+      );
+      const openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
+
+      if (this.outboxRepository) {
+        outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+          aggregateId: bookingId,
+          eventType: EVENTS.BOOKING_CREATED,
+          payload: {
+            eventId: randomUUID(),
+            eventName: EVENTS.BOOKING_CREATED,
+            bookingId,
+            bookingNumber,
+            customerUserId: customer.customerUserId,
+          },
+        });
+      }
+
+      const booking = await this.bookingRepository.findById(bookingId, conn);
+      await conn.commit();
+
+      if (this.outboxProcessor && outboxId) {
+        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+      }
+
+      await this.dispatchOpenCallNotifications({
+        drivers: eligibleDrivers,
+        bookingId,
+        bookingNumber,
+        openCallPayload,
+        idempotencyKeyPrefix: 'admin-manual-open',
+      });
+      for (const target of openCallTargets) {
+        emitDriverCallAvailable(target.userId, openCallPayload);
+      }
+
+      const customerChargeAmount = input.customerChargeAmount != null
+        ? Number(input.customerChargeAmount)
+        : null;
+      if (
+        customerChargeAmount != null
+        && Number.isFinite(customerChargeAmount)
+        && customerChargeAmount > 0
+      ) {
+        const container = require('../helpers/container');
+        await container.get('adminBookingNoteService').create(
+          bookingNumber,
+          {
+            text: `관리자 등록 콜 · 고객 결제 ${customerChargeAmount} THB / 기사 지급 ${payoutAmount} THB`,
+          },
+          adminUser,
+        );
+      }
+
+      return {
+        bookingNumber: booking.booking_number,
+        status: booking.status,
+        paymentMethod,
+        paymentStatus: booking.payment_status,
+        totalAmount: Number(booking.total_amount),
+        currency: booking.currency,
+        payoutAmount,
+        customerChargeAmount: customerChargeAmount ?? null,
+        openCallTargets: openCallTargets.length,
+      };
+    } catch (err) {
       await conn.rollback();
       throw err;
     } finally {

@@ -705,6 +705,8 @@ OpenCall openCall({
   bool nameSignRequested = true,
   String? nameSignText = 'KIM FAMILY',
   String? createdAt,
+  bool isAdminManualCall = false,
+  bool requiresBankAccountConfirmation = false,
 }) => OpenCall(
   bookingNumber: bookingNumber,
   status: 'OPEN',
@@ -744,6 +746,8 @@ OpenCall openCall({
   isUrgentRequest: isUrgentRequest,
   negotiationId: negotiationId,
   minRequiredEtaMinutes: minRequiredEtaMinutes,
+  isAdminManualCall: isAdminManualCall,
+  requiresBankAccountConfirmation: requiresBankAccountConfirmation,
 );
 
 ClaimResult claimResult({String bookingNumber = 'TX209912319998'}) =>

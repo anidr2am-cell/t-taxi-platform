@@ -244,6 +244,8 @@ void main() {
         isUrgentRequest: true,
         negotiationId: 9,
         minRequiredEtaMinutes: 30,
+        isAdminManualCall: false,
+        requiresBankAccountConfirmation: false,
       );
       await pumpOpenCalls(tester, onlineReader(calls: [urgent]));
 

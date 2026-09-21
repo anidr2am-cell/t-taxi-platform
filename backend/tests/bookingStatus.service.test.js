@@ -83,7 +83,10 @@ function createHarness({ booking = createBooking(), commitError = null } = {}) {
       calls.insertActivityLog += 1;
       records.activityLog = { bookingId, activity };
     },
-    async updateCommissionFields() {},
+    async updateCommissionFields(_conn, bookingId, fields) {
+      calls.updateCommissionFields = (calls.updateCommissionFields ?? 0) + 1;
+      records.commissionFields = { bookingId, fields };
+    },
     async completeActiveAssignment(_conn, bookingId) {
       calls.completeActiveAssignment = (calls.completeActiveAssignment ?? 0) + 1;
       records.completeActiveAssignment = { bookingId };
@@ -273,6 +276,24 @@ test('SETTLEMENT_PENDING transition enqueues TRIP_ENDED outbox event', async () 
   );
 
   assert.equal(harness.records.outbox.eventType, EVENTS.TRIP_ENDED);
+});
+
+test('SETTLEMENT_PENDING waives commission for admin manual bookings', async () => {
+  const harness = createHarness({
+    booking: createBooking({
+      status: BOOKING_STATUS.PICKED_UP,
+      commission_exempt: 1,
+    }),
+  });
+
+  await harness.service.transition(
+    'TX202607010001',
+    { status: BOOKING_STATUS.SETTLEMENT_PENDING },
+    { id: 99, role: ROLES.DRIVER },
+  );
+
+  assert.equal(harness.records.commissionFields.fields.commissionStatus, 'WAIVED');
+  assert.equal(harness.records.commissionFields.fields.commissionAmount, 0);
 });
 
 test('COMPLETED transition closes active driver assignment', async () => {
