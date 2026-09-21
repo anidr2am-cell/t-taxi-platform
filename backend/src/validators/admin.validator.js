@@ -140,6 +140,45 @@ const driverIdParamsSchema = Joi.object({
   id: Joi.number().integer().positive().required(),
 });
 
+const adminManualLocationSchema = Joi.object({
+  address: unicodeText({ max: 500 }).required(),
+  placeId: Joi.string().max(255).allow(null, '').optional(),
+  lat: Joi.number().optional(),
+  lng: Joi.number().optional(),
+  name: unicodeText({ max: 200, allowEmpty: true }).optional(),
+});
+
+const adminManualBookingCreateSchema = Joi.object({
+  origin: adminManualLocationSchema.required(),
+  destination: adminManualLocationSchema.required(),
+  scheduledPickupAt: Joi.string().isoDate().required(),
+  vehicleTypeCode: Joi.string()
+    .valid('SEDAN', 'SUV', 'VIP_SUV', 'VAN', 'VIP_VAN')
+    .required(),
+  serviceTypeCode: Joi.string()
+    .valid('AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'CITY_TRANSFER', 'GOLF_TRANSFER')
+    .optional(),
+  passengers: Joi.object({
+    adults: Joi.number().integer().min(1).default(1),
+    children: Joi.number().integer().min(0).default(0),
+    infants: Joi.number().integer().min(0).default(0),
+  }).default({ adults: 1, children: 0, infants: 0 }),
+  payoutAmount: Joi.number().positive().required(),
+  customerChargeAmount: Joi.number().positive().optional(),
+  paymentCollection: Joi.string()
+    .valid('DRIVER_COLLECTS', 'ADMIN_COLLECTED')
+    .required(),
+  customer: Joi.object({
+    customerUserId: Joi.number().integer().positive().optional(),
+    name: unicodeText({ max: 120, allowEmpty: true }).optional(),
+    phone: Joi.string().max(32).allow('', null).optional(),
+    email: Joi.string().email({ tlds: { allow: false } }).allow('', null).optional(),
+  }).required(),
+  memo: unicodeText({ max: 1000, allowEmpty: true }).optional(),
+  nameSignText: unicodeText({ max: 120, allowEmpty: true }).optional(),
+  preferFemaleDriver: Joi.boolean().optional(),
+});
+
 module.exports = {
   adminBookingListQuerySchema,
   bookingNumberParamsSchema,
@@ -154,4 +193,5 @@ module.exports = {
   archiveBookingsSchema,
   archiveDriversSchema,
   driverIdParamsSchema,
+  adminManualBookingCreateSchema,
 };

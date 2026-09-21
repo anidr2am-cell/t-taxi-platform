@@ -225,6 +225,8 @@ class BookingSummary {
     required this.nameSignRequested,
     required this.nameSignText,
     required this.nameSignPhotoUrl,
+    required this.isAdminManualCall,
+    required this.requiresBankAccountConfirmation,
   });
 
   factory BookingSummary.fromJson(Map<String, dynamic> json) {
@@ -289,6 +291,9 @@ class BookingSummary {
       nameSignRequested: json['nameSignRequested'] == true,
       nameSignText: _optionalString(json['nameSignText']),
       nameSignPhotoUrl: _optionalString(json['nameSignPhotoUrl']),
+      isAdminManualCall: json['isAdminManualCall'] == true,
+      requiresBankAccountConfirmation:
+          json['requiresBankAccountConfirmation'] == true,
     );
   }
 
@@ -324,6 +329,8 @@ class BookingSummary {
   final bool nameSignRequested;
   final String? nameSignText;
   final String? nameSignPhotoUrl;
+  final bool isAdminManualCall;
+  final bool requiresBankAccountConfirmation;
 
   bool get canAccept =>
       canConfirmStandby &&
@@ -368,6 +375,8 @@ class BookingSummary {
     nameSignRequested: nameSignRequested,
     nameSignText: nameSignText,
     nameSignPhotoUrl: nameSignPhotoUrl,
+    isAdminManualCall: isAdminManualCall,
+    requiresBankAccountConfirmation: requiresBankAccountConfirmation,
   );
 }
 
@@ -524,6 +533,9 @@ class BookingDetail {
       nameSignRequested: data['nameSignRequested'] == true,
       nameSignText: _optionalString(data['nameSignText']),
       nameSignPhotoUrl: _optionalString(data['nameSignPhotoUrl']),
+      isAdminManualCall: data['isAdminManualCall'] == true,
+      requiresBankAccountConfirmation:
+          data['requiresBankAccountConfirmation'] == true,
     );
   }
 
@@ -538,6 +550,8 @@ class BookingDetail {
   final bool nameSignRequested;
   final String? nameSignText;
   final String? nameSignPhotoUrl;
+  final bool isAdminManualCall;
+  final bool requiresBankAccountConfirmation;
 
   bool get canAccept => summary.canAccept;
 
@@ -553,6 +567,8 @@ class BookingDetail {
     nameSignRequested: nameSignRequested,
     nameSignText: nameSignText,
     nameSignPhotoUrl: nameSignPhotoUrl,
+    isAdminManualCall: isAdminManualCall,
+    requiresBankAccountConfirmation: requiresBankAccountConfirmation,
   );
 
   BookingDetail copyWithNameSignPhotoUrl(String nameSignPhotoUrl) =>
@@ -568,6 +584,8 @@ class BookingDetail {
         nameSignRequested: nameSignRequested,
         nameSignText: nameSignText,
         nameSignPhotoUrl: nameSignPhotoUrl,
+        isAdminManualCall: isAdminManualCall,
+        requiresBankAccountConfirmation: requiresBankAccountConfirmation,
       );
 }
 

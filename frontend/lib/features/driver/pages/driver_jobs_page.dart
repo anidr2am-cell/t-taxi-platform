@@ -721,6 +721,14 @@ class _UrgentCallsSection extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (call.isAdminManualCall) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      DriverAdminManualCallNotice(
+                        isAdminManualCall: call.isAdminManualCall,
+                        requiresBankAccountConfirmation:
+                            call.requiresBankAccountConfirmation,
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     _driverJobsRouteLocations(
                       l10n,
@@ -890,6 +898,14 @@ class _OpenCallsSection extends StatelessWidget {
                         '${call.pickupDate} ${call.pickupTime}',
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
+                      if (call.isAdminManualCall) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        DriverAdminManualCallNotice(
+                          isAdminManualCall: call.isAdminManualCall,
+                          requiresBankAccountConfirmation:
+                              call.requiresBankAccountConfirmation,
+                        ),
+                      ],
                       const SizedBox(height: 6),
                       _driverJobsRouteLocations(
                         l10n,
@@ -1328,13 +1344,20 @@ double _openCallPicketCost(DriverOpenCall call) {
   return call.nameSignRequested ? _openCallPicketAmount : 0;
 }
 
+double _openCallCommissionForCall(DriverOpenCall call) {
+  if (call.isAdminManualCall) {
+    return call.companyCommissionAmount ?? 0;
+  }
+  return _openCallCommissionAmount;
+}
+
 double _openCallDriverIncome(
   DriverOpenCall call,
   double customerTotal,
   double picketCost,
 ) {
   return call.driverExpectedIncomeAmount ??
-      (customerTotal - _openCallCommissionAmount - picketCost);
+      (customerTotal - _openCallCommissionForCall(call) - picketCost);
 }
 
 List<Widget> _openCallPaymentSummaryRows(
@@ -1362,8 +1385,13 @@ List<Widget> _openCallPaymentSummaryRows(
       emphasize: true,
     ),
     AppUi.summaryRow(
-      label: '수수료',
-      value: DriverMoneyFormat.money(_openCallCommissionAmount, currency),
+      label: call.isAdminManualCall
+          ? l10n.t('driver_call_badge_no_commission')
+          : '수수료',
+      value: DriverMoneyFormat.money(
+        _openCallCommissionForCall(call),
+        currency,
+      ),
     ),
     AppUi.summaryRow(
       label: '피켓비용',

@@ -270,6 +270,14 @@ class AppLocalizations {
       _s('회사 수수료', 'ค่าคอมมิชชันบริษัท');
   String get labelDriverExpectedIncome =>
       _s('기사 예상 수입', 'รายได้โดยประมาณของคนขับ');
+  String get driverCallBadgeAdminManual =>
+      _s('관리자 등록 콜', 'งานที่แอดมินลงทะเบียน');
+  String get driverCallBadgeNoCommission =>
+      _s('커미션 없음', 'ไม่มีค่าคอมมิชชัน');
+  String get driverCallBankAccountConfirmNotice => _s(
+        '회원가입시 등록된 계좌로 지급될 예정이오니 계좌가 맞는지 한번 더 확인해주세요',
+        'จะโอนเข้าบัญชีที่ลงทะเบียนตอนสมัครสมาชิก กรุณาตรวจสอบว่าบัญชีถูกต้องอีกครั้ง',
+      );
   String get sectionDriverNotes =>
       _s('기사 참고 사항', 'หมายเหตุสำหรับคนขับ');
   String get labelCustomerRequest =>

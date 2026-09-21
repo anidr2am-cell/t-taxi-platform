@@ -49,6 +49,8 @@ class DriverBooking {
     this.releaseAssignmentEmergencyOnly = false,
     this.assignmentReleaseDeadline,
     this.assignmentReleaseBlockedReason,
+    this.isAdminManualCall = false,
+    this.requiresBankAccountConfirmation = false,
   });
 
   final String bookingNumber;
@@ -100,6 +102,8 @@ class DriverBooking {
   final bool releaseAssignmentEmergencyOnly;
   final String? assignmentReleaseDeadline;
   final String? assignmentReleaseBlockedReason;
+  final bool isAdminManualCall;
+  final bool requiresBankAccountConfirmation;
 
   bool get hasRouteCoordinates =>
       originLatitude != null &&
@@ -200,6 +204,9 @@ class DriverBooking {
           capabilities['assignmentReleaseDeadline'] as String?,
       assignmentReleaseBlockedReason:
           capabilities['assignmentReleaseBlockedReason'] as String?,
+      isAdminManualCall: json['isAdminManualCall'] == true,
+      requiresBankAccountConfirmation:
+          json['requiresBankAccountConfirmation'] == true,
     );
   }
 }
@@ -337,6 +344,8 @@ class DriverOpenCall {
     this.negotiationId,
     this.minRequiredEtaMinutes,
     this.compatibleVehicles = const [],
+    this.isAdminManualCall = false,
+    this.requiresBankAccountConfirmation = false,
   });
 
   final String bookingNumber;
@@ -365,12 +374,16 @@ class DriverOpenCall {
   final int? negotiationId;
   final int? minRequiredEtaMinutes;
   final List<DriverOpenCallCompatibleVehicle> compatibleVehicles;
+  final bool isAdminManualCall;
+  final bool requiresBankAccountConfirmation;
 
   DriverOpenCall copyWith({
     bool? isUrgentRequest,
     int? negotiationId,
     int? minRequiredEtaMinutes,
     List<DriverOpenCallCompatibleVehicle>? compatibleVehicles,
+    bool? isAdminManualCall,
+    bool? requiresBankAccountConfirmation,
   }) {
     return DriverOpenCall(
       bookingNumber: bookingNumber,
@@ -400,6 +413,9 @@ class DriverOpenCall {
       minRequiredEtaMinutes:
           minRequiredEtaMinutes ?? this.minRequiredEtaMinutes,
       compatibleVehicles: compatibleVehicles ?? this.compatibleVehicles,
+      isAdminManualCall: isAdminManualCall ?? this.isAdminManualCall,
+      requiresBankAccountConfirmation: requiresBankAccountConfirmation ??
+          this.requiresBankAccountConfirmation,
     );
   }
 
@@ -461,6 +477,9 @@ class DriverOpenCall {
           )
           .where((item) => item.driverVehicleId > 0)
           .toList(growable: false),
+      isAdminManualCall: json['isAdminManualCall'] == true,
+      requiresBankAccountConfirmation:
+          json['requiresBankAccountConfirmation'] == true,
     );
   }
 }

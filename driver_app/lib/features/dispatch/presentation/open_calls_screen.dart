@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/app_localizations.dart';
+import 'driver_admin_manual_call_notice.dart';
 import '../../../l10n/app_localizations_extensions.dart';
 import '../data/airport_label_resolver.dart';
 import '../../bookings/data/booking_models.dart';
@@ -867,6 +868,14 @@ class _UrgentCallCard extends StatelessWidget {
                 Chip(label: Text(l10n.urgentChip)),
               ],
             ),
+            if (call.isAdminManualCall) ...[
+              const SizedBox(height: 8),
+              DriverAdminManualCallNotice(
+                isAdminManualCall: call.isAdminManualCall,
+                requiresBankAccountConfirmation:
+                    call.requiresBankAccountConfirmation,
+              ),
+            ],
             if (meetingGate != null)
               Align(
                 alignment: Alignment.centerRight,
@@ -1015,6 +1024,14 @@ class _OpenCallCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (call.isAdminManualCall) ...[
+                const SizedBox(height: 8),
+                DriverAdminManualCallNotice(
+                  isAdminManualCall: call.isAdminManualCall,
+                  requiresBankAccountConfirmation:
+                      call.requiresBankAccountConfirmation,
+                ),
+              ],
               if (meetingGate != null)
                 Align(
                   alignment: Alignment.centerRight,

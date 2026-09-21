@@ -66,6 +66,69 @@ class DriverStepIndicator extends StatelessWidget {
   }
 }
 
+class DriverAdminManualCallNotice extends StatelessWidget {
+  const DriverAdminManualCallNotice({
+    super.key,
+    required this.isAdminManualCall,
+    required this.requiresBankAccountConfirmation,
+  });
+
+  final bool isAdminManualCall;
+  final bool requiresBankAccountConfirmation;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isAdminManualCall) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    return Column(
+      key: const Key('driverAdminManualCallNotice'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: AppTokens.spaceSm,
+          runSpacing: AppTokens.spaceSm,
+          children: [
+            AppUi.statusBadge(
+              l10n.t('driver_call_badge_admin_manual'),
+              tone: AppStatusTone.info,
+            ),
+            AppUi.statusBadge(
+              l10n.t('driver_call_badge_no_commission'),
+              tone: AppStatusTone.success,
+            ),
+          ],
+        ),
+        if (requiresBankAccountConfirmation) ...[
+          const SizedBox(height: AppTokens.spaceSm),
+          AppUi.surfaceCard(
+            backgroundColor: AppTokens.warningLight,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.account_balance_outlined,
+                  color: AppTokens.warning,
+                  size: 22,
+                ),
+                const SizedBox(width: AppTokens.spaceSm),
+                Expanded(
+                  child: Text(
+                    l10n.t('driver_call_bank_account_confirm_notice'),
+                    style: const TextStyle(
+                      height: 1.45,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class DriverSettlementBlockBanner extends StatelessWidget {
   const DriverSettlementBlockBanner({
     super.key,

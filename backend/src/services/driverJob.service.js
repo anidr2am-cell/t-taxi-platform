@@ -125,9 +125,19 @@ class DriverJobService {
       case 'CARD':
       case 'CREDIT_CARD':
         return 'CARD';
+      case 'ADMIN_COLLECTED':
+        return 'ADMIN_COLLECTED';
       default:
         return null;
     }
+  }
+
+  isAdminManualCall(row) {
+    return row.booking_source === 'ADMIN_MANUAL' || Number(row.commission_exempt) === 1;
+  }
+
+  requiresBankAccountConfirmation(row) {
+    return row.payment_method === 'ADMIN_COLLECTED';
   }
 
   moneyAmount(value) {
@@ -177,6 +187,8 @@ class DriverJobService {
       nameSignAmount,
       driverExpectedIncomeAmount,
       driverExpectedIncomeCurrency: driverExpectedIncomeAmount == null ? null : currency,
+      isAdminManualCall: this.isAdminManualCall(row),
+      requiresBankAccountConfirmation: this.requiresBankAccountConfirmation(row),
     };
   }
 

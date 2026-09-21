@@ -472,6 +472,14 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                   padding: AppUi.pagePadding(context),
                   children: [
                     DriverStepIndicator(booking: booking),
+                    if (booking.isAdminManualCall) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      DriverAdminManualCallNotice(
+                        isAdminManualCall: booking.isAdminManualCall,
+                        requiresBankAccountConfirmation:
+                            booking.requiresBankAccountConfirmation,
+                      ),
+                    ],
                     const SizedBox(height: AppTokens.spaceMd),
                     if (widget.showStatusControl)
                       _DriverDetailLocationSection(

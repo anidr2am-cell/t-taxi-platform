@@ -19,6 +19,7 @@ const {
   archiveBookingsSchema,
   archiveDriversSchema,
   driverIdParamsSchema,
+  adminManualBookingCreateSchema,
 } = require('../validators/admin.validator');
 const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
@@ -29,6 +30,13 @@ router.get(
   '/bookings/summary',
   adminOnly,
   adminController.getBookingsSummary,
+);
+
+router.post(
+  '/bookings/manual',
+  adminOnly,
+  validate({ body: adminManualBookingCreateSchema }),
+  adminController.createManualBooking,
 );
 
 router.get(

@@ -60,6 +60,7 @@ class BookingRepository {
       `
         INSERT INTO bookings (
           booking_number, status, contact_status, service_type_id,
+          booking_source, commission_exempt,
           origin_address, origin_place_id, origin_lat, origin_lng,
           destination_address, destination_place_id, destination_lat, destination_lng,
           scheduled_pickup_at, vehicle_type_id, recommended_vehicle_type_id, vehicle_count,
@@ -72,6 +73,7 @@ class BookingRepository {
           created_by, updated_by
         ) VALUES (
           ?, ?, ?, ?,
+          ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?,
@@ -87,6 +89,8 @@ class BookingRepository {
         row.status,
         row.contactStatus ?? 'VERIFIED',
         row.serviceTypeId,
+        row.bookingSource ?? 'CUSTOMER',
+        row.commissionExempt ? 1 : 0,
         row.originAddress,
         row.originPlaceId,
         row.originLat,
@@ -563,7 +567,8 @@ class BookingRepository {
         SELECT
           b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
           b.scheduled_pickup_at,
-          b.payment_status, b.payment_method, b.customer_user_id,
+          b.payment_status, b.payment_method, b.commission_exempt, b.booking_source,
+          b.customer_user_id,
           b.is_urgent_request,
           b.urgent_negotiation_id,
           b.contact_status,
@@ -762,6 +767,8 @@ class BookingRepository {
         b.total_amount,
         b.currency,
         b.commission_amount,
+        b.commission_exempt,
+        b.booking_source,
         b.payment_method,
         b.boarding_qr_token_hash,
         b.boarding_qr_expires_at,
@@ -1002,6 +1009,8 @@ class BookingRepository {
         b.total_amount,
         b.currency,
         b.commission_amount,
+        b.commission_exempt,
+        b.booking_source,
         b.payment_method,
         EXISTS (
           SELECT 1
