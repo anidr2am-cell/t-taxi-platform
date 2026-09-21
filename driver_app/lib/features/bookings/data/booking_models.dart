@@ -508,6 +508,8 @@ class BookingDetail {
     required this.nameSignRequested,
     required this.nameSignText,
     required this.nameSignPhotoUrl,
+    required this.isAdminManualCall,
+    required this.requiresBankAccountConfirmation,
   });
 
   factory BookingDetail.fromEnvelope(Map<String, dynamic> envelope) {
