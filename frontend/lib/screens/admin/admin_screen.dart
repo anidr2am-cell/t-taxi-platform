@@ -97,7 +97,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.settings_outlined,
       Icons.local_offer_outlined,
       Icons.view_carousel_outlined,
-      Icons.add_call_outlined,
+      Icons.call_outlined,
     ];
 
     final selectedIcons = [
@@ -117,7 +117,7 @@ class _AdminScreenState extends State<AdminScreen> {
       Icons.settings,
       Icons.local_offer,
       Icons.view_carousel,
-      Icons.add_call,
+      Icons.call,
     ];
 
     void selectIndex(int index) {
