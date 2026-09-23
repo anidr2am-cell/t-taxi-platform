@@ -138,6 +138,114 @@ class BookingRepository {
     );
   }
 
+  async updatePassengers(conn, bookingId, passengers) {
+    const [result] = await conn.query(
+      `
+        UPDATE booking_passengers
+        SET adults = ?, children = ?, infants = ?
+        WHERE booking_id = ? AND deleted_at IS NULL
+      `,
+      [bookingId, passengers.adults, passengers.children, passengers.infants],
+    );
+    if ((result.affectedRows ?? 0) === 0) {
+      await this.insertPassengers(conn, bookingId, passengers);
+    }
+  }
+
+  async updateAdminManualBookingFields(conn, bookingId, fields) {
+    await conn.query(
+      `
+        UPDATE bookings
+        SET
+          origin_address = ?,
+          origin_place_id = ?,
+          origin_lat = ?,
+          origin_lng = ?,
+          destination_address = ?,
+          destination_place_id = ?,
+          destination_lat = ?,
+          destination_lng = ?,
+          scheduled_pickup_at = ?,
+          vehicle_type_id = ?,
+          payment_status = ?,
+          payment_method = ?,
+          customer_user_id = ?,
+          customer_name = ?,
+          customer_email = ?,
+          customer_phone = ?,
+          special_requests = ?,
+          metadata = ?,
+          updated_by = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND deleted_at IS NULL
+      `,
+      [
+        fields.originAddress,
+        fields.originPlaceId,
+        fields.originLat,
+        fields.originLng,
+        fields.destinationAddress,
+        fields.destinationPlaceId,
+        fields.destinationLat,
+        fields.destinationLng,
+        fields.scheduledPickupAt,
+        fields.vehicleTypeId,
+        fields.paymentStatus,
+        fields.paymentMethod,
+        fields.customerUserId,
+        fields.customerName,
+        fields.customerEmail,
+        fields.customerPhone,
+        fields.specialRequests,
+        fields.metadata ? JSON.stringify(fields.metadata) : null,
+        fields.updatedBy,
+        bookingId,
+      ],
+    );
+  }
+
+  async upsertManualPayoutChargeItem(conn, bookingId, item, actorUserId) {
+    const [rows] = await conn.query(
+      `
+        SELECT id
+        FROM booking_charge_items
+        WHERE booking_id = ? AND charge_type = 'OTHER' AND deleted_at IS NULL
+        ORDER BY id ASC
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    if (rows[0]?.id) {
+      await conn.query(
+        `
+          UPDATE booking_charge_items
+          SET
+            description = ?,
+            quantity = ?,
+            unit_price = ?,
+            amount = ?
+          WHERE id = ?
+        `,
+        [item.description, item.quantity, item.unitPrice, item.amount, rows[0].id],
+      );
+      return;
+    }
+    await this.insertChargeItem(conn, bookingId, item, actorUserId);
+  }
+
+  async findBookingMetadataForUpdate(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT metadata
+        FROM bookings
+        WHERE id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0]?.metadata ?? null;
+  }
+
   async insertLuggage(conn, bookingId, luggage) {
     await conn.query(
       `
@@ -1770,6 +1878,8 @@ class BookingRepository {
           b.contact_channel,
           b.contact_requested_at,
           b.contact_verified_at,
+          b.customer_user_id,
+          b.booking_source,
           b.special_requests,
           b.prefer_female_driver,
           b.payment_method,

@@ -41,6 +41,12 @@ const CANDIDATE_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CONFIRMED,
 ]);
 
+const ADMIN_MANUAL_EDIT_STATUSES = new Set([
+  BOOKING_STATUS.OPEN,
+  BOOKING_STATUS.CONFIRMED,
+  BOOKING_STATUS.DRIVER_ASSIGNED,
+]);
+
 function addDaysToApiDate(value, days) {
   const [year, month, day] = String(value).split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + days));
@@ -468,9 +474,18 @@ class AdminDispatchService {
       admin_unread_count: adminUnreadCount,
     });
 
+    const isAdminManual = row.booking_source === "ADMIN_MANUAL";
+    const manualManageable = isAdminManual && !TERMINAL_ASSIGN_STATUSES.has(row.status);
+
     return {
       bookingNumber: row.booking_number,
       status: row.status,
+      bookingSource: row.booking_source ?? "CUSTOMER",
+      isAdminManualCall: isAdminManual,
+      manualCallActions: {
+        canEdit: manualManageable && ADMIN_MANUAL_EDIT_STATUSES.has(row.status),
+        canCancel: manualManageable,
+      },
       archive: {
         isArchived: Boolean(row.is_archived),
         archivedAt: row.archived_at ?? null,
@@ -503,6 +518,7 @@ class AdminDispatchService {
         },
       },
       customer: {
+        customerUserId: row.customer_user_id ?? null,
         name: row.customer_name,
         email: row.customer_email,
         phone: row.customer_phone,
@@ -1707,6 +1723,69 @@ class AdminDispatchService {
       status: BOOKING_STATUS.NO_SHOW,
       noShowPenalty: this.mapNoShowPenalty(penaltyRow),
     };
+  }
+
+  async cancelManualBooking(bookingNumber, input, user) {
+    const actor = this.actorFromUser(user);
+    const conn = await this.pool.getConnection();
+    let transition;
+
+    try {
+      await conn.beginTransaction();
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
+      if (!booking) {
+        throw new AppError("Booking not found", {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+      if (booking.booking_source !== "ADMIN_MANUAL") {
+        throw new AppError("Only admin manual bookings can be cancelled here", {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+      if (TERMINAL_ASSIGN_STATUSES.has(booking.status)) {
+        throw new AppError("Booking cannot be cancelled in the current status", {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+        });
+      }
+
+      transition = await this.bookingStatusService.transitionInTransaction(
+        conn,
+        bookingNumber,
+        {
+          status: BOOKING_STATUS.CANCELLED,
+          reason: input.reason?.trim() || "ADMIN_MANUAL_CANCELLED",
+          memo: input.memo?.trim() || null,
+        },
+        actor,
+        { skipAccessCheck: true },
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    if (transition.releasedDriverUserId) {
+      emitDriverAssignmentReleased(transition.releasedDriverUserId, {
+        bookingNumber,
+        reason: transition.releaseReasonCode || "ADMIN_CANCELLED",
+        reasonCode: transition.releaseReasonCode || "ADMIN_CANCELLED",
+        bookingStatus: BOOKING_STATUS.CANCELLED,
+        releasedAt: transition.releasedAt || new Date().toISOString(),
+      });
+    }
+
+    return transition.result;
   }
 }
 

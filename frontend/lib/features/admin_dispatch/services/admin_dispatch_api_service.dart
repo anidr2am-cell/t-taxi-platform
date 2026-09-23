@@ -108,17 +108,29 @@ class AdminDispatchApiService {
     };
 
     final client = _client;
-    final response = await (method == 'GET'
-        ? (client == null
+    final encodedBody = body != null ? jsonEncode(body) : null;
+    Future<http.Response> sendRequest() {
+      switch (method) {
+        case 'GET':
+          return client == null
               ? http.get(uri, headers: headers)
-              : client.get(uri, headers: headers))
-        : (client == null
-              ? http.post(uri, headers: headers, body: jsonEncode(body ?? {}))
+              : client.get(uri, headers: headers);
+        case 'PATCH':
+          return client == null
+              ? http.patch(uri, headers: headers, body: encodedBody)
+              : client.patch(uri, headers: headers, body: encodedBody);
+        default:
+          return client == null
+              ? http.post(uri, headers: headers, body: encodedBody ?? '{}')
               : client.post(
                   uri,
                   headers: headers,
-                  body: jsonEncode(body ?? {}),
-                )));
+                  body: encodedBody ?? '{}',
+                );
+      }
+    }
+
+    final response = await sendRequest();
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode >= 400) {
@@ -422,6 +434,58 @@ class AdminDispatchApiService {
       if (serviceTypeCode != null) 'serviceTypeCode': serviceTypeCode,
     };
     final data = await _request('POST', '/admin/bookings/manual', body: body);
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> updateManualBooking(
+    String bookingNumber, {
+    required Map<String, dynamic> origin,
+    required Map<String, dynamic> destination,
+    required String scheduledPickupAt,
+    required String vehicleTypeCode,
+    required int payoutAmount,
+    int? customerChargeAmount,
+    required String paymentCollection,
+    required Map<String, dynamic> customer,
+    String? memo,
+    Map<String, dynamic>? passengers,
+    String? serviceTypeCode,
+  }) async {
+    final payload = <String, dynamic>{
+      'origin': origin,
+      'destination': destination,
+      'scheduledPickupAt': scheduledPickupAt,
+      'vehicleTypeCode': vehicleTypeCode,
+      'payoutAmount': payoutAmount,
+      'paymentCollection': paymentCollection,
+      'customer': customer,
+      if (customerChargeAmount != null)
+        'customerChargeAmount': customerChargeAmount,
+      if (memo != null && memo.isNotEmpty) 'memo': memo,
+      if (passengers != null) 'passengers': passengers,
+      if (serviceTypeCode != null) 'serviceTypeCode': serviceTypeCode,
+    };
+    final data = await _request(
+      'PATCH',
+      '/admin/bookings/$bookingNumber/manual',
+      body: payload,
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> cancelManualBooking(
+    String bookingNumber, {
+    String? reason,
+    String? memo,
+  }) async {
+    final body = <String, dynamic>{};
+    if (reason != null && reason.isNotEmpty) body['reason'] = reason;
+    if (memo != null && memo.isNotEmpty) body['memo'] = memo;
+    final data = await _request(
+      'POST',
+      '/admin/bookings/$bookingNumber/manual/cancel',
+      body: body,
+    );
     return Map<String, dynamic>.from(data as Map);
   }
 }

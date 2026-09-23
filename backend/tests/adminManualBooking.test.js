@@ -6,6 +6,8 @@ process.env.DB_USER = process.env.DB_USER || 'test';
 process.env.DB_NAME = process.env.DB_NAME || 'tride_test';
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret';
+process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY
+  || Buffer.alloc(32, 1).toString('base64');
 
 const BookingService = require('../src/services/booking.service');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
@@ -54,6 +56,22 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
         total_amount: calls.chargeItems[0]?.amount ?? 0,
         currency: 'THB',
       };
+    },
+    async findByBookingNumberForUpdate(_conn, bookingNumber) {
+      return {
+        id: 10,
+        booking_number: bookingNumber,
+        status: BOOKING_STATUS.OPEN,
+        booking_source: 'ADMIN_MANUAL',
+      };
+    },
+    async findBookingMetadataForUpdate() {
+      return null;
+    },
+    async updateAdminManualBookingFields() {},
+    async updatePassengers() {},
+    async upsertManualPayoutChargeItem(_conn, _bookingId, item) {
+      calls.chargeItems = [item];
     },
   };
   const couponRepository = {
@@ -184,6 +202,23 @@ test('createAdminManualBooking links member, marks commission exempt, and broadc
     assert.deepEqual(calls.dispatchedOutboxIds, [[30]]);
   } finally {
     setRealtimeIo(null);
+    restoreContainer();
+  }
+});
+
+test('updateAdminManualBooking updates payout for admin manual open call', async () => {
+  const { service, calls, input, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    const result = await service.updateAdminManualBooking(
+      'TX202607130001',
+      { ...input, payoutAmount: 950 },
+      ADMIN,
+    );
+
+    assert.equal(result.bookingNumber, 'TX202607130001');
+    assert.equal(calls.chargeItems[0].amount, 950);
+    assert.equal(calls.commits, 1);
+  } finally {
     restoreContainer();
   }
 });
