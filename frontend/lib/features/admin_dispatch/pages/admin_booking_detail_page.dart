@@ -16,6 +16,7 @@ import '../widgets/recommend_drivers_dialog.dart';
 import '../widgets/unassign_driver_dialog.dart';
 import '../utils/admin_operations_ux.dart';
 import '../utils/admin_customer_preference_options.dart';
+import 'admin_manual_booking_create_page.dart';
 
 class AdminBookingDetailPage extends StatefulWidget {
   final String bookingNumber;
@@ -156,6 +157,73 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       });
     } finally {
       if (mounted) setState(() => _addingNote = false);
+    }
+  }
+
+  Map<String, dynamic>? _manualCallActions() {
+    final raw = _detail?['manualCallActions'];
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return null;
+  }
+
+  bool _canEditManualCall() => _manualCallActions()?['canEdit'] == true;
+
+  bool _canCancelManualCall() => _manualCallActions()?['canCancel'] == true;
+
+  Future<void> _openManualCallEdit() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AdminManualBookingCreatePage(
+          dispatchApi: widget.api,
+          editBookingNumber: widget.bookingNumber,
+        ),
+      ),
+    );
+    if (changed == true) {
+      widget.onChanged();
+      await _load();
+    }
+  }
+
+  Future<void> _cancelManualCall() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.t('admin_manual_booking_cancel')),
+        content: Text(l10n.t('admin_manual_booking_cancel_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.t('driver_cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.t('admin_manual_booking_cancel')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _submitting = true);
+    try {
+      await widget.api.cancelManualBooking(widget.bookingNumber);
+      widget.onChanged();
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('admin_manual_booking_cancel_success'))),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userFacingError(err))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -1020,6 +1088,33 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     Map<String, dynamic> detail,
   ) {
     final buttons = <Widget>[];
+    if (_canEditManualCall()) {
+      buttons.add(
+        AppUi.secondaryButton(
+          label: l10n.t('admin_manual_booking_edit'),
+          icon: Icons.edit_outlined,
+          onPressed: _submitting ? null : _openManualCallEdit,
+          fullWidth: true,
+        ),
+      );
+    }
+    if (_canCancelManualCall()) {
+      buttons.add(
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTokens.error,
+              side: const BorderSide(color: AppTokens.error),
+            ),
+            onPressed: _submitting ? null : _cancelManualCall,
+            icon: const Icon(Icons.cancel_outlined),
+            label: Text(l10n.t('admin_manual_booking_cancel')),
+          ),
+        ),
+      );
+    }
     if (actions.contains('RECOMMEND_DRIVERS')) {
       buttons.add(
         AppUi.secondaryButton(

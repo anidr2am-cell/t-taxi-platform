@@ -143,6 +143,24 @@ const createManualBooking = asyncHandler(async (req, res) => {
   return success(res, data, 'Admin manual booking created', 201);
 });
 
+const updateManualBooking = asyncHandler(async (req, res) => {
+  const data = await getBookingService().updateAdminManualBooking(
+    req.params.bookingNumber,
+    req.body,
+    req.user,
+  );
+  return success(res, data, 'Admin manual booking updated');
+});
+
+const cancelManualBooking = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().cancelManualBooking(
+    req.params.bookingNumber,
+    req.body,
+    req.user,
+  );
+  return success(res, data, 'Admin manual booking cancelled');
+});
+
 module.exports = {
   listBookings,
   getBookingsSummary,
@@ -163,4 +181,6 @@ module.exports = {
   restoreBookings,
   processBookingNoShow,
   createManualBooking,
+  updateManualBooking,
+  cancelManualBooking,
 };

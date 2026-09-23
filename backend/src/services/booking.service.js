@@ -1666,6 +1666,192 @@ class BookingService {
     }
   }
 
+  async updateAdminManualBooking(bookingNumber, input, adminUser) {
+    const payoutAmount = Number(input.payoutAmount);
+    if (!Number.isFinite(payoutAmount) || payoutAmount <= 0) {
+      throw new AppError('Payout amount must be a positive number', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
+    const editableStatuses = new Set([
+      BOOKING_STATUS.OPEN,
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.DRIVER_ASSIGNED,
+    ]);
+
+    const paymentCollection = String(input.paymentCollection ?? '').trim().toUpperCase();
+    const isAdminCollected = paymentCollection === 'ADMIN_COLLECTED';
+    const paymentMethod = isAdminCollected
+      ? PAYMENT_METHODS.ADMIN_COLLECTED
+      : PAYMENT_METHODS.PAY_DRIVER;
+    const paymentStatus = isAdminCollected ? 'PAID' : 'UNPAID';
+
+    const customer = await this.resolveAdminManualCustomer(input.customer ?? {});
+    const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
+    if (!vehicleType) {
+      throw new AppError('Vehicle type not found', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const booking = await this.bookingRepository.findByBookingNumberForUpdate(
+        conn,
+        bookingNumber,
+      );
+      if (!booking) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
+      if (booking.booking_source !== 'ADMIN_MANUAL') {
+        throw new AppError('Only admin manual bookings can be updated', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+      if (!editableStatuses.has(booking.status)) {
+        throw new AppError('Admin manual booking cannot be updated in the current status', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+        });
+      }
+
+      const scheduledPickupAtIso = input.scheduledPickupAt;
+      const scheduledPickupAt = this.formatThailandDateTime(scheduledPickupAtIso);
+      const origin = input.origin ?? {};
+      const destination = input.destination ?? {};
+      const [originLocationMetadata, destinationLocationMetadata] = await Promise.all([
+        this.buildLocationMetadata({
+          name: origin.name,
+          placeId: origin.placeId,
+        }),
+        this.buildLocationMetadata({
+          name: destination.name,
+          placeId: destination.placeId,
+        }),
+      ]);
+
+      const rawMetadata = await this.bookingRepository.findBookingMetadataForUpdate(
+        conn,
+        booking.id,
+      );
+      let metadata = {};
+      if (rawMetadata) {
+        try {
+          metadata = typeof rawMetadata === 'object'
+            ? { ...rawMetadata }
+            : JSON.parse(rawMetadata);
+        } catch {
+          metadata = {};
+        }
+      }
+      if (originLocationMetadata) metadata.originLocation = originLocationMetadata;
+      else delete metadata.originLocation;
+      if (destinationLocationMetadata) metadata.destinationLocation = destinationLocationMetadata;
+      else delete metadata.destinationLocation;
+
+      const originAddress = this.resolvePlaceAddress(origin);
+      const destinationAddress = this.resolvePlaceAddress(destination);
+      const chargeItem = {
+        chargeType: 'OTHER',
+        description: '관리자 등록 콜 (고객센터 협의 금액)',
+        quantity: 1,
+        unitPrice: payoutAmount,
+        amount: payoutAmount,
+      };
+
+      await this.bookingRepository.updateAdminManualBookingFields(conn, booking.id, {
+        originAddress,
+        originPlaceId: origin.placeId ?? null,
+        originLat: origin.lat ?? null,
+        originLng: origin.lng ?? null,
+        destinationAddress,
+        destinationPlaceId: destination.placeId ?? null,
+        destinationLat: destination.lat ?? null,
+        destinationLng: destination.lng ?? null,
+        scheduledPickupAt,
+        vehicleTypeId: vehicleType.id,
+        paymentStatus,
+        paymentMethod,
+        customerUserId: customer.customerUserId,
+        customerName: customer.customerName,
+        customerEmail: customer.customerEmail,
+        customerPhone: customer.customerPhone,
+        specialRequests: input.memo?.trim() || null,
+        metadata: Object.keys(metadata).length ? metadata : null,
+        updatedBy: adminUser.id,
+      });
+
+      await this.bookingRepository.updatePassengers(conn, booking.id, {
+        adults: input.passengers?.adults ?? 1,
+        children: input.passengers?.children ?? 0,
+        infants: input.passengers?.infants ?? 0,
+      });
+
+      await this.bookingRepository.upsertManualPayoutChargeItem(
+        conn,
+        booking.id,
+        chargeItem,
+        adminUser.id,
+      );
+
+      await this.bookingRepository.insertActivityLog(conn, booking.id, {
+        activityType: 'BOOKING_UPDATED',
+        actorUserId: adminUser.id,
+        actorRole: adminUser.role,
+        description: 'Admin manual open call updated',
+        payload: {
+          bookingNumber,
+          paymentMethod,
+          payoutAmount,
+          paymentCollection,
+        },
+      });
+
+      await conn.commit();
+
+      const customerChargeAmount = input.customerChargeAmount != null
+        ? Number(input.customerChargeAmount)
+        : null;
+      if (
+        customerChargeAmount != null
+        && Number.isFinite(customerChargeAmount)
+        && customerChargeAmount > 0
+      ) {
+        const container = require('../helpers/container');
+        await container.get('adminBookingNoteService').create(
+          bookingNumber,
+          {
+            text: `관리자 등록 콜 수정 · 고객 결제 ${customerChargeAmount} THB / 기사 지급 ${payoutAmount} THB`,
+          },
+          adminUser,
+        );
+      }
+
+      return {
+        bookingNumber,
+        status: booking.status,
+        paymentMethod,
+        paymentStatus,
+        payoutAmount,
+        customerChargeAmount: customerChargeAmount ?? null,
+      };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
   validateBookingNumber(bookingNumber) {
     const value = String(bookingNumber ?? '').trim().toUpperCase();
     if (!/^TX\d{12}$/.test(value)) {

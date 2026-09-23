@@ -20,6 +20,8 @@ const {
   archiveDriversSchema,
   driverIdParamsSchema,
   adminManualBookingCreateSchema,
+  adminManualBookingUpdateSchema,
+  adminManualBookingCancelSchema,
 } = require('../validators/admin.validator');
 const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
 
@@ -37,6 +39,20 @@ router.post(
   adminOnly,
   validate({ body: adminManualBookingCreateSchema }),
   adminController.createManualBooking,
+);
+
+router.patch(
+  '/bookings/:bookingNumber/manual',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: adminManualBookingUpdateSchema }),
+  adminController.updateManualBooking,
+);
+
+router.post(
+  '/bookings/:bookingNumber/manual/cancel',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: adminManualBookingCancelSchema }),
+  adminController.cancelManualBooking,
 );
 
 router.get(

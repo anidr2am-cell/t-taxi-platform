@@ -179,6 +179,13 @@ const adminManualBookingCreateSchema = Joi.object({
   preferFemaleDriver: Joi.boolean().optional(),
 });
 
+const adminManualBookingUpdateSchema = adminManualBookingCreateSchema;
+
+const adminManualBookingCancelSchema = Joi.object({
+  reason: unicodeText({ max: 100, allowEmpty: true }).optional(),
+  memo: unicodeText({ max: 500, allowEmpty: true }).optional(),
+});
+
 module.exports = {
   adminBookingListQuerySchema,
   bookingNumberParamsSchema,
@@ -194,4 +201,6 @@ module.exports = {
   archiveDriversSchema,
   driverIdParamsSchema,
   adminManualBookingCreateSchema,
+  adminManualBookingUpdateSchema,
+  adminManualBookingCancelSchema,
 };
