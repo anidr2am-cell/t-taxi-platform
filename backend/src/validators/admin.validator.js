@@ -175,7 +175,12 @@ const adminManualBookingCreateSchema = Joi.object({
     email: Joi.string().email({ tlds: { allow: false } }).allow('', null).optional(),
   }).required(),
   memo: unicodeText({ max: 1000, allowEmpty: true }).optional(),
-  nameSignText: unicodeText({ max: 120, allowEmpty: true }).optional(),
+  nameSign: Joi.boolean().default(false),
+  nameSignText: Joi.when("nameSign", {
+    is: true,
+    then: unicodeText({ max: 120 }).required(),
+    otherwise: unicodeText({ max: 120, allowEmpty: true }).optional(),
+  }),
   preferFemaleDriver: Joi.boolean().optional(),
 });
 

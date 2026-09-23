@@ -39,6 +39,7 @@ class _AdminManualBookingCreatePageState
   final _guestPhoneController = TextEditingController();
   final _guestEmailController = TextEditingController();
   final _memoController = TextEditingController();
+  final _nameSignTextController = TextEditingController();
 
   AdminDispatchApiService get _dispatchApi =>
       widget.dispatchApi ?? const AdminDispatchApiService();
@@ -51,6 +52,7 @@ class _AdminManualBookingCreatePageState
   String _vehicleTypeCode = 'SEDAN';
   String _paymentCollection = 'DRIVER_COLLECTS';
   int _adults = 1;
+  bool _nameSign = false;
 
   bool _searching = false;
   bool _submitting = false;
@@ -131,6 +133,7 @@ class _AdminManualBookingCreatePageState
       final pricing = Map<String, dynamic>.from(detail['pricing'] as Map);
       final customer = Map<String, dynamic>.from(detail['customer'] as Map);
       final items = pricing['chargeItems'] as List<dynamic>? ?? [];
+      final options = Map<String, dynamic>.from(detail['options'] as Map? ?? {});
       var payout = 0;
       for (final item in items) {
         if (item is Map && item['chargeType'] == 'OTHER') {
@@ -138,6 +141,8 @@ class _AdminManualBookingCreatePageState
           break;
         }
       }
+      final nameSign = options['nameSign'] == true
+          || items.any((item) => item is Map && item['chargeType'] == 'NAME_SIGN');
       final pickupRaw = detail['scheduledPickupAt'] as String?;
       DateTime? pickupAt;
       if (pickupRaw != null && pickupRaw.isNotEmpty) {
@@ -157,6 +162,9 @@ class _AdminManualBookingCreatePageState
         _paymentCollection =
             paymentMethod == 'ADMIN_COLLECTED' ? 'ADMIN_COLLECTED' : 'DRIVER_COLLECTS';
         _memoController.text = detail['specialRequests'] as String? ?? '';
+        _nameSign = nameSign;
+        _nameSignTextController.text =
+            options['nameSignText'] as String? ?? customer['name'] as String? ?? '';
         _selectedCustomer = null;
         _guestNameController.clear();
         _guestPhoneController.clear();
@@ -297,7 +305,31 @@ class _AdminManualBookingCreatePageState
     _guestPhoneController.dispose();
     _guestEmailController.dispose();
     _memoController.dispose();
+    _nameSignTextController.dispose();
     super.dispose();
+  }
+
+  String? _defaultNameSignText() {
+    final fromCustomer = _selectedCustomer?.name?.trim();
+    if (fromCustomer != null && fromCustomer.isNotEmpty) return fromCustomer;
+    final guest = _guestNameController.text.trim();
+    return guest.isEmpty ? null : guest;
+  }
+
+  void _onNameSignChanged(bool? value) {
+    final enabled = value ?? false;
+    setState(() {
+      _nameSign = enabled;
+      if (enabled && _nameSignTextController.text.trim().isEmpty) {
+        final suggested = _defaultNameSignText();
+        if (suggested != null) {
+          _nameSignTextController.text = suggested;
+        }
+      }
+      if (!enabled) {
+        _nameSignTextController.clear();
+      }
+    });
   }
 
   Future<void> _searchCustomers() async {
@@ -378,6 +410,10 @@ class _AdminManualBookingCreatePageState
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_customer'));
       return;
     }
+    if (_nameSign && _nameSignTextController.text.trim().isEmpty) {
+      setState(() => _submitError = context.l10n.t('wizard_required_name_sign_text'));
+      return;
+    }
 
     setState(() {
       _submitting = true;
@@ -407,6 +443,8 @@ class _AdminManualBookingCreatePageState
             ? null
             : _memoController.text.trim(),
         'passengers': {'adults': _adults, 'children': 0, 'infants': 0},
+        'nameSign': _nameSign,
+        'nameSignText': _nameSign ? _nameSignTextController.text.trim() : null,
       };
 
       final Map<String, dynamic> result;
@@ -423,6 +461,8 @@ class _AdminManualBookingCreatePageState
           customer: payload['customer'] as Map<String, dynamic>,
           memo: payload['memo'] as String?,
           passengers: payload['passengers'] as Map<String, dynamic>,
+          nameSign: payload['nameSign'] as bool,
+          nameSignText: payload['nameSignText'] as String?,
         );
       } else {
         result = await _dispatchApi.createManualBooking(
@@ -436,6 +476,8 @@ class _AdminManualBookingCreatePageState
           customer: payload['customer'] as Map<String, dynamic>,
           memo: payload['memo'] as String?,
           passengers: payload['passengers'] as Map<String, dynamic>,
+          nameSign: payload['nameSign'] as bool,
+          nameSignText: payload['nameSignText'] as String?,
         );
       }
       if (!mounted) return;
@@ -645,6 +687,41 @@ class _AdminManualBookingCreatePageState
                         if (value != null) setState(() => _adults = value);
                       },
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.surfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SwitchListTile(
+                      key: const Key('adminManualBookingNameSign'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.t('pricing_name_sign_with_picket')),
+                      subtitle: Text(l10n.t('admin_manual_booking_name_sign_hint')),
+                      value: _nameSign,
+                      onChanged: _submitting ? null : _onNameSignChanged,
+                    ),
+                    if (_nameSign) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      TextFormField(
+                        key: const Key('adminManualBookingNameSignText'),
+                        controller: _nameSignTextController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('name_sign_text_label'),
+                          hintText: l10n.t('name_sign_text_hint'),
+                        ),
+                        validator: (value) {
+                          if (!_nameSign) return null;
+                          if (value == null || value.trim().isEmpty) {
+                            return l10n.t('wizard_required_name_sign_text');
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),

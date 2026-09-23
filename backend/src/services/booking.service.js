@@ -1402,6 +1402,8 @@ class BookingService {
     commissionExempt = true,
     isAdminManualCall = true,
     requiresBankAccountConfirmation = false,
+    nameSign = false,
+    nameSignText = null,
   } = {}) {
     return {
       ...basePayload,
@@ -1409,6 +1411,33 @@ class BookingService {
       commissionExempt,
       isAdminManualCall,
       requiresBankAccountConfirmation,
+      nameSignRequested: Boolean(nameSign),
+      nameSignText: nameSign ? (nameSignText ?? null) : null,
+    };
+  }
+
+  resolveAdminManualNameSign(input = {}) {
+    const nameSign = input.nameSign === true;
+    const nameSignText = String(input.nameSignText ?? '').trim();
+    if (nameSign && !nameSignText) {
+      throw new AppError('Name sign text is required when picket service is enabled', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    return {
+      nameSign,
+      nameSignText: nameSign ? nameSignText : null,
+    };
+  }
+
+  adminManualNameSignChargeItem() {
+    return {
+      chargeType: 'NAME_SIGN',
+      description: 'Name sign service (picket)',
+      quantity: 1,
+      unitPrice: 0,
+      amount: 0,
     };
   }
 
@@ -1429,6 +1458,7 @@ class BookingService {
     const paymentStatus = isAdminCollected ? 'PAID' : 'UNPAID';
 
     const customer = await this.resolveAdminManualCustomer(input.customer ?? {});
+    const { nameSign, nameSignText } = this.resolveAdminManualNameSign(input);
     const serviceType = await this.pricingService.resolveServiceType(
       input.serviceTypeCode || SERVICE_TYPES.CITY_TRANSFER,
     );
@@ -1508,7 +1538,7 @@ class BookingService {
         commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
         customerUserId: customer.customerUserId,
         customerName: customer.customerName,
-        nameSignText: input.nameSignText?.trim() || null,
+        nameSignText,
         customerEmail: customer.customerEmail,
         customerPhone: customer.customerPhone,
         customerCountryCode: null,
@@ -1536,6 +1566,14 @@ class BookingService {
       });
 
       await this.bookingRepository.insertChargeItem(conn, bookingId, chargeItem, adminUser.id);
+      if (nameSign) {
+        await this.bookingRepository.insertChargeItem(
+          conn,
+          bookingId,
+          this.adminManualNameSignChargeItem(),
+          adminUser.id,
+        );
+      }
 
       await this.bookingRepository.insertStatusLog(conn, bookingId, {
         fromStatus: null,
@@ -1555,6 +1593,7 @@ class BookingService {
           paymentMethod,
           payoutAmount,
           paymentCollection,
+          nameSign,
         },
       });
 
@@ -1562,7 +1601,9 @@ class BookingService {
         routeId: null,
         currency: 'THB',
         totalAmount: payoutAmount,
-        chargeItems: [chargeItem],
+        chargeItems: nameSign
+          ? [chargeItem, this.adminManualNameSignChargeItem()]
+          : [chargeItem],
       };
 
       const openCallPayload = this.buildAdminManualOpenCallPayload(
@@ -1587,6 +1628,8 @@ class BookingService {
           commissionExempt: true,
           isAdminManualCall: true,
           requiresBankAccountConfirmation: isAdminCollected,
+          nameSign,
+          nameSignText,
         },
       );
 
@@ -1689,6 +1732,7 @@ class BookingService {
     const paymentStatus = isAdminCollected ? 'PAID' : 'UNPAID';
 
     const customer = await this.resolveAdminManualCustomer(input.customer ?? {});
+    const { nameSign, nameSignText } = this.resolveAdminManualNameSign(input);
     const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
     if (!vehicleType) {
       throw new AppError('Vehicle type not found', {
@@ -1785,10 +1829,18 @@ class BookingService {
         customerName: customer.customerName,
         customerEmail: customer.customerEmail,
         customerPhone: customer.customerPhone,
+        nameSignText,
         specialRequests: input.memo?.trim() || null,
         metadata: Object.keys(metadata).length ? metadata : null,
         updatedBy: adminUser.id,
       });
+
+      await this.bookingRepository.syncAdminManualNameSignChargeItem(
+        conn,
+        booking.id,
+        nameSign,
+        adminUser.id,
+      );
 
       await this.bookingRepository.updatePassengers(conn, booking.id, {
         adults: input.passengers?.adults ?? 1,
@@ -1813,6 +1865,7 @@ class BookingService {
           paymentMethod,
           payoutAmount,
           paymentCollection,
+          nameSign,
         },
       });
 
@@ -1843,6 +1896,8 @@ class BookingService {
         paymentStatus,
         payoutAmount,
         customerChargeAmount: customerChargeAmount ?? null,
+        nameSign,
+        nameSignText,
       };
     } catch (err) {
       await conn.rollback();

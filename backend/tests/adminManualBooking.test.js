@@ -73,6 +73,14 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
     async upsertManualPayoutChargeItem(_conn, _bookingId, item) {
       calls.chargeItems = [item];
     },
+    async syncAdminManualNameSignChargeItem(_conn, _bookingId, enabled) {
+      if (enabled) {
+        calls.chargeItems.push({
+          chargeType: 'NAME_SIGN',
+          amount: 0,
+        });
+      }
+    },
   };
   const couponRepository = {
     async findCustomerById(id) {
@@ -200,6 +208,31 @@ test('createAdminManualBooking links member, marks commission exempt, and broadc
     assert.equal(calls.outbox[0].eventType, EVENTS.BOOKING_CREATED);
     assert.equal(calls.outbox[0].payload.customerUserId, 55);
     assert.deepEqual(calls.dispatchedOutboxIds, [[30]]);
+  } finally {
+    setRealtimeIo(null);
+    restoreContainer();
+  }
+});
+
+test('createAdminManualBooking marks name sign for drivers when picket enabled', async () => {
+  const { service, calls, input, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.createAdminManualBooking(
+      {
+        ...input,
+        nameSign: true,
+        nameSignText: 'KIM MINSU',
+      },
+      ADMIN,
+    );
+
+    assert.equal(calls.booking.nameSignText, 'KIM MINSU');
+    assert.equal(
+      calls.chargeItems.some((item) => item.chargeType === 'NAME_SIGN'),
+      true,
+    );
+    assert.equal(calls.socket[0].payload.nameSignRequested, true);
+    assert.equal(calls.socket[0].payload.nameSignText, 'KIM MINSU');
   } finally {
     setRealtimeIo(null);
     restoreContainer();

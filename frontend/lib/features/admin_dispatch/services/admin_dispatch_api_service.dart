@@ -418,6 +418,8 @@ class AdminDispatchApiService {
     String? memo,
     Map<String, dynamic>? passengers,
     String? serviceTypeCode,
+    bool nameSign = false,
+    String? nameSignText,
   }) async {
     final body = <String, dynamic>{
       'origin': origin,
@@ -427,6 +429,9 @@ class AdminDispatchApiService {
       'payoutAmount': payoutAmount,
       'paymentCollection': paymentCollection,
       'customer': customer,
+      'nameSign': nameSign,
+      if (nameSign && nameSignText != null && nameSignText.isNotEmpty)
+        'nameSignText': nameSignText,
       if (customerChargeAmount != null)
         'customerChargeAmount': customerChargeAmount,
       if (memo != null && memo.isNotEmpty) 'memo': memo,
@@ -450,6 +455,8 @@ class AdminDispatchApiService {
     String? memo,
     Map<String, dynamic>? passengers,
     String? serviceTypeCode,
+    bool nameSign = false,
+    String? nameSignText,
   }) async {
     final payload = <String, dynamic>{
       'origin': origin,
@@ -459,6 +466,9 @@ class AdminDispatchApiService {
       'payoutAmount': payoutAmount,
       'paymentCollection': paymentCollection,
       'customer': customer,
+      'nameSign': nameSign,
+      if (nameSign && nameSignText != null && nameSignText.isNotEmpty)
+        'nameSignText': nameSignText,
       if (customerChargeAmount != null)
         'customerChargeAmount': customerChargeAmount,
       if (memo != null && memo.isNotEmpty) 'memo': memo,

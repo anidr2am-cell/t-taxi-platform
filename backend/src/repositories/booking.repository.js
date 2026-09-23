@@ -173,6 +173,7 @@ class BookingRepository {
           customer_name = ?,
           customer_email = ?,
           customer_phone = ?,
+          name_sign_text = ?,
           special_requests = ?,
           metadata = ?,
           updated_by = ?,
@@ -196,12 +197,59 @@ class BookingRepository {
         fields.customerName,
         fields.customerEmail,
         fields.customerPhone,
+        fields.nameSignText ?? null,
         fields.specialRequests,
         fields.metadata ? JSON.stringify(fields.metadata) : null,
         fields.updatedBy,
         bookingId,
       ],
     );
+  }
+
+  async syncAdminManualNameSignChargeItem(conn, bookingId, enabled, actorUserId) {
+    if (!enabled) {
+      await conn.query(
+        `
+          UPDATE booking_charge_items
+          SET deleted_at = CURRENT_TIMESTAMP(3)
+          WHERE booking_id = ?
+            AND charge_type = 'NAME_SIGN'
+            AND deleted_at IS NULL
+        `,
+        [bookingId],
+      );
+      return;
+    }
+
+    const item = {
+      chargeType: 'NAME_SIGN',
+      description: 'Name sign service (picket)',
+      quantity: 1,
+      unitPrice: 0,
+      amount: 0,
+    };
+    const [rows] = await conn.query(
+      `
+        SELECT id
+        FROM booking_charge_items
+        WHERE booking_id = ? AND charge_type = 'NAME_SIGN' AND deleted_at IS NULL
+        ORDER BY id ASC
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    if (rows[0]?.id) {
+      await conn.query(
+        `
+          UPDATE booking_charge_items
+          SET description = ?, quantity = ?, unit_price = ?, amount = ?
+          WHERE id = ?
+        `,
+        [item.description, item.quantity, item.unitPrice, item.amount, rows[0].id],
+      );
+      return;
+    }
+    await this.insertChargeItem(conn, bookingId, item, actorUserId);
   }
 
   async upsertManualPayoutChargeItem(conn, bookingId, item, actorUserId) {
@@ -1880,6 +1928,7 @@ class BookingRepository {
           b.contact_verified_at,
           b.customer_user_id,
           b.booking_source,
+          b.name_sign_text,
           b.special_requests,
           b.prefer_female_driver,
           b.payment_method,
