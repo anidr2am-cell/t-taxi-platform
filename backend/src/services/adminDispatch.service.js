@@ -533,6 +533,8 @@ class AdminDispatchService {
       specialRequests: row.special_requests,
       options: {
         preferFemaleDriver: Boolean(row.prefer_female_driver),
+        nameSign: chargeItems.some((item) => item.charge_type === "NAME_SIGN"),
+        nameSignText: row.name_sign_text ?? null,
       },
       passengers: {
         adults: row.adults ?? 0,

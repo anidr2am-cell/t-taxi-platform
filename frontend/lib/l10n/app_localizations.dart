@@ -166,6 +166,8 @@ class AppLocalizations {
       'admin_manual_booking_pickup_datetime_hint': 'Select pickup date and time',
       'admin_manual_booking_vehicle_type': 'Vehicle class',
       'admin_manual_booking_passengers': 'Passengers',
+      'admin_manual_booking_name_sign_hint':
+          'Drivers will see a picket/name-sign badge on this call.',
       'admin_manual_booking_payout_amount': 'Driver payout amount (THB)',
       'admin_manual_booking_customer_charge_amount': 'Customer payment amount (THB)',
       'admin_manual_booking_customer_charge_hint':
@@ -2039,6 +2041,8 @@ class AppLocalizations {
       'admin_manual_booking_pickup_datetime_hint': '픽업 날짜와 시간을 선택하세요',
       'admin_manual_booking_vehicle_type': '차량 등급',
       'admin_manual_booking_passengers': '탑승 인원',
+      'admin_manual_booking_name_sign_hint':
+          '기사 앱에서 피켓(네임사인) 필요 콜로 표시됩니다.',
       'admin_manual_booking_payout_amount': '기사 지급 금액 (THB)',
       'admin_manual_booking_customer_charge_amount': '고객 결제 금액 (THB)',
       'admin_manual_booking_customer_charge_hint':
@@ -3274,6 +3278,7 @@ class AppLocalizations {
       'admin_manual_booking_pickup_datetime_hint': '请选择接客日期和时间',
       'admin_manual_booking_vehicle_type': '车型等级',
       'admin_manual_booking_passengers': '乘客人数',
+      'admin_manual_booking_name_sign_hint': '司机端将显示需要举牌服务的标识。',
       'admin_manual_booking_payout_amount': '司机支付金额 (THB)',
       'admin_manual_booking_customer_charge_amount': '客户支付金额 (THB)',
       'admin_manual_booking_customer_charge_hint': '可选，仅供管理员记录客户实际支付金额。',
@@ -4040,6 +4045,8 @@ class AppLocalizations {
       'admin_manual_booking_pickup_datetime_hint': 'ピックアップ日時を選択してください',
       'admin_manual_booking_vehicle_type': '車両クラス',
       'admin_manual_booking_passengers': '乗客人数',
+      'admin_manual_booking_name_sign_hint':
+          'ドライバーアプリでネームボード（ピケット）必要として表示されます。',
       'admin_manual_booking_payout_amount': 'ドライバー支払額 (THB)',
       'admin_manual_booking_customer_charge_amount': '顧客支払額 (THB)',
       'admin_manual_booking_customer_charge_hint': '任意。管理者記録用の顧客実支払額です。',
@@ -4878,6 +4885,8 @@ class AppLocalizations {
       'admin_manual_booking_pickup_datetime_hint': 'เลือกวันและเวลารับ',
       'admin_manual_booking_vehicle_type': 'ประเภทรถ',
       'admin_manual_booking_passengers': 'จำนวนผู้โดยสาร',
+      'admin_manual_booking_name_sign_hint':
+          'คนขับจะเห็นป้ายว่าต้องถือป้ายชื่อสำหรับงานนี้',
       'admin_manual_booking_payout_amount': 'ยอดจ่ายคนขับ (THB)',
       'admin_manual_booking_customer_charge_amount': 'ยอดที่ลูกค้าจ่าย (THB)',
       'admin_manual_booking_customer_charge_hint':

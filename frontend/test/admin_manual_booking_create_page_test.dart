@@ -34,6 +34,8 @@ class _FakeDispatchApi extends AdminDispatchApiService {
     String? memo,
     Map<String, dynamic>? passengers,
     String? serviceTypeCode,
+    bool nameSign = false,
+    String? nameSignText,
   }) {
     return onCreate();
   }
