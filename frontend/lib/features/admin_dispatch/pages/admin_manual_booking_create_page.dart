@@ -12,6 +12,26 @@ import '../services/admin_dispatch_api_service.dart';
 import '../widgets/assign_driver_dialog.dart';
 import 'admin_booking_detail_page.dart';
 
+Map<String, dynamic> _bookingDetailMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+  return {};
+}
+
+int? _bookingDetailInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim());
+  return null;
+}
+
+String? _bookingDetailString(dynamic value) {
+  if (value == null) return null;
+  if (value is String) return value;
+  return value.toString();
+}
+
 class AdminManualBookingCreatePage extends StatefulWidget {
   const AdminManualBookingCreatePage({
     super.key,
@@ -115,8 +135,7 @@ class _AdminManualBookingCreatePageState
     try {
       final detail = await _dispatchApi.getBookingDetail(bookingNumber);
       if (!mounted) return;
-      final manualActions =
-          detail['manualCallActions'] as Map<String, dynamic>? ?? {};
+      final manualActions = _bookingDetailMap(detail['manualCallActions']);
       if (manualActions['canEdit'] != true) {
         setState(() {
           _loadingEdit = false;
@@ -125,46 +144,56 @@ class _AdminManualBookingCreatePageState
         return;
       }
 
-      final route = Map<String, dynamic>.from(detail['route'] as Map);
-      final origin = Map<String, dynamic>.from(route['origin'] as Map);
-      final destination = Map<String, dynamic>.from(route['destination'] as Map);
-      final vehicle = Map<String, dynamic>.from(detail['vehicle'] as Map);
-      final passengers = Map<String, dynamic>.from(detail['passengers'] as Map);
-      final pricing = Map<String, dynamic>.from(detail['pricing'] as Map);
-      final customer = Map<String, dynamic>.from(detail['customer'] as Map);
+      final route = _bookingDetailMap(detail['route']);
+      final origin = _bookingDetailMap(route['origin']);
+      final destination = _bookingDetailMap(route['destination']);
+      final vehicle = _bookingDetailMap(detail['vehicle']);
+      final passengers = _bookingDetailMap(detail['passengers']);
+      final pricing = _bookingDetailMap(detail['pricing']);
+      final customer = _bookingDetailMap(detail['customer']);
       final items = pricing['chargeItems'] as List<dynamic>? ?? [];
-      final options = Map<String, dynamic>.from(detail['options'] as Map? ?? {});
+      final options = _bookingDetailMap(detail['options']);
       var payout = 0;
       for (final item in items) {
-        if (item is Map && item['chargeType'] == 'OTHER') {
-          payout = (item['amount'] as num?)?.toInt() ?? 0;
-          break;
+        if (item is Map) {
+          final chargeType = _bookingDetailString(item['chargeType']);
+          if (chargeType == 'OTHER') {
+            payout = _bookingDetailInt(item['amount']) ?? 0;
+            break;
+          }
         }
       }
       final nameSign = options['nameSign'] == true
-          || items.any((item) => item is Map && item['chargeType'] == 'NAME_SIGN');
-      final pickupRaw = detail['scheduledPickupAt'] as String?;
+          || items.any(
+            (item) =>
+                item is Map && _bookingDetailString(item['chargeType']) == 'NAME_SIGN',
+          );
+      final pickupRaw = _bookingDetailString(detail['scheduledPickupAt']);
       DateTime? pickupAt;
       if (pickupRaw != null && pickupRaw.isNotEmpty) {
         pickupAt = DateTime.tryParse(pickupRaw)?.toLocal();
       }
-      final paymentMethod = pricing['paymentMethod'] as String? ?? 'PAY_DRIVER';
-      final customerUserId = customer['customerUserId'] as int?;
+      final paymentMethod =
+          _bookingDetailString(pricing['paymentMethod']) ?? 'PAY_DRIVER';
+      final customerUserId = _bookingDetailInt(customer['customerUserId']);
 
       setState(() {
         _origin = _routeLocation(origin);
         _destination = _routeLocation(destination);
         _pickupAt = pickupAt;
-        _vehicleTypeCode = vehicle['typeCode'] as String? ?? 'SEDAN';
-        _adults = (passengers['adults'] as num?)?.toInt().clamp(1, 8) ?? 1;
+        _vehicleTypeCode = _bookingDetailString(vehicle['typeCode']) ?? 'SEDAN';
+        final adultsRaw = _bookingDetailInt(passengers['adults']);
+        _adults = (adultsRaw ?? 1).clamp(1, 8);
         _payoutController.text = payout > 0 ? '$payout' : '';
         _customerChargeController.clear();
         _paymentCollection =
             paymentMethod == 'ADMIN_COLLECTED' ? 'ADMIN_COLLECTED' : 'DRIVER_COLLECTS';
-        _memoController.text = detail['specialRequests'] as String? ?? '';
+        _memoController.text = _bookingDetailString(detail['specialRequests']) ?? '';
         _nameSign = nameSign;
         _nameSignTextController.text =
-            options['nameSignText'] as String? ?? customer['name'] as String? ?? '';
+            _bookingDetailString(options['nameSignText']) ??
+            _bookingDetailString(customer['name']) ??
+            '';
         _selectedCustomer = null;
         _guestNameController.clear();
         _guestPhoneController.clear();
@@ -172,14 +201,14 @@ class _AdminManualBookingCreatePageState
         if (customerUserId != null) {
           _selectedCustomer = AdminCustomerSearchResult(
             id: customerUserId,
-            name: customer['name'] as String?,
-            phone: customer['phone'] as String?,
-            email: customer['email'] as String?,
+            name: _bookingDetailString(customer['name']),
+            phone: _bookingDetailString(customer['phone']),
+            email: _bookingDetailString(customer['email']),
           );
         } else {
-          _guestNameController.text = customer['name'] as String? ?? '';
-          _guestPhoneController.text = customer['phone'] as String? ?? '';
-          _guestEmailController.text = customer['email'] as String? ?? '';
+          _guestNameController.text = _bookingDetailString(customer['name']) ?? '';
+          _guestPhoneController.text = _bookingDetailString(customer['phone']) ?? '';
+          _guestEmailController.text = _bookingDetailString(customer['email']) ?? '';
         }
         _loadingEdit = false;
         _createdBookingNumber = null;
@@ -594,9 +623,15 @@ class _AdminManualBookingCreatePageState
                           OutlinedButton.icon(
                             onPressed: _submitting
                                 ? null
-                                : () => setState(
-                                    () => _editingBookingNumber = _createdBookingNumber,
-                                  ),
+                                : () {
+                                    setState(
+                                      () => _editingBookingNumber =
+                                          _createdBookingNumber,
+                                    );
+                                    WidgetsBinding.instance.addPostFrameCallback(
+                                      (_) => _loadForEdit(),
+                                    );
+                                  },
                             icon: const Icon(Icons.edit_outlined),
                             label: Text(l10n.t('admin_manual_booking_edit')),
                           ),
