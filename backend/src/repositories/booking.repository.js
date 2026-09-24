@@ -167,6 +167,7 @@ class BookingRepository {
           destination_lng = ?,
           scheduled_pickup_at = ?,
           vehicle_type_id = ?,
+          service_type_id = ?,
           payment_status = ?,
           payment_method = ?,
           customer_user_id = ?,
@@ -175,6 +176,7 @@ class BookingRepository {
           customer_phone = ?,
           name_sign_text = ?,
           special_requests = ?,
+          prefer_female_driver = ?,
           metadata = ?,
           updated_by = ?,
           updated_at = CURRENT_TIMESTAMP
@@ -191,6 +193,7 @@ class BookingRepository {
         fields.destinationLng,
         fields.scheduledPickupAt,
         fields.vehicleTypeId,
+        fields.serviceTypeId,
         fields.paymentStatus,
         fields.paymentMethod,
         fields.customerUserId,
@@ -199,6 +202,7 @@ class BookingRepository {
         fields.customerPhone,
         fields.nameSignText ?? null,
         fields.specialRequests,
+        fields.preferFemaleDriver ? 1 : 0,
         fields.metadata ? JSON.stringify(fields.metadata) : null,
         fields.updatedBy,
         bookingId,
@@ -311,14 +315,40 @@ class BookingRepository {
     );
   }
 
+  async updateLuggage(conn, bookingId, luggage) {
+    const [result] = await conn.query(
+      `
+        UPDATE booking_luggage
+        SET
+          carriers_20_inch = ?,
+          carriers_24_inch_plus = ?,
+          golf_bags = ?,
+          special_items = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE booking_id = ? AND deleted_at IS NULL
+      `,
+      [
+        luggage.carriers20Inch,
+        luggage.carriers24InchPlus,
+        luggage.golfBags,
+        luggage.specialItems,
+        bookingId,
+      ],
+    );
+    if ((result.affectedRows ?? 0) === 0) {
+      await this.insertLuggage(conn, bookingId, luggage);
+    }
+  }
+
   async insertTransferDetails(conn, bookingId, transfer) {
     await conn.query(
       `
         INSERT INTO booking_transfer_details (
           booking_id, airport_id, airport_code_custom, flight_number,
           airline_code, flight_date,
-          golf_course_id, golf_region, driver_included
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          golf_course_id, golf_region, driver_included,
+          flight_scheduled_arrival_at, flight_estimated_arrival_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         bookingId,
@@ -330,8 +360,192 @@ class BookingRepository {
         transfer.golfCourseId,
         transfer.golfRegion,
         transfer.driverIncluded ? 1 : 0,
+        transfer.flightScheduledArrivalAt ?? null,
+        transfer.flightEstimatedArrivalAt ?? null,
       ],
     );
+  }
+
+  async findPassengersByBookingId(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT adults, children, infants
+        FROM booking_passengers
+        WHERE booking_id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findLuggageByBookingId(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          carriers_20_inch,
+          carriers_24_inch_plus,
+          golf_bags,
+          special_items
+        FROM booking_luggage
+        WHERE booking_id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findTransferByBookingId(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          btd.airport_id,
+          btd.airport_code_custom,
+          btd.flight_number,
+          btd.airline_code,
+          btd.flight_date,
+          btd.golf_course_id,
+          btd.golf_region,
+          btd.driver_included,
+          btd.flight_scheduled_arrival_at,
+          btd.flight_estimated_arrival_at,
+          a.iata_code AS airport_iata
+        FROM booking_transfer_details btd
+        LEFT JOIN airports a ON a.id = btd.airport_id AND a.deleted_at IS NULL
+        WHERE btd.booking_id = ? AND btd.deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async upsertTransferDetails(conn, bookingId, transfer) {
+    const [existing] = await conn.query(
+      `
+        SELECT id
+        FROM booking_transfer_details
+        WHERE booking_id = ? AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    if (existing[0]?.id) {
+      const sets = [
+        'airport_id = ?',
+        'airport_code_custom = ?',
+        'flight_number = ?',
+        'airline_code = ?',
+        'flight_date = ?',
+        'golf_course_id = ?',
+        'golf_region = ?',
+        'driver_included = ?',
+      ];
+      const params = [
+        transfer.airportId,
+        transfer.airportCodeCustom,
+        transfer.flightNumber,
+        transfer.airlineCode ?? null,
+        transfer.flightDate ?? null,
+        transfer.golfCourseId ?? null,
+        transfer.golfRegion ?? null,
+        transfer.driverIncluded ? 1 : 0,
+      ];
+      if (transfer.updateFlightArrivalTimes) {
+        sets.push(
+          'flight_scheduled_arrival_at = ?',
+          'flight_estimated_arrival_at = ?',
+        );
+        params.push(
+          transfer.flightScheduledArrivalAt ?? null,
+          transfer.flightEstimatedArrivalAt ?? null,
+        );
+      }
+      sets.push('updated_at = CURRENT_TIMESTAMP');
+      params.push(bookingId);
+      await conn.query(
+        `
+          UPDATE booking_transfer_details
+          SET ${sets.join(',\n            ')}
+          WHERE booking_id = ? AND deleted_at IS NULL
+        `,
+        params,
+      );
+      return;
+    }
+    await this.insertTransferDetails(conn, bookingId, transfer);
+  }
+
+  async findAdminManualBookingFieldsForUpdate(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT
+          b.origin_address,
+          b.origin_place_id,
+          b.origin_lat,
+          b.origin_lng,
+          b.destination_address,
+          b.destination_place_id,
+          b.destination_lat,
+          b.destination_lng,
+          b.scheduled_pickup_at,
+          b.vehicle_type_id,
+          b.service_type_id,
+          b.prefer_female_driver,
+          b.special_requests,
+          b.name_sign_text,
+          b.customer_user_id,
+          b.customer_name,
+          b.customer_email,
+          b.customer_phone,
+          b.payment_status,
+          b.payment_method,
+          vt.code AS vehicle_type_code,
+          st.code AS service_type_code
+        FROM bookings b
+        INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
+        INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
+        WHERE b.id = ? AND b.deleted_at IS NULL
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [bookingId],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findBookingScheduledPickupByNumber(bookingNumber) {
+    const context = await this.findBookingPickupContextByNumber(bookingNumber);
+    return context?.scheduled_pickup_at ?? null;
+  }
+
+  async findBookingPickupContextByNumber(bookingNumber) {
+    const [rows] = await this.pool.query(
+      `
+        SELECT id, scheduled_pickup_at
+        FROM bookings
+        WHERE booking_number = ? AND deleted_at IS NULL AND is_archived = 0
+        LIMIT 1
+      `,
+      [bookingNumber],
+    );
+    return rows[0] ?? null;
+  }
+
+  async findManualPayoutAmountByBookingId(conn, bookingId) {
+    const [rows] = await conn.query(
+      `
+        SELECT amount
+        FROM booking_charge_items
+        WHERE booking_id = ? AND charge_type = 'OTHER' AND deleted_at IS NULL
+        ORDER BY id ASC
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    const amount = rows[0]?.amount;
+    return amount != null ? Number(amount) : null;
   }
 
   async insertChargeItem(conn, bookingId, item, createdBy) {
@@ -1965,6 +2179,9 @@ class BookingRepository {
           btd.delay_status,
           btd.delay_minutes,
           btd.airport_code_custom,
+          btd.golf_course_id,
+          btd.golf_region,
+          btd.driver_included,
           a.iata_code AS airport_iata
         FROM bookings b
         INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL

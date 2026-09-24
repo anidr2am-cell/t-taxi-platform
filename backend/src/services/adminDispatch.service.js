@@ -20,6 +20,9 @@ const { emitDriverAssignmentReleased } = require("../socket/realtime");
 const {
   assertBookingDispatchEligible,
 } = require("../policies/bookingDispatchEligibility.policy");
+const {
+  assertNoPickupTimeConflict,
+} = require("../policies/driverBookingConflictPolicy");
 
 const TERMINAL_ASSIGN_STATUSES = new Set([
   BOOKING_STATUS.CANCELLED,
@@ -559,6 +562,9 @@ class AdminDispatchService {
         estimatedArrivalAt: row.flight_estimated_arrival_at,
         delayStatus: row.delay_status,
         delayMinutes: row.delay_minutes,
+        golfCourseId: row.golf_course_id ?? null,
+        golfRegion: row.golf_region ?? null,
+        driverIncluded: Boolean(row.driver_included),
       },
       pricing: {
         totalAmount: Number(row.total_amount),
@@ -799,6 +805,18 @@ class AdminDispatchService {
     const rows = await this.driverRepository.listForAdminAssignment({
       archived: query.archived === true || query.archived === "true",
     });
+    let targetPickupAt = null;
+    let excludeBookingId = null;
+    const bookingNumber = String(query.bookingNumber ?? "").trim();
+    if (bookingNumber) {
+      const pickupContext =
+        await this.bookingRepository.findBookingPickupContextByNumber(
+          bookingNumber,
+        );
+      targetPickupAt = pickupContext?.scheduled_pickup_at ?? null;
+      excludeBookingId = pickupContext?.id ?? null;
+    }
+
     const items = [];
     for (const row of rows) {
       const blocked =
@@ -808,7 +826,39 @@ class AdminDispatchService {
       const blockReason = blocked
         ? "Outstanding overdue or unresolved commission settlement"
         : null;
-      items.push(this.mapDriverListItem(row, blocked, blockReason));
+      const item = this.mapDriverListItem(row, blocked, blockReason);
+
+      if (
+        targetPickupAt &&
+        item.assignmentEligible &&
+        Number(row.active_assignment_count ?? 0) > 0
+      ) {
+        const conn = await this.pool.getConnection();
+        try {
+          const conflictRows =
+            await this.driverRepository.findActiveAssignmentPickupsForConflict(
+              conn,
+              row.id,
+              excludeBookingId,
+            );
+          try {
+            assertNoPickupTimeConflict(conflictRows, targetPickupAt, {
+              excludeBookingId,
+            });
+          } catch (err) {
+            if (err?.errorCode === ERROR_CODES.DRIVER_BOOKING_TIME_CONFLICT) {
+              item.assignmentEligible = false;
+              item.pickupTimeConflict = true;
+            } else {
+              throw err;
+            }
+          }
+        } finally {
+          conn.release();
+        }
+      }
+
+      items.push(item);
     }
     return items;
   }
@@ -1017,19 +1067,6 @@ class AdminDispatchService {
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });
     }
-    const hasActiveJob = await this.driverRepository.hasActiveJob(
-      conn,
-      driver.id,
-    );
-    if (hasActiveJob) {
-      throw new AppError(
-        "This driver has an active or unsettled job and cannot receive a new booking.",
-        {
-          statusCode: HTTP_STATUS.CONFLICT,
-          errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
-        },
-      );
-    }
     const blocked =
       await this.commissionSettlementService.driverHasBlockingSettlement(
         driver.id,
@@ -1044,6 +1081,20 @@ class AdminDispatchService {
       );
     }
     return driver;
+  }
+
+  async assertDriverPickupTimeAvailable(conn, driverId, scheduledPickupAt, {
+    excludeBookingId = null,
+  } = {}) {
+    const conflictRows =
+      await this.driverRepository.findActiveAssignmentPickupsForConflict(
+        conn,
+        driverId,
+        excludeBookingId,
+      );
+    assertNoPickupTimeConflict(conflictRows, scheduledPickupAt, {
+      excludeBookingId,
+    });
   }
 
   assertBookingSupportsCandidateRecommendation(booking, activeAssignment) {
@@ -1291,6 +1342,11 @@ class AdminDispatchService {
       }
 
       const driver = await this.ensureDriverEligible(conn, input.driverId);
+      await this.assertDriverPickupTimeAvailable(
+        conn,
+        driver.id,
+        booking.scheduled_pickup_at,
+      );
       let driverVehicleId = input.driverVehicleId ?? null;
       if (!driverVehicleId) {
         const primaryVehicle = await this.driverRepository.findPrimaryVehicle(
@@ -1410,6 +1466,12 @@ class AdminDispatchService {
       }
 
       const driver = await this.ensureDriverEligible(conn, input.driverId);
+      await this.assertDriverPickupTimeAvailable(
+        conn,
+        driver.id,
+        booking.scheduled_pickup_at,
+        { excludeBookingId: booking.id },
+      );
       let driverVehicleId = input.driverVehicleId ?? null;
       if (!driverVehicleId) {
         const primaryVehicle = await this.driverRepository.findPrimaryVehicle(

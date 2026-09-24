@@ -37,6 +37,20 @@ test('allows when pickup times are exactly 61 minutes apart', () => {
   ));
 });
 
+test('blocks when pickup times are exactly 60 minutes and 0 seconds apart', () => {
+  expectConflict(() => assertNoPickupTimeConflict(
+    [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
+    '2026-07-13 11:00:00',
+  ));
+});
+
+test('allows when pickup times are 60 minutes and 1 second apart', () => {
+  assert.doesNotThrow(() => assertNoPickupTimeConflict(
+    [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],
+    '2026-07-13 11:00:01',
+  ));
+});
+
 test('blocks when pickup times are at the same instant', () => {
   expectConflict(() => assertNoPickupTimeConflict(
     [{ id: 1, scheduled_pickup_at: '2026-07-13 10:00:00' }],

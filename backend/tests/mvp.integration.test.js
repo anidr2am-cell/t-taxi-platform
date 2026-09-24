@@ -99,6 +99,7 @@ function bookingRow(state) {
     id: state.bookingId,
     booking_number: state.bookingNumber,
     status: state.status,
+    scheduled_pickup_at: state.scheduledPickupAt ?? '2026-07-01 09:00:00',
     total_amount: state.totalAmount,
     currency: state.currency,
     customer_name: state.customerName,
@@ -262,6 +263,9 @@ function buildMvpHarness(initialState = createLifecycleState()) {
           BOOKING_STATUS.SETTLEMENT_PENDING,
         ].includes(state.status);
     },
+    async findActiveAssignmentPickupsForConflict() {
+      return [];
+    },
   };
 
   const fileRepository = {
@@ -405,10 +409,8 @@ test('MVP lifecycle — booking through review with commission and notifications
     () => h.commission.approve(BOOKING_NUMBER, ADMIN_USER),
     (err) => err.errorCode === ERROR_CODES.RECEIPT_REQUIRED,
   );
-  await assert.rejects(
-    () => h.adminDispatch.ensureDriverEligible(connStub(state), 5),
-    (err) => err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE,
-  );
+  const eligible = await h.adminDispatch.ensureDriverEligible(connStub(state), 5);
+  assert.equal(eligible.id, 5);
 
   const uploadPath = path.join(uploadDir, 'mvp-transfer-slip.pdf');
   fs.writeFileSync(uploadPath, '%PDF-1.4');

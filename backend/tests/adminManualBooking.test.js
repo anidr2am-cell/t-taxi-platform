@@ -21,6 +21,18 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
   const calls = {
     booking: null,
     chargeItems: [],
+    luggage: null,
+    luggageUpdates: 0,
+    passengerUpdates: 0,
+    transferUpdates: 0,
+    transferInserts: 0,
+    lastUpdateFields: null,
+    payoutUpserts: 0,
+    transferUpsertPayload: null,
+    metadataSnapshot: {
+      originLocation: { name: 'Suvarnabhumi', nameTh: 'ท่าอากาศยานสุวรรณภูมิ' },
+      destinationLocation: { name: 'Pattaya', nameTh: 'พัทยา' },
+    },
     notifications: [],
     notes: [],
     socket: [],
@@ -41,7 +53,67 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
       return 10;
     },
     async insertPassengers() {},
-    async insertLuggage() {},
+    async insertLuggage(_conn, _bookingId, luggage) {
+      calls.luggage = luggage;
+    },
+    async updateLuggage(_conn, _bookingId, luggage) {
+      calls.luggageUpdates += 1;
+      calls.luggage = luggage;
+    },
+    async insertTransferDetails() {
+      calls.transferInserts += 1;
+    },
+    async upsertTransferDetails(_conn, _bookingId, payload) {
+      calls.transferUpdates += 1;
+      calls.transferUpsertPayload = payload;
+    },
+    async findAdminManualBookingFieldsForUpdate() {
+      return {
+        origin_address: 'Origin',
+        origin_place_id: 'p1',
+        origin_lat: 13.7,
+        origin_lng: 100.5,
+        destination_address: 'Dest',
+        destination_place_id: 'p2',
+        destination_lat: 12.9,
+        destination_lng: 100.8,
+        scheduled_pickup_at: '2026-12-01 09:30:00',
+        vehicle_type_id: 1,
+        service_type_id: 2,
+        prefer_female_driver: 1,
+        special_requests: 'original memo',
+        name_sign_text: null,
+        customer_user_id: 55,
+        customer_name: 'Member Kim',
+        customer_email: 'kim@example.com',
+        customer_phone: '0811111111',
+        payment_method: 'PAY_DRIVER',
+        payment_status: 'UNPAID',
+        vehicle_type_code: 'SEDAN',
+        service_type_code: 'CITY_TRANSFER',
+      };
+    },
+    async findPassengersByBookingId() {
+      return { adults: 2, children: 1, infants: 0 };
+    },
+    async findLuggageByBookingId() {
+      return {
+        carriers_20_inch: 1,
+        carriers_24_inch_plus: 2,
+        golf_bags: 0,
+        special_items: 'wheelchair',
+      };
+    },
+    async findTransferByBookingId() {
+      return {
+        flight_number: 'TG123',
+        airport_iata: 'BKK',
+        golf_course_id: 42,
+        golf_region: 'East',
+        driver_included: 1,
+        flight_estimated_arrival_at: '2026-12-01 11:00:00',
+      };
+    },
     async insertChargeItem(_conn, _bookingId, item) {
       calls.chargeItems.push(item);
     },
@@ -66,11 +138,25 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
       };
     },
     async findBookingMetadataForUpdate() {
+      return calls.metadataSnapshot;
+    },
+    async findManualPayoutAmountByBookingId() {
+      return 800;
+    },
+    async findAirportByIata(_conn, iata) {
+      if (iata === 'BKK') {
+        return { id: 1, iata_code: 'BKK' };
+      }
       return null;
     },
-    async updateAdminManualBookingFields() {},
-    async updatePassengers() {},
+    async updateAdminManualBookingFields(_conn, _id, fields) {
+      calls.lastUpdateFields = fields;
+    },
+    async updatePassengers() {
+      calls.passengerUpdates += 1;
+    },
     async upsertManualPayoutChargeItem(_conn, _bookingId, item) {
+      calls.payoutUpserts += 1;
       calls.chargeItems = [item];
     },
     async syncAdminManualNameSignChargeItem(_conn, _bookingId, enabled) {
@@ -251,6 +337,178 @@ test('updateAdminManualBooking updates payout for admin manual open call', async
     assert.equal(result.bookingNumber, 'TX202607130001');
     assert.equal(calls.chargeItems[0].amount, 950);
     assert.equal(calls.commits, 1);
+  } finally {
+    restoreContainer();
+  }
+});
+
+test('createAdminManualBooking persists luggage from request body', async () => {
+  const { service, calls, input, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.createAdminManualBooking(
+      {
+        ...input,
+        luggage: {
+          carriers20Inch: 1,
+          carriers24InchPlus: 2,
+          golfBags: 0,
+          specialLuggageCount: 1,
+        },
+      },
+      ADMIN,
+    );
+
+    assert.deepEqual(calls.luggage, {
+      carriers20Inch: 1,
+      carriers24InchPlus: 2,
+      golfBags: 0,
+      specialItems: '1',
+    });
+  } finally {
+    setRealtimeIo(null);
+    restoreContainer();
+  }
+});
+
+test('updateAdminManualBooking memo-only keeps luggage passengers payout and payment', async () => {
+  const { service, calls, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.updateAdminManualBooking(
+      'TX202607130001',
+      { memo: 'memo only' },
+      ADMIN,
+    );
+
+    assert.equal(calls.luggageUpdates, 0);
+    assert.equal(calls.passengerUpdates, 0);
+    assert.equal(calls.payoutUpserts, 0);
+    assert.equal(calls.transferUpdates, 0);
+    assert.equal(calls.lastUpdateFields.preferFemaleDriver, true);
+    assert.equal(calls.lastUpdateFields.specialRequests, 'memo only');
+    assert.equal(calls.lastUpdateFields.paymentMethod, 'PAY_DRIVER');
+    assert.equal(calls.lastUpdateFields.paymentStatus, 'UNPAID');
+    assert.deepEqual(
+      calls.lastUpdateFields.metadata.originLocation.name,
+      'Suvarnabhumi',
+    );
+    assert.deepEqual(
+      calls.lastUpdateFields.metadata.originLocation.nameTh,
+      'ท่าอากาศยานสุวรรณภูมิ',
+    );
+  } finally {
+    restoreContainer();
+  }
+});
+
+test('adminManualBookingUpdateSchema accepts memo-only body without payoutAmount', async () => {
+  const { adminManualBookingUpdateSchema } = require('../src/validators/admin.validator');
+  const { error, value } = adminManualBookingUpdateSchema.validate({ memo: 'notes only' });
+  assert.equal(error, undefined);
+  assert.equal(value.memo, 'notes only');
+  assert.equal(value.payoutAmount, undefined);
+});
+
+test('updateAdminManualBooking can explicitly clear preferFemaleDriver', async () => {
+  const { service, calls, input, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.updateAdminManualBooking(
+      'TX202607130001',
+      { payoutAmount: 900, preferFemaleDriver: false },
+      ADMIN,
+    );
+    assert.equal(calls.lastUpdateFields.preferFemaleDriver, false);
+  } finally {
+    restoreContainer();
+  }
+});
+
+test('updateAdminManualBooking preserves specialItems text when luggage omitted', async () => {
+  const { service, calls, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.updateAdminManualBooking(
+      'TX202607130001',
+      { memo: 'touch memo only' },
+      ADMIN,
+    );
+    assert.equal(calls.luggageUpdates, 0);
+  } finally {
+    restoreContainer();
+  }
+});
+
+test('updateAdminManualBooking customer phone-only keeps member name email and link', async () => {
+  const { service, calls, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.updateAdminManualBooking(
+      'TX202607130001',
+      { customer: { phone: '0899999999' } },
+      ADMIN,
+    );
+    assert.equal(calls.lastUpdateFields.customerUserId, 55);
+    assert.equal(calls.lastUpdateFields.customerName, 'Member Kim');
+    assert.equal(calls.lastUpdateFields.customerEmail, 'kim@example.com');
+    assert.equal(calls.lastUpdateFields.customerPhone, '0899999999');
+  } finally {
+    restoreContainer();
+  }
+});
+
+test('updateAdminManualBooking flight-only update preserves golf transfer fields', async () => {
+  const { service, calls, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.updateAdminManualBooking(
+      'TX202607130001',
+      { transfer: { flightNumber: 'TG456' } },
+      ADMIN,
+    );
+    assert.equal(calls.transferUpsertPayload.flightNumber, 'TG456');
+    assert.equal(calls.transferUpsertPayload.golfCourseId, 42);
+    assert.equal(calls.transferUpsertPayload.golfRegion, 'East');
+    assert.equal(calls.transferUpsertPayload.driverIncluded, true);
+  } finally {
+    restoreContainer();
+  }
+});
+
+test('updateAdminManualBooking explicit flight clear wipes flight number on upsert', async () => {
+  const { service, calls, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.updateAdminManualBooking(
+      'TX202607130001',
+      { transfer: { flightNumber: '' } },
+      ADMIN,
+    );
+    assert.equal(calls.transferUpsertPayload.flightNumber, null);
+    assert.equal(calls.transferUpsertPayload.updateFlightArrivalTimes, true);
+    assert.equal(calls.transferUpsertPayload.flightEstimatedArrivalAt, null);
+  } finally {
+    restoreContainer();
+  }
+});
+
+test('updateAdminManualBooking updates luggage counts', async () => {
+  const { service, calls, input, restoreContainer } = createHarness({ customerUserId: 55 });
+  try {
+    await service.updateAdminManualBooking(
+      'TX202607130001',
+      {
+        ...input,
+        luggage: {
+          carriers20Inch: 3,
+          carriers24InchPlus: 0,
+          golfBags: 1,
+          specialLuggageCount: 0,
+        },
+      },
+      ADMIN,
+    );
+
+    assert.deepEqual(calls.luggage, {
+      carriers20Inch: 3,
+      carriers24InchPlus: 0,
+      golfBags: 1,
+      specialItems: null,
+    });
   } finally {
     restoreContainer();
   }

@@ -14,6 +14,7 @@ import '../../settlement/utils/settlement_receipt.dart';
 import '../widgets/assign_driver_dialog.dart';
 import '../widgets/recommend_drivers_dialog.dart';
 import '../widgets/unassign_driver_dialog.dart';
+import '../utils/admin_booking_json_values.dart';
 import '../utils/admin_operations_ux.dart';
 import '../utils/admin_customer_preference_options.dart';
 import 'admin_manual_booking_create_page.dart';
@@ -631,6 +632,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       context: context,
       api: widget.api,
       isReassign: false,
+      bookingNumber: widget.bookingNumber,
     );
     if (result == null) return;
     setState(() => _submitting = true);
@@ -709,6 +711,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       context: context,
       api: widget.api,
       isReassign: true,
+      bookingNumber: widget.bookingNumber,
     );
     if (result == null) return;
     setState(() => _submitting = true);
@@ -2270,12 +2273,13 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           for (final raw in chargeItems)
             AppUi.summaryRow(
               label: _chargeLabel(raw),
-              value: '${_chargeAmount(raw)} ${pricing['currency']}',
+              value: _chargeAmountLabel(raw, pricing['currency'] as String? ?? ''),
             ),
           if (chargeItems.isNotEmpty) const Divider(height: 20),
           AppUi.summaryRow(
             label: l10n.t('total'),
-            value: '${pricing['totalAmount']} ${pricing['currency']}',
+            value:
+                '${adminBookingJsonNum(pricing['totalAmount']) ?? pricing['totalAmount']} ${pricing['currency']}',
             emphasize: true,
           ),
           AppUi.summaryRow(
@@ -2637,7 +2641,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   num? _chargeAmount(dynamic raw) {
-    return Map<String, dynamic>.from(raw as Map)['amount'] as num?;
+    if (raw is! Map) return null;
+    return adminBookingJsonNum(
+      Map<String, dynamic>.from(raw)['amount'],
+    );
+  }
+
+  String _chargeAmountLabel(dynamic raw, String currency) {
+    final amount = _chargeAmount(raw);
+    if (amount == null) return '— $currency';
+    return '$amount $currency';
   }
 }
 

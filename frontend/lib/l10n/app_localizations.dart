@@ -164,6 +164,20 @@ class AppLocalizations {
       'admin_manual_booking_destination': 'Drop-off location',
       'admin_manual_booking_pickup_datetime': 'Pickup date & time',
       'admin_manual_booking_pickup_datetime_hint': 'Select pickup date and time',
+      'admin_manual_booking_pickup_timezone': 'Thailand local time (UTC+7)',
+      'admin_manual_booking_special_items_text': 'Special luggage notes',
+      'admin_manual_booking_special_items_hint': 'Describe oversized or unusual items',
+      'admin_manual_booking_flight_pickup_date_required':
+          'Select pickup date before flight lookup',
+      'admin_manual_booking_flight_manual_fallback_hint':
+          'If flight lookup fails, enter the flight number and set pickup time manually.',
+      'admin_manual_booking_flight_pickup_conflict_warning':
+          'Your pickup time and the flight scheduled arrival differ by {minutes} minutes.',
+      'admin_manual_booking_flight_pickup_keep_manual': 'Keep my entered time',
+      'admin_manual_booking_flight_pickup_use_flight': 'Use flight arrival time',
+      'admin_manual_booking_flight_pickup_final_label': 'Final pickup request time',
+      'admin_dispatch_driver_pickup_conflict':
+          'Pickup time conflicts with another assigned job',
       'admin_manual_booking_vehicle_type': 'Vehicle class',
       'admin_manual_booking_passengers': 'Passengers',
       'admin_manual_booking_name_sign_hint':
@@ -2039,6 +2053,20 @@ class AppLocalizations {
       'admin_manual_booking_destination': '도착지',
       'admin_manual_booking_pickup_datetime': '픽업 일시',
       'admin_manual_booking_pickup_datetime_hint': '픽업 날짜와 시간을 선택하세요',
+      'admin_manual_booking_pickup_timezone': '태국 현지 시간 (UTC+7)',
+      'admin_manual_booking_special_items_text': '특수 수하물 설명',
+      'admin_manual_booking_special_items_hint': '대형·특수 수하물을 입력하세요',
+      'admin_manual_booking_flight_pickup_date_required':
+          '항공편 조회 전 픽업 날짜를 선택하세요',
+      'admin_manual_booking_flight_manual_fallback_hint':
+          '항공편 조회가 실패해도 항공편 번호와 픽업 시간을 직접 입력해 진행할 수 있습니다.',
+      'admin_manual_booking_flight_pickup_conflict_warning':
+          '입력하신 픽업 시간과 항공편 도착 예정 시간이 {minutes}분 차이납니다.',
+      'admin_manual_booking_flight_pickup_keep_manual': '직접 입력한 시간 사용',
+      'admin_manual_booking_flight_pickup_use_flight': '항공편 시간 기준으로 변경',
+      'admin_manual_booking_flight_pickup_final_label': '최종 픽업 요청시간',
+      'admin_dispatch_driver_pickup_conflict':
+          '다른 배정 콜과 픽업 시간이 충돌합니다',
       'admin_manual_booking_vehicle_type': '차량 등급',
       'admin_manual_booking_passengers': '탑승 인원',
       'admin_manual_booking_name_sign_hint':
@@ -3276,6 +3304,18 @@ class AppLocalizations {
       'admin_manual_booking_destination': '下车地点',
       'admin_manual_booking_pickup_datetime': '接客日期与时间',
       'admin_manual_booking_pickup_datetime_hint': '请选择接客日期和时间',
+      'admin_manual_booking_pickup_timezone': '泰国当地时间 (UTC+7)',
+      'admin_manual_booking_special_items_text': '特殊行李说明',
+      'admin_manual_booking_special_items_hint': '请描述超大或特殊行李',
+      'admin_manual_booking_flight_pickup_date_required': '航班查询前请先选择接客日期',
+      'admin_manual_booking_flight_manual_fallback_hint':
+          '若航班查询失败，请手动输入航班号并设置接客时间。',
+      'admin_manual_booking_flight_pickup_conflict_warning':
+          '您输入的接送时间与航班预计到达时间相差 {minutes} 分钟。',
+      'admin_manual_booking_flight_pickup_keep_manual': '使用我输入的时间',
+      'admin_manual_booking_flight_pickup_use_flight': '按航班到达时间更改',
+      'admin_manual_booking_flight_pickup_final_label': '最终接送请求时间',
+      'admin_dispatch_driver_pickup_conflict': '接客时间与该司机其他已分配订单冲突',
       'admin_manual_booking_vehicle_type': '车型等级',
       'admin_manual_booking_passengers': '乘客人数',
       'admin_manual_booking_name_sign_hint': '司机端将显示需要举牌服务的标识。',
@@ -4043,6 +4083,20 @@ class AppLocalizations {
       'admin_manual_booking_destination': '目的地',
       'admin_manual_booking_pickup_datetime': 'ピックアップ日時',
       'admin_manual_booking_pickup_datetime_hint': 'ピックアップ日時を選択してください',
+      'admin_manual_booking_pickup_timezone': 'タイ現地時間 (UTC+7)',
+      'admin_manual_booking_special_items_text': '特殊荷物メモ',
+      'admin_manual_booking_special_items_hint': '大型・特殊荷物を記入してください',
+      'admin_manual_booking_flight_pickup_date_required':
+          'フライト検索の前にピックアップ日を選択してください',
+      'admin_manual_booking_flight_manual_fallback_hint':
+          'フライト検索に失敗した場合は、便名を入力しピックアップ時間を手動で設定してください。',
+      'admin_manual_booking_flight_pickup_conflict_warning':
+          '入力したピックアップ時間とフライト到着予定時間が {minutes} 分異なります。',
+      'admin_manual_booking_flight_pickup_keep_manual': '入力した時間を使用',
+      'admin_manual_booking_flight_pickup_use_flight': 'フライト到着時間に変更',
+      'admin_manual_booking_flight_pickup_final_label': '最終ピックアップ希望時間',
+      'admin_dispatch_driver_pickup_conflict':
+          'ピックアップ時間がこのドライバーの他の割当と重なります',
       'admin_manual_booking_vehicle_type': '車両クラス',
       'admin_manual_booking_passengers': '乗客人数',
       'admin_manual_booking_name_sign_hint':
@@ -4883,6 +4937,20 @@ class AppLocalizations {
       'admin_manual_booking_destination': 'จุดส่ง',
       'admin_manual_booking_pickup_datetime': 'วันและเวลารับ',
       'admin_manual_booking_pickup_datetime_hint': 'เลือกวันและเวลารับ',
+      'admin_manual_booking_pickup_timezone': 'เวลาท้องถิ่นประเทศไทย (UTC+7)',
+      'admin_manual_booking_special_items_text': 'หมายเหตุสัมภาระพิเศษ',
+      'admin_manual_booking_special_items_hint': 'อธิบายสัมภาระขนาดใหญ่หรือพิเศษ',
+      'admin_manual_booking_flight_pickup_date_required':
+          'เลือกวันรับก่อนค้นหาเที่ยวบิน',
+      'admin_manual_booking_flight_manual_fallback_hint':
+          'หากค้นหาเที่ยวบินไม่ได้ ให้กรอกหมายเลขเที่ยวบินและตั้งเวลารับด้วยตนเอง',
+      'admin_manual_booking_flight_pickup_conflict_warning':
+          'เวลารับที่คุณกรอกกับเวลาถึงตามกำหนดของเที่ยวบินต่างกัน {minutes} นาที',
+      'admin_manual_booking_flight_pickup_keep_manual': 'ใช้เวลาที่กรอกเอง',
+      'admin_manual_booking_flight_pickup_use_flight': 'เปลี่ยนตามเวลาเที่ยวบิน',
+      'admin_manual_booking_flight_pickup_final_label': 'เวลารับสุดท้ายที่ขอ',
+      'admin_dispatch_driver_pickup_conflict':
+          'เวลารับขัดแย้งกับงานที่มอบหมายอื่นของคนขับคนนี้',
       'admin_manual_booking_vehicle_type': 'ประเภทรถ',
       'admin_manual_booking_passengers': 'จำนวนผู้โดยสาร',
       'admin_manual_booking_name_sign_hint':

@@ -66,9 +66,13 @@ class _FakeDispatchApi extends AdminDispatchApiService {
     required Map<String, dynamic> customer,
     String? memo,
     Map<String, dynamic>? passengers,
+    Map<String, dynamic>? luggage,
     String? serviceTypeCode,
     bool nameSign = false,
     String? nameSignText,
+    bool preferFemaleDriver = false,
+    String? originAirportIata,
+    Map<String, dynamic>? transfer,
   }) {
     return onCreate();
   }
@@ -111,7 +115,11 @@ Future<void> _pumpAdminPage(WidgetTester tester) async {
 
 Future<void> _tapSubmit(WidgetTester tester) async {
   final submit = find.byKey(const Key('adminManualBookingSubmit'));
-  await tester.ensureVisible(submit);
+  await tester.scrollUntilVisible(
+    submit,
+    400,
+    scrollable: find.byType(Scrollable).first,
+  );
   await tester.pump();
   await tester.tap(submit);
   await tester.pump();
@@ -210,6 +218,62 @@ void main() {
 
     expect(find.text('데이터를 불러오지 못했습니다. 다시 시도해 주세요.'), findsNothing);
     expect(find.text('관리자 콜 수정'), findsOneWidget);
+  });
+
+  testWidgets('edit mode restores passenger and luggage counters', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        AdminManualBookingCreatePage(
+          couponApi: const _FakeCouponApi(),
+          dispatchApi: _FakeDispatchApi(
+            () async => throw StateError('no create'),
+            editDetail: {
+              'bookingNumber': 'TX202609240003',
+              'manualCallActions': {'canEdit': true},
+              'scheduledPickupAt': '2026-09-24T03:30:00.000Z',
+              'route': {
+                'origin': {'address': 'A'},
+                'destination': {'address': 'B'},
+              },
+              'vehicle': {'typeCode': 'SEDAN'},
+              'serviceType': {'code': 'CITY_TRANSFER'},
+              'passengers': {'adults': 2, 'children': 1, 'infants': 0},
+              'luggage': {
+                'carriers20Inch': 1,
+                'carriers24InchPlus': 2,
+                'golfBags': 0,
+                'specialItems': 'wheelchair',
+              },
+              'serviceType': {'code': 'AIRPORT_PICKUP'},
+              'flight': {'flightNumber': 'TG123', 'airportIata': 'BKK'},
+              'pricing': {
+                'paymentMethod': 'PAY_DRIVER',
+                'chargeItems': [
+                  {'chargeType': 'OTHER', 'amount': 500},
+                ],
+              },
+              'customer': {'name': 'Guest'},
+              'options': {'preferFemaleDriver': true},
+            },
+          ),
+          editBookingNumber: 'TX202609240003',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('데이터를 불러오지 못했습니다. 다시 시도해 주세요.'), findsNothing);
+    final scrollable = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(find.text('수하물'), 400, scrollable: scrollable);
+    expect(find.text('인원'), findsOneWidget);
+    expect(find.text('수하물'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('여성 기사 선호'),
+      400,
+      scrollable: scrollable,
+    );
+    expect(find.text('여성 기사 선호'), findsOneWidget);
   });
 
   testWidgets('still blocks submit when payout is filled but trip fields are missing', (
