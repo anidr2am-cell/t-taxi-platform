@@ -150,6 +150,49 @@ void main() {
     expect(find.text('관리자 콜 수정'), findsOneWidget);
   });
 
+  testWidgets('edit mode parses string coordinates from booking detail', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        AdminManualBookingCreatePage(
+          couponApi: const _FakeCouponApi(),
+          dispatchApi: _FakeDispatchApi(
+            () async => throw StateError('no create'),
+            editDetail: {
+              'bookingNumber': 'TX202609230002',
+              'manualCallActions': {'canEdit': true},
+              'route': {
+                'origin': {
+                  'address': 'Origin',
+                  'lat': '13.756330',
+                  'lng': '100.501765',
+                },
+                'destination': {'address': 'Dest'},
+              },
+              'vehicle': {'typeCode': 'VAN'},
+              'passengers': {'adults': 2},
+              'pricing': {
+                'paymentMethod': 'PAY_DRIVER',
+                'chargeItems': [
+                  {'chargeType': 'OTHER', 'amount': '1200'},
+                ],
+              },
+              'customer': {'name': 'Guest'},
+              'options': {},
+            },
+          ),
+          editBookingNumber: 'TX202609230002',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('데이터를 불러오지 못했습니다. 다시 시도해 주세요.'), findsNothing);
+    expect(find.text('관리자 콜 수정'), findsOneWidget);
+  });
+
   testWidgets('edit mode loads admin manual booking detail into the form', (
     tester,
   ) async {

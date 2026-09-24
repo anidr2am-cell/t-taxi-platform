@@ -215,9 +215,29 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  static dynamic _deepNormalizeJson(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(
+        value.map(
+          (key, nested) =>
+              MapEntry(key.toString(), _deepNormalizeJson(nested)),
+        ),
+      );
+    }
+    if (value is List) {
+      return value.map(_deepNormalizeJson).toList(growable: false);
+    }
+    return value;
+  }
+
   Future<Map<String, dynamic>> getBookingDetail(String bookingNumber) async {
     final data = await _request('GET', '/admin/bookings/$bookingNumber');
-    return Map<String, dynamic>.from(data as Map);
+    if (data is! Map) {
+      throw AdminDispatchApiException('Invalid booking detail response');
+    }
+    return Map<String, dynamic>.from(
+      _deepNormalizeJson(data) as Map,
+    );
   }
 
   Future<Map<String, dynamic>> listBookingNotes(

@@ -32,6 +32,25 @@ String? _bookingDetailString(dynamic value) {
   return value.toString();
 }
 
+double? _bookingDetailDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value.trim());
+  return null;
+}
+
+bool _bookingDetailBool(dynamic value) {
+  if (value == true || value == 1 || value == '1') return true;
+  if (value is String && value.toLowerCase() == 'true') return true;
+  return false;
+}
+
+List<dynamic> _bookingDetailList(dynamic value) {
+  if (value is List) return value;
+  return const [];
+}
+
 class AdminManualBookingCreatePage extends StatefulWidget {
   const AdminManualBookingCreatePage({
     super.key,
@@ -109,20 +128,33 @@ class _AdminManualBookingCreatePageState
   String? get _activeBookingNumber =>
       _createdBookingNumber ?? _editingBookingNumber;
 
-  LocationOption _routeLocation(Map<String, dynamic> side) {
-    final address = side['address'] as String? ?? '';
-    final placeId = side['placeId'] as String?;
-    final name = side['name'] as String?;
+  LocationOption _routeLocation(
+    Map<String, dynamic> side, {
+    required String fallbackId,
+  }) {
+    final address = _bookingDetailString(side['address']) ?? '';
+    final placeId = _bookingDetailString(side['placeId']);
+    final name = _bookingDetailString(side['name']);
+    final displayName = (name != null && name.isNotEmpty) ? name : address;
+    final id = (placeId != null && placeId.isNotEmpty)
+        ? placeId
+        : (address.isNotEmpty ? address : fallbackId);
     return LocationOption(
-      id: placeId ?? address,
-      displayName: (name != null && name.isNotEmpty) ? name : address,
+      id: id,
+      displayName: displayName.isNotEmpty ? displayName : '—',
       kind: LocationKind.place,
       placeId: placeId,
       name: name,
       address: address.isNotEmpty ? address : null,
-      latitude: (side['lat'] as num?)?.toDouble(),
-      longitude: (side['lng'] as num?)?.toDouble(),
+      latitude: _bookingDetailDouble(side['lat']),
+      longitude: _bookingDetailDouble(side['lng']),
     );
+  }
+
+  String _normalizeVehicleTypeCode(String? code) {
+    final normalized = (code ?? 'SEDAN').trim().toUpperCase();
+    if (_vehicleTypes.contains(normalized)) return normalized;
+    return _vehicleTypes.first;
   }
 
   Future<void> _loadForEdit() async {
@@ -136,7 +168,7 @@ class _AdminManualBookingCreatePageState
       final detail = await _dispatchApi.getBookingDetail(bookingNumber);
       if (!mounted) return;
       final manualActions = _bookingDetailMap(detail['manualCallActions']);
-      if (manualActions['canEdit'] != true) {
+      if (!_bookingDetailBool(manualActions['canEdit'])) {
         setState(() {
           _loadingEdit = false;
           _loadEditError = context.l10n.t('admin_manual_booking_edit_not_allowed');
@@ -151,7 +183,7 @@ class _AdminManualBookingCreatePageState
       final passengers = _bookingDetailMap(detail['passengers']);
       final pricing = _bookingDetailMap(detail['pricing']);
       final customer = _bookingDetailMap(detail['customer']);
-      final items = pricing['chargeItems'] as List<dynamic>? ?? [];
+      final items = _bookingDetailList(pricing['chargeItems']);
       final options = _bookingDetailMap(detail['options']);
       var payout = 0;
       for (final item in items) {
@@ -178,10 +210,18 @@ class _AdminManualBookingCreatePageState
       final customerUserId = _bookingDetailInt(customer['customerUserId']);
 
       setState(() {
-        _origin = _routeLocation(origin);
-        _destination = _routeLocation(destination);
+        _origin = _routeLocation(
+          origin,
+          fallbackId: '$bookingNumber-origin',
+        );
+        _destination = _routeLocation(
+          destination,
+          fallbackId: '$bookingNumber-destination',
+        );
         _pickupAt = pickupAt;
-        _vehicleTypeCode = _bookingDetailString(vehicle['typeCode']) ?? 'SEDAN';
+        _vehicleTypeCode = _normalizeVehicleTypeCode(
+          _bookingDetailString(vehicle['typeCode']),
+        );
         final adultsRaw = _bookingDetailInt(passengers['adults']);
         _adults = (adultsRaw ?? 1).clamp(1, 8);
         _payoutController.text = payout > 0 ? '$payout' : '';
