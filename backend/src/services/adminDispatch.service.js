@@ -558,8 +558,8 @@ class AdminDispatchService {
       flight: {
         flightNumber: row.flight_number,
         airportIata: row.airport_iata ?? row.airport_code_custom,
-        scheduledArrivalAt: row.flight_scheduled_arrival_at,
-        estimatedArrivalAt: row.flight_estimated_arrival_at,
+        scheduledArrivalAt: formatServiceDateTimeIso(row.flight_scheduled_arrival_at),
+        estimatedArrivalAt: formatServiceDateTimeIso(row.flight_estimated_arrival_at),
         delayStatus: row.delay_status,
         delayMinutes: row.delay_minutes,
         golfCourseId: row.golf_course_id ?? null,

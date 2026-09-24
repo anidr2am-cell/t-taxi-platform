@@ -145,7 +145,7 @@ class BookingRepository {
         SET adults = ?, children = ?, infants = ?
         WHERE booking_id = ? AND deleted_at IS NULL
       `,
-      [bookingId, passengers.adults, passengers.children, passengers.infants],
+      [passengers.adults, passengers.children, passengers.infants, bookingId],
     );
     if ((result.affectedRows ?? 0) === 0) {
       await this.insertPassengers(conn, bookingId, passengers);
