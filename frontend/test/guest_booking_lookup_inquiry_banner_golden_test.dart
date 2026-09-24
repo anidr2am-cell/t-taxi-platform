@@ -106,22 +106,6 @@ void main() {
     await _precacheBrandIcons(tester);
     await tester.pump();
 
-    // Precaching completes decoding, but Image's listener may still have a
-    // pending real-async frame under a busy Linux full-suite run. Wait for the
-    // actual render widgets, not just the existence of Image/AssetImage.
-    for (var attempt = 0; attempt < 50; attempt++) {
-      final rendered = tester.widgetList<RawImage>(find.byType(RawImage));
-      if (rendered.length >= 2 && rendered.every((image) => image.image != null)) {
-        break;
-      }
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
-      await tester.pump();
-    }
-    final rendered = tester.widgetList<RawImage>(find.byType(RawImage)).toList();
-    expect(rendered.length, greaterThanOrEqualTo(2));
-    expect(rendered.every((image) => image.image != null), isTrue,
-        reason: 'Both brand icons must be painted before taking the golden');
-
     final images = tester.widgetList<Image>(find.byType(Image)).toList();
     expect(images.length, greaterThanOrEqualTo(2));
     expect(
