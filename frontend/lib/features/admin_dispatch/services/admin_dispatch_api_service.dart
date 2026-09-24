@@ -215,9 +215,29 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  static dynamic _deepNormalizeJson(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(
+        value.map(
+          (key, nested) =>
+              MapEntry(key.toString(), _deepNormalizeJson(nested)),
+        ),
+      );
+    }
+    if (value is List) {
+      return value.map(_deepNormalizeJson).toList(growable: false);
+    }
+    return value;
+  }
+
   Future<Map<String, dynamic>> getBookingDetail(String bookingNumber) async {
     final data = await _request('GET', '/admin/bookings/$bookingNumber');
-    return Map<String, dynamic>.from(data as Map);
+    if (data is! Map) {
+      throw AdminDispatchApiException('Invalid booking detail response');
+    }
+    return Map<String, dynamic>.from(
+      _deepNormalizeJson(data) as Map,
+    );
   }
 
   Future<Map<String, dynamic>> listBookingNotes(
@@ -266,9 +286,16 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
-  Future<List<dynamic>> listDrivers({bool? archived}) async {
+  Future<List<dynamic>> listDrivers({
+    bool? archived,
+    String? bookingNumber,
+  }) async {
     final query = <String, String>{};
     if (archived == true) query['archived'] = 'true';
+    final booking = bookingNumber?.trim();
+    if (booking != null && booking.isNotEmpty) {
+      query['bookingNumber'] = booking;
+    }
     final data = await _request('GET', '/admin/drivers', query: query);
     if (data is List) return data;
     if (data is Map) return data['items'] as List<dynamic>? ?? [];
@@ -417,9 +444,13 @@ class AdminDispatchApiService {
     required Map<String, dynamic> customer,
     String? memo,
     Map<String, dynamic>? passengers,
+    Map<String, dynamic>? luggage,
     String? serviceTypeCode,
     bool nameSign = false,
     String? nameSignText,
+    bool preferFemaleDriver = false,
+    String? originAirportIata,
+    Map<String, dynamic>? transfer,
   }) async {
     final body = <String, dynamic>{
       'origin': origin,
@@ -436,7 +467,12 @@ class AdminDispatchApiService {
         'customerChargeAmount': customerChargeAmount,
       if (memo != null && memo.isNotEmpty) 'memo': memo,
       if (passengers != null) 'passengers': passengers,
+      if (luggage != null) 'luggage': luggage,
       if (serviceTypeCode != null) 'serviceTypeCode': serviceTypeCode,
+      'preferFemaleDriver': preferFemaleDriver,
+      if (originAirportIata != null && originAirportIata.isNotEmpty)
+        'originAirportIata': originAirportIata,
+      if (transfer != null) 'transfer': transfer,
     };
     final data = await _request('POST', '/admin/bookings/manual', body: body);
     return Map<String, dynamic>.from(data as Map);
@@ -454,9 +490,13 @@ class AdminDispatchApiService {
     required Map<String, dynamic> customer,
     String? memo,
     Map<String, dynamic>? passengers,
+    Map<String, dynamic>? luggage,
     String? serviceTypeCode,
     bool nameSign = false,
     String? nameSignText,
+    bool preferFemaleDriver = false,
+    String? originAirportIata,
+    Map<String, dynamic>? transfer,
   }) async {
     final payload = <String, dynamic>{
       'origin': origin,
@@ -473,7 +513,12 @@ class AdminDispatchApiService {
         'customerChargeAmount': customerChargeAmount,
       if (memo != null && memo.isNotEmpty) 'memo': memo,
       if (passengers != null) 'passengers': passengers,
+      if (luggage != null) 'luggage': luggage,
       if (serviceTypeCode != null) 'serviceTypeCode': serviceTypeCode,
+      'preferFemaleDriver': preferFemaleDriver,
+      if (originAirportIata != null && originAirportIata.isNotEmpty)
+        'originAirportIata': originAirportIata,
+      if (transfer != null) 'transfer': transfer,
     };
     final data = await _request(
       'PATCH',

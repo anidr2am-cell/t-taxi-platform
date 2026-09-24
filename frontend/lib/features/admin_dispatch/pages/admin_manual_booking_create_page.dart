@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,8 +6,16 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../admin_coupon/services/admin_coupon_api_service.dart';
+import '../../booking/models/flight_lookup_models.dart';
+import '../../booking/services/flight_lookup_api_service.dart';
 import '../../booking/models/location_option.dart';
+import '../../booking/models/service_type_option.dart';
+import '../../../services/api_service.dart';
+import '../../booking/utils/pickup_time_format.dart';
+import '../../booking/utils/thailand_pickup_datetime.dart';
 import '../../booking/widgets/google_places_search_field.dart';
+import '../../booking/widgets/pickup_time_picker_sheet.dart';
+import '../widgets/admin_manual_flight_section.dart';
 import '../../driver/widgets/driver_workflow_widgets.dart';
 import '../services/admin_dispatch_api_service.dart';
 import '../widgets/assign_driver_dialog.dart';
@@ -32,16 +41,59 @@ String? _bookingDetailString(dynamic value) {
   return value.toString();
 }
 
+double? _bookingDetailDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value.trim());
+  return null;
+}
+
+bool _bookingDetailBool(dynamic value) {
+  if (value == true || value == 1 || value == '1') return true;
+  if (value is String && value.toLowerCase() == 'true') return true;
+  return false;
+}
+
+List<dynamic> _bookingDetailList(dynamic value) {
+  if (value is List) return value;
+  return const [];
+}
+
+void _applySpecialLuggageFromDetail(
+  Map<String, dynamic> luggage, {
+  required void Function(int count) setCount,
+  required void Function(String text) setText,
+}) {
+  final items = _bookingDetailString(luggage['specialItems']);
+  if (items != null && items.isNotEmpty) {
+    final asCount = int.tryParse(items.trim());
+    if (asCount != null) {
+      setCount(asCount.clamp(0, 20));
+      setText('');
+    } else {
+      setCount(0);
+      setText(items);
+    }
+    return;
+  }
+  final explicit = _bookingDetailInt(luggage['specialLuggageCount']);
+  setCount((explicit ?? 0).clamp(0, 20));
+  setText('');
+}
+
 class AdminManualBookingCreatePage extends StatefulWidget {
   const AdminManualBookingCreatePage({
     super.key,
     this.dispatchApi,
     this.couponApi,
+    this.flightLookupApi,
     this.editBookingNumber,
   });
 
   final AdminDispatchApiService? dispatchApi;
   final AdminCouponApiService? couponApi;
+  final FlightLookupApiService? flightLookupApi;
   final String? editBookingNumber;
 
   @override
@@ -60,6 +112,7 @@ class _AdminManualBookingCreatePageState
   final _guestEmailController = TextEditingController();
   final _memoController = TextEditingController();
   final _nameSignTextController = TextEditingController();
+  final _specialItemsTextController = TextEditingController();
 
   AdminDispatchApiService get _dispatchApi =>
       widget.dispatchApi ?? const AdminDispatchApiService();
@@ -70,9 +123,26 @@ class _AdminManualBookingCreatePageState
   LocationOption? _destination;
   DateTime? _pickupAt;
   String _vehicleTypeCode = 'SEDAN';
+  String _serviceTypeCode = 'CITY_TRANSFER';
   String _paymentCollection = 'DRIVER_COLLECTS';
   int _adults = 1;
+  int _children = 0;
+  int _infants = 0;
+  int _luggage20 = 0;
+  int _luggage24 = 0;
+  int _golfBags = 0;
+  int _specialLuggageCount = 0;
   bool _nameSign = false;
+  bool _preferFemaleDriver = false;
+  String _flightNumber = '';
+  String? _originAirportIata;
+  String? _flightScheduledArrivalAt;
+  String? _flightEstimatedArrivalAt;
+  String? _golfRegion;
+  int? _golfCourseId;
+  bool _driverIncluded = false;
+  List<String> _golfRegions = const [];
+  List<Map<String, dynamic>> _golfCourses = const [];
 
   bool _searching = false;
   bool _submitting = false;
@@ -93,6 +163,74 @@ class _AdminManualBookingCreatePageState
     'VIP_VAN',
   ];
 
+  static const _serviceTypeCodes = [
+    'CITY_TRANSFER',
+    'AIRPORT_PICKUP',
+    'AIRPORT_DROPOFF',
+    'GOLF_TRANSFER',
+  ];
+
+  Map<String, dynamic> get _luggagePayload {
+    final payload = <String, dynamic>{
+      'carriers20Inch': _luggage20,
+      'carriers24InchPlus': _luggage24,
+      'golfBags': _golfBags,
+    };
+    final specialText = _specialItemsTextController.text.trim();
+    if (specialText.isNotEmpty) {
+      payload['specialItems'] = specialText;
+    } else if (_specialLuggageCount > 0) {
+      payload['specialLuggageCount'] = _specialLuggageCount;
+    } else {
+      payload['specialItems'] = '';
+    }
+    return payload;
+  }
+
+  String? get _pickupDateYmdForFlight {
+    if (_pickupAt == null) return null;
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${_pickupAt!.year}-${two(_pickupAt!.month)}-${two(_pickupAt!.day)}';
+  }
+
+  Map<String, dynamic>? get _transferPayload {
+    if (_showsGolfSection) {
+      return {
+        if (_golfRegion != null && _golfRegion!.isNotEmpty)
+          'golfRegion': _golfRegion,
+        if (_golfCourseId != null) 'golfCourseId': _golfCourseId,
+        'driverIncluded': _driverIncluded,
+      };
+    }
+    if (!_showsFlightSection) return null;
+    final normalized = _flightNumber.trim().toUpperCase();
+    return {
+      if (_originAirportIata != null && _originAirportIata!.isNotEmpty)
+        'airportIata': _originAirportIata,
+      'flightNumber': normalized.isEmpty ? null : normalized,
+      if (_flightScheduledArrivalAt != null && _flightScheduledArrivalAt!.isNotEmpty)
+        'flightScheduledArrivalAt': _flightScheduledArrivalAt,
+      if (_flightEstimatedArrivalAt != null && _flightEstimatedArrivalAt!.isNotEmpty)
+        'flightEstimatedArrivalAt': _flightEstimatedArrivalAt,
+    };
+  }
+
+  String _formatPickupDisplay(AppLocalizations l10n) {
+    if (_pickupAt == null) {
+      return l10n.t('admin_manual_booking_pickup_datetime_hint');
+    }
+    final value = _pickupAt!;
+    String two(int n) => n.toString().padLeft(2, '0');
+    final date = '${value.year}-${two(value.month)}-${two(value.day)}';
+    final time = PickupTimeFormat.formatDisplay(
+      hour24: value.hour,
+      minute: value.minute,
+      amLabel: l10n.t('pickup_time_am'),
+      pmLabel: l10n.t('pickup_time_pm'),
+    );
+    return '$date · $time';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -101,6 +239,39 @@ class _AdminManualBookingCreatePageState
       _editingBookingNumber = initialEdit;
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadForEdit());
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadGolfRegions());
+  }
+
+  Future<void> _loadGolfRegions() async {
+    try {
+      final regions = await ApiService().getGolfRegions();
+      if (!mounted) return;
+      setState(() => _golfRegions = regions);
+    } catch (_) {}
+  }
+
+  Future<void> _loadGolfCourses(String region) async {
+    try {
+      final courses = await ApiService().getGolfCourses(region: region);
+      if (!mounted) return;
+      setState(() {
+        _golfCourses = courses
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      });
+    } catch (_) {}
+  }
+
+  void _applyFlightLookup(FlightSearchResult? result) {
+    if (result == null) {
+      _flightScheduledArrivalAt = null;
+      _flightEstimatedArrivalAt = null;
+      return;
+    }
+    _flightScheduledArrivalAt = result.arrival.scheduledAt;
+    _flightEstimatedArrivalAt =
+        result.arrival.estimatedAt ?? result.arrival.scheduledAt;
   }
 
   bool get _isEditMode =>
@@ -109,21 +280,39 @@ class _AdminManualBookingCreatePageState
   String? get _activeBookingNumber =>
       _createdBookingNumber ?? _editingBookingNumber;
 
-  LocationOption _routeLocation(Map<String, dynamic> side) {
-    final address = side['address'] as String? ?? '';
-    final placeId = side['placeId'] as String?;
-    final name = side['name'] as String?;
+  LocationOption _routeLocation(
+    Map<String, dynamic> side, {
+    required String fallbackId,
+  }) {
+    final address = _bookingDetailString(side['address']) ?? '';
+    final placeId = _bookingDetailString(side['placeId']);
+    final name = _bookingDetailString(side['name']);
+    final displayName = (name != null && name.isNotEmpty) ? name : address;
+    final id = (placeId != null && placeId.isNotEmpty)
+        ? placeId
+        : (address.isNotEmpty ? address : fallbackId);
     return LocationOption(
-      id: placeId ?? address,
-      displayName: (name != null && name.isNotEmpty) ? name : address,
+      id: id,
+      displayName: displayName.isNotEmpty ? displayName : '—',
       kind: LocationKind.place,
       placeId: placeId,
       name: name,
       address: address.isNotEmpty ? address : null,
-      latitude: (side['lat'] as num?)?.toDouble(),
-      longitude: (side['lng'] as num?)?.toDouble(),
+      latitude: _bookingDetailDouble(side['lat']),
+      longitude: _bookingDetailDouble(side['lng']),
     );
   }
+
+  List<String> get _vehicleTypeOptions {
+    if (_vehicleTypes.contains(_vehicleTypeCode)) return _vehicleTypes;
+    return [..._vehicleTypes, _vehicleTypeCode];
+  }
+
+  bool get _showsFlightSection =>
+      _serviceTypeCode == 'AIRPORT_PICKUP' ||
+      _serviceTypeCode == 'AIRPORT_DROPOFF';
+
+  bool get _showsGolfSection => _serviceTypeCode == 'GOLF_TRANSFER';
 
   Future<void> _loadForEdit() async {
     final bookingNumber = _editingBookingNumber;
@@ -136,7 +325,7 @@ class _AdminManualBookingCreatePageState
       final detail = await _dispatchApi.getBookingDetail(bookingNumber);
       if (!mounted) return;
       final manualActions = _bookingDetailMap(detail['manualCallActions']);
-      if (manualActions['canEdit'] != true) {
+      if (!_bookingDetailBool(manualActions['canEdit'])) {
         setState(() {
           _loadingEdit = false;
           _loadEditError = context.l10n.t('admin_manual_booking_edit_not_allowed');
@@ -149,9 +338,11 @@ class _AdminManualBookingCreatePageState
       final destination = _bookingDetailMap(route['destination']);
       final vehicle = _bookingDetailMap(detail['vehicle']);
       final passengers = _bookingDetailMap(detail['passengers']);
+      final luggage = _bookingDetailMap(detail['luggage']);
+      final serviceType = _bookingDetailMap(detail['serviceType']);
       final pricing = _bookingDetailMap(detail['pricing']);
       final customer = _bookingDetailMap(detail['customer']);
-      final items = pricing['chargeItems'] as List<dynamic>? ?? [];
+      final items = _bookingDetailList(pricing['chargeItems']);
       final options = _bookingDetailMap(detail['options']);
       var payout = 0;
       for (final item in items) {
@@ -168,22 +359,63 @@ class _AdminManualBookingCreatePageState
             (item) =>
                 item is Map && _bookingDetailString(item['chargeType']) == 'NAME_SIGN',
           );
-      final pickupRaw = _bookingDetailString(detail['scheduledPickupAt']);
-      DateTime? pickupAt;
-      if (pickupRaw != null && pickupRaw.isNotEmpty) {
-        pickupAt = DateTime.tryParse(pickupRaw)?.toLocal();
-      }
+      final pickupAt = ThailandPickupDateTime.tryBangkokWallFromIso(
+        _bookingDetailString(detail['scheduledPickupAt']),
+      );
+      final flight = _bookingDetailMap(detail['flight']);
       final paymentMethod =
           _bookingDetailString(pricing['paymentMethod']) ?? 'PAY_DRIVER';
       final customerUserId = _bookingDetailInt(customer['customerUserId']);
 
       setState(() {
-        _origin = _routeLocation(origin);
-        _destination = _routeLocation(destination);
+        _origin = _routeLocation(
+          origin,
+          fallbackId: '$bookingNumber-origin',
+        );
+        _destination = _routeLocation(
+          destination,
+          fallbackId: '$bookingNumber-destination',
+        );
         _pickupAt = pickupAt;
-        _vehicleTypeCode = _bookingDetailString(vehicle['typeCode']) ?? 'SEDAN';
+        _vehicleTypeCode =
+            (_bookingDetailString(vehicle['typeCode']) ?? 'SEDAN')
+                .trim()
+                .toUpperCase();
         final adultsRaw = _bookingDetailInt(passengers['adults']);
         _adults = (adultsRaw ?? 1).clamp(1, 8);
+        _children = (_bookingDetailInt(passengers['children']) ?? 0).clamp(0, 8);
+        _infants = (_bookingDetailInt(passengers['infants']) ?? 0).clamp(0, 8);
+        _luggage20 =
+            (_bookingDetailInt(luggage['carriers20Inch']) ?? 0).clamp(0, 20);
+        _luggage24 =
+            (_bookingDetailInt(luggage['carriers24InchPlus']) ?? 0).clamp(0, 20);
+        _golfBags = (_bookingDetailInt(luggage['golfBags']) ?? 0).clamp(0, 20);
+        _specialItemsTextController.clear();
+        _applySpecialLuggageFromDetail(
+          luggage,
+          setCount: (value) => _specialLuggageCount = value,
+          setText: (value) => _specialItemsTextController.text = value,
+        );
+        final serviceCode =
+            _bookingDetailString(serviceType['code'])?.toUpperCase();
+        if (serviceCode != null && serviceCode.isNotEmpty) {
+          _serviceTypeCode = _serviceTypeCodes.contains(serviceCode)
+              ? serviceCode
+              : serviceCode;
+        }
+        _preferFemaleDriver = _bookingDetailBool(options['preferFemaleDriver']);
+        _flightNumber = _bookingDetailString(flight['flightNumber']) ?? '';
+        _originAirportIata = _bookingDetailString(flight['airportIata']);
+        _flightScheduledArrivalAt =
+            _bookingDetailString(flight['scheduledArrivalAt']);
+        _flightEstimatedArrivalAt =
+            _bookingDetailString(flight['estimatedArrivalAt']);
+        _golfRegion = _bookingDetailString(flight['golfRegion']);
+        _golfCourseId = _bookingDetailInt(flight['golfCourseId']);
+        _driverIncluded = _bookingDetailBool(flight['driverIncluded']);
+        if (_golfRegion != null && _golfRegion!.isNotEmpty) {
+          _loadGolfCourses(_golfRegion!);
+        }
         _payoutController.text = payout > 0 ? '$payout' : '';
         _customerChargeController.clear();
         _paymentCollection =
@@ -219,7 +451,13 @@ class _AdminManualBookingCreatePageState
         _loadingEdit = false;
         _loadEditError = error.message;
       });
-    } catch (_) {
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'AdminManualBookingCreatePage._loadForEdit failed for '
+          '$bookingNumber: $error\n$stackTrace',
+        );
+      }
       if (!mounted) return;
       setState(() {
         _loadingEdit = false;
@@ -249,6 +487,7 @@ class _AdminManualBookingCreatePageState
       context: context,
       api: _dispatchApi,
       isReassign: false,
+      bookingNumber: bookingNumber,
     );
     if (result == null) return;
     setState(() => _submitting = true);
@@ -335,6 +574,7 @@ class _AdminManualBookingCreatePageState
     _guestEmailController.dispose();
     _memoController.dispose();
     _nameSignTextController.dispose();
+    _specialItemsTextController.dispose();
     super.dispose();
   }
 
@@ -393,17 +633,23 @@ class _AdminManualBookingCreatePageState
   }
 
   Future<void> _pickPickupDateTime() async {
-    final now = DateTime.now();
+    final now = ThailandPickupDateTime.thailandNow();
+    final today = DateTime(now.year, now.month, now.day);
+    final initial = _pickupAt ?? now.add(const Duration(hours: 2));
     final date = await showDatePicker(
       context: context,
-      initialDate: _pickupAt ?? now.add(const Duration(hours: 2)),
-      firstDate: now,
+      initialDate: initial,
+      firstDate: ThailandPickupDateTime.datePickerFirstDate(
+        thailandToday: today,
+        currentPickup: _pickupAt,
+      ),
       lastDate: now.add(const Duration(days: 365)),
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_pickupAt ?? now.add(const Duration(hours: 2))),
+    final time = await PickupTimePickerSheet.show(
+      context,
+      initialHour24: _pickupAt?.hour ?? initial.hour,
+      initialMinute: _pickupAt?.minute ?? initial.minute,
     );
     if (time == null || !mounted) return;
     setState(() {
@@ -411,7 +657,7 @@ class _AdminManualBookingCreatePageState
         date.year,
         date.month,
         date.day,
-        time.hour,
+        time.hour24,
         time.minute,
       );
     });
@@ -455,8 +701,10 @@ class _AdminManualBookingCreatePageState
       final payload = {
         'origin': _locationPayload(_origin!),
         'destination': _locationPayload(_destination!),
-        'scheduledPickupAt': _pickupAt!.toUtc().toIso8601String(),
+        'scheduledPickupAt':
+            ThailandPickupDateTime.serializeWallClock(_pickupAt!),
         'vehicleTypeCode': _vehicleTypeCode,
+        'serviceTypeCode': _serviceTypeCode,
         'payoutAmount': int.parse(_payoutController.text.trim()),
         'customerChargeAmount': customerCharge,
         'paymentCollection': _paymentCollection,
@@ -471,9 +719,18 @@ class _AdminManualBookingCreatePageState
         'memo': _memoController.text.trim().isEmpty
             ? null
             : _memoController.text.trim(),
-        'passengers': {'adults': _adults, 'children': 0, 'infants': 0},
+        'passengers': {
+          'adults': _adults,
+          'children': _children,
+          'infants': _infants,
+        },
+        'luggage': _luggagePayload,
         'nameSign': _nameSign,
         'nameSignText': _nameSign ? _nameSignTextController.text.trim() : null,
+        'preferFemaleDriver': _preferFemaleDriver,
+        if (_originAirportIata != null && _originAirportIata!.isNotEmpty)
+          'originAirportIata': _originAirportIata,
+        if (_transferPayload != null) 'transfer': _transferPayload,
       };
 
       final Map<String, dynamic> result;
@@ -490,8 +747,13 @@ class _AdminManualBookingCreatePageState
           customer: payload['customer'] as Map<String, dynamic>,
           memo: payload['memo'] as String?,
           passengers: payload['passengers'] as Map<String, dynamic>,
+          luggage: payload['luggage'] as Map<String, dynamic>,
+          serviceTypeCode: payload['serviceTypeCode'] as String,
           nameSign: payload['nameSign'] as bool,
           nameSignText: payload['nameSignText'] as String?,
+          preferFemaleDriver: payload['preferFemaleDriver'] as bool,
+          originAirportIata: payload['originAirportIata'] as String?,
+          transfer: payload['transfer'] as Map<String, dynamic>?,
         );
       } else {
         result = await _dispatchApi.createManualBooking(
@@ -505,8 +767,13 @@ class _AdminManualBookingCreatePageState
           customer: payload['customer'] as Map<String, dynamic>,
           memo: payload['memo'] as String?,
           passengers: payload['passengers'] as Map<String, dynamic>,
+          luggage: payload['luggage'] as Map<String, dynamic>,
+          serviceTypeCode: payload['serviceTypeCode'] as String,
           nameSign: payload['nameSign'] as bool,
           nameSignText: payload['nameSignText'] as String?,
+          preferFemaleDriver: payload['preferFemaleDriver'] as bool,
+          originAirportIata: payload['originAirportIata'] as String?,
+          transfer: payload['transfer'] as Map<String, dynamic>?,
         );
       }
       if (!mounted) return;
@@ -659,6 +926,64 @@ class _AdminManualBookingCreatePageState
                 const SizedBox(height: AppTokens.spaceSm),
               ],
               AppUi.surfaceCard(
+                backgroundColor: AppTokens.primaryLight,
+                child: InkWell(
+                  onTap: _submitting ? null : _pickPickupDateTime,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppTokens.spaceSm,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.schedule,
+                          color: AppTokens.primary,
+                          size: 28,
+                        ),
+                        const SizedBox(width: AppTokens.spaceMd),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                l10n.t('admin_manual_booking_pickup_datetime'),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTokens.primary,
+                                    ),
+                              ),
+                              const SizedBox(height: AppTokens.spaceXs),
+                              Text(
+                                _formatPickupDisplay(l10n),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: AppTokens.spaceXs),
+                              Text(
+                                l10n.t('admin_manual_booking_pickup_timezone'),
+                                style: const TextStyle(
+                                  color: AppTokens.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.surfaceCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -676,24 +1001,130 @@ class _AdminManualBookingCreatePageState
                       onSelected: (value) => setState(() => _destination = value),
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.t('admin_manual_booking_pickup_datetime')),
-                      subtitle: Text(
-                        _pickupAt == null
-                            ? l10n.t('admin_manual_booking_pickup_datetime_hint')
-                            : _pickupAt!.toLocal().toString(),
+                    DropdownButtonFormField<String>(
+                      value: _serviceTypeCode,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('service_type'),
                       ),
-                      trailing: const Icon(Icons.event),
-                      onTap: _pickPickupDateTime,
+                      items: (_serviceTypeCodes.contains(_serviceTypeCode)
+                              ? _serviceTypeCodes
+                              : [..._serviceTypeCodes, _serviceTypeCode])
+                          .map((code) {
+                            final type = BookingServiceTypeX.fromApiCode(code);
+                            final label = type != null
+                                ? l10n.t(type.labelKey)
+                                : code;
+                            return DropdownMenuItem(
+                              value: code,
+                              child: Text(label),
+                            );
+                          })
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _serviceTypeCode = value;
+                            if (!_showsFlightSection) {
+                              _flightNumber = '';
+                              _originAirportIata = null;
+                              _applyFlightLookup(null);
+                            }
+                            if (!_showsGolfSection) {
+                              _golfRegion = null;
+                              _golfCourseId = null;
+                              _driverIncluded = false;
+                              _golfCourses = const [];
+                            }
+                          });
+                        }
+                      },
                     ),
+                    if (_showsGolfSection) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      DropdownButtonFormField<String>(
+                        value: _golfRegions.contains(_golfRegion)
+                            ? _golfRegion
+                            : null,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('golf_region'),
+                        ),
+                        items: _golfRegions
+                            .map(
+                              (region) => DropdownMenuItem(
+                                value: region,
+                                child: Text(region),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: _submitting
+                            ? null
+                            : (value) async {
+                                setState(() {
+                                  _golfRegion = value;
+                                  _golfCourseId = null;
+                                  _golfCourses = const [];
+                                });
+                                if (value != null) {
+                                  await _loadGolfCourses(value);
+                                }
+                              },
+                      ),
+                      const SizedBox(height: AppTokens.spaceMd),
+                      DropdownButtonFormField<int>(
+                        value: _golfCourses.any((c) => c['id'] == _golfCourseId)
+                            ? _golfCourseId
+                            : null,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('golf_course'),
+                        ),
+                        items: _golfCourses
+                            .map(
+                              (course) => DropdownMenuItem(
+                                value: course['id'] as int?,
+                                child: Text(
+                                  course['name']?.toString() ?? '—',
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: _submitting
+                            ? null
+                            : (value) => setState(() => _golfCourseId = value),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.t('driver_included')),
+                        value: _driverIncluded,
+                        onChanged: _submitting
+                            ? null
+                            : (value) =>
+                                setState(() => _driverIncluded = value),
+                      ),
+                    ],
+                    if (_showsFlightSection) ...[
+                      const SizedBox(height: AppTokens.spaceMd),
+                      AdminManualFlightSection(
+                        flightNumber: _flightNumber,
+                        pickupDateIsoOrBangkokDate: _pickupDateYmdForFlight,
+                        pickupAtBangkok: _pickupAt,
+                        enabled: !_submitting,
+                        onFlightNumberChanged: (value) =>
+                            setState(() => _flightNumber = value),
+                        onConfirmedLookup: (result) => setState(
+                          () => _applyFlightLookup(result),
+                        ),
+                        onPickupAtApply: (value) =>
+                            setState(() => _pickupAt = value),
+                        flightLookupApi: widget.flightLookupApi,
+                      ),
+                    ],
                     const SizedBox(height: AppTokens.spaceMd),
                     DropdownButtonFormField<String>(
                       value: _vehicleTypeCode,
                       decoration: InputDecoration(
                         labelText: l10n.t('admin_manual_booking_vehicle_type'),
                       ),
-                      items: _vehicleTypes
+                      items: _vehicleTypeOptions
                           .map(
                             (code) => DropdownMenuItem(
                               value: code,
@@ -705,24 +1136,110 @@ class _AdminManualBookingCreatePageState
                         if (value != null) setState(() => _vehicleTypeCode = value);
                       },
                     ),
-                    const SizedBox(height: AppTokens.spaceMd),
-                    DropdownButtonFormField<int>(
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.sectionHeader(context, title: l10n.t('passengers')),
+              AppUi.surfaceCard(
+                child: Column(
+                  children: [
+                    AppUi.counterRow(
+                      label: l10n.t('adults'),
                       value: _adults,
-                      decoration: InputDecoration(
-                        labelText: l10n.t('admin_manual_booking_passengers'),
-                      ),
-                      items: List.generate(
-                        8,
-                        (index) => DropdownMenuItem(
-                          value: index + 1,
-                          child: Text('${index + 1}'),
-                        ),
-                      ),
+                      min: 1,
                       onChanged: (value) {
-                        if (value != null) setState(() => _adults = value);
+                        if (_submitting) return;
+                        setState(() => _adults = value.clamp(1, 8));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('children'),
+                      value: _children,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _children = value.clamp(0, 8));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('infants'),
+                      value: _infants,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _infants = value.clamp(0, 8));
                       },
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.sectionHeader(context, title: l10n.t('luggage')),
+              AppUi.surfaceCard(
+                child: Column(
+                  children: [
+                    AppUi.counterRow(
+                      label: l10n.t('small_carriers'),
+                      value: _luggage20,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _luggage20 = value.clamp(0, 20));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('large_carriers'),
+                      value: _luggage24,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _luggage24 = value.clamp(0, 20));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('golf_bags'),
+                      value: _golfBags,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() => _golfBags = value.clamp(0, 20));
+                      },
+                    ),
+                    AppUi.counterRow(
+                      label: l10n.t('special_luggage'),
+                      value: _specialLuggageCount,
+                      onChanged: (value) {
+                        if (_submitting) return;
+                        setState(() {
+                          _specialLuggageCount = value.clamp(0, 20);
+                          if (value > 0) _specialItemsTextController.clear();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: AppTokens.spaceSm),
+                    TextFormField(
+                      key: const Key('adminManualSpecialItemsText'),
+                      controller: _specialItemsTextController,
+                      enabled: !_submitting,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('admin_manual_booking_special_items_text'),
+                        hintText: l10n.t('admin_manual_booking_special_items_hint'),
+                      ),
+                      onChanged: (_) {
+                        if (_specialItemsTextController.text.trim().isNotEmpty) {
+                          setState(() => _specialLuggageCount = 0);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              AppUi.surfaceCard(
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.t('booking_prefer_female_driver')),
+                  subtitle: Text(l10n.t('booking_preference_disclaimer')),
+                  value: _preferFemaleDriver,
+                  onChanged: _submitting
+                      ? null
+                      : (value) => setState(() => _preferFemaleDriver = value),
                 ),
               ),
               const SizedBox(height: AppTokens.spaceMd),

@@ -64,6 +64,9 @@ function buildHarness(contactStatus) {
     async hasActiveJob() {
       return false;
     },
+    async findActiveAssignmentPickupsForConflict() {
+      return [];
+    },
     async findPrimaryVehicle() {
       return { id: 100 };
     },

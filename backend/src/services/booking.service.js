@@ -1397,6 +1397,126 @@ class BookingService {
     };
   }
 
+  mapAdminManualCustomerFromFieldsRow(fieldsRow) {
+    return {
+      customerUserId: fieldsRow.customer_user_id ?? null,
+      customerName: fieldsRow.customer_name,
+      customerEmail: fieldsRow.customer_email,
+      customerPhone: fieldsRow.customer_phone,
+    };
+  }
+
+  async resolveAdminManualCustomerForUpdate(customerInput, fieldsRow) {
+    if (customerInput === undefined) {
+      return this.mapAdminManualCustomerFromFieldsRow(fieldsRow);
+    }
+
+    const hasUserIdKey = Object.prototype.hasOwnProperty.call(
+      customerInput,
+      'customerUserId',
+    );
+
+    if (hasUserIdKey && customerInput.customerUserId != null) {
+      const linked = await this.resolveAdminManualCustomer(customerInput);
+      return {
+        customerUserId: linked.customerUserId,
+        customerName: customerInput.name?.trim() || linked.customerName,
+        customerPhone: customerInput.phone?.trim() || linked.customerPhone,
+        customerEmail: customerInput.email?.trim() || linked.customerEmail,
+      };
+    }
+
+    if (hasUserIdKey && customerInput.customerUserId == null) {
+      const customerName = customerInput.name?.trim() || fieldsRow.customer_name?.trim();
+      const customerPhone = customerInput.phone?.trim() || fieldsRow.customer_phone?.trim();
+      if (!customerName || !customerPhone) {
+        throw new AppError('Customer name and phone are required for guest bookings', {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+      return {
+        customerUserId: null,
+        customerName,
+        customerPhone,
+        customerEmail: customerInput.email?.trim()
+          ?? fieldsRow.customer_email?.trim()
+          ?? null,
+      };
+    }
+
+    if (fieldsRow.customer_user_id != null) {
+      const repository = this.couponService?.couponRepository;
+      const member = repository
+        ? await repository.findCustomerById(fieldsRow.customer_user_id)
+        : null;
+      return {
+        customerUserId: fieldsRow.customer_user_id,
+        customerName: customerInput.name?.trim()
+          || fieldsRow.customer_name
+          || member?.name
+          || 'Customer',
+        customerPhone: customerInput.phone?.trim()
+          || fieldsRow.customer_phone
+          || member?.phone,
+        customerEmail: customerInput.email?.trim()
+          ?? fieldsRow.customer_email
+          ?? member?.email
+          ?? null,
+      };
+    }
+
+    const customerName = customerInput.name?.trim() || fieldsRow.customer_name?.trim();
+    const customerPhone = customerInput.phone?.trim() || fieldsRow.customer_phone?.trim();
+    if (!customerName || !customerPhone) {
+      throw new AppError('Customer name and phone are required for guest bookings', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    return {
+      customerUserId: null,
+      customerName,
+      customerPhone,
+      customerEmail: customerInput.email?.trim()
+        ?? fieldsRow.customer_email?.trim()
+        ?? null,
+    };
+  }
+
+  parseAdminManualFlightArrivalAt(value) {
+    if (value == null || value === '') return null;
+    const parsed = new Date(value);
+    if (!Number.isFinite(parsed.getTime())) {
+      throw new AppError('Invalid flight arrival time', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+      });
+    }
+    return this.formatThailandDateTime(parsed.toISOString());
+  }
+
+  pickAdminManualTransferValue(input, existingTransfer, inputKey, existingKey, {
+    partial = false,
+  } = {}) {
+    const transferInput = input.transfer;
+    if (transferInput !== undefined && Object.prototype.hasOwnProperty.call(transferInput, inputKey)) {
+      const value = transferInput[inputKey];
+      if (inputKey === 'golfRegion') {
+        const trimmed = value == null ? null : String(value).trim();
+        return trimmed || null;
+      }
+      if (inputKey === 'driverIncluded') {
+        return Boolean(value);
+      }
+      return value ?? null;
+    }
+    if (partial && existingTransfer) {
+      return existingTransfer[existingKey] ?? null;
+    }
+    return null;
+  }
+
   buildAdminManualOpenCallPayload(basePayload, {
     paymentMethod,
     commissionExempt = true,
@@ -1441,6 +1561,224 @@ class BookingService {
     };
   }
 
+  mapExistingAdminManualLuggage(row) {
+    if (!row) {
+      return {
+        carriers20Inch: 0,
+        carriers24InchPlus: 0,
+        golfBags: 0,
+        specialItems: null,
+      };
+    }
+    return {
+      carriers20Inch: Number(row.carriers_20_inch ?? 0),
+      carriers24InchPlus: Number(row.carriers_24_inch_plus ?? 0),
+      golfBags: Number(row.golf_bags ?? 0),
+      specialItems: row.special_items ?? null,
+    };
+  }
+
+  resolveAdminManualLuggage(luggageInput, { existing = null, partial = false } = {}) {
+    if (partial && luggageInput === undefined) {
+      return undefined;
+    }
+    const input = luggageInput ?? {};
+    const pickCount = (key, fallback = 0) => {
+      if (input[key] !== undefined && input[key] !== null) {
+        return Math.max(0, Number(input[key]) || 0);
+      }
+      if (partial && existing) {
+        return Math.max(0, Number(existing[key] ?? fallback) || 0);
+      }
+      return fallback;
+    };
+
+    let specialItems = null;
+    if (input.specialItems !== undefined) {
+      const trimmed = input.specialItems == null
+        ? ''
+        : String(input.specialItems).trim();
+      specialItems = trimmed || null;
+    } else if (input.specialLuggageCount !== undefined) {
+      const specialCount = Math.max(0, Number(input.specialLuggageCount) || 0);
+      specialItems = specialCount > 0 ? String(specialCount) : null;
+    } else if (partial && existing) {
+      specialItems = existing.specialItems ?? null;
+    }
+
+    return {
+      carriers20Inch: pickCount('carriers20Inch', existing?.carriers20Inch ?? 0),
+      carriers24InchPlus: pickCount('carriers24InchPlus', existing?.carriers24InchPlus ?? 0),
+      golfBags: pickCount('golfBags', existing?.golfBags ?? 0),
+      specialItems,
+    };
+  }
+
+  mapExistingAdminManualPassengers(row) {
+    if (!row) {
+      return { adults: 1, children: 0, infants: 0 };
+    }
+    return {
+      adults: Number(row.adults ?? 1),
+      children: Number(row.children ?? 0),
+      infants: Number(row.infants ?? 0),
+    };
+  }
+
+  resolveAdminManualPassengers(passengersInput, { existing = null, partial = false } = {}) {
+    if (partial && passengersInput === undefined) {
+      return undefined;
+    }
+    const input = passengersInput ?? {};
+    const pick = (key, fallback) => {
+      if (input[key] !== undefined && input[key] !== null) {
+        return Number(input[key]);
+      }
+      if (partial && existing) {
+        return Number(existing[key] ?? fallback);
+      }
+      return fallback;
+    };
+    return {
+      adults: pick('adults', existing?.adults ?? 1),
+      children: pick('children', existing?.children ?? 0),
+      infants: pick('infants', existing?.infants ?? 0),
+    };
+  }
+
+  resolveAdminManualNameSignUpdate(input, existingRow, { hasNameSignCharge = false } = {}) {
+    if (input.nameSign === undefined) {
+      const text = existingRow?.name_sign_text ?? null;
+      return {
+        nameSign: Boolean(text) || hasNameSignCharge,
+        nameSignText: text,
+      };
+    }
+    return this.resolveAdminManualNameSign(input);
+  }
+
+  mapAdminManualLocationFromBooking(side) {
+    return {
+      address: side.address ?? '',
+      placeId: side.placeId ?? null,
+      lat: side.lat ?? null,
+      lng: side.lng ?? null,
+      name: side.name ?? null,
+    };
+  }
+
+  async persistAdminManualTransfer(conn, bookingId, input, {
+    scheduledPickupAtIso,
+    partial = false,
+    existingTransfer = null,
+  }) {
+    if (partial && input.transfer === undefined && input.originAirportIata === undefined) {
+      return;
+    }
+    const mergedTransfer = {
+      ...(existingTransfer?.flight_number != null
+        ? { flightNumber: existingTransfer.flight_number }
+        : {}),
+      ...(existingTransfer?.airport_iata || existingTransfer?.airport_code_custom
+        ? {
+          airportIata:
+              existingTransfer.airport_iata ?? existingTransfer.airport_code_custom,
+        }
+        : {}),
+      ...(input.transfer ?? {}),
+    };
+    if (input.originAirportIata !== undefined) {
+      mergedTransfer.airportIata = input.originAirportIata || null;
+    }
+    const flightInfo = this.resolveTransferFlight({
+      ...input,
+      transfer: mergedTransfer,
+      scheduledPickupAt: scheduledPickupAtIso,
+    });
+    const airportInfo = await this.resolveTransferAirport(conn, {
+      ...input,
+      transfer: mergedTransfer,
+      originAirportIata: mergedTransfer.airportIata ?? input.originAirportIata,
+    });
+
+    const golfCourseId = this.pickAdminManualTransferValue(
+      input,
+      existingTransfer,
+      'golfCourseId',
+      'golf_course_id',
+      { partial },
+    );
+    const golfRegion = this.pickAdminManualTransferValue(
+      input,
+      existingTransfer,
+      'golfRegion',
+      'golf_region',
+      { partial },
+    );
+    const driverIncluded = partial
+      ? Boolean(Number(this.pickAdminManualTransferValue(
+        input,
+        existingTransfer,
+        'driverIncluded',
+        'driver_included',
+        { partial: true },
+      ) ?? 0))
+      : Boolean(input.transfer?.driverIncluded);
+
+    let updateFlightArrivalTimes = false;
+    let flightScheduledArrivalAt = null;
+    let flightEstimatedArrivalAt = null;
+    const transferInput = input.transfer;
+    const flightFieldsTouched = input.originAirportIata !== undefined
+      || (transferInput !== undefined && (
+        Object.prototype.hasOwnProperty.call(transferInput, 'flightNumber')
+        || Object.prototype.hasOwnProperty.call(transferInput, 'flightScheduledArrivalAt')
+        || Object.prototype.hasOwnProperty.call(transferInput, 'flightEstimatedArrivalAt')
+      ));
+
+    if (flightFieldsTouched) {
+      updateFlightArrivalTimes = true;
+      if (transferInput !== undefined) {
+        if (Object.prototype.hasOwnProperty.call(transferInput, 'flightScheduledArrivalAt')) {
+          flightScheduledArrivalAt = this.parseAdminManualFlightArrivalAt(
+            transferInput.flightScheduledArrivalAt,
+          );
+        }
+        if (Object.prototype.hasOwnProperty.call(transferInput, 'flightEstimatedArrivalAt')) {
+          flightEstimatedArrivalAt = this.parseAdminManualFlightArrivalAt(
+            transferInput.flightEstimatedArrivalAt,
+          );
+        }
+      }
+      if (!flightInfo.flightNumber) {
+        flightScheduledArrivalAt = null;
+        flightEstimatedArrivalAt = null;
+      }
+    } else if (!partial) {
+      updateFlightArrivalTimes = true;
+      flightScheduledArrivalAt = this.parseAdminManualFlightArrivalAt(
+        transferInput?.flightScheduledArrivalAt,
+      );
+      flightEstimatedArrivalAt = this.parseAdminManualFlightArrivalAt(
+        transferInput?.flightEstimatedArrivalAt,
+      );
+    }
+
+    await this.bookingRepository.upsertTransferDetails(conn, bookingId, {
+      airportId: airportInfo.airportId,
+      airportCodeCustom: airportInfo.airportCodeCustom,
+      flightNumber: flightInfo.flightNumber,
+      airlineCode: flightInfo.airlineCode,
+      flightDate: flightInfo.flightDate,
+      golfCourseId,
+      golfRegion,
+      driverIncluded,
+      flightScheduledArrivalAt,
+      flightEstimatedArrivalAt,
+      updateFlightArrivalTimes,
+    });
+  }
+
   async createAdminManualBooking(input, adminUser) {
     const payoutAmount = Number(input.payoutAmount);
     if (!Number.isFinite(payoutAmount) || payoutAmount <= 0) {
@@ -1459,6 +1797,7 @@ class BookingService {
 
     const customer = await this.resolveAdminManualCustomer(input.customer ?? {});
     const { nameSign, nameSignText } = this.resolveAdminManualNameSign(input);
+    const luggage = this.resolveAdminManualLuggage(input.luggage);
     const serviceType = await this.pricingService.resolveServiceType(
       input.serviceTypeCode || SERVICE_TYPES.CITY_TRANSFER,
     );
@@ -1558,11 +1897,11 @@ class BookingService {
         infants: input.passengers?.infants ?? 0,
       });
 
-      await this.bookingRepository.insertLuggage(conn, bookingId, {
-        carriers20Inch: 0,
-        carriers24InchPlus: 0,
-        golfBags: 0,
-        specialItems: null,
+      await this.bookingRepository.insertLuggage(conn, bookingId, luggage);
+
+      await this.persistAdminManualTransfer(conn, bookingId, input, {
+        scheduledPickupAtIso,
+        partial: false,
       });
 
       await this.bookingRepository.insertChargeItem(conn, bookingId, chargeItem, adminUser.id);
@@ -1616,12 +1955,7 @@ class BookingService {
           serviceType,
           vehicleType,
           pricing,
-          luggage: {
-            carriers20Inch: 0,
-            carriers24InchPlus: 0,
-            golfBags: 0,
-            specialItems: null,
-          },
+          luggage,
         }),
         {
           paymentMethod,
@@ -1710,12 +2044,16 @@ class BookingService {
   }
 
   async updateAdminManualBooking(bookingNumber, input, adminUser) {
-    const payoutAmount = Number(input.payoutAmount);
-    if (!Number.isFinite(payoutAmount) || payoutAmount <= 0) {
-      throw new AppError('Payout amount must be a positive number', {
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        errorCode: ERROR_CODES.VALIDATION_ERROR,
-      });
+    const shouldUpdatePayout = input.payoutAmount !== undefined;
+    let payoutAmount = null;
+    if (shouldUpdatePayout) {
+      payoutAmount = Number(input.payoutAmount);
+      if (!Number.isFinite(payoutAmount) || payoutAmount <= 0) {
+        throw new AppError('Payout amount must be a positive number', {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
     }
 
     const editableStatuses = new Set([
@@ -1723,23 +2061,6 @@ class BookingService {
       BOOKING_STATUS.CONFIRMED,
       BOOKING_STATUS.DRIVER_ASSIGNED,
     ]);
-
-    const paymentCollection = String(input.paymentCollection ?? '').trim().toUpperCase();
-    const isAdminCollected = paymentCollection === 'ADMIN_COLLECTED';
-    const paymentMethod = isAdminCollected
-      ? PAYMENT_METHODS.ADMIN_COLLECTED
-      : PAYMENT_METHODS.PAY_DRIVER;
-    const paymentStatus = isAdminCollected ? 'PAID' : 'UNPAID';
-
-    const customer = await this.resolveAdminManualCustomer(input.customer ?? {});
-    const { nameSign, nameSignText } = this.resolveAdminManualNameSign(input);
-    const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
-    if (!vehicleType) {
-      throw new AppError('Vehicle type not found', {
-        statusCode: HTTP_STATUS.BAD_REQUEST,
-        errorCode: ERROR_CODES.VALIDATION_ERROR,
-      });
-    }
 
     const conn = await this.pool.getConnection();
     try {
@@ -1768,49 +2089,155 @@ class BookingService {
         });
       }
 
-      const scheduledPickupAtIso = input.scheduledPickupAt;
-      const scheduledPickupAt = this.formatThailandDateTime(scheduledPickupAtIso);
-      const origin = input.origin ?? {};
-      const destination = input.destination ?? {};
-      const [originLocationMetadata, destinationLocationMetadata] = await Promise.all([
-        this.buildLocationMetadata({
-          name: origin.name,
-          placeId: origin.placeId,
-        }),
-        this.buildLocationMetadata({
-          name: destination.name,
-          placeId: destination.placeId,
-        }),
-      ]);
+      const fieldsRow = await this.bookingRepository.findAdminManualBookingFieldsForUpdate(
+        conn,
+        booking.id,
+      );
+      if (!fieldsRow) {
+        throw new AppError('Booking not found', {
+          statusCode: HTTP_STATUS.NOT_FOUND,
+          errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
+        });
+      }
 
+      const existingPassengers = this.mapExistingAdminManualPassengers(
+        await this.bookingRepository.findPassengersByBookingId(conn, booking.id),
+      );
+      const existingLuggage = this.mapExistingAdminManualLuggage(
+        await this.bookingRepository.findLuggageByBookingId(conn, booking.id),
+      );
+      const existingTransfer = await this.bookingRepository.findTransferByBookingId(
+        conn,
+        booking.id,
+      );
+
+      let paymentMethod = fieldsRow.payment_method;
+      let paymentStatus = fieldsRow.payment_status;
+      let paymentCollection;
+      if (input.paymentCollection !== undefined) {
+        paymentCollection = String(input.paymentCollection).trim().toUpperCase();
+        const isAdminCollected = paymentCollection === 'ADMIN_COLLECTED';
+        paymentMethod = isAdminCollected
+          ? PAYMENT_METHODS.ADMIN_COLLECTED
+          : PAYMENT_METHODS.PAY_DRIVER;
+        paymentStatus = isAdminCollected ? 'PAID' : 'UNPAID';
+      } else {
+        paymentCollection = paymentMethod === PAYMENT_METHODS.ADMIN_COLLECTED
+          ? 'ADMIN_COLLECTED'
+          : 'DRIVER_COLLECTS';
+      }
+
+      const customer = await this.resolveAdminManualCustomerForUpdate(
+        input.customer,
+        fieldsRow,
+      );
+
+      const { nameSign, nameSignText } = this.resolveAdminManualNameSignUpdate(
+        input,
+        fieldsRow,
+      );
+      const luggage = this.resolveAdminManualLuggage(input.luggage, {
+        existing: existingLuggage,
+        partial: true,
+      });
+      const passengers = this.resolveAdminManualPassengers(input.passengers, {
+        existing: existingPassengers,
+        partial: true,
+      });
+
+      let serviceType;
+      if (input.serviceTypeCode !== undefined) {
+        serviceType = await this.pricingService.resolveServiceType(input.serviceTypeCode);
+      } else {
+        serviceType = {
+          id: fieldsRow.service_type_id,
+          code: fieldsRow.service_type_code,
+        };
+      }
+
+      let vehicleType;
+      if (input.vehicleTypeCode !== undefined) {
+        vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
+      } else {
+        vehicleType = await this.vehicleRepository.findTypeByCode(fieldsRow.vehicle_type_code);
+      }
+      if (!vehicleType) {
+        throw new AppError('Vehicle type not found', {
+          statusCode: HTTP_STATUS.BAD_REQUEST,
+          errorCode: ERROR_CODES.VALIDATION_ERROR,
+        });
+      }
+
+      const { formatServiceDateTimeIso } = require('../utils/serviceDateTime.util');
+      const scheduledPickupAtIso = input.scheduledPickupAt
+        ?? formatServiceDateTimeIso(fieldsRow.scheduled_pickup_at);
+      const scheduledPickupAt = this.formatThailandDateTime(scheduledPickupAtIso);
+
+      const origin = input.origin !== undefined
+        ? input.origin
+        : {
+          address: fieldsRow.origin_address,
+          placeId: fieldsRow.origin_place_id,
+          lat: fieldsRow.origin_lat,
+          lng: fieldsRow.origin_lng,
+        };
+      const destination = input.destination !== undefined
+        ? input.destination
+        : {
+          address: fieldsRow.destination_address,
+          placeId: fieldsRow.destination_place_id,
+          lat: fieldsRow.destination_lat,
+          lng: fieldsRow.destination_lng,
+        };
       const rawMetadata = await this.bookingRepository.findBookingMetadataForUpdate(
         conn,
         booking.id,
       );
-      let metadata = {};
-      if (rawMetadata) {
-        try {
-          metadata = typeof rawMetadata === 'object'
-            ? { ...rawMetadata }
-            : JSON.parse(rawMetadata);
-        } catch {
-          metadata = {};
+      let metadata = this.parseBookingMetadata(rawMetadata);
+
+      if (input.origin !== undefined) {
+        const previous = { ...(metadata.originLocation ?? {}) };
+        const built = await this.buildLocationMetadata({
+          name: origin.name,
+          placeId: origin.placeId,
+        });
+        if (built) {
+          metadata.originLocation = { ...previous, ...built };
+        } else if (origin.name?.trim()) {
+          metadata.originLocation = { ...previous, name: origin.name.trim() };
+        } else if (Object.keys(previous).length) {
+          metadata.originLocation = previous;
+        } else {
+          delete metadata.originLocation;
         }
       }
-      if (originLocationMetadata) metadata.originLocation = originLocationMetadata;
-      else delete metadata.originLocation;
-      if (destinationLocationMetadata) metadata.destinationLocation = destinationLocationMetadata;
-      else delete metadata.destinationLocation;
+
+      if (input.destination !== undefined) {
+        const previous = { ...(metadata.destinationLocation ?? {}) };
+        const built = await this.buildLocationMetadata({
+          name: destination.name,
+          placeId: destination.placeId,
+        });
+        if (built) {
+          metadata.destinationLocation = { ...previous, ...built };
+        } else if (destination.name?.trim()) {
+          metadata.destinationLocation = { ...previous, name: destination.name.trim() };
+        } else if (Object.keys(previous).length) {
+          metadata.destinationLocation = previous;
+        } else {
+          delete metadata.destinationLocation;
+        }
+      }
 
       const originAddress = this.resolvePlaceAddress(origin);
       const destinationAddress = this.resolvePlaceAddress(destination);
-      const chargeItem = {
-        chargeType: 'OTHER',
-        description: '관리자 등록 콜 (고객센터 협의 금액)',
-        quantity: 1,
-        unitPrice: payoutAmount,
-        amount: payoutAmount,
-      };
+
+      if (!shouldUpdatePayout) {
+        payoutAmount = await this.bookingRepository.findManualPayoutAmountByBookingId(
+          conn,
+          booking.id,
+        );
+      }
 
       await this.bookingRepository.updateAdminManualBookingFields(conn, booking.id, {
         originAddress,
@@ -1823,6 +2250,7 @@ class BookingService {
         destinationLng: destination.lng ?? null,
         scheduledPickupAt,
         vehicleTypeId: vehicleType.id,
+        serviceTypeId: serviceType.id,
         paymentStatus,
         paymentMethod,
         customerUserId: customer.customerUserId,
@@ -1830,7 +2258,12 @@ class BookingService {
         customerEmail: customer.customerEmail,
         customerPhone: customer.customerPhone,
         nameSignText,
-        specialRequests: input.memo?.trim() || null,
+        specialRequests: input.memo !== undefined
+          ? (input.memo?.trim() || null)
+          : fieldsRow.special_requests,
+        preferFemaleDriver: input.preferFemaleDriver !== undefined
+          ? Boolean(input.preferFemaleDriver)
+          : Boolean(fieldsRow.prefer_female_driver),
         metadata: Object.keys(metadata).length ? metadata : null,
         updatedBy: adminUser.id,
       });
@@ -1842,18 +2275,34 @@ class BookingService {
         adminUser.id,
       );
 
-      await this.bookingRepository.updatePassengers(conn, booking.id, {
-        adults: input.passengers?.adults ?? 1,
-        children: input.passengers?.children ?? 0,
-        infants: input.passengers?.infants ?? 0,
+      if (passengers !== undefined) {
+        await this.bookingRepository.updatePassengers(conn, booking.id, passengers);
+      }
+
+      if (luggage !== undefined) {
+        await this.bookingRepository.updateLuggage(conn, booking.id, luggage);
+      }
+
+      await this.persistAdminManualTransfer(conn, booking.id, input, {
+        scheduledPickupAtIso,
+        partial: true,
+        existingTransfer,
       });
 
-      await this.bookingRepository.upsertManualPayoutChargeItem(
-        conn,
-        booking.id,
-        chargeItem,
-        adminUser.id,
-      );
+      if (shouldUpdatePayout) {
+        await this.bookingRepository.upsertManualPayoutChargeItem(
+          conn,
+          booking.id,
+          {
+            chargeType: 'OTHER',
+            description: '관리자 등록 콜 (고객센터 협의 금액)',
+            quantity: 1,
+            unitPrice: payoutAmount,
+            amount: payoutAmount,
+          },
+          adminUser.id,
+        );
+      }
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
         activityType: 'BOOKING_UPDATED',
@@ -1866,6 +2315,7 @@ class BookingService {
           payoutAmount,
           paymentCollection,
           nameSign,
+          payoutUpdated: shouldUpdatePayout,
         },
       });
 

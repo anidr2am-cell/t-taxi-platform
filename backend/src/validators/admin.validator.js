@@ -5,6 +5,11 @@ const {
   bookingNumberParam,
   unicodeText,
 } = require("./common.validator");
+const {
+  FLIGHT_NUMBER_INVALID_MESSAGE,
+  isValidFlightNumber,
+  normalizeFlightNumber,
+} = require("../utils/flightNumber.util");
 const BOOKING_STATUS = require("../constants/reservationStatus");
 const {
   ADMIN_BOOKING_VIEWS,
@@ -148,6 +153,53 @@ const adminManualLocationSchema = Joi.object({
   name: unicodeText({ max: 200, allowEmpty: true }).optional(),
 });
 
+const adminManualPassengersCreateSchema = Joi.object({
+  adults: Joi.number().integer().min(1).default(1),
+  children: Joi.number().integer().min(0).default(0),
+  infants: Joi.number().integer().min(0).default(0),
+}).default({ adults: 1, children: 0, infants: 0 });
+
+const adminManualLuggageCreateSchema = Joi.object({
+  carriers20Inch: Joi.number().integer().min(0).max(20).default(0),
+  carriers24InchPlus: Joi.number().integer().min(0).max(20).default(0),
+  golfBags: Joi.number().integer().min(0).max(20).default(0),
+  specialLuggageCount: Joi.number().integer().min(0).max(20).default(0),
+  specialItems: Joi.string().max(500).allow('', null).optional(),
+}).default({
+  carriers20Inch: 0,
+  carriers24InchPlus: 0,
+  golfBags: 0,
+  specialLuggageCount: 0,
+});
+
+const adminManualLuggageUpdateSchema = Joi.object({
+  carriers20Inch: Joi.number().integer().min(0).max(20).optional(),
+  carriers24InchPlus: Joi.number().integer().min(0).max(20).optional(),
+  golfBags: Joi.number().integer().min(0).max(20).optional(),
+  specialLuggageCount: Joi.number().integer().min(0).max(20).optional(),
+  specialItems: Joi.string().max(500).allow('', null).optional(),
+});
+
+const adminManualTransferSchema = Joi.object({
+  airportIata: Joi.string().length(3).uppercase().allow(null, '').optional(),
+  flightNumber: Joi.string().max(20).allow(null, '').empty('').custom((value, helpers) => {
+    if (value == null) return null;
+    const normalized = normalizeFlightNumber(value);
+    if (normalized == null) return null;
+    if (!isValidFlightNumber(normalized)) {
+      return helpers.error('any.invalid');
+    }
+    return normalized;
+  }).optional().messages({
+    'any.invalid': FLIGHT_NUMBER_INVALID_MESSAGE,
+  }),
+  golfCourseId: Joi.number().integer().positive().allow(null).optional(),
+  golfRegion: Joi.string().max(50).allow(null, '').optional(),
+  driverIncluded: Joi.boolean().optional(),
+  flightScheduledArrivalAt: Joi.string().isoDate().allow(null).optional(),
+  flightEstimatedArrivalAt: Joi.string().isoDate().allow(null).optional(),
+}).optional();
+
 const adminManualBookingCreateSchema = Joi.object({
   origin: adminManualLocationSchema.required(),
   destination: adminManualLocationSchema.required(),
@@ -158,11 +210,10 @@ const adminManualBookingCreateSchema = Joi.object({
   serviceTypeCode: Joi.string()
     .valid('AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'CITY_TRANSFER', 'GOLF_TRANSFER')
     .optional(),
-  passengers: Joi.object({
-    adults: Joi.number().integer().min(1).default(1),
-    children: Joi.number().integer().min(0).default(0),
-    infants: Joi.number().integer().min(0).default(0),
-  }).default({ adults: 1, children: 0, infants: 0 }),
+  originAirportIata: Joi.string().length(3).uppercase().allow(null, '').optional(),
+  passengers: adminManualPassengersCreateSchema,
+  luggage: adminManualLuggageCreateSchema,
+  transfer: adminManualTransferSchema,
   payoutAmount: Joi.number().positive().required(),
   customerChargeAmount: Joi.number().positive().optional(),
   paymentCollection: Joi.string()
@@ -181,14 +232,56 @@ const adminManualBookingCreateSchema = Joi.object({
     then: unicodeText({ max: 120 }).required(),
     otherwise: unicodeText({ max: 120, allowEmpty: true }).optional(),
   }),
-  preferFemaleDriver: Joi.boolean().optional(),
+  preferFemaleDriver: Joi.boolean().optional().default(false),
 });
 
-const adminManualBookingUpdateSchema = adminManualBookingCreateSchema;
+const adminManualBookingUpdateSchema = Joi.object({
+  origin: adminManualLocationSchema.optional(),
+  destination: adminManualLocationSchema.optional(),
+  scheduledPickupAt: Joi.string().isoDate().optional(),
+  vehicleTypeCode: Joi.string()
+    .valid('SEDAN', 'SUV', 'VIP_SUV', 'VAN', 'VIP_VAN')
+    .optional(),
+  serviceTypeCode: Joi.string()
+    .valid('AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'CITY_TRANSFER', 'GOLF_TRANSFER')
+    .optional(),
+  originAirportIata: Joi.string().length(3).uppercase().allow(null, '').optional(),
+  passengers: Joi.object({
+    adults: Joi.number().integer().min(1).optional(),
+    children: Joi.number().integer().min(0).optional(),
+    infants: Joi.number().integer().min(0).optional(),
+  }).optional(),
+  luggage: adminManualLuggageUpdateSchema.optional(),
+  transfer: adminManualTransferSchema,
+  payoutAmount: Joi.number().positive().optional(),
+  customerChargeAmount: Joi.number().positive().optional(),
+  paymentCollection: Joi.string()
+    .valid('DRIVER_COLLECTS', 'ADMIN_COLLECTED')
+    .optional(),
+  customer: Joi.object({
+    customerUserId: Joi.number().integer().positive().optional(),
+    name: unicodeText({ max: 120, allowEmpty: true }).optional(),
+    phone: Joi.string().max(32).allow('', null).optional(),
+    email: Joi.string().email({ tlds: { allow: false } }).allow('', null).optional(),
+  }).optional(),
+  memo: unicodeText({ max: 1000, allowEmpty: true }).optional(),
+  nameSign: Joi.boolean().optional(),
+  nameSignText: Joi.when("nameSign", {
+    is: true,
+    then: unicodeText({ max: 120 }).required(),
+    otherwise: unicodeText({ max: 120, allowEmpty: true }).optional(),
+  }),
+  preferFemaleDriver: Joi.boolean().optional(),
+});
 
 const adminManualBookingCancelSchema = Joi.object({
   reason: unicodeText({ max: 100, allowEmpty: true }).optional(),
   memo: unicodeText({ max: 500, allowEmpty: true }).optional(),
+});
+
+const adminListDriversQuerySchema = Joi.object({
+  archived: Joi.boolean().truthy('true').falsy('false').optional(),
+  bookingNumber: bookingNumberParam.optional(),
 });
 
 module.exports = {
@@ -208,4 +301,5 @@ module.exports = {
   adminManualBookingCreateSchema,
   adminManualBookingUpdateSchema,
   adminManualBookingCancelSchema,
+  adminListDriversQuerySchema,
 };

@@ -5,6 +5,9 @@ process.env.JWT_ACCESS_SECRET =
   process.env.JWT_ACCESS_SECRET || "test-access-secret-value";
 process.env.JWT_REFRESH_SECRET =
   process.env.JWT_REFRESH_SECRET || "test-refresh-secret-value";
+process.env.SOCIAL_TOKEN_ENCRYPTION_KEY =
+  process.env.SOCIAL_TOKEN_ENCRYPTION_KEY ||
+  Buffer.alloc(32, 1).toString("base64");
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -321,73 +324,136 @@ test("auto-assignment candidates exclude a driver with an active or unsettled jo
   assert.deepEqual(result.excluded[0].reasons, ["MAX_ACTIVE_JOBS"]);
 });
 
-for (const status of ["ON_ROUTE", "PICKED_UP", "SETTLEMENT_PENDING"]) {
-  test(`direct assign rejects a driver with ${status} active job`, async () => {
-    let inserted = false;
-    const conn = {
-      async beginTransaction() {},
-      async commit() {},
-      async rollback() {},
-      release() {},
-    };
-    const service = new AdminDispatchService(
-      {
-        async getConnection() {
-          return conn;
-        },
+test("direct assign rejects driver when pickup is within 60 minutes of another job", async () => {
+  let inserted = false;
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const service = new AdminDispatchService(
+    {
+      async getConnection() {
+        return conn;
       },
-      {
-        async findByBookingNumberForUpdate() {
-          return {
-            id: 1,
-            status: BOOKING_STATUS.PENDING,
-            booking_number: "TX202607010001",
-          };
-        },
-        async findActiveAssignmentForUpdate() {
-          return null;
-        },
-        async insertDriverAssignment() {
-          inserted = true;
-        },
+    },
+    {
+      async findByBookingNumberForUpdate() {
+        return {
+          id: 1,
+          status: BOOKING_STATUS.PENDING,
+          booking_number: "TX202607010001",
+          scheduled_pickup_at: "2026-07-13 10:30:00",
+        };
       },
-      {
-        async findByIdForUpdate() {
-          return {
-            id: 6,
-            name: "Busy Driver",
-            is_active: 1,
-            status: "AVAILABLE",
-          };
-        },
-        async hasActiveJob() {
-          return true;
-        },
+      async findActiveAssignmentForUpdate() {
+        return null;
       },
-      {},
-      settlementStub,
-      null,
-      null,
-      scoringService,
-    );
+      async insertDriverAssignment() {
+        inserted = true;
+      },
+    },
+    {
+      async findByIdForUpdate() {
+        return {
+          id: 6,
+          name: "Busy Driver",
+          is_active: 1,
+          status: "AVAILABLE",
+        };
+      },
+      async findActiveAssignmentPickupsForConflict() {
+        return [{ id: 2, scheduled_pickup_at: "2026-07-13 10:00:00" }];
+      },
+    },
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
 
-    await assert.rejects(
-      () =>
-        service.assignDriver(
-          "TX202607010001",
-          { driverId: 6 },
-          { id: 1, role: "ADMIN" },
-        ),
-      (err) =>
-        err.errorCode === ERROR_CODES.DRIVER_NOT_ELIGIBLE &&
-        err.message ===
-          "This driver has an active or unsettled job and cannot receive a new booking.",
-    );
-    assert.equal(inserted, false);
-  });
-}
+  await assert.rejects(
+    () =>
+      service.assignDriver(
+        "TX202607010001",
+        { driverId: 6 },
+        { id: 1, role: "ADMIN" },
+      ),
+    (err) => err.errorCode === ERROR_CODES.DRIVER_BOOKING_TIME_CONFLICT,
+  );
+  assert.equal(inserted, false);
+});
 
-test("completed job no longer blocks driver eligibility", async () => {
+test("direct assign allows driver with another job when pickups are 61+ minutes apart", async () => {
+  let inserted = false;
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const service = new AdminDispatchService(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      async findByBookingNumberForUpdate() {
+        return {
+          id: 1,
+          status: BOOKING_STATUS.PENDING,
+          booking_number: "TX202607010001",
+          scheduled_pickup_at: "2026-07-13 11:01:00",
+        };
+      },
+      async findActiveAssignmentForUpdate() {
+        return null;
+      },
+      async insertDriverAssignment() {
+        inserted = true;
+        return 99;
+      },
+      async insertActivityLog() {},
+    },
+    {
+      async findByIdForUpdate() {
+        return {
+          id: 6,
+          name: "Busy Driver",
+          is_active: 1,
+          status: "AVAILABLE",
+        };
+      },
+      async findPrimaryVehicle() {
+        return { id: 3 };
+      },
+      async findActiveAssignmentPickupsForConflict() {
+        return [{ id: 2, scheduled_pickup_at: "2026-07-13 10:00:00" }];
+      },
+    },
+    {
+      async transitionInTransaction() {
+        return { result: {}, domainEvent: null, eventPayload: null };
+      },
+    },
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  await service.assignDriver(
+    "TX202607010001",
+    { driverId: 6 },
+    { id: 1, role: "ADMIN" },
+  );
+  assert.equal(inserted, true);
+});
+
+test("ensureDriverEligible no longer rejects drivers solely for having an active job", async () => {
   const driver = {
     id: 6,
     name: "Available Driver",
@@ -400,9 +466,6 @@ test("completed job no longer blocks driver eligibility", async () => {
     {
       async findByIdForUpdate() {
         return driver;
-      },
-      async hasActiveJob() {
-        return false;
       },
     },
     {},
@@ -599,6 +662,7 @@ test("assign uses BookingStatusService transitions", async () => {
         id: 1,
         status: BOOKING_STATUS.PENDING,
         booking_number: "TX202607010001",
+        scheduled_pickup_at: "2026-07-13 12:00:00",
       };
     },
     async findActiveAssignmentForUpdate() {
@@ -622,8 +686,8 @@ test("assign uses BookingStatusService transitions", async () => {
     async findPrimaryVehicle() {
       return { id: 3 };
     },
-    async hasActiveJob() {
-      return false;
+    async findActiveAssignmentPickupsForConflict() {
+      return [];
     },
   };
   const statusService = {
@@ -685,6 +749,7 @@ test("reassign dispatches outbox only after commit", async () => {
         id: 1,
         status: BOOKING_STATUS.DRIVER_ASSIGNED,
         booking_number: "TX202607010001",
+        scheduled_pickup_at: "2026-07-13 12:00:00",
       };
     },
     async findActiveAssignmentForUpdate() {
@@ -711,8 +776,8 @@ test("reassign dispatches outbox only after commit", async () => {
     async findPrimaryVehicle() {
       return null;
     },
-    async hasActiveJob() {
-      return false;
+    async findActiveAssignmentPickupsForConflict() {
+      return [];
     },
   };
   const conn = {
@@ -1560,6 +1625,7 @@ test("assign creates exactly one active assignment", async () => {
         id: 1,
         status: BOOKING_STATUS.CONFIRMED,
         booking_number: "TX202607010001",
+        scheduled_pickup_at: "2026-07-13 12:00:00",
       };
     },
     async findActiveAssignmentForUpdate() {
@@ -1585,8 +1651,8 @@ test("assign creates exactly one active assignment", async () => {
     async findPrimaryVehicle() {
       return { id: 3 };
     },
-    async hasActiveJob() {
-      return false;
+    async findActiveAssignmentPickupsForConflict() {
+      return [];
     },
   };
   const statusService = {
@@ -1633,6 +1699,7 @@ test("reassign deactivates previous assignment and creates one new active assign
         id: 1,
         status: BOOKING_STATUS.DRIVER_ASSIGNED,
         booking_number: "TX202607010001",
+        scheduled_pickup_at: "2026-07-13 12:00:00",
       };
     },
     async findActiveAssignmentForUpdate() {
@@ -1661,8 +1728,8 @@ test("reassign deactivates previous assignment and creates one new active assign
     async findPrimaryVehicle() {
       return null;
     },
-    async hasActiveJob() {
-      return false;
+    async findActiveAssignmentPickupsForConflict() {
+      return [];
     },
   };
   const conn = {
@@ -1703,6 +1770,7 @@ test("assign maps ER_DUP_ENTRY to ASSIGNMENT_CONFLICT", async () => {
         id: 1,
         status: BOOKING_STATUS.PENDING,
         booking_number: "TX202607010001",
+        scheduled_pickup_at: "2026-07-13 12:00:00",
       };
     },
     async findActiveAssignmentForUpdate() {
@@ -1727,8 +1795,8 @@ test("assign maps ER_DUP_ENTRY to ASSIGNMENT_CONFLICT", async () => {
     async findPrimaryVehicle() {
       return null;
     },
-    async hasActiveJob() {
-      return false;
+    async findActiveAssignmentPickupsForConflict() {
+      return [];
     },
   };
   const conn = {
@@ -1938,4 +2006,131 @@ test("booking detail exposes route customer pricing messenger and flight contrac
   assert.equal(detail.pricing.totalAmount, 1300);
   assert.equal(detail.pricing.chargeItems[0].chargeType, "VEHICLE_BASE");
   assert.equal(detail.pricing.chargeItems[0].amount, 1300);
+});
+
+test("GET /admin/drivers passes bookingNumber query through validator to listDrivers", async () => {
+  let captured = null;
+  container.register("adminDispatchService", () => ({
+    async listDrivers(query) {
+      captured = query;
+      return [{ driverId: 6, assignmentEligible: true, pickupTimeConflict: false }];
+    },
+  }));
+
+  const res = await request(app)
+    .get("/api/v1/admin/drivers")
+    .query({ bookingNumber: "TX202607010001" })
+    .set("Authorization", `Bearer ${sign("ADMIN")}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(captured.bookingNumber, "TX202607010001");
+});
+
+test("GET /admin/drivers rejects invalid bookingNumber query", async () => {
+  const res = await request(app)
+    .get("/api/v1/admin/drivers")
+    .query({ bookingNumber: "NOT-A-BOOKING" })
+    .set("Authorization", `Bearer ${sign("ADMIN")}`);
+
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error_code, ERROR_CODES.VALIDATION_ERROR);
+});
+
+test("listDrivers excludes target booking from pickup conflict checks", async () => {
+  let capturedExcludeBookingId = null;
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const service = new AdminDispatchService(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      async findBookingPickupContextByNumber() {
+        return { id: 99, scheduled_pickup_at: "2026-07-13 10:30:00" };
+      },
+    },
+    {
+      async listForAdminAssignment() {
+        return [
+          {
+            id: 6,
+            user_id: 16,
+            name: "Driver A",
+            phone: "+6600",
+            is_active: 1,
+            status: "AVAILABLE",
+            active_assignment_count: 1,
+          },
+        ];
+      },
+      async findActiveAssignmentPickupsForConflict(_conn, _driverId, excludeBookingId) {
+        capturedExcludeBookingId = excludeBookingId;
+        return [{ id: 99, scheduled_pickup_at: "2026-07-13 10:30:00" }];
+      },
+    },
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const items = await service.listDrivers({ bookingNumber: "TX202607010001" });
+  assert.equal(capturedExcludeBookingId, 99);
+  assert.equal(items[0].assignmentEligible, true);
+  assert.notEqual(items[0].pickupTimeConflict, true);
+});
+
+test("listDrivers marks pickup conflict without masking other errors", async () => {
+  const conn = {
+    async beginTransaction() {},
+    async commit() {},
+    async rollback() {},
+    release() {},
+  };
+  const service = new AdminDispatchService(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      async findBookingPickupContextByNumber() {
+        return { id: 1, scheduled_pickup_at: "2026-07-13 10:30:00" };
+      },
+    },
+    {
+      async listForAdminAssignment() {
+        return [
+          {
+            id: 6,
+            user_id: 16,
+            name: "Driver A",
+            phone: "+6600",
+            is_active: 1,
+            status: "AVAILABLE",
+            active_assignment_count: 1,
+          },
+        ];
+      },
+      async findActiveAssignmentPickupsForConflict() {
+        return [{ id: 2, scheduled_pickup_at: "2026-07-13 10:00:00" }];
+      },
+    },
+    {},
+    settlementStub,
+    null,
+    null,
+    scoringService,
+  );
+
+  const items = await service.listDrivers({ bookingNumber: "TX202607010001" });
+  assert.equal(items[0].assignmentEligible, false);
+  assert.equal(items[0].pickupTimeConflict, true);
 });

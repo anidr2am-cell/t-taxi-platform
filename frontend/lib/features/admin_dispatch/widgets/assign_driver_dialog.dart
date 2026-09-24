@@ -17,21 +17,28 @@ Future<AssignDriverDialogResult?> showAssignDriverDialog({
   required BuildContext context,
   required AdminDispatchApiService api,
   required bool isReassign,
+  String? bookingNumber,
 }) {
   return showDialog<AssignDriverDialogResult>(
     context: context,
-    builder: (_) => AssignDriverDialog(api: api, isReassign: isReassign),
+    builder: (_) => AssignDriverDialog(
+      api: api,
+      isReassign: isReassign,
+      bookingNumber: bookingNumber,
+    ),
   );
 }
 
 class AssignDriverDialog extends StatefulWidget {
   final AdminDispatchApiService api;
   final bool isReassign;
+  final String? bookingNumber;
 
   const AssignDriverDialog({
     super.key,
     required this.api,
     required this.isReassign,
+    this.bookingNumber,
   });
 
   @override
@@ -77,7 +84,9 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
       _error = null;
     });
     try {
-      final drivers = await widget.api.listDrivers();
+      final drivers = await widget.api.listDrivers(
+        bookingNumber: widget.bookingNumber,
+      );
       setState(() {
         _drivers = drivers;
         _loading = false;
@@ -132,6 +141,8 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
                             ..._drivers.map((raw) {
                               final driver = Map<String, dynamic>.from(raw as Map);
                               final eligible = driver['assignmentEligible'] == true;
+                              final pickupConflict =
+                                  driver['pickupTimeConflict'] == true;
                               final id = driver['driverId'] as int;
                               final selected = _selectedDriverId == id;
                               return Padding(
@@ -163,9 +174,15 @@ class _AssignDriverDialogState extends State<AssignDriverDialog> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              '${driver['phone']} · ${driver['eligibilityState']} · active ${driver['activeAssignmentCount']}',
-                                              style: const TextStyle(
-                                                color: AppTokens.textSecondary,
+                                              pickupConflict
+                                                  ? l10n.t(
+                                                      'admin_dispatch_driver_pickup_conflict',
+                                                    )
+                                                  : '${driver['phone']} · ${driver['eligibilityState']} · active ${driver['activeAssignmentCount']}',
+                                              style: TextStyle(
+                                                color: pickupConflict
+                                                    ? AppTokens.warning
+                                                    : AppTokens.textSecondary,
                                                 fontSize: 13,
                                               ),
                                             ),
