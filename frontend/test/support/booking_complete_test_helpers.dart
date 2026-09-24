@@ -2,9 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/core/navigation/app_navigator.dart';
 import 'package:frontend/features/auth/controllers/auth_controller.dart';
-import 'package:frontend/features/auth/services/auth_api_service.dart';
 import 'package:frontend/features/auth/models/auth_session.dart';
+import 'package:frontend/features/auth/pages/profile_completion_page.dart';
+import 'package:frontend/features/auth/services/auth_api_service.dart';
 import 'package:frontend/features/auth/services/auth_token_storage.dart';
 import 'package:frontend/features/auth/services/google_sign_in_service.dart';
 import 'package:frontend/features/auth/widgets/booking_social_login_section.dart';
@@ -12,6 +14,20 @@ import 'package:frontend/l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Named routes needed when OAuth callbacks redirect via [appNavigatorKey].
+Map<String, WidgetBuilder> oauthCallbackProfileCompletionRoutes() {
+  return {
+    ProfileCompletionPage.routeName: (context) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      return ProfileCompletionPage(
+        returnContext: args is ProfileCompletionRouteArgs
+            ? args.returnContext
+            : null,
+      );
+    },
+  };
+}
 
 /// Signed-out [AuthController] for [BookingCompletePage] widget tests.
 AuthController createSignedOutAuthController({http.Client? client}) {
@@ -39,6 +55,7 @@ Widget wrapBookingCompleteTestApp({
   required AuthController authController,
   Locale locale = const Locale('en'),
   bool includeAppLocalizations = false,
+  bool linkAppNavigatorForOAuth = false,
 }) {
   final delegates = <LocalizationsDelegate<dynamic>>[
     if (includeAppLocalizations) AppLocalizationsDelegate(locale.languageCode),
@@ -47,7 +64,8 @@ Widget wrapBookingCompleteTestApp({
     GlobalCupertinoLocalizations.delegate,
   ];
 
-  return MaterialApp(
+  final app = MaterialApp(
+    navigatorKey: linkAppNavigatorForOAuth ? appNavigatorKey : null,
     locale: locale,
     supportedLocales: const [
       Locale('en'),
@@ -57,8 +75,18 @@ Widget wrapBookingCompleteTestApp({
       Locale('zh'),
     ],
     localizationsDelegates: delegates,
-    home: AuthScope(controller: authController, child: home),
+    routes: linkAppNavigatorForOAuth
+        ? oauthCallbackProfileCompletionRoutes()
+        : const <String, WidgetBuilder>{},
+    home: linkAppNavigatorForOAuth
+        ? home
+        : AuthScope(controller: authController, child: home),
   );
+
+  if (linkAppNavigatorForOAuth) {
+    return AuthScope(controller: authController, child: app);
+  }
+  return app;
 }
 
 const kOAuthCallbackHomeRouteKey = Key('oauth_callback_home_route');
@@ -68,6 +96,7 @@ Widget wrapOAuthCallbackTestApp({
   required AuthController authController,
   Locale locale = const Locale('en'),
   bool includeAppLocalizations = false,
+  bool linkAppNavigatorForOAuth = true,
 }) {
   final delegates = <LocalizationsDelegate<dynamic>>[
     if (includeAppLocalizations) AppLocalizationsDelegate(locale.languageCode),
@@ -76,7 +105,8 @@ Widget wrapOAuthCallbackTestApp({
     GlobalCupertinoLocalizations.delegate,
   ];
 
-  return MaterialApp(
+  final app = MaterialApp(
+    navigatorKey: linkAppNavigatorForOAuth ? appNavigatorKey : null,
     locale: locale,
     supportedLocales: const [
       Locale('en'),
@@ -92,12 +122,12 @@ Widget wrapOAuthCallbackTestApp({
         key: kOAuthCallbackHomeRouteKey,
         body: SizedBox.shrink(),
       ),
-      '/oauth-callback': (_) => AuthScope(
-        controller: authController,
-        child: callbackPage,
-      ),
+      '/oauth-callback': (_) => callbackPage,
+      if (linkAppNavigatorForOAuth) ...oauthCallbackProfileCompletionRoutes(),
     },
   );
+
+  return AuthScope(controller: authController, child: app);
 }
 
 Future<void> pumpBookingCompleteTestApp(

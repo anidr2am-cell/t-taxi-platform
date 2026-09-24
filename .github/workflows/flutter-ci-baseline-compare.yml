@@ -1,0 +1,86 @@
+name: Flutter CI baseline compare
+
+# Verification-only: does not replace required PR Checks.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/flutter-ci-baseline-compare.yml'
+      - 'frontend/**'
+  push:
+    branches:
+      - 'codex/fix-flutter-ci-baseline'
+
+concurrency:
+  group: flutter-ci-baseline-compare-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  flutter-test-at-ref:
+    name: Flutter test (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main-6ac6fce
+            ref: 6ac6fcecbd217141b0222ca0b691cd0df9488229
+          - label: pr-b3eb433
+            ref: b3eb4339912fda7eb9dc39ebb55c46e5ab9bb8ca
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout pinned ref (unmodified tree)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 1
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.6"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run Flutter tests
+        id: flutter_test
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          flutter test --reporter expanded 2>&1 | tee "${{ github.workspace }}/flutter-test-${{ matrix.label }}.log"
+
+      - name: Render golden candidates (Linux, not committed)
+        if: steps.flutter_test.outcome == 'failure'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          flutter test \
+            test/privacy_policy_page_test.dart \
+            test/booking_contact_connect_test.dart \
+            test/guest_booking_lookup_inquiry_banner_golden_test.dart \
+            --update-goldens \
+            --reporter expanded \
+            2>&1 | tee "${{ github.workspace }}/flutter-golden-candidates-${{ matrix.label }}.log" || true
+          mkdir -p "${{ github.workspace }}/golden-candidates-${{ matrix.label }}"
+          cp -a test/goldens/. "${{ github.workspace }}/golden-candidates-${{ matrix.label }}/" 2>/dev/null || true
+
+      - name: Upload logs and failure images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-${{ matrix.label }}-artifacts
+          path: |
+            flutter-test-${{ matrix.label }}.log
+            flutter-golden-candidates-${{ matrix.label }}.log
+            frontend/test/failures/
+            golden-candidates-${{ matrix.label }}/
+          if-no-files-found: ignore
+
+      - name: Fail job if tests failed
+        if: steps.flutter_test.outcome == 'failure'
+        run: exit 1
