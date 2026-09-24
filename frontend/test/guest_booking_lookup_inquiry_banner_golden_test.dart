@@ -67,6 +67,7 @@ void main() {
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(375, 812));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
       MaterialApp(

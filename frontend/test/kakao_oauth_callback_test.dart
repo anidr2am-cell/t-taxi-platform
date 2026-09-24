@@ -18,6 +18,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/booking_complete_test_helpers.dart';
 import 'support/booking_location_test_data.dart';
+import 'support/oauth_callback_test_user.dart';
+import 'support/oauth_callback_test_user.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -111,15 +113,11 @@ void main() {
               'accessToken': 'access-token',
               'refreshToken': 'refresh-token',
               'expiresIn': 3600,
-              'user': {
-                'id': 42,
-                'email': 'kakao@example.com',
-                'role': 'CUSTOMER',
-                'name': 'Minji',
-                'phone': null,
-                'locale': 'ko',
-                'isActive': true,
-              },
+              'user': oauthCallbackTestUserWithPhone(
+                id: 42,
+                email: 'kakao@example.com',
+                name: 'Minji',
+              ),
             },
           }),
           200,
@@ -133,6 +131,7 @@ void main() {
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         home: KakaoOAuthCallbackPage(
           uri: Uri.parse(
             'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -173,15 +172,11 @@ void main() {
               'accessToken': 'access-token',
               'refreshToken': 'refresh-token',
               'expiresIn': 3600,
-              'user': {
-                'id': 42,
-                'email': 'kakao@example.com',
-                'role': 'CUSTOMER',
-                'name': 'Minji',
-                'phone': null,
-                'locale': 'ko',
-                'isActive': true,
-              },
+              'user': oauthCallbackTestUserWithPhone(
+                id: 42,
+                email: 'kakao@example.com',
+                name: 'Minji',
+              ),
             },
           }),
           200,
@@ -195,6 +190,7 @@ void main() {
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         callbackPage: KakaoOAuthCallbackPage(
           uri: Uri.parse(
             'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -233,15 +229,11 @@ void main() {
               'accessToken': 'access-token',
               'refreshToken': 'refresh-token',
               'expiresIn': 3600,
-              'user': {
-                'id': 42,
-                'email': 'kakao@example.com',
-                'role': 'CUSTOMER',
-                'name': 'Minji',
-                'phone': null,
-                'locale': 'ko',
-                'isActive': true,
-              },
+              'user': oauthCallbackTestUserWithPhone(
+                id: 42,
+                email: 'kakao@example.com',
+                name: 'Minji',
+              ),
             },
           }),
           200,
@@ -256,6 +248,7 @@ void main() {
           authController: authController,
           locale: const Locale('ko'),
           includeAppLocalizations: true,
+          linkAppNavigatorForOAuth: true,
           home: KakaoOAuthCallbackPage(
             uri: Uri.parse(
               'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -320,6 +313,7 @@ void main() {
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         home: KakaoOAuthCallbackPage(
           uri: Uri.parse(
             'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -370,6 +364,7 @@ void main() {
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         home: KakaoOAuthCallbackPage(
           uri: Uri.parse('https://trider.taxi/auth/kakao/callback'),
           guardStorage: guardStorage,
@@ -413,15 +408,11 @@ void main() {
               'accessToken': 'access-token',
               'refreshToken': 'refresh-token',
               'expiresIn': 3600,
-              'user': {
-                'id': 42,
-                'email': 'kakao@example.com',
-                'role': 'CUSTOMER',
-                'name': 'Minji',
-                'phone': null,
-                'locale': 'ko',
-                'isActive': true,
-              },
+              'user': oauthCallbackTestUserWithPhone(
+                id: 42,
+                email: 'kakao@example.com',
+                name: 'Minji',
+              ),
             },
           }),
           200,
@@ -434,6 +425,7 @@ void main() {
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         home: KakaoOAuthCallbackPage(
           uri: Uri.parse(
             'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -475,15 +467,11 @@ void main() {
                 'accessToken': 'access-token',
                 'refreshToken': 'refresh-token',
                 'expiresIn': 3600,
-                'user': {
-                  'id': 42,
-                  'email': 'kakao@example.com',
-                  'role': 'CUSTOMER',
-                  'name': 'Minji',
-                  'phone': null,
-                  'locale': 'ko',
-                  'isActive': true,
-                },
+                'user': oauthCallbackTestUserWithPhone(
+                  id: 42,
+                  email: 'kakao@example.com',
+                  name: 'Minji',
+                ),
               },
             }),
             200,
@@ -502,6 +490,7 @@ void main() {
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         home: KakaoOAuthCallbackPage(
           uri: Uri.parse(
             'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -538,15 +527,11 @@ void main() {
               'accessToken': 'access-token',
               'refreshToken': 'refresh-token',
               'expiresIn': 3600,
-              'user': {
-                'id': 42,
-                'email': 'kakao@example.com',
-                'role': 'CUSTOMER',
-                'name': 'Minji',
-                'phone': null,
-                'locale': 'ko',
-                'isActive': true,
-              },
+              'user': oauthCallbackTestUserWithPhone(
+                id: 42,
+                email: 'kakao@example.com',
+                name: 'Minji',
+              ),
             },
           }),
           200,
@@ -559,6 +544,7 @@ void main() {
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         home: KakaoOAuthCallbackPage(
           uri: Uri.parse(
             'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -574,6 +560,62 @@ void main() {
     final stored = await guardStorage.load();
     expect(stored?.code, 'mock-kakao-code');
     expect(stored?.outcome, KakaoOAuthCallbackOutcome.success);
+  });
+
+  testWidgets('callback without phone opens profile completion', (tester) async {
+    final guardStorage = MemoryKakaoOAuthCallbackGuardStorage();
+    await SocialLoginReturnStorage().save(
+      SocialLoginReturnContext.fromBookingComplete(
+        result: _result(),
+        serviceLabel: 'Airport Pickup',
+        enableCustomerTools: true,
+        baseUri: Uri.parse('https://trider.taxi/booking'),
+      ),
+    );
+
+    final authController = _buildAuthController(
+      onRequest: (request) async {
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'accessToken': 'access-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+              'user': oauthCallbackTestUser(
+                id: 42,
+                email: 'kakao@example.com',
+                name: 'Minji',
+                phone: null,
+              ),
+            },
+          }),
+          200,
+        );
+      },
+    );
+    await authController.initialize();
+
+    await tester.pumpWidget(
+      wrapBookingCompleteTestApp(
+        authController: authController,
+        locale: const Locale('ko'),
+        includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
+        home: KakaoOAuthCallbackPage(
+          uri: Uri.parse(
+            'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
+          ),
+          guardStorage: guardStorage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(AuthTokenStorage.accessTokenKey), 'access-token');
+    expect(find.text('프로필 완성'), findsOneWidget);
+    expect(find.text('TX202607010001'), findsNothing);
   });
 
   test('default slow loading hint delay is 8 seconds', () {
@@ -601,27 +643,25 @@ void main() {
               'accessToken': 'access-token',
               'refreshToken': 'refresh-token',
               'expiresIn': 3600,
-              'user': {
-                'id': 42,
-                'email': 'kakao@example.com',
-                'role': 'CUSTOMER',
-                'name': 'Minji',
-                'phone': null,
-                'locale': 'ko',
-                'isActive': true,
-              },
+              'user': oauthCallbackTestUserWithPhone(
+                id: 42,
+                email: 'kakao@example.com',
+                name: 'Minji',
+              ),
             },
           }),
           200,
         );
       },
     );
+    await authController.initialize();
 
     await tester.pumpWidget(
       wrapBookingCompleteTestApp(
         authController: authController,
         locale: const Locale('ko'),
         includeAppLocalizations: true,
+        linkAppNavigatorForOAuth: true,
         home: KakaoOAuthCallbackPage(
           uri: Uri.parse(
             'https://trider.taxi/auth/kakao/callback?code=mock-kakao-code',
@@ -646,7 +686,12 @@ void main() {
     expect(find.byKey(const Key('kakao_callback_refresh_button')), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(AuthTokenStorage.accessTokenKey), 'access-token');
+    expect(find.text('Minji님, 연결되었습니다'), findsOneWidget);
   });
 }
 
