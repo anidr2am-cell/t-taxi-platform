@@ -191,7 +191,10 @@ class _FakeAdminApi extends AdminDispatchApiService {
   }
 
   @override
-  Future<List<dynamic>> listDrivers({bool? archived}) async {
+  Future<List<dynamic>> listDrivers({
+    bool? archived,
+    String? bookingNumber,
+  }) async {
     return [
       {
         'driverId': 6,

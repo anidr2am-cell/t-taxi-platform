@@ -1048,7 +1048,11 @@ class _FakeDispatchDriversApi extends AdminDispatchApiService {
   final List<Map<String, dynamic>> drivers;
 
   @override
-  Future<List<dynamic>> listDrivers({bool? archived}) async => drivers;
+  Future<List<dynamic>> listDrivers({
+    bool? archived,
+    String? bookingNumber,
+  }) async =>
+      drivers;
 }
 
 class _FakeAdminLocationApi extends DriverLocationApiService {
