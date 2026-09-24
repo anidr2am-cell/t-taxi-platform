@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const vehicleTypeCodeValues = ['SEDAN', 'SUV', 'VIP_SUV', 'VAN', 'VIP_VAN', 'LUXURY'];
+const vehicleTypeCodeValues = ['SEDAN', 'SUV', 'VIP_SUV', 'VAN', 'LUXURY'];
 
 const updateDriverProfileSchema = Joi.object({
   name: Joi.string().trim().min(1).max(100),
@@ -10,7 +10,6 @@ const updateDriverProfileSchema = Joi.object({
     'SUV',
     'VIP_SUV',
     'VAN',
-    'VIP_VAN',
     'LUXURY',
   ),
   vehicleModelName: Joi.string().trim().max(100).allow('', null),

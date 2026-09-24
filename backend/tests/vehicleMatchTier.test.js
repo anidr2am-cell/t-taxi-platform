@@ -75,6 +75,20 @@ test('VIP_VAN and LUXURY stay exact-match-only', () => {
   assert.deepEqual(visibleCodes(['LUXURY']), ['LUXURY']);
 });
 
+test('VIP_VAN to VAN migration: driver gains VAN open-call compatibility', () => {
+  assert.equal(
+    isBookingCompatibleWithDriverVehicles(['VIP_VAN'], 'VAN'),
+    false,
+    'before migration VIP_VAN drivers do not see VAN bookings',
+  );
+  assert.equal(
+    isBookingCompatibleWithDriverVehicles(['VAN'], 'VAN'),
+    true,
+    'after migration to VAN driver sees VAN bookings',
+  );
+  assert.equal(isExactVehicleMatch(['VAN'], 'VAN'), true);
+});
+
 test('isVehicleCompatibleWithBooking allows VAN on SEDAN and blocks SEDAN on SUV', () => {
   const {
     isVehicleCompatibleWithBooking,

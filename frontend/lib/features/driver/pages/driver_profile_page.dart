@@ -53,7 +53,6 @@ class _DriverProfilePageState extends State<DriverProfilePage> {
     'SUV',
     'VIP_SUV',
     'VAN',
-    'VIP_VAN',
     'LUXURY',
   ];
 

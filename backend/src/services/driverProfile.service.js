@@ -3,6 +3,7 @@ const path = require('path');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const { isDriverRegistrationVehicleType } = require('../utils/driverRegistrationVehicleTypes');
 const { uploadDir } = require('../config/multer');
 const { assertImageUploadSignature } = require('../utils/fileSignatureValidation.util');
 
@@ -156,7 +157,7 @@ class DriverProfileService {
     if (input.vehicleTypeCode !== undefined) {
       const code = String(input.vehicleTypeCode).trim().toUpperCase();
       const vehicleType = await this.vehicleRepository.findTypeByCode(code);
-      if (!vehicleType) {
+      if (!vehicleType || !isDriverRegistrationVehicleType(vehicleType.code)) {
         this.validation('Invalid vehicle type', 'vehicleTypeCode');
       }
       vehicleTypeId = vehicleType.id;

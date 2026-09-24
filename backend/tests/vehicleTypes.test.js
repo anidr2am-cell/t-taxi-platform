@@ -102,6 +102,34 @@ describe('VehicleService', () => {
     ]);
   });
 
+  test('listTypes excludes VIP_VAN from driver registration choices', async () => {
+    const repository = {
+      async findPublicTypesOrdered() {
+        return [
+          {
+            id: 5,
+            code: 'VIP_VAN',
+            name: 'VIP Van',
+            max_passengers: 6,
+            max_luggage: 6,
+            is_active: 1,
+          },
+          {
+            id: 4,
+            code: 'VAN',
+            name: 'Van',
+            max_passengers: 6,
+            max_luggage: 6,
+            is_active: 1,
+          },
+        ];
+      },
+    };
+
+    const result = await new VehicleService(repository).listTypes();
+    assert.deepEqual(result.map((row) => row.code), ['VAN']);
+  });
+
   test('repository query returns only active non-deleted public types ordered by id', async () => {
     let sql = '';
     const repository = container.get('vehicleRepository');
