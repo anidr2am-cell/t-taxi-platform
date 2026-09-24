@@ -33,7 +33,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     'SUV',
     'VIP_SUV',
     'VAN',
-    'VIP_VAN',
     'LUXURY',
   ];
 

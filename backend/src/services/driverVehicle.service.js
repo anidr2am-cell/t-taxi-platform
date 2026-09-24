@@ -1,4 +1,5 @@
 const path = require('path');
+const { isDriverRegistrationVehicleType } = require('../utils/driverRegistrationVehicleTypes');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
@@ -295,7 +296,7 @@ class DriverVehicleService {
     await this.validateRequiredFiles(files);
 
     const vehicleType = await this.vehicleRepository.findTypeById(vehicleTypeId);
-    if (!vehicleType) {
+    if (!vehicleType || !isDriverRegistrationVehicleType(vehicleType.code)) {
       this.validation('Vehicle type is not supported', 'vehicleTypeId');
     }
 

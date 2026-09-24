@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
+const { isDriverRegistrationVehicleType } = require('../utils/driverRegistrationVehicleTypes');
 const { generateSecureToken, hashToken } = require('../utils/tokenHash.util');
 const { uploadDir } = require('../config/multer');
 const { assertDocumentUploadSignature } = require('../utils/fileSignatureValidation.util');
@@ -267,6 +268,14 @@ class DriverApplicationService {
       ? await this.repository.findVehicleTypeById(conn, Number(input.vehicleTypeCode.slice(1)))
       : await this.repository.findVehicleTypeByCode(conn, input.vehicleTypeCode);
     if (!vehicleType) {
+      throw new AppError('Vehicle type is not supported', {
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
+        errors: [{ field: 'vehicleTypeCode', message: 'Vehicle type is not supported' }],
+      });
+    }
+
+    if (!isDriverRegistrationVehicleType(vehicleType.code)) {
       throw new AppError('Vehicle type is not supported', {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
