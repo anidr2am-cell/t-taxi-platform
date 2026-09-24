@@ -175,9 +175,14 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   Future<void> _openManualCallEdit() async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => AdminManualBookingCreatePage(
-          dispatchApi: widget.api,
-          editBookingNumber: widget.bookingNumber,
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(context.l10n.t('admin_manual_booking_edit_title')),
+          ),
+          body: AdminManualBookingCreatePage(
+            dispatchApi: widget.api,
+            editBookingNumber: widget.bookingNumber,
+          ),
         ),
       ),
     );
