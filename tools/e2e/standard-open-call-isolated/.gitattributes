@@ -1,0 +1,2 @@
+# Isolated QA harness: staging runs bash on Linux — force LF in git (not CRLF).
+*.sh text eol=lf
