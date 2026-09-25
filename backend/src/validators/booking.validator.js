@@ -12,6 +12,7 @@ const {
   normalizeFlightNumber,
 } = require('../utils/flightNumber.util');
 const { marketingAttributionSchema } = require('../utils/marketingAttribution.util');
+const { stripTransitionalMessengerPlaceholders } = require('../utils/customerMessengerFields');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 const nameSignTextField = Joi.string().trim().min(1).max(100);
@@ -152,7 +153,7 @@ const createBookingSchema = Joi.object({
     countryCode: optionalCountryField,
     messengerType: Joi.string().trim().min(1).max(30).optional(),
     messengerId: Joi.string().trim().min(1).max(100).optional(),
-  }).required(),
+  }).required().custom((customer) => stripTransitionalMessengerPlaceholders(customer)),
   additionalRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   specialRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   marketingAttribution: marketingAttributionSchema,

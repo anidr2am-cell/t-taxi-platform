@@ -1,4 +1,5 @@
 const { normalizeMarketingAttribution } = require('../utils/marketingAttribution.util');
+const { pickPersistableMessengerMetadata } = require('../utils/customerMessengerFields');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
@@ -1068,11 +1069,12 @@ class BookingService {
         : this.addDays(now, 30);
 
       const metadata = {};
-      if (input.customer?.messengerType) {
-        metadata.messengerType = input.customer.messengerType;
+      const messengerMetadata = pickPersistableMessengerMetadata(input.customer);
+      if (messengerMetadata.messengerType) {
+        metadata.messengerType = messengerMetadata.messengerType;
       }
-      if (input.customer?.messengerId) {
-        metadata.messengerId = input.customer.messengerId;
+      if (messengerMetadata.messengerId) {
+        metadata.messengerId = messengerMetadata.messengerId;
       }
 
       const origin = input.origin ?? {};
