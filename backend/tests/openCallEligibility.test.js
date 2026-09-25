@@ -13,6 +13,8 @@ const DriverRepository = require('../src/repositories/driver.repository');
 const BookingRepository = require('../src/repositories/booking.repository');
 const {
   PICKUP_CONFLICT_MIN_GAP_MINUTES,
+  PICKUP_CONFLICT_MIN_GAP_SECONDS,
+  PICKUP_CONFLICT_MIN_GAP_MS,
   assertNoPickupTimeConflict,
 } = require('../src/policies/driverBookingConflictPolicy');
 
@@ -55,12 +57,12 @@ test('listEligibleForOpenBooking uses 60-minute pickup conflict gap from policy'
     excludeReleasedBookingId: 173,
   });
 
-  assert.match(capturedSql, /TIMESTAMPDIFF\(MINUTE, b\.scheduled_pickup_at, \?\)/);
+  assert.match(capturedSql, /TIMESTAMPDIFF\(SECOND, b\.scheduled_pickup_at, \?\)/);
   assert.match(capturedSql, /<= \?/);
   assert.equal(capturedParams[0], 3);
   assert.equal(capturedParams[1], '2026-07-31 21:10:00');
   assert.equal(capturedParams[2], '2026-07-31 21:10:00');
-  assert.equal(capturedParams[3], PICKUP_CONFLICT_MIN_GAP_MINUTES);
+  assert.equal(capturedParams[3], PICKUP_CONFLICT_MIN_GAP_SECONDS);
   assert.equal(capturedParams[4], 173);
   assert.equal(capturedParams[5], 173);
 });
@@ -81,10 +83,25 @@ test('findOpenDriverCallsForDriver compares each open call pickup against active
 
   assert.match(
     capturedSql,
-    /TIMESTAMPDIFF\(MINUTE, own_b\.scheduled_pickup_at, b\.scheduled_pickup_at\)/,
+    /TIMESTAMPDIFF\(SECOND, own_b\.scheduled_pickup_at, b\.scheduled_pickup_at\)/,
   );
   assert.equal(capturedParams[0], 4);
-  assert.equal(capturedParams[1], PICKUP_CONFLICT_MIN_GAP_MINUTES);
+  assert.equal(capturedParams[1], PICKUP_CONFLICT_MIN_GAP_SECONDS);
+});
+
+test('pickup conflict policy uses millisecond gap aligned to 3600 seconds', () => {
+  const anchor = '2028-01-01T10:00:00+07:00';
+  const at3599 = new Date(new Date(anchor).getTime() + 3599 * 1000).toISOString();
+  const at3601 = new Date(new Date(anchor).getTime() + 3601 * 1000).toISOString();
+  assert.throws(
+    () => assertNoPickupTimeConflict([{ id: 1, scheduled_pickup_at: anchor }], at3599),
+  );
+  assert.doesNotThrow(
+    () => assertNoPickupTimeConflict([{ id: 1, scheduled_pickup_at: anchor }], at3601),
+  );
+  assert.equal(PICKUP_CONFLICT_MIN_GAP_MS, 3600 * 1000);
+  assert.equal(PICKUP_CONFLICT_MIN_GAP_SECONDS, 3600);
+  assert.equal(PICKUP_CONFLICT_MIN_GAP_MINUTES, 60);
 });
 
 test('driver_id=2 scenario: 10-minute gap remains excluded', () => {
@@ -130,5 +147,5 @@ test('listEligibleForOpenBooking SQL keeps pickup conflict filter on active assi
     listBody,
     /'DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP', 'SETTLEMENT_PENDING'/,
   );
-  assert.match(listBody, /TIMESTAMPDIFF\(MINUTE, b\.scheduled_pickup_at, \?\)/);
+  assert.match(listBody, /TIMESTAMPDIFF\(SECOND, b\.scheduled_pickup_at, \?\)/);
 });

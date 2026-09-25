@@ -1,5 +1,5 @@
 const database = require('../config/database');
-const { PICKUP_CONFLICT_MIN_GAP_MINUTES } = require('../policies/driverBookingConflictPolicy');
+const { PICKUP_CONFLICT_MIN_GAP_SECONDS } = require('../policies/driverBookingConflictPolicy');
 const {
   isContactConnectionRequired,
 } = require('../policies/bookingDispatchEligibility.policy');
@@ -615,6 +615,21 @@ class BookingRepository {
       `,
       [bookingId, tokenHash, expiresAt],
     );
+  }
+
+  async findBookingMetadata(bookingId, conn = null) {
+    const executor = conn ?? this.pool;
+    const [rows] = await executor.query(
+      `
+        SELECT metadata
+        FROM bookings
+        WHERE id = ?
+          AND deleted_at IS NULL
+        LIMIT 1
+      `,
+      [bookingId],
+    );
+    return rows[0]?.metadata ?? null;
   }
 
   async findById(bookingId, conn = null) {
@@ -1465,12 +1480,12 @@ class BookingRepository {
               AND (
                 own_b.scheduled_pickup_at IS NULL
                 OR b.scheduled_pickup_at IS NULL
-                OR ABS(TIMESTAMPDIFF(MINUTE, own_b.scheduled_pickup_at, b.scheduled_pickup_at)) <= ?
+                OR ABS(TIMESTAMPDIFF(SECOND, own_b.scheduled_pickup_at, b.scheduled_pickup_at)) <= ?
               )
           )
         ORDER BY b.created_at DESC, b.scheduled_pickup_at ASC, b.booking_number ASC
       `,
-      [driverUserId, PICKUP_CONFLICT_MIN_GAP_MINUTES],
+      [driverUserId, PICKUP_CONFLICT_MIN_GAP_SECONDS],
     );
     return rows;
   }

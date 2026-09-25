@@ -64,6 +64,9 @@ test('dispatchAfterContactVerified marks metadata and skips duplicate dispatch',
       metadataUpdates.push({ bookingId, metadata: fields.metadata });
       bookingRow.metadata = JSON.stringify(fields.metadata);
     },
+    async findBookingMetadata(id, _conn) {
+      return id === bookingRow.id ? bookingRow.metadata : null;
+    },
   };
 
   const service = new BookingService(
@@ -194,6 +197,9 @@ test('dispatchAfterContactVerified uses urgent path for urgent bookings', async 
       metadataUpdates.push({ bookingId, metadata: fields.metadata });
       bookingRow.metadata = JSON.stringify(fields.metadata);
     },
+    async findBookingMetadata(id, _conn) {
+      return id === bookingRow.id ? bookingRow.metadata : null;
+    },
   };
 
   const service = new BookingService(
@@ -286,6 +292,9 @@ test('dispatchAfterContactVerified passes SUV vehicle_type_id into eligibility l
     },
     async updateCommissionFields(_conn, bookingId, fields) {
       bookingRow.metadata = JSON.stringify(fields.metadata);
+    },
+    async findBookingMetadata(id, _conn) {
+      return id === bookingRow.id ? bookingRow.metadata : null;
     },
   };
 

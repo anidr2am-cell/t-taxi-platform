@@ -403,16 +403,26 @@ class BookingService {
     persistedNotifications,
     durableStateCommitted,
   }) {
-    if (isUrgent) {
-      emitDriverUrgentCallNew(urgentPayload);
-    } else {
-      for (const target of openCallTargets) {
-        emitDriverCallAvailable(target.userId, openCallPayload);
+    if (!durableStateCommitted) {
+      if (isUrgent) {
+        emitDriverUrgentCallNew(urgentPayload);
+      } else {
+        for (const target of openCallTargets) {
+          emitDriverCallAvailable(target.userId, openCallPayload);
+        }
       }
     }
 
     if (durableStateCommitted) {
-      await this.deliverPersistedContactNotifications(persistedNotifications);
+      if (persistedNotifications.length > 0) {
+        await this.deliverPersistedContactNotifications(persistedNotifications);
+      } else {
+        await this.redeliverContactDispatchNotifications({
+          drivers: eligibleDrivers,
+          bookingId,
+          isUrgent,
+        });
+      }
     } else {
       await this.redeliverContactDispatchNotifications({
         drivers: eligibleDrivers,
@@ -854,11 +864,14 @@ class BookingService {
         const deliveryConn = await this.pool.getConnection();
         try {
           await deliveryConn.beginTransaction();
-          const refreshedBooking = await this.bookingRepository.findById(booking.id, deliveryConn);
+          const persistedMetadata = await this.bookingRepository.findBookingMetadata(
+            booking.id,
+            deliveryConn,
+          );
           await this.markContactDispatchDelivered(
             deliveryConn,
             booking.id,
-            refreshedBooking?.metadata ?? fullBooking.metadata,
+            persistedMetadata ?? fullBooking.metadata,
           );
           await deliveryConn.commit();
         } catch (deliveryMarkerErr) {
