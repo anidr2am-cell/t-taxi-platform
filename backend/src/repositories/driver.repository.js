@@ -1,6 +1,9 @@
 const database = require('../config/database');
 const SCORING = require('../constants/driverAssignmentScoring');
-const { PICKUP_CONFLICT_MIN_GAP_MINUTES } = require('../policies/driverBookingConflictPolicy');
+const {
+  PICKUP_CONFLICT_MIN_GAP_MINUTES,
+  PICKUP_CONFLICT_MIN_GAP_SECONDS,
+} = require('../policies/driverBookingConflictPolicy');
 const { compatibleDriverVehicleIdSubquerySql } = require('../utils/vehicleMatchTier');
 
 class DriverRepository {
@@ -422,7 +425,7 @@ class DriverRepository {
               AND (
                 ? IS NULL
                 OR b.scheduled_pickup_at IS NULL
-                OR ABS(TIMESTAMPDIFF(MINUTE, b.scheduled_pickup_at, ?)) <= ?
+                OR ABS(TIMESTAMPDIFF(SECOND, b.scheduled_pickup_at, ?)) <= ?
               )
           )
           AND (
@@ -443,7 +446,7 @@ class DriverRepository {
         vehicleTypeId,
         scheduledPickupAt,
         scheduledPickupAt,
-        PICKUP_CONFLICT_MIN_GAP_MINUTES,
+        PICKUP_CONFLICT_MIN_GAP_SECONDS,
         excludeReleasedBookingId,
         excludeReleasedBookingId,
       ],

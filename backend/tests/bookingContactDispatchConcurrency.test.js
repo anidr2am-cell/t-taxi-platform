@@ -61,6 +61,9 @@ function createDispatchHarness(overrides = {}) {
       metadataUpdates.push({ bookingId, metadata: fields.metadata });
       bookingRow.metadata = JSON.stringify(fields.metadata);
     },
+    async findBookingMetadata(id, _conn) {
+      return id === bookingRow.id ? bookingRow.metadata : null;
+    },
   };
 
   const service = new BookingService(

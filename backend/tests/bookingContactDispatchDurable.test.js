@@ -106,6 +106,9 @@ function createDispatchService(overrides = {}) {
       metadataUpdates.push({ bookingId, metadata: fields.metadata });
       bookingRow.metadata = JSON.stringify(fields.metadata);
     },
+    async findBookingMetadata(id, _conn) {
+      return id === bookingRow.id ? bookingRow.metadata : null;
+    },
   };
 
   const { notificationService, inserts } = createNotificationHarness();
@@ -207,6 +210,20 @@ test('contact dispatch retry does not create duplicate durable notifications', a
   assert.equal(harness.inserts.length, 2);
 });
 
+test('contact dispatch delivery retry uses durable postCommit without new notification persist', async () => {
+  const harness = createDispatchService();
+  await harness.service.dispatchAfterContactVerified(harness.bookingRow);
+  assert.equal(harness.inserts.length, 2);
+  assert.equal(harness.postCommitCalls[0].durableStateCommitted, false);
+
+  harness.bookingRow.metadata = JSON.stringify({ contactDispatchCompleted: true });
+  const retry = await harness.service.dispatchAfterContactVerified(harness.bookingRow);
+  assert.equal(retry, true);
+  assert.equal(harness.inserts.length, 2);
+  assert.equal(harness.postCommitCalls.length, 2);
+  assert.equal(harness.postCommitCalls[1].durableStateCommitted, true);
+});
+
 test('contact dispatch retries delivery when durable marker exists but delivery marker is absent', async () => {
   const harness = createDispatchService({
     metadata: { contactDispatchCompleted: true },
@@ -239,6 +256,27 @@ test('contact dispatch keeps durable marker absent when notification persist fai
 
   assert.equal(harness.metadataUpdates.length, 0);
   assert.equal(harness.inserts.length, 0);
+});
+
+test('contact dispatch delivered marker preserves completed and unrelated metadata from DB read', async () => {
+  const harness = createDispatchService({
+    metadata: { regionTag: 'bkk-north', note: 'keep-unrelated' },
+  });
+  harness.bookingRow.metadata = JSON.stringify({
+    regionTag: 'bkk-north',
+    note: 'keep-unrelated',
+    contactDispatchCompleted: true,
+  });
+
+  const dispatched = await harness.service.dispatchAfterContactVerified(harness.bookingRow);
+
+  assert.equal(dispatched, true);
+  assert.equal(harness.inserts.length, 0);
+  const deliveredUpdate = harness.metadataUpdates.at(-1);
+  assert.equal(deliveredUpdate.metadata.contactDispatchCompleted, true);
+  assert.equal(deliveredUpdate.metadata.contactDispatchDelivered, true);
+  assert.equal(deliveredUpdate.metadata.regionTag, 'bkk-north');
+  assert.equal(deliveredUpdate.metadata.note, 'keep-unrelated');
 });
 
 test('contact dispatch keeps durable marker when post-commit delivery fails', async () => {

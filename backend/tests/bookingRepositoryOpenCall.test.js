@@ -81,5 +81,5 @@ test('findOpenDriverCallsForDriver shares the same name_sign_requested EXISTS se
   assertNameSignRequestedUsesExistsSubquery(capturedSql);
   assertNameSignAmountUsesSumSubquery(capturedSql);
   assert.match(capturedSql, /d\.user_id = \?/);
-  assert.match(capturedSql, /TIMESTAMPDIFF\(MINUTE, own_b\.scheduled_pickup_at, b\.scheduled_pickup_at\)/);
+  assert.match(capturedSql, /TIMESTAMPDIFF\(SECOND, own_b\.scheduled_pickup_at, b\.scheduled_pickup_at\)/);
 });
