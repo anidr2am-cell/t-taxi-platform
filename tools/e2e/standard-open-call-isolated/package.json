@@ -1,0 +1,5 @@
+{
+  "name": "qa-standard-open-call-isolated",
+  "private": true,
+  "description": "createRequire anchor for local URGENT harness checks only"
+}
