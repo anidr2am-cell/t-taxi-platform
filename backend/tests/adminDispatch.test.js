@@ -810,7 +810,7 @@ test("reassign dispatches outbox only after commit", async () => {
   assert.equal(dispatched, 1);
 });
 
-test("booking detail never includes qr hashes", async () => {
+test("booking detail excludes secrets and serializes Bangkok flight arrival times", async () => {
   const bookingRepo = {
     async findAdminBookingDetail() {
       return {
@@ -846,8 +846,8 @@ test("booking detail never includes qr hashes", async () => {
         golf_bags: 0,
         special_items: null,
         flight_number: "TG409",
-        flight_scheduled_arrival_at: null,
-        flight_estimated_arrival_at: null,
+        flight_scheduled_arrival_at: new Date("2026-07-01T09:00:00.000Z"),
+        flight_estimated_arrival_at: "2026-07-01 09:15:00",
         delay_status: null,
         delay_minutes: null,
         airport_code_custom: "BKK",
@@ -878,6 +878,8 @@ test("booking detail never includes qr hashes", async () => {
   const detail = await service.getBookingDetail("TX202607010001");
   assert.equal(detail.bookingNumber, "TX202607010001");
   assert.equal(detail.scheduledPickupAt, "2026-07-01T02:30:00.000Z");
+  assert.equal(detail.flight.scheduledArrivalAt, "2026-07-01T02:00:00.000Z");
+  assert.equal(detail.flight.estimatedArrivalAt, "2026-07-01T02:15:00.000Z");
   assert.ok(!("boardingQrTokenHash" in detail));
   assert.ok(!("guestAccessToken" in detail));
 });
