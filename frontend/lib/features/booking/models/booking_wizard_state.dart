@@ -1,6 +1,7 @@
 import 'location_option.dart';
 import 'pricing_result.dart';
 import 'service_type_option.dart';
+import '../utils/transitional_messenger_placeholders.dart';
 import 'vehicle_recommendation.dart';
 
 class BookingWizardState {
@@ -211,8 +212,12 @@ class BookingWizardState {
       customerEmail: json['customerEmail'] as String? ?? '',
       customerPhone: json['customerPhone'] as String? ?? '',
       customerCountryCode: json['customerCountryCode'] as String? ?? '',
-      messengerType: json['messengerType'] as String? ?? '',
-      messengerId: json['messengerId'] as String? ?? '',
+      messengerType: TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
+        json['messengerType'] as String?,
+      ),
+      messengerId: TransitionalMessengerPlaceholders.sanitizeMessengerIdField(
+        json['messengerId'] as String?,
+      ),
       additionalRequests: json['additionalRequests'] as String? ?? '',
       flightNumber: json['flightNumber'] as String? ?? '',
     );

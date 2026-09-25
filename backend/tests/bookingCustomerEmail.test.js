@@ -118,6 +118,32 @@ test('booking validator accepts null customer email', () => {
   assert.equal(value.customer.email, null);
 });
 
+test('booking validator strips transitional messenger placeholders from customer', () => {
+  const withPlaceholders = createBookingSchema.validate(validPayload({
+    customer: {
+      name: 'Kim',
+      phone: '+66123456789',
+      messengerType: 'PENDING',
+      messengerId: 'POST_CREATE',
+    },
+  }));
+  assert.equal(withPlaceholders.error, undefined);
+  assert.equal(withPlaceholders.value.customer.messengerType, undefined);
+  assert.equal(withPlaceholders.value.customer.messengerId, undefined);
+
+  const padded = createBookingSchema.validate(validPayload({
+    customer: {
+      name: 'Kim',
+      phone: '+66123456789',
+      messengerType: ' PENDING ',
+      messengerId: ' POST_CREATE ',
+    },
+  }));
+  assert.equal(padded.error, undefined);
+  assert.equal(padded.value.customer.messengerType, undefined);
+  assert.equal(padded.value.customer.messengerId, undefined);
+});
+
 test('booking validator accepts optional customer messengerType and messengerId', () => {
   const withoutMessenger = createBookingSchema.validate(validPayload({
     customer: {

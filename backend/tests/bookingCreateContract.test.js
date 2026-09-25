@@ -259,6 +259,25 @@ test('createBooking stores customer contact and route fields on booking row', as
   assert.equal(metadata.destinationLocation.name, 'Pattaya Hotel');
 });
 
+test('createBooking omits metadata messenger keys when customer sends transitional placeholders', async () => {
+  const { service, calls } = createHarness();
+  await service.createBooking({
+    ...CREATE_INPUT,
+    customer: {
+      name: CREATE_INPUT.customer.name,
+      phone: CREATE_INPUT.customer.phone,
+      messengerType: 'PENDING',
+      messengerId: 'POST_CREATE',
+    },
+  }, null);
+
+  const metadata = typeof calls.booking.metadata === 'string'
+    ? JSON.parse(calls.booking.metadata)
+    : calls.booking.metadata;
+  assert.equal(metadata.messengerType, undefined);
+  assert.equal(metadata.messengerId, undefined);
+});
+
 test('createBooking omits metadata messenger keys when customer messenger fields are omitted', async () => {
   const { service, calls } = createHarness();
   await service.createBooking({

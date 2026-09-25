@@ -15,6 +15,7 @@ import '../services/booking_api_service.dart';
 import '../services/booking_state_storage.dart';
 import '../services/places_api_service.dart';
 import '../services/recent_locations_storage.dart';
+import '../utils/transitional_messenger_placeholders.dart';
 
 class BookingWizardController extends ChangeNotifier {
   BookingWizardController({
@@ -675,6 +676,19 @@ class BookingWizardController extends ChangeNotifier {
     return null;
   }
 
+  Map<String, String> _optionalPersistableCustomerMessengerFields() {
+    final messengerType = TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
+      _state.messengerType,
+    );
+    final messengerId = TransitionalMessengerPlaceholders.sanitizeMessengerIdField(
+      _state.messengerId,
+    );
+    return {
+      if (messengerType.isNotEmpty) 'messengerType': messengerType,
+      if (messengerId.isNotEmpty) 'messengerId': messengerId,
+    };
+  }
+
   Map<String, dynamic> buildCreatePayload({String bookingMode = 'STANDARD'}) {
     final locations = _pricingLocationParams();
     final airportIata = _airportIataForTransfer();
@@ -728,6 +742,7 @@ class BookingWizardController extends ChangeNotifier {
       'customer': {
         'name': _state.customerName.trim(),
         'phone': _state.customerPhone.trim(),
+        ..._optionalPersistableCustomerMessengerFields(),
       },
       if (_state.additionalRequests.trim().isNotEmpty)
         'additionalRequests': _state.additionalRequests.trim(),
