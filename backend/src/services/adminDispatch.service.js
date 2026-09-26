@@ -21,6 +21,12 @@ const {
   assertBookingDispatchEligible,
 } = require("../policies/bookingDispatchEligibility.policy");
 const {
+  deriveContactDispatch,
+  canVerifyContact,
+  contactDispatchInputFromBooking,
+  isUrgentBooking,
+} = require("../policies/adminContactDispatch.policy");
+const {
   assertNoPickupTimeConflict,
 } = require("../policies/driverBookingConflictPolicy");
 
@@ -71,6 +77,7 @@ class AdminDispatchService {
     bookingAssignmentReopenService = null,
     driverCallService = null,
     bookingNoShowPenaltyRepository = null,
+    contactConnectionRepository = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -85,6 +92,7 @@ class AdminDispatchService {
     this.bookingAssignmentReopenService = bookingAssignmentReopenService;
     this.driverCallService = driverCallService;
     this.bookingNoShowPenaltyRepository = bookingNoShowPenaltyRepository;
+    this.contactConnectionRepository = contactConnectionRepository;
     this.adminOperationsService = new AdminOperationsService();
   }
 
@@ -288,7 +296,7 @@ class AdminDispatchService {
     };
   }
 
-  computeAllowedActions(booking, activeAssignment) {
+  computeAllowedActions(booking, activeAssignment, contactDispatch = null) {
     const actions = [];
     const status = booking.status;
     const terminalAssign = TERMINAL_ASSIGN_STATUSES.has(status);
@@ -300,7 +308,25 @@ class AdminDispatchService {
     if (activeAssignment && !terminalReassign) {
       actions.push("REASSIGN_DRIVER");
     }
+    if (canVerifyContact(booking)) {
+      actions.push("VERIFY_CONTACT");
+    }
+    if (contactDispatch?.retryable) {
+      actions.push("RETRY_CONTACT_DISPATCH");
+    }
     return actions;
+  }
+
+  async resolveContactDispatch(row) {
+    let hasConnectionRow = false;
+    if (this.contactConnectionRepository && row?.id) {
+      const connection = await this.contactConnectionRepository.findActiveByBookingId(
+        null,
+        row.id,
+      );
+      hasConnectionRow = Boolean(connection);
+    }
+    return deriveContactDispatch(contactDispatchInputFromBooking(row, { hasConnectionRow }));
   }
 
   parseMetadata(raw) {
@@ -479,6 +505,7 @@ class AdminDispatchService {
 
     const isAdminManual = row.booking_source === "ADMIN_MANUAL";
     const manualManageable = isAdminManual && !TERMINAL_ASSIGN_STATUSES.has(row.status);
+    const contactDispatch = await this.resolveContactDispatch(row);
 
     return {
       bookingNumber: row.booking_number,
@@ -497,6 +524,8 @@ class AdminDispatchService {
       },
       operations,
       primaryCta: operations.primaryCta,
+      isUrgentRequest: isUrgentBooking(row),
+      contactDispatch,
       serviceType: {
         code: row.service_type_code,
         name: row.service_type_name,
@@ -615,7 +644,7 @@ class AdminDispatchService {
       })),
       allowedActions: row.is_archived
         ? []
-        : this.computeAllowedActions(row, activeAssignment),
+        : this.computeAllowedActions(row, activeAssignment, contactDispatch),
       customerReview,
       noShowPenalty: this.mapNoShowPenalty(noShowPenaltyRow),
       devQrTools: this.adminQrReissueService?.buildDevTools(row) ?? {

@@ -2155,6 +2155,7 @@ class BookingRepository {
           b.contact_channel,
           b.contact_requested_at,
           b.contact_verified_at,
+          b.is_urgent_request,
           b.customer_user_id,
           b.booking_source,
           b.name_sign_text,

@@ -1608,6 +1608,37 @@ class AppLocalizations {
       'admin_detail_customer': 'Customer information',
       'admin_contact_status': 'Contact status',
       'admin_contact_channel': 'Contact channel',
+      'admin_contact_requested_at': 'Requested at',
+      'admin_contact_verified_at': 'Verified at',
+      'admin_contact_status_pending': 'Waiting for customer to connect',
+      'admin_contact_status_confirm_requested': 'Customer asked to confirm',
+      'admin_contact_status_verified': 'Connection confirmed',
+      'admin_contact_section': 'Customer contact',
+      'admin_contact_dispatch_section': 'Driver notification',
+      'admin_contact_dispatch_mode_standard': 'Open-call notification',
+      'admin_contact_dispatch_mode_urgent': 'Urgent-call notification',
+      'admin_contact_dispatch_state_not_applicable':
+          'No contact-dispatch record. The open call was attempted when the booking was created.',
+      'admin_contact_dispatch_state_waiting_contact':
+          'Driver notification waits until the contact connection is confirmed.',
+      'admin_contact_dispatch_state_dispatch_pending':
+          'Contact is confirmed, but the first driver notification has not been saved yet.',
+      'admin_contact_dispatch_state_delivery_retry_needed':
+          'Notification is saved. The server still needs to retry delivery.',
+      'admin_contact_dispatch_state_delivery_attempted':
+          'The server finished attempting delivery.',
+      'admin_contact_dispatch_state_not_open':
+          'This booking is no longer open. Contact-dispatch is only a record.',
+      'admin_contact_dispatch_delivery_caveat':
+          'A completed delivery attempt does not guarantee the driver app received the notification.',
+      'admin_contact_dispatch_retry_button': 'Retry driver notification',
+      'admin_contact_dispatch_retry_success': 'Driver notification retry started',
+      'admin_contact_dispatch_error_in_progress':
+          'A driver notification is already in progress. Try again in a moment.',
+      'admin_contact_dispatch_error_already_delivered':
+          'The server already attempted delivery for this booking.',
+      'admin_contact_dispatch_error_not_retryable':
+          'This booking is not eligible for a driver notification retry.',
       'admin_contact_confirm_requested_hint':
           'The customer confirmed they sent the booking number on messenger. Verify the same booking number in your messenger, then confirm the connection.',
       'admin_contact_verify_button': 'Confirm connection',
@@ -3008,6 +3039,37 @@ class AppLocalizations {
       'admin_detail_customer': '고객 정보',
       'admin_contact_status': '연락 상태',
       'admin_contact_channel': '연락 채널',
+      'admin_contact_requested_at': '요청 시각',
+      'admin_contact_verified_at': '승인 시각',
+      'admin_contact_status_pending': '고객 연결 대기',
+      'admin_contact_status_confirm_requested': '고객 확인 요청',
+      'admin_contact_status_verified': '연결 확인됨',
+      'admin_contact_section': '고객 연락',
+      'admin_contact_dispatch_section': '기사 알림',
+      'admin_contact_dispatch_mode_standard': '오픈콜 알림',
+      'admin_contact_dispatch_mode_urgent': '긴급콜 알림',
+      'admin_contact_dispatch_state_not_applicable':
+          '연락 확인 후 배차 기록이 없습니다. 오픈콜은 예약 생성 시 시도되었습니다.',
+      'admin_contact_dispatch_state_waiting_contact':
+          '연락 연결이 확인되기 전에는 기사 알림을 보내지 않습니다.',
+      'admin_contact_dispatch_state_dispatch_pending':
+          '연락은 확인됐지만 첫 기사 알림이 아직 저장되지 않았습니다.',
+      'admin_contact_dispatch_state_delivery_retry_needed':
+          '알림은 저장됐습니다. 서버 전달을 다시 시도해야 합니다.',
+      'admin_contact_dispatch_state_delivery_attempted':
+          '서버가 전달 시도를 마쳤습니다.',
+      'admin_contact_dispatch_state_not_open':
+          '더 이상 오픈 상태가 아닙니다. 기사 알림은 기록만 남아 있습니다.',
+      'admin_contact_dispatch_delivery_caveat':
+          '전달 시도 완료는 기사 앱 수신을 보장하지 않습니다.',
+      'admin_contact_dispatch_retry_button': '기사 알림 재시도',
+      'admin_contact_dispatch_retry_success': '기사 알림 재시도를 시작했습니다',
+      'admin_contact_dispatch_error_in_progress':
+          '기사 알림이 이미 진행 중입니다. 잠시 후 다시 시도해 주세요.',
+      'admin_contact_dispatch_error_already_delivered':
+          '이 예약은 이미 서버가 전달을 시도했습니다.',
+      'admin_contact_dispatch_error_not_retryable':
+          '이 예약은 기사 알림을 재시도할 수 없습니다.',
       'admin_contact_confirm_requested_hint':
           '고객이 메신저로 예약번호를 보냈다고 확인했습니다. 운영 메신저에서 동일 예약번호를 확인한 뒤 연결을 확인해 주세요.',
       'admin_contact_verify_button': '연결 확인',
@@ -3502,6 +3564,43 @@ class AppLocalizations {
       'contact_connect_wechat_body': '扫描二维码或复制 WeChat ID，然后发送预订参考号。',
       'contact_connect_wechat_id_copied': 'WeChat ID 已复制',
       'contact_connect_invalid_link': '联系连接链接无效',
+      'admin_contact_status': '联系状态',
+      'admin_contact_channel': '联系渠道',
+      'admin_contact_requested_at': '请求时间',
+      'admin_contact_verified_at': '确认时间',
+      'admin_contact_status_pending': '等待顾客连接',
+      'admin_contact_status_confirm_requested': '顾客请求确认',
+      'admin_contact_status_verified': '已确认连接',
+      'admin_contact_section': '顾客联系',
+      'admin_contact_dispatch_section': '司机通知',
+      'admin_contact_dispatch_mode_standard': '公开派车通知',
+      'admin_contact_dispatch_mode_urgent': '紧急派车通知',
+      'admin_contact_dispatch_state_not_applicable':
+          '没有联系确认后的派车记录。公开派车已在创建预约时尝试。',
+      'admin_contact_dispatch_state_waiting_contact':
+          '在联系确认之前不会发送司机通知。',
+      'admin_contact_dispatch_state_dispatch_pending':
+          '联系已确认，但首次司机通知尚未保存。',
+      'admin_contact_dispatch_state_delivery_retry_needed':
+          '通知已保存，服务器仍需重试送达。',
+      'admin_contact_dispatch_state_delivery_attempted':
+          '服务器已完成送达尝试。',
+      'admin_contact_dispatch_state_not_open':
+          '此预约已不再开放，联系派车仅作为记录。',
+      'admin_contact_dispatch_delivery_caveat':
+          '送达尝试完成并不保证司机应用已收到通知。',
+      'admin_contact_dispatch_retry_button': '重试司机通知',
+      'admin_contact_dispatch_retry_success': '已开始重试司机通知',
+      'admin_contact_dispatch_error_in_progress':
+          '司机通知正在进行中，请稍后再试。',
+      'admin_contact_dispatch_error_already_delivered':
+          '服务器已对此预约尝试送达。',
+      'admin_contact_dispatch_error_not_retryable':
+          '此预约不符合司机通知重试条件。',
+      'admin_contact_confirm_requested_hint':
+          '顾客已确认在即时通讯中发送了预约号。请核对后确认连接。',
+      'admin_contact_verify_button': '确认连接',
+      'admin_contact_verify_success': '联系连接已确认',
       'additional_requests': '附加要求',
       'country_code_hint': 'TH、US、KR…',
       'country_search_hint': '搜索国家或直接输入',
@@ -4291,6 +4390,43 @@ class AppLocalizations {
           'QR コードをスキャンするか WeChat ID をコピーし、予約参照番号を送信してください。',
       'contact_connect_wechat_id_copied': 'WeChat ID をコピーしました',
       'contact_connect_invalid_link': '連携リンクが無効です',
+      'admin_contact_status': '連絡状態',
+      'admin_contact_channel': '連絡チャネル',
+      'admin_contact_requested_at': 'リクエスト時刻',
+      'admin_contact_verified_at': '承認時刻',
+      'admin_contact_status_pending': '顧客の接続待ち',
+      'admin_contact_status_confirm_requested': '顧客が確認を依頼',
+      'admin_contact_status_verified': '接続確認済み',
+      'admin_contact_section': '顧客連絡',
+      'admin_contact_dispatch_section': 'ドライバー通知',
+      'admin_contact_dispatch_mode_standard': 'オープンコール通知',
+      'admin_contact_dispatch_mode_urgent': '緊急コール通知',
+      'admin_contact_dispatch_state_not_applicable':
+          '連絡確認後の配車記録はありません。オープンコールは予約作成時に試行されました。',
+      'admin_contact_dispatch_state_waiting_contact':
+          '連絡が確認されるまでドライバー通知は送りません。',
+      'admin_contact_dispatch_state_dispatch_pending':
+          '連絡は確認済みですが、最初のドライバー通知はまだ保存されていません。',
+      'admin_contact_dispatch_state_delivery_retry_needed':
+          '通知は保存済みです。サーバーの配信を再試行する必要があります。',
+      'admin_contact_dispatch_state_delivery_attempted':
+          'サーバーは配信の試行を完了しました。',
+      'admin_contact_dispatch_state_not_open':
+          'この予約はオープンではありません。連絡配車は記録のみです。',
+      'admin_contact_dispatch_delivery_caveat':
+          '配信試行の完了は、ドライバーアプリの受信を保証しません。',
+      'admin_contact_dispatch_retry_button': 'ドライバー通知を再試行',
+      'admin_contact_dispatch_retry_success': 'ドライバー通知の再試行を開始しました',
+      'admin_contact_dispatch_error_in_progress':
+          'ドライバー通知はすでに進行中です。しばらくしてから再試行してください。',
+      'admin_contact_dispatch_error_already_delivered':
+          'この予約はすでにサーバーが配信を試行しました。',
+      'admin_contact_dispatch_error_not_retryable':
+          'この予約はドライバー通知を再試行できません。',
+      'admin_contact_confirm_requested_hint':
+          '顧客がメッセンジャーで予約番号を送信したと確認しました。同じ番号を確認してから接続を承認してください。',
+      'admin_contact_verify_button': '接続を確認',
+      'admin_contact_verify_success': '連絡接続を確認しました',
       'additional_requests': '追加リクエスト',
       'country_code_hint': 'TH、US、KR…',
       'country_search_hint': '国を検索または直接入力',
@@ -5136,6 +5272,43 @@ class AppLocalizations {
           'สแกน QR code หรือคัดลอก WeChat ID แล้วส่งหมายเลขอ้างอิงการจอง',
       'contact_connect_wechat_id_copied': 'คัดลอก WeChat ID แล้ว',
       'contact_connect_invalid_link': 'ลิงก์เชื่อมต่อไม่ถูกต้อง',
+      'admin_contact_status': 'สถานะการติดต่อ',
+      'admin_contact_channel': 'ช่องทางติดต่อ',
+      'admin_contact_requested_at': 'เวลาที่ขอ',
+      'admin_contact_verified_at': 'เวลาที่ยืนยัน',
+      'admin_contact_status_pending': 'รอลูกค้าเชื่อมต่อ',
+      'admin_contact_status_confirm_requested': 'ลูกค้าขอให้ยืนยัน',
+      'admin_contact_status_verified': 'ยืนยันการเชื่อมต่อแล้ว',
+      'admin_contact_section': 'การติดต่อลูกค้า',
+      'admin_contact_dispatch_section': 'การแจ้งเตือนคนขับ',
+      'admin_contact_dispatch_mode_standard': 'การแจ้งเตือนคอลเปิด',
+      'admin_contact_dispatch_mode_urgent': 'การแจ้งเตือนคอลเร่งด่วน',
+      'admin_contact_dispatch_state_not_applicable':
+          'ไม่มีบันทึกการจ่ายงานหลังยืนยันการติดต่อ คอลเปิดถูกพยายามเมื่อสร้างการจอง',
+      'admin_contact_dispatch_state_waiting_contact':
+          'จะยังไม่ส่งการแจ้งเตือนคนขับจนกว่าจะยืนยันการติดต่อ',
+      'admin_contact_dispatch_state_dispatch_pending':
+          'ยืนยันการติดต่อแล้ว แต่ยังไม่ได้บันทึกการแจ้งเตือนคนขับครั้งแรก',
+      'admin_contact_dispatch_state_delivery_retry_needed':
+          'บันทึกการแจ้งเตือนแล้ว เซิร์ฟเวอร์ยังต้องลองส่งอีกครั้ง',
+      'admin_contact_dispatch_state_delivery_attempted':
+          'เซิร์ฟเวอร์พยายามส่งแล้ว',
+      'admin_contact_dispatch_state_not_open':
+          'การจองนี้ไม่เปิดแล้ว การจ่ายงานหลังติดต่อเป็นเพียงบันทึก',
+      'admin_contact_dispatch_delivery_caveat':
+          'การพยายามส่งสำเร็จไม่ได้รับประกันว่าแอปคนขับได้รับแจ้งเตือน',
+      'admin_contact_dispatch_retry_button': 'ลองส่งแจ้งเตือนคนขับอีกครั้ง',
+      'admin_contact_dispatch_retry_success': 'เริ่มลองส่งแจ้งเตือนคนขับอีกครั้งแล้ว',
+      'admin_contact_dispatch_error_in_progress':
+          'กำลังส่งแจ้งเตือนคนขับอยู่แล้ว โปรดลองใหม่ในอีกสักครู่',
+      'admin_contact_dispatch_error_already_delivered':
+          'เซิร์ฟเวอร์พยายามส่งสำหรับการจองนี้แล้ว',
+      'admin_contact_dispatch_error_not_retryable':
+          'การจองนี้ไม่สามารถลองส่งแจ้งเตือนคนขับอีกครั้งได้',
+      'admin_contact_confirm_requested_hint':
+          'ลูกค้ายืนยันว่าได้ส่งหมายเลขการจองในเมสเซนเจอร์แล้ว โปรดตรวจสอบแล้วยืนยันการเชื่อมต่อ',
+      'admin_contact_verify_button': 'ยืนยันการเชื่อมต่อ',
+      'admin_contact_verify_success': 'ยืนยันการเชื่อมต่อแล้ว',
       'additional_requests': 'คำขอเพิ่มเติม',
       'country_code_hint': 'TH, US, KR…',
       'country_search_hint': 'ค้นหาประเทศหรือกรอกเอง',

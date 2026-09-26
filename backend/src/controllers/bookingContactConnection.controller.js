@@ -72,10 +72,21 @@ async function adminVerifyContact(req, res, next) {
   }
 }
 
+async function adminRetryContactDispatch(req, res, next) {
+  try {
+    const service = container.get('bookingContactConnectionService');
+    const data = await service.adminRetryDispatch(req.params.bookingNumber);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getContactConnection,
   getContactChannelSettings,
   startContactConnection,
   confirmContactSent,
   adminVerifyContact,
+  adminRetryContactDispatch,
 };

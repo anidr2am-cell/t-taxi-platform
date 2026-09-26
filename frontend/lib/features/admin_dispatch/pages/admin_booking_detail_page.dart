@@ -16,6 +16,7 @@ import '../widgets/recommend_drivers_dialog.dart';
 import '../widgets/unassign_driver_dialog.dart';
 import '../utils/admin_booking_json_values.dart';
 import '../utils/admin_operations_ux.dart';
+import '../utils/admin_contact_dispatch_ux.dart';
 import '../utils/admin_customer_preference_options.dart';
 import 'admin_manual_booking_create_page.dart';
 
@@ -611,6 +612,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
   }
 
   Future<void> _verifyContactConnection(Map<String, dynamic> detail) async {
+    if (_submitting) return;
     setState(() => _submitting = true);
     try {
       await widget.api.verifyContactConnection(widget.bookingNumber);
@@ -625,6 +627,34 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(userFacingError(err))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _retryContactDispatch() async {
+    if (_submitting) return;
+    final l10n = context.l10n;
+    setState(() => _submitting = true);
+    try {
+      await widget.api.retryContactDispatch(widget.bookingNumber);
+      widget.onChanged();
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('admin_contact_dispatch_retry_success'))),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        final code = err is AdminDispatchApiException ? err.errorCode : null;
+        final key = AdminContactDispatchUx.retryErrorLabelKey(code);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(key != null ? l10n.t(key) : userFacingError(err)),
+          ),
         );
       }
     } finally {
@@ -1887,6 +1917,22 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
   Widget _customerSection(AppLocalizations l10n, Map<String, dynamic> detail) {
     final customer = Map<String, dynamic>.from(detail['customer'] as Map);
+    final contactDispatch = detail['contactDispatch'] is Map
+        ? Map<String, dynamic>.from(detail['contactDispatch'] as Map)
+        : const <String, dynamic>{};
+    final actions = _allowedActions();
+    final contactStatus = customer['contactStatus'] as String?;
+    final dispatchState = contactDispatch['state'] as String?;
+    final retryable = contactDispatch['retryable'] == true;
+    final showVerify = AdminContactDispatchUx.showVerifyCta(
+      contactStatus: contactStatus,
+      allowedActions: actions,
+    );
+    final showRetry = AdminContactDispatchUx.showRetryCta(
+      retryable: retryable,
+      allowedActions: actions,
+      state: dispatchState,
+    );
     return AppUi.adminDetailSection(
       context: context,
       title: l10n.t('admin_detail_customer'),
@@ -1900,17 +1946,53 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             label: l10n.t('phone'),
             value: customer['phone'] as String? ?? '',
           ),
-          if (customer['contactStatus'] != null)
-            AppUi.summaryRow(
-              label: l10n.t('admin_contact_status'),
-              value: customer['contactStatus'] as String,
+          AppUi.summaryRow(
+            label: l10n.t('admin_contact_status'),
+            value: l10n.t(
+              AdminContactDispatchUx.contactStatusLabelKey(contactStatus),
             ),
-          if (customer['contactChannel'] != null)
-            AppUi.summaryRow(
-              label: l10n.t('admin_contact_channel'),
-              value: customer['contactChannel'] as String,
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_contact_channel'),
+            value: (customer['contactChannel'] as String?)?.trim().isNotEmpty == true
+                ? customer['contactChannel'] as String
+                : '-',
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_contact_requested_at'),
+            value: _formatBangkokServiceDateTime(
+              customer['contactRequestedAt'] as String?,
             ),
-          if (customer['contactStatus'] == 'CONFIRM_REQUESTED') ...[
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_contact_verified_at'),
+            value: _formatBangkokServiceDateTime(
+              customer['contactVerifiedAt'] as String?,
+            ),
+          ),
+          AppUi.summaryRow(
+            label: l10n.t('admin_contact_dispatch_section'),
+            value:
+                '${l10n.t(AdminContactDispatchUx.dispatchModeLabelKey(
+                  detail['isUrgentRequest'] == true
+                      ? 'URGENT'
+                      : contactDispatch['mode'] as String?,
+                ))} · ${l10n.t(AdminContactDispatchUx.dispatchStateLabelKey(dispatchState))}',
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                l10n.t('admin_contact_dispatch_delivery_caveat'),
+                style: const TextStyle(
+                  height: 1.45,
+                  color: AppTokens.textSecondary,
+                ),
+              ),
+            ),
+          ),
+          if (showVerify) ...[
             const SizedBox(height: 12),
             Text(
               l10n.t('admin_contact_confirm_requested_hint'),
@@ -1918,8 +2000,19 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             ),
             const SizedBox(height: 8),
             FilledButton(
-              onPressed: () => _verifyContactConnection(detail),
+              key: const Key('admin-contact-verify'),
+              onPressed: _submitting
+                  ? null
+                  : () => _verifyContactConnection(detail),
               child: Text(l10n.t('admin_contact_verify_button')),
+            ),
+          ],
+          if (showRetry) ...[
+            const SizedBox(height: 8),
+            FilledButton(
+              key: const Key('admin-contact-dispatch-retry'),
+              onPressed: _submitting ? null : _retryContactDispatch,
+              child: Text(l10n.t('admin_contact_dispatch_retry_button')),
             ),
           ],
           if (customer['messengerType'] != null &&

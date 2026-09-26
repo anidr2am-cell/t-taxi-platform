@@ -735,7 +735,7 @@ class BookingService {
       : CONTACT_STATUS.VERIFIED;
   }
 
-  async dispatchAfterContactVerified(bookingRow) {
+  async dispatchAfterContactVerified(bookingRow, options = {}) {
     if (!bookingRow?.id) return false;
 
     const conn = await this.pool.getConnection();
@@ -750,9 +750,21 @@ class BookingService {
           bookingId: bookingRow.id,
           lockName,
         });
+        if (options.failOnLockContention) {
+          throw new AppError('Contact dispatch is already in progress', {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.CONTACT_DISPATCH_IN_PROGRESS,
+          });
+        }
         return false;
       }
       if (!acquired) {
+        if (options.failOnLockContention) {
+          throw new AppError('Contact dispatch is already in progress', {
+            statusCode: HTTP_STATUS.CONFLICT,
+            errorCode: ERROR_CODES.CONTACT_DISPATCH_IN_PROGRESS,
+          });
+        }
         return false;
       }
       lockHeld = true;

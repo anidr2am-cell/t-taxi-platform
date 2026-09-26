@@ -3,9 +3,14 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const CONTACT_STATUS = require('../constants/contactStatus');
 const CONTACT_CHANNEL = require('../constants/contactChannel');
+const BOOKING_STATUS = require('../constants/reservationStatus');
 const {
   isContactConnectionRequired,
 } = require('../policies/bookingDispatchEligibility.policy');
+const {
+  deriveContactDispatch,
+  contactDispatchInputFromBooking,
+} = require('../policies/adminContactDispatch.policy');
 const logger = require('../utils/logger');
 
 class BookingContactConnectionService {
@@ -239,6 +244,13 @@ class BookingContactConnectionService {
         throw this.notFound();
       }
 
+      if (booking.status !== BOOKING_STATUS.OPEN) {
+        throw new AppError('Booking is not open for contact verification', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.INVALID_STATUS_TRANSITION,
+        });
+      }
+
       if (booking.contact_status === CONTACT_STATUS.VERIFIED) {
         const bookingWithMeta = await this.bookingRepository.findById(booking.id, conn);
         bookingSnapshot = bookingWithMeta ?? booking;
@@ -272,8 +284,11 @@ class BookingContactConnectionService {
           contactVerifiedAt: now,
         });
 
-        shouldDispatch = isContactConnectionRequired();
         bookingSnapshot = await this.bookingRepository.findById(booking.id, conn);
+        const delivered = this.bookingService.isContactDispatchDelivered?.(
+          bookingSnapshot?.metadata,
+        ) === true;
+        shouldDispatch = booking.status === BOOKING_STATUS.OPEN && !delivered;
         await conn.commit();
       }
     } catch (err) {
@@ -303,6 +318,63 @@ class BookingContactConnectionService {
     return {
       ...this.mapPublicConnection(refreshed, connection),
       dispatchStarted,
+    };
+  }
+
+  async adminRetryDispatch(bookingNumber) {
+    const summary = await this.bookingRepository.findContactBookingByNumber(bookingNumber);
+    if (!summary) {
+      throw this.notFound();
+    }
+    const booking = await this.bookingRepository.findById(summary.id) ?? summary;
+    const connection = await this.contactConnectionRepository.findActiveByBookingId(
+      null,
+      booking.id,
+    );
+    const derived = deriveContactDispatch(contactDispatchInputFromBooking(booking, {
+      hasConnectionRow: Boolean(connection),
+    }));
+    if (derived.deliveryAttempted) {
+      throw new AppError('Contact dispatch was already delivery-attempted', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.CONTACT_DISPATCH_ALREADY_DELIVERED,
+      });
+    }
+    if (!derived.retryable) {
+      throw new AppError('Contact dispatch is not retryable for this booking', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.CONTACT_DISPATCH_NOT_RETRYABLE,
+      });
+    }
+
+    let dispatchStarted = false;
+    try {
+      dispatchStarted = await this.bookingService.dispatchAfterContactVerified(booking, {
+        failOnLockContention: true,
+      });
+    } catch (dispatchErr) {
+      if (dispatchErr?.errorCode === ERROR_CODES.CONTACT_DISPATCH_IN_PROGRESS) {
+        throw dispatchErr;
+      }
+      logger.error('Failed to retry contact dispatch', {
+        bookingNumber,
+        error: dispatchErr?.message,
+      });
+      throw dispatchErr;
+    }
+
+    const refreshed = await this.bookingRepository.findById(booking.id)
+      ?? await this.bookingRepository.findContactBookingByNumber(bookingNumber);
+    const refreshedConnection = await this.contactConnectionRepository.findActiveByBookingId(
+      null,
+      refreshed.id,
+    );
+    return {
+      ...this.mapPublicConnection(refreshed, refreshedConnection),
+      dispatchStarted,
+      contactDispatch: deriveContactDispatch(contactDispatchInputFromBooking(refreshed, {
+        hasConnectionRow: Boolean(refreshedConnection),
+      })),
     };
   }
 

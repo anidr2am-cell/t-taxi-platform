@@ -346,6 +346,16 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<Map<String, dynamic>> retryContactDispatch(
+    String bookingNumber,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/bookings/$bookingNumber/contact/dispatch-retry',
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
   Future<Map<String, dynamic>> reassignDriver(
     String bookingNumber,
     int driverId,
