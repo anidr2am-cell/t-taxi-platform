@@ -19,6 +19,13 @@ const TERMINAL_STATUSES = new Set([
   BOOKING_STATUS.NO_SHOW,
 ]);
 
+const ADMIN_COMPLETABLE_TRIP_STATUSES = new Set([
+  BOOKING_STATUS.DRIVER_ASSIGNED,
+  BOOKING_STATUS.ON_ROUTE,
+  BOOKING_STATUS.DRIVER_ARRIVED,
+  BOOKING_STATUS.PICKED_UP,
+]);
+
 const TRANSITIONS = {
   [BOOKING_STATUS.PENDING]: {
     [BOOKING_STATUS.OPEN]: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
@@ -157,6 +164,15 @@ class BookingStatusService {
 
     if (TERMINAL_STATUSES.has(fromStatus)) {
       this.throwInvalidTransition(fromStatus, toStatus, actorRole);
+    }
+
+    if (
+      options.allowAdminCompleteActiveTrip
+      && [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(actorRole)
+      && toStatus === BOOKING_STATUS.SETTLEMENT_PENDING
+      && ADMIN_COMPLETABLE_TRIP_STATUSES.has(fromStatus)
+    ) {
+      return;
     }
 
     const allowedRoles = TRANSITIONS[fromStatus]?.[toStatus];
@@ -327,6 +343,18 @@ class BookingStatusService {
         fromStatus,
         toStatus,
       };
+    }
+    if (options.requireActiveAssignment) {
+      const activeAssignment = await this.bookingRepository.findActiveAssignmentForUpdate(
+        conn,
+        booking.id,
+      );
+      if (!activeAssignment) {
+        throw new AppError('Booking has no active driver assignment', {
+          statusCode: HTTP_STATUS.CONFLICT,
+          errorCode: ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
+        });
+      }
     }
 
     if (

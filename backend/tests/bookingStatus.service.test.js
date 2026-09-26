@@ -34,7 +34,11 @@ function createBooking(overrides = {}) {
   };
 }
 
-function createHarness({ booking = createBooking(), commitError = null } = {}) {
+function createHarness({
+  booking = createBooking(),
+  commitError = null,
+  activeAssignment = { id: 1 },
+} = {}) {
   const calls = {
     beginTransaction: 0,
     commit: 0,
@@ -98,6 +102,9 @@ function createHarness({ booking = createBooking(), commitError = null } = {}) {
     },
     async findActiveGuestTokenForBooking() {
       return { id: 1 };
+    },
+    async findActiveAssignmentForUpdate() {
+      return activeAssignment;
     },
   };
   const outboxRepository = {
@@ -198,6 +205,50 @@ test('invalid transition returns INVALID_STATUS_TRANSITION', async () => {
   assert.equal(harness.calls.insertStatusLog, 0);
   assert.equal(harness.calls.insertActivityLog, 0);
   assert.equal(harness.calls.rollback, 1);
+});
+
+test('dedicated admin completion can move any assigned trip status to settlement pending', async () => {
+  for (const status of [
+    BOOKING_STATUS.DRIVER_ASSIGNED,
+    BOOKING_STATUS.ON_ROUTE,
+    BOOKING_STATUS.DRIVER_ARRIVED,
+    BOOKING_STATUS.PICKED_UP,
+  ]) {
+    const harness = createHarness({ booking: createBooking({ status }) });
+    const result = await harness.service.transition(
+      'TX202607010001',
+      { status: BOOKING_STATUS.SETTLEMENT_PENDING, reason: 'ADMIN_COMPLETE_TRIP' },
+      actor,
+      {
+        allowAdminCompleteActiveTrip: true,
+        requireActiveAssignment: true,
+      },
+    );
+
+    assert.equal(result.status, BOOKING_STATUS.SETTLEMENT_PENDING, status);
+    assert.equal(harness.calls.updateStatus, 1, status);
+  }
+});
+
+test('dedicated admin completion rejects a booking without an active assignment', async () => {
+  const harness = createHarness({
+    booking: createBooking({ status: BOOKING_STATUS.DRIVER_ASSIGNED }),
+    activeAssignment: null,
+  });
+
+  await assert.rejects(
+    () => harness.service.transition(
+      'TX202607010001',
+      { status: BOOKING_STATUS.SETTLEMENT_PENDING },
+      actor,
+      {
+        allowAdminCompleteActiveTrip: true,
+        requireActiveAssignment: true,
+      },
+    ),
+    (err) => err instanceof AppError
+      && err.errorCode === ERROR_CODES.NO_ACTIVE_ASSIGNMENT,
+  );
 });
 
 test('same-status request is idempotent and creates no duplicate side effects', async () => {

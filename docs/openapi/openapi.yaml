@@ -2029,7 +2029,7 @@ paths:
     post:
       tags: [Admin]
       summary: Complete an active trip on behalf of the driver
-      description: Transitions a PICKED_UP booking to SETTLEMENT_PENDING through the standard booking state machine.
+      description: Transitions an actively assigned DRIVER_ASSIGNED, ON_ROUTE, DRIVER_ARRIVED, or PICKED_UP booking to SETTLEMENT_PENDING through the standard booking state machine.
       operationId: adminCompleteActiveTrip
       parameters:
         - $ref: '#/components/parameters/BookingNumber'
