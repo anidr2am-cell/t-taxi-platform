@@ -284,6 +284,10 @@ test('frontend Dockerfile requires explicit production API and socket build args
   assert.match(dockerfile, /API_BASE_URL is required when APP_ENV=production/);
   assert.match(dockerfile, /SOCKET_URL is required when APP_ENV=production/);
   assert.match(dockerfile, /EFFECTIVE_API_BASE_URL="\$\{API_BASE_URL:-http:\/\/localhost:3100\}"/);
+  assert.equal(
+    dockerfile.match(/flutter build web --release --no-wasm-dry-run/g)?.length,
+    2,
+  );
 });
 
 test('frontend nginx does not immutable-cache Flutter app shell entry files', () => {
