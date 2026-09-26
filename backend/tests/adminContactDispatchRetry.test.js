@@ -20,6 +20,24 @@ const HTTP_STATUS = require('../src/constants/httpStatus');
 const BookingContactConnectionService = require('../src/services/bookingContactConnection.service');
 const { CONTACT_DISPATCH_STATE } = require('../src/policies/adminContactDispatch.policy');
 const AdminDispatchService = require('../src/services/adminDispatch.service');
+const BookingRepository = require('../src/repositories/booking.repository');
+
+test('booking findById includes metadata required by repeat dispatch retry', async () => {
+  let capturedSql = '';
+  const repository = new BookingRepository({
+    async query(sql) {
+      capturedSql = sql;
+      return [[{
+        id: 21,
+        metadata: JSON.stringify({ contactDispatchDelivered: true }),
+      }]];
+    },
+  });
+
+  const booking = await repository.findById(21);
+  assert.match(capturedSql, /\bb\.metadata\b/);
+  assert.deepEqual(JSON.parse(booking.metadata), { contactDispatchDelivered: true });
+});
 
 function createRetryService(overrides = {}) {
   const booking = {
