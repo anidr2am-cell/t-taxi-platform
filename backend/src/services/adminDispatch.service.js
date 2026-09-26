@@ -56,6 +56,13 @@ const ADMIN_MANUAL_EDIT_STATUSES = new Set([
   BOOKING_STATUS.DRIVER_ASSIGNED,
 ]);
 
+const ADMIN_COMPLETABLE_TRIP_STATUSES = new Set([
+  BOOKING_STATUS.DRIVER_ASSIGNED,
+  BOOKING_STATUS.ON_ROUTE,
+  BOOKING_STATUS.DRIVER_ARRIVED,
+  BOOKING_STATUS.PICKED_UP,
+]);
+
 function addDaysToApiDate(value, days) {
   const [year, month, day] = String(value).split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + days));
@@ -308,7 +315,7 @@ class AdminDispatchService {
     if (activeAssignment && !terminalReassign) {
       actions.push("REASSIGN_DRIVER");
     }
-    if (activeAssignment && status === BOOKING_STATUS.PICKED_UP) {
+    if (activeAssignment && ADMIN_COMPLETABLE_TRIP_STATUSES.has(status)) {
       actions.push("COMPLETE_TRIP");
     }
     if (canVerifyContact(booking)) {
@@ -1343,6 +1350,10 @@ class AdminDispatchService {
         reason: "ADMIN_COMPLETE_TRIP",
       },
       actor,
+      {
+        allowAdminCompleteActiveTrip: true,
+        requireActiveAssignment: true,
+      },
     );
   }
 

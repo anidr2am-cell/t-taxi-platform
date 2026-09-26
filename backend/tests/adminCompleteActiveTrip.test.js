@@ -37,16 +37,23 @@ function sign(role = 'ADMIN', id = 9) {
   );
 }
 
-test('booking detail action allows admin completion only for an actively assigned PICKED_UP trip', () => {
+test('booking detail action allows admin completion for every actively assigned trip status', () => {
   const service = createService();
   const activeAssignment = { id: 44 };
 
-  assert.ok(
-    service.computeAllowedActions(
-      { status: BOOKING_STATUS.PICKED_UP },
-      activeAssignment,
-    ).includes('COMPLETE_TRIP'),
-  );
+  for (const status of [
+    BOOKING_STATUS.DRIVER_ASSIGNED,
+    BOOKING_STATUS.ON_ROUTE,
+    BOOKING_STATUS.DRIVER_ARRIVED,
+    BOOKING_STATUS.PICKED_UP,
+  ]) {
+    assert.ok(
+      service.computeAllowedActions({ status }, activeAssignment).includes(
+        'COMPLETE_TRIP',
+      ),
+      status,
+    );
+  }
   assert.ok(
     !service.computeAllowedActions(
       { status: BOOKING_STATUS.PICKED_UP },
@@ -55,7 +62,7 @@ test('booking detail action allows admin completion only for an actively assigne
   );
   assert.ok(
     !service.computeAllowedActions(
-      { status: BOOKING_STATUS.DRIVER_ARRIVED },
+      { status: BOOKING_STATUS.SETTLEMENT_PENDING },
       activeAssignment,
     ).includes('COMPLETE_TRIP'),
   );
@@ -64,8 +71,8 @@ test('booking detail action allows admin completion only for an actively assigne
 test('completeActiveTrip reuses the booking state machine and moves the trip to settlement pending', async () => {
   let captured;
   const service = createService({
-    async transition(bookingNumber, input, actor) {
-      captured = { bookingNumber, input, actor };
+    async transition(bookingNumber, input, actor, options) {
+      captured = { bookingNumber, input, actor, options };
       return { bookingNumber, status: input.status };
     },
   });
@@ -82,6 +89,10 @@ test('completeActiveTrip reuses the booking state machine and moves the trip to 
       reason: 'ADMIN_COMPLETE_TRIP',
     },
     actor: { id: 9, role: 'ADMIN' },
+    options: {
+      allowAdminCompleteActiveTrip: true,
+      requireActiveAssignment: true,
+    },
   });
   assert.equal(result.status, BOOKING_STATUS.SETTLEMENT_PENDING);
 });

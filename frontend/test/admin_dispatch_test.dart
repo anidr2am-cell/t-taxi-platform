@@ -905,12 +905,12 @@ void main() {
     expect(find.text('Reassign driver'), findsNothing);
   });
 
-  testWidgets('admin can complete a picked-up trip after confirmation', (
+  testWidgets('admin can complete an assigned trip after confirmation', (
     tester,
   ) async {
     final activeDetail = {
       'bookingNumber': 'TX202609260001',
-      'status': 'PICKED_UP',
+      'status': 'DRIVER_ASSIGNED',
       'route': {
         'origin': {'address': 'BKK'},
         'destination': {'address': 'Pattaya'},
