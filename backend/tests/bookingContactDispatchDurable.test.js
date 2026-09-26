@@ -200,6 +200,24 @@ test('contact dispatch persists durable notifications before completion marker i
   assert.equal(harness.postCommitCalls[0].durableStateCommitted, false);
 });
 
+test('urgent contact dispatch delivery retry does not insert or emit again', async () => {
+  const harness = createDispatchService({
+    metadata: { contactDispatchCompleted: true },
+    openCallRow: { is_urgent_request: 1 },
+    bookingRow: { is_urgent_request: 1 },
+  });
+  let emitCount = 0;
+  harness.service.dispatchContactDispatchPostCommit = async (params) => {
+    assert.equal(params.durableStateCommitted, true);
+    assert.equal(params.isUrgent, true);
+    emitCount += 1;
+  };
+  const dispatched = await harness.service.dispatchAfterContactVerified(harness.bookingRow);
+  assert.equal(dispatched, true);
+  assert.equal(harness.inserts.length, 0);
+  assert.equal(emitCount, 1);
+});
+
 test('contact dispatch retry does not create duplicate durable notifications', async () => {
   const harness = createDispatchService();
   const first = await harness.service.dispatchAfterContactVerified(harness.bookingRow);

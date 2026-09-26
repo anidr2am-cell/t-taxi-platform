@@ -191,4 +191,11 @@ router.post(
   bookingContactConnectionController.adminVerifyContact,
 );
 
+router.post(
+  '/bookings/:bookingNumber/contact/dispatch-retry',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema }),
+  bookingContactConnectionController.adminRetryContactDispatch,
+);
+
 module.exports = router;

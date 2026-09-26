@@ -529,6 +529,7 @@ container.register(
       c.get("bookingAssignmentReopenService"),
       c.get("driverCallService"),
       c.get("bookingNoShowPenaltyRepository"),
+      c.get("bookingContactConnectionRepository"),
     ),
 );
 container.register(
