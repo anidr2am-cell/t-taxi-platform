@@ -126,6 +126,13 @@ router.post(
   adminController.unassignDriver,
 );
 
+router.post(
+  '/bookings/:bookingNumber/complete-trip',
+  adminOnly,
+  validate({ params: bookingNumberParamsSchema }),
+  adminController.completeActiveTrip,
+);
+
 router.get(
   '/bookings/:bookingNumber/driver-candidates',
   adminOnly,

@@ -1633,6 +1633,13 @@ class AppLocalizations {
           'A completed delivery attempt does not guarantee the driver app received the notification.',
       'admin_contact_dispatch_retry_button': 'Retry driver notification',
       'admin_contact_dispatch_retry_success': 'Driver notification retry started',
+      'admin_complete_trip_button': 'Complete trip',
+      'admin_complete_trip_title': 'Complete this active trip?',
+      'admin_complete_trip_message':
+          'This ends the trip on the driver’s behalf and moves the booking to settlement pending. Continue only after confirming the ride has finished.',
+      'admin_complete_trip_confirm': 'Complete trip',
+      'admin_complete_trip_success': 'Trip completed and moved to settlement pending',
+      'admin_complete_trip_error': 'Unable to complete this trip',
       'admin_contact_dispatch_error_in_progress':
           'A driver notification is already in progress. Try again in a moment.',
       'admin_contact_dispatch_error_already_delivered':
@@ -3064,6 +3071,13 @@ class AppLocalizations {
           '전달 시도 완료는 기사 앱 수신을 보장하지 않습니다.',
       'admin_contact_dispatch_retry_button': '기사 알림 재시도',
       'admin_contact_dispatch_retry_success': '기사 알림 재시도를 시작했습니다',
+      'admin_complete_trip_button': '운행 완료 처리',
+      'admin_complete_trip_title': '이 운행을 완료 처리할까요?',
+      'admin_complete_trip_message':
+          '기사 대신 운행을 종료하고 예약을 정산 대기 상태로 전환합니다. 실제 운행이 끝난 것을 확인한 뒤 진행해 주세요.',
+      'admin_complete_trip_confirm': '운행 완료 처리',
+      'admin_complete_trip_success': '운행을 완료하고 정산 대기 상태로 전환했습니다',
+      'admin_complete_trip_error': '운행 완료 처리에 실패했습니다',
       'admin_contact_dispatch_error_in_progress':
           '기사 알림이 이미 진행 중입니다. 잠시 후 다시 시도해 주세요.',
       'admin_contact_dispatch_error_already_delivered':
@@ -3591,6 +3605,13 @@ class AppLocalizations {
           '送达尝试完成并不保证司机应用已收到通知。',
       'admin_contact_dispatch_retry_button': '重试司机通知',
       'admin_contact_dispatch_retry_success': '已开始重试司机通知',
+      'admin_complete_trip_button': '完成行程',
+      'admin_complete_trip_title': '要完成此行程吗？',
+      'admin_complete_trip_message':
+          '这将代替司机结束行程，并把订单转为待结算。请确认行程确实已结束后再继续。',
+      'admin_complete_trip_confirm': '完成行程',
+      'admin_complete_trip_success': '行程已完成并转为待结算',
+      'admin_complete_trip_error': '无法完成此行程',
       'admin_contact_dispatch_error_in_progress':
           '司机通知正在进行中，请稍后再试。',
       'admin_contact_dispatch_error_already_delivered':
@@ -4417,6 +4438,13 @@ class AppLocalizations {
           '配信試行の完了は、ドライバーアプリの受信を保証しません。',
       'admin_contact_dispatch_retry_button': 'ドライバー通知を再試行',
       'admin_contact_dispatch_retry_success': 'ドライバー通知の再試行を開始しました',
+      'admin_complete_trip_button': '運行を完了',
+      'admin_complete_trip_title': 'この運行を完了しますか？',
+      'admin_complete_trip_message':
+          'ドライバーに代わって運行を終了し、予約を精算待ちに移します。実際に運行が終了したことを確認してから続行してください。',
+      'admin_complete_trip_confirm': '運行を完了',
+      'admin_complete_trip_success': '運行を完了し、精算待ちに移しました',
+      'admin_complete_trip_error': '運行を完了できませんでした',
       'admin_contact_dispatch_error_in_progress':
           'ドライバー通知はすでに進行中です。しばらくしてから再試行してください。',
       'admin_contact_dispatch_error_already_delivered':
@@ -5299,6 +5327,13 @@ class AppLocalizations {
           'การพยายามส่งสำเร็จไม่ได้รับประกันว่าแอปคนขับได้รับแจ้งเตือน',
       'admin_contact_dispatch_retry_button': 'ลองส่งแจ้งเตือนคนขับอีกครั้ง',
       'admin_contact_dispatch_retry_success': 'เริ่มลองส่งแจ้งเตือนคนขับอีกครั้งแล้ว',
+      'admin_complete_trip_button': 'จบการเดินทาง',
+      'admin_complete_trip_title': 'จบการเดินทางนี้หรือไม่',
+      'admin_complete_trip_message':
+          'ระบบจะจบการเดินทางแทนคนขับและย้ายการจองไปยังสถานะรอชำระบัญชี โปรดยืนยันว่าการเดินทางสิ้นสุดแล้วก่อนดำเนินการ',
+      'admin_complete_trip_confirm': 'จบการเดินทาง',
+      'admin_complete_trip_success': 'จบการเดินทางและย้ายไปรอชำระบัญชีแล้ว',
+      'admin_complete_trip_error': 'ไม่สามารถจบการเดินทางนี้ได้',
       'admin_contact_dispatch_error_in_progress':
           'กำลังส่งแจ้งเตือนคนขับอยู่แล้ว โปรดลองใหม่ในอีกสักครู่',
       'admin_contact_dispatch_error_already_delivered':

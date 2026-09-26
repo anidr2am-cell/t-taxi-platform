@@ -78,6 +78,14 @@ const unassignDriver = asyncHandler(async (req, res) => {
   return success(res, data, 'Driver unassigned');
 });
 
+const completeActiveTrip = asyncHandler(async (req, res) => {
+  const data = await getAdminDispatchService().completeActiveTrip(
+    req.params.bookingNumber,
+    req.user,
+  );
+  return success(res, data, 'Trip completed and moved to settlement pending');
+});
+
 const getDriverCandidates = asyncHandler(async (req, res) => {
   const data = await getAdminDispatchService().getDriverCandidates(req.params.bookingNumber);
   return success(res, data, 'OK');
@@ -172,6 +180,7 @@ module.exports = {
   assignDriver,
   reassignDriver,
   unassignDriver,
+  completeActiveTrip,
   getDriverCandidates,
   autoAssignDriver,
   reissueQr,

@@ -804,6 +804,55 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     }
   }
 
+  Future<void> _completeTrip() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.t('admin_complete_trip_title')),
+        content: Text(l10n.t('admin_complete_trip_message')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.t('ui_cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.t('admin_complete_trip_confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || _submitting) return;
+
+    setState(() => _submitting = true);
+    try {
+      await widget.api.completeTrip(widget.bookingNumber);
+      widget.onChanged();
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.t('admin_complete_trip_success'))),
+        );
+      }
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              userFacingError(
+                err,
+                fallback: l10n.t('admin_complete_trip_error'),
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   Future<void> _confirmSettlement() async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
@@ -1170,6 +1219,18 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           icon: Icons.swap_horiz,
           onPressed: _submitting ? null : _reassign,
           fullWidth: true,
+        ),
+      );
+    }
+    if (actions.contains('COMPLETE_TRIP')) {
+      buttons.add(
+        SizedBox(
+          width: double.infinity,
+          child: AppUi.primaryButton(
+            label: l10n.t('admin_complete_trip_button'),
+            icon: Icons.flag_outlined,
+            onPressed: _submitting ? null : _completeTrip,
+          ),
         ),
       );
     }
