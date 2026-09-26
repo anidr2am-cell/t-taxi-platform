@@ -308,6 +308,9 @@ class AdminDispatchService {
     if (activeAssignment && !terminalReassign) {
       actions.push("REASSIGN_DRIVER");
     }
+    if (activeAssignment && status === BOOKING_STATUS.PICKED_UP) {
+      actions.push("COMPLETE_TRIP");
+    }
     if (canVerifyContact(booking)) {
       actions.push("VERIFY_CONTACT");
     }
@@ -1329,6 +1332,18 @@ class AdminDispatchService {
       }
     }
     return outboxIds;
+  }
+
+  async completeActiveTrip(bookingNumber, user) {
+    const actor = this.actorFromUser(user);
+    return this.bookingStatusService.transition(
+      bookingNumber,
+      {
+        status: BOOKING_STATUS.SETTLEMENT_PENDING,
+        reason: "ADMIN_COMPLETE_TRIP",
+      },
+      actor,
+    );
   }
 
   async assignDriver(bookingNumber, input, user) {

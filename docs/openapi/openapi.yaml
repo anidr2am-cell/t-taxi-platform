@@ -2025,6 +2025,25 @@ paths:
         '200':
           $ref: '#/components/responses/SuccessEmpty'
 
+  /admin/bookings/{bookingNumber}/complete-trip:
+    post:
+      tags: [Admin]
+      summary: Complete an active trip on behalf of the driver
+      description: Transitions a PICKED_UP booking to SETTLEMENT_PENDING through the standard booking state machine.
+      operationId: adminCompleteActiveTrip
+      parameters:
+        - $ref: '#/components/parameters/BookingNumber'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBookingResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidTransition'
+
   /admin/bookings/{bookingNumber}/notes:
     get:
       tags: [Admin]
@@ -5255,7 +5274,7 @@ components:
           type: array
           items:
             type: string
-            enum: [ASSIGN_DRIVER, REASSIGN_DRIVER]
+            enum: [ASSIGN_DRIVER, REASSIGN_DRIVER, COMPLETE_TRIP]
         createdAt:
           type: string
           format: date-time

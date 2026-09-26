@@ -33,6 +33,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
   int assignCalls = 0;
   int reassignCalls = 0;
   int unassignCalls = 0;
+  int completeTripCalls = 0;
   int autoAssignCalls = 0;
   int addNoteCalls = 0;
   int archiveCalls = 0;
@@ -244,6 +245,15 @@ class _FakeAdminApi extends AdminDispatchApiService {
       'bookingNumber': bookingNumber,
       'status': 'OPEN',
       'unassigned': true,
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> completeTrip(String bookingNumber) async {
+    completeTripCalls += 1;
+    return {
+      'bookingNumber': bookingNumber,
+      'status': 'SETTLEMENT_PENDING',
     };
   }
 
@@ -893,6 +903,63 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Assign driver'), findsNothing);
     expect(find.text('Reassign driver'), findsNothing);
+  });
+
+  testWidgets('admin can complete a picked-up trip after confirmation', (
+    tester,
+  ) async {
+    final activeDetail = {
+      'bookingNumber': 'TX202609260001',
+      'status': 'PICKED_UP',
+      'route': {
+        'origin': {'address': 'BKK'},
+        'destination': {'address': 'Pattaya'},
+      },
+      'customer': {'name': 'Kim', 'phone': '+66123456789'},
+      'pricing': {
+        'totalAmount': 1200,
+        'currency': 'THB',
+        'paymentMethod': 'PAY_DRIVER',
+      },
+      'activeAssignment': {'driverDisplayName': 'Driver A'},
+      'allowedActions': ['COMPLETE_TRIP'],
+    };
+    final settledDetail = {
+      ...activeDetail,
+      'allowedActions': <String>[],
+    };
+    final api = _FakeAdminApi(
+      detailResponses: [activeDetail, settledDetail],
+    );
+    var changed = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202609260001',
+          api: api,
+          onChanged: () => changed += 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Complete trip'), findsOneWidget);
+    await tester.tap(find.text('Complete trip'));
+    await tester.pumpAndSettle();
+    expect(find.text('Complete this active trip?'), findsOneWidget);
+    expect(find.textContaining('settlement pending'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Complete trip'));
+    await tester.pumpAndSettle();
+
+    expect(api.completeTripCalls, 1);
+    expect(changed, 1);
+    expect(find.text('Complete trip'), findsNothing);
+    expect(
+      find.text('Trip completed and moved to settlement pending'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('assigned driver is rendered in booking detail', (tester) async {
