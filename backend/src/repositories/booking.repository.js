@@ -649,6 +649,7 @@ class BookingRepository {
           b.is_urgent_request,
           b.contact_status,
           b.contact_channel,
+          b.metadata,
           COALESCE(b.driver_id, bda.driver_id) AS driver_id,
           d.user_id AS driver_user_id
         FROM bookings b
