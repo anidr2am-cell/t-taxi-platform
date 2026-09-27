@@ -16,7 +16,7 @@ test('equal customer payment and driver payout needs no settlement', () => {
 
 test('driver-collected customer surplus becomes company settlement', () => {
   assert.deepEqual(calculateAdminManualSettlement({
-    payoutAmount: 1500,
+    payoutAmount: 1600,
     customerChargeAmount: 1800,
     nameSignAmount: ADMIN_MANUAL_NAME_SIGN_AMOUNT,
     paymentMethod: 'PAY_DRIVER',

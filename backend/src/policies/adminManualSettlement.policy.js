@@ -5,14 +5,13 @@ function money(value) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function calculateAdminManualSettlement({ payoutAmount, customerChargeAmount, nameSignAmount = 0, paymentMethod }) {
+function calculateAdminManualSettlement({ payoutAmount, customerChargeAmount, paymentMethod }) {
   const payout = money(payoutAmount);
   const customerCharge = money(customerChargeAmount);
-  const picket = money(nameSignAmount) ?? 0;
   if (paymentMethod !== 'PAY_DRIVER' || payout == null || customerCharge == null) {
     return { settlementAmount: 0, commissionExempt: true };
   }
-  const settlementAmount = Math.max(0, customerCharge - payout - picket);
+  const settlementAmount = Math.max(0, customerCharge - payout);
   return { settlementAmount, commissionExempt: settlementAmount === 0 };
 }
 

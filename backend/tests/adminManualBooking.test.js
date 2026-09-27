@@ -344,14 +344,14 @@ test('driver-collected admin booking stores customer total and settlement differ
   });
   try {
     await service.createAdminManualBooking(
-      { ...input, payoutAmount: 1500, nameSign: true, nameSignText: 'KIM' },
+      { ...input, payoutAmount: 1600, nameSign: true, nameSignText: 'KIM' },
       ADMIN,
     );
 
     assert.equal(calls.booking.totalAmount, 0);
     assert.equal(calls.booking.commissionExempt, false);
     assert.deepEqual(calls.booking.metadata.adminManualPricing, {
-      payoutAmount: 1500,
+      payoutAmount: 1600,
       customerChargeAmount: 1800,
       nameSignAmount: 100,
       settlementAmount: 200,
