@@ -322,7 +322,11 @@ test('createAdminManualBooking marks name sign for drivers when picket enabled',
       true,
     );
     assert.equal(calls.chargeItems.find((item) => item.chargeType === 'NAME_SIGN').amount, 100);
-    assert.equal(calls.booking.totalAmount, 900);
+    assert.equal(calls.booking.totalAmount, 0);
+    assert.equal(
+      calls.chargeItems.reduce((sum, item) => sum + Number(item.amount), 0),
+      900,
+    );
     assert.equal(calls.socket[0].payload.nameSignAmount, 100);
     assert.equal(calls.socket[0].payload.driverExpectedIncomeAmount, 800);
     assert.equal(calls.socket[0].payload.nameSignRequested, true);
@@ -344,7 +348,7 @@ test('driver-collected admin booking stores customer total and settlement differ
       ADMIN,
     );
 
-    assert.equal(calls.booking.totalAmount, 1800);
+    assert.equal(calls.booking.totalAmount, 0);
     assert.equal(calls.booking.commissionExempt, false);
     assert.deepEqual(calls.booking.metadata.adminManualPricing, {
       payoutAmount: 1500,
