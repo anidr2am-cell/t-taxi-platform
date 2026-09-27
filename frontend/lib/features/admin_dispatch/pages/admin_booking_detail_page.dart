@@ -1174,23 +1174,41 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     List<String> actions,
     Map<String, dynamic> detail,
   ) {
-    final buttons = <Widget>[];
+    Widget actionCell(Widget child) => SizedBox(height: 48, child: child);
+
+    final primaryActions = <Widget>[];
+    final standardActions = <Widget>[];
+    final cautionActions = <Widget>[];
+    Widget? notice;
+
+    if (actions.contains('COMPLETE_TRIP')) {
+      primaryActions.add(
+        SizedBox(
+          width: double.infinity,
+          child: AppUi.primaryButton(
+            label: l10n.t('admin_complete_trip_button'),
+            icon: Icons.flag_outlined,
+            onPressed: _submitting ? null : _completeTrip,
+          ),
+        ),
+      );
+    }
     if (_canEditManualCall()) {
-      buttons.add(
-        AppUi.secondaryButton(
-          label: l10n.t('admin_manual_booking_edit'),
-          icon: Icons.edit_outlined,
-          onPressed: _submitting ? null : _openManualCallEdit,
-          fullWidth: true,
+      standardActions.add(
+        actionCell(
+          AppUi.secondaryButton(
+            label: l10n.t('admin_manual_booking_edit'),
+            icon: Icons.edit_outlined,
+            onPressed: _submitting ? null : _openManualCallEdit,
+            fullWidth: true,
+          ),
         ),
       );
     }
     if (_canCancelManualCall()) {
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: OutlinedButton.icon(
+      cautionActions.add(
+        actionCell(
+          OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTokens.error,
               side: const BorderSide(color: AppTokens.error),
@@ -1203,43 +1221,33 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       );
     }
     if (actions.contains('RECOMMEND_DRIVERS')) {
-      buttons.add(
-        AppUi.secondaryButton(
-          label: l10n.t('admin_detail_recommend_drivers'),
-          icon: Icons.recommend_outlined,
-          onPressed: _submitting ? null : _recommendDrivers,
-          fullWidth: true,
+      standardActions.add(
+        actionCell(
+          AppUi.secondaryButton(
+            label: l10n.t('admin_detail_recommend_drivers'),
+            icon: Icons.recommend_outlined,
+            onPressed: _submitting ? null : _recommendDrivers,
+            fullWidth: true,
+          ),
         ),
       );
     }
     if (actions.contains('REASSIGN_DRIVER')) {
-      buttons.add(
-        AppUi.secondaryButton(
-          label: l10n.t('admin_dispatch_reassign_driver'),
-          icon: Icons.swap_horiz,
-          onPressed: _submitting ? null : _reassign,
-          fullWidth: true,
-        ),
-      );
-    }
-    if (actions.contains('COMPLETE_TRIP')) {
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          child: AppUi.primaryButton(
-            label: l10n.t('admin_complete_trip_button'),
-            icon: Icons.flag_outlined,
-            onPressed: _submitting ? null : _completeTrip,
+      standardActions.add(
+        actionCell(
+          AppUi.secondaryButton(
+            label: l10n.t('admin_dispatch_reassign_driver'),
+            icon: Icons.swap_horiz,
+            onPressed: _submitting ? null : _reassign,
+            fullWidth: true,
           ),
         ),
       );
     }
     if (_canUnassignDriver(detail)) {
-      buttons.add(
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: OutlinedButton.icon(
+      cautionActions.add(
+        actionCell(
+          OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTokens.error,
               side: const BorderSide(color: AppTokens.error),
@@ -1252,17 +1260,26 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       );
     }
     if (_hasNoShowPenalty(detail)) {
-      buttons.add(
-        _noticeBox(
-          icon: Icons.event_busy_outlined,
-          text: _noShowText(context, 'already_processed'),
-          isWarning: true,
-        ),
+      notice = _noticeBox(
+        icon: Icons.event_busy_outlined,
+        text: _noShowText(context, 'already_processed'),
+        isWarning: true,
       );
     } else if (_shouldShowNoShowButton(detail)) {
-      buttons.add(_noShowActionButton(detail));
+      cautionActions.add(_noShowActionButton(detail));
     }
-    return buttons.isEmpty ? null : AppUi.adminStickyActions(actions: buttons);
+    if (primaryActions.isEmpty &&
+        standardActions.isEmpty &&
+        cautionActions.isEmpty &&
+        notice == null) {
+      return null;
+    }
+    return _AdminBookingActionPanel(
+      primaryActions: primaryActions,
+      standardActions: standardActions,
+      cautionActions: cautionActions,
+      notice: notice,
+    );
   }
 
   Widget _noShowPenaltySection(
@@ -3111,4 +3128,129 @@ String _noShowText(BuildContext context, String key) {
     },
   };
   return values[language]?[key] ?? values['en']![key] ?? key;
+}
+
+class _AdminBookingActionPanel extends StatelessWidget {
+  final List<Widget> primaryActions;
+  final List<Widget> standardActions;
+  final List<Widget> cautionActions;
+  final Widget? notice;
+
+  const _AdminBookingActionPanel({
+    required this.primaryActions,
+    required this.standardActions,
+    required this.cautionActions,
+    this.notice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTokens.surface,
+        border: Border(top: BorderSide(color: AppTokens.border)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 18,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.spaceMd,
+            AppTokens.spaceSm,
+            AppTokens.spaceMd,
+            AppTokens.spaceMd,
+          ),
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth >= 760
+                      ? 3
+                      : constraints.maxWidth >= 480
+                      ? 2
+                      : 1;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (primaryActions.isNotEmpty) ...[
+                        ..._spaced(primaryActions),
+                      ],
+                      if (standardActions.isNotEmpty) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        _responsiveGrid(
+                          standardActions,
+                          constraints.maxWidth,
+                          columns,
+                        ),
+                      ],
+                      if (notice != null) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        notice!,
+                      ],
+                      if (cautionActions.isNotEmpty) ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        if (primaryActions.isEmpty &&
+                            standardActions.isEmpty &&
+                            notice == null &&
+                            cautionActions.length == 1)
+                          cautionActions.single
+                        else
+                          Container(
+                            padding: const EdgeInsets.all(AppTokens.spaceSm),
+                            decoration: BoxDecoration(
+                              color: AppTokens.surfaceMuted,
+                              borderRadius: AppTokens.borderRadiusMd,
+                            ),
+                            child: _responsiveGrid(
+                              cautionActions,
+                              constraints.maxWidth - AppTokens.spaceMd,
+                              columns,
+                            ),
+                          ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static List<Widget> _spaced(List<Widget> children) {
+    return [
+      for (var i = 0; i < children.length; i++) ...[
+        if (i > 0) const SizedBox(height: AppTokens.spaceSm),
+        children[i],
+      ],
+    ];
+  }
+
+  static Widget _responsiveGrid(
+    List<Widget> actions,
+    double availableWidth,
+    int maxColumns,
+  ) {
+    final columns = actions.length < maxColumns ? actions.length : maxColumns;
+    final itemWidth =
+        (availableWidth - (columns - 1) * AppTokens.spaceSm) / columns;
+    return Wrap(
+      spacing: AppTokens.spaceSm,
+      runSpacing: AppTokens.spaceSm,
+      children: [
+        for (final action in actions) SizedBox(width: itemWidth, child: action),
+      ],
+    );
+  }
 }

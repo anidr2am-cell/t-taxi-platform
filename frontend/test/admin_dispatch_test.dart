@@ -962,6 +962,67 @@ void main() {
     );
   });
 
+  testWidgets('booking actions use compact grouped desktop layout', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminBookingDetailPage(
+          bookingNumber: 'TX202609260002',
+          api: _FakeAdminApi(
+            detailResponse: {
+              'bookingNumber': 'TX202609260002',
+              'status': 'DRIVER_ASSIGNED',
+              'route': {
+                'origin': {'address': 'BKK'},
+                'destination': {'address': 'Pattaya'},
+              },
+              'customer': {'name': 'Kim', 'phone': '+66123456789'},
+              'pricing': {
+                'totalAmount': 1200,
+                'currency': 'THB',
+                'paymentMethod': 'PAY_DRIVER',
+              },
+              'activeAssignment': {'driverDisplayName': 'Driver A'},
+              'allowedActions': ['REASSIGN_DRIVER', 'COMPLETE_TRIP'],
+              'manualCallActions': {'canEdit': true, 'canCancel': true},
+            },
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final complete = find.widgetWithText(ElevatedButton, 'Complete trip');
+    final edit = find.widgetWithText(OutlinedButton, 'Edit');
+    final reassign = find.widgetWithText(OutlinedButton, 'Reassign driver');
+    final cancel = find.widgetWithText(OutlinedButton, 'Cancel call');
+    final unassign = find.widgetWithText(
+      OutlinedButton,
+      'Unassign driver (reopen)',
+    );
+    final noShow = find.widgetWithText(OutlinedButton, 'Mark no-show');
+
+    expect(complete, findsOneWidget);
+    expect(edit, findsOneWidget);
+    expect(reassign, findsOneWidget);
+    expect(cancel, findsOneWidget);
+    expect(unassign, findsOneWidget);
+    expect(noShow, findsOneWidget);
+    expect(tester.getSize(complete).width, greaterThan(850));
+    expect(tester.getCenter(edit).dy, tester.getCenter(reassign).dy);
+    expect(tester.getCenter(cancel).dy, tester.getCenter(unassign).dy);
+    expect(tester.getCenter(unassign).dy, tester.getCenter(noShow).dy);
+    expect(tester.getCenter(complete).dy, lessThan(tester.getCenter(edit).dy));
+    expect(tester.getCenter(edit).dy, lessThan(tester.getCenter(cancel).dy));
+  });
+
   testWidgets('assigned driver is rendered in booking detail', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
