@@ -355,6 +355,11 @@ test('driver-collected admin booking stores customer total and settlement differ
     });
     assert.equal(calls.commissionUpdates[0].fields.commissionAmount, 200);
     assert.equal(calls.socket[0].payload.companyCommissionAmount, 200);
+    assert.equal(
+      calls.chargeItems.reduce((sum, item) => sum + Number(item.amount), 0),
+      1800,
+    );
+    assert.equal(calls.chargeItems.find((item) => item.chargeType === 'OTHER').amount, 1700);
   } finally {
     setRealtimeIo(null);
     restoreContainer();

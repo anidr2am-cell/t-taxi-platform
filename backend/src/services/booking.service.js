@@ -1600,6 +1600,20 @@ class BookingService {
     };
   }
 
+  adminManualBaseChargeItem(manualPricing) {
+    const amount = Math.max(
+      0,
+      Number(manualPricing.customerChargeAmount) - Number(manualPricing.nameSignAmount || 0),
+    );
+    return {
+      chargeType: 'OTHER',
+      description: '관리자 등록 콜 (고객 결제 기본 금액)',
+      quantity: 1,
+      unitPrice: amount,
+      amount,
+    };
+  }
+
   resolveAdminManualPricing(input, { payoutAmount, nameSign, existingMetadata = null } = {}) {
     const stored = existingMetadata?.adminManualPricing ?? {};
     const requested = input.customerChargeAmount !== undefined
@@ -1909,13 +1923,7 @@ class BookingService {
 
       const originAddress = this.resolvePlaceAddress(origin);
       const destinationAddress = this.resolvePlaceAddress(destination);
-      const chargeItem = {
-        chargeType: 'OTHER',
-        description: '관리자 등록 콜 (고객센터 협의 금액)',
-        quantity: 1,
-        unitPrice: payoutAmount,
-        amount: payoutAmount,
-      };
+      const chargeItem = this.adminManualBaseChargeItem(manualPricing);
 
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
@@ -2305,10 +2313,10 @@ class BookingService {
       const destinationAddress = this.resolvePlaceAddress(destination);
 
       if (!shouldUpdatePayout) {
-        payoutAmount = await this.bookingRepository.findManualPayoutAmountByBookingId(
-          conn,
-          booking.id,
-        );
+        const storedPayoutAmount = Number(metadata.adminManualPricing?.payoutAmount);
+        payoutAmount = Number.isFinite(storedPayoutAmount) && storedPayoutAmount > 0
+          ? storedPayoutAmount
+          : await this.bookingRepository.findManualPayoutAmountByBookingId(conn, booking.id);
       }
 
       const manualPricing = this.resolveAdminManualPricing(
@@ -2316,6 +2324,25 @@ class BookingService {
         { payoutAmount, nameSign, existingMetadata: metadata },
       );
       metadata.adminManualPricing = manualPricing;
+
+      await this.bookingRepository.syncAdminManualNameSignChargeItem(
+        conn,
+        booking.id,
+        nameSign,
+        adminUser.id,
+      );
+      if (
+        shouldUpdatePayout
+        || input.customerChargeAmount !== undefined
+        || input.nameSign !== undefined
+      ) {
+        await this.bookingRepository.upsertManualPayoutChargeItem(
+          conn,
+          booking.id,
+          this.adminManualBaseChargeItem(manualPricing),
+          adminUser.id,
+        );
+      }
 
       await this.bookingRepository.updateAdminManualBookingFields(conn, booking.id, {
         originAddress,
@@ -2348,12 +2375,6 @@ class BookingService {
         updatedBy: adminUser.id,
       });
 
-      await this.bookingRepository.syncAdminManualNameSignChargeItem(
-        conn,
-        booking.id,
-        nameSign,
-        adminUser.id,
-      );
       await this.bookingRepository.updateCommissionFields(conn, booking.id, {
         commissionAmount: manualPricing.settlementAmount,
         commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
@@ -2373,21 +2394,6 @@ class BookingService {
         partial: true,
         existingTransfer,
       });
-
-      if (shouldUpdatePayout) {
-        await this.bookingRepository.upsertManualPayoutChargeItem(
-          conn,
-          booking.id,
-          {
-            chargeType: 'OTHER',
-            description: '관리자 등록 콜 (고객센터 협의 금액)',
-            quantity: 1,
-            unitPrice: payoutAmount,
-            amount: payoutAmount,
-          },
-          adminUser.id,
-        );
-      }
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
         activityType: 'BOOKING_UPDATED',
