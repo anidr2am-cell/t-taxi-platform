@@ -1945,7 +1945,8 @@ class BookingService {
         recommendedVehicleTypeId: null,
         vehicleCount: 1,
         routeId: null,
-        totalAmount: manualPricing.customerChargeAmount,
+        // Pricing-integrity triggers derive bookings.total_amount from charge items.
+        totalAmount: 0,
         currency: 'THB',
         paymentStatus,
         paymentMethod,
