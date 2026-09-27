@@ -38,6 +38,7 @@ function createHarness({
   booking = createBooking(),
   commitError = null,
   activeAssignment = { id: 1 },
+  mileageService = null,
 } = {}) {
   const calls = {
     beginTransaction: 0,
@@ -124,7 +125,13 @@ function createHarness({
   return {
     calls,
     records,
-    service: new BookingStatusService(pool, repository, outboxRepository, outboxProcessor),
+    service: new BookingStatusService(
+      pool,
+      repository,
+      outboxRepository,
+      outboxProcessor,
+      mileageService,
+    ),
   };
 }
 
@@ -329,22 +336,33 @@ test('SETTLEMENT_PENDING transition enqueues TRIP_ENDED outbox event', async () 
   assert.equal(harness.records.outbox.eventType, EVENTS.TRIP_ENDED);
 });
 
-test('SETTLEMENT_PENDING waives commission for admin manual bookings', async () => {
+test('ending a commission-exempt trip waives settlement and completes it immediately', async () => {
+  const mileageCalls = [];
   const harness = createHarness({
     booking: createBooking({
       status: BOOKING_STATUS.PICKED_UP,
       commission_exempt: 1,
     }),
+    mileageService: {
+      async accrueForBooking(bookingId) {
+        mileageCalls.push(bookingId);
+      },
+    },
   });
 
-  await harness.service.transition(
+  const result = await harness.service.transition(
     'TX202607010001',
     { status: BOOKING_STATUS.SETTLEMENT_PENDING },
     { id: 99, role: ROLES.DRIVER },
   );
 
+  assert.equal(result.status, BOOKING_STATUS.COMPLETED);
+  assert.equal(harness.records.updateStatus.status, BOOKING_STATUS.COMPLETED);
   assert.equal(harness.records.commissionFields.fields.commissionStatus, 'WAIVED');
   assert.equal(harness.records.commissionFields.fields.commissionAmount, 0);
+  assert.equal(harness.calls.completeActiveAssignment, 1);
+  assert.equal(harness.records.outbox.eventType, EVENTS.TRIP_COMPLETED);
+  assert.deepEqual(mileageCalls, [10]);
 });
 
 test('COMPLETED transition closes active driver assignment', async () => {

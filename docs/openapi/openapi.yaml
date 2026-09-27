@@ -2029,7 +2029,7 @@ paths:
     post:
       tags: [Admin]
       summary: Complete an active trip on behalf of the driver
-      description: Transitions an actively assigned DRIVER_ASSIGNED, ON_ROUTE, DRIVER_ARRIVED, or PICKED_UP booking to SETTLEMENT_PENDING through the standard booking state machine.
+      description: Completes an actively assigned DRIVER_ASSIGNED, ON_ROUTE, DRIVER_ARRIVED, or PICKED_UP booking through the standard booking state machine. Commission-bearing bookings move to SETTLEMENT_PENDING; commission-exempt bookings move directly to COMPLETED.
       operationId: adminCompleteActiveTrip
       parameters:
         - $ref: '#/components/parameters/BookingNumber'
