@@ -371,7 +371,7 @@ void main() {
       expect(api.detailCalls, greaterThan(1));
       expect(settlementApi.detailCalls, greaterThanOrEqualTo(1));
       expect(find.text('정산이 필요합니다'), findsOneWidget);
-      expect(find.text('THB 200'), findsOneWidget);
+      expect(find.text('THB 200'), findsWidgets);
       expect(find.text('SCB'), findsOneWidget);
       expect(find.text('T-Ride'), findsOneWidget);
       expect(find.text('1234567890'), findsOneWidget);
@@ -411,7 +411,7 @@ void main() {
   });
 
   testWidgets(
-    'detail shows route map, name board, and total fare without commission',
+    'detail shows route map, name board, and complete payment breakdown',
     (tester) async {
       _useTallViewport(tester);
       await tester.pumpWidget(
@@ -421,6 +421,7 @@ void main() {
               status: 'DRIVER_ASSIGNED',
               actions: ['VIEW_DETAILS', 'START_ON_ROUTE'],
               nameSignRequested: true,
+              nameSignAmount: 100,
               withCoordinates: true,
             ),
           ),
@@ -431,8 +432,10 @@ void main() {
       expect(find.byKey(const Key('driverRouteMap')), findsOneWidget);
       expect(find.text('THB 1,300'), findsWidgets);
       expect(find.textContaining('네임보드 서비스'), findsOneWidget);
-      expect(find.textContaining('회사에 납부할 수수료'), findsNothing);
-      expect(find.textContaining('기사 예상 수입'), findsNothing);
+      expect(find.textContaining('회사에 납부할 수수료'), findsOneWidget);
+      expect(find.textContaining('기사가 선지급할 피켓 비용'), findsOneWidget);
+      expect(find.text('THB 100'), findsOneWidget);
+      expect(find.textContaining('기사 예상 수입'), findsOneWidget);
     },
   );
 
@@ -972,6 +975,7 @@ DriverBooking _booking({
   String? standbyReferenceTime,
   String? standbyAllowedAt,
   bool nameSignRequested = false,
+  double? nameSignAmount,
   bool withCoordinates = false,
   DriverBookingLocation? pickupLocation,
   DriverBookingLocation? destinationLocation,
@@ -1013,6 +1017,7 @@ DriverBooking _booking({
     customerPaymentMethod: 'PAY_DRIVER_AT_DESTINATION',
     companyCommissionAmount: 200,
     companyCommissionCurrency: 'THB',
+    nameSignAmount: nameSignAmount,
     driverExpectedIncomeAmount: 1100,
     driverExpectedIncomeCurrency: 'THB',
     currency: 'THB',

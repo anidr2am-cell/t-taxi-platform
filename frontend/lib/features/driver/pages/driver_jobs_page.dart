@@ -1385,16 +1385,14 @@ List<Widget> _openCallPaymentSummaryRows(
       emphasize: true,
     ),
     AppUi.summaryRow(
-      label: call.isAdminManualCall
-          ? l10n.t('driver_call_badge_no_commission')
-          : '수수료',
+      label: l10n.t('driver_company_commission'),
       value: DriverMoneyFormat.money(
         _openCallCommissionForCall(call),
         currency,
       ),
     ),
     AppUi.summaryRow(
-      label: '피켓비용',
+      label: l10n.t('driver_name_sign_advance'),
       value: DriverMoneyFormat.money(picketCost, currency),
     ),
     AppUi.summaryRow(

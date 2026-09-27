@@ -606,6 +606,31 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                               ),
                               emphasize: true,
                             ),
+                            if (booking.companyCommissionAmount != null)
+                              AppUi.summaryRow(
+                                label: l10n.t('driver_company_commission'),
+                                value: DriverMoneyFormat.money(
+                                  booking.companyCommissionAmount!,
+                                  booking.companyCommissionCurrency ?? booking.currency,
+                                ),
+                              ),
+                            if (booking.nameSignRequested && booking.nameSignAmount != null)
+                              AppUi.summaryRow(
+                                label: l10n.t('driver_name_sign_advance'),
+                                value: DriverMoneyFormat.money(
+                                  booking.nameSignAmount!,
+                                  booking.customerPaymentCurrency ?? booking.currency,
+                                ),
+                              ),
+                            if (booking.driverExpectedIncomeAmount != null)
+                              AppUi.summaryRow(
+                                label: l10n.t('driver_expected_income'),
+                                value: DriverMoneyFormat.money(
+                                  booking.driverExpectedIncomeAmount!,
+                                  booking.driverExpectedIncomeCurrency ?? booking.currency,
+                                ),
+                                emphasize: true,
+                              ),
                           ],
                           if (booking.nameSignRequested) ...[
                             const SizedBox(height: AppTokens.spaceSm),
@@ -980,6 +1005,28 @@ class _EndTripPaymentSummary extends StatelessWidget {
           value: paymentLabel,
         ),
       );
+    }
+    final commission = booking.companyCommissionAmount;
+    if (commission != null && currency != null && currency.isNotEmpty) {
+      rows.add(AppUi.summaryRow(
+        label: l10n.t('driver_company_commission'),
+        value: DriverMoneyFormat.money(commission, currency),
+      ));
+    }
+    final nameSignAmount = booking.nameSignAmount;
+    if (booking.nameSignRequested && nameSignAmount != null && currency != null && currency.isNotEmpty) {
+      rows.add(AppUi.summaryRow(
+        label: l10n.t('driver_name_sign_advance'),
+        value: DriverMoneyFormat.money(nameSignAmount, currency),
+      ));
+    }
+    final income = booking.driverExpectedIncomeAmount;
+    if (income != null && currency != null && currency.isNotEmpty) {
+      rows.add(AppUi.summaryRow(
+        label: l10n.t('driver_expected_income'),
+        value: DriverMoneyFormat.money(income, currency),
+        emphasize: true,
+      ));
     }
     if (rows.isEmpty) {
       return const SizedBox.shrink();

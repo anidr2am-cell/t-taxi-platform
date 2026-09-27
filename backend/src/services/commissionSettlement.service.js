@@ -280,6 +280,12 @@ class CommissionSettlementService {
   }
 
   driverExpectedIncome(row) {
+    const metadata = this.parseMetadata(row.metadata);
+    const adminManualPayout = this.moneyAmount(metadata.adminManualPricing?.payoutAmount);
+    if ((row.booking_source === 'ADMIN_MANUAL' || Number(row.commission_exempt) === 1)
+      && adminManualPayout != null) {
+      return adminManualPayout;
+    }
     const customerPaymentAmount = this.moneyAmount(row.total_amount);
     const companyCommissionAmount = this.moneyAmount(row.commission_amount);
     if (customerPaymentAmount == null || companyCommissionAmount == null) {

@@ -27,6 +27,7 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
     transferUpdates: 0,
     transferInserts: 0,
     lastUpdateFields: null,
+    commissionUpdates: [],
     payoutUpserts: 0,
     transferUpsertPayload: null,
     metadataSnapshot: {
@@ -152,6 +153,9 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
     async updateAdminManualBookingFields(_conn, _id, fields) {
       calls.lastUpdateFields = fields;
     },
+    async updateCommissionFields(_conn, bookingId, fields) {
+      calls.commissionUpdates.push({ bookingId, fields });
+    },
     async updatePassengers() {
       calls.passengerUpdates += 1;
     },
@@ -163,7 +167,7 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
       if (enabled) {
         calls.chargeItems.push({
           chargeType: 'NAME_SIGN',
-          amount: 0,
+          amount: 100,
         });
       }
     },
@@ -317,8 +321,55 @@ test('createAdminManualBooking marks name sign for drivers when picket enabled',
       calls.chargeItems.some((item) => item.chargeType === 'NAME_SIGN'),
       true,
     );
+    assert.equal(calls.chargeItems.find((item) => item.chargeType === 'NAME_SIGN').amount, 100);
+    assert.equal(calls.booking.totalAmount, 900);
+    assert.equal(calls.socket[0].payload.nameSignAmount, 100);
+    assert.equal(calls.socket[0].payload.driverExpectedIncomeAmount, 800);
     assert.equal(calls.socket[0].payload.nameSignRequested, true);
     assert.equal(calls.socket[0].payload.nameSignText, 'KIM MINSU');
+  } finally {
+    setRealtimeIo(null);
+    restoreContainer();
+  }
+});
+
+test('driver-collected admin booking stores customer total and settlement difference', async () => {
+  const { service, calls, input, restoreContainer } = createHarness({
+    customerUserId: 55,
+    customerChargeAmount: 1800,
+  });
+  try {
+    await service.createAdminManualBooking(
+      { ...input, payoutAmount: 1500, nameSign: true, nameSignText: 'KIM' },
+      ADMIN,
+    );
+
+    assert.equal(calls.booking.totalAmount, 1800);
+    assert.equal(calls.booking.commissionExempt, false);
+    assert.deepEqual(calls.booking.metadata.adminManualPricing, {
+      payoutAmount: 1500,
+      customerChargeAmount: 1800,
+      nameSignAmount: 100,
+      settlementAmount: 200,
+      commissionExempt: false,
+    });
+    assert.equal(calls.commissionUpdates[0].fields.commissionAmount, 200);
+    assert.equal(calls.socket[0].payload.companyCommissionAmount, 200);
+  } finally {
+    setRealtimeIo(null);
+    restoreContainer();
+  }
+});
+
+test('equal driver-collected amounts remain settlement exempt', async () => {
+  const { service, calls, input, restoreContainer } = createHarness({
+    customerUserId: 55,
+    customerChargeAmount: 800,
+  });
+  try {
+    await service.createAdminManualBooking(input, ADMIN);
+    assert.equal(calls.booking.commissionExempt, true);
+    assert.equal(calls.commissionUpdates[0].fields.commissionAmount, 0);
   } finally {
     setRealtimeIo(null);
     restoreContainer();
