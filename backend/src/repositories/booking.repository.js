@@ -1729,7 +1729,16 @@ class BookingRepository {
 
     where.push(`
       (
-        b.status NOT IN ('COMPLETED', 'CANCELLED', 'NO_SHOW', 'SETTLEMENT_PENDING')
+        b.status NOT IN (
+          'DRIVER_ASSIGNED',
+          'ON_ROUTE',
+          'DRIVER_ARRIVED',
+          'PICKED_UP',
+          'SETTLEMENT_PENDING',
+          'COMPLETED',
+          'CANCELLED',
+          'NO_SHOW'
+        )
         AND b.updated_at < DATE_SUB(?, INTERVAL 2 HOUR)
       )
     `);

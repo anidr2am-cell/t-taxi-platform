@@ -444,6 +444,20 @@ test("needs action settlement conditions require DUE or OVERDUE", () => {
   assert.match(where.sql, /commission_status IN \('DUE', 'OVERDUE'\)/);
 });
 
+test("needs action stale-status condition excludes active trips", () => {
+  const repo = new BookingRepository({});
+  const where = repo.buildNeedsActionWhere({
+    operationsNow: "2026-07-11 10:00:00",
+    operationsUrgentCutoff: "2026-07-11 10:30:00",
+    adminUserId: null,
+  });
+
+  assert.match(
+    where.sql,
+    /status NOT IN \(\s*'DRIVER_ASSIGNED',\s*'ON_ROUTE',\s*'DRIVER_ARRIVED',\s*'PICKED_UP',\s*'SETTLEMENT_PENDING'/,
+  );
+});
+
 test("admin unread is excluded from needs_action when admin id missing", () => {
   const repo = new BookingRepository({});
   const where = repo.buildNeedsActionWhere({
