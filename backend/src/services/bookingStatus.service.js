@@ -126,13 +126,18 @@ class BookingStatusService {
     return MILEAGE_REVERSAL_FROM_STATUSES.has(fromStatus);
   }
 
-  async handlePostCommitMileageEffects({ bookingId, fromStatus, toStatus }) {
+  async handlePostCommitMileageEffects({
+    bookingId,
+    fromStatus,
+    toStatus,
+    settlementReached = false,
+  }) {
     if (!this.mileageService || !bookingId) {
       return;
     }
 
     try {
-      if (toStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
+      if (settlementReached || toStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
         await this.mileageService.accrueForBooking(bookingId);
         return;
       }
@@ -327,21 +332,30 @@ class BookingStatusService {
     }
 
     const fromStatus = booking.status;
-    const toStatus = input.status;
+    const requestedToStatus = input.status;
+    const commissionExempt = booking.commission_exempt === 1
+      || booking.commission_exempt === true
+      || booking.commission_exempt === '1';
+    const autoCompleteCommissionExempt =
+      requestedToStatus === BOOKING_STATUS.SETTLEMENT_PENDING && commissionExempt;
+    const toStatus = autoCompleteCommissionExempt
+      ? BOOKING_STATUS.COMPLETED
+      : requestedToStatus;
     if (!options.skipAccessCheck) {
       this.assertActorCanAccessBooking(booking, actor);
     }
 
-    if (fromStatus === toStatus) {
+    if (fromStatus === requestedToStatus) {
       return {
-        result: this.buildBookingResult(booking, toStatus, true),
+        result: this.buildBookingResult(booking, requestedToStatus, true),
         domainEvent: null,
         eventPayload: null,
         outboxId: null,
         releasedDriverUserId: null,
         bookingId: booking.id,
         fromStatus,
-        toStatus,
+        toStatus: requestedToStatus,
+        settlementReached: false,
       };
     }
     if (options.requireActiveAssignment) {
@@ -364,7 +378,7 @@ class BookingStatusService {
       this.assertCustomerCancellationAllowed(booking, options.nowMs);
     }
 
-    this.validateTransition(fromStatus, toStatus, actor.role, options);
+    this.validateTransition(fromStatus, requestedToStatus, actor.role, options);
     const occurredAt = new Date().toISOString();
     let releasedDriverUserId = booking.driver_user_id ?? null;
     let releaseReasonCode = null;
@@ -373,10 +387,7 @@ class BookingStatusService {
       cancellationReason: input.reason ?? input.memo ?? null,
     });
 
-    if (toStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
-      const commissionExempt = booking.commission_exempt === 1
-        || booking.commission_exempt === true
-        || booking.commission_exempt === '1';
+    if (requestedToStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
       await this.bookingRepository.updateCommissionFields(conn, booking.id, {
         commissionStatus: commissionExempt ? 'WAIVED' : 'DUE',
         commissionAmount: commissionExempt ? 0 : 200,
@@ -448,6 +459,7 @@ class BookingStatusService {
       bookingId: booking.id,
       fromStatus,
       toStatus,
+      settlementReached: requestedToStatus === BOOKING_STATUS.SETTLEMENT_PENDING,
     };
   }
 
@@ -487,6 +499,7 @@ class BookingStatusService {
       bookingId: transition.bookingId,
       fromStatus: transition.fromStatus,
       toStatus: transition.toStatus,
+      settlementReached: transition.settlementReached,
     });
     return transition.result;
   }

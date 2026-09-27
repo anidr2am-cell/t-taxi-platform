@@ -83,7 +83,7 @@ const completeActiveTrip = asyncHandler(async (req, res) => {
     req.params.bookingNumber,
     req.user,
   );
-  return success(res, data, 'Trip completed and moved to settlement pending');
+  return success(res, data, 'Trip completed');
 });
 
 const getDriverCandidates = asyncHandler(async (req, res) => {
