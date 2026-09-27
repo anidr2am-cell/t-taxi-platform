@@ -365,6 +365,25 @@ test('ending a commission-exempt trip waives settlement and completes it immedia
   assert.deepEqual(mileageCalls, [10]);
 });
 
+test('ending a driver-collected admin trip uses its calculated settlement amount', async () => {
+  const harness = createHarness({
+    booking: createBooking({
+      status: BOOKING_STATUS.PICKED_UP,
+      booking_source: 'ADMIN_MANUAL',
+      commission_exempt: 0,
+      commission_amount: '100.00',
+    }),
+  });
+  const result = await harness.service.transition(
+    'TX202607010001',
+    { status: BOOKING_STATUS.SETTLEMENT_PENDING },
+    actor,
+  );
+  assert.equal(result.status, BOOKING_STATUS.SETTLEMENT_PENDING);
+  assert.equal(harness.records.commissionFields.fields.commissionStatus, 'DUE');
+  assert.equal(harness.records.commissionFields.fields.commissionAmount, 100);
+});
+
 test('COMPLETED transition closes active driver assignment', async () => {
   const harness = createHarness({
     booking: createBooking({ status: 'SETTLEMENT_PENDING' }),

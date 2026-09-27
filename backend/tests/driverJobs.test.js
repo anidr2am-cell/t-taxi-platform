@@ -761,6 +761,23 @@ test('driver job payment summary keeps legacy income when NAME_SIGN amount is ab
   assert.equal(summary.driverExpectedIncomeAmount, 1100);
 });
 
+test('admin manual payment summary uses the explicitly stored driver payout', () => {
+  const service = new DriverJobService({});
+  const summary = service.paymentSummary({
+    booking_source: 'ADMIN_MANUAL',
+    total_amount: 1800,
+    commission_amount: 200,
+    name_sign_amount: 100,
+    currency: 'THB',
+    payment_method: 'PAY_DRIVER',
+    metadata: JSON.stringify({ adminManualPricing: { payoutAmount: 1500 } }),
+  });
+  assert.equal(summary.customerPaymentAmount, 1800);
+  assert.equal(summary.companyCommissionAmount, 200);
+  assert.equal(summary.nameSignAmount, 100);
+  assert.equal(summary.driverExpectedIncomeAmount, 1500);
+});
+
 test('mapBase exposes nameSignAmount from payment summary', () => {
   const service = new DriverJobService({});
   const mapped = service.mapBase(row({

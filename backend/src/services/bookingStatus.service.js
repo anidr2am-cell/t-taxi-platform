@@ -388,9 +388,15 @@ class BookingStatusService {
     });
 
     if (requestedToStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
+      const storedCommissionAmount = Number(booking.commission_amount);
+      const commissionAmount = commissionExempt
+        ? 0
+        : (Number.isFinite(storedCommissionAmount) && storedCommissionAmount > 0
+          ? storedCommissionAmount
+          : 200);
       await this.bookingRepository.updateCommissionFields(conn, booking.id, {
         commissionStatus: commissionExempt ? 'WAIVED' : 'DUE',
-        commissionAmount: commissionExempt ? 0 : 200,
+        commissionAmount,
         commissionDueAt: null,
         updatedBy: actor.id,
       });

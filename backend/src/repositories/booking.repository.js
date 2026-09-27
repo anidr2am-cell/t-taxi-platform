@@ -178,6 +178,8 @@ class BookingRepository {
           special_requests = ?,
           prefer_female_driver = ?,
           metadata = ?,
+          total_amount = ?,
+          commission_exempt = ?,
           updated_by = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND deleted_at IS NULL
@@ -204,6 +206,8 @@ class BookingRepository {
         fields.specialRequests,
         fields.preferFemaleDriver ? 1 : 0,
         fields.metadata ? JSON.stringify(fields.metadata) : null,
+        fields.totalAmount,
+        fields.commissionExempt ? 1 : 0,
         fields.updatedBy,
         bookingId,
       ],
@@ -229,8 +233,8 @@ class BookingRepository {
       chargeType: 'NAME_SIGN',
       description: 'Name sign service (picket)',
       quantity: 1,
-      unitPrice: 0,
-      amount: 0,
+      unitPrice: 100,
+      amount: 100,
     };
     const [rows] = await conn.query(
       `
@@ -954,6 +958,7 @@ class BookingRepository {
           b.id, b.booking_number, b.status, b.total_amount, b.currency, b.vehicle_type_id,
           b.scheduled_pickup_at,
           b.payment_status, b.payment_method, b.commission_exempt, b.booking_source,
+          b.commission_amount, b.metadata,
           b.customer_user_id,
           b.is_urgent_request,
           b.urgent_negotiation_id,

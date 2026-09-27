@@ -397,7 +397,7 @@ void main() {
       expect(find.textContaining('고객 결제 총액'), findsWidgets);
       expect(find.textContaining('수수료'), findsWidgets);
       expect(find.textContaining('THB 200'), findsWidgets);
-      expect(find.textContaining('피켓비용'), findsWidgets);
+      expect(find.textContaining('기사가 선지급할 피켓 비용'), findsWidgets);
       expect(find.textContaining('THB 100'), findsWidgets);
       expect(find.textContaining('기사 예상 수입'), findsWidgets);
       expect(find.textContaining('THB 2,200'), findsWidgets);

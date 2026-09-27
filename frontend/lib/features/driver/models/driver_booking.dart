@@ -39,6 +39,7 @@ class DriverBooking {
     this.customerPaymentMethod,
     this.companyCommissionAmount,
     this.companyCommissionCurrency,
+    this.nameSignAmount,
     this.driverExpectedIncomeAmount,
     this.driverExpectedIncomeCurrency,
     this.currency,
@@ -92,6 +93,7 @@ class DriverBooking {
   final String? customerPaymentMethod;
   final double? companyCommissionAmount;
   final String? companyCommissionCurrency;
+  final double? nameSignAmount;
   final double? driverExpectedIncomeAmount;
   final String? driverExpectedIncomeCurrency;
   final String? currency;
@@ -183,6 +185,7 @@ class DriverBooking {
       companyCommissionAmount: (json['companyCommissionAmount'] as num?)
           ?.toDouble(),
       companyCommissionCurrency: json['companyCommissionCurrency'] as String?,
+      nameSignAmount: (json['nameSignAmount'] as num?)?.toDouble(),
       driverExpectedIncomeAmount: (json['driverExpectedIncomeAmount'] as num?)
           ?.toDouble(),
       driverExpectedIncomeCurrency:
@@ -197,7 +200,9 @@ class DriverBooking {
           .toList(),
       releaseAssignmentAvailable:
           capabilities['releaseAssignmentAvailable'] == true ||
-          (json['allowedActions'] as List? ?? []).contains('RELEASE_ASSIGNMENT'),
+          (json['allowedActions'] as List? ?? []).contains(
+            'RELEASE_ASSIGNMENT',
+          ),
       releaseAssignmentEmergencyOnly:
           capabilities['releaseAssignmentEmergencyOnly'] == true,
       assignmentReleaseDeadline:
@@ -336,6 +341,7 @@ class DriverOpenCall {
     this.customerPaymentMethod,
     this.companyCommissionAmount,
     this.companyCommissionCurrency,
+    this.nameSignAmount,
     this.driverExpectedIncomeAmount,
     this.driverExpectedIncomeCurrency,
     this.luggage,
@@ -366,6 +372,7 @@ class DriverOpenCall {
   final String? customerPaymentMethod;
   final double? companyCommissionAmount;
   final String? companyCommissionCurrency;
+  final double? nameSignAmount;
   final double? driverExpectedIncomeAmount;
   final String? driverExpectedIncomeCurrency;
   final Map<String, dynamic>? luggage;
@@ -404,6 +411,7 @@ class DriverOpenCall {
       customerPaymentMethod: customerPaymentMethod,
       companyCommissionAmount: companyCommissionAmount,
       companyCommissionCurrency: companyCommissionCurrency,
+      nameSignAmount: nameSignAmount,
       driverExpectedIncomeAmount: driverExpectedIncomeAmount,
       driverExpectedIncomeCurrency: driverExpectedIncomeCurrency,
       luggage: luggage,
@@ -414,7 +422,8 @@ class DriverOpenCall {
           minRequiredEtaMinutes ?? this.minRequiredEtaMinutes,
       compatibleVehicles: compatibleVehicles ?? this.compatibleVehicles,
       isAdminManualCall: isAdminManualCall ?? this.isAdminManualCall,
-      requiresBankAccountConfirmation: requiresBankAccountConfirmation ??
+      requiresBankAccountConfirmation:
+          requiresBankAccountConfirmation ??
           this.requiresBankAccountConfirmation,
     );
   }
@@ -457,6 +466,7 @@ class DriverOpenCall {
       companyCommissionAmount: (json['companyCommissionAmount'] as num?)
           ?.toDouble(),
       companyCommissionCurrency: json['companyCommissionCurrency'] as String?,
+      nameSignAmount: (json['nameSignAmount'] as num?)?.toDouble(),
       driverExpectedIncomeAmount: (json['driverExpectedIncomeAmount'] as num?)
           ?.toDouble(),
       driverExpectedIncomeCurrency:

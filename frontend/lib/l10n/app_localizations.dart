@@ -181,11 +181,11 @@ class AppLocalizations {
       'admin_manual_booking_vehicle_type': 'Vehicle class',
       'admin_manual_booking_passengers': 'Passengers',
       'admin_manual_booking_name_sign_hint':
-          'Drivers will see a picket/name-sign badge on this call.',
+          'Adds 100 THB to the customer total. The driver pays that 100 THB to airport picket staff.',
       'admin_manual_booking_payout_amount': 'Driver payout amount (THB)',
       'admin_manual_booking_customer_charge_amount': 'Customer payment amount (THB)',
       'admin_manual_booking_customer_charge_hint':
-          'Optional internal record of what the customer paid or will pay.',
+          'Used to calculate settlement when the driver collects. Company settlement = customer payment - driver payout - 100 THB picket fee.',
       'admin_manual_booking_payment_method': 'Payment collection',
       'admin_manual_booking_payment_admin_collected': 'Admin already collected payment',
       'admin_manual_booking_payment_driver_collects': 'Driver collects on site',
@@ -1109,6 +1109,7 @@ class AppLocalizations {
       'driver_payment_summary_title': 'Payment and income',
       'driver_customer_total_amount': 'Customer total',
       'driver_company_commission': 'Company commission',
+      'driver_name_sign_advance': 'Picket fee paid in advance by driver',
       'driver_expected_income': 'Driver expected income',
       'driver_income_unavailable':
           'Income information is not available. Please contact operations.',
@@ -2108,11 +2109,11 @@ class AppLocalizations {
       'admin_manual_booking_vehicle_type': '차량 등급',
       'admin_manual_booking_passengers': '탑승 인원',
       'admin_manual_booking_name_sign_hint':
-          '기사 앱에서 피켓(네임사인) 필요 콜로 표시됩니다.',
+          '고객 결제액에 100바트가 추가되며, 기사가 공항 피켓 직원에게 100바트를 선지급합니다.',
       'admin_manual_booking_payout_amount': '기사 지급 금액 (THB)',
       'admin_manual_booking_customer_charge_amount': '고객 결제 금액 (THB)',
       'admin_manual_booking_customer_charge_hint':
-          '관리자 기록용 선택 항목입니다. 고객이 실제로 낸/낼 금액을 입력하세요.',
+          '기사 현장 수금 시 회사 정산액 = 고객 결제액 - 기사 지급액 - 피켓비 100바트입니다.',
       'admin_manual_booking_payment_method': '결제 방식',
       'admin_manual_booking_payment_admin_collected': '관리자가 이미 결제 받음',
       'admin_manual_booking_payment_driver_collects': '현장에서 기사가 직접 수금',
@@ -3394,10 +3395,10 @@ class AppLocalizations {
       'admin_dispatch_driver_pickup_conflict': '接客时间与该司机其他已分配订单冲突',
       'admin_manual_booking_vehicle_type': '车型等级',
       'admin_manual_booking_passengers': '乘客人数',
-      'admin_manual_booking_name_sign_hint': '司机端将显示需要举牌服务的标识。',
+      'admin_manual_booking_name_sign_hint': '客户总额增加100泰铢，司机需向机场举牌人员先支付100泰铢。',
       'admin_manual_booking_payout_amount': '司机支付金额 (THB)',
       'admin_manual_booking_customer_charge_amount': '客户支付金额 (THB)',
-      'admin_manual_booking_customer_charge_hint': '可选，仅供管理员记录客户实际支付金额。',
+      'admin_manual_booking_customer_charge_hint': '司机现场收款时，公司结算额＝客户付款－司机收入－举牌费100泰铢。',
       'admin_manual_booking_payment_method': '收款方式',
       'admin_manual_booking_payment_admin_collected': '管理员已收款',
       'admin_manual_booking_payment_driver_collects': '司机现场收款',
@@ -4220,10 +4221,10 @@ class AppLocalizations {
       'admin_manual_booking_vehicle_type': '車両クラス',
       'admin_manual_booking_passengers': '乗客人数',
       'admin_manual_booking_name_sign_hint':
-          'ドライバーアプリでネームボード（ピケット）必要として表示されます。',
+          '顧客支払額に100バーツを加算し、ドライバーが空港の係員へ100バーツを立替払いします。',
       'admin_manual_booking_payout_amount': 'ドライバー支払額 (THB)',
       'admin_manual_booking_customer_charge_amount': '顧客支払額 (THB)',
-      'admin_manual_booking_customer_charge_hint': '任意。管理者記録用の顧客実支払額です。',
+      'admin_manual_booking_customer_charge_hint': '現地回収時の会社精算額＝顧客支払額－ドライバー受取額－ピケット代100バーツです。',
       'admin_manual_booking_payment_method': '支払い回収方法',
       'admin_manual_booking_payment_admin_collected': '管理者が既に受領済み',
       'admin_manual_booking_payment_driver_collects': '現地でドライバーが直接回収',
@@ -5118,11 +5119,11 @@ class AppLocalizations {
       'admin_manual_booking_vehicle_type': 'ประเภทรถ',
       'admin_manual_booking_passengers': 'จำนวนผู้โดยสาร',
       'admin_manual_booking_name_sign_hint':
-          'คนขับจะเห็นป้ายว่าต้องถือป้ายชื่อสำหรับงานนี้',
+          'เพิ่มยอดลูกค้า 100 บาท และคนขับสำรองจ่าย 100 บาทให้เจ้าหน้าที่ป้ายที่สนามบิน',
       'admin_manual_booking_payout_amount': 'ยอดจ่ายคนขับ (THB)',
       'admin_manual_booking_customer_charge_amount': 'ยอดที่ลูกค้าจ่าย (THB)',
       'admin_manual_booking_customer_charge_hint':
-          'ไม่บังคับ ใช้บันทึกภายในว่าลูกค้าจ่าย/จะจ่ายเท่าใด',
+          'เมื่อคนขับเก็บเงิน: ยอดชำระบริษัท = ยอดลูกค้า - รายได้คนขับ - ค่าป้าย 100 บาท',
       'admin_manual_booking_payment_method': 'วิธีรับเงิน',
       'admin_manual_booking_payment_admin_collected': 'แอดมินรับเงินแล้ว',
       'admin_manual_booking_payment_driver_collects': 'คนขับเก็บเงินหน้างาน',
@@ -6968,6 +6969,8 @@ class AppLocalizations {
     'driver_customer_total_amount': '고객 결제 총액\n(ยอดชำระรวมของลูกค้า)',
     'driver_company_commission':
         '회사에 납부할 수수료\n(ค่าคอมมิชชันที่ต้องชำระให้บริษัท)',
+    'driver_name_sign_advance':
+        '기사가 선지급할 피켓 비용\n(ค่าป้ายรับที่คนขับสำรองจ่าย)',
     'driver_expected_income': '기사 예상 수입\n(รายได้โดยประมาณของคนขับ)',
     'driver_income_unavailable':
         '수입 정보를 확인할 수 없습니다. 관리자에게 문의해 주세요.\n(ไม่สามารถยืนยันข้อมูลรายได้ได้ กรุณาติดต่อผู้ดูแล)',

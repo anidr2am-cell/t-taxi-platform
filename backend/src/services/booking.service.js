@@ -1,5 +1,9 @@
 const { normalizeMarketingAttribution } = require('../utils/marketingAttribution.util');
 const { pickPersistableMessengerMetadata } = require('../utils/customerMessengerFields');
+const {
+  ADMIN_MANUAL_NAME_SIGN_AMOUNT,
+  calculateAdminManualSettlement,
+} = require('../policies/adminManualSettlement.policy');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
@@ -1551,6 +1555,7 @@ class BookingService {
     requiresBankAccountConfirmation = false,
     nameSign = false,
     nameSignText = null,
+    manualPricing = null,
   } = {}) {
     return {
       ...basePayload,
@@ -1560,6 +1565,13 @@ class BookingService {
       requiresBankAccountConfirmation,
       nameSignRequested: Boolean(nameSign),
       nameSignText: nameSign ? (nameSignText ?? null) : null,
+      customerPaymentAmount: manualPricing?.customerChargeAmount ?? basePayload.amount,
+      customerPaymentCurrency: basePayload.currency,
+      companyCommissionAmount: manualPricing?.settlementAmount ?? 0,
+      companyCommissionCurrency: basePayload.currency,
+      nameSignAmount: manualPricing?.nameSignAmount ?? 0,
+      driverExpectedIncomeAmount: manualPricing?.payoutAmount ?? basePayload.amount,
+      driverExpectedIncomeCurrency: basePayload.currency,
     };
   }
 
@@ -1583,8 +1595,32 @@ class BookingService {
       chargeType: 'NAME_SIGN',
       description: 'Name sign service (picket)',
       quantity: 1,
-      unitPrice: 0,
-      amount: 0,
+      unitPrice: ADMIN_MANUAL_NAME_SIGN_AMOUNT,
+      amount: ADMIN_MANUAL_NAME_SIGN_AMOUNT,
+    };
+  }
+
+  resolveAdminManualPricing(input, { payoutAmount, nameSign, existingMetadata = null } = {}) {
+    const stored = existingMetadata?.adminManualPricing ?? {};
+    const requested = input.customerChargeAmount !== undefined
+      ? Number(input.customerChargeAmount)
+      : Number(stored.customerChargeAmount);
+    const nameSignAmount = nameSign ? ADMIN_MANUAL_NAME_SIGN_AMOUNT : 0;
+    const customerChargeAmount = Number.isFinite(requested) && requested > 0
+      ? requested
+      : Number(payoutAmount) + nameSignAmount;
+    const settlement = calculateAdminManualSettlement({
+      payoutAmount,
+      customerChargeAmount,
+      nameSignAmount,
+      paymentMethod: input.paymentMethod,
+    });
+    return {
+      payoutAmount: Number(payoutAmount),
+      customerChargeAmount,
+      nameSignAmount,
+      settlementAmount: settlement.settlementAmount,
+      commissionExempt: settlement.commissionExempt,
     };
   }
 
@@ -1863,7 +1899,11 @@ class BookingService {
           placeId: destination.placeId,
         }),
       ]);
-      const metadata = {};
+      const manualPricing = this.resolveAdminManualPricing(
+        { ...input, paymentMethod },
+        { payoutAmount, nameSign },
+      );
+      const metadata = { adminManualPricing: manualPricing };
       if (originLocationMetadata) metadata.originLocation = originLocationMetadata;
       if (destinationLocationMetadata) metadata.destinationLocation = destinationLocationMetadata;
 
@@ -1883,7 +1923,7 @@ class BookingService {
         contactStatus: CONTACT_STATUS.VERIFIED,
         serviceTypeId: serviceType.id,
         bookingSource: 'ADMIN_MANUAL',
-        commissionExempt: true,
+        commissionExempt: manualPricing.commissionExempt,
         originAddress,
         originPlaceId: origin.placeId ?? null,
         originLat: origin.lat ?? null,
@@ -1897,7 +1937,7 @@ class BookingService {
         recommendedVehicleTypeId: null,
         vehicleCount: 1,
         routeId: null,
-        totalAmount: 0,
+        totalAmount: manualPricing.customerChargeAmount,
         currency: 'THB',
         paymentStatus,
         paymentMethod,
@@ -1940,6 +1980,11 @@ class BookingService {
           adminUser.id,
         );
       }
+      await this.bookingRepository.updateCommissionFields(conn, bookingId, {
+        commissionAmount: manualPricing.settlementAmount,
+        commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
+        updatedBy: adminUser.id,
+      });
 
       await this.bookingRepository.insertStatusLog(conn, bookingId, {
         fromStatus: null,
@@ -1966,7 +2011,7 @@ class BookingService {
       const pricing = {
         routeId: null,
         currency: 'THB',
-        totalAmount: payoutAmount,
+        totalAmount: manualPricing.customerChargeAmount,
         chargeItems: nameSign
           ? [chargeItem, this.adminManualNameSignChargeItem()]
           : [chargeItem],
@@ -1986,11 +2031,12 @@ class BookingService {
         }),
         {
           paymentMethod,
-          commissionExempt: true,
+          commissionExempt: manualPricing.commissionExempt,
           isAdminManualCall: true,
           requiresBankAccountConfirmation: isAdminCollected,
           nameSign,
           nameSignText,
+          manualPricing,
         },
       );
 
@@ -2033,11 +2079,10 @@ class BookingService {
         emitDriverCallAvailable(target.userId, openCallPayload);
       }
 
-      const customerChargeAmount = input.customerChargeAmount != null
-        ? Number(input.customerChargeAmount)
-        : null;
+      const customerChargeAmount = manualPricing.customerChargeAmount;
       if (
-        customerChargeAmount != null
+        input.customerChargeAmount != null
+        && customerChargeAmount != null
         && Number.isFinite(customerChargeAmount)
         && customerChargeAmount > 0
       ) {
@@ -2059,7 +2104,7 @@ class BookingService {
         totalAmount: Number(booking.total_amount),
         currency: booking.currency,
         payoutAmount,
-        customerChargeAmount: customerChargeAmount ?? null,
+        customerChargeAmount,
         openCallTargets: openCallTargets.length,
       };
     } catch (err) {
@@ -2266,6 +2311,12 @@ class BookingService {
         );
       }
 
+      const manualPricing = this.resolveAdminManualPricing(
+        { ...input, paymentMethod },
+        { payoutAmount, nameSign, existingMetadata: metadata },
+      );
+      metadata.adminManualPricing = manualPricing;
+
       await this.bookingRepository.updateAdminManualBookingFields(conn, booking.id, {
         originAddress,
         originPlaceId: origin.placeId ?? null,
@@ -2292,6 +2343,8 @@ class BookingService {
           ? Boolean(input.preferFemaleDriver)
           : Boolean(fieldsRow.prefer_female_driver),
         metadata: Object.keys(metadata).length ? metadata : null,
+        totalAmount: manualPricing.customerChargeAmount,
+        commissionExempt: manualPricing.commissionExempt,
         updatedBy: adminUser.id,
       });
 
@@ -2301,6 +2354,11 @@ class BookingService {
         nameSign,
         adminUser.id,
       );
+      await this.bookingRepository.updateCommissionFields(conn, booking.id, {
+        commissionAmount: manualPricing.settlementAmount,
+        commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
+        updatedBy: adminUser.id,
+      });
 
       if (passengers !== undefined) {
         await this.bookingRepository.updatePassengers(conn, booking.id, passengers);
@@ -2348,11 +2406,10 @@ class BookingService {
 
       await conn.commit();
 
-      const customerChargeAmount = input.customerChargeAmount != null
-        ? Number(input.customerChargeAmount)
-        : null;
+      const customerChargeAmount = manualPricing.customerChargeAmount;
       if (
-        customerChargeAmount != null
+        input.customerChargeAmount != null
+        && customerChargeAmount != null
         && Number.isFinite(customerChargeAmount)
         && customerChargeAmount > 0
       ) {

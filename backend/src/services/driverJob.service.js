@@ -169,14 +169,18 @@ class DriverJobService {
   }
 
   paymentSummary(row) {
+    const metadata = this.metadata(row);
+    const adminManualPayout = this.moneyAmount(metadata.adminManualPricing?.payoutAmount);
     const customerPaymentAmount = this.moneyAmount(row.total_amount);
     const companyCommissionAmount = this.moneyAmount(row.commission_amount);
     const nameSignAmount = this.normalizedNameSignAmount(row.name_sign_amount);
-    const driverExpectedIncomeAmount = this.driverExpectedIncome(
-      row.total_amount,
-      row.commission_amount,
-      row.name_sign_amount,
-    );
+    const driverExpectedIncomeAmount = this.isAdminManualCall(row) && adminManualPayout != null
+      ? adminManualPayout
+      : this.driverExpectedIncome(
+        row.total_amount,
+        row.commission_amount,
+        row.name_sign_amount,
+      );
     const currency = row.currency ?? null;
     return {
       customerPaymentAmount,

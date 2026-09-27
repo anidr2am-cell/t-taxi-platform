@@ -838,6 +838,22 @@ test('mapSettlementListItem exposes nameSignAmount and adjusted driverExpectedIn
   assert.equal(item.driverExpectedIncomeAmount, 1000);
 });
 
+test('admin manual settlement shows the stored final driver payout', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(
+    settlementRow({
+      booking_source: 'ADMIN_MANUAL',
+      total_amount: 1800,
+      commission_amount: 200,
+      name_sign_amount: 100,
+      metadata: JSON.stringify({ adminManualPricing: { payoutAmount: 1500 } }),
+    }),
+    '/api/v1/driver/settlements',
+    ROLES.DRIVER,
+  );
+  assert.equal(item.driverExpectedIncomeAmount, 1500);
+});
+
 test('admin settlement list item keeps driver summary fields', () => {
   const service = new CommissionSettlementService({}, {}, {}, {}, {});
   const item = service.mapSettlementListItem(
