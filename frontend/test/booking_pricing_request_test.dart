@@ -1060,7 +1060,7 @@ void main() {
   );
 
   test(
-    'loadPricing omits coordinates for AIRPORT_PICKUP even when places have lat/lng',
+    'loadPricing sends coordinates for AIRPORT_PICKUP distance adjustment',
     () async {
       final api = _CapturingBookingApi();
       final controller = BookingWizardController(
@@ -1104,8 +1104,10 @@ void main() {
 
       expect(api.lastPricingRequest, isNotNull);
       expect(api.lastPricingRequest!['serviceTypeCode'], 'AIRPORT_PICKUP');
-      expect(api.lastPricingRequest!.containsKey('originLat'), isFalse);
-      expect(api.lastPricingRequest!.containsKey('destinationLat'), isFalse);
+      expect(api.lastPricingRequest!['originLat'], 13.69);
+      expect(api.lastPricingRequest!['originLng'], 100.7501);
+      expect(api.lastPricingRequest!['destinationLat'], 12.9236);
+      expect(api.lastPricingRequest!['destinationLng'], 100.8825);
     },
   );
 

@@ -17,9 +17,13 @@ class RouteRepository {
       originLocationId: row.origin_location_id,
       originLocationCode: row.origin_location_code,
       originDisplayName: row.origin_display_name,
+      originLatitude: row.origin_latitude == null ? null : Number(row.origin_latitude),
+      originLongitude: row.origin_longitude == null ? null : Number(row.origin_longitude),
       destinationLocationId: row.destination_location_id,
       destinationLocationCode: row.destination_location_code,
       destinationDisplayName: row.destination_display_name,
+      destinationLatitude: row.destination_latitude == null ? null : Number(row.destination_latitude),
+      destinationLongitude: row.destination_longitude == null ? null : Number(row.destination_longitude),
       isActive: Boolean(row.is_active),
       displayOrder: row.display_order,
       effectiveFrom: row.effective_from,
@@ -40,9 +44,13 @@ class RouteRepository {
         r.origin_location_id,
         lo.code AS origin_location_code,
         lo.display_name AS origin_display_name,
+        lo.latitude AS origin_latitude,
+        lo.longitude AS origin_longitude,
         r.destination_location_id,
         ld.code AS destination_location_code,
         ld.display_name AS destination_display_name,
+        ld.latitude AS destination_latitude,
+        ld.longitude AS destination_longitude,
         r.is_active,
         r.display_order,
         r.effective_from,
@@ -92,6 +100,18 @@ class RouteRepository {
          AND r.deleted_at IS NULL
        ORDER BY r.display_order ASC, r.id ASC`,
       [serviceTypeId, originLocationId, destinationLocationId],
+    );
+    return rows.map((row) => this.mapRow(row));
+  }
+
+  async findActiveByService(serviceTypeId) {
+    const [rows] = await this.pool.query(
+      `${this.baseSelect()}
+       WHERE r.service_type_id = ?
+         AND r.is_active = 1
+         AND r.deleted_at IS NULL
+       ORDER BY r.display_order ASC, r.id ASC`,
+      [serviceTypeId],
     );
     return rows.map((row) => this.mapRow(row));
   }

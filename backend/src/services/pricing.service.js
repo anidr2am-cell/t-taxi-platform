@@ -6,6 +6,7 @@ const CHARGE_TYPES = require('../constants/chargeTypes');
 const CALCULATION_TYPES = require('../constants/calculationTypes');
 const SERVICE_TYPES = require('../constants/serviceTypes');
 const logger = require('../utils/logger');
+const { estimateRoadDistanceKm } = require('../utils/geo.util');
 const {
   isEffectiveAt,
   mapPolicyTypeToChargeType,
@@ -15,6 +16,15 @@ const {
 const CUSTOMER_EXCLUDED_POLICY_TYPES = new Set([
   CHARGE_POLICY_TYPES.NIGHT,
   CHARGE_POLICY_TYPES.AIRPORT,
+]);
+
+const DISTANCE_INCLUDED_KM = 10;
+const DISTANCE_STEP_KM = 10;
+const DISTANCE_STEP_PRICE = 100;
+const REFERENCE_ROUTE_SERVICES = new Set([
+  SERVICE_TYPES.AIRPORT_PICKUP,
+  SERVICE_TYPES.AIRPORT_DROPOFF,
+  SERVICE_TYPES.CITY_TRANSFER,
 ]);
 
 class PricingService {
@@ -60,6 +70,115 @@ class PricingService {
       destinationLat: coords[2],
       destinationLng: coords[3],
     };
+  }
+
+  routeEndpointDistances(route, coords) {
+    const originDistanceKm = estimateRoadDistanceKm(
+      coords.originLat,
+      coords.originLng,
+      route.originLatitude,
+      route.originLongitude,
+    );
+    const destinationDistanceKm = estimateRoadDistanceKm(
+      coords.destinationLat,
+      coords.destinationLng,
+      route.destinationLatitude,
+      route.destinationLongitude,
+    );
+    if (originDistanceKm == null || destinationDistanceKm == null) {
+      return null;
+    }
+    return { originDistanceKm, destinationDistanceKm };
+  }
+
+  distanceSteps(distanceKm) {
+    if (distanceKm <= DISTANCE_INCLUDED_KM) return 0;
+    return Math.ceil((distanceKm - DISTANCE_INCLUDED_KM) / DISTANCE_STEP_KM);
+  }
+
+  distanceAdjustment(route, coords, vehicleCount = 1) {
+    const distances = this.routeEndpointDistances(route, coords);
+    if (!distances) return null;
+    const originSteps = this.distanceSteps(distances.originDistanceKm);
+    const destinationSteps = this.distanceSteps(distances.destinationDistanceKm);
+    const totalSteps = originSteps + destinationSteps;
+    return {
+      ...distances,
+      totalSteps,
+      amount: roundMoney(totalSteps * DISTANCE_STEP_PRICE * vehicleCount),
+    };
+  }
+
+  applyDistanceAdjustment(quote, adjustment, vehicleCount = 1) {
+    if (!adjustment || adjustment.amount <= 0) return quote;
+    const unitPrice = roundMoney(adjustment.amount / vehicleCount);
+    quote.chargeItems.push({
+      chargeType: CHARGE_TYPES.DISTANCE_SURCHARGE,
+      description: 'Distance extension surcharge',
+      quantity: vehicleCount,
+      unitPrice,
+      amount: adjustment.amount,
+      referenceType: 'ROUTE_DISTANCE_EXTENSION',
+      referenceId: quote.route.id,
+    });
+    quote.subtotal = roundMoney(quote.subtotal + adjustment.amount);
+    quote.totalAmount = roundMoney(quote.totalAmount + adjustment.amount);
+    return quote;
+  }
+
+  async findNearestPricedReferenceRoute(serviceType, vehicleType, coords, at) {
+    if (!REFERENCE_ROUTE_SERVICES.has(serviceType.code)
+      || typeof this.routeRepository.findActiveByService !== 'function') {
+      return null;
+    }
+    const routes = await this.routeRepository.findActiveByService(serviceType.id);
+    const ranked = routes
+      .filter((route) => isEffectiveAt(route, at))
+      .map((route) => ({
+        route,
+        adjustment: this.distanceAdjustment(route, coords),
+      }))
+      .filter((entry) => entry.adjustment != null)
+      .sort((a, b) => (
+        (a.adjustment.originDistanceKm + a.adjustment.destinationDistanceKm)
+        - (b.adjustment.originDistanceKm + b.adjustment.destinationDistanceKm)
+      ));
+
+    for (const entry of ranked) {
+      const prices = await this.vehiclePriceRepository.findByRouteId(entry.route.id);
+      if (this.selectVehiclePrice(prices, vehicleType.id, at)) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  async calculateReferenceRouteQuote(input, serviceType, vehicleType) {
+    const coords = this.extractPricingCoordinates(input);
+    if (!coords) return null;
+    const at = input.scheduledPickupAt ? new Date(input.scheduledPickupAt) : new Date();
+    const match = await this.findNearestPricedReferenceRoute(
+      serviceType,
+      vehicleType,
+      coords,
+      at,
+    );
+    if (!match) return null;
+    const vehicleCount = input.vehicleCount ?? 1;
+    const quote = await this.computeQuote({
+      serviceType,
+      vehicleType,
+      originLocationId: match.route.originLocationId,
+      destinationLocationId: match.route.destinationLocationId,
+      vehicleCount,
+      options: input.options ?? {},
+      scheduledPickupAt: input.scheduledPickupAt,
+      customerFacing: true,
+      routeOverride: match.route,
+    });
+    return this.formatCalculateResponse(
+      this.applyDistanceAdjustment(quote, match.adjustment, vehicleCount),
+    );
   }
 
   shouldUseCityTransferDistanceFallback(err, input, serviceType) {
@@ -368,6 +487,7 @@ class PricingService {
     options = {},
     scheduledPickupAt,
     customerFacing = false,
+    routeOverride = null,
   }) {
     if (originLocationId === destinationLocationId) {
       throw new AppError('Origin and destination must be different', {
@@ -376,11 +496,13 @@ class PricingService {
       });
     }
 
-    const routes = await this.routeRepository.findActiveByServiceAndLocations(
-      serviceType.id,
-      originLocationId,
-      destinationLocationId,
-    );
+    const routes = routeOverride
+      ? [routeOverride]
+      : await this.routeRepository.findActiveByServiceAndLocations(
+        serviceType.id,
+        originLocationId,
+        destinationLocationId,
+      );
 
     if (!routes.length) {
       logger.warn('Pricing route not found', {
@@ -544,8 +666,22 @@ class PricingService {
         customerFacing: true,
       });
 
-      return this.formatCalculateResponse(quote);
+      const coords = this.extractPricingCoordinates(input);
+      const adjustment = coords
+        ? this.distanceAdjustment(quote.route, coords, input.vehicleCount ?? 1)
+        : null;
+      return this.formatCalculateResponse(
+        this.applyDistanceAdjustment(quote, adjustment, input.vehicleCount ?? 1),
+      );
     } catch (err) {
+      if (err?.errorCode === ERROR_CODES.NOT_FOUND) {
+        const referenceQuote = await this.calculateReferenceRouteQuote(
+          input,
+          serviceType,
+          vehicleType,
+        );
+        if (referenceQuote) return referenceQuote;
+      }
       if (!this.shouldUseCityTransferDistanceFallback(err, input, serviceType)) {
         throw err;
       }

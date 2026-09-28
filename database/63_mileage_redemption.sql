@@ -37,7 +37,7 @@ SET @alter_charge_type_sql = IF(
   @charge_type_has_mileage = 0,
   'ALTER TABLE booking_charge_items
      MODIFY COLUMN charge_type ENUM(
-       ''VEHICLE_BASE'', ''NAME_SIGN'', ''NIGHT_SURCHARGE'', ''AIRPORT_SURCHARGE'',
+       ''VEHICLE_BASE'', ''DISTANCE_SURCHARGE'', ''NAME_SIGN'', ''NIGHT_SURCHARGE'', ''AIRPORT_SURCHARGE'',
        ''TOLL_GATE'', ''PROMOTION'', ''COUPON'', ''MILEAGE'', ''DRIVER_EXTRA'',
        ''SEASON_SURCHARGE'', ''HOLIDAY_SURCHARGE'', ''WAITING_CHARGE'', ''OTHER''
      ) NOT NULL',

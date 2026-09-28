@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS driver_assignment_weights (
 ALTER TABLE booking_charge_items
   MODIFY COLUMN charge_type ENUM(
     'VEHICLE_BASE',
+    'DISTANCE_SURCHARGE',
     'NAME_SIGN',
     'NIGHT_SURCHARGE',
     'AIRPORT_PARKING',
@@ -79,6 +80,7 @@ ALTER TABLE booking_charge_items
     'TOLL_GATE',
     'PROMOTION',
     'COUPON',
+    'MILEAGE',
     'DRIVER_EXTRA',
     'SEASON_SURCHARGE',
     'HOLIDAY_SURCHARGE',
@@ -93,12 +95,14 @@ WHERE charge_type = 'AIRPORT_PARKING';
 ALTER TABLE booking_charge_items
   MODIFY COLUMN charge_type ENUM(
     'VEHICLE_BASE',
+    'DISTANCE_SURCHARGE',
     'NAME_SIGN',
     'NIGHT_SURCHARGE',
     'AIRPORT_SURCHARGE',
     'TOLL_GATE',
     'PROMOTION',
     'COUPON',
+    'MILEAGE',
     'DRIVER_EXTRA',
     'SEASON_SURCHARGE',
     'HOLIDAY_SURCHARGE',

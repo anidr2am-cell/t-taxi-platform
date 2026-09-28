@@ -51,6 +51,21 @@ void main() {
     expect(label.contains('km'), isFalse);
   });
 
+  test('pricing display localizes distance surcharge', () {
+    final l10n = AppLocalizations('ko');
+    final label = PricingDisplay.chargeItemLabel(
+      l10n,
+      const ChargeLineItem(
+        chargeType: 'DISTANCE_SURCHARGE',
+        description: 'Distance extension surcharge',
+        quantity: 1,
+        unitPrice: 100,
+        amount: 100,
+      ),
+    );
+    expect(label, '추가 거리 요금');
+  });
+
   testWidgets('required labels are visible before focus', (tester) async {
     await tester.pumpWidget(
       ChangeNotifierProvider(

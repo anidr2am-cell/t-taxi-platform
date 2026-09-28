@@ -930,7 +930,7 @@ class BookingWizardController extends ChangeNotifier {
     final idempotencyKey = _ensureSubmitIdempotencyKey();
     const maxInProgressRetries = 3;
     try {
-      if (!await _ensureCityTransferCoordinates()) {
+      if (!await _ensurePricingCoordinates()) {
         _analytics.trackBookingFailed(
           stepName: BookingAnalytics.stepNameFor(
             _state.step == BookingWizardSteps.review
@@ -1326,11 +1326,7 @@ class BookingWizardController extends ChangeNotifier {
     return null;
   }
 
-  Future<bool> _ensureCityTransferCoordinates() async {
-    if (_state.serviceType != BookingServiceType.cityTransfer) {
-      return true;
-    }
-
+  Future<bool> _ensurePricingCoordinates() async {
     var origin = _state.origin;
     var destination = _state.destination;
     if (origin == null || destination == null) {
@@ -1353,10 +1349,10 @@ class BookingWizardController extends ChangeNotifier {
       return true;
     }
 
-    return _hasKnownCityTransferLocationCodes();
+    return _hasKnownPricingLocationCodes();
   }
 
-  bool _hasKnownCityTransferLocationCodes() {
+  bool _hasKnownPricingLocationCodes() {
     final locations = _pricingLocationParams();
     final originKey =
         locations['originAirportIata'] ?? locations['originLocationCode'];
@@ -1384,11 +1380,7 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Future<Map<String, double>?> _pricingCoordinateParams() async {
-    if (_state.serviceType != BookingServiceType.cityTransfer) {
-      return null;
-    }
-
-    if (!await _ensureCityTransferCoordinates()) {
+    if (!await _ensurePricingCoordinates()) {
       return null;
     }
 
