@@ -11,6 +11,9 @@ class PricingDisplay {
     if (item.chargeType == 'VEHICLE_BASE') {
       return l10n.t('base_price');
     }
+    if (item.chargeType == 'DISTANCE_SURCHARGE') {
+      return l10n.t('pricing_distance_surcharge');
+    }
     return item.description;
   }
 }
