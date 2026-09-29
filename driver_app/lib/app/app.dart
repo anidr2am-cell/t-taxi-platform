@@ -14,6 +14,7 @@ import '../core/firebase/fcm_message_service.dart';
 import '../l10n/app_localizations.dart';
 import '../core/storage/secure_token_storage.dart';
 import '../features/driver_application/data/driver_application_api.dart';
+import '../features/support/data/support_contact_api.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({
@@ -30,6 +31,7 @@ class DriverApp extends StatelessWidget {
     this.fcmMessageService,
     this.tokenStorage,
     this.driverApplicationApi,
+    this.supportContactApi,
   });
 
   final AppConfig config;
@@ -44,6 +46,7 @@ class DriverApp extends StatelessWidget {
   final FcmMessageService? fcmMessageService;
   final TokenStorage? tokenStorage;
   final DriverApplicationDataSource? driverApplicationApi;
+  final SupportContactDataSource? supportContactApi;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +60,9 @@ class DriverApp extends StatelessWidget {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           debugShowCheckedModeBanner: config.environment.label != 'PROD',
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF006A60)),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF006A60),
+            ),
             useMaterial3: true,
           ),
           home: AuthGate(
@@ -73,6 +78,7 @@ class DriverApp extends StatelessWidget {
             fcmMessageService: fcmMessageService,
             tokenStorage: tokenStorage,
             driverApplicationApi: driverApplicationApi,
+            supportContactApi: supportContactApi,
           ),
         );
       },

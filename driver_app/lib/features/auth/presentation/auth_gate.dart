@@ -13,6 +13,7 @@ import '../../../core/firebase/fcm_token_service.dart';
 import '../../../core/firebase/fcm_message_service.dart';
 import '../../../core/storage/secure_token_storage.dart';
 import '../../driver_application/data/driver_application_api.dart';
+import '../../support/data/support_contact_api.dart';
 import '../../dispatch/presentation/driver_home_shell.dart';
 import 'auth_controller.dart';
 import 'login_screen.dart';
@@ -32,6 +33,7 @@ class AuthGate extends StatefulWidget {
     this.fcmMessageService,
     this.tokenStorage,
     this.driverApplicationApi,
+    this.supportContactApi,
   });
 
   final AuthController controller;
@@ -46,6 +48,7 @@ class AuthGate extends StatefulWidget {
   final FcmMessageService? fcmMessageService;
   final TokenStorage? tokenStorage;
   final DriverApplicationDataSource? driverApplicationApi;
+  final SupportContactDataSource? supportContactApi;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -69,7 +72,9 @@ class _AuthGateState extends State<AuthGate> {
           AuthStatus.checking => const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           ),
-          AuthStatus.restoreError => _RestoreErrorBody(controller: widget.controller),
+          AuthStatus.restoreError => _RestoreErrorBody(
+            controller: widget.controller,
+          ),
           AuthStatus.signedIn => DriverHomeShell(
             bookingRepository: widget.bookingRepository,
             dispatchRepository: widget.dispatchRepository,
@@ -79,6 +84,7 @@ class _AuthGateState extends State<AuthGate> {
             driverSocket: widget.driverSocket,
             fcmTokenService: widget.fcmTokenService,
             fcmMessageService: widget.fcmMessageService,
+            supportContactApi: widget.supportContactApi,
             onUnauthorized: widget.controller.expireSession,
             onLogout: widget.controller.logout,
           ),
@@ -103,8 +109,8 @@ class _RestoreErrorBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final message = controller.lastError?.localizedMessage(l10n) ??
-        l10n.connectionFailed;
+    final message =
+        controller.lastError?.localizedMessage(l10n) ?? l10n.connectionFailed;
     return Scaffold(
       body: Center(
         child: Padding(

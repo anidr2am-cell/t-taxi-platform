@@ -43,6 +43,28 @@ class AppLocalizations {
   String get submit => _s('제출', 'ส่ง');
   String get accept => _s('수락', 'รับงาน');
   String get logout => _s('로그아웃', 'ออกจากระบบ');
+  String get contactAdministrator =>
+      _s('관리자에게 연락하기', 'ติดต่อผู้ดูแล');
+  String get administratorLineContactSubtitle =>
+      _s('비상시 LINE으로 문의', 'ติดต่อทาง LINE ในกรณีฉุกเฉิน');
+  String get administratorEmergencyContact =>
+      _s('관리자 긴급 연락', 'ติดต่อผู้ดูแลกรณีฉุกเฉิน');
+  String get administratorLineHelp => _s(
+    '운행 중 도움이 필요하면 아래 버튼으로 관리자 LINE을 여세요.',
+    'หากต้องการความช่วยเหลือระหว่างงาน ให้เปิด LINE ของผู้ดูแลด้วยปุ่มด้านล่าง',
+  );
+  String get openAdministratorLine =>
+      _s('LINE으로 관리자에게 연락', 'ติดต่อผู้ดูแลทาง LINE');
+  String get lineUnavailable => _s(
+    '현재 관리자 LINE 연락처를 불러올 수 없습니다.',
+    'ไม่สามารถโหลดช่องทาง LINE ของผู้ดูแลได้ในขณะนี้',
+  );
+  String get lineLaunchFailed =>
+      _s('LINE을 열 수 없습니다.', 'ไม่สามารถเปิด LINE ได้');
+  String get externalLineNotice => _s(
+    '버튼을 누르면 LINE 앱 또는 외부 브라우저가 열립니다.',
+    'เมื่อกดปุ่ม แอป LINE หรือเบราว์เซอร์ภายนอกจะเปิดขึ้น',
+  );
   String get refresh => _s('새로고침', 'รีเฟรช');
   String get select => _s('선택', 'เลือก');
   String get leave => _s('나가기', 'ออก');
