@@ -11,6 +11,7 @@ import '../../bookings/data/booking_repository.dart';
 import '../../bookings/presentation/booking_list_screen.dart';
 import '../../settlement/data/settlement_api.dart';
 import '../../settlement/presentation/settlement_list_page.dart';
+import '../../support/data/support_contact_api.dart';
 import '../data/dispatch_repository.dart';
 import '../data/driver_socket_service.dart';
 import '../../../l10n/app_localizations.dart';
@@ -30,6 +31,7 @@ class DriverHomeShell extends StatefulWidget {
     this.driverSocket,
     this.fcmTokenService,
     this.fcmMessageService,
+    this.supportContactApi,
   });
 
   final BookingReader bookingRepository;
@@ -42,6 +44,7 @@ class DriverHomeShell extends StatefulWidget {
   final SettlementDataSource? settlementApi;
   final FcmTokenService? fcmTokenService;
   final FcmMessageService? fcmMessageService;
+  final SupportContactDataSource? supportContactApi;
 
   @override
   State<DriverHomeShell> createState() => _DriverHomeShellState();
@@ -204,6 +207,7 @@ class _DriverHomeShellState extends State<DriverHomeShell>
                 localeController: widget.localeController,
                 onUnauthorized: widget.onUnauthorized,
                 onLogout: widget.onLogout,
+                supportContactApi: widget.supportContactApi,
               ),
             ),
         ],

@@ -7,9 +7,16 @@ import 'package:tride_driver/features/account/presentation/account_page.dart';
 import 'package:tride_driver/features/account/presentation/profile_edit_page.dart';
 import 'package:tride_driver/features/account/presentation/vehicle_add_page.dart';
 import 'package:tride_driver/features/account/presentation/vehicle_list_page.dart';
+import 'package:tride_driver/features/support/data/support_contact_api.dart';
 
 import 'l10n_test_helpers.dart';
 import 'test_fakes.dart';
+
+class _FakeSupportContactApi implements SupportContactDataSource {
+  @override
+  Future<Uri?> getAdministratorLineUrl() async =>
+      Uri.parse('https://lin.ee/55A9phq');
+}
 
 void main() {
   testWidgets(
@@ -65,10 +72,7 @@ void main() {
     await tester.tap(find.byKey(const Key('languageSelectorMenu')));
     await tester.pumpAndSettle();
     await tester.tap(
-      find.descendant(
-        of: find.byType(Overlay),
-        matching: find.text('ไทย'),
-      ),
+      find.descendant(of: find.byType(Overlay), matching: find.text('ไทย')),
       warnIfMissed: false,
     );
     await tester.pumpAndSettle();
@@ -76,6 +80,30 @@ void main() {
     expect(localeController.locale.languageCode, 'th');
     expect(find.text('ตั้งค่าภาษา'), findsOneWidget);
     expect(find.text('ไทย'), findsWidgets);
+  });
+
+  testWidgets('account exposes administrator LINE contact', (tester) async {
+    final localeController = await createTestLocaleController();
+    await tester.pumpWidget(
+      materialAppWithLocaleController(
+        localeController: localeController,
+        home: AccountPage(
+          accountApi: FakeAccountApi(),
+          dispatchRepository: FakeDispatchReader(),
+          localeController: localeController,
+          supportContactApi: _FakeSupportContactApi(),
+          onUnauthorized: () async {},
+          onLogout: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('openAdministratorLineContact')),
+      findsOneWidget,
+    );
+    expect(find.text('관리자에게 연락하기'), findsOneWidget);
   });
 
   testWidgets('profile save sends changed fields only', (tester) async {
@@ -173,7 +201,9 @@ void main() {
   ) async {
     _useTallView(tester);
     final api = FakeAccountApi();
-    await tester.pumpWidget(localizedMaterialApp(home: VehicleAddPage(api: api)));
+    await tester.pumpWidget(
+      localizedMaterialApp(home: VehicleAddPage(api: api)),
+    );
     await tester.pumpAndSettle();
 
     expect(

@@ -7,6 +7,8 @@ import '../../../l10n/app_localizations_extensions.dart';
 import '../../auth/presentation/language_selector.dart';
 import '../../dispatch/data/dispatch_models.dart';
 import '../../dispatch/data/dispatch_repository.dart';
+import '../../support/data/support_contact_api.dart';
+import '../../support/presentation/driver_support_page.dart';
 import '../data/account_api.dart';
 import '../data/account_models.dart';
 import 'profile_edit_page.dart';
@@ -20,6 +22,7 @@ class AccountPage extends StatefulWidget {
     required this.localeController,
     required this.onUnauthorized,
     required this.onLogout,
+    this.supportContactApi,
   });
 
   final AccountDataSource accountApi;
@@ -27,6 +30,7 @@ class AccountPage extends StatefulWidget {
   final LocaleController localeController;
   final Future<void> Function() onUnauthorized;
   final Future<void> Function() onLogout;
+  final SupportContactDataSource? supportContactApi;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -172,9 +176,7 @@ class _AccountPageState extends State<AccountPage> {
                         horizontal: 18,
                         vertical: 8,
                       ),
-                      title: Text(
-                        _status!.online ? l10n.online : l10n.offline,
-                      ),
+                      title: Text(_status!.online ? l10n.online : l10n.offline),
                       subtitle: Text(l10n.newCallReceivingStatus),
                       value: _status!.online,
                       onChanged: _changingOnline ? null : _setOnline,
@@ -214,6 +216,20 @@ class _AccountPageState extends State<AccountPage> {
                       ),
                     ),
                   ),
+                  if (widget.supportContactApi != null)
+                    ListTile(
+                      key: const Key('openAdministratorLineContact'),
+                      leading: const Icon(Icons.support_agent_outlined),
+                      title: Text(l10n.contactAdministrator),
+                      subtitle: Text(l10n.administratorLineContactSubtitle),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DriverSupportPage(api: widget.supportContactApi!),
+                        ),
+                      ),
+                    ),
                   ListenableBuilder(
                     listenable: widget.localeController,
                     builder: (context, _) {
@@ -262,7 +278,10 @@ class _PrimaryVehicleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.primaryVehicle, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              l10n.primaryVehicle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               value == null
