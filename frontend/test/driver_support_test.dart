@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/booking/models/contact_channel.dart';
+import 'package:frontend/features/booking/services/booking_contact_connection_service.dart';
 import 'package:frontend/features/driver/pages/driver_support_page.dart';
-import 'package:frontend/features/platform_settings/services/platform_settings_api_service.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 
 Widget _wrap({
   Locale locale = const Locale('ko'),
   double width = 360,
   double height = 800,
-  required PlatformSettingsApiService api,
+  required BookingContactConnectionService contactService,
+  DriverSupportUrlLauncher? launcher,
 }) {
   return MaterialApp(
     locale: locale,
@@ -24,61 +26,104 @@ Widget _wrap({
     ],
     home: MediaQuery(
       data: MediaQueryData(size: Size(width, height)),
-      child: DriverSupportPage(api: api),
+      child: DriverSupportPage(
+        contactService: contactService,
+        launchUrlOverride: launcher,
+      ),
     ),
   );
 }
 
 void main() {
-  testWidgets('driver support renders LINE description and QR image safely', (
+  testWidgets('driver can open the configured administrator LINE URL', (
     tester,
   ) async {
+    Uri? openedUri;
     await tester.pumpWidget(
       _wrap(
-        api: const _FakePlatformSettingsApi({
-          'lineQrDescription': 'LINE 기사 지원 안내\n운영팀 연결',
-          'lineQrImageUrl': '/api/v1/settings/assets/lineQr',
-        }),
+        contactService: _FakeContactService(const [
+          ContactChannel(
+            code: 'LINE',
+            displayName: 'LINE',
+            addUrl: 'https://lin.ee/admin-support',
+          ),
+        ]),
+        launcher: (uri) async {
+          openedUri = uri;
+          return true;
+        },
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('LINE 기사 지원 안내\n운영팀 연결'), findsOneWidget);
-    final image = tester.widget<Image>(find.byType(Image));
-    expect(image.errorBuilder, isNotNull);
+    expect(
+      find.byKey(const Key('driver_admin_line_contact_button')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('driver_admin_line_contact_button')));
+    await tester.pumpAndSettle();
+
+    expect(openedUri, Uri.parse('https://lin.ee/admin-support'));
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-    'driver support shows fallback without QR and has no mobile overflow',
+    'driver sees an unavailable message when LINE is not configured',
     (tester) async {
-      final l10n = AppLocalizations('ko');
       await tester.pumpWidget(
         _wrap(
           width: 360,
-          api: const _FakePlatformSettingsApi({
-            'lineQrDescription': 'LINE 안내',
-            'lineQrImageUrl': null,
-          }),
+          contactService: _FakeContactService(const [
+            ContactChannel(
+              code: 'KAKAO',
+              displayName: 'KakaoTalk',
+              addUrl: 'https://open.kakao.com/example',
+            ),
+          ]),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('LINE 안내'), findsOneWidget);
-      expect(find.text(l10n.t('support_line_qr_missing')), findsOneWidget);
+      expect(
+        find.byKey(const Key('driver_admin_line_unavailable')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('driver support rejects an unsafe LINE URL', (tester) async {
+    var launchCount = 0;
+    await tester.pumpWidget(
+      _wrap(
+        contactService: _FakeContactService(const [
+          ContactChannel(
+            code: 'LINE',
+            displayName: 'LINE',
+            addUrl: 'javascript:alert(1)',
+          ),
+        ]),
+        launcher: (_) async {
+          launchCount += 1;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('driver_admin_line_contact_button')));
+    await tester.pumpAndSettle();
+
+    expect(launchCount, 0);
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
 }
 
-class _FakePlatformSettingsApi extends PlatformSettingsApiService {
-  const _FakePlatformSettingsApi(this.publicSettings);
+class _FakeContactService extends BookingContactConnectionService {
+  _FakeContactService(this.channels);
 
-  final Map<String, dynamic> publicSettings;
-
-  @override
-  Future<Map<String, dynamic>> getPublic() async => publicSettings;
+  final List<ContactChannel> channels;
 
   @override
-  Uri assetUri(String path) => Uri.parse('https://example.test$path');
+  Future<List<ContactChannel>> getPublicChannels() async => channels;
 }

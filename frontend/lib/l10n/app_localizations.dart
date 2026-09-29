@@ -988,7 +988,7 @@ class AppLocalizations {
       'driver_history_pending_settlement':
           '{count} trip(s) need settlement action',
       'driver_account_settlement': 'Settlement',
-      'driver_account_support': 'Customer support',
+      'driver_account_support': 'Contact administrator',
       'driver_account_profile': 'My profile',
       'driver_account_vehicle_title': 'My vehicle',
       'driver_account_vehicle_empty': 'No vehicle information registered yet.',
@@ -6676,13 +6676,20 @@ class AppLocalizations {
   };
 
   static const Map<String, String> _driverUiTranslations = {
-    'driver_support_title': '고객센터\n(ศูนย์บริการลูกค้า)',
+    'driver_support_title': '관리자에게 연락하기\n(ติดต่อผู้ดูแล)',
     'driver_support_resources': '자료실\n(เอกสาร)',
     'driver_support_faq': '자주 묻는 질문\n(คำถามที่พบบ่อย)',
-    'driver_support_inquiry': '1:1 문의\n(สอบถาม 1:1)',
+    'driver_support_inquiry': '비상 연락\n(ติดต่อฉุกเฉิน)',
     'driver_support_empty': '등록된 내용이 없습니다.\n(ยังไม่มีข้อมูล)',
     'driver_support_line_help':
-        'LINE으로 관리자에게 1:1 문의할 수 있습니다.\n(ติดต่อผู้ดูแลโดยตรงผ่าน LINE)',
+        '비상시 LINE으로 관리자에게 바로 연락할 수 있습니다.\n(ในกรณีฉุกเฉิน ติดต่อผู้ดูแลได้ทันทีทาง LINE)',
+    'driver_support_open_line': 'LINE으로 관리자에게 연락\n(ติดต่อผู้ดูแลทาง LINE)',
+    'driver_support_external_app_notice':
+        '버튼을 누르면 LINE 앱 또는 LINE 웹페이지가 열립니다.\n(กดปุ่มเพื่อเปิดแอปหรือเว็บ LINE)',
+    'driver_support_line_unavailable':
+        '관리자 LINE 연락처가 아직 설정되지 않았습니다.\n(ยังไม่ได้ตั้งค่า LINE ของผู้ดูแล)',
+    'driver_support_line_launch_failed':
+        'LINE을 열지 못했습니다. 잠시 후 다시 시도해 주세요.\n(ไม่สามารถเปิด LINE ได้ กรุณาลองใหม่)',
     'driver_settlement_payment_account': '정산 계좌\n(บัญชีสำหรับชำระเงิน)',
     'driver_settlement_next_job_notice':
         '송금증을 업로드한 뒤 관리자가 입금을 확인하면 다음 운행을 배정받을 수 있습니다.\n(อัปโหลดสลิปแล้วรอผู้ดูแลยืนยัน ก่อนรับงานถัดไป)',
@@ -6854,7 +6861,7 @@ class AppLocalizations {
     'driver_history_pending_settlement':
         '정산 필요 {count}건\n(ต้องดำเนินการชำระเงิน {count} รายการ)',
     'driver_account_settlement': '정산\n(การชำระบัญชี)',
-    'driver_account_support': '고객센터\n(ศูนย์บริการลูกค้า)',
+    'driver_account_support': '관리자에게 연락하기\n(ติดต่อผู้ดูแล)',
     'driver_account_profile': '내 프로필\n(โปรไฟล์ของฉัน)',
     'driver_vehicles_menu': '차량 관리\n(จัดการรถ)',
     'driver_vehicles_title': '차량 관리\n(จัดการรถ)',
