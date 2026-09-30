@@ -12,6 +12,7 @@ frontend/build
 frontend/.dart_tool
 **/*.md
 !frontend/assets/legal/*.md
+!blog/posts/*.md
 docs
 deploy/pm2
 .cursor

@@ -19,6 +19,8 @@ test('blog build emits crawlable pages and SEO metadata', () => {
   assert.match(html, /"@type":"Article"/);
   assert.match(html, /최종 업데이트:.*2026-10-01/s);
   assert.match(html, /세단 1,000바트|1,000바트/);
+  assert.match(html, /href="https:\/\/trider\.taxi\/">지금 예약하기<\/a>/);
+  assert.match(html, /href="https:\/\/open\.kakao\.com\/o\/suG4krMi"/);
   assert.doesNotMatch(html, /flutter_bootstrap|serviceWorker/);
 });
 

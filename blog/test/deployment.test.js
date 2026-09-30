@@ -22,7 +22,7 @@ test('nginx serves blog before SPA fallback with separate cache policies', () =>
     const blogLocation = nginx.indexOf('location /blog/');
     const spaFallback = nginx.indexOf('try_files $uri $uri/ /index.html');
     assert.ok(blogLocation >= 0 && blogLocation < spaFallback, `${file}: blog route must precede SPA fallback`);
-    assert.match(nginx, /location \/blog\/ \{[\s\S]*?Cache-Control "no-cache"[\s\S]*?try_files \$uri \$uri\/ =404;/);
+    assert.match(nginx, /location \/blog\/ \{[\s\S]*?Cache-Control "no-cache"[\s\S]*?try_files \$uri\/index\.html \$uri =404;/);
     assert.match(nginx, /location ~\* \^\/blog\/assets\/[\s\S]*?max-age=2592000/);
     assert.match(nginx, /location = \/sitemap-blog\.xml/);
   }
