@@ -4,6 +4,7 @@ description: 방콕 공항 픽업의 결제, 취소, 톨비, 심야 할증, 항�
 slug: trider-airport-transfer-faq
 lang: ko
 category: faq
+translationKey: trider-airport-transfer-faq
 date: 2026-10-01
 updated: 2026-10-01
 faq:
