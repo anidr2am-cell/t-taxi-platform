@@ -4,6 +4,7 @@ description: 수완나품 공항 도착 후 7번 게이트에서 기사를 만�
 slug: suvarnabhumi-airport-pickup-guide
 lang: ko
 category: airport
+translationKey: suvarnabhumi-airport-pickup-guide
 date: 2026-10-01
 updated: 2026-10-01
 ---
