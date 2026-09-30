@@ -152,8 +152,18 @@ function build() {
     write(path.join('category', category, 'index.html'), page({ title: `${category} | TRider 블로그`, description: `TRider의 ${category} 관련 여행 정보입니다.`, canonical: `${BLOG_ORIGIN}/blog/category/${category}/`, body }));
   }
 
-  const urls = [`${BLOG_ORIGIN}/blog/`, ...CATEGORIES.map((c) => `${BLOG_ORIGIN}/blog/category/${c}/`), ...posts.map((p) => `${BLOG_ORIGIN}/blog/${p.slug}`)];
-  write('sitemap-blog.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${url}</loc></url>`).join('\n')}\n</urlset>\n`);
+  const latestUpdated = posts.reduce((latest, post) => post.updated > latest ? post.updated : latest, '');
+  const sitemapEntries = [
+    { url: `${BLOG_ORIGIN}/blog/`, lastmod: latestUpdated },
+    ...CATEGORIES.map((category) => ({
+      url: `${BLOG_ORIGIN}/blog/category/${category}/`,
+      lastmod: posts
+        .filter((post) => post.category === category)
+        .reduce((latest, post) => post.updated > latest ? post.updated : latest, latestUpdated),
+    })),
+    ...posts.map((post) => ({ url: `${BLOG_ORIGIN}/blog/${post.slug}`, lastmod: post.updated })),
+  ];
+  write('sitemap-blog.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapEntries.map(({ url, lastmod }) => `  <url><loc>${url}</loc><lastmod>${lastmod}</lastmod></url>`).join('\n')}\n</urlset>\n`);
   console.log(`Built ${posts.length} blog post(s) in ${distDir}`);
 }
 

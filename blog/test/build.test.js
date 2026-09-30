@@ -29,4 +29,7 @@ test('blog build emits lists, categories, and standalone sitemap', () => {
   assert.ok(fs.existsSync(path.join(dist, 'category', 'airport', 'index.html')));
   const sitemap = fs.readFileSync(path.join(dist, 'sitemap-blog.xml'), 'utf8');
   assert.match(sitemap, /https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-pattaya/);
+  assert.match(sitemap, /<loc>https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-pattaya<\/loc><lastmod>2026-10-01<\/lastmod>/);
+  assert.match(sitemap, /<loc>https:\/\/trider\.taxi\/blog\/<\/loc><lastmod>2026-10-01<\/lastmod>/);
+  assert.doesNotMatch(sitemap, /<url><loc>[^<]+<\/loc><\/url>/);
 });

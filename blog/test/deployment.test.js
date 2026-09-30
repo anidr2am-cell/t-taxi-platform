@@ -25,6 +25,7 @@ test('nginx serves blog before SPA fallback with separate cache policies', () =>
     assert.match(nginx, /location \/blog\/ \{[\s\S]*?Cache-Control "no-cache"[\s\S]*?try_files \$uri\/index\.html \$uri =404;/);
     assert.match(nginx, /location ~\* \^\/blog\/assets\/[\s\S]*?max-age=2592000/);
     assert.match(nginx, /location = \/sitemap-blog\.xml/);
+    assert.match(nginx, /location = \/blog \{[\s\S]*?absolute_redirect off;[\s\S]*?return 308 \/blog\/;/);
   }
 });
 
