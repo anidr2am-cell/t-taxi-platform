@@ -4,6 +4,7 @@ description: 수완나품 공항에서 파타야까지 택시, 버스, 정찰제
 slug: suvarnabhumi-to-pattaya
 lang: ko
 category: airport
+translationKey: suvarnabhumi-to-pattaya
 date: 2026-10-01
 updated: 2026-10-01
 ---
