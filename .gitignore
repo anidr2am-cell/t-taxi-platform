@@ -1,4 +1,5 @@
 node_modules/
+blog/dist/
 flutter/build/
 flutter/.dart_tool/
 
