@@ -304,9 +304,12 @@ test('frontend nginx does not immutable-cache Flutter app shell entry files', ()
   assert.match(nginxConfig, /flutter_bootstrap\\\.js/);
   assert.match(nginxConfig, /version\\\.json/);
 
-  const appShellCacheRule = nginxConfig.match(
-    /location ~\* \^\S+\s+\{([\s\S]*?)\n    \}/,
-  )?.[1] || '';
+  const appShellLocationStart = nginxConfig.indexOf(
+    'location ~* ^/(?:main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js',
+  );
+  const appShellCacheRule = appShellLocationStart >= 0
+    ? nginxConfig.slice(appShellLocationStart, nginxConfig.indexOf('\n    }', appShellLocationStart))
+    : '';
   assert.match(appShellCacheRule, /Cache-Control "no-store"/);
   assert.doesNotMatch(appShellCacheRule, /immutable/);
 });

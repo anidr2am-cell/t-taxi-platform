@@ -13,3 +13,4 @@ Disallow: /booking/contact-connect
 Disallow: /auth/
 
 Sitemap: https://trider.taxi/sitemap.xml
+Sitemap: https://trider.taxi/sitemap-blog.xml
