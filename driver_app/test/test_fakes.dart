@@ -106,10 +106,7 @@ class FakeTokenStorage implements TokenStorage {
 }
 
 class FakeDriverApplicationApi implements DriverApplicationDataSource {
-  FakeDriverApplicationApi({
-    this.statusResult,
-    this.statusError,
-  });
+  FakeDriverApplicationApi({this.statusResult, this.statusError});
 
   int submitCount = 0;
   int statusLookupCount = 0;
@@ -249,6 +246,22 @@ class FakeAuthApi implements AuthDataSource {
   int loginCount = 0;
   int meCount = 0;
   int logoutCount = 0;
+  int resetRequestCount = 0;
+  int resetConfirmCount = 0;
+
+  @override
+  Future<void> requestPasswordReset(String identifier) async {
+    resetRequestCount++;
+  }
+
+  @override
+  Future<void> confirmPasswordReset(
+    String identifier,
+    String code,
+    String newPassword,
+  ) async {
+    resetConfirmCount++;
+  }
 
   @override
   Future<DriverUser> getMe(String accessToken) async {

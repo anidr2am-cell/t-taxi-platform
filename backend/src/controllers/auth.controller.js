@@ -7,6 +7,7 @@ const logger = require('../utils/logger');
 const getAuthService = () => container.get('authService');
 const getSocialAuthService = () => container.get('socialAuthService');
 const getDriverStatusService = () => container.get('driverStatusService');
+const getDriverPasswordResetService = () => container.get('driverPasswordResetService');
 
 const register = asyncHandler(async (req, res) => {
   const data = await getAuthService().register(req.body);
@@ -60,6 +61,16 @@ const me = asyncHandler(async (req, res) => {
   return success(res, data, 'OK');
 });
 
+const requestDriverPasswordReset = asyncHandler(async (req, res) => {
+  await getDriverPasswordResetService().requestCode(req.body.identifier);
+  return success(res, null, 'If the driver account exists, a verification code was sent.');
+});
+
+const confirmDriverPasswordReset = asyncHandler(async (req, res) => {
+  await getDriverPasswordResetService().resetPassword(req.body);
+  return success(res, null, 'Password reset successful.');
+});
+
 module.exports = {
   register,
   login,
@@ -69,4 +80,6 @@ module.exports = {
   refresh,
   logout,
   me,
+  requestDriverPasswordReset,
+  confirmDriverPasswordReset,
 };

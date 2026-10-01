@@ -50,6 +50,15 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> requestPasswordReset(String identifier) =>
+      _repository.requestPasswordReset(identifier);
+
+  Future<void> confirmPasswordReset(
+    String identifier,
+    String code,
+    String newPassword,
+  ) => _repository.confirmPasswordReset(identifier, code, newPassword);
+
   Future<void> logout() async {
     try {
       await _repository.logout();

@@ -156,7 +156,8 @@ class AuthService {
       const payload = this.tokenService.verifyRefreshToken(refreshToken);
       const user = await this.userRepository.findById(payload.userId);
 
-      if (!user || !user.is_active) {
+      if (!user || !user.is_active
+        || Number(user.auth_token_version || 0) !== payload.tokenVersion) {
         throw new AppError('Invalid refresh token', {
           statusCode: HTTP_STATUS.UNAUTHORIZED,
           errorCode: ERROR_CODES.AUTH_INVALID,

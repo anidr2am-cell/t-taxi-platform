@@ -5,6 +5,7 @@ import '../../../utils/user_facing_error.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../pages/driver_shell_page.dart';
 import '../services/driver_api_service.dart';
+import '../widgets/driver_password_reset_dialog.dart';
 
 class DriverLoginPage extends StatefulWidget {
   const DriverLoginPage({
@@ -127,6 +128,20 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
                 autofillHints: const [AutofillHints.password],
                 decoration: InputDecoration(
                   labelText: context.l10n.t('driver_password'),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  key: const Key('driverForgotPasswordButton'),
+                  onPressed: _loading
+                      ? null
+                      : () => showDriverPasswordResetDialog(
+                          context,
+                          api: _api,
+                          initialIdentifier: _phoneController.text.trim(),
+                        ),
+                  child: Text(context.l10n.t('driver_forgot_password')),
                 ),
               ),
               if (_error != null) ...[

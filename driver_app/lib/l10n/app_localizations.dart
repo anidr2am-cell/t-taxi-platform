@@ -87,6 +87,40 @@ class AppLocalizations {
       _s('비밀번호를 입력해 주세요.', 'กรุณากรอกรหัสผ่าน');
   String get showPassword => _s('비밀번호 표시', 'แสดงรหัสผ่าน');
   String get hidePassword => _s('비밀번호 숨기기', 'ซ่อนรหัสผ่าน');
+  String get forgotPassword => _s('비밀번호를 잊어버리셨나요?', 'ลืมรหัสผ่านใช่ไหม?');
+  String get resetPasswordTitle => _s('비밀번호 재설정', 'ตั้งรหัสผ่านใหม่');
+  String get resetRequestHelp => _s(
+    '전화번호 또는 이메일을 입력하면 등록 이메일로 인증번호를 보내드립니다.',
+    'กรอกเบอร์โทรหรืออีเมล ระบบจะส่งรหัสไปยังอีเมลที่ลงทะเบียน',
+  );
+  String get resetCodeHelp => _s(
+    '이메일로 받은 6자리 인증번호와 새 비밀번호를 입력하세요.',
+    'กรอกรหัส 6 หลักจากอีเมลและรหัสผ่านใหม่',
+  );
+  String get resetIdentifier => _s('전화번호 또는 이메일', 'เบอร์โทรหรืออีเมล');
+  String get resetCode => _s('인증번호 6자리', 'รหัสยืนยัน 6 หลัก');
+  String get newPassword => _s('새 비밀번호', 'รหัสผ่านใหม่');
+  String get confirmNewPassword => _s('새 비밀번호 확인', 'ยืนยันรหัสผ่านใหม่');
+  String get sendResetCode => _s('인증번호 받기', 'รับรหัส');
+  String get saveNewPassword => _s('새 비밀번호 저장', 'บันทึกรหัสผ่านใหม่');
+  String get resetIdentifierRequired =>
+      _s('기사 계정을 정확히 입력해 주세요.', 'กรุณากรอกบัญชีคนขับให้ถูกต้อง');
+  String get resetCodeInvalid =>
+      _s('6자리 인증번호를 입력해 주세요.', 'กรุณากรอกรหัสยืนยัน 6 หลัก');
+  String get resetPasswordMin => _s(
+    '새 비밀번호는 8자 이상이어야 합니다.',
+    'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัว',
+  );
+  String get resetPasswordMismatch =>
+      _s('새 비밀번호가 일치하지 않습니다.', 'รหัสผ่านใหม่ไม่ตรงกัน');
+  String get resetPasswordSuccess => _s(
+    '비밀번호가 변경되었습니다. 새 비밀번호로 로그인하세요.',
+    'เปลี่ยนรหัสผ่านแล้ว กรุณาเข้าสู่ระบบด้วยรหัสใหม่',
+  );
+  String get resetPasswordFailed => _s(
+    '인증번호가 올바르지 않거나 만료되었습니다.',
+    'รหัสไม่ถูกต้องหรือหมดอายุ',
+  );
   String get connectionFailed => _s('연결에 실패했습니다.', 'เชื่อมต่อไม่สำเร็จ');
   String get logoutFromThisDevice =>
       _s('이 기기에서 로그아웃', 'ออกจากระบบบนเครื่องนี้');

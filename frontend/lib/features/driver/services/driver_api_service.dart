@@ -94,6 +94,28 @@ class DriverApiService {
     );
   }
 
+  Future<void> requestPasswordReset(String identifier) async {
+    await _session.apiClient.postJson(
+      '/auth/driver/password-reset/request',
+      body: {'identifier': identifier.trim()},
+    );
+  }
+
+  Future<void> confirmPasswordReset({
+    required String identifier,
+    required String code,
+    required String newPassword,
+  }) async {
+    await _session.apiClient.postJson(
+      '/auth/driver/password-reset/confirm',
+      body: {
+        'identifier': identifier.trim(),
+        'code': code.trim(),
+        'newPassword': newPassword,
+      },
+    );
+  }
+
   Future<dynamic> _get(String path) async {
     final token = await _requireAccessToken();
     try {

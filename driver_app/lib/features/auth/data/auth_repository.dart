@@ -26,6 +26,15 @@ class AuthRepository {
     return session;
   }
 
+  Future<void> requestPasswordReset(String identifier) =>
+      _api.requestPasswordReset(identifier);
+
+  Future<void> confirmPasswordReset(
+    String identifier,
+    String code,
+    String newPassword,
+  ) => _api.confirmPasswordReset(identifier, code, newPassword);
+
   Future<AuthSession?> restoreSession() async {
     final tokens = await _storage.read();
     if (tokens == null) return null;

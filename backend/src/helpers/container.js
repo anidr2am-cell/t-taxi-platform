@@ -13,6 +13,9 @@ const ChargePolicyRepository = require("../repositories/chargePolicy.repository"
 const RevokedRefreshTokenStore = require("../services/revokedRefreshToken.store");
 const TokenService = require("../services/token.service");
 const AuthService = require("../services/auth.service");
+const DriverPasswordResetRepository = require("../repositories/driverPasswordReset.repository");
+const DriverPasswordResetService = require("../services/driverPasswordReset.service");
+const DriverPasswordResetEmailService = require("../services/driverPasswordResetEmail.service");
 const SocialAuthService = require("../services/socialAuth.service");
 const VehicleRecommendationService = require("../services/vehicleRecommendation.service");
 const PricingService = require("../services/pricing.service");
@@ -123,6 +126,16 @@ class Container {
 const container = new Container();
 
 container.register("userRepository", () => new UserRepository());
+container.register("driverPasswordResetRepository", () => new DriverPasswordResetRepository());
+container.register("driverPasswordResetEmailService", () => new DriverPasswordResetEmailService());
+container.register(
+  "driverPasswordResetService",
+  (c) => new DriverPasswordResetService(
+    c.get("userRepository"),
+    c.get("driverPasswordResetRepository"),
+    c.get("driverPasswordResetEmailService"),
+  ),
+);
 container.register("socialAccountRepository", () => new SocialAccountRepository());
 container.register(
   "revokedRefreshTokenStore",
