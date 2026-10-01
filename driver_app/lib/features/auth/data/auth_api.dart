@@ -5,6 +5,12 @@ import 'auth_models.dart';
 
 abstract interface class AuthDataSource {
   Future<AuthSession> login(String loginId, String password);
+  Future<void> requestPasswordReset(String identifier);
+  Future<void> confirmPasswordReset(
+    String identifier,
+    String code,
+    String newPassword,
+  );
   Future<DriverUser> getMe(String accessToken);
   Future<void> logout(AuthTokens tokens);
 }
@@ -33,6 +39,30 @@ class AuthApi implements AuthDataSource {
       }
       rethrow;
     }
+  }
+
+  @override
+  Future<void> requestPasswordReset(String identifier) async {
+    await _client.postJson(
+      '/api/v1/auth/driver/password-reset/request',
+      body: {'identifier': identifier.trim()},
+    );
+  }
+
+  @override
+  Future<void> confirmPasswordReset(
+    String identifier,
+    String code,
+    String newPassword,
+  ) async {
+    await _client.postJson(
+      '/api/v1/auth/driver/password-reset/confirm',
+      body: {
+        'identifier': identifier.trim(),
+        'code': code.trim(),
+        'newPassword': newPassword,
+      },
+    );
   }
 
   @override

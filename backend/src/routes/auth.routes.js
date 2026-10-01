@@ -7,6 +7,8 @@ const {
   loginIdentifierRateLimit,
   registerRateLimit,
   refreshRateLimit,
+  passwordResetRequestRateLimit,
+  passwordResetConfirmRateLimit,
 } = require('../middlewares/authRateLimit.middleware');
 const {
   registerSchema,
@@ -16,6 +18,8 @@ const {
   googleSocialLoginSchema,
   kakaoSocialLoginSchema,
   lineSocialLoginSchema,
+  driverPasswordResetRequestSchema,
+  driverPasswordResetConfirmSchema,
 } = require('../validators/auth.validator');
 
 const router = express.Router();
@@ -32,6 +36,18 @@ router.post(
   loginIdentifierRateLimit,
   validate({ body: loginSchema }),
   authController.login,
+);
+router.post(
+  '/driver/password-reset/request',
+  passwordResetRequestRateLimit,
+  validate({ body: driverPasswordResetRequestSchema }),
+  authController.requestDriverPasswordReset,
+);
+router.post(
+  '/driver/password-reset/confirm',
+  passwordResetConfirmRateLimit,
+  validate({ body: driverPasswordResetConfirmSchema }),
+  authController.confirmDriverPasswordReset,
 );
 router.post(
   '/social/google',

@@ -25,6 +25,16 @@ const logoutSchema = Joi.object({
   refreshToken: Joi.string().trim().optional(),
 });
 
+const driverPasswordResetRequestSchema = Joi.object({
+  identifier: Joi.string().trim().min(5).max(255).required(),
+});
+
+const driverPasswordResetConfirmSchema = Joi.object({
+  identifier: Joi.string().trim().min(5).max(255).required(),
+  code: Joi.string().trim().pattern(/^\d{6}$/).required(),
+  newPassword: Joi.string().min(8).max(128).required(),
+});
+
 const googleSocialLoginSchema = Joi.object({
   idToken: Joi.string().trim().min(1).required(),
 });
@@ -44,6 +54,8 @@ module.exports = {
   loginSchema,
   refreshSchema,
   logoutSchema,
+  driverPasswordResetRequestSchema,
+  driverPasswordResetConfirmSchema,
   googleSocialLoginSchema,
   kakaoSocialLoginSchema,
   lineSocialLoginSchema,

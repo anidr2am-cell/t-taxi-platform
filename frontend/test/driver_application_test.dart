@@ -137,8 +137,25 @@ class _CaptureClient extends http.BaseClient {
 class _FakeDriverApi extends DriverApiService {
   _FakeDriverApi();
 
+  int resetRequestCount = 0;
+  int resetConfirmCount = 0;
+
   @override
   Future<String?> getSavedToken() async => null;
+
+  @override
+  Future<void> requestPasswordReset(String identifier) async {
+    resetRequestCount++;
+  }
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String identifier,
+    required String code,
+    required String newPassword,
+  }) async {
+    resetConfirmCount++;
+  }
 }
 
 class _FakeDriverApplicationApi extends DriverApplicationApiService {
@@ -750,6 +767,7 @@ void main() {
     expect(find.text('기사 등록 신청 / สมัครคนขับ'), findsOneWidget);
     expect(find.text('Check application status'), findsNothing);
     expect(find.text('Check saved application status'), findsNothing);
+    expect(find.byKey(const Key('driverForgotPasswordButton')), findsOneWidget);
   });
 
   testWidgets('driver login application CTA navigates to apply route', (
@@ -764,6 +782,41 @@ void main() {
     expect(find.text('Apply route'), findsOneWidget);
   });
 
+  testWidgets('driver web can request a code and set a new password', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final api = _FakeDriverApi();
+    await tester.pumpWidget(_app(DriverLoginPage(api: api), locale: 'ko'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('driverForgotPasswordButton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('driverResetIdentifierField')),
+      '0812345678',
+    );
+    await tester.tap(find.byKey(const Key('driverResetContinueButton')));
+    await tester.pumpAndSettle();
+    expect(api.resetRequestCount, 1);
+
+    await tester.enterText(
+      find.byKey(const Key('driverResetCodeField')),
+      '123456',
+    );
+    await tester.enterText(
+      find.byKey(const Key('driverResetPasswordField')),
+      'new-password',
+    );
+    await tester.enterText(
+      find.byKey(const Key('driverResetPasswordConfirmField')),
+      'new-password',
+    );
+    await tester.tap(find.byKey(const Key('driverResetContinueButton')));
+    await tester.pumpAndSettle();
+    expect(api.resetConfirmCount, 1);
+  });
+
   testWidgets(
     'driver login CTAs stay visible without overflow on small screen',
     (tester) async {
@@ -771,9 +824,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(360, 640));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(
-        _app(DriverLoginPage(api: _FakeDriverApi())),
-      );
+      await tester.pumpWidget(_app(DriverLoginPage(api: _FakeDriverApi())));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

@@ -18,6 +18,7 @@ class TokenService {
         sub: user.id,
         email: user.email,
         role: user.role,
+        ver: Number(user.auth_token_version || 0),
         type: 'access',
       },
       config.jwt.accessSecret,
@@ -32,6 +33,7 @@ class TokenService {
         sub: user.id,
         type: 'refresh',
         jti,
+        ver: Number(user.auth_token_version || 0),
       },
       config.jwt.refreshSecret,
       { expiresIn: this.refreshExpiresIn },
@@ -49,6 +51,7 @@ class TokenService {
       id: Number(payload.sub),
       email: payload.email,
       role: payload.role,
+      tokenVersion: Number(payload.ver || 0),
     };
   }
 
@@ -66,6 +69,7 @@ class TokenService {
       userId: Number(payload.sub),
       jti: payload.jti,
       exp: payload.exp,
+      tokenVersion: Number(payload.ver || 0),
     };
   }
 

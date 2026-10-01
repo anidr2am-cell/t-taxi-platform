@@ -9,6 +9,7 @@ import '../../driver_application/presentation/driver_application_form_page.dart'
 import '../../driver_application/presentation/driver_application_status_page.dart';
 import 'auth_controller.dart';
 import 'language_selector.dart';
+import 'password_reset_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -174,6 +175,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: (value) => value == null || value.isEmpty
                         ? l10n.passwordRequired
                         : null,
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      key: const Key('forgotPasswordButton'),
+                      onPressed: submitting
+                          ? null
+                          : () => showPasswordResetDialog(
+                              context,
+                              controller: widget.controller,
+                              initialIdentifier: _loginIdController.text.trim(),
+                            ),
+                      child: Text(l10n.forgotPassword),
+                    ),
                   ),
                   if (errorMessage case final message?) ...[
                     const SizedBox(height: 12),

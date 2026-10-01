@@ -57,6 +57,24 @@ void main() {
     await pumpApp(tester);
     expect(find.text('기사 로그인'), findsOneWidget);
     expect(find.byKey(const Key('loginButton')), findsOneWidget);
+    expect(find.byKey(const Key('forgotPasswordButton')), findsOneWidget);
+  });
+
+  testWidgets('driver can request a code and set a new password', (tester) async {
+    final result = await pumpApp(tester);
+    await tester.enterText(find.byKey(const Key('loginIdField')), '0812345678');
+    await tester.tap(find.byKey(const Key('forgotPasswordButton')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('resetPasswordContinueButton')));
+    await tester.pumpAndSettle();
+    expect(result.$1.resetRequestCount, 1);
+    await tester.enterText(find.byKey(const Key('resetCodeField')), '123456');
+    await tester.enterText(find.byKey(const Key('resetPasswordField')), 'new-password');
+    await tester.enterText(find.byKey(const Key('resetPasswordConfirmField')), 'new-password');
+    await tester.tap(find.byKey(const Key('resetPasswordContinueButton')));
+    await tester.pumpAndSettle();
+    expect(result.$1.resetConfirmCount, 1);
+    expect(find.text('비밀번호가 변경되었습니다. 새 비밀번호로 로그인하세요.'), findsOneWidget);
   });
 
   testWidgets(
