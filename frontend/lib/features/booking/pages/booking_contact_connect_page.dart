@@ -483,11 +483,6 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
             ),
             const SizedBox(height: 8),
           ],
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: null,
-            child: Text(l10n.t('contact_connect_email_soon')),
-          ),
         ],
       );
     }

@@ -14,6 +14,7 @@ import '../utils/location_display.dart';
 import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
+import '../widgets/booking_messenger_handoff_section.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
@@ -300,6 +301,9 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 l10n: l10n,
                 onCopy: _copyBookingNumber,
                 statusTone: AppUi.toneForBookingStatus(_status),
+              ),
+              BookingMessengerHandoffSection(
+                bookingNumber: result.bookingNumber,
               ),
               BookingSocialLoginSection(
                 authController: widget.authController,

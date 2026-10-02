@@ -206,9 +206,9 @@ class _PromptCard extends StatelessWidget {
               const SizedBox(height: AppTokens.spaceSm),
               Text(
                 l10n.t('auth_social_login_description'),
-                style: const TextStyle(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTokens.textSecondary,
-                  height: 1.45,
+                  height: 1.4,
                 ),
               ),
               if (errorMessage != null && errorMessage!.isNotEmpty) ...[

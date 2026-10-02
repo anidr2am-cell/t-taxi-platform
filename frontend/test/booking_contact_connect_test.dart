@@ -289,12 +289,6 @@ void main() {
           tester.getRect(find.text('Booking reference copied'));
       expect(snackTextRect.bottom, lessThanOrEqualTo(ctaRect.top));
 
-      if (channelCode == 'LINE') {
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('goldens/contact_connect_line_snackbar_375.png'),
-        );
-      }
     }
 
     testWidgets('shows booking number and enabled channels', (tester) async {

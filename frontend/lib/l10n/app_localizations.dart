@@ -646,7 +646,6 @@ class AppLocalizations {
       'contact_connect_intro':
           'Your T-Rider booking is created. Connect on messenger so we can share driver and vehicle updates.',
       'contact_connect_choose_channel': 'Choose a messenger',
-      'contact_connect_email_soon': 'Email (coming soon)',
       'contact_connect_after_launch':
           'After sending a message with your booking reference, tap the button below.',
       'contact_connect_confirm_sent': 'I sent the message',
@@ -665,6 +664,21 @@ class AppLocalizations {
           'Scan the QR code or copy the WeChat ID, then send your booking reference.',
       'contact_connect_wechat_id_copied': 'WeChat ID copied',
       'contact_connect_invalid_link': 'Invalid contact connect link',
+      'booking_messenger_handoff_title':
+          'Where should we send your driver and vehicle updates?',
+      'booking_messenger_handoff_description':
+          'Choose a messenger once. Your booking reference is copied automatically, so you only need to send it in the chat.',
+      'booking_messenger_handoff_channel': 'Receive updates on {channel}',
+      'booking_messenger_handoff_copied':
+          'Booking reference copied. Paste and send it in the chat.',
+      'booking_messenger_handoff_optional':
+          'You can skip this. Your booking remains confirmed.',
+      'booking_messenger_step_received': 'Booking received',
+      'booking_messenger_step_assigning': 'Vehicle assignment in progress',
+      'booking_messenger_step_assigned':
+          'Driver, vehicle details and photo assigned',
+      'booking_messenger_step_departure':
+          'Departure reminder or important update',
       'additional_requests': 'Additional Requests',
       'country_code_hint': 'TH, US, KR…',
       'country_search_hint': 'Search country or enter a value',
@@ -1370,7 +1384,7 @@ class AppLocalizations {
       'auth_social_login_title':
           'Create an account to make your next booking easier',
       'auth_social_login_description':
-          'View booking history and auto-fill your details on future trips.',
+          'Use social login to earn mileage, receive travel vouchers you can use like cash, and review your trip history.',
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': 'Continue with Kakao',
       'auth_kakao_callback_error': 'Kakao sign-in failed. Please try again.',
@@ -2300,7 +2314,6 @@ class AppLocalizations {
       'contact_connect_intro':
           'T-Rider 예약이 생성되었습니다. 기사·차량 안내를 받으려면 메신저로 연결해 주세요.',
       'contact_connect_choose_channel': '메신저 선택',
-      'contact_connect_email_soon': '이메일 (준비 중)',
       'contact_connect_after_launch': '예약번호가 포함된 메시지를 보낸 뒤 아래 버튼을 눌러 주세요.',
       'contact_connect_confirm_sent': '메시지를 보냈습니다',
       'contact_connect_waiting': 'T-Rider에서 메시지 확인 중입니다',
@@ -2317,6 +2330,17 @@ class AppLocalizations {
           'QR 코드를 스캔하거나 WeChat ID를 복사한 뒤 예약 참조 문구를 보내 주세요.',
       'contact_connect_wechat_id_copied': 'WeChat ID가 복사되었습니다',
       'contact_connect_invalid_link': '연결 링크가 올바르지 않습니다',
+      'booking_messenger_handoff_title': '차량 사진과 기사 배정 알림을 어디로 받을까요?',
+      'booking_messenger_handoff_description':
+          '메신저를 한 번 선택하면 예약번호가 자동으로 복사됩니다. 열린 채팅창에 붙여넣어 전송만 해주세요.',
+      'booking_messenger_handoff_channel': '{channel}으로 알림 받기',
+      'booking_messenger_handoff_copied':
+          '예약번호가 복사되었습니다. 채팅창에 붙여넣어 전송해 주세요.',
+      'booking_messenger_handoff_optional': '지금 선택하지 않아도 예약에는 영향이 없습니다.',
+      'booking_messenger_step_received': '예약 접수 완료',
+      'booking_messenger_step_assigning': '차량 배정 중',
+      'booking_messenger_step_assigned': '차량 사진·차량번호·기사 정보 안내',
+      'booking_messenger_step_departure': '출발 전 안내 또는 중요한 변경 알림',
       'additional_requests': '추가 요청',
       'country_code_hint': 'TH, US, KR…',
       'country_search_hint': '국가 검색 또는 직접 입력',
@@ -2790,7 +2814,8 @@ class AppLocalizations {
       'guest_lookup_refresh_needs_phone': '새로고침하려면 조회 화면에서 전화번호를 입력해 주세요.',
       'booking_complete_track_cta': '예약 상태 확인',
       'auth_social_login_title': '계정을 만들면 다음 예약이 더 편해집니다',
-      'auth_social_login_description': '예약 내역 조회, 정보 자동입력이 가능해집니다',
+      'auth_social_login_description':
+          'SNS로 로그인을 이용하시면 마일리지 적립과 여행시 현금처럼 이용할 수 있는 각종 바우처 제공, 이용 내역 확인 등이 가능합니다.',
       'auth_google_continue': 'Google로 계속하기',
       'auth_kakao_continue': '카카오로 계속하기',
       'auth_kakao_callback_error': '카카오 로그인에 실패했습니다. 다시 시도해 주세요.',
@@ -3566,7 +3591,6 @@ class AppLocalizations {
       'contact_connect_booking_number': '预订号',
       'contact_connect_intro': '您的 T-Rider 预订已创建。请通过 Messenger 连接，以便接收司机和车辆更新。',
       'contact_connect_choose_channel': '选择 Messenger',
-      'contact_connect_email_soon': '电子邮件（即将推出）',
       'contact_connect_after_launch': '发送包含预订参考号的消息后，请点击下方按钮。',
       'contact_connect_confirm_sent': '我已发送消息',
       'contact_connect_waiting': 'T-Rider 正在确认您的消息',
@@ -3582,6 +3606,16 @@ class AppLocalizations {
       'contact_connect_wechat_body': '扫描二维码或复制 WeChat ID，然后发送预订参考号。',
       'contact_connect_wechat_id_copied': 'WeChat ID 已复制',
       'contact_connect_invalid_link': '联系连接链接无效',
+      'booking_messenger_handoff_title': '您希望通过哪个聊天软件接收车辆和司机信息？',
+      'booking_messenger_handoff_description':
+          '选择一次即可自动复制预订号。只需在打开的聊天中粘贴并发送。',
+      'booking_messenger_handoff_channel': '通过 {channel} 接收通知',
+      'booking_messenger_handoff_copied': '预订号已复制，请粘贴到聊天中并发送。',
+      'booking_messenger_handoff_optional': '您可以跳过此步骤，不会影响预订。',
+      'booking_messenger_step_received': '预订已受理',
+      'booking_messenger_step_assigning': '正在分配车辆',
+      'booking_messenger_step_assigned': '车辆照片、车牌和司机信息',
+      'booking_messenger_step_departure': '出发提醒或重要变更通知',
       'admin_contact_status': '联系状态',
       'admin_contact_channel': '联系渠道',
       'admin_contact_requested_at': '请求时间',
@@ -3700,7 +3734,7 @@ class AppLocalizations {
       'auth_social_login_title':
           'Create an account to make your next booking easier',
       'auth_social_login_description':
-          'View booking history and auto-fill your details on future trips.',
+          '使用社交账号登录，可累积里程、领取旅行时可当现金使用的优惠券，并查看使用记录。',
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': '使用 Kakao 继续',
       'auth_kakao_callback_error': 'Kakao 登录失败，请重试。',
@@ -4399,7 +4433,6 @@ class AppLocalizations {
       'contact_connect_intro':
           'T-Rider の予約が作成されました。ドライバーと車両の案内を受けるため Messenger で連携してください。',
       'contact_connect_choose_channel': 'Messenger を選択',
-      'contact_connect_email_soon': 'メール（準備中）',
       'contact_connect_after_launch': '予約参照番号を含むメッセージを送信した後、下のボタンを押してください。',
       'contact_connect_confirm_sent': 'メッセージを送信しました',
       'contact_connect_waiting': 'T-Rider がメッセージを確認しています',
@@ -4416,6 +4449,16 @@ class AppLocalizations {
           'QR コードをスキャンするか WeChat ID をコピーし、予約参照番号を送信してください。',
       'contact_connect_wechat_id_copied': 'WeChat ID をコピーしました',
       'contact_connect_invalid_link': '連携リンクが無効です',
+      'booking_messenger_handoff_title': '車両写真とドライバー情報をどこで受け取りますか？',
+      'booking_messenger_handoff_description':
+          'メッセンジャーを一度選ぶと予約番号が自動でコピーされます。開いたチャットに貼り付けて送信してください。',
+      'booking_messenger_handoff_channel': '{channel}で通知を受け取る',
+      'booking_messenger_handoff_copied': '予約番号をコピーしました。チャットに貼り付けて送信してください。',
+      'booking_messenger_handoff_optional': '今は選択しなくても予約には影響しません。',
+      'booking_messenger_step_received': '予約受付完了',
+      'booking_messenger_step_assigning': '車両を手配中',
+      'booking_messenger_step_assigned': '車両写真・車両番号・ドライバー情報',
+      'booking_messenger_step_departure': '出発前のご案内または重要な変更',
       'admin_contact_status': '連絡状態',
       'admin_contact_channel': '連絡チャネル',
       'admin_contact_requested_at': 'リクエスト時刻',
@@ -4536,7 +4579,7 @@ class AppLocalizations {
       'auth_social_login_title':
           'Create an account to make your next booking easier',
       'auth_social_login_description':
-          'View booking history and auto-fill your details on future trips.',
+          'SNSログインを利用すると、マイレージの獲得、旅行中に現金同様に使える各種バウチャー、利用履歴の確認が可能です。',
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': 'Kakaoで続ける',
       'auth_kakao_callback_error': 'Kakaoログインに失敗しました。もう一度お試しください。',
@@ -5287,7 +5330,6 @@ class AppLocalizations {
       'contact_connect_intro':
           'การจอง T-Rider ของคุณถูกสร้างแล้ว กรุณาเชื่อมต่อผ่าน Messenger เพื่อรับข้อมูลคนขับและรถ',
       'contact_connect_choose_channel': 'เลือก Messenger',
-      'contact_connect_email_soon': 'อีเมล (เร็วๆ นี้)',
       'contact_connect_after_launch':
           'หลังส่งข้อความพร้อมหมายเลขอ้างอิงการจอง ให้แตะปุ่มด้านล่าง',
       'contact_connect_confirm_sent': 'ฉันส่งข้อความแล้ว',
@@ -5306,6 +5348,21 @@ class AppLocalizations {
           'สแกน QR code หรือคัดลอก WeChat ID แล้วส่งหมายเลขอ้างอิงการจอง',
       'contact_connect_wechat_id_copied': 'คัดลอก WeChat ID แล้ว',
       'contact_connect_invalid_link': 'ลิงก์เชื่อมต่อไม่ถูกต้อง',
+      'booking_messenger_handoff_title':
+          'ต้องการรับรูปภาพรถและข้อมูลคนขับผ่านช่องทางใด?',
+      'booking_messenger_handoff_description':
+          'เลือกแอปแชทเพียงครั้งเดียว ระบบจะคัดลอกหมายเลขจองให้อัตโนมัติ จากนั้นวางและส่งในแชทได้เลย',
+      'booking_messenger_handoff_channel': 'รับการแจ้งเตือนผ่าน {channel}',
+      'booking_messenger_handoff_copied':
+          'คัดลอกหมายเลขจองแล้ว กรุณาวางและส่งในแชท',
+      'booking_messenger_handoff_optional':
+          'สามารถข้ามขั้นตอนนี้ได้ โดยไม่มีผลต่อการจอง',
+      'booking_messenger_step_received': 'รับการจองแล้ว',
+      'booking_messenger_step_assigning': 'กำลังจัดสรรรถ',
+      'booking_messenger_step_assigned':
+          'รูปภาพรถ หมายเลขทะเบียน และข้อมูลคนขับ',
+      'booking_messenger_step_departure':
+          'แจ้งเตือนก่อนออกเดินทางหรือการเปลี่ยนแปลงสำคัญ',
       'admin_contact_status': 'สถานะการติดต่อ',
       'admin_contact_channel': 'ช่องทางติดต่อ',
       'admin_contact_requested_at': 'เวลาที่ขอ',
@@ -5430,7 +5487,7 @@ class AppLocalizations {
       'auth_social_login_title':
           'Create an account to make your next booking easier',
       'auth_social_login_description':
-          'View booking history and auto-fill your details on future trips.',
+          'เข้าสู่ระบบด้วย SNS เพื่อสะสมไมล์ รับบัตรกำนัลท่องเที่ยวที่ใช้แทนเงินสด และตรวจสอบประวัติการใช้งาน',
       'auth_google_continue': 'Continue with Google',
       'auth_kakao_continue': 'ดำเนินการต่อด้วย Kakao',
       'auth_kakao_callback_error':
