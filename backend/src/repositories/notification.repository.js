@@ -305,6 +305,25 @@ class NotificationRepository {
     return rows;
   }
 
+  async findRecoverableNotificationIds(limit = 100) {
+    const boundedLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
+    const [rows] = await this.pool.query(
+      `
+        SELECT DISTINCT n.id
+        FROM notifications n
+        INNER JOIN notification_deliveries d ON d.notification_id = n.id
+        WHERE n.deleted_at IS NULL
+          AND d.delivery_status IN ('PENDING', 'FAILED')
+          AND d.attempt_count < 3
+          AND (d.last_error IS NULL OR d.last_error NOT LIKE 'PERMANENT\\_%')
+        ORDER BY n.id ASC
+        LIMIT ?
+      `,
+      [boundedLimit],
+    );
+    return rows.map((row) => Number(row.id)).filter(Number.isInteger);
+  }
+
   buildDeliveryFilters(filters = {}) {
     const where = ['n.deleted_at IS NULL'];
     const params = [];

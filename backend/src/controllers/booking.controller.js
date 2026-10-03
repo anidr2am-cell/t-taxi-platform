@@ -50,6 +50,7 @@ const createBooking = asyncHandler(async (req, res) => {
 
   const result = await getBookingService().createBooking(req.body, req.user, {
     idempotencyKey: normalizedKey?.value ?? null,
+    deferPostCommitDispatch: true,
   });
   const statusCode = result.replayed ? HTTP_STATUS.OK : result.responseStatus;
   return success(res, result.data, 'Booking created', statusCode);

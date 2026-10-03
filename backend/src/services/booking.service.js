@@ -258,6 +258,73 @@ class BookingService {
     }
   }
 
+  scheduleCreateBookingPostCommit({
+    outboxId,
+    isUrgentRequest,
+    eligibleDrivers,
+    bookingId,
+    bookingNumber,
+    urgentPayload,
+    openCallPayload,
+    openCallTargets,
+    persistedNotifications,
+    deferDispatch,
+  }) {
+    if (!deferDispatch) {
+      try {
+        if (isUrgentRequest) {
+          emitDriverUrgentCallNew(urgentPayload);
+        } else {
+          for (const target of openCallTargets) {
+            emitDriverCallAvailable(target.userId, openCallPayload);
+          }
+        }
+      } catch (error) {
+        logger.warn('Booking create post-commit socket dispatch failed', {
+          bookingId,
+          error: error?.message ?? String(error),
+        });
+      }
+    }
+
+    setImmediate(async () => {
+      const tasks = [];
+      if (this.outboxProcessor && outboxId) {
+        tasks.push(this.outboxProcessor.dispatchOutboxIds([outboxId]));
+      }
+
+      if (!deferDispatch) {
+        if (persistedNotifications.length > 0) {
+          tasks.push(this.deliverPersistedContactNotifications(persistedNotifications));
+        } else if (isUrgentRequest) {
+          tasks.push(this.dispatchUrgentCallNotifications({
+            drivers: eligibleDrivers,
+            bookingId,
+            bookingNumber,
+            urgentPayload,
+          }));
+        } else {
+          tasks.push(this.dispatchOpenCallNotifications({
+            drivers: eligibleDrivers,
+            bookingId,
+            bookingNumber,
+            openCallPayload,
+          }));
+        }
+      }
+
+      const results = await Promise.allSettled(tasks);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          logger.warn('Booking create post-commit dispatch failed', {
+            bookingId,
+            error: result.reason?.message ?? String(result.reason),
+          });
+        }
+      }
+    });
+  }
+
   async persistOpenCallNotificationsTx(conn, {
     drivers,
     bookingId,
@@ -935,7 +1002,7 @@ class BookingService {
   }
 
   async createBooking(input, authUser, options = {}) {
-    const { idempotencyKey = null } = options;
+    const { idempotencyKey = null, deferPostCommitDispatch = false } = options;
     const requestHash = idempotencyKey
       ? this.bookingIdempotencyService?.computeRequestHash(input)
       : null;
@@ -1256,6 +1323,8 @@ class BookingService {
       let openCallTargets = [];
       let eligibleDrivers = [];
       let urgentNegotiationId = null;
+      let urgentPayload = null;
+      let persistedNotifications = [];
       const openCallPayload = this.buildOpenCallPayload({
         bookingNumber,
         scheduledPickupAt,
@@ -1293,8 +1362,35 @@ class BookingService {
           bookingId,
           urgentNegotiationId,
         );
+        urgentPayload = {
+          bookingNumber,
+          negotiationId: urgentNegotiationId,
+          attemptCount: 0,
+          minRequiredEtaMinutes: null,
+        };
       } else {
         openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
+      }
+
+      const deferDispatch = this.shouldDeferDispatchUntilContactVerified();
+      const notificationService = this.getNotificationService();
+      const canPersistBeforeCommit = deferPostCommitDispatch
+        && notificationService
+        && typeof notificationService.persistDirectNotificationTx === 'function';
+      if (!deferDispatch && canPersistBeforeCommit) {
+        persistedNotifications = isUrgentRequest
+          ? await this.persistUrgentCallNotificationsTx(conn, {
+            drivers: eligibleDrivers,
+            bookingId,
+            bookingNumber,
+            urgentPayload,
+          })
+          : await this.persistOpenCallNotificationsTx(conn, {
+            drivers: eligibleDrivers,
+            bookingId,
+            bookingNumber,
+            openCallPayload,
+          });
       }
 
       if (this.outboxRepository) {
@@ -1332,34 +1428,42 @@ class BookingService {
 
       await conn.commit();
 
-      if (this.outboxProcessor && outboxId) {
-        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
-      }
-      const deferDispatch = this.shouldDeferDispatchUntilContactVerified();
-      if (!deferDispatch) {
-        if (isUrgentRequest) {
-          const urgentPayload = {
-            bookingNumber,
-            negotiationId: urgentNegotiationId,
-            attemptCount: 0,
-            minRequiredEtaMinutes: null,
-          };
-          emitDriverUrgentCallNew(urgentPayload);
-          await this.dispatchUrgentCallNotifications({
-            drivers: eligibleDrivers,
-            bookingId,
-            bookingNumber,
-            urgentPayload,
-          });
-        } else {
-          await this.dispatchOpenCallNotifications({
-            drivers: eligibleDrivers,
-            bookingId,
-            bookingNumber,
-            openCallPayload,
-          });
-          for (const target of openCallTargets) {
-            emitDriverCallAvailable(target.userId, openCallPayload);
+      if (deferPostCommitDispatch) {
+        this.scheduleCreateBookingPostCommit({
+          outboxId,
+          isUrgentRequest,
+          eligibleDrivers,
+          bookingId,
+          bookingNumber,
+          urgentPayload,
+          openCallPayload,
+          openCallTargets,
+          persistedNotifications,
+          deferDispatch,
+        });
+      } else {
+        if (this.outboxProcessor && outboxId) {
+          await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+        }
+        if (!deferDispatch) {
+          if (isUrgentRequest) {
+            emitDriverUrgentCallNew(urgentPayload);
+            await this.dispatchUrgentCallNotifications({
+              drivers: eligibleDrivers,
+              bookingId,
+              bookingNumber,
+              urgentPayload,
+            });
+          } else {
+            await this.dispatchOpenCallNotifications({
+              drivers: eligibleDrivers,
+              bookingId,
+              bookingNumber,
+              openCallPayload,
+            });
+            for (const target of openCallTargets) {
+              emitDriverCallAvailable(target.userId, openCallPayload);
+            }
           }
         }
       }

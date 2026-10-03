@@ -1023,6 +1023,26 @@ test('handler failure propagates to caller for outbox retry', async () => {
   );
 });
 
+test('startup recovery retries persisted notification deliveries', async () => {
+  const processed = [];
+  const service = makeService({
+    notificationRepository: {
+      async findRecoverableNotificationIds(limit) {
+        assert.equal(limit, 25);
+        return [501, 502];
+      },
+    },
+  });
+  service.processDeliveries = async (notificationId) => {
+    processed.push(notificationId);
+  };
+
+  const count = await service.recoverPendingDeliveries(25);
+
+  assert.equal(count, 2);
+  assert.deepEqual(processed, [501, 502]);
+});
+
 test('sendDirectNotification creates deliveries and processes FCM channel', async () => {
   const deliveryInserts = [];
   const processed = [];
