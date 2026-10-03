@@ -79,15 +79,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Regenerate privacy policy goldens for review
-        run: flutter test test/privacy_policy_page_test.dart --update-goldens
-
-      - name: Upload privacy policy goldens
-        uses: actions/upload-artifact@v4
-        with:
-          name: privacy-policy-linux-goldens
-          path: frontend/test/goldens/privacy_policy_*.png
-
       - name: Run Flutter tests
         run: flutter test
 
