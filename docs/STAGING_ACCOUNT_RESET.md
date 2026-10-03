@@ -101,7 +101,7 @@ Use the normal auth endpoint. Avoid printing response tokens.
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" \
-  -X POST http://103.60.127.213:3100/api/v1/auth/login \
+  -X POST http://159.89.192.55:3100/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@tride.local","password":"<PASSWORD_FROM_VAULT>"}'
 ```

@@ -1,4 +1,6 @@
-\# T-Ride Gabia Staging Deployment Log
+\# T-Ride DigitalOcean (Singapore) Staging Deployment Log
+
+2026-10-03 DigitalOcean 싱가포르로 서버 이전
 
 
 
@@ -8,7 +10,7 @@
 
 \### Server
 
-\- Gabia VPS: 103.60.127.213
+\- DigitalOcean (Singapore): 159.89.192.55
 
 \- OS: Ubuntu 22.04.5 LTS
 
@@ -21,6 +23,8 @@
 
 
 \### Safety Rule
+
+[확인 필요: DigitalOcean 서버에서도 KTaxi와 공유하는지]
 
 Existing KTaxi legacy stack must not be touched.
 
@@ -54,9 +58,9 @@ Do not modify or restart:
 
 \### Staging Ports
 
-\- Backend API: `103.60.127.213:3100`
+\- Backend API: `159.89.192.55:3100`
 
-\- Frontend: `103.60.127.213:3101`
+\- Frontend: `159.89.192.55:3101`
 
 
 
@@ -150,9 +154,9 @@ KTaxi legacy impact: none
 - Success tag created: `staging-manual-e2e-success-2026-07-08`.
 
 ### Access Rules
-- `http://103.60.127.213` opens existing KTaxi. This is expected.
-- T-Ride staging must be accessed with `http://103.60.127.213:3101/`.
-- T-Ride backend API uses `http://103.60.127.213:3100/`.
+- `http://159.89.192.55` opens existing KTaxi. This is expected.
+- T-Ride staging must be accessed with `http://159.89.192.55:3101/`.
+- T-Ride backend API uses `http://159.89.192.55:3100/`.
 
 ### Safety
 - Existing KTaxi legacy stack remained unaffected.
@@ -171,7 +175,7 @@ KTaxi legacy impact: none
 - Remote apply script: `deploy/scripts/apply-staging-fare-table.sh`.
 - API smoke: `npm run smoke:staging:fare-table` (from backend).
 
-### Server apply (Gabia, T-Ride only)
+### Server apply (DigitalOcean (Singapore), T-Ride only)
 ```bash
 cd /opt/t-ride
 bash deploy/scripts/apply-staging-fare-table.sh
@@ -180,7 +184,7 @@ bash deploy/scripts/apply-staging-fare-table.sh
 ### Post-apply API smoke — **10/10 passed** (office PC, 2026-07-08)
 ```powershell
 cd C:\TTaxi\backend
-$env:STAGING_BASE_URL='http://103.60.127.213:3100'
+$env:STAGING_BASE_URL='http://159.89.192.55:3100'
 npm run smoke:staging:fare-table
 ```
 

@@ -2,7 +2,7 @@
 # Staging-only logical backup for tride_staging via tride-db (MariaDB 10.11).
 # Safe scope: /opt/t-ride, tride-db, tride_staging only.
 #
-# Usage (on Gabia staging host):
+# Usage (on DigitalOcean staging host):
 #   bash /opt/t-ride/backend/scripts/run-staging-db-backup.sh
 #
 # Does NOT run restore, prune, or touch ktaxi-*.

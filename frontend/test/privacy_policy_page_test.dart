@@ -92,12 +92,19 @@ void main() {
       );
       expect(find.textContaining('예약 서비스 제공'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.textContaining('Gabia'),
+        find.textContaining('DigitalOcean').first,
         200,
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.textContaining('수탁업체'), findsOneWidget);
-      expect(find.textContaining('Gabia'), findsOneWidget);
+      expect(find.textContaining('DigitalOcean'), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.textContaining('개인정보의 국외 이전'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('개인정보의 국외 이전'), findsOneWidget);
+      expect(find.textContaining('싱가포르'), findsWidgets);
       await tester.scrollUntilVisible(
         find.textContaining('Edward'),
         200,

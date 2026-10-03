@@ -17,7 +17,7 @@
                     HTTPS (REST) + WebSocket (Socket.IO)
                                 │
 ┌───────────────────────────────┴─────────────────────────────────────────┐
-│                    Gabia Cloud — Application Layer                      │
+│                    DigitalOcean (Singapore) — Application Layer                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                   │
 │  │ Express API  │  │ Socket.IO    │  │ Static Web   │                   │
 │  │ (REST/JWT)   │  │ (Chat)       │  │ (Flutter build)│                 │
@@ -71,13 +71,13 @@
 ### 1.5 스토리지 확장 전략
 
 ```
-Phase 1: Local Storage (Gabia 서버 디스크)
+Phase 1: Local Storage (DigitalOcean (Singapore) 서버 디스크)
          storage/uploads/{year}/{month}/{uuid}.ext
 
 Phase 2: Storage Adapter Interface
          IStorageService → LocalStorageService | S3StorageService
 
-Phase 3: S3 호환 Object Storage (Gabia 또는 AWS S3)
+Phase 3: S3 호환 Object Storage (DigitalOcean Spaces 또는 AWS S3)
          동일 인터페이스, 환경변수로 Provider 전환
 ```
 
@@ -798,7 +798,7 @@ feature_screen_element
 | **12** | PWA: manifest, service worker, install banner | PWA |
 | **13** | FCM: token 등록 + notification service | 푸시 |
 | **14** | Driver API + 화면 (또는 기사용 route) | 기사 배정 |
-| **15** | Gabia 배포, HTTPS, CI (GitHub Actions) | production |
+| **15** | DigitalOcean (Singapore) 배포, HTTPS, CI (GitHub Actions) | production |
 | **16** | Storage adapter + files (선택) | 파일 업로드 |
 
 **초보 개발자 권장**: Phase 1→5→8→9를 먼저 완료하면 **데모 가능한 MVP**.

@@ -1,4 +1,4 @@
-# Gabia T-Ride Staging Checklist
+# DigitalOcean (Singapore) T-Ride Staging Checklist
 
 ## Scope
 

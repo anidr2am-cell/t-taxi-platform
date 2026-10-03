@@ -1,4 +1,4 @@
-const baseUrl = (process.env.STAGING_BASE_URL || 'http://103.60.127.213:3100').replace(/\/$/, '');
+const baseUrl = (process.env.STAGING_BASE_URL || 'http://159.89.192.55:3100').replace(/\/$/, '');
 const timeoutMs = Number(process.env.STAGING_SMOKE_TIMEOUT_MS || 10000);
 const pickupAt = process.env.STAGING_FARE_PICKUP_AT || '2026-07-10T10:00:00+07:00';
 

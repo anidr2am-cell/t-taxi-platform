@@ -11,8 +11,8 @@
 | Environment / release | Staging / |
 | Operator | |
 | Developer | |
-| Frontend | `http://103.60.127.213:3101/` |
-| Backend | `http://103.60.127.213:3100/` |
+| Frontend | `http://159.89.192.55:3101/` |
+| Backend | `http://159.89.192.55:3100/` |
 | Test admin | |
 | Test driver | |
 | Test booking number | |

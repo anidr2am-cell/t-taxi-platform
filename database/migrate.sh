@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply numbered SQL migrations on Linux (Gabia VPS / staging).
+# Apply numbered SQL migrations on Linux (DigitalOcean server / staging).
 # Reads DB_* from backend/.env by default (same behaviour as migrate.ps1).
 #
 # Usage:
