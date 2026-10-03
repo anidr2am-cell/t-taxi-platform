@@ -409,7 +409,7 @@ database/
 |------|------|
 | `09_indexes.sql` 분리 | 대형 테이블 생성 후 인덱스 일괄 적용 → DDL 속도·가독성 |
 | `10_views.sql` | Admin/Driver API용 조회 단순화, 앱 코드 중복 제거 |
-| `migrate.ps1` | Windows(Gabia) + CI 동일 실행 |
+| `migrate.ps1` | Windows / DigitalOcean (Singapore) + CI 동일 실행 |
 
 향후 Phase 2: `12_commerce.sql` (payments, wallets, …)
 

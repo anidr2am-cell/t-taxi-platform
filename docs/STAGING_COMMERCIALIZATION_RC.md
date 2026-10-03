@@ -52,11 +52,11 @@ Eligibility requires `SETTLEMENT_PENDING` or `COMPLETED`, resolved driver, no ex
 - `tride-db`: MariaDB 10.11, private DB
 - `tride-backend`: host 3100
 - `tride-frontend`: host 3101
-- Customer: `http://103.60.127.213:3101/`
-- Lookup: `http://103.60.127.213:3101/booking/lookup`
-- Driver: `http://103.60.127.213:3101/driver`
-- Admin: `http://103.60.127.213:3101/admin`
-- Health: `http://103.60.127.213:3100/api/v1/health`
+- Customer: `http://159.89.192.55:3101/`
+- Lookup: `http://159.89.192.55:3101/booking/lookup`
+- Driver: `http://159.89.192.55:3101/driver`
+- Admin: `http://159.89.192.55:3101/admin`
+- Health: `http://159.89.192.55:3100/api/v1/health`
 
 ## Selective Deployment And Migration
 

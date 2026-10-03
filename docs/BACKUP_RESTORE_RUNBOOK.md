@@ -199,9 +199,9 @@ Suggested schedules (T-Rider operational intent in **Asia/Bangkok**):
 - daily backup: `02:30` Asia/Bangkok
 - monthly rehearsal: first Sunday `04:00` Asia/Bangkok
 
-**Host timezone assumption:** the version-controlled timer templates use **host-local**
-`OnCalendar` values because the Gabia VPS runs **systemd 249**, which does not support
-`Timezone=` on `[Timer]` units. The templates are currently written for a host configured
+**Host timezone assumption:** check the server's systemd version before enabling these
+timers and confirm the supported `OnCalendar` format. The version-controlled timer
+templates use **host-local** values and are currently written for a host configured
 as **Asia/Seoul** (UTC+09):
 
 | Timer | Host-local (Asia/Seoul) | T-Rider equivalent (Asia/Bangkok) |

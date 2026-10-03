@@ -1,4 +1,4 @@
-﻿# T-Ride Staging Domain Cutover Plan
+# T-Ride Staging Domain Cutover Plan
 
 
 
@@ -20,9 +20,9 @@ T-Ride staging is currently running safely on temporary ports.
 
 
 
-- Frontend: `http://103.60.127.213:3101/`
+- Frontend: `http://159.89.192.55:3101/`
 
-- Backend API: `http://103.60.127.213:3100/`
+- Backend API: `http://159.89.192.55:3100/`
 
 - Server path: `/opt/t-ride`
 
@@ -40,9 +40,11 @@ T-Ride staging is currently running safely on temporary ports.
 
 Existing KTaxi legacy service is running on ports `80/443`.
 
+> 2026-10-03 기준: DigitalOcean(싱가포르) 서버는 **TRider 전용**이며 KTaxi는 이 서버에 없습니다. 아래 KTaxi 관련 안전 규칙은 혹시 모를 오접속을 막기 위해 유지합니다. (이 문서의 KTaxi 80/443 설명은 이전 공유 서버 기준입니다.)
 
 
-- KTaxi public access: `http://103.60.127.213`
+
+- KTaxi public access: `http://159.89.192.55`
 
 - KTaxi nginx: `ktaxi-nginx`
 
@@ -186,9 +188,9 @@ T-Ride stays on:
 
 
 
-http://103.60.127.213:3101/
+http://159.89.192.55:3101/
 
-http://103.60.127.213:3100/
+http://159.89.192.55:3100/
 
 
 
@@ -456,7 +458,7 @@ Public KTaxi should still load from:
 
 
 
-http://103.60.127.213
+http://159.89.192.55
 
 
 
@@ -548,9 +550,9 @@ For now, keep T-Ride staging on temporary ports:
 
 
 
-http://103.60.127.213:3101/
+http://159.89.192.55:3101/
 
-http://103.60.127.213:3100/
+http://159.89.192.55:3100/
 
 
 

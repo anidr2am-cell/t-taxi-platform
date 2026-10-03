@@ -2,7 +2,7 @@
 
 
 
-This checklist is for manually verifying T-Ride staging on Gabia.
+This checklist is for manually verifying T-Ride staging on DigitalOcean (Singapore).
 
 
 
@@ -14,9 +14,9 @@ This checklist applies only to T-Ride staging.
 
 
 
-\* Frontend: `http://103.60.127.213:3101/`
+\* Frontend: `http://159.89.192.55:3101/`
 
-\* Backend API: `http://103.60.127.213:3100/`
+\* Backend API: `http://159.89.192.55:3100/`
 
 \* Server path: `/opt/t-ride`
 
@@ -24,9 +24,11 @@ This checklist applies only to T-Ride staging.
 
 
 
-Do not use plain `http://103.60.127.213` for T-Ride.
+Do not use plain `http://159.89.192.55` for T-Ride.
 
-That address uses port `80` and belongs to the existing KTaxi legacy service.
+Port `80` on this server is not the T-Ride staging UI; always use the ports above.
+
+2026-10-03 기준: DigitalOcean(싱가포르) 서버는 **TRider 전용**이며 KTaxi는 이 서버에 없습니다. 아래 KTaxi 관련 안전 규칙은 혹시 모를 오접속을 막기 위해 유지합니다.
 
 
 
@@ -90,7 +92,7 @@ docker system prune
 
 
 
-Run on Gabia server:
+Run on DigitalOcean server:
 
 
 
@@ -240,7 +242,7 @@ Open:
 
 ```text
 
-http://103.60.127.213:3101/
+http://159.89.192.55:3101/
 
 ```
 
@@ -252,7 +254,7 @@ Expected:
 
 \* T-Ride frontend opens
 
-\* Do not use `http://103.60.127.213` without port `3101`
+\* Do not use `http://159.89.192.55` without port `3101`
 
 
 
@@ -264,7 +266,7 @@ Browser flow:
 
 
 
-1\. Open `http://103.60.127.213:3101/`
+1\. Open `http://159.89.192.55:3101/`
 
 2\. Select airport pickup
 
@@ -312,7 +314,7 @@ Browser flow:
 
 
 
-1\. Open `http://103.60.127.213:3101/`
+1\. Open `http://159.89.192.55:3101/`
 
 2\. Select airport dropoff
 
@@ -362,7 +364,7 @@ Open:
 
 ```text
 
-http://103.60.127.213:3101/booking/lookup
+http://159.89.192.55:3101/booking/lookup
 
 ```
 
@@ -404,7 +406,7 @@ Open:
 
 ```text
 
-http://103.60.127.213:3101/admin
+http://159.89.192.55:3101/admin
 
 ```
 
@@ -452,7 +454,7 @@ Open:
 
 ```text
 
-http://103.60.127.213:3101/driver
+http://159.89.192.55:3101/driver
 
 ```
 
@@ -608,7 +610,7 @@ If browser still shows old behavior after a frontend fix:
 
 \* Test in incognito mode
 
-\* Clear site data for `103.60.127.213`
+\* Clear site data for `159.89.192.55`
 
 
 
@@ -620,19 +622,19 @@ If browser still shows old behavior after a frontend fix:
 
 KTaxi legacy:
 
-http://103.60.127.213
+http://159.89.192.55
 
 
 
 T-Ride staging:
 
-http://103.60.127.213:3101/
+http://159.89.192.55:3101/
 
 
 
 T-Ride backend API:
 
-http://103.60.127.213:3100/
+http://159.89.192.55:3100/
 
 ```
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Apply fare-table image seed on T-Ride staging (Gabia VPS).
+# Apply fare-table image seed on T-Ride staging (DigitalOcean (Singapore)).
 # Safe scope only: /opt/t-ride, tride-* containers. Never touches /opt/ktaxi or ktaxi-*.
 #
-# Usage (on Gabia server as a user with docker access):
+# Usage (on DigitalOcean server as a user with docker access):
 #   bash /opt/t-ride/deploy/scripts/apply-staging-fare-table.sh
 set -euo pipefail
 
@@ -30,4 +30,4 @@ echo "==> staging fare table API smoke"
 docker compose -f docker-compose.staging.yml exec tride-backend \
   sh -c 'cd /srv/tride/backend && STAGING_BASE_URL=http://127.0.0.1:3000 node scripts/staging-fare-table-smoke.js'
 
-echo "Done. Verify UI at http://103.60.127.213:3101/ (KTaxi 80/443 untouched)."
+echo "Done. Verify UI at http://159.89.192.55:3101/ (KTaxi 80/443 untouched)."

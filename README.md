@@ -17,8 +17,8 @@ Customer reviews are available in `SETTLEMENT_PENDING` and `COMPLETED`. Administ
 - Repository path: `/opt/t-ride`
 - Compose: `deploy/docker/docker-compose.staging.yml`
 - Services: `tride-db`, `tride-backend`, `tride-frontend`
-- API: `http://103.60.127.213:3100`
-- UI: `http://103.60.127.213:3101`
+- API: `http://159.89.192.55:3100`
+- UI: `http://159.89.192.55:3101`
 - RC baseline: [docs/STAGING_COMMERCIALIZATION_RC.md](docs/STAGING_COMMERCIALIZATION_RC.md)
 
 ## Production readiness
