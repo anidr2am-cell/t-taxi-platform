@@ -943,6 +943,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Cancel this booking?'), findsOneWidget);
+    final cancelDialog = find.byType(AlertDialog);
+    expect(
+      find.descendant(of: cancelDialog, matching: find.text('Keep booking')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: cancelDialog, matching: find.text('Cancel booking')),
+      findsOneWidget,
+    );
     expect(find.text('TX202607010001'), findsWidgets);
     expect(
       find.textContaining('Cancellation cannot be undone.'),
