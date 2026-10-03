@@ -2,9 +2,9 @@
 
 These files describe the **same-origin** pattern (Flutter static + `/api/` proxy + SPA fallback). They are **templates**, not something to install blindly on every server.
 
-## DigitalOcean (Singapore) (shared with legacy KTaxi)
+## DigitalOcean (Singapore) — TRider only
 
-> [확인 필요: DigitalOcean 서버에서도 KTaxi와 공유하는지]
+> 2026-10-03 기준: DigitalOcean(싱가포르) 서버는 **TRider 전용**이며 KTaxi는 이 서버에 없습니다. 아래 KTaxi 관련 안전 규칙은 혹시 모를 오접속을 막기 위해 유지합니다. The `ktaxi-nginx` notes below describe the previous shared server and are kept for history only.
 
 On the **DigitalOcean (Singapore)** server that runs **`ktaxi-nginx`** on host **80/443**:
 

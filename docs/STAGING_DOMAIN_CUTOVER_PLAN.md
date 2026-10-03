@@ -40,7 +40,7 @@ T-Ride staging is currently running safely on temporary ports.
 
 Existing KTaxi legacy service is running on ports `80/443`.
 
-> [확인 필요: DigitalOcean 서버에서도 KTaxi와 공유하는지]
+> 2026-10-03 기준: DigitalOcean(싱가포르) 서버는 **TRider 전용**이며 KTaxi는 이 서버에 없습니다. 아래 KTaxi 관련 안전 규칙은 혹시 모를 오접속을 막기 위해 유지합니다. (이 문서의 KTaxi 80/443 설명은 이전 공유 서버 기준입니다.)
 
 
 

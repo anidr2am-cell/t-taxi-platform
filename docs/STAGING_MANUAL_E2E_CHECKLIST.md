@@ -26,9 +26,9 @@ This checklist applies only to T-Ride staging.
 
 Do not use plain `http://159.89.192.55` for T-Ride.
 
-That address uses port `80` and belongs to the existing KTaxi legacy service.
+Port `80` on this server is not the T-Ride staging UI; always use the ports above.
 
-\[확인 필요: DigitalOcean 서버에서도 KTaxi와 공유하는지]
+2026-10-03 기준: DigitalOcean(싱가포르) 서버는 **TRider 전용**이며 KTaxi는 이 서버에 없습니다. 아래 KTaxi 관련 안전 규칙은 혹시 모를 오접속을 막기 위해 유지합니다.
 
 
 

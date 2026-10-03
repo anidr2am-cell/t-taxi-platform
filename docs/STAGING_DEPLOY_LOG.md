@@ -24,7 +24,7 @@
 
 \### Safety Rule
 
-[확인 필요: DigitalOcean 서버에서도 KTaxi와 공유하는지]
+2026-10-03 기준: DigitalOcean(싱가포르) 서버는 **TRider 전용**이며 KTaxi는 이 서버에 없습니다. 아래 KTaxi 관련 안전 규칙은 혹시 모를 오접속을 막기 위해 유지합니다.
 
 Existing KTaxi legacy stack must not be touched.
 
