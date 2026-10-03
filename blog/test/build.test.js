@@ -35,7 +35,15 @@ test('blog build emits lists, categories, and standalone sitemap', () => {
   const sitemap = fs.readFileSync(path.join(dist, 'sitemap-blog.xml'), 'utf8');
   assert.match(sitemap, /https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-pattaya/);
   assert.match(sitemap, /<loc>https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-pattaya<\/loc><lastmod>2026-10-01<\/lastmod>/);
-  assert.match(sitemap, /<loc>https:\/\/trider\.taxi\/blog\/<\/loc><lastmod>2026-10-01<\/lastmod>/);
+  const postsDir = path.join(root, 'blog', 'posts');
+  const latestUpdated = fs.readdirSync(postsDir)
+    .filter((file) => file.endsWith('.md'))
+    .map((file) => (fs.readFileSync(path.join(postsDir, file), 'utf8').match(/^updated:\s*(\S+)/m) || [])[1])
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  assert.ok(sitemap.includes(`<loc>https://trider.taxi/blog/</loc><lastmod>${latestUpdated}</lastmod>`));
+  assert.match(sitemap, /<loc>https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-bangkok-city<\/loc><lastmod>2026-10-03<\/lastmod>/);
   assert.doesNotMatch(sitemap, /<url><loc>[^<]+<\/loc><\/url>/);
 });
 
