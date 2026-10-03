@@ -49,6 +49,14 @@ if (config.swagger.enabled) {
     logger.warn('Outbox startup recovery failed', { error: err.message });
   });
 
+  container.get('notificationService').recoverPendingDeliveries().then((processed) => {
+    if (processed > 0) {
+      logger.info('Notification startup recovery processed pending deliveries', { processed });
+    }
+  }).catch((err) => {
+    logger.warn('Notification startup recovery failed', { error: err.message });
+  });
+
   container.get('flightSyncSchedulerService').start();
   container.get('urgentNegotiationSchedulerService').start();
   container.get('bookingIdempotencyCleanupSchedulerService').start();

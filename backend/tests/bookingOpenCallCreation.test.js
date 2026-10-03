@@ -47,7 +47,11 @@ const BOOKING_INPUT = {
   customer: { name: 'Test Customer', phone: '0800000000' },
 };
 
-function createHarness({ failSecondChargeItem = false } = {}) {
+function createHarness({
+  failSecondChargeItem = false,
+  backgroundDeliveryGate = null,
+  persistBeforeCommit = false,
+} = {}) {
   const calls = {
     booking: null,
     chargeItems: [],
@@ -57,6 +61,7 @@ function createHarness({ failSecondChargeItem = false } = {}) {
     sequence: [],
     commits: 0,
     rollbacks: 0,
+    backgroundDeliveryStarted: 0,
   };
   const state = { status: null, totalAmount: null };
   const conn = {
@@ -101,6 +106,34 @@ function createHarness({ failSecondChargeItem = false } = {}) {
       };
     },
   };
+  const notificationService = {
+    async sendDirectNotification(notification) {
+      calls.notifications.push(notification);
+      calls.sequence.push('notify');
+      if (backgroundDeliveryGate) {
+        calls.backgroundDeliveryStarted += 1;
+        await backgroundDeliveryGate.promise;
+      }
+    },
+  };
+  if (persistBeforeCommit) {
+    notificationService.buildDirectNotificationSpec = (spec) => spec;
+    notificationService.persistDirectNotificationTx = async (_conn, spec) => {
+      calls.notifications.push(spec);
+      calls.sequence.push('persist');
+      return {
+        notificationId: 90 + calls.notifications.length,
+        created: true,
+        idempotencyKey: spec.idempotencyKey,
+      };
+    };
+    notificationService.processDeliveries = async () => {
+      calls.sequence.push('deliver');
+      calls.backgroundDeliveryStarted += 1;
+      if (backgroundDeliveryGate) await backgroundDeliveryGate.promise;
+    };
+  }
+
   const service = new BookingService(
     { async getConnection() { return conn; } },
     bookingRepository,
@@ -122,6 +155,10 @@ function createHarness({ failSecondChargeItem = false } = {}) {
     {
       async dispatchOutboxIds(ids) {
         calls.sequence.push(`outbox:${ids.join(',')}`);
+        if (backgroundDeliveryGate) {
+          calls.backgroundDeliveryStarted += 1;
+          await backgroundDeliveryGate.promise;
+        }
       },
     },
     null,
@@ -130,12 +167,7 @@ function createHarness({ failSecondChargeItem = false } = {}) {
         return [{ id: 7, user_id: 42 }];
       },
     },
-    () => ({
-      async sendDirectNotification(notification) {
-        calls.notifications.push(notification);
-        calls.sequence.push('notify');
-      },
-    }),
+    () => notificationService,
   );
 
   setRealtimeIo({
@@ -150,6 +182,12 @@ function createHarness({ failSecondChargeItem = false } = {}) {
   });
 
   return { service, calls, state };
+}
+
+function createDeferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
 }
 
 test('OPEN booking derives total from charge items and notifies eligible drivers after commit', async () => {
@@ -195,6 +233,37 @@ test('OPEN booking derives total from charge items and notifies eligible drivers
       placeId: null,
     });
   } finally {
+    setRealtimeIo(null);
+  }
+});
+
+test('HTTP booking path returns after commit without waiting for external notification delivery', async () => {
+  const backgroundDeliveryGate = createDeferred();
+  const { service, calls } = createHarness({
+    backgroundDeliveryGate,
+    persistBeforeCommit: true,
+  });
+  try {
+    const result = await service.createBooking(BOOKING_INPUT, null, {
+      deferPostCommitDispatch: true,
+    });
+
+    assert.equal(result.data.bookingNumber, 'TX202607130001');
+    assert.equal(calls.commits, 1);
+    assert.equal(calls.notifications.length, 1);
+    assert.deepEqual(calls.sequence, ['persist', 'commit', 'socket']);
+
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(calls.backgroundDeliveryStarted, 2);
+    assert.deepEqual(calls.sequence, [
+      'persist',
+      'commit',
+      'socket',
+      'outbox:30',
+      'deliver',
+    ]);
+  } finally {
+    backgroundDeliveryGate.resolve();
     setRealtimeIo(null);
   }
 });

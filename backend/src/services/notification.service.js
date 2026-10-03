@@ -684,6 +684,17 @@ class NotificationService {
     return true;
   }
 
+  async recoverPendingDeliveries(limit = 100) {
+    if (typeof this.notificationRepository.findRecoverableNotificationIds !== 'function') {
+      return 0;
+    }
+    const notificationIds = await this.notificationRepository.findRecoverableNotificationIds(limit);
+    for (const notificationId of notificationIds) {
+      await this.processDeliveries(notificationId);
+    }
+    return notificationIds.length;
+  }
+
   async processDeliveries(notificationId) {
     const notification = await this.notificationRepository.findById(notificationId);
     if (!notification) return;
