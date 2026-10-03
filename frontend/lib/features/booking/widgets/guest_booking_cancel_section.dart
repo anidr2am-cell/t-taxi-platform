@@ -157,7 +157,7 @@ class _GuestBookingCancelSectionState extends State<GuestBookingCancelSection> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.t('ui_cancel')),
+              child: Text(l10n.t('booking_cancel_keep_action')),
             ),
             TextButton(
               key: const ValueKey('guest_booking_cancel_confirm'),
