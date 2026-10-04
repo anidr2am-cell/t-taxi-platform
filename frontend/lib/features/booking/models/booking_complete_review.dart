@@ -25,6 +25,8 @@ class BookingCompleteReview {
   final String messengerType;
   final String messengerId;
   final String additionalRequests;
+  final String paymentMethod;
+  final String? paymentCurrency;
 
   const BookingCompleteReview({
     this.pickupDate,
@@ -48,6 +50,8 @@ class BookingCompleteReview {
     this.messengerType = '',
     this.messengerId = '',
     this.additionalRequests = '',
+    this.paymentMethod = 'PAY_DRIVER',
+    this.paymentCurrency,
   });
 
   bool get showFlightNumber =>

@@ -19,6 +19,7 @@ import '../widgets/booking_review_form.dart';
 import '../widgets/assigned_driver_status_card.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
+import '../widgets/customer_payment_instructions_card.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 
 enum _GuestLookupMode { bookingNumber, contactName }
@@ -255,8 +256,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           guestAccessToken: result.guestAccessToken,
           bookingStatus: result.status,
           useCustomerAuth: widget.fromMyBookings,
-          customerAccessToken:
-              widget.fromMyBookings ? _customerAccessToken : null,
+          customerAccessToken: widget.fromMyBookings
+              ? _customerAccessToken
+              : null,
         );
   }
 
@@ -373,7 +375,10 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
     }
   }
 
-  String _maskedPickupLabel(AppLocalizations l10n, GuestContactLookupItem item) {
+  String _maskedPickupLabel(
+    AppLocalizations l10n,
+    GuestContactLookupItem item,
+  ) {
     final date = item.scheduledPickupDate?.trim();
     final period = _pickupPeriodLabel(l10n, item.pickupTimePeriod);
     if (date == null || date.isEmpty) return period;
@@ -470,7 +475,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                     decoration: InputDecoration(
                       labelText: l10n.t('guest_lookup_booking_number'),
                       hintText: l10n.t('guest_lookup_booking_number_hint'),
-                      prefixIcon: const Icon(Icons.confirmation_number_outlined),
+                      prefixIcon: const Icon(
+                        Icons.confirmation_number_outlined,
+                      ),
                     ),
                     validator: (value) {
                       if (isContactMode) return null;
@@ -549,7 +556,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               key: Key('guest_lookup_contact_card_${item.bookingNumber}'),
               onTap: () => setState(() => _selectedContact = item),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppTokens.spaceSm),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppTokens.spaceSm,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -689,7 +698,8 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
                   label: l10n.t('guest_lookup_passengers'),
                   value: '${item.passengerTotal}',
                 ),
-              if (item.luggageTotalPieces != null && item.luggageTotalPieces! > 0)
+              if (item.luggageTotalPieces != null &&
+                  item.luggageTotalPieces! > 0)
                 AppUi.summaryRow(
                   label: l10n.t('guest_lookup_luggage'),
                   value: '${item.luggageTotalPieces}',
@@ -772,11 +782,13 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           const SizedBox(height: AppTokens.spaceMd),
           AssignedDriverStatusCard(
             result: result,
-            allowDriverPhoneWithoutGuestToken: widget.fromMyBookings &&
+            allowDriverPhoneWithoutGuestToken:
+                widget.fromMyBookings &&
                 _customerAccessToken?.trim().isNotEmpty == true,
             useCustomerAuth: widget.fromMyBookings,
-            customerAccessToken:
-                widget.fromMyBookings ? _customerAccessToken : null,
+            customerAccessToken: widget.fromMyBookings
+                ? _customerAccessToken
+                : null,
           ),
         ],
         if (BookingStatusDisplay.customerGuidance(
@@ -814,7 +826,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
         GuestBookingCancelSection(
           booking: result,
           lookupService: _lookupService,
-          customerAccessToken: widget.fromMyBookings ? _customerAccessToken : null,
+          customerAccessToken: widget.fromMyBookings
+              ? _customerAccessToken
+              : null,
           tokenStorage: widget.fromMyBookings ? _tokenStorage : null,
           onCancelled: (updated) {
             setState(() {
@@ -831,8 +845,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
             bookingNumber: result.bookingNumber,
             guestAccessToken: result.guestAccessToken,
-            customerAccessToken:
-                widget.fromMyBookings ? _customerAccessToken : null,
+            customerAccessToken: widget.fromMyBookings
+                ? _customerAccessToken
+                : null,
             api: widget.reviewApi,
             initialState: result.review!.toFormState(),
           ),
@@ -844,8 +859,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
             ),
             bookingNumber: result.bookingNumber,
             guestAccessToken: result.guestAccessToken,
-            customerAccessToken:
-                widget.fromMyBookings ? _customerAccessToken : null,
+            customerAccessToken: widget.fromMyBookings
+                ? _customerAccessToken
+                : null,
             api: widget.reviewApi,
             initialState: reviewFormState,
             onSubmitted: _refresh,
@@ -940,6 +956,12 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
           ),
         ),
         const SizedBox(height: AppTokens.spaceMd),
+        CustomerPaymentInstructionsCard(
+          paymentMethod: result.paymentMethod,
+          paymentCurrency: result.paymentCurrency,
+          instructions: result.paymentInstructions,
+        ),
+        const SizedBox(height: AppTokens.spaceMd),
         if (_error != null) ...[
           const SizedBox(height: AppTokens.spaceMd),
           AppUi.errorState(message: _error!),
@@ -954,8 +976,9 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
               bookingNumber: result.bookingNumber,
               bookingId: result.bookingId,
               guestAccessToken: result.guestAccessToken,
-              customerAccessToken:
-                  widget.fromMyBookings ? _customerAccessToken : null,
+              customerAccessToken: widget.fromMyBookings
+                  ? _customerAccessToken
+                  : null,
               useCustomerPushRegistration: widget.fromMyBookings,
             ),
         ],

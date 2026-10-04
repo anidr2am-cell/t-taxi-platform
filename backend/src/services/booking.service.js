@@ -34,6 +34,11 @@ const {
 } = require('../constants/thailandAirports.constants');
 const logger = require('../utils/logger');
 const {
+  normalizeCustomerPayment,
+  operationalPaymentMethod,
+  customerPaymentFromMetadata,
+} = require('../utils/customerPayment');
+const {
   acquireNamedLock,
   releaseNamedLock,
   contactDispatchLockName,
@@ -775,11 +780,13 @@ class BookingService {
       status: booking.status,
       scheduledPickupAt: booking.scheduled_pickup_at,
     });
+    const customerPayment = customerPaymentFromMetadata(booking.metadata, booking.payment_method);
     return {
       bookingId: booking.id,
       bookingNumber: booking.booking_number,
       status: booking.status,
-      paymentMethod: booking.payment_method,
+      paymentMethod: customerPayment.method,
+      paymentCurrency: customerPayment.transferCurrency,
       paymentStatus: booking.payment_status,
       totalAmount: Number(booking.total_amount),
       currency: booking.currency,
@@ -1152,6 +1159,8 @@ class BookingService {
         : this.addDays(now, 30);
 
       const metadata = {};
+      const customerPayment = normalizeCustomerPayment(input.payment);
+      metadata.customerPayment = customerPayment;
       const messengerMetadata = pickPersistableMessengerMetadata(input.customer);
       if (messengerMetadata.messengerType) {
         metadata.messengerType = messengerMetadata.messengerType;
@@ -1215,7 +1224,7 @@ class BookingService {
         totalAmount: 0,
         currency: pricing.currency,
         paymentStatus: 'UNPAID',
-        paymentMethod: PAYMENT_METHODS.PAY_DRIVER,
+        paymentMethod: operationalPaymentMethod(customerPayment),
         commissionStatus: COMMISSION_STATUS.NOT_DUE_YET,
         customerUserId,
         customerName: input.customer.name,
@@ -1304,7 +1313,8 @@ class BookingService {
         description: isUrgentRequest ? 'Urgent booking created' : 'Booking created',
         payload: {
           bookingNumber,
-          paymentMethod: PAYMENT_METHODS.PAY_DRIVER,
+          paymentMethod: customerPayment.method,
+          paymentCurrency: customerPayment.transferCurrency,
           bookingMode,
         },
       });

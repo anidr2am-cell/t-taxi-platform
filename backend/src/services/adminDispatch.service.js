@@ -217,7 +217,8 @@ class AdminDispatchService {
       },
       flightNumber: row.flight_number,
       flightStatus: row.delay_status,
-      paymentMethod: row.payment_method,
+      paymentMethod: metadata.customerPayment?.method ?? row.payment_method,
+      paymentCurrency: metadata.customerPayment?.transferCurrency ?? null,
       totalAmount: Number(row.total_amount),
       currency: row.currency,
       activeAssignment: this.mapActiveAssignment(row),
@@ -608,7 +609,8 @@ class AdminDispatchService {
       pricing: {
         totalAmount: Number(row.total_amount),
         currency: row.currency,
-        paymentMethod: row.payment_method,
+        paymentMethod: metadata?.customerPayment?.method ?? row.payment_method,
+        paymentCurrency: metadata?.customerPayment?.transferCurrency ?? null,
         paymentStatus: row.payment_status,
         chargeItems: chargeItems.map((item) => ({
           chargeType: item.charge_type,

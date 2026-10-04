@@ -170,8 +170,11 @@ class DriverJobService {
 
   paymentSummary(row) {
     const metadata = this.metadata(row);
+    const customerPaymentMethod = metadata.customerPayment?.method ?? row.payment_method;
     const adminManualPayout = this.moneyAmount(metadata.adminManualPricing?.payoutAmount);
-    const customerPaymentAmount = this.moneyAmount(row.total_amount);
+    const customerPaymentAmount = metadata.customerPayment && customerPaymentMethod !== 'PAY_DRIVER'
+      ? null
+      : this.moneyAmount(row.total_amount);
     const companyCommissionAmount = this.moneyAmount(row.commission_amount);
     const nameSignAmount = this.normalizedNameSignAmount(row.name_sign_amount);
     const driverExpectedIncomeAmount = this.isAdminManualCall(row) && adminManualPayout != null
@@ -185,7 +188,7 @@ class DriverJobService {
     return {
       customerPaymentAmount,
       customerPaymentCurrency: customerPaymentAmount == null ? null : currency,
-      customerPaymentMethod: this.paymentMethodLabel(row.payment_method),
+      customerPaymentMethod: this.paymentMethodLabel(customerPaymentMethod),
       companyCommissionAmount,
       companyCommissionCurrency: companyCommissionAmount == null ? null : currency,
       nameSignAmount,
@@ -303,7 +306,9 @@ class DriverJobService {
       },
       ...this.paymentSummary(row),
       currency: row.currency,
-      paymentMethodLabel: this.paymentMethodLabel(row.payment_method),
+      paymentMethodLabel: this.paymentMethodLabel(
+        this.metadata(row).customerPayment?.method ?? row.payment_method,
+      ),
       customerDisplayName: row.customer_name,
       flightNumber: row.flight_number,
       flightStatus: row.delay_status,

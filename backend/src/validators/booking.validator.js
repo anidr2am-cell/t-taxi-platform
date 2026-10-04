@@ -13,6 +13,7 @@ const {
 } = require('../utils/flightNumber.util');
 const { marketingAttributionSchema } = require('../utils/marketingAttribution.util');
 const { stripTransitionalMessengerPlaceholders } = require('../utils/customerMessengerFields');
+const { CUSTOMER_PAYMENT_METHODS, TRANSFER_CURRENCIES } = require('../utils/customerPayment');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
 const nameSignTextField = Joi.string().trim().min(1).max(100);
@@ -154,6 +155,14 @@ const createBookingSchema = Joi.object({
     messengerType: Joi.string().trim().min(1).max(30).optional(),
     messengerId: Joi.string().trim().min(1).max(100).optional(),
   }).required().custom((customer) => stripTransitionalMessengerPlaceholders(customer)),
+  payment: Joi.object({
+    method: Joi.string().valid(...Object.values(CUSTOMER_PAYMENT_METHODS)).default('PAY_DRIVER'),
+    transferCurrency: Joi.when('method', {
+      is: 'BANK_TRANSFER',
+      then: Joi.string().valid(...Object.values(TRANSFER_CURRENCIES)).required(),
+      otherwise: Joi.any().strip(),
+    }),
+  }).default({ method: 'PAY_DRIVER' }),
   additionalRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   specialRequests: unicodeText({ max: 2000, allowEmpty: true }).default(null),
   marketingAttribution: marketingAttributionSchema,

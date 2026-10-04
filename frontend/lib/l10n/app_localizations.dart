@@ -611,6 +611,16 @@ class AppLocalizations {
       'customer_payment_card': 'Card payment',
       'customer_payment_bank_transfer': 'Bank transfer',
       'customer_payment_unknown': 'Payment method unavailable',
+      'payment_pay_driver_description':
+          'Pay the driver after you arrive at your destination.',
+      'payment_bank_transfer_description':
+          'Choose KRW for a Korean bank account or THB for a PromptPay QR code.',
+      'payment_card_description':
+          'Card payments are available through an administrator.',
+      'payment_depositor_name_notice':
+          'If the booking name and depositor name are different, send the depositor name to an administrator to complete processing.',
+      'payment_details_contact_admin':
+          'Please contact an administrator for payment details.',
       'customer_price_conditions':
           'Tolls, airport parking fees, and extra waiting charges may vary depending on the booking conditions.',
       'customer_luggage_guidance':
@@ -2285,6 +2295,13 @@ class AppLocalizations {
       'customer_payment_card': '카드 결제',
       'customer_payment_bank_transfer': '계좌이체',
       'customer_payment_unknown': '결제 방법 확인 필요',
+      'payment_pay_driver_description': '목적지에 도착한 뒤 기사에게 직접 결제해 주세요.',
+      'payment_bank_transfer_description':
+          '원화는 한국 계좌번호로, 바트는 PromptPay QR로 안내해 드립니다.',
+      'payment_card_description': '카드결제의 경우 관리자를 통해 결제가 가능합니다.',
+      'payment_depositor_name_notice':
+          '예약자명과 입금자의 이름이 다른 경우 관리자에게 입금자명을 보내주셔야 처리가 완료됩니다.',
+      'payment_details_contact_admin': '결제 안내가 보이지 않으면 관리자에게 문의해 주세요.',
       'customer_price_conditions':
           '통행료, 공항 주차비 및 추가 대기요금은 예약 조건에 따라 달라질 수 있습니다.',
       'customer_luggage_guidance':
@@ -3566,6 +3583,13 @@ class AppLocalizations {
       'customer_payment_card': '银行卡付款',
       'customer_payment_bank_transfer': '银行转账',
       'customer_payment_unknown': '付款方式不可用',
+      'payment_pay_driver_description': '到达目的地后，请直接向司机付款。',
+      'payment_bank_transfer_description':
+          '选择韩元可查看韩国银行账户，选择泰铢可查看 PromptPay 二维码。',
+      'payment_card_description': '如需刷卡付款，请联系管理员协助处理。',
+      'payment_depositor_name_notice':
+          '如果预订人姓名与汇款人姓名不同，请将汇款人姓名发送给管理员，以便完成处理。',
+      'payment_details_contact_admin': '如未显示付款信息，请联系管理员。',
       'customer_price_conditions': '过路费、机场停车费和额外等待费可能根据预约条件而有所不同。',
       'customer_luggage_guidance': '请准确填写大件行李和高尔夫球包数量，以便推荐合适车辆。实际容量取决于最终分配车辆。',
       'customer_vehicle_guidance': '乘客或行李较多时，可能无法选择小于推荐车型的车辆。',
@@ -4407,6 +4431,13 @@ class AppLocalizations {
       'customer_payment_card': 'カード決済',
       'customer_payment_bank_transfer': '銀行振込',
       'customer_payment_unknown': '支払方法を確認できません',
+      'payment_pay_driver_description': '目的地に到着後、ドライバーへ直接お支払いください。',
+      'payment_bank_transfer_description':
+          'KRWは韓国の銀行口座、THBはPromptPayのQRコードをご案内します。',
+      'payment_card_description': 'カード決済は管理者を通じてご利用いただけます。',
+      'payment_depositor_name_notice':
+          '予約者名と振込名義が異なる場合は、処理完了のため振込名義を管理者へお知らせください。',
+      'payment_details_contact_admin': '支払い情報が表示されない場合は、管理者へお問い合わせください。',
       'customer_price_conditions': '通行料、空港駐車料金、追加待機料金は予約条件により変動する場合があります。',
       'customer_luggage_guidance':
           '大型スーツケースやゴルフバッグの数を正確に入力してください。実際の積載可否は割り当て車両により異なります。',
@@ -5300,6 +5331,16 @@ class AppLocalizations {
       'customer_payment_card': 'ชำระด้วยบัตร',
       'customer_payment_bank_transfer': 'โอนผ่านบัญชีธนาคาร',
       'customer_payment_unknown': 'ไม่พบข้อมูลวิธีชำระเงิน',
+      'payment_pay_driver_description':
+          'ชำระเงินให้คนขับโดยตรงเมื่อถึงจุดหมายปลายทาง',
+      'payment_bank_transfer_description':
+          'เลือก KRW เพื่อดูบัญชีธนาคารเกาหลี หรือ THB เพื่อดูคิวอาร์ PromptPay',
+      'payment_card_description':
+          'การชำระด้วยบัตรสามารถดำเนินการผ่านผู้ดูแลระบบได้',
+      'payment_depositor_name_notice':
+          'หากชื่อผู้จองและชื่อผู้โอนเงินไม่ตรงกัน โปรดส่งชื่อผู้โอนให้ผู้ดูแลระบบเพื่อดำเนินการให้เสร็จสมบูรณ์',
+      'payment_details_contact_admin':
+          'หากไม่เห็นข้อมูลการชำระเงิน โปรดติดต่อผู้ดูแลระบบ',
       'customer_price_conditions':
           'ค่าทางด่วน ค่าจอดรถสนามบิน และค่ารอเพิ่มเติมอาจแตกต่างกันตามเงื่อนไขการจอง',
       'customer_luggage_guidance':

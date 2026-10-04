@@ -67,17 +67,22 @@ class BookingWizardController extends ChangeNotifier {
     final locations = _pricingLocationParams();
     final airportIata = _airportIataForTransfer();
     final attribution =
-        MarketingAttributionProvider.snapshotForAnalytics()?.analyticsParams() ??
+        MarketingAttributionProvider.snapshotForAnalytics()
+            ?.analyticsParams() ??
         const {};
     _analytics.setSessionContext({
       'locale': locale,
       'device_type': deviceType,
       'passenger_count': _state.adults + _state.children + _state.infants,
       'luggage_count':
-          _state.luggage20 + _state.luggage24 + _state.golfBags + _state.specialLuggageCount,
+          _state.luggage20 +
+          _state.luggage24 +
+          _state.golfBags +
+          _state.specialLuggageCount,
       if (_state.serviceType != null)
         'route_type': BookingAnalytics.routeTypeFor(_state.serviceType),
-      if (_state.selectedVehicle != null) 'vehicle_type': _state.selectedVehicle,
+      if (_state.selectedVehicle != null)
+        'vehicle_type': _state.selectedVehicle,
       if (locations['originLocationCode'] != null)
         'origin_location_code': locations['originLocationCode'],
       if (locations['destinationLocationCode'] != null)
@@ -366,7 +371,9 @@ class BookingWizardController extends ChangeNotifier {
     await syncDerivedData();
   }
 
-  Future<LocationOption> _resolveLocationCoordinates(LocationOption location) async {
+  Future<LocationOption> _resolveLocationCoordinates(
+    LocationOption location,
+  ) async {
     if (_state.serviceType != BookingServiceType.cityTransfer) {
       return location;
     }
@@ -677,12 +684,14 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   Map<String, String> _optionalPersistableCustomerMessengerFields() {
-    final messengerType = TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
-      _state.messengerType,
-    );
-    final messengerId = TransitionalMessengerPlaceholders.sanitizeMessengerIdField(
-      _state.messengerId,
-    );
+    final messengerType =
+        TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
+          _state.messengerType,
+        );
+    final messengerId =
+        TransitionalMessengerPlaceholders.sanitizeMessengerIdField(
+          _state.messengerId,
+        );
     return {
       if (messengerType.isNotEmpty) 'messengerType': messengerType,
       if (messengerId.isNotEmpty) 'messengerId': messengerId,
@@ -744,6 +753,11 @@ class BookingWizardController extends ChangeNotifier {
         'phone': _state.customerPhone.trim(),
         ..._optionalPersistableCustomerMessengerFields(),
       },
+      'payment': {
+        'method': _state.paymentMethod,
+        if (_state.paymentMethod == 'BANK_TRANSFER')
+          'transferCurrency': _state.paymentCurrency,
+      },
       if (_state.additionalRequests.trim().isNotEmpty)
         'additionalRequests': _state.additionalRequests.trim(),
       if (attribution.isNotEmpty) 'marketingAttribution': attribution,
@@ -797,7 +811,9 @@ class BookingWizardController extends ChangeNotifier {
       final coupons = await _couponApi.listCoupons();
       _availableCoupons = coupons.where((item) => item.isAvailable).toList();
       if (_state.selectedCouponId != null &&
-          !_availableCoupons.any((item) => item.id == _state.selectedCouponId)) {
+          !_availableCoupons.any(
+            (item) => item.id == _state.selectedCouponId,
+          )) {
         _state = _state.copyWith(clearSelectedCoupon: true);
       }
     } catch (_) {
@@ -854,6 +870,22 @@ class BookingWizardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setPaymentMethod(String method) {
+    _state = _state.copyWith(
+      paymentMethod: method,
+      clearPaymentCurrency: method != 'BANK_TRANSFER',
+      paymentCurrency: method == 'BANK_TRANSFER'
+          ? (_state.paymentCurrency ?? 'KRW')
+          : null,
+    );
+    notifyListeners();
+  }
+
+  void setPaymentCurrency(String currency) {
+    _state = _state.copyWith(paymentCurrency: currency);
+    notifyListeners();
+  }
+
   num? estimatedTotalAfterMileage() {
     final afterCoupon = estimatedTotalAfterCoupon();
     if (afterCoupon == null) return null;
@@ -892,6 +924,8 @@ class BookingWizardController extends ChangeNotifier {
       messengerType: _state.messengerType,
       messengerId: _state.messengerId,
       additionalRequests: _state.additionalRequests,
+      paymentMethod: _state.paymentMethod,
+      paymentCurrency: _state.paymentCurrency,
     );
   }
 
@@ -903,7 +937,9 @@ class BookingWizardController extends ChangeNotifier {
     );
   }
 
-  Future<BookingCreateResult?> submitUrgentBooking({String? accessToken}) async {
+  Future<BookingCreateResult?> submitUrgentBooking({
+    String? accessToken,
+  }) async {
     return _submitBooking(
       bookingMode: 'URGENT',
       validatePickup: isUrgentPickupWindow,
@@ -921,7 +957,7 @@ class BookingWizardController extends ChangeNotifier {
 
     _analytics.trackBookingSubmitted(
       vehicleType: _state.selectedVehicle,
-      paymentMethod: 'PAY_DRIVER',
+      paymentMethod: _state.paymentMethod,
       bookingMode: bookingMode,
     );
 
@@ -1027,37 +1063,70 @@ class BookingWizardController extends ChangeNotifier {
     );
     final field = first.field;
     if (field == 'customer.name') {
-      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer_name');
+      return (
+        step: BookingWizardSteps.customer,
+        messageKey: 'wizard_required_customer_name',
+      );
     }
     if (field == 'customer.phone') {
-      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer_phone');
+      return (
+        step: BookingWizardSteps.customer,
+        messageKey: 'wizard_required_customer_phone',
+      );
     }
     if (field == 'customer.messengerType' || field == 'customer.messengerId') {
-      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer');
+      return (
+        step: BookingWizardSteps.customer,
+        messageKey: 'wizard_required_customer',
+      );
     }
     if (field.startsWith('customer.')) {
-      return (step: BookingWizardSteps.customer, messageKey: 'wizard_required_customer');
+      return (
+        step: BookingWizardSteps.customer,
+        messageKey: 'wizard_required_customer',
+      );
     }
     if (field == 'origin' || field.startsWith('origin.')) {
-      return (step: BookingWizardSteps.route, messageKey: 'wizard_required_origin');
+      return (
+        step: BookingWizardSteps.route,
+        messageKey: 'wizard_required_origin',
+      );
     }
     if (field == 'destination' || field.startsWith('destination.')) {
-      return (step: BookingWizardSteps.route, messageKey: 'wizard_required_destination');
+      return (
+        step: BookingWizardSteps.route,
+        messageKey: 'wizard_required_destination',
+      );
     }
     if (field == 'scheduledPickupAt') {
-      return (step: BookingWizardSteps.schedule, messageKey: 'pickup_datetime_required');
+      return (
+        step: BookingWizardSteps.schedule,
+        messageKey: 'pickup_datetime_required',
+      );
     }
     if (field == 'transfer.flightNumber') {
-      return (step: BookingWizardSteps.schedule, messageKey: 'flight_number_invalid');
+      return (
+        step: BookingWizardSteps.schedule,
+        messageKey: 'flight_number_invalid',
+      );
     }
     if (field.startsWith('passengers.') || field.startsWith('luggage.')) {
-      return (step: BookingWizardSteps.vehicle, messageKey: 'wizard_required_passengers');
+      return (
+        step: BookingWizardSteps.vehicle,
+        messageKey: 'wizard_required_passengers',
+      );
     }
     if (field == 'options.nameSignText') {
-      return (step: BookingWizardSteps.vehicle, messageKey: 'wizard_required_name_sign_text');
+      return (
+        step: BookingWizardSteps.vehicle,
+        messageKey: 'wizard_required_name_sign_text',
+      );
     }
     if (field == 'vehicleTypeCode' || field == 'vehicleCount') {
-      return (step: BookingWizardSteps.vehicle, messageKey: 'wizard_required_vehicle');
+      return (
+        step: BookingWizardSteps.vehicle,
+        messageKey: 'wizard_required_vehicle',
+      );
     }
     return (step: _state.step, messageKey: 'ui_action_failed');
   }
@@ -1174,7 +1243,8 @@ class BookingWizardController extends ChangeNotifier {
   void reportVehicleCapacityWarning(String vehicleCode) {
     if (isVehicleEnabled(vehicleCode)) return;
     final recommendation = _state.recommendation;
-    final warningType = recommendation != null &&
+    final warningType =
+        recommendation != null &&
             !recommendation.selectableVehicles.contains(vehicleCode)
         ? 'capacity_exceeded'
         : 'tier_too_small';
@@ -1366,7 +1436,10 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   bool _isKnownPricingLocationCode(String value) {
-    final normalized = value.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '_');
+    final normalized = value.trim().toUpperCase().replaceAll(
+      RegExp(r'\s+'),
+      '_',
+    );
     const knownCodes = {
       'BANGKOK',
       'PATTAYA',
@@ -1659,6 +1732,10 @@ class BookingWizardController extends ChangeNotifier {
   int get totalRequiredCount => validationSteps.length;
 
   bool canSubmitAll({bool Function(DateTime value)? validatePickup}) {
+    if (_state.paymentMethod == 'BANK_TRANSFER' &&
+        (_state.paymentCurrency == null || _state.paymentCurrency!.isEmpty)) {
+      return false;
+    }
     final pickupValidator = validatePickup ?? isStandardPickupAllowed;
     for (final step in validationSteps) {
       if (step == BookingWizardSteps.schedule) {

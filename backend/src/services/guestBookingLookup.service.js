@@ -9,6 +9,7 @@ const GuestVehiclePhotoService = require('./guestVehiclePhoto.service');
 const {
   evaluateCustomerCancellation,
 } = require('../policies/customerBookingCancellation.policy');
+const { customerPaymentFromMetadata } = require('../utils/customerPayment');
 
 const LOOKUP_GUEST_TOKEN_TTL_HOURS = 24;
 const CUSTOMER_TRACKING_STATUSES = new Set([
@@ -194,6 +195,7 @@ class GuestBookingLookupService {
       ].includes(row.status);
 
     const metadata = this.parseBookingMetadata(row.metadata);
+    const customerPayment = customerPaymentFromMetadata(metadata, row.payment_method);
     const originLocationMeta = metadata.originLocation ?? {};
     const destinationLocationMeta = metadata.destinationLocation ?? {};
     const pickupLocation = this.locationDetails({
@@ -258,7 +260,8 @@ class GuestBookingLookupService {
       pricing: {
         totalAmount: Number(row.total_amount ?? 0),
         currency: row.currency,
-        paymentMethod: row.payment_method,
+        paymentMethod: customerPayment.method,
+        paymentCurrency: customerPayment.transferCurrency,
         paymentStatus: row.payment_status,
       },
       assignedDriver,

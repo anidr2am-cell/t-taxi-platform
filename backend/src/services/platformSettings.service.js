@@ -61,6 +61,31 @@ class PlatformSettingsService {
     };
   }
 
+  async getCustomerPaymentInstructions(method, currency = null) {
+    const normalizedMethod = String(method || 'PAY_DRIVER').trim().toUpperCase();
+    const normalizedCurrency = currency == null ? null : String(currency).trim().toUpperCase();
+    if (normalizedMethod !== 'BANK_TRANSFER') {
+      return { method: normalizedMethod, currency: null };
+    }
+    const rows = await this.settingsRepository.findByGroup(GROUP);
+    const values = Object.fromEntries(rows.map((row) => [row.key_name, row.value]));
+    if (normalizedCurrency === 'THB') {
+      return {
+        method: normalizedMethod,
+        currency: 'THB',
+        promptPayNumber: values.promptPayNumber || '',
+        qrImageUrl: settingsAssetUrl('promptPayQr', values.promptPayQrImagePath),
+      };
+    }
+    return {
+      method: normalizedMethod,
+      currency: 'KRW',
+      bankName: values.bankName || '',
+      accountName: values.accountName || '',
+      accountNumber: values.accountNumber || '',
+    };
+  }
+
   async getContactChannelsPublic() {
     const rows = await this.settingsRepository.findByGroup(GROUP);
     const contactRows = await this.settingsRepository.findByGroup(CONTACT_GROUP);
