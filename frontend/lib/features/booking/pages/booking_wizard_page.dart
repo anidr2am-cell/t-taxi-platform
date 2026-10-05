@@ -111,8 +111,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
   @override
   void initState() {
     super.initState();
-    _controller =
-        widget.controller ?? BookingWizardController(now: widget.now);
+    _controller = widget.controller ?? BookingWizardController(now: widget.now);
     if (widget.controller != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _controller.syncDerivedData();
@@ -128,8 +127,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
               initialStep: args.initialStep,
             )
             .then((_) {
-          if (mounted) _controller.syncDerivedData();
-        });
+              if (mounted) _controller.syncDerivedData();
+            });
       } else {
         _controller.initialize().then((_) {
           if (mounted) _controller.syncDerivedData();
@@ -297,8 +296,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       );
     }
 
-    final needsContactConnect = result.contactConnectionRequired ||
-        result.contactStatus == 'PENDING';
+    final needsContactConnect =
+        result.contactConnectionRequired || result.contactStatus == 'PENDING';
 
     if (needsContactConnect) {
       final connectArgs = BookingContactConnectArgs(
@@ -483,6 +482,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           mileageBalance: _controller.mileageBalance,
           mileageAmountToUse: state.mileageAmountToUse,
           onMileageAmountChanged: _controller.setMileageAmountToUse,
+          onPaymentMethodChanged: _controller.setPaymentMethod,
+          onPaymentCurrencyChanged: _controller.setPaymentCurrency,
           estimatedTotal: _controller.estimatedTotalAfterMileage(),
           couponDiscount: _controller.appliedCouponDiscount(),
           mileageDiscount: state.mileageAmountToUse > 0
@@ -562,10 +563,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                   children: [
                     BookingProgressHeader(currentStep: state.step),
                     if (state.step >= BookingWizardSteps.schedule)
-                      BookingSummaryBar(
-                        state: state,
-                        controller: _controller,
-                      ),
+                      BookingSummaryBar(state: state, controller: _controller),
                     Expanded(
                       child: SingleChildScrollView(
                         controller: _scrollController,
@@ -601,7 +599,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                         key: const Key('booking_wizard_cta_bar'),
                         decoration: const BoxDecoration(
                           color: AppTokens.surface,
-                          border: Border(top: BorderSide(color: AppTokens.border)),
+                          border: Border(
+                            top: BorderSide(color: AppTokens.border),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Color(0x0F000000),
@@ -635,8 +635,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                       width: double.infinity,
                                       height: 48,
                                       child: ElevatedButton(
-                                        onPressed:
-                                            canAdvance ? _handleAdvance : null,
+                                        onPressed: canAdvance
+                                            ? _handleAdvance
+                                            : null,
                                         child: Text(
                                           _ctaLabel(l10n, state),
                                           maxLines: 2,
@@ -660,7 +661,9 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                                 strokeWidth: 2,
                                               ),
                                             )
-                                          : Text(l10n.t('customer_urgent_request')),
+                                          : Text(
+                                              l10n.t('customer_urgent_request'),
+                                            ),
                                     ),
                                   ),
                                 if (canSubmitStandard)
@@ -679,8 +682,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                                   height: 20,
                                                   child:
                                                       CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                  ),
+                                                        strokeWidth: 2,
+                                                      ),
                                                 ),
                                                 const SizedBox(width: 10),
                                                 Flexible(
@@ -688,7 +691,8 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
                                                     l10n.t(
                                                       'customer_booking_processing',
                                                     ),
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],

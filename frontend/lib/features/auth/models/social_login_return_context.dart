@@ -179,6 +179,8 @@ class SocialLoginReturnContext {
     'bookingNumber': result.bookingNumber,
     'status': result.status,
     'paymentMethod': result.paymentMethod,
+    'paymentCurrency': result.paymentCurrency,
+    'paymentInstructions': result.paymentInstructions,
     'paymentStatus': result.paymentStatus,
     'totalAmount': result.totalAmount,
     'currency': result.currency,
@@ -200,6 +202,10 @@ class SocialLoginReturnContext {
       bookingNumber: json['bookingNumber'] as String? ?? '',
       status: json['status'] as String? ?? 'PENDING',
       paymentMethod: json['paymentMethod'] as String? ?? 'PAY_DRIVER',
+      paymentCurrency: json['paymentCurrency'] as String?,
+      paymentInstructions: json['paymentInstructions'] is Map
+          ? Map<String, dynamic>.from(json['paymentInstructions'] as Map)
+          : const {},
       paymentStatus: json['paymentStatus'] as String? ?? 'UNPAID',
       totalAmount: json['totalAmount'] as num? ?? 0,
       currency: json['currency'] as String? ?? 'THB',

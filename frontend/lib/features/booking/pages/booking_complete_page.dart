@@ -15,6 +15,7 @@ import '../widgets/booking_complete_review_section.dart';
 import '../widgets/booking_review_form.dart';
 import '../widgets/booking_notification_section.dart';
 import '../widgets/booking_messenger_handoff_section.dart';
+import '../widgets/customer_payment_instructions_card.dart';
 import '../../driver_location/widgets/guest_driver_tracking_section.dart';
 import '../widgets/airport_meeting_guide_card.dart';
 import '../widgets/guest_booking_cancel_section.dart';
@@ -116,8 +117,7 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
   bool get _hasGuestToken =>
       widget.result.guestAccessToken?.trim().isNotEmpty == true;
 
-  bool get _useCustomerAuth =>
-      _customerAccessToken?.trim().isNotEmpty == true;
+  bool get _useCustomerAuth => _customerAccessToken?.trim().isNotEmpty == true;
 
   bool get _hasBookingCustomerAuth => _hasGuestToken || _useCustomerAuth;
 
@@ -252,19 +252,20 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
       selectedVehicle: widget.selectedVehicle,
       enableCustomerTools: widget.enableCustomerTools,
     );
-    final lineReturnContext = SocialLoginReturnContext.fromBookingCompleteForLine(
-      result: result,
-      serviceLabel: widget.serviceLabel,
-      origin: widget.origin,
-      destination: widget.destination,
-      serviceTypeCode: widget.serviceTypeCode,
-      originAirportCode: widget.originAirportCode,
-      nameSignRequested: widget.nameSignRequested,
-      customerPhone: widget.customerPhone,
-      scheduledPickupAt: widget.scheduledPickupAt,
-      selectedVehicle: widget.selectedVehicle,
-      enableCustomerTools: widget.enableCustomerTools,
-    );
+    final lineReturnContext =
+        SocialLoginReturnContext.fromBookingCompleteForLine(
+          result: result,
+          serviceLabel: widget.serviceLabel,
+          origin: widget.origin,
+          destination: widget.destination,
+          serviceTypeCode: widget.serviceTypeCode,
+          originAirportCode: widget.originAirportCode,
+          nameSignRequested: widget.nameSignRequested,
+          customerPhone: widget.customerPhone,
+          scheduledPickupAt: widget.scheduledPickupAt,
+          selectedVehicle: widget.selectedVehicle,
+          enableCustomerTools: widget.enableCustomerTools,
+        );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.t('booking_complete'))),
@@ -301,6 +302,13 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 l10n: l10n,
                 onCopy: _copyBookingNumber,
                 statusTone: AppUi.toneForBookingStatus(_status),
+              ),
+              const SizedBox(height: AppTokens.spaceMd),
+              CustomerPaymentInstructionsCard(
+                paymentMethod: result.paymentMethod,
+                paymentCurrency:
+                    result.paymentCurrency ?? widget.review?.paymentCurrency,
+                instructions: result.paymentInstructions,
               ),
               BookingMessengerHandoffSection(
                 bookingNumber: result.bookingNumber,
@@ -485,10 +493,9 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
                 child: AppUi.primaryButton(
                   label: l10n.t('app_title'),
                   icon: Icons.home_outlined,
-                  onPressed: () => Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/',
-                    (route) => false,
-                  ),
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/', (route) => false),
                 ),
               ),
             ],

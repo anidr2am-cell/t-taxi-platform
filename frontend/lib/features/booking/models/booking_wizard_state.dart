@@ -35,6 +35,8 @@ class BookingWizardState {
   final String flightNumber;
   final int? selectedCouponId;
   final int mileageAmountToUse;
+  final String paymentMethod;
+  final String? paymentCurrency;
 
   const BookingWizardState({
     this.step = 0,
@@ -67,6 +69,8 @@ class BookingWizardState {
     this.flightNumber = '',
     this.selectedCouponId,
     this.mileageAmountToUse = 0,
+    this.paymentMethod = 'PAY_DRIVER',
+    this.paymentCurrency,
   });
 
   static const int stepCount = 5;
@@ -110,6 +114,9 @@ class BookingWizardState {
     int? selectedCouponId,
     bool clearSelectedCoupon = false,
     int? mileageAmountToUse,
+    String? paymentMethod,
+    String? paymentCurrency,
+    bool clearPaymentCurrency = false,
   }) {
     return BookingWizardState(
       step: step ?? this.step,
@@ -148,6 +155,10 @@ class BookingWizardState {
           ? null
           : (selectedCouponId ?? this.selectedCouponId),
       mileageAmountToUse: mileageAmountToUse ?? this.mileageAmountToUse,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentCurrency: clearPaymentCurrency
+          ? null
+          : (paymentCurrency ?? this.paymentCurrency),
     );
   }
 
@@ -177,6 +188,8 @@ class BookingWizardState {
     'messengerId': messengerId,
     'additionalRequests': additionalRequests,
     'flightNumber': flightNumber,
+    'paymentMethod': paymentMethod,
+    'paymentCurrency': paymentCurrency,
   };
 
   factory BookingWizardState.fromJson(Map<String, dynamic> json) {
@@ -212,14 +225,17 @@ class BookingWizardState {
       customerEmail: json['customerEmail'] as String? ?? '',
       customerPhone: json['customerPhone'] as String? ?? '',
       customerCountryCode: json['customerCountryCode'] as String? ?? '',
-      messengerType: TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
-        json['messengerType'] as String?,
-      ),
+      messengerType:
+          TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
+            json['messengerType'] as String?,
+          ),
       messengerId: TransitionalMessengerPlaceholders.sanitizeMessengerIdField(
         json['messengerId'] as String?,
       ),
       additionalRequests: json['additionalRequests'] as String? ?? '',
       flightNumber: json['flightNumber'] as String? ?? '',
+      paymentMethod: json['paymentMethod'] as String? ?? 'PAY_DRIVER',
+      paymentCurrency: json['paymentCurrency'] as String?,
     );
   }
 }

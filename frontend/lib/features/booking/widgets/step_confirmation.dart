@@ -23,6 +23,8 @@ class StepConfirmation extends StatelessWidget {
   final num? estimatedTotal;
   final num? couponDiscount;
   final num? mileageDiscount;
+  final ValueChanged<String>? onPaymentMethodChanged;
+  final ValueChanged<String>? onPaymentCurrencyChanged;
 
   const StepConfirmation({
     super.key,
@@ -38,6 +40,8 @@ class StepConfirmation extends StatelessWidget {
     this.estimatedTotal,
     this.couponDiscount,
     this.mileageDiscount,
+    this.onPaymentMethodChanged,
+    this.onPaymentCurrencyChanged,
   });
 
   @override
@@ -177,21 +181,23 @@ class StepConfirmation extends StatelessWidget {
               if (couponDiscount != null && couponDiscount! > 0)
                 AppUi.summaryRow(
                   label: l10n.t('booking_coupon_discount_label'),
-                  value: '-${CustomerBookingFormat.money(couponDiscount!, pricing.currency)}',
+                  value:
+                      '-${CustomerBookingFormat.money(couponDiscount!, pricing.currency)}',
                 ),
               if (mileageDiscount != null && mileageDiscount! > 0)
                 AppUi.summaryRow(
                   label: l10n.t('booking_mileage_discount_label'),
-                  value: '-${CustomerBookingFormat.money(mileageDiscount!, pricing.currency)}',
+                  value:
+                      '-${CustomerBookingFormat.money(mileageDiscount!, pricing.currency)}',
                 ),
             ],
             if (availableCoupons.isNotEmpty || loadingCoupons) ...[
               const Divider(height: 24),
               Text(
                 l10n.t('booking_coupon_section_title'),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               if (loadingCoupons)
@@ -226,13 +232,14 @@ class StepConfirmation extends StatelessWidget {
               const Divider(height: 24),
               Text(
                 l10n.t('booking_mileage_section_title'),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                l10n.t('booking_mileage_available')
+                l10n
+                    .t('booking_mileage_available')
                     .replaceAll('{balance}', '$mileageBalance'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -268,9 +275,59 @@ class StepConfirmation extends StatelessWidget {
               value: total,
               emphasize: true,
             ),
-            AppUi.summaryRow(
-              label: l10n.t('customer_payment_method'),
-              value: CustomerBookingFormat.paymentMethod(l10n, 'PAY_DRIVER'),
+            const SizedBox(height: 8),
+            Text(
+              l10n.t('customer_payment_method'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            _paymentChoice(
+              context,
+              value: 'PAY_DRIVER',
+              icon: Icons.payments_outlined,
+              title: l10n.t('customer_payment_cash'),
+              description: l10n.t('payment_pay_driver_description'),
+            ),
+            _paymentChoice(
+              context,
+              value: 'BANK_TRANSFER',
+              icon: Icons.account_balance_outlined,
+              title: l10n.t('customer_payment_bank_transfer'),
+              description: l10n.t('payment_bank_transfer_description'),
+            ),
+            if (state.paymentMethod == 'BANK_TRANSFER') ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'KRW', label: Text('KRW (원화)')),
+                    ButtonSegment(value: 'THB', label: Text('THB (바트)')),
+                  ],
+                  selected: {state.paymentCurrency ?? 'KRW'},
+                  onSelectionChanged: (values) =>
+                      onPaymentCurrencyChanged?.call(values.first),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                child: Text(
+                  l10n.t('payment_depositor_name_notice'),
+                  style: const TextStyle(
+                    color: AppTokens.warning,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+            _paymentChoice(
+              context,
+              value: 'CARD',
+              icon: Icons.credit_card_outlined,
+              title: l10n.t('customer_payment_card'),
+              description: l10n.t('payment_card_description'),
             ),
           ],
         ),
@@ -326,6 +383,71 @@ class StepConfirmation extends StatelessWidget {
     return SingleChildScrollView(
       padding: AppUi.pagePadding(context),
       child: content,
+    );
+  }
+
+  Widget _paymentChoice(
+    BuildContext context, {
+    required String value,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final selected = state.paymentMethod == value;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => onPaymentMethodChanged?.call(value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: selected ? AppTokens.accentLight : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? AppTokens.primary : AppTokens.border,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                icon,
+                color: selected ? AppTokens.primary : AppTokens.textSecondary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        color: AppTokens.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Radio<String>(
+                value: value,
+                groupValue: state.paymentMethod,
+                onChanged: (next) {
+                  if (next != null) onPaymentMethodChanged?.call(next);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -4,6 +4,8 @@ class BookingCreateResult {
   final String status;
   final String paymentMethod;
   final String paymentStatus;
+  final String? paymentCurrency;
+  final Map<String, dynamic> paymentInstructions;
   final num totalAmount;
   final String currency;
   final String? guestAccessToken;
@@ -23,6 +25,8 @@ class BookingCreateResult {
     required this.status,
     required this.paymentMethod,
     required this.paymentStatus,
+    this.paymentCurrency,
+    this.paymentInstructions = const {},
     required this.totalAmount,
     required this.currency,
     this.guestAccessToken,
@@ -47,6 +51,10 @@ class BookingCreateResult {
       status: json['status'] as String? ?? 'PENDING',
       paymentMethod: json['paymentMethod'] as String? ?? 'PAY_DRIVER',
       paymentStatus: json['paymentStatus'] as String? ?? 'UNPAID',
+      paymentCurrency: json['paymentCurrency'] as String?,
+      paymentInstructions: json['paymentInstructions'] is Map
+          ? Map<String, dynamic>.from(json['paymentInstructions'] as Map)
+          : const {},
       totalAmount: json['totalAmount'] as num? ?? 0,
       currency: json['currency'] as String? ?? 'THB',
       guestAccessToken: json['guestAccessToken'] as String?,

@@ -12,6 +12,8 @@ class GuestBookingLookupResult {
     required this.totalAmount,
     required this.currency,
     required this.paymentMethod,
+    this.paymentCurrency,
+    this.paymentInstructions = const {},
     required this.guestAccessToken,
     required this.guestAccessExpiresAt,
     required this.capabilities,
@@ -45,6 +47,8 @@ class GuestBookingLookupResult {
   final num totalAmount;
   final String currency;
   final String paymentMethod;
+  final String? paymentCurrency;
+  final Map<String, dynamic> paymentInstructions;
   final String guestAccessToken;
   final String? guestAccessExpiresAt;
   final GuestBookingCapabilities capabilities;
@@ -102,8 +106,7 @@ class GuestBookingLookupResult {
 
     final bookingNumber = json['bookingNumber'] as String? ?? '';
     final token = guestAccess['token'] as String? ?? '';
-    if (bookingNumber.isEmpty ||
-        (requireGuestAccessToken && token.isEmpty)) {
+    if (bookingNumber.isEmpty || (requireGuestAccessToken && token.isEmpty)) {
       throw const FormatException('Invalid booking lookup response');
     }
 
@@ -124,6 +127,10 @@ class GuestBookingLookupResult {
       totalAmount: pricing['totalAmount'] as num? ?? 0,
       currency: pricing['currency'] as String? ?? 'THB',
       paymentMethod: pricing['paymentMethod'] as String? ?? 'PAY_DRIVER',
+      paymentCurrency: pricing['paymentCurrency'] as String?,
+      paymentInstructions: json['paymentInstructions'] is Map
+          ? Map<String, dynamic>.from(json['paymentInstructions'] as Map)
+          : const {},
       guestAccessToken: token,
       guestAccessExpiresAt: guestAccess['expiresAt'] as String?,
       capabilities: capabilities,
@@ -204,6 +211,8 @@ class GuestBookingLookupResult {
       totalAmount: totalAmount,
       currency: currency,
       paymentMethod: paymentMethod,
+      paymentCurrency: paymentCurrency,
+      paymentInstructions: paymentInstructions,
       guestAccessToken: guestAccessToken,
       guestAccessExpiresAt: guestAccessExpiresAt,
       capabilities: capabilities ?? this.capabilities,
@@ -320,7 +329,9 @@ class GuestBookingLookupResult {
       'totalAmount': totalAmount,
       'currency': currency,
       'paymentMethod': paymentMethod,
+      'paymentCurrency': paymentCurrency,
     },
+    'paymentInstructions': paymentInstructions,
     'guestAccess': {
       'token': guestAccessToken,
       'expiresAt': guestAccessExpiresAt,

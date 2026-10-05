@@ -12,6 +12,7 @@ const getBookingStatusService = () => container.get('bookingStatusService');
 const getGuestBookingLookupService = () => container.get('guestBookingLookupService');
 const getGuestVehiclePhotoService = () => container.get('guestVehiclePhotoService');
 const getUrgentNegotiationService = () => container.get('urgentNegotiationService');
+const getPlatformSettingsService = () => container.get('platformSettingsService');
 
 const recommendVehicle = asyncHandler(async (req, res) => {
   const data = await getVehicleRecommendationService().recommend(req.body);
@@ -52,6 +53,11 @@ const createBooking = asyncHandler(async (req, res) => {
     idempotencyKey: normalizedKey?.value ?? null,
     deferPostCommitDispatch: true,
   });
+  result.data.paymentInstructions = await getPlatformSettingsService()
+    .getCustomerPaymentInstructions(
+      result.data.paymentMethod,
+      result.data.paymentCurrency,
+    );
   const statusCode = result.replayed ? HTTP_STATUS.OK : result.responseStatus;
   return success(res, result.data, 'Booking created', statusCode);
 });
@@ -125,6 +131,11 @@ const issueBoardingQr = asyncHandler(async (req, res) => {
 
 const lookupGuestBooking = asyncHandler(async (req, res) => {
   const data = await getGuestBookingLookupService().lookup(req.body);
+  data.paymentInstructions = await getPlatformSettingsService()
+    .getCustomerPaymentInstructions(
+      data.pricing?.paymentMethod,
+      data.pricing?.paymentCurrency,
+    );
   return success(res, data, 'Booking found');
 });
 

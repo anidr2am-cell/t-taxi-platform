@@ -220,14 +220,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.t('admin_manual_booking_cancel_success'))),
+          SnackBar(
+            content: Text(l10n.t('admin_manual_booking_cancel_success')),
+          ),
         );
       }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(err))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(userFacingError(err))));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -512,9 +514,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       widget.onChanged();
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_noShowText(context, 'success'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_noShowText(context, 'success'))));
     } catch (err) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -620,14 +622,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.t('admin_contact_verify_success'))),
+          SnackBar(
+            content: Text(context.l10n.t('admin_contact_verify_success')),
+          ),
         );
       }
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(userFacingError(err))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(userFacingError(err))));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -644,7 +648,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.t('admin_contact_dispatch_retry_success'))),
+          SnackBar(
+            content: Text(l10n.t('admin_contact_dispatch_retry_success')),
+          ),
         );
       }
     } catch (err) {
@@ -1411,13 +1417,15 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
     final parsed = parseBackendServiceDateTime(raw);
     if (parsed == null) return '-';
     final bangkok = parsed.toUtc().add(const Duration(hours: 7));
-    return _formatAbsolute(DateTime(
-      bangkok.year,
-      bangkok.month,
-      bangkok.day,
-      bangkok.hour,
-      bangkok.minute,
-    ));
+    return _formatAbsolute(
+      DateTime(
+        bangkok.year,
+        bangkok.month,
+        bangkok.day,
+        bangkok.hour,
+        bangkok.minute,
+      ),
+    );
   }
 
   String _twoDigits(int value) => value.toString().padLeft(2, '0');
@@ -1968,10 +1976,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
               detail['scheduledPickupAt'] as String?,
             ),
           ),
-          _LocationSummaryRow(
-            label: l10n.t('origin'),
-            location: origin,
-          ),
+          _LocationSummaryRow(label: l10n.t('origin'), location: origin),
           _LocationSummaryRow(
             label: l10n.t('destination'),
             location: destination,
@@ -2032,7 +2037,9 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           ),
           AppUi.summaryRow(
             label: l10n.t('admin_contact_channel'),
-            value: (customer['contactChannel'] as String?)?.trim().isNotEmpty == true
+            value:
+                (customer['contactChannel'] as String?)?.trim().isNotEmpty ==
+                    true
                 ? customer['contactChannel'] as String
                 : '-',
           ),
@@ -2051,11 +2058,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           AppUi.summaryRow(
             label: l10n.t('admin_contact_dispatch_section'),
             value:
-                '${l10n.t(AdminContactDispatchUx.dispatchModeLabelKey(
-                  detail['isUrgentRequest'] == true
-                      ? 'URGENT'
-                      : contactDispatch['mode'] as String?,
-                ))} · ${l10n.t(AdminContactDispatchUx.dispatchStateLabelKey(dispatchState))}',
+                '${l10n.t(AdminContactDispatchUx.dispatchModeLabelKey(detail['isUrgentRequest'] == true ? 'URGENT' : contactDispatch['mode'] as String?))} · ${l10n.t(AdminContactDispatchUx.dispatchStateLabelKey(dispatchState))}',
           ),
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
@@ -2449,7 +2452,10 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           for (final raw in chargeItems)
             AppUi.summaryRow(
               label: _chargeLabel(raw),
-              value: _chargeAmountLabel(raw, pricing['currency'] as String? ?? ''),
+              value: _chargeAmountLabel(
+                raw,
+                pricing['currency'] as String? ?? '',
+              ),
             ),
           if (chargeItems.isNotEmpty) const Divider(height: 20),
           AppUi.summaryRow(
@@ -2460,7 +2466,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           ),
           AppUi.summaryRow(
             label: l10n.t('payment_method'),
-            value: pricing['paymentMethod'] as String? ?? '',
+            value: [
+              pricing['paymentMethod'] as String? ?? '',
+              if ((pricing['paymentCurrency'] as String? ?? '').isNotEmpty)
+                pricing['paymentCurrency'] as String,
+            ].where((value) => value.isNotEmpty).join(' · '),
           ),
           if (pricing['paymentStatus'] != null)
             AppUi.summaryRow(
@@ -2818,9 +2828,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
 
   num? _chargeAmount(dynamic raw) {
     if (raw is! Map) return null;
-    return adminBookingJsonNum(
-      Map<String, dynamic>.from(raw)['amount'],
-    );
+    return adminBookingJsonNum(Map<String, dynamic>.from(raw)['amount']);
   }
 
   String _chargeAmountLabel(dynamic raw, String currency) {
@@ -2932,10 +2940,7 @@ class _AdminOperationsRouteEndpoint extends StatelessWidget {
 }
 
 class _LocationSummaryRow extends StatelessWidget {
-  const _LocationSummaryRow({
-    required this.label,
-    required this.location,
-  });
+  const _LocationSummaryRow({required this.label, required this.location});
 
   final String label;
   final Map<String, dynamic> location;
@@ -3071,7 +3076,8 @@ String _noShowText(BuildContext context, String key) {
           'Separate admin record — not linked to commission settlement.',
       'processed_by': 'Processed by admin',
       'processed_at': 'Processed at',
-      'error_already_processed': 'This booking has already been marked no-show.',
+      'error_already_processed':
+          'This booking has already been marked no-show.',
       'error_invalid_status':
           'No-show cannot be recorded for the current booking status.',
       'error_validation': 'Please check the no-show form and try again.',
@@ -3081,8 +3087,7 @@ String _noShowText(BuildContext context, String key) {
     'ko': {
       'button': '노쇼 처리',
       'title': '노쇼 처리',
-      'body':
-          '이 예약에 대한 노쇼 패널티를 별도로 기록합니다. 수수료 정산과는 별개입니다.',
+      'body': '이 예약에 대한 노쇼 패널티를 별도로 기록합니다. 수수료 정산과는 별개입니다.',
       'warning': '이 작업은 되돌릴 수 없습니다.',
       'confirm': '노쇼 처리 확인',
       'penalty_label': '패널티 금액 (THB)',
