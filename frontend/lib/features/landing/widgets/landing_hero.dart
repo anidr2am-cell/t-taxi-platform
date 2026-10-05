@@ -264,14 +264,17 @@ class LandingHero extends StatelessWidget {
       );
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        IntrinsicWidth(child: button),
-        const SizedBox(height: 8),
-        helper,
-      ],
+    return SizedBox(
+      width: 180,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          button,
+          const SizedBox(height: 8),
+          helper,
+        ],
+      ),
     );
   }
 }

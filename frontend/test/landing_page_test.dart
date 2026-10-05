@@ -234,11 +234,19 @@ void main() {
     });
 
     testWidgets('desktop hero shows booking CTA without inline form', (tester) async {
-      await pumpLanding(tester, width: 1100, height: 1200);
+      await pumpLanding(
+        tester,
+        width: 1100,
+        height: 1200,
+        locale: const Locale('ko'),
+      );
 
       expect(find.byKey(const Key('landing_booking_widget')), findsNothing);
       expect(find.byKey(const Key('landing_booking_service_row')), findsNothing);
-      expect(find.text('Book now'), findsWidgets);
+      final bookingButton = find.widgetWithText(FilledButton, '예약하기');
+      expect(bookingButton, findsOneWidget);
+      expect(tester.getSize(bookingButton).width, greaterThanOrEqualTo(180));
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('hides desktop booking widget below 900px', (tester) async {
