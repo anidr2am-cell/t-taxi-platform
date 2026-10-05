@@ -18,11 +18,8 @@ abstract final class LandingHeroCarouselLayout {
   static const mobileReferenceHeroHeight = 300.0;
 
   static const desktopReferenceViewportWidth = 1100.0;
-  /// Target ~388px (57% of legacy 680). Not used while [LandingBookingWidget]
-  /// overflows the shorter frame (~269px); kept for banner-aspect reference.
+  /// Compact desktop hero height when only the booking CTA is shown.
   static const desktopHeroHeightWithBookingWidgetTarget = 388.0;
-  /// ~57% of legacy 480px — used when no desktop booking widget is shown.
-  static const desktopHeroHeightWithoutBookingWidget = 274.0;
   /// Legacy desktop frame height when the booking widget is present.
   static const desktopHeroHeightWithBookingWidget = 680.0;
 
@@ -36,7 +33,7 @@ abstract final class LandingHeroCarouselLayout {
         desktopReferenceViewportWidth - carouselHorizontalMargin;
     final referenceHeight = hasDesktopBookingWidget
         ? desktopHeroHeightWithBookingWidget
-        : desktopHeroHeightWithoutBookingWidget;
+        : desktopHeroHeightWithBookingWidgetTarget;
     return referenceContentWidth / referenceHeight;
   }
 }

@@ -233,11 +233,12 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('renders desktop booking widget at 1100px', (tester) async {
+    testWidgets('desktop hero shows booking CTA without inline form', (tester) async {
       await pumpLanding(tester, width: 1100, height: 1200);
 
-      expect(find.byKey(const Key('landing_booking_widget')), findsOneWidget);
-      expect(find.byKey(const Key('landing_booking_service_row')), findsOneWidget);
+      expect(find.byKey(const Key('landing_booking_widget')), findsNothing);
+      expect(find.byKey(const Key('landing_booking_service_row')), findsNothing);
+      expect(find.text('Book now'), findsWidgets);
     });
 
     testWidgets('hides desktop booking widget below 900px', (tester) async {
@@ -259,8 +260,7 @@ void main() {
         ),
       );
 
-      await tester.ensureVisible(find.byKey(const Key('landing_booking_submit')));
-      await tester.tap(find.byKey(const Key('landing_booking_submit')));
+      await tester.tap(find.text('Book now').first);
       await pumpWizardReady(tester);
 
       expect(find.byType(BookingWizardPage), findsOneWidget);
@@ -281,25 +281,13 @@ void main() {
       expect(find.byType(StepPickupDateTime), findsNothing);
     });
 
-    testWidgets('service card selection updates shared draft state', (tester) async {
+    testWidgets('service card selection opens the booking wizard', (tester) async {
       await pumpLanding(tester, width: 1100, height: 1200);
 
       await tester.tap(find.byKey(const Key('landing_service_golfTransfer')));
       await pumpWizardReady(tester);
       expect(find.byType(BookingWizardPage), findsOneWidget);
 
-      await tester.pageBack();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      final golfHeroSegment = find.byKey(
-        const Key('landing_booking_service_golfTransfer'),
-      );
-      final decoration = tester.widget<Ink>(
-        find.descendant(of: golfHeroSegment, matching: find.byType(Ink)),
-      ).decoration! as ShapeDecoration;
-
-      expect(decoration.color, LandingClickableStyles.selectedBackground);
     });
 
     testWidgets('primary CTA opens booking wizard', (tester) async {
