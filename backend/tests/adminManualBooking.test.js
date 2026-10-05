@@ -17,7 +17,11 @@ const { driverUserRoom, setRealtimeIo } = require('../src/socket/realtime');
 
 const ADMIN = { id: 1, role: 'ADMIN' };
 
-function createHarness({ customerUserId = null, customerChargeAmount = null } = {}) {
+function createHarness({
+  customerUserId = null,
+  customerChargeAmount = null,
+  deliveryBlocker = null,
+} = {}) {
   const calls = {
     booking: null,
     chargeItems: [],
@@ -35,6 +39,7 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
       destinationLocation: { name: 'Pattaya', nameTh: 'พัทยา' },
     },
     notifications: [],
+    deliveryStarted: 0,
     notes: [],
     socket: [],
     outbox: [],
@@ -228,8 +233,19 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
       },
     },
     () => ({
-      async sendDirectNotification(notification) {
+      buildDirectNotificationSpec(notification) {
+        return notification;
+      },
+      async persistDirectNotificationTx(_conn, notification) {
         calls.notifications.push(notification);
+        return {
+          notificationId: calls.notifications.length,
+          created: true,
+        };
+      },
+      async processDeliveries() {
+        calls.deliveryStarted += 1;
+        if (deliveryBlocker) await deliveryBlocker;
       },
     }),
     null,
@@ -272,10 +288,13 @@ function createHarness({ customerUserId = null, customerChargeAmount = null } = 
   };
 }
 
+const flushPostCommitTasks = () => new Promise((resolve) => setImmediate(resolve));
+
 test('createAdminManualBooking links member, marks commission exempt, and broadcasts open call', async () => {
   const { service, calls, input, restoreContainer } = createHarness({ customerUserId: 55 });
   try {
     const result = await service.createAdminManualBooking(input, ADMIN);
+    await flushPostCommitTasks();
 
     assert.equal(calls.booking.bookingSource, 'ADMIN_MANUAL');
     assert.equal(calls.booking.commissionExempt, true);
@@ -298,6 +317,33 @@ test('createAdminManualBooking links member, marks commission exempt, and broadc
     assert.equal(calls.outbox[0].eventType, EVENTS.BOOKING_CREATED);
     assert.equal(calls.outbox[0].payload.customerUserId, 55);
     assert.deepEqual(calls.dispatchedOutboxIds, [[30]]);
+    assert.equal(calls.deliveryStarted, 1);
+  } finally {
+    setRealtimeIo(null);
+    restoreContainer();
+  }
+});
+
+test('createAdminManualBooking responds without waiting for push delivery', async () => {
+  let releaseDelivery;
+  const deliveryBlocker = new Promise((resolve) => {
+    releaseDelivery = resolve;
+  });
+  const { service, calls, input, restoreContainer } = createHarness({
+    customerUserId: 55,
+    deliveryBlocker,
+  });
+  try {
+    const result = await service.createAdminManualBooking(input, ADMIN);
+
+    assert.equal(result.bookingNumber, 'TX202607130001');
+    assert.equal(calls.commits, 1);
+    assert.equal(calls.deliveryStarted, 0);
+
+    await flushPostCommitTasks();
+    assert.equal(calls.deliveryStarted, 1);
+    releaseDelivery();
+    await flushPostCommitTasks();
   } finally {
     setRealtimeIo(null);
     restoreContainer();
@@ -377,6 +423,7 @@ test('equal driver-collected amounts remain settlement exempt', async () => {
   });
   try {
     await service.createAdminManualBooking(input, ADMIN);
+    await flushPostCommitTasks();
     assert.equal(calls.booking.commissionExempt, true);
     assert.equal(calls.commissionUpdates[0].fields.commissionAmount, 0);
   } finally {
@@ -580,6 +627,7 @@ test('createAdminManualBooking creates guest booking and auto note when customer
   });
   try {
     await service.createAdminManualBooking(input, ADMIN);
+    await flushPostCommitTasks();
 
     assert.equal(calls.booking.customerUserId, null);
     assert.equal(calls.booking.customerName, 'Guest Lee');

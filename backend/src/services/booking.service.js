@@ -179,6 +179,19 @@ class BookingService {
     return this.notificationServiceResolver ? this.notificationServiceResolver() : null;
   }
 
+  queuePostCommitTask(taskName, task) {
+    setImmediate(() => {
+      Promise.resolve()
+        .then(task)
+        .catch((err) => {
+          logger.warn('Post-commit booking task failed', {
+            taskName,
+            error: err?.message,
+          });
+        });
+    });
+  }
+
   buildDriverNotificationPayload(bookingNumber, payload, targetScreen) {
     return {
       ...payload,
@@ -2006,6 +2019,7 @@ class BookingService {
     try {
       await conn.beginTransaction();
       let outboxId = null;
+      let persistedOpenCallNotifications = [];
 
       const bookingNumber = await this.bookingNumberService.generateNext(conn);
       const scheduledPickupAtIso = input.scheduledPickupAt;
@@ -2169,6 +2183,13 @@ class BookingService {
         scheduledPickupAt,
       );
       const openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
+      persistedOpenCallNotifications = await this.persistOpenCallNotificationsTx(conn, {
+        drivers: eligibleDrivers,
+        bookingId,
+        bookingNumber,
+        openCallPayload,
+        idempotencyKeyPrefix: 'admin-manual-open',
+      });
 
       if (this.outboxRepository) {
         outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
@@ -2186,21 +2207,16 @@ class BookingService {
 
       const booking = await this.bookingRepository.findById(bookingId, conn);
       await conn.commit();
-
-      if (this.outboxProcessor && outboxId) {
-        await this.outboxProcessor.dispatchOutboxIds([outboxId]);
-      }
-
-      await this.dispatchOpenCallNotifications({
-        drivers: eligibleDrivers,
-        bookingId,
-        bookingNumber,
-        openCallPayload,
-        idempotencyKeyPrefix: 'admin-manual-open',
-      });
       for (const target of openCallTargets) {
         emitDriverCallAvailable(target.userId, openCallPayload);
       }
+
+      this.queuePostCommitTask('admin-manual-booking-notifications', async () => {
+        if (this.outboxProcessor && outboxId) {
+          await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+        }
+        await this.deliverPersistedContactNotifications(persistedOpenCallNotifications);
+      });
 
       const customerChargeAmount = manualPricing.customerChargeAmount;
       if (
