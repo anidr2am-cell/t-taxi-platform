@@ -219,9 +219,11 @@ void main() {
           kind: LocationKind.city,
           code: 'PATTAYA',
         ),
-        pickupDate: '2026-07-01',
+        pickupDate: '2026-07-29',
         pickupTime: '09:30',
+        selectedVehicle: 'SUV',
         customerName: 'Kim',
+        customerPhone: '+66123456789',
       );
 
       SharedPreferences.setMockInitialValues({
@@ -242,6 +244,105 @@ void main() {
       await controller.initialize();
 
       expect(controller.state.step, BookingWizardSteps.review);
+    });
+
+    test('restored vehicle step falls back to route when route is empty', () async {
+      final storage = MemoryBookingStateStorage()
+        ..value = const BookingWizardState(
+          step: BookingWizardSteps.vehicle,
+          serviceType: BookingServiceType.airportPickup,
+        );
+      final controller = BookingWizardController(
+        storage: storage,
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+
+      expect(controller.state.step, BookingWizardSteps.route);
+    });
+
+    test('restored customer step falls back to schedule when time is empty', () async {
+      final storage = MemoryBookingStateStorage()
+        ..value = const BookingWizardState(
+          step: BookingWizardSteps.customer,
+          serviceType: BookingServiceType.airportPickup,
+          origin: LocationOption(
+            id: 'bkk',
+            displayName: 'Suvarnabhumi Airport',
+            kind: LocationKind.airport,
+            code: 'BKK',
+          ),
+          destination: LocationOption(
+            id: 'pattaya',
+            displayName: 'Pattaya',
+            kind: LocationKind.city,
+            code: 'PATTAYA',
+          ),
+        );
+      final controller = BookingWizardController(
+        storage: storage,
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+
+      expect(controller.state.step, BookingWizardSteps.schedule);
+    });
+
+    test('restored customer step remains when all prior inputs are valid', () async {
+      final storage = MemoryBookingStateStorage()
+        ..value = const BookingWizardState(
+          step: BookingWizardSteps.customer,
+          serviceType: BookingServiceType.airportPickup,
+          origin: LocationOption(
+            id: 'bkk',
+            displayName: 'Suvarnabhumi Airport',
+            kind: LocationKind.airport,
+            code: 'BKK',
+          ),
+          destination: LocationOption(
+            id: 'pattaya',
+            displayName: 'Pattaya',
+            kind: LocationKind.city,
+            code: 'PATTAYA',
+          ),
+          pickupDate: '2026-07-01',
+          pickupTime: '09:30',
+          selectedVehicle: 'SUV',
+        );
+      final controller = BookingWizardController(
+        storage: storage,
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize();
+
+      expect(controller.state.step, BookingWizardSteps.customer);
+    });
+
+    test('different preselected service resets restored draft to route', () async {
+      final storage = MemoryBookingStateStorage()
+        ..value = const BookingWizardState(
+          step: BookingWizardSteps.customer,
+          serviceType: BookingServiceType.cityTransfer,
+          pickupDate: '2026-07-01',
+          pickupTime: '09:30',
+          selectedVehicle: 'SUV',
+        );
+      final controller = BookingWizardController(
+        storage: storage,
+        now: () => DateTime.utc(2026, 6, 29, 3),
+      );
+
+      await controller.initialize(
+        initialServiceType: BookingServiceType.airportPickup,
+      );
+
+      expect(controller.state.step, BookingWizardSteps.route);
+      expect(controller.state.serviceType, BookingServiceType.airportPickup);
+      expect(controller.state.origin, isNull);
+      expect(controller.state.destination, isNull);
     });
 
     testWidgets('edit from review returns to review after CTA', (tester) async {
@@ -417,10 +518,23 @@ void main() {
         state: const BookingWizardState(
           step: BookingWizardSteps.customer,
           serviceType: BookingServiceType.airportPickup,
+          origin: LocationOption(
+            id: 'bkk',
+            displayName: 'Suvarnabhumi Airport',
+            kind: LocationKind.airport,
+            code: 'BKK',
+          ),
+          destination: LocationOption(
+            id: 'pattaya',
+            displayName: 'Pattaya',
+            kind: LocationKind.city,
+            code: 'PATTAYA',
+          ),
           customerName: 'Stored Name',
           customerPhone: '+66111111111',
-          pickupDate: '20260701',
+          pickupDate: '2026-07-01',
           pickupTime: '09:30',
+          selectedVehicle: 'SUV',
         ),
         savedAt: savedAt,
       );

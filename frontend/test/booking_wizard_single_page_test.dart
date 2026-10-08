@@ -179,7 +179,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(BookingProgressHeader), findsOneWidget);
-      expect(find.text('2/5 Date & time'), findsOneWidget);
+      expect(find.text('1/5 Route'), findsOneWidget);
       expect(find.byIcon(Icons.flight_outlined), findsOneWidget);
     });
 
@@ -201,10 +201,12 @@ void main() {
           kind: LocationKind.city,
           code: 'PATTAYA',
         ),
-        pickupDate: '2026-07-01',
+        pickupDate: '2099-07-01',
         pickupTime: '09:30',
+        selectedVehicle: 'SUV',
         flightNumber: 'TG401',
         customerName: 'Kim',
+        customerPhone: '+66123456789',
       );
 
       SharedPreferences.setMockInitialValues({

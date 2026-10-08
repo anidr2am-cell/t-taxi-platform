@@ -29,27 +29,31 @@ ARG LINE_LOGIN_CHANNEL_ID
 ARG GA4_MEASUREMENT_ID
 
 RUN test -n "$APP_ENV" \
-    && if [ "$APP_ENV" = "production" ]; then \
+    && if [ "$APP_ENV" != "development" ]; then \
       if [ -z "$API_BASE_URL" ]; then \
-        echo "API_BASE_URL is required when APP_ENV=production"; exit 1; \
-      fi; \
-      if [ -z "$SOCKET_URL" ]; then \
-        echo "SOCKET_URL is required when APP_ENV=production"; exit 1; \
+        echo "API_BASE_URL is required outside local development"; exit 1; \
       fi; \
       case "$API_BASE_URL" in \
-        /api|https://*) ;; \
         http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*) \
-          echo "API_BASE_URL must not point to localhost when APP_ENV=production"; exit 1 ;; \
-        http://*) ;; \
-        *) echo "API_BASE_URL must be /api, https://, or http:// (non-localhost) when APP_ENV=production"; exit 1 ;; \
+          echo "API_BASE_URL must not point to localhost outside local development"; exit 1 ;; \
+        /api|https://*|http://*) ;; \
+        *) echo "API_BASE_URL must be /api, https://, or http:// (non-localhost)"; exit 1 ;; \
       esac; \
-      case "$SOCKET_URL" in \
-        https://*) ;; \
-        http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*) \
-          echo "SOCKET_URL must not point to localhost when APP_ENV=production"; exit 1 ;; \
-        http://*) ;; \
-        *) echo "SOCKET_URL must be https:// or http:// (non-localhost) when APP_ENV=production"; exit 1 ;; \
-      esac; \
+      if [ -n "$SOCKET_URL" ]; then \
+        case "$SOCKET_URL" in \
+          http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*) \
+            echo "SOCKET_URL must not point to localhost outside local development"; exit 1 ;; \
+          https://*|http://*) ;; \
+          *) echo "SOCKET_URL must be https:// or http:// (non-localhost)"; exit 1 ;; \
+        esac; \
+      fi; \
+      if [ "$APP_ENV" = "production" ]; then \
+        if [ -z "$SOCKET_URL" ]; then echo "SOCKET_URL is required when APP_ENV=production"; exit 1; fi; \
+        case "$API_BASE_URL" in /api|https://*) ;; *) echo "API_BASE_URL must use https in production"; exit 1 ;; esac; \
+        if [ -n "$SOCKET_URL" ]; then \
+          case "$SOCKET_URL" in https://*) ;; *) echo "SOCKET_URL must use https in production"; exit 1 ;; esac; \
+        fi; \
+      fi; \
     fi
 
 RUN EFFECTIVE_API_BASE_URL="${API_BASE_URL:-http://localhost:3100}" \

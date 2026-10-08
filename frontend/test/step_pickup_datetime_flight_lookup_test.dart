@@ -306,4 +306,103 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('flight results scroll into view on a 390px mobile viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final scrollController = ScrollController();
+    addTearDown(scrollController.dispose);
+    final controller = await _controller();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => LocaleState()..setLanguage('ko'),
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              controller: scrollController,
+              child: Column(
+                children: [
+                  const SizedBox(height: 420),
+                  AnimatedBuilder(
+                    animation: controller,
+                    builder: (_, __) => StepFlightLookup(
+                      state: controller.state,
+                      controller: controller,
+                      flightLookupApi: _api(succeeds: true),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final lookupButton = find.byKey(const Key('route_flight_lookup_button'));
+    await tester.ensureVisible(lookupButton);
+    final offsetBeforeLookup = scrollController.offset;
+    await tester.tap(lookupButton);
+    await tester.pumpAndSettle();
+
+    final result = find.byKey(const Key('route_flight_result_0'));
+    expect(result, findsOneWidget);
+    expect(scrollController.offset, greaterThan(offsetBeforeLookup));
+    expect(tester.getTopLeft(result).dy, greaterThanOrEqualTo(0));
+    expect(tester.getBottomLeft(result).dy, lessThanOrEqualTo(600));
+  });
+
+  testWidgets('confirming flight date starts lookup on the first action', (
+    tester,
+  ) async {
+    var requests = 0;
+    final api = FlightLookupApiService.test(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((_) async {
+        requests += 1;
+        return http.Response(
+          jsonEncode({
+            'data': {
+              'flightNumber': 'TG401',
+              'airlineName': 'Thai Airways',
+              'departure': {
+                'airportCode': 'ICN',
+                'scheduledAt': '2026-10-15T14:00:00Z',
+                'scheduledLocal': '2026-10-15T23:00:00+09:00',
+              },
+              'arrival': {
+                'airportCode': 'BKK',
+                'scheduledAt': '2026-10-15T19:30:00Z',
+              },
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    final controller = BookingWizardController(
+      storage: _MemoryStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _NoopRecentRepository(),
+      ),
+      now: () => DateTime.parse('2026-10-15T09:00:00+09:00'),
+    );
+    await controller.initialize(
+      initialServiceType: BookingServiceType.airportPickup,
+    );
+    await controller.updateCustomerInfo(flightNumber: 'TG401');
+    await _pump(tester, controller, api);
+
+    await tester.tap(find.byKey(const Key('route_flight_date_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'OK'));
+    await tester.pumpAndSettle();
+
+    expect(requests, 1);
+    expect(find.byKey(const Key('route_flight_result_0')), findsOneWidget);
+  });
 }

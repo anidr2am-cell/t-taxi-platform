@@ -18,13 +18,33 @@ void main() {
       );
     });
 
-    test('staging allows explicit localhost URL for isolated smoke builds', () {
+    test('staging rejects explicit localhost URL', () {
       expect(
-        AppConfigValidation.resolveApiBaseUrl(
+        () => AppConfigValidation.resolveApiBaseUrl(
           appEnvironment: 'staging',
           apiBaseUrl: 'http://localhost:3100',
         ),
-        'http://localhost:3100',
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('preview rejects missing API_BASE_URL instead of using localhost', () {
+      expect(
+        () => AppConfigValidation.resolveApiBaseUrl(
+          appEnvironment: 'preview',
+          apiBaseUrl: '',
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('preview allows an explicit non-local http API_BASE_URL', () {
+      expect(
+        AppConfigValidation.resolveApiBaseUrl(
+          appEnvironment: 'preview',
+          apiBaseUrl: 'http://159.89.192.55:3101',
+        ),
+        'http://159.89.192.55:3101',
       );
     });
 

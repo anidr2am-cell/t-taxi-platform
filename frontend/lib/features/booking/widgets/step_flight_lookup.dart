@@ -30,6 +30,7 @@ class StepFlightLookup extends StatefulWidget {
 
 class _StepFlightLookupState extends State<StepFlightLookup> {
   late final TextEditingController _flightController;
+  final GlobalKey _resultsAnchorKey = GlobalKey();
   bool _loading = false;
   int? _confirmedIndex;
   List<FlightSearchResult> _results = const [];
@@ -72,7 +73,12 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     await widget.controller.updateCustomerInfo(
       flightDate: widget.controller.formatDate(date),
     );
-    if (mounted) setState(_clearResult);
+    if (!mounted) return;
+    setState(_clearResult);
+    FocusScope.of(context).unfocus();
+    if (_flightController.text.trim().isNotEmpty) {
+      await _search(dateOverride: widget.controller.formatDate(date));
+    }
   }
 
   void _clearResult() {
@@ -81,9 +87,9 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     _confirmedIndex = null;
   }
 
-  Future<void> _search() async {
+  Future<void> _search({String? dateOverride}) async {
     final number = _flightController.text.trim();
-    final date = widget.state.flightDate;
+    final date = dateOverride ?? widget.state.flightDate;
     if (number.isEmpty || date.isEmpty || _loading) return;
     setState(() {
       _loading = true;
@@ -96,6 +102,19 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
         _loading = false;
         _results = results;
       });
+      if (results.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final resultContext = _resultsAnchorKey.currentContext;
+          if (resultContext == null) return;
+          Scrollable.ensureVisible(
+            resultContext,
+            alignment: 0.2,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+          );
+        });
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -177,7 +196,7 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
           height: WizardCompact.minTouchHeight,
           child: FilledButton.tonal(
             key: const Key('route_flight_lookup_button'),
-            onPressed: canSearch ? _search : null,
+            onPressed: canSearch ? () => _search() : null,
             child: _loading
                 ? const SizedBox(
                     width: 18,
@@ -199,11 +218,18 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
         ],
         if (_results.isNotEmpty) ...[
           const SizedBox(height: AppTokens.spaceSm),
-          for (var index = 0; index < _results.length; index++) ...[
-            _resultCard(l10n, _results[index], index),
-            if (index != _results.length - 1)
-              const SizedBox(height: AppTokens.spaceSm),
-          ],
+          KeyedSubtree(
+            key: _resultsAnchorKey,
+            child: Column(
+              children: [
+                for (var index = 0; index < _results.length; index++) ...[
+                  _resultCard(l10n, _results[index], index),
+                  if (index != _results.length - 1)
+                    const SizedBox(height: AppTokens.spaceSm),
+                ],
+              ],
+            ),
+          ),
         ],
         const SizedBox(height: WizardCompact.sectionGap),
       ],

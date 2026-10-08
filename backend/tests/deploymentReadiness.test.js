@@ -272,7 +272,7 @@ test('staging smoke test refuses to run without explicit target URLs', () => {
   assert.match(result.stderr + result.stdout, /STAGING_BASE_URL/);
 });
 
-test('frontend Dockerfile requires explicit production API and socket build args', () => {
+test('frontend Dockerfile requires explicit non-development API and production socket build args', () => {
   const dockerfile = fs.readFileSync(
     path.join(repoRoot, 'deploy', 'docker', 'Dockerfile.frontend'),
     'utf8',
@@ -281,7 +281,8 @@ test('frontend Dockerfile requires explicit production API and socket build args
   assert.match(dockerfile, /^ARG API_BASE_URL$/m);
   assert.match(dockerfile, /^ARG SOCKET_URL$/m);
   assert.doesNotMatch(dockerfile, /^ARG API_BASE_URL=http:\/\/localhost/m);
-  assert.match(dockerfile, /API_BASE_URL is required when APP_ENV=production/);
+  assert.match(dockerfile, /API_BASE_URL is required outside local development/);
+  assert.match(dockerfile, /API_BASE_URL must not point to localhost outside local development/);
   assert.match(dockerfile, /SOCKET_URL is required when APP_ENV=production/);
   assert.match(dockerfile, /EFFECTIVE_API_BASE_URL="\$\{API_BASE_URL:-http:\/\/localhost:3100\}"/);
   assert.equal(
