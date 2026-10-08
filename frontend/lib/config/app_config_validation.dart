@@ -12,6 +12,9 @@ class AppConfigValidation {
   static bool isProductionEnvironment(String value) =>
       normalizeEnvironment(value) == production;
 
+  static bool isDevelopmentEnvironment(String value) =>
+      normalizeEnvironment(value) == development;
+
   static String resolveApiBaseUrl({
     required String appEnvironment,
     required String apiBaseUrl,
@@ -20,14 +23,15 @@ class AppConfigValidation {
     final normalizedEnvironment = normalizeEnvironment(appEnvironment);
     final normalizedUrl = _normalizeLocalHost(apiBaseUrl.trim());
 
-    if (!isProductionEnvironment(normalizedEnvironment)) {
+    if (isDevelopmentEnvironment(normalizedEnvironment)) {
       return normalizedUrl.isEmpty ? developmentDefault : normalizedUrl;
     }
 
-    _validateProductionUrl(
+    _validateDeployedUrl(
       name: 'API_BASE_URL',
       value: normalizedUrl,
       allowSameOriginApiPath: true,
+      requireHttps: isProductionEnvironment(normalizedEnvironment),
     );
     return normalizedUrl;
   }
@@ -43,11 +47,12 @@ class AppConfigValidation {
         ? fallbackUrl
         : normalizedSocketUrl;
 
-    if (isProductionEnvironment(appEnvironment)) {
-      _validateProductionUrl(
+    if (!isDevelopmentEnvironment(appEnvironment)) {
+      _validateDeployedUrl(
         name: 'SOCKET_URL',
         value: resolved,
         allowSameOriginApiPath: false,
+        requireHttps: isProductionEnvironment(appEnvironment),
       );
     }
 
@@ -60,13 +65,14 @@ class AppConfigValidation {
     return uri.replace(host: 'localhost').toString();
   }
 
-  static void _validateProductionUrl({
+  static void _validateDeployedUrl({
     required String name,
     required String value,
     required bool allowSameOriginApiPath,
+    required bool requireHttps,
   }) {
     if (value.trim().isEmpty) {
-      throw StateError('$name is required when APP_ENV=production');
+      throw StateError('$name is required outside local development');
     }
 
     if (allowSameOriginApiPath && value == '/api') {
@@ -76,19 +82,23 @@ class AppConfigValidation {
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
       throw StateError(
-        '$name must be /api or an absolute https URL when APP_ENV=production',
+        '$name must be /api or an absolute URL outside local development',
       );
     }
 
     final host = uri.host.toLowerCase();
     if (host == 'localhost' || host == '127.0.0.1') {
       throw StateError(
-        '$name must not point to localhost when APP_ENV=production',
+        '$name must not point to localhost outside local development',
       );
     }
 
-    if (uri.scheme != 'https') {
+    if (requireHttps && uri.scheme != 'https') {
       throw StateError('$name must use https when APP_ENV=production');
+    }
+
+    if (uri.scheme != 'https' && uri.scheme != 'http') {
+      throw StateError('$name must use http or https');
     }
   }
 }
