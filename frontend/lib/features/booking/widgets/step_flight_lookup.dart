@@ -16,11 +16,13 @@ class StepFlightLookup extends StatefulWidget {
     required this.state,
     required this.controller,
     this.flightLookupApi,
+    this.onFlightConfirmed,
   });
 
   final BookingWizardState state;
   final BookingWizardController controller;
   final FlightLookupApiService? flightLookupApi;
+  final VoidCallback? onFlightConfirmed;
 
   @override
   State<StepFlightLookup> createState() => _StepFlightLookupState();
@@ -118,6 +120,7 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
       _confirmedIndex = applied ? index : null;
       _errorKey = applied ? null : 'flight_lookup_airport_unsupported';
     });
+    if (applied) widget.onFlightConfirmed?.call();
   }
 
   @override

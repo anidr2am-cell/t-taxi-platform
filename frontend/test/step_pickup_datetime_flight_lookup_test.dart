@@ -11,6 +11,7 @@ import 'package:frontend/features/booking/services/flight_lookup_api_service.dar
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
 import 'package:frontend/features/booking/widgets/step_flight_lookup.dart';
 import 'package:frontend/features/booking/widgets/step_origin_select.dart';
+import 'package:frontend/features/booking/widgets/step_route_select.dart';
 import 'package:frontend/providers/booking_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -210,6 +211,66 @@ void main() {
 
       expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
       expect(find.text('BKK'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'flight confirmation closes origin editor after airport change is opened',
+    (tester) async {
+      final controller = await _controller();
+      final api = _api(succeeds: true);
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => LocaleState()..setLanguage('ko'),
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: AnimatedBuilder(
+                  animation: controller,
+                  builder: (_, __) => StepRouteSelect(
+                    state: controller.state,
+                    controller: controller,
+                    languageCode: 'ko',
+                    flightLookupApi: api,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final airportShortcut = find.widgetWithText(OutlinedButton, 'BKK');
+      await tester.ensureVisible(airportShortcut);
+      await tester.tap(airportShortcut);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
+
+      final changeButton = find.byKey(const Key('route_origin_change_button'));
+      await tester.ensureVisible(changeButton);
+      await tester.tap(changeButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.widgetWithText(OutlinedButton, 'BKK'), findsOneWidget);
+
+      final lookupButton = find.byKey(const Key('route_flight_lookup_button'));
+      await tester.ensureVisible(lookupButton);
+      await tester.tap(lookupButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final confirmButton = find.byKey(
+        const Key('route_flight_confirm_button_0'),
+      );
+      await tester.ensureVisible(confirmButton);
+      await tester.tap(confirmButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('BKK — Suvarnabhumi Airport'), findsOneWidget);
+      expect(find.widgetWithText(OutlinedButton, 'BKK'), findsNothing);
     },
   );
 

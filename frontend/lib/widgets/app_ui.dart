@@ -333,6 +333,7 @@ abstract final class AppUi {
     String? meta,
     IconData icon = Icons.place_outlined,
     String? changeLabel,
+    Key? changeButtonKey,
     VoidCallback? onChange,
     bool loading = false,
   }) {
@@ -377,7 +378,7 @@ abstract final class AppUi {
             ),
           ),
           if (changeLabel != null && onChange != null)
-            TextButton(onPressed: loading ? null : onChange, child: Text(changeLabel)),
+            TextButton(key: changeButtonKey, onPressed: loading ? null : onChange, child: Text(changeLabel)),
         ],
       ),
     );

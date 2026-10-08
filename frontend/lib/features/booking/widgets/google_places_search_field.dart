@@ -26,6 +26,7 @@ class GooglePlacesSearchField extends StatefulWidget {
   final String? airportShortcutsLabelKey;
   final bool compact;
   final FocusNode? focusNode;
+  final Object? editingResetToken;
   final ValueChanged<LocationOption> onSelected;
   final void Function(String errorCategory)? onSearchFailed;
   final String placeType;
@@ -50,6 +51,7 @@ class GooglePlacesSearchField extends StatefulWidget {
     this.airportShortcutsLabelKey,
     this.compact = false,
     this.focusNode,
+    this.editingResetToken,
     this.onSearchFailed,
     this.placeType = 'place',
     this.placesApi,
@@ -98,6 +100,15 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   @override
   void didUpdateWidget(covariant GooglePlacesSearchField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.editingResetToken != widget.editingResetToken &&
+        widget.selected != null) {
+      _editing = false;
+      _controller.text = widget.selected!.name ?? widget.selected!.displayName;
+      _predictions = const [];
+      _error = null;
+      _focusNode.unfocus();
+      return;
+    }
     if (oldWidget.selected == widget.selected) return;
 
     final selected = widget.selected;
@@ -475,6 +486,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           ? Icons.flight
           : Icons.place_outlined,
       changeLabel: l10n.t('change_location'),
+      changeButtonKey: Key('route_${widget.placeType}_change_button'),
       onChange: _startEditing,
       loading: _loadingDetails,
     );

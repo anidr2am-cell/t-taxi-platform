@@ -14,6 +14,7 @@ class StepOriginSelect extends StatelessWidget {
   final void Function(String errorCategory)? onSearchFailed;
   final bool embedded;
   final FocusNode? focusNode;
+  final Object? editingResetToken;
 
   const StepOriginSelect({
     super.key,
@@ -25,6 +26,7 @@ class StepOriginSelect extends StatelessWidget {
     this.onSearchFailed,
     this.embedded = false,
     this.focusNode,
+    this.editingResetToken,
   });
 
   bool get _showAirportShortcuts =>
@@ -49,6 +51,7 @@ class StepOriginSelect extends StatelessWidget {
           : null,
       compact: embedded,
       focusNode: focusNode,
+      editingResetToken: editingResetToken,
       placeType: 'origin',
       onSearchFailed: onSearchFailed,
       onSelected: onSelected,
