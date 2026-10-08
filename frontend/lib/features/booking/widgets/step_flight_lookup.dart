@@ -72,7 +72,12 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     await widget.controller.updateCustomerInfo(
       flightDate: widget.controller.formatDate(date),
     );
-    if (mounted) setState(_clearResult);
+    if (!mounted) return;
+    setState(_clearResult);
+    FocusScope.of(context).unfocus();
+    if (_flightController.text.trim().isNotEmpty) {
+      await _search(dateOverride: widget.controller.formatDate(date));
+    }
   }
 
   void _clearResult() {
@@ -81,9 +86,9 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     _confirmedIndex = null;
   }
 
-  Future<void> _search() async {
+  Future<void> _search({String? dateOverride}) async {
     final number = _flightController.text.trim();
-    final date = widget.state.flightDate;
+    final date = dateOverride ?? widget.state.flightDate;
     if (number.isEmpty || date.isEmpty || _loading) return;
     setState(() {
       _loading = true;
@@ -177,7 +182,7 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
           height: WizardCompact.minTouchHeight,
           child: FilledButton.tonal(
             key: const Key('route_flight_lookup_button'),
-            onPressed: canSearch ? _search : null,
+            onPressed: canSearch ? () => _search() : null,
             child: _loading
                 ? const SizedBox(
                     width: 18,

@@ -306,4 +306,54 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('confirming flight date starts lookup on the first action', (
+    tester,
+  ) async {
+    var requests = 0;
+    final api = FlightLookupApiService.test(
+      baseUrl: 'http://localhost:3000',
+      client: MockClient((_) async {
+        requests += 1;
+        return http.Response(
+          jsonEncode({
+            'data': {
+              'flightNumber': 'TG401',
+              'airlineName': 'Thai Airways',
+              'departure': {
+                'airportCode': 'ICN',
+                'scheduledAt': '2026-10-15T14:00:00Z',
+                'scheduledLocal': '2026-10-15T23:00:00+09:00',
+              },
+              'arrival': {
+                'airportCode': 'BKK',
+                'scheduledAt': '2026-10-15T19:30:00Z',
+              },
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    final controller = BookingWizardController(
+      storage: _MemoryStorage(),
+      recentLocationsStorage: RecentLocationsStorage(
+        guestRepository: _NoopRecentRepository(),
+      ),
+      now: () => DateTime.parse('2026-10-15T09:00:00+09:00'),
+    );
+    await controller.initialize(
+      initialServiceType: BookingServiceType.airportPickup,
+    );
+    await controller.updateCustomerInfo(flightNumber: 'TG401');
+    await _pump(tester, controller, api);
+
+    await tester.tap(find.byKey(const Key('route_flight_date_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'OK'));
+    await tester.pumpAndSettle();
+
+    expect(requests, 1);
+    expect(find.byKey(const Key('route_flight_result_0')), findsOneWidget);
+  });
 }

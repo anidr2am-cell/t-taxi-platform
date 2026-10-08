@@ -212,7 +212,12 @@ class BookingWizardController extends ChangeNotifier {
   Future<void> initialize({BookingServiceType? initialServiceType}) async {
     final restored = await _storage.load();
     if (restored != null) {
-      final migratedStep = BookingWizardSteps.clampStep(restored.step);
+      final serviceChanged =
+          initialServiceType != null &&
+          initialServiceType != restored.serviceType;
+      final migratedStep = serviceChanged
+          ? BookingWizardSteps.route
+          : safeEntryStep(restored, restored.step);
       _state = restored.copyWith(
         step: migratedStep,
         pickupTime: _normalizePickupTime(restored.pickupTime),
@@ -224,9 +229,9 @@ class BookingWizardController extends ChangeNotifier {
       if (!_hasSelectablePickupDateTime()) {
         _state = _state.copyWith(clearPickupDateTime: true);
       }
-      if (initialServiceType != null &&
-          initialServiceType != _state.serviceType) {
+      if (serviceChanged) {
         _state = _state.copyWith(
+          step: BookingWizardSteps.route,
           serviceType: initialServiceType,
           clearOrigin: true,
           clearDestination: true,
@@ -250,6 +255,47 @@ class BookingWizardController extends ChangeNotifier {
     _isInitialized = true;
     await syncDerivedData();
     notifyListeners();
+  }
+
+  /// Keeps restored or prefilled navigation behind the first incomplete step.
+  ///
+  /// This deliberately checks persisted user input rather than derived pricing
+  /// and recommendation objects, which are cleared and recalculated on restore.
+  int safeEntryStep(BookingWizardState state, int requestedStep) {
+    final requested = BookingWizardSteps.clampStep(requestedStep);
+    final routeComplete =
+        state.serviceType != null &&
+        state.origin != null &&
+        state.destination != null &&
+        !_isSamePlace(state.origin, state.destination);
+    if (!routeComplete) return BookingWizardSteps.route;
+
+    final pickup = pickupDateTimeFrom(state.pickupDate, state.pickupTime);
+    if (pickup == null || !isPickupSelectable(pickup)) {
+      return requested < BookingWizardSteps.schedule
+          ? requested
+          : BookingWizardSteps.schedule;
+    }
+
+    final vehicleComplete =
+        state.adults >= 1 &&
+        (!state.nameSign || (state.nameSignText?.trim().isNotEmpty ?? false)) &&
+        state.selectedVehicle != null;
+    if (!vehicleComplete) {
+      return requested < BookingWizardSteps.vehicle
+          ? requested
+          : BookingWizardSteps.vehicle;
+    }
+
+    final customerComplete =
+        state.customerName.trim().isNotEmpty &&
+        state.customerPhone.trim().isNotEmpty;
+    if (!customerComplete) {
+      return requested < BookingWizardSteps.customer
+          ? requested
+          : BookingWizardSteps.customer;
+    }
+    return requested;
   }
 
   bool _hasSelectablePickupDateTime() {
@@ -311,12 +357,12 @@ class BookingWizardController extends ChangeNotifier {
       return;
     }
     _invalidateSubmitIdempotencyKey();
-    _state = BookingWizardState(
-      step: initialStep,
+    final prefilled = BookingWizardState(
       serviceType: serviceType,
       origin: origin,
       destination: destination,
     );
+    _state = prefilled.copyWith(step: safeEntryStep(prefilled, initialStep));
     if (serviceType != BookingServiceType.airportPickup) {
       await _seedDefaultPickupDateTime();
     } else {
