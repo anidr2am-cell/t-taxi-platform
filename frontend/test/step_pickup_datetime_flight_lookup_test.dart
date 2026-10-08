@@ -307,6 +307,55 @@ void main() {
     );
   });
 
+  testWidgets('flight results scroll into view on a 390px mobile viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final scrollController = ScrollController();
+    addTearDown(scrollController.dispose);
+    final controller = await _controller();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => LocaleState()..setLanguage('ko'),
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              controller: scrollController,
+              child: Column(
+                children: [
+                  const SizedBox(height: 420),
+                  AnimatedBuilder(
+                    animation: controller,
+                    builder: (_, __) => StepFlightLookup(
+                      state: controller.state,
+                      controller: controller,
+                      flightLookupApi: _api(succeeds: true),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final lookupButton = find.byKey(const Key('route_flight_lookup_button'));
+    await tester.ensureVisible(lookupButton);
+    final offsetBeforeLookup = scrollController.offset;
+    await tester.tap(lookupButton);
+    await tester.pumpAndSettle();
+
+    final result = find.byKey(const Key('route_flight_result_0'));
+    expect(result, findsOneWidget);
+    expect(scrollController.offset, greaterThan(offsetBeforeLookup));
+    expect(tester.getTopLeft(result).dy, greaterThanOrEqualTo(0));
+    expect(tester.getBottomLeft(result).dy, lessThanOrEqualTo(600));
+  });
+
   testWidgets('confirming flight date starts lookup on the first action', (
     tester,
   ) async {

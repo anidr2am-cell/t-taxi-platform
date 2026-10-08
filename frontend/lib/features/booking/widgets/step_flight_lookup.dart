@@ -30,6 +30,7 @@ class StepFlightLookup extends StatefulWidget {
 
 class _StepFlightLookupState extends State<StepFlightLookup> {
   late final TextEditingController _flightController;
+  final GlobalKey _resultsAnchorKey = GlobalKey();
   bool _loading = false;
   int? _confirmedIndex;
   List<FlightSearchResult> _results = const [];
@@ -101,6 +102,19 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
         _loading = false;
         _results = results;
       });
+      if (results.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          final resultContext = _resultsAnchorKey.currentContext;
+          if (resultContext == null) return;
+          Scrollable.ensureVisible(
+            resultContext,
+            alignment: 0.2,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+          );
+        });
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -204,11 +218,18 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
         ],
         if (_results.isNotEmpty) ...[
           const SizedBox(height: AppTokens.spaceSm),
-          for (var index = 0; index < _results.length; index++) ...[
-            _resultCard(l10n, _results[index], index),
-            if (index != _results.length - 1)
-              const SizedBox(height: AppTokens.spaceSm),
-          ],
+          KeyedSubtree(
+            key: _resultsAnchorKey,
+            child: Column(
+              children: [
+                for (var index = 0; index < _results.length; index++) ...[
+                  _resultCard(l10n, _results[index], index),
+                  if (index != _results.length - 1)
+                    const SizedBox(height: AppTokens.spaceSm),
+                ],
+              ],
+            ),
+          ),
         ],
         const SizedBox(height: WizardCompact.sectionGap),
       ],
