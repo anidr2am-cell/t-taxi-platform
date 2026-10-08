@@ -4,12 +4,16 @@ class FlightEndpointInfo {
     this.airportName,
     this.scheduledAt,
     this.estimatedAt,
+    this.scheduledLocal,
+    this.estimatedLocal,
   });
 
   final String? airportCode;
   final String? airportName;
   final String? scheduledAt;
   final String? estimatedAt;
+  final String? scheduledLocal;
+  final String? estimatedLocal;
 
   factory FlightEndpointInfo.fromJson(Map<String, dynamic> json) {
     return FlightEndpointInfo(
@@ -17,6 +21,8 @@ class FlightEndpointInfo {
       airportName: json['airportName'] as String?,
       scheduledAt: json['scheduledAt'] as String?,
       estimatedAt: json['estimatedAt'] as String?,
+      scheduledLocal: json['scheduledLocal'] as String?,
+      estimatedLocal: json['estimatedLocal'] as String?,
     );
   }
 }

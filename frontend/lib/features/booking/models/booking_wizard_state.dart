@@ -33,6 +33,7 @@ class BookingWizardState {
   final String messengerId;
   final String additionalRequests;
   final String flightNumber;
+  final String flightDate;
   final int? selectedCouponId;
   final int mileageAmountToUse;
   final String paymentMethod;
@@ -67,6 +68,7 @@ class BookingWizardState {
     this.messengerId = '',
     this.additionalRequests = '',
     this.flightNumber = '',
+    this.flightDate = '',
     this.selectedCouponId,
     this.mileageAmountToUse = 0,
     this.paymentMethod = 'PAY_DRIVER',
@@ -111,6 +113,7 @@ class BookingWizardState {
     String? messengerId,
     String? additionalRequests,
     String? flightNumber,
+    String? flightDate,
     int? selectedCouponId,
     bool clearSelectedCoupon = false,
     int? mileageAmountToUse,
@@ -151,6 +154,7 @@ class BookingWizardState {
       messengerId: messengerId ?? this.messengerId,
       additionalRequests: additionalRequests ?? this.additionalRequests,
       flightNumber: flightNumber ?? this.flightNumber,
+      flightDate: flightDate ?? this.flightDate,
       selectedCouponId: clearSelectedCoupon
           ? null
           : (selectedCouponId ?? this.selectedCouponId),
@@ -188,6 +192,7 @@ class BookingWizardState {
     'messengerId': messengerId,
     'additionalRequests': additionalRequests,
     'flightNumber': flightNumber,
+    'flightDate': flightDate,
     'paymentMethod': paymentMethod,
     'paymentCurrency': paymentCurrency,
   };
@@ -234,6 +239,7 @@ class BookingWizardState {
       ),
       additionalRequests: json['additionalRequests'] as String? ?? '',
       flightNumber: json['flightNumber'] as String? ?? '',
+      flightDate: json['flightDate'] as String? ?? '',
       paymentMethod: json['paymentMethod'] as String? ?? 'PAY_DRIVER',
       paymentCurrency: json['paymentCurrency'] as String?,
     );

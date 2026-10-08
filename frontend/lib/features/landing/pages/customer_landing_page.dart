@@ -74,7 +74,16 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
       return;
     }
 
-    Navigator.pushNamed(context, '/booking');
+    Navigator.pushNamed(
+      context,
+      '/booking',
+      arguments: _draft.serviceType == null
+          ? null
+          : BookingWizardRouteArgs(
+              serviceType: _draft.serviceType!,
+              initialStep: BookingWizardSteps.route,
+            ),
+    );
   }
 
   void _openBookingLookup(BuildContext context) {
@@ -107,7 +116,9 @@ class _CustomerLandingPageState extends State<CustomerLandingPage> {
                 decoration: BoxDecoration(
                   color: AppTokens.surface,
                   border: Border(
-                    bottom: BorderSide(color: AppTokens.border.withValues(alpha: 0.6)),
+                    bottom: BorderSide(
+                      color: AppTokens.border.withValues(alpha: 0.6),
+                    ),
                   ),
                   boxShadow: const [
                     BoxShadow(

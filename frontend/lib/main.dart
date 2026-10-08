@@ -22,6 +22,7 @@ import 'features/booking/pages/booking_wizard_page.dart';
 import 'features/booking/pages/guest_booking_lookup_page.dart';
 import 'features/account/pages/account_page.dart';
 import 'features/booking/pages/my_bookings_page.dart';
+import 'features/booking/utils/booking_entry_query.dart';
 import 'features/driver/pages/driver_login_page.dart';
 import 'features/driver/pages/driver_shell_page.dart';
 import 'features/driver_application/pages/driver_application_form_page.dart';
@@ -166,11 +167,17 @@ class TTaxiApp extends StatelessWidget {
         },
       },
       onGenerateRoute: (settings) {
-        return buildKakaoOAuthCallbackRoute(settings) ??
+        return buildBookingEntryRoute(settings) ??
+            buildKakaoOAuthCallbackRoute(settings) ??
             buildLineOAuthCallbackRoute(settings) ??
             buildE2ERoute(settings);
       },
       onGenerateInitialRoutes: (initialRoute) {
+        final bookingRoute = buildBookingEntryRoute(
+          RouteSettings(name: initialRoute),
+        );
+        if (bookingRoute != null) return [bookingRoute];
+
         final kakaoRoute = buildKakaoOAuthCallbackRoute(
           RouteSettings(name: initialRoute),
         );
@@ -204,6 +211,17 @@ class TTaxiApp extends StatelessWidget {
       },
     );
   }
+}
+
+@visibleForTesting
+Route<dynamic>? buildBookingEntryRoute(RouteSettings settings) {
+  final uri = Uri.tryParse(settings.name ?? '');
+  if (uri == null || uri.path != '/booking' || !uri.hasQuery) return null;
+  final args = BookingEntryQuery.parse(uri);
+  return MaterialPageRoute<void>(
+    settings: settings,
+    builder: (_) => BookingWizardPage(routeArgs: args),
+  );
 }
 
 @visibleForTesting

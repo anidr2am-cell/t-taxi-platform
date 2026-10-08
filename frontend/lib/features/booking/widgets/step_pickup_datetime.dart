@@ -537,12 +537,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
         }
       }
     }
-    return PickupTimeFormat.formatDisplay(
-      hour24: selected.hour,
-      minute: selected.minute,
-      amLabel: l10n.t('pickup_time_am'),
-      pmLabel: l10n.t('pickup_time_pm'),
-    );
+    return l10n.t('pickup_time_select');
   }
 
   Future<void> _pickTime(BuildContext context, DateTime selected) async {
@@ -632,9 +627,8 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                     compact: widget.embedded,
                     icon: Icons.calendar_today_outlined,
                     title: l10n.t('pickup_date'),
-                    value:
-                        widget.state.pickupDate ??
-                        widget.controller.formatDate(selected),
+                    value: widget.state.pickupDate ??
+                        l10n.t('pickup_date_select'),
                     onTap: () => _pickDate(context, selected, min),
                   ),
                   const Divider(height: 1),
@@ -694,7 +688,18 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                 const SizedBox(height: WizardCompact.fieldGap),
                 manualTimeField,
                 const SizedBox(height: WizardCompact.fieldGap),
-                _buildFlightLookupSection(l10n),
+                TextField(
+                  key: const Key('flight_number_field'),
+                  controller: _flightController,
+                  focusNode: widget.focusNode,
+                  decoration: WizardCompact.inputDecoration(
+                    label: l10n.t('flight_number'),
+                    hint: l10n.t('flight_number_hint'),
+                    prefixIcon: const Icon(Icons.flight_outlined, size: 20),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  onChanged: _onFlightNumberChanged,
+                ),
               ],
             );
           },
@@ -730,9 +735,13 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       lastDate: DateTime(min.year + 2),
     );
     if (date == null) return;
-    await widget.controller.setPickupDateTime(
-      DateTime(date.year, date.month, date.day, selected.hour, selected.minute),
-    );
+    if (widget.state.pickupTime == null) {
+      await widget.controller.setPickupDate(date);
+    } else {
+      await widget.controller.setPickupDateTime(
+        DateTime(date.year, date.month, date.day, selected.hour, selected.minute),
+      );
+    }
   }
 }
 

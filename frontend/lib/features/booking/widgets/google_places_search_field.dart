@@ -19,16 +19,19 @@ import 'wizard_compact.dart';
 class GooglePlacesSearchField extends StatefulWidget {
   final String label;
   final LocationOption? selected;
+  final LocationOption? excludedRecentLocation;
   final String languageCode;
   final bool showAirportShortcuts;
   final bool recentNonAirportOnly;
   final String? airportShortcutsLabelKey;
   final bool compact;
   final FocusNode? focusNode;
+  final Object? editingResetToken;
   final ValueChanged<LocationOption> onSelected;
   final void Function(String errorCategory)? onSearchFailed;
   final String placeType;
   final PlacesApiService? placesApi;
+  final RecentLocationsStorage? recentLocationsStorage;
   final Future<LocationOption?> Function(
     BuildContext context,
     LocationOption? current,
@@ -42,14 +45,17 @@ class GooglePlacesSearchField extends StatefulWidget {
     required this.languageCode,
     required this.onSelected,
     this.selected,
+    this.excludedRecentLocation,
     this.showAirportShortcuts = false,
     this.recentNonAirportOnly = false,
     this.airportShortcutsLabelKey,
     this.compact = false,
     this.focusNode,
+    this.editingResetToken,
     this.onSearchFailed,
     this.placeType = 'place',
     this.placesApi,
+    this.recentLocationsStorage,
     this.mapPicker,
   });
 
@@ -60,7 +66,7 @@ class GooglePlacesSearchField extends StatefulWidget {
 
 class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   late final PlacesApiService _placesApi;
-  final _recentStorage = RecentLocationsStorage();
+  late final RecentLocationsStorage _recentStorage;
   final _controller = TextEditingController();
   FocusNode? _ownedFocusNode;
 
@@ -80,6 +86,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   void initState() {
     super.initState();
     _placesApi = widget.placesApi ?? PlacesApiService();
+    _recentStorage = widget.recentLocationsStorage ?? RecentLocationsStorage();
     if (widget.focusNode == null) {
       _ownedFocusNode = FocusNode();
     }
@@ -88,6 +95,36 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
       _controller.text = widget.selected!.name ?? widget.selected!.displayName;
     }
     _loadRecents();
+  }
+
+  @override
+  void didUpdateWidget(covariant GooglePlacesSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.editingResetToken != widget.editingResetToken &&
+        widget.selected != null) {
+      _editing = false;
+      _controller.text = widget.selected!.name ?? widget.selected!.displayName;
+      _predictions = const [];
+      _error = null;
+      _focusNode.unfocus();
+      return;
+    }
+    if (oldWidget.selected == widget.selected) return;
+
+    final selected = widget.selected;
+    if (selected == null) {
+      _editing = true;
+      _controller.clear();
+      return;
+    }
+
+    // A parent can select an airport after an asynchronous flight lookup.
+    // Keep this widget's editing mode in sync so the selected card appears in
+    // the same frame instead of only after the step is recreated.
+    _editing = false;
+    _controller.text = selected.name ?? selected.displayName;
+    _predictions = const [];
+    _error = null;
   }
 
   @override
@@ -310,10 +347,28 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   List<LocationOption> get _visibleRecents {
-    if (!widget.recentNonAirportOnly) return _recentLocations;
-    return _recentLocations
-        .where((location) => location.kind != LocationKind.airport)
-        .toList();
+    return _recentLocations.where((location) {
+      if (widget.recentNonAirportOnly &&
+          location.kind == LocationKind.airport) {
+        return false;
+      }
+      return !_sameLocation(location, widget.excludedRecentLocation);
+    }).toList();
+  }
+
+  bool _sameLocation(LocationOption a, LocationOption? b) {
+    if (b == null) return false;
+    if (a.id == b.id) return true;
+    if ((a.placeId ?? '').isNotEmpty && a.placeId == b.placeId) return true;
+    if ((a.code ?? '').isNotEmpty && a.code == b.code && a.kind == b.kind) {
+      return true;
+    }
+    if (a.hasCoordinates && b.hasCoordinates) {
+      const epsilon = 0.0001;
+      return (a.latitude! - b.latitude!).abs() < epsilon &&
+          (a.longitude! - b.longitude!).abs() < epsilon;
+    }
+    return false;
   }
 
   Widget _airportShortcuts(AppLocalizations l10n) {
@@ -381,7 +436,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: AppUi.surfaceCard(
-              onTap: _loadingDetails ? null : () => _selectRecentLocation(location),
+              onTap: _loadingDetails
+                  ? null
+                  : () => _selectRecentLocation(location),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
@@ -429,6 +486,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           ? Icons.flight
           : Icons.place_outlined,
       changeLabel: l10n.t('change_location'),
+      changeButtonKey: Key('route_${widget.placeType}_change_button'),
       onChange: _startEditing,
       loading: _loadingDetails,
     );
@@ -488,27 +546,29 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
               controller: _controller,
               focusNode: _focusNode,
               scrollPadding: WizardCompact.fieldScrollPadding,
-            decoration: widget.compact
-                ? WizardCompact.inputDecoration(
-                    label: widget.label,
-                    hint: l10n.t('search_place'),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                  )
-                : InputDecoration(
-                    hintText: l10n.t('search_place'),
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _loading || _loadingDetails
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : null,
-                  ),
-            onChanged: _onQueryChanged,
+              decoration: widget.compact
+                  ? WizardCompact.inputDecoration(
+                      label: widget.label,
+                      hint: l10n.t('search_place'),
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                    )
+                  : InputDecoration(
+                      hintText: l10n.t('search_place'),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _loading || _loadingDetails
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+              onChanged: _onQueryChanged,
             ),
           ),
         ),
