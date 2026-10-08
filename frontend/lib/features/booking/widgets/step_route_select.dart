@@ -8,6 +8,8 @@ import '../models/booking_wizard_state.dart';
 import 'step_destination_select.dart';
 import 'step_origin_select.dart';
 import 'step_service_select.dart';
+import 'step_flight_lookup.dart';
+import '../models/service_type_option.dart';
 import 'wizard_compact.dart';
 
 class StepRouteSelect extends StatelessWidget {
@@ -38,24 +40,21 @@ class StepRouteSelect extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppUi.sectionHeader(
-          context,
-          title: l10n.t('select_service'),
-        ),
+        AppUi.sectionHeader(context, title: l10n.t('select_service')),
         StepServiceSelect(
           embedded: true,
           selected: state.serviceType,
           onSelected: controller.selectService,
         ),
         const SizedBox(height: WizardCompact.sectionGap),
-        AppUi.sectionHeader(
-          context,
-          title: l10n.t('origin'),
-        ),
+        if (state.serviceType == BookingServiceType.airportPickup)
+          StepFlightLookup(state: state, controller: controller),
+        AppUi.sectionHeader(context, title: l10n.t('origin')),
         StepOriginSelect(
           embedded: true,
           serviceType: state.serviceType,
           selected: state.origin,
+          excludedRecentLocation: state.destination,
           languageCode: languageCode,
           focusNode: originFocusNode,
           onSearchFailed: (category) => controller.reportPlaceSearchFailed(
@@ -83,14 +82,12 @@ class StepRouteSelect extends StatelessWidget {
           ),
         ),
         const SizedBox(height: WizardCompact.fieldGap),
-        AppUi.sectionHeader(
-          context,
-          title: l10n.t('destination'),
-        ),
+        AppUi.sectionHeader(context, title: l10n.t('destination')),
         StepDestinationSelect(
           embedded: true,
           serviceType: state.serviceType,
           selected: state.destination,
+          excludedRecentLocation: state.origin,
           languageCode: languageCode,
           focusNode: destinationFocusNode,
           onSearchFailed: (category) => controller.reportPlaceSearchFailed(

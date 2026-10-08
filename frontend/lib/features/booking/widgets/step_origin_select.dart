@@ -8,6 +8,7 @@ import 'google_places_search_field.dart';
 class StepOriginSelect extends StatelessWidget {
   final BookingServiceType? serviceType;
   final LocationOption? selected;
+  final LocationOption? excludedRecentLocation;
   final String languageCode;
   final ValueChanged<LocationOption> onSelected;
   final void Function(String errorCategory)? onSearchFailed;
@@ -18,6 +19,7 @@ class StepOriginSelect extends StatelessWidget {
     super.key,
     required this.serviceType,
     required this.selected,
+    this.excludedRecentLocation,
     required this.languageCode,
     required this.onSelected,
     this.onSearchFailed,
@@ -39,9 +41,12 @@ class StepOriginSelect extends StatelessWidget {
       label: l10n.t('search_place'),
       languageCode: languageCode,
       selected: selected,
+      excludedRecentLocation: excludedRecentLocation,
       showAirportShortcuts: _showAirportShortcuts,
       recentNonAirportOnly: _recentNonAirportOnly,
-      airportShortcutsLabelKey: _showAirportShortcuts ? 'airport_shortcuts_origin' : null,
+      airportShortcutsLabelKey: _showAirportShortcuts
+          ? 'airport_shortcuts_origin'
+          : null,
       compact: embedded,
       focusNode: focusNode,
       placeType: 'origin',

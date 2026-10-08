@@ -23,4 +23,13 @@ class AirportShortcuts {
       longitude: 101.005028,
     ),
   ];
+
+  static LocationOption? byCode(String? code) {
+    final normalized = code?.trim().toUpperCase();
+    if (normalized == null || normalized.isEmpty) return null;
+    for (final airport in all) {
+      if (airport.code?.toUpperCase() == normalized) return airport;
+    }
+    return null;
+  }
 }

@@ -127,10 +127,11 @@ class FlightService {
   }
 
   matchesRequestedDate(item, flightDate) {
-    return [
-      item?.departure?.scheduledTime?.utc,
-      item?.arrival?.scheduledTime?.utc,
-    ].some((value) => this.getDatePart(value) === flightDate);
+    const departureLocal = item?.departure?.scheduledTime?.local;
+    if (departureLocal) {
+      return this.getDatePart(departureLocal) === flightDate;
+    }
+    return this.getDatePart(item?.departure?.scheduledTime?.utc) === flightDate;
   }
 
   selectBestResult(items, flightNumber, flightDate) {

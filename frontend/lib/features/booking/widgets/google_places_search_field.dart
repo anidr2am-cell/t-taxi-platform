@@ -19,6 +19,7 @@ import 'wizard_compact.dart';
 class GooglePlacesSearchField extends StatefulWidget {
   final String label;
   final LocationOption? selected;
+  final LocationOption? excludedRecentLocation;
   final String languageCode;
   final bool showAirportShortcuts;
   final bool recentNonAirportOnly;
@@ -29,6 +30,7 @@ class GooglePlacesSearchField extends StatefulWidget {
   final void Function(String errorCategory)? onSearchFailed;
   final String placeType;
   final PlacesApiService? placesApi;
+  final RecentLocationsStorage? recentLocationsStorage;
   final Future<LocationOption?> Function(
     BuildContext context,
     LocationOption? current,
@@ -42,6 +44,7 @@ class GooglePlacesSearchField extends StatefulWidget {
     required this.languageCode,
     required this.onSelected,
     this.selected,
+    this.excludedRecentLocation,
     this.showAirportShortcuts = false,
     this.recentNonAirportOnly = false,
     this.airportShortcutsLabelKey,
@@ -50,6 +53,7 @@ class GooglePlacesSearchField extends StatefulWidget {
     this.onSearchFailed,
     this.placeType = 'place',
     this.placesApi,
+    this.recentLocationsStorage,
     this.mapPicker,
   });
 
@@ -60,7 +64,7 @@ class GooglePlacesSearchField extends StatefulWidget {
 
 class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   late final PlacesApiService _placesApi;
-  final _recentStorage = RecentLocationsStorage();
+  late final RecentLocationsStorage _recentStorage;
   final _controller = TextEditingController();
   FocusNode? _ownedFocusNode;
 
@@ -80,6 +84,7 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   void initState() {
     super.initState();
     _placesApi = widget.placesApi ?? PlacesApiService();
+    _recentStorage = widget.recentLocationsStorage ?? RecentLocationsStorage();
     if (widget.focusNode == null) {
       _ownedFocusNode = FocusNode();
     }
@@ -310,10 +315,28 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   List<LocationOption> get _visibleRecents {
-    if (!widget.recentNonAirportOnly) return _recentLocations;
-    return _recentLocations
-        .where((location) => location.kind != LocationKind.airport)
-        .toList();
+    return _recentLocations.where((location) {
+      if (widget.recentNonAirportOnly &&
+          location.kind == LocationKind.airport) {
+        return false;
+      }
+      return !_sameLocation(location, widget.excludedRecentLocation);
+    }).toList();
+  }
+
+  bool _sameLocation(LocationOption a, LocationOption? b) {
+    if (b == null) return false;
+    if (a.id == b.id) return true;
+    if ((a.placeId ?? '').isNotEmpty && a.placeId == b.placeId) return true;
+    if ((a.code ?? '').isNotEmpty && a.code == b.code && a.kind == b.kind) {
+      return true;
+    }
+    if (a.hasCoordinates && b.hasCoordinates) {
+      const epsilon = 0.0001;
+      return (a.latitude! - b.latitude!).abs() < epsilon &&
+          (a.longitude! - b.longitude!).abs() < epsilon;
+    }
+    return false;
   }
 
   Widget _airportShortcuts(AppLocalizations l10n) {

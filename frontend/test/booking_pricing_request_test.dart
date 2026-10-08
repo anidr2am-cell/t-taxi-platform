@@ -572,7 +572,7 @@ void main() {
     expect(restored.scheduledPickupAtIso(), '2026-07-01T09:30:00+07:00');
   });
 
-  test('initialize reseeds past stored pickup to defaultPickupDateTime', () async {
+  test('initialize clears past stored pickup for explicit reselection', () async {
     final storage = _MemoryBookingStateStorage()
       ..value = const BookingWizardState(
         pickupDate: '2026-06-01',
@@ -589,9 +589,8 @@ void main() {
 
     await controller.initialize();
 
-    final defaultPickup = controller.defaultPickupDateTime();
-    expect(controller.state.pickupDate, controller.formatDate(defaultPickup));
-    expect(controller.state.pickupTime, controller.formatTime(defaultPickup));
+    expect(controller.state.pickupDate, isNull);
+    expect(controller.state.pickupTime, isNull);
     expect(storage.value?.pickupDate, controller.state.pickupDate);
     expect(storage.value?.pickupTime, controller.state.pickupTime);
   });
@@ -1454,13 +1453,13 @@ void main() {
         ),
       );
 
-      await controller.selectService(BookingServiceType.cityTransfer);
+      await controller.selectService(BookingServiceType.airportPickup);
       await controller.setOrigin(
         const LocationOption(
           id: 'origin',
           displayName: 'Bangkok',
-          kind: LocationKind.city,
-          code: 'BANGKOK',
+          kind: LocationKind.airport,
+          code: 'BKK',
         ),
       );
       await controller.setDestination(

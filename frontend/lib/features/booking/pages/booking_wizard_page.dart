@@ -118,19 +118,19 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       });
     } else {
       final args = widget.routeArgs;
-      if (args != null) {
+      if (args != null && args.hasCompleteRoute) {
         _controller
             .applyRoutePrefill(
               serviceType: args.serviceType,
-              origin: args.origin,
-              destination: args.destination,
+              origin: args.origin!,
+              destination: args.destination!,
               initialStep: args.initialStep,
             )
             .then((_) {
               if (mounted) _controller.syncDerivedData();
             });
       } else {
-        _controller.initialize().then((_) {
+        _controller.initialize(initialServiceType: args?.serviceType).then((_) {
           if (mounted) _controller.syncDerivedData();
         });
       }

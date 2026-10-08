@@ -5,6 +5,7 @@ import '../../../utils/user_facing_error.dart';
 import '../../account/services/coupon_api_service.dart';
 import '../../account/services/mileage_api_service.dart';
 import '../models/booking_wizard_steps.dart';
+import '../models/airport_shortcuts.dart';
 import '../models/booking_wizard_state.dart';
 import '../models/booking_complete_review.dart';
 import '../models/booking_create_result.dart';
@@ -16,6 +17,7 @@ import '../services/booking_state_storage.dart';
 import '../services/places_api_service.dart';
 import '../services/recent_locations_storage.dart';
 import '../utils/transitional_messenger_placeholders.dart';
+import '../utils/flight_time_format.dart';
 
 class BookingWizardController extends ChangeNotifier {
   BookingWizardController({
@@ -207,7 +209,7 @@ class BookingWizardController extends ChangeNotifier {
     '아유타야': 'AYUTTHAYA',
   };
 
-  Future<void> initialize() async {
+  Future<void> initialize({BookingServiceType? initialServiceType}) async {
     final restored = await _storage.load();
     if (restored != null) {
       final migratedStep = BookingWizardSteps.clampStep(restored.step);
@@ -220,11 +222,31 @@ class BookingWizardController extends ChangeNotifier {
       );
       _sanitizeCustomerVehicleSelection();
       if (!_hasSelectablePickupDateTime()) {
-        await _seedDefaultPickupDateTime();
+        _state = _state.copyWith(clearPickupDateTime: true);
+      }
+      if (initialServiceType != null &&
+          initialServiceType != _state.serviceType) {
+        _state = _state.copyWith(
+          serviceType: initialServiceType,
+          clearOrigin: true,
+          clearDestination: true,
+          clearRecommendation: true,
+          clearSelectedVehicle: true,
+          clearPricing: true,
+          clearError: true,
+          flightNumber: '',
+          flightDate: '',
+          clearPickupDateTime:
+              initialServiceType == BookingServiceType.airportPickup,
+        );
       }
     } else {
-      await _seedDefaultPickupDateTime();
+      _state = _state.copyWith(serviceType: initialServiceType);
+      if (initialServiceType != BookingServiceType.airportPickup) {
+        await _seedDefaultPickupDateTime();
+      }
     }
+    await _persist();
     _isInitialized = true;
     await syncDerivedData();
     notifyListeners();
@@ -263,7 +285,17 @@ class BookingWizardController extends ChangeNotifier {
       clearPricing: true,
       clearError: true,
       flightNumber: '',
+      flightDate: '',
+      clearPickupDateTime: type == BookingServiceType.airportPickup,
     );
+    if (type != BookingServiceType.airportPickup &&
+        !_hasSelectablePickupDateTime()) {
+      final initialPickup = defaultPickupDateTime();
+      _state = _state.copyWith(
+        pickupDate: formatDate(initialPickup),
+        pickupTime: formatTime(initialPickup),
+      );
+    }
     await _persist();
     notifyListeners();
     await syncDerivedData();
@@ -285,7 +317,11 @@ class BookingWizardController extends ChangeNotifier {
       origin: origin,
       destination: destination,
     );
-    await _seedDefaultPickupDateTime();
+    if (serviceType != BookingServiceType.airportPickup) {
+      await _seedDefaultPickupDateTime();
+    } else {
+      await _persist();
+    }
     await _recentLocations.add(origin);
     await _recentLocations.add(destination);
     _isInitialized = true;
@@ -635,6 +671,7 @@ class BookingWizardController extends ChangeNotifier {
     String? messengerId,
     String? additionalRequests,
     String? flightNumber,
+    String? flightDate,
   }) async {
     _state = _state.copyWith(
       customerName: name,
@@ -645,10 +682,64 @@ class BookingWizardController extends ChangeNotifier {
       messengerId: messengerId,
       additionalRequests: additionalRequests,
       flightNumber: flightNumber,
+      flightDate: flightDate,
       clearError: true,
     );
     await _persist();
     notifyListeners();
+  }
+
+  Future<bool> setPickupDate(DateTime value) async {
+    final date = DateTime(value.year, value.month, value.day);
+    final today = thailandNow();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    if (date.isBefore(todayDate)) {
+      _state = _state.copyWith(errorMessage: 'pickup_date_past');
+      await _persist();
+      notifyListeners();
+      return false;
+    }
+    _invalidateSubmitIdempotencyKey();
+    _state = _state.copyWith(
+      pickupDate: formatDate(date),
+      clearPricing: true,
+      clearError: true,
+    );
+    await _persist();
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> applyConfirmedFlight({
+    required String flightNumber,
+    required String flightDate,
+    required String? arrivalAirportCode,
+    required String? arrivalTimestamp,
+  }) async {
+    final airport = AirportShortcuts.byCode(arrivalAirportCode);
+    final arrivalBangkok = FlightTimeFormat.bangkokWallClock(arrivalTimestamp);
+    if (airport == null || arrivalBangkok == null) return false;
+
+    final pickupBangkok = arrivalBangkok.add(const Duration(minutes: 50));
+    if (!isPickupSelectable(pickupBangkok)) return false;
+
+    _invalidateSubmitIdempotencyKey();
+    _state = _state.copyWith(
+      origin: airport,
+      pickupDate: formatDate(pickupBangkok),
+      pickupTime: formatTime(pickupBangkok),
+      flightNumber: flightNumber.trim().toUpperCase(),
+      flightDate: flightDate,
+      clearRecommendation: true,
+      clearSelectedVehicle: true,
+      clearPricing: true,
+      clearError: true,
+    );
+    await _recentLocations.add(airport);
+    await _persist();
+    notifyListeners();
+    await syncDerivedData();
+    return true;
   }
 
   String _normalizeFlightNumber(String value) {

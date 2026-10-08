@@ -5,13 +5,15 @@ import 'service_type_option.dart';
 class BookingWizardRouteArgs {
   const BookingWizardRouteArgs({
     required this.serviceType,
-    required this.origin,
-    required this.destination,
+    this.origin,
+    this.destination,
     this.initialStep = BookingWizardSteps.schedule,
   });
 
   final BookingServiceType serviceType;
-  final LocationOption origin;
-  final LocationOption destination;
+  final LocationOption? origin;
+  final LocationOption? destination;
   final int initialStep;
+
+  bool get hasCompleteRoute => origin != null && destination != null;
 }

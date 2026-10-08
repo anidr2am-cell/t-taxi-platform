@@ -191,16 +191,21 @@ test('selects deterministic matching result among multiple provider results', as
   assert.equal(result.departure.scheduledAt, '2026-07-01T08:00:00Z');
 });
 
-test('date matching uses scheduled UTC date prefix without timezone shift', async () => {
+test('date matching uses departure local date printed on the ticket', async () => {
   const calls = [];
   const service = new FlightService(config, createHttpClient([
     providerFlight({
-      departure: { scheduledTime: { utc: '2026-07-01 23:50Z' } },
+      departure: {
+        scheduledTime: {
+          local: '2026-07-02 06:50+07:00',
+          utc: '2026-07-01 23:50Z',
+        },
+      },
       arrival: { scheduledTime: { utc: '2026-07-02 01:20Z' } },
     }),
   ], calls));
 
-  const result = await service.search({ flightNumber: 'TG409', flightDate: '2026-07-01' });
+  const result = await service.search({ flightNumber: 'TG409', flightDate: '2026-07-02' });
 
   assert.equal(result.departure.scheduledAt, '2026-07-01T23:50:00Z');
 });
