@@ -134,7 +134,7 @@ class FlightService {
     return this.getDatePart(item?.departure?.scheduledTime?.utc) === flightDate;
   }
 
-  selectBestResult(items, flightNumber, flightDate) {
+  selectMatchingResults(items, flightNumber, flightDate) {
     const candidates = items
       .map((item, index) => ({
         item,
@@ -154,7 +154,11 @@ class FlightService {
       return a.index - b.index;
     });
 
-    return candidates[0]?.item ?? null;
+    return candidates.map((candidate) => candidate.item);
+  }
+
+  selectBestResult(items, flightNumber, flightDate) {
+    return this.selectMatchingResults(items, flightNumber, flightDate)[0] ?? null;
   }
 
   mapStatus(providerStatus) {
@@ -208,6 +212,8 @@ class FlightService {
         airportName: item?.departure?.airport?.name ?? null,
         scheduledAt: this.normalizeAeroDataBoxUtc(item?.departure?.scheduledTime?.utc),
         estimatedAt: this.normalizeAeroDataBoxUtc(item?.departure?.predictedTime?.utc),
+        scheduledLocal: this.normalizeAeroDataBoxUtc(item?.departure?.scheduledTime?.local),
+        estimatedLocal: this.normalizeAeroDataBoxUtc(item?.departure?.predictedTime?.local),
         // AeroDataBox may add actualTime in future responses.
         actualAt: null,
         terminal: item?.departure?.terminal ?? null,
@@ -218,6 +224,8 @@ class FlightService {
         airportName: item?.arrival?.airport?.name ?? null,
         scheduledAt: this.normalizeAeroDataBoxUtc(item?.arrival?.scheduledTime?.utc),
         estimatedAt: this.normalizeAeroDataBoxUtc(item?.arrival?.predictedTime?.utc),
+        scheduledLocal: this.normalizeAeroDataBoxUtc(item?.arrival?.scheduledTime?.local),
+        estimatedLocal: this.normalizeAeroDataBoxUtc(item?.arrival?.predictedTime?.local),
         // AeroDataBox may add actualTime in future responses.
         actualAt: null,
         terminal: item?.arrival?.terminal ?? null,
@@ -246,15 +254,20 @@ class FlightService {
       throw mapped;
     }
 
-    const bestResult = this.selectBestResult(providerData, flightNumber, flightDate);
-    if (!bestResult) {
+    const matchingResults = this.selectMatchingResults(providerData, flightNumber, flightDate);
+    if (matchingResults.length === 0) {
       throw new AppError('Flight not found', {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.FLIGHT_NOT_FOUND,
       });
     }
 
-    const normalized = this.normalizeProviderResult(bestResult, flightNumber, flightDate);
+    const normalizedMatches = matchingResults.map((item) =>
+      this.normalizeProviderResult(item, flightNumber, flightDate));
+    const normalized = {
+      ...normalizedMatches[0],
+      matches: normalizedMatches,
+    };
     this.setCached(cacheKey, normalized);
     return normalized;
   }

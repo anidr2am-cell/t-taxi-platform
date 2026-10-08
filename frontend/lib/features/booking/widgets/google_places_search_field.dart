@@ -96,6 +96,27 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
   }
 
   @override
+  void didUpdateWidget(covariant GooglePlacesSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected == widget.selected) return;
+
+    final selected = widget.selected;
+    if (selected == null) {
+      _editing = true;
+      _controller.clear();
+      return;
+    }
+
+    // A parent can select an airport after an asynchronous flight lookup.
+    // Keep this widget's editing mode in sync so the selected card appears in
+    // the same frame instead of only after the step is recreated.
+    _editing = false;
+    _controller.text = selected.name ?? selected.displayName;
+    _predictions = const [];
+    _error = null;
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
     _controller.dispose();
@@ -404,7 +425,9 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: AppUi.surfaceCard(
-              onTap: _loadingDetails ? null : () => _selectRecentLocation(location),
+              onTap: _loadingDetails
+                  ? null
+                  : () => _selectRecentLocation(location),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
@@ -511,27 +534,29 @@ class _GooglePlacesSearchFieldState extends State<GooglePlacesSearchField> {
               controller: _controller,
               focusNode: _focusNode,
               scrollPadding: WizardCompact.fieldScrollPadding,
-            decoration: widget.compact
-                ? WizardCompact.inputDecoration(
-                    label: widget.label,
-                    hint: l10n.t('search_place'),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                  )
-                : InputDecoration(
-                    hintText: l10n.t('search_place'),
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _loading || _loadingDetails
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : null,
-                  ),
-            onChanged: _onQueryChanged,
+              decoration: widget.compact
+                  ? WizardCompact.inputDecoration(
+                      label: widget.label,
+                      hint: l10n.t('search_place'),
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                    )
+                  : InputDecoration(
+                      hintText: l10n.t('search_place'),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _loading || _loadingDetails
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+              onChanged: _onQueryChanged,
             ),
           ),
         ),

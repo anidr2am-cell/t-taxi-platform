@@ -114,6 +114,8 @@ test('normalizes provider response', async () => {
   assert.equal(result.departure.airportName, 'Bangkok Suvarnabhumi');
   assert.equal(result.departure.scheduledAt, '2026-07-01T09:30:00Z');
   assert.equal(result.departure.estimatedAt, '2026-07-01T09:40:00Z');
+  assert.equal(result.departure.scheduledLocal, '2026-07-01T16:30+07:00');
+  assert.equal(result.departure.estimatedLocal, '2026-07-01T16:40+07:00');
   assert.equal(result.departure.actualAt, null);
   assert.equal(result.arrival.airportCode, 'SIN');
   assert.equal(result.status, 'SCHEDULED');
@@ -189,6 +191,8 @@ test('selects deterministic matching result among multiple provider results', as
   const result = await service.search({ flightNumber: 'TG409', flightDate: '2026-07-01' });
 
   assert.equal(result.departure.scheduledAt, '2026-07-01T08:00:00Z');
+  assert.equal(result.matches.length, 2);
+  assert.equal(result.matches[1].departure.scheduledAt, '2026-07-01T11:00:00Z');
 });
 
 test('date matching uses departure local date printed on the ticket', async () => {

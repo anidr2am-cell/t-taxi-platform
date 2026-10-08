@@ -29,8 +29,8 @@ class StepFlightLookup extends StatefulWidget {
 class _StepFlightLookupState extends State<StepFlightLookup> {
   late final TextEditingController _flightController;
   bool _loading = false;
-  bool _confirmed = false;
-  FlightSearchResult? _result;
+  int? _confirmedIndex;
+  List<FlightSearchResult> _results = const [];
   String? _errorKey;
 
   FlightLookupApiService get _api =>
@@ -74,9 +74,9 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
   }
 
   void _clearResult() {
-    _result = null;
+    _results = const [];
     _errorKey = null;
-    _confirmed = false;
+    _confirmedIndex = null;
   }
 
   Future<void> _search() async {
@@ -88,11 +88,11 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
       _clearResult();
     });
     try {
-      final result = await _api.searchFlight(number, date);
+      final results = await _api.searchFlights(number, date);
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _result = result;
+        _results = results;
       });
     } catch (_) {
       if (!mounted) return;
@@ -103,9 +103,7 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     }
   }
 
-  Future<void> _confirm() async {
-    final result = _result;
-    if (result == null) return;
+  Future<void> _confirm(FlightSearchResult result, int index) async {
     final applied = await widget.controller.applyConfirmedFlight(
       flightNumber: result.flightNumber.isEmpty
           ? _flightController.text
@@ -117,7 +115,7 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
     );
     if (!mounted) return;
     setState(() {
-      _confirmed = applied;
+      _confirmedIndex = applied ? index : null;
       _errorKey = applied ? null : 'flight_lookup_airport_unsupported';
     });
   }
@@ -196,50 +194,85 @@ class _StepFlightLookupState extends State<StepFlightLookup> {
             ),
           ),
         ],
-        if (_result != null) ...[
+        if (_results.isNotEmpty) ...[
           const SizedBox(height: AppTokens.spaceSm),
-          _resultCard(l10n, _result!),
+          for (var index = 0; index < _results.length; index++) ...[
+            _resultCard(l10n, _results[index], index),
+            if (index != _results.length - 1)
+              const SizedBox(height: AppTokens.spaceSm),
+          ],
         ],
         const SizedBox(height: WizardCompact.sectionGap),
       ],
     );
   }
 
-  Widget _resultCard(AppLocalizations l10n, FlightSearchResult result) {
+  Widget _resultCard(
+    AppLocalizations l10n,
+    FlightSearchResult result,
+    int index,
+  ) {
+    final departureLocal = FlightTimeFormat.localWallClock(
+      result.departure.estimatedLocal ??
+          result.departure.scheduledLocal ??
+          result.departure.estimatedAt ??
+          result.departure.scheduledAt,
+    );
     final arrival = result.arrival.estimatedAt ?? result.arrival.scheduledAt;
-    return AppUi.surfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if ((result.airlineName ?? '').isNotEmpty)
+    final arrivalBangkok = FlightTimeFormat.bangkokWallClock(arrival);
+    final departureCode =
+        result.departure.airportCode ?? result.departure.airportName ?? '—';
+    final arrivalCode =
+        result.arrival.airportCode ?? result.arrival.airportName ?? '—';
+    final departureDate = FlightTimeFormat.formatDate(departureLocal);
+    final arrivalDate = FlightTimeFormat.formatDate(arrivalBangkok);
+    final datesDiffer = departureDate != arrivalDate;
+    return KeyedSubtree(
+      key: Key('route_flight_result_$index'),
+      child: AppUi.surfaceCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if ((result.airlineName ?? '').isNotEmpty)
+              Text(
+                result.airlineName!,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            const SizedBox(height: AppTokens.spaceXs),
             Text(
-              result.airlineName!,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              '$departureCode ${FlightTimeFormat.format24Hour(departureLocal)} '
+              '→ $arrivalCode ${FlightTimeFormat.format24Hour(arrivalBangkok)}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-          const SizedBox(height: AppTokens.spaceXs),
-          Text(result.routeLabel()),
-          const SizedBox(height: AppTokens.spaceXs),
-          Text(
-            '${l10n.t('flight_lookup_arrival')}: '
-            '${FlightTimeFormat.formatBangkokDisplay(arrival, amLabel: l10n.t('pickup_time_am'), pmLabel: l10n.t('pickup_time_pm'))}',
-            style: const TextStyle(color: AppTokens.textSecondary),
-          ),
-          const SizedBox(height: AppTokens.spaceSm),
-          TextButton.icon(
-            key: const Key('route_flight_confirm_button'),
-            onPressed: _confirm,
-            icon: Icon(
-              _confirmed ? Icons.check_circle : Icons.check_circle_outline,
-              color: _confirmed ? AppTokens.success : AppTokens.primary,
-            ),
-            label: Text(l10n.t('flight_lookup_confirm')),
-          ),
-          if (_confirmed)
+            const SizedBox(height: AppTokens.spaceXs),
             Text(
-              l10n.t('flight_lookup_applied_50_minutes'),
-              style: const TextStyle(color: AppTokens.success),
+              datesDiffer
+                  ? '${l10n.t('flight_lookup_departure_date_short')}: $departureDate · '
+                        '${l10n.t('flight_lookup_arrival_date_short')}: $arrivalDate'
+                  : departureDate,
+              style: const TextStyle(color: AppTokens.textSecondary),
             ),
-        ],
+            const SizedBox(height: AppTokens.spaceSm),
+            TextButton.icon(
+              key: Key('route_flight_confirm_button_$index'),
+              onPressed: () => _confirm(result, index),
+              icon: Icon(
+                _confirmedIndex == index
+                    ? Icons.check_circle
+                    : Icons.check_circle_outline,
+                color: _confirmedIndex == index
+                    ? AppTokens.success
+                    : AppTokens.primary,
+              ),
+              label: Text(l10n.t('flight_lookup_confirm')),
+            ),
+            if (_confirmedIndex == index)
+              Text(
+                l10n.t('flight_lookup_applied_50_minutes'),
+                style: const TextStyle(color: AppTokens.success),
+              ),
+          ],
+        ),
       ),
     );
   }

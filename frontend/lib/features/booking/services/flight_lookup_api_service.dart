@@ -6,10 +6,7 @@ import '../../../config/app_config.dart';
 import '../models/flight_lookup_models.dart';
 
 class FlightLookupException implements Exception {
-  FlightLookupException({
-    required this.errorCode,
-    required this.message,
-  });
+  FlightLookupException({required this.errorCode, required this.message});
 
   final String errorCode;
   final String message;
@@ -23,8 +20,8 @@ class FlightLookupApiService {
   factory FlightLookupApiService() => _instance;
 
   FlightLookupApiService._({http.Client? client, String? baseUrl})
-      : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+    : _client = client ?? http.Client(),
+      _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
   FlightLookupApiService.test({
     required http.Client client,
@@ -55,8 +52,8 @@ class FlightLookupApiService {
           : 'Request failed';
       final errorCode = decoded is Map
           ? (decoded['error_code'] as String? ??
-              decoded['code'] as String? ??
-              'UNKNOWN')
+                decoded['code'] as String? ??
+                'UNKNOWN')
           : 'UNKNOWN';
       throw FlightLookupException(errorCode: errorCode, message: message);
     }
@@ -68,8 +65,54 @@ class FlightLookupApiService {
       );
     }
 
-    return FlightSearchResult.fromJson(
-      Map<String, dynamic>.from(decoded['data'] as Map),
+    return (await _decodeResults(decoded)).first;
+  }
+
+  Future<List<FlightSearchResult>> searchFlights(
+    String flightNumber,
+    String flightDate,
+  ) async {
+    final uri = Uri.parse('$_base/public/flights/search').replace(
+      queryParameters: {
+        'flightNumber': flightNumber.trim(),
+        'flightDate': flightDate.trim(),
+      },
     );
+    final response = await _client.get(uri);
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode >= 400) {
+      final message = decoded is Map
+          ? (decoded['message'] as String? ?? 'Request failed')
+          : 'Request failed';
+      final errorCode = decoded is Map
+          ? (decoded['error_code'] as String? ??
+                decoded['code'] as String? ??
+                'UNKNOWN')
+          : 'UNKNOWN';
+      throw FlightLookupException(errorCode: errorCode, message: message);
+    }
+    return _decodeResults(decoded);
+  }
+
+  List<FlightSearchResult> _decodeResults(dynamic decoded) {
+    if (decoded is! Map || !decoded.containsKey('data')) {
+      throw FlightLookupException(
+        errorCode: 'UNKNOWN',
+        message: 'Malformed flight lookup response',
+      );
+    }
+    final data = Map<String, dynamic>.from(decoded['data'] as Map);
+    final matches = data['matches'];
+    if (matches is List && matches.isNotEmpty) {
+      return matches
+          .map(
+            (item) => FlightSearchResult.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList(growable: false);
+    }
+    return [FlightSearchResult.fromJson(data)];
   }
 }

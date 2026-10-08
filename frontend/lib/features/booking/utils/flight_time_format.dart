@@ -18,6 +18,37 @@ class FlightTimeFormat {
     );
   }
 
+  /// Keeps the wall-clock fields supplied by the departure airport. Provider
+  /// local timestamps include an offset, but the displayed departure time must
+  /// remain the airport's local time rather than the viewer device's time.
+  static DateTime? localWallClock(String? isoTimestamp) {
+    if (isoTimestamp == null || isoTimestamp.isEmpty) return null;
+    final match = RegExp(
+      r'^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})',
+    ).firstMatch(isoTimestamp);
+    if (match == null) return null;
+    return DateTime(
+      int.parse(match.group(1)!),
+      int.parse(match.group(2)!),
+      int.parse(match.group(3)!),
+      int.parse(match.group(4)!),
+      int.parse(match.group(5)!),
+    );
+  }
+
+  static String format24Hour(DateTime? value) {
+    if (value == null) return '—';
+    return '${value.hour.toString().padLeft(2, '0')}:'
+        '${value.minute.toString().padLeft(2, '0')}';
+  }
+
+  static String formatDate(DateTime? value) {
+    if (value == null) return '—';
+    return '${value.year.toString().padLeft(4, '0')}-'
+        '${value.month.toString().padLeft(2, '0')}-'
+        '${value.day.toString().padLeft(2, '0')}';
+  }
+
   static String formatBangkokDisplay(
     String? isoUtc, {
     required String amLabel,
