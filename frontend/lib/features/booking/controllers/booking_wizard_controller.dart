@@ -288,9 +288,7 @@ class BookingWizardController extends ChangeNotifier {
           : BookingWizardSteps.vehicle;
     }
 
-    final customerComplete =
-        state.customerName.trim().isNotEmpty &&
-        state.customerPhone.trim().isNotEmpty;
+    final customerComplete = _isContactPreferenceValidFor(state);
     if (!customerComplete) {
       return requested < BookingWizardSteps.customer
           ? requested
@@ -1908,31 +1906,35 @@ class BookingWizardController extends ChangeNotifier {
   }
 
   bool _isCustomerStepValid() {
-    if (_state.customerName.trim().isEmpty) return false;
-    final type = BookingContactPreference.normalize(_state.messengerType);
+    return _isContactPreferenceValidFor(_state);
+  }
+
+  bool _isContactPreferenceValidFor(BookingWizardState state) {
+    if (state.customerName.trim().isEmpty) return false;
+    final type = BookingContactPreference.normalize(state.messengerType);
     // Phone-only drafts and already-open older clients remain resumable during
     // the rollout. The current customer UI always applies a channel default,
     // so newly entered bookings still require the selected channel details.
     if (type.isEmpty) {
       return _normalizedPhone(
-        _state.customerPhone,
-        _state.customerCountryCode,
+        state.customerPhone,
+        state.customerCountryCode,
       ).isNotEmpty;
     }
     if (!BookingContactPreference.values.contains(type)) return false;
-    if (_state.messengerId.trim().isEmpty) return false;
+    if (state.messengerId.trim().isEmpty) return false;
     if (BookingContactPreference.usesPhone(type) &&
         _normalizedPhone(
-          _state.customerPhone,
-          _state.customerCountryCode,
+          state.customerPhone,
+          state.customerCountryCode,
         ).isEmpty) {
       return false;
     }
     if (BookingContactPreference.allowsEmergencyPhone(type) &&
-        _state.customerPhone.trim().isNotEmpty &&
+        state.customerPhone.trim().isNotEmpty &&
         _normalizedPhone(
-          _state.customerPhone,
-          _state.customerCountryCode,
+          state.customerPhone,
+          state.customerCountryCode,
         ).isEmpty) {
       return false;
     }

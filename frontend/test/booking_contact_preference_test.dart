@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/booking/models/booking_wizard_state.dart';
+import 'package:frontend/features/booking/models/booking_wizard_steps.dart';
 import 'package:frontend/features/booking/utils/booking_contact_preference.dart';
 import 'package:frontend/features/booking/widgets/booking_contact_preference_section.dart';
 import 'package:frontend/l10n/app_localizations.dart';
+
+import 'support/booking_wizard_test_helpers.dart';
 
 class _ContactHarness extends StatefulWidget {
   const _ContactHarness();
@@ -181,4 +184,22 @@ void main() {
     expect(find.text('LOGIN_ACTION'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  test(
+    'Kakao draft without emergency phone can restore past customer step',
+    () async {
+      final controller = await buildContractAirportPickupController();
+      await controller.updateCustomerInfo(
+        name: 'QA Customer',
+        phone: '',
+        messengerType: 'KAKAO',
+        messengerId: 'qa_kakao',
+      );
+
+      expect(
+        controller.safeEntryStep(controller.state, BookingWizardSteps.review),
+        BookingWizardSteps.review,
+      );
+    },
+  );
 }
