@@ -9,6 +9,7 @@ import '../models/booking_wizard_state.dart';
 import '../models/booking_wizard_steps.dart';
 import '../models/service_type_option.dart';
 import '../utils/pricing_display.dart';
+import '../utils/booking_contact_preference.dart';
 
 class StepConfirmation extends StatelessWidget {
   final BookingWizardState state;
@@ -339,18 +340,22 @@ class StepConfirmation extends StatelessWidget {
           children: [
             AppUi.summaryRow(label: l10n.t('name'), value: state.customerName),
             AppUi.summaryRow(
-              label: l10n.t('phone'),
-              value: state.customerPhone,
+              label: l10n.t('booking_contact_method_summary'),
+              value:
+                  '${l10n.t(BookingContactPreference.labelKey(state.messengerType))} · ${BookingContactPreference.usesPhone(BookingContactPreference.normalize(state.messengerType)) ? BookingContactPreference.formatInternationalPhone(state.messengerId) : state.messengerId.trim()}',
             ),
-            if (state.messengerType.trim().isNotEmpty)
+            if (BookingContactPreference.allowsEmergencyPhone(
+                  BookingContactPreference.normalize(state.messengerType),
+                ) &&
+                state.customerPhone.trim().isNotEmpty)
               AppUi.summaryRow(
-                label: l10n.t('messenger_type'),
-                value: state.messengerType.trim(),
-              ),
-            if (state.messengerId.trim().isNotEmpty)
-              AppUi.summaryRow(
-                label: l10n.t('messenger_id'),
-                value: state.messengerId.trim(),
+                label: l10n.t('booking_contact_emergency_summary'),
+                value: BookingContactPreference.formatInternationalPhone(
+                  BookingContactPreference.normalizeInternationalPhone(
+                    state.customerCountryCode,
+                    state.customerPhone,
+                  ),
+                ),
               ),
             if (state.customerEmail.trim().isNotEmpty)
               AppUi.summaryRow(

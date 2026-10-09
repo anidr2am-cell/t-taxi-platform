@@ -95,11 +95,17 @@ void main() {
       for (final key in [
         'booking_contact_method_title',
         'booking_contact_phone_sms',
+        'booking_contact_method_summary',
+        'booking_contact_emergency_summary',
         'booking_contact_confirm_kakao',
         'booking_contact_confirm_line',
         'admin_contact_unverified',
       ]) {
-        expect(l10n.t(key), isNot(key), reason: '$language must translate $key');
+        expect(
+          l10n.t(key),
+          isNot(key),
+          reason: '$language must translate $key',
+        );
       }
     }
   });
@@ -120,6 +126,17 @@ void main() {
       BookingContactPreference.normalizeInternationalPhone('+66', '123'),
       '',
     );
+    expect(
+      BookingContactPreference.normalizeInternationalPhone(
+        '+82',
+        '010-1234-5678',
+      ),
+      '+821012345678',
+    );
+    expect(
+      BookingContactPreference.formatInternationalPhone('+821012345678'),
+      '+82 10-1234-5678',
+    );
   });
 
   testWidgets('shows all four choices and channel-specific inputs', (
@@ -138,6 +155,16 @@ void main() {
     expect(find.byKey(const ValueKey('booking-contact-phone')), findsOneWidget);
     expect(find.text('LOGIN_ACTION'), findsOneWidget);
 
+    await tester.enterText(
+      find.byKey(const ValueKey('booking-contact-phone')),
+      '010-1234-5678',
+    );
+
+    final card = tester.getSize(
+      find.byKey(const ValueKey('booking-contact-KAKAO')),
+    );
+    expect(card.height, inInclusiveRange(64, 72));
+
     final whatsapp = find.byKey(
       const ValueKey('booking-contact-WHATSAPP'),
       skipOffstage: false,
@@ -148,6 +175,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('booking-messenger-id')), findsNothing);
     expect(find.byKey(const ValueKey('booking-contact-phone')), findsOneWidget);
+    expect(find.text('010-1234-5678'), findsOneWidget);
     expect(find.text('LOGIN_ACTION'), findsNothing);
   });
 }

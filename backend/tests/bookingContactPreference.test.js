@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createBookingSchema } = require('../src/validators/booking.validator');
 const { normalizeMessengerType } = require('../src/utils/customerMessengerFields');
+const BookingService = require('../src/services/booking.service');
+const CONTACT_STATUS = require('../src/constants/contactStatus');
 
 function payload(customer) {
   return {
@@ -59,5 +61,18 @@ test('requires international WhatsApp and SMS numbers', () => {
       phone: '+66812345678',
     }));
     assert.equal(valid.error, undefined);
+  }
+});
+
+test('all preferred contact channels start unverified even when a phone exists', () => {
+  const service = new BookingService(null, null, null, null, null, null, null);
+  for (const messengerType of ['KAKAO', 'LINE', 'WHATSAPP', 'SMS']) {
+    assert.equal(
+      service.resolveInitialContactStatus({
+        messengerType,
+        phone: '+821012345678',
+      }),
+      CONTACT_STATUS.PENDING,
+    );
   }
 });

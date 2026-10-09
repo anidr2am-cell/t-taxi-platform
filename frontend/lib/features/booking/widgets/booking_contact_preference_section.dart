@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
+import '../../auth/widgets/social_brand_icons.dart';
 import '../models/booking_wizard_state.dart';
 import '../utils/booking_contact_preference.dart';
 
@@ -66,9 +67,22 @@ class _BookingContactPreferenceSectionState
     _ => l10n.t('booking_contact_phone_sms'),
   };
 
-  IconData _icon(String type) => switch (type) {
-    BookingContactPreference.sms => Icons.phone_outlined,
-    _ => Icons.chat_bubble_outline,
+  Widget _icon(String type) => switch (type) {
+    BookingContactPreference.kakao => const KakaoBrandIcon(
+      size: 24,
+      style: SocialBrandIconStyle.appIcon,
+    ),
+    BookingContactPreference.line => const LineBrandIcon(
+      size: 24,
+      style: SocialBrandIconStyle.appIcon,
+    ),
+    BookingContactPreference.whatsapp => Image.asset(
+      'assets/images/brands/whatsapp_app_icon.png',
+      width: 24,
+      height: 24,
+      fit: BoxFit.contain,
+    ),
+    _ => const Icon(Icons.phone_outlined, color: AppTokens.primary, size: 24),
   };
 
   @override
@@ -101,7 +115,7 @@ class _BookingContactPreferenceSectionState
         const SizedBox(height: AppTokens.spaceSm),
         GridView.count(
           crossAxisCount: 2,
-          childAspectRatio: 2.4,
+          mainAxisExtent: 68,
           mainAxisSpacing: AppTokens.spaceSm,
           crossAxisSpacing: AppTokens.spaceSm,
           shrinkWrap: true,
@@ -128,7 +142,7 @@ class _BookingContactPreferenceSectionState
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(_icon(value), color: AppTokens.primary, size: 20),
+                      _icon(value),
                       const SizedBox(width: AppTokens.spaceXs),
                       Flexible(
                         child: Text(

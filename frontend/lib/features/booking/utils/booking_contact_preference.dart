@@ -47,6 +47,30 @@ class BookingContactPreference {
   static bool allowsEmergencyPhone(String type) =>
       type == kakao || type == line;
 
+  static String labelKey(String? value) => switch (normalize(value)) {
+    kakao => 'booking_contact_kakao',
+    line => 'booking_contact_line',
+    whatsapp => 'booking_contact_whatsapp',
+    _ => 'booking_contact_phone_sms',
+  };
+
+  static String formatInternationalPhone(String value) {
+    final normalized = value.replaceAll(RegExp(r'[^\d+]'), '');
+    if (RegExp(r'^\+82\d{10}$').hasMatch(normalized)) {
+      return '${normalized.substring(0, 3)} ${normalized.substring(3, 5)}-${normalized.substring(5, 9)}-${normalized.substring(9)}';
+    }
+    if (RegExp(r'^\+66\d{9}$').hasMatch(normalized)) {
+      return '${normalized.substring(0, 3)} ${normalized.substring(3, 5)}-${normalized.substring(5, 8)}-${normalized.substring(8)}';
+    }
+    if (RegExp(r'^\+81\d{10}$').hasMatch(normalized)) {
+      return '${normalized.substring(0, 3)} ${normalized.substring(3, 5)}-${normalized.substring(5, 9)}-${normalized.substring(9)}';
+    }
+    if (RegExp(r'^\+86\d{11}$').hasMatch(normalized)) {
+      return '${normalized.substring(0, 3)} ${normalized.substring(3, 6)}-${normalized.substring(6, 10)}-${normalized.substring(10)}';
+    }
+    return normalized;
+  }
+
   static String normalizeInternationalPhone(
     String dialCode,
     String localNumber,
@@ -57,7 +81,8 @@ class BookingContactPreference {
       'JP': '+81',
       'CN': '+86',
     };
-    final resolvedDial = countryDialCodes[dialCode.trim().toUpperCase()] ?? dialCode;
+    final resolvedDial =
+        countryDialCodes[dialCode.trim().toUpperCase()] ?? dialCode;
     var dial = resolvedDial.replaceAll(RegExp(r'\D'), '');
     var local = localNumber.replaceAll(RegExp(r'\D'), '');
     if (local.startsWith('0')) local = local.substring(1);

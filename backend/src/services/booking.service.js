@@ -821,13 +821,8 @@ class BookingService {
   }
 
   resolveInitialContactStatus(customer = {}) {
-    const preferredMessenger = String(customer.messengerType ?? '').trim().toUpperCase();
-    if (['KAKAO', 'LINE'].includes(preferredMessenger)) {
-      return CONTACT_STATUS.PENDING;
-    }
-    return this.shouldDeferDispatchUntilContactVerified()
-      ? CONTACT_STATUS.PENDING
-      : CONTACT_STATUS.VERIFIED;
+    void customer;
+    return CONTACT_STATUS.PENDING;
   }
 
   async dispatchAfterContactVerified(bookingRow, options = {}) {

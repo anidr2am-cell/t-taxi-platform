@@ -61,7 +61,7 @@ test('create uses pending contact status when feature flag enabled', () => {
   delete require.cache[require.resolve('../src/services/booking.service')];
 });
 
-test('create uses verified contact status when feature flag disabled', () => {
+test('create keeps contact pending while dispatch proceeds when feature flag disabled', () => {
   const previous = process.env.CONTACT_CONNECTION_REQUIRED;
   process.env.CONTACT_CONNECTION_REQUIRED = 'false';
   delete require.cache[require.resolve('../src/config/env')];
@@ -70,7 +70,7 @@ test('create uses verified contact status when feature flag disabled', () => {
   const BookingServiceFresh = require('../src/services/booking.service');
   const CONTACT_STATUS = require('../src/constants/contactStatus');
   const service = new BookingServiceFresh({}, {}, {}, {}, {}, {}, null, null, null, null, null, null, null, null, null, null);
-  assert.equal(service.resolveInitialContactStatus(), CONTACT_STATUS.VERIFIED);
+  assert.equal(service.resolveInitialContactStatus(), CONTACT_STATUS.PENDING);
   assert.equal(service.shouldDeferDispatchUntilContactVerified(), false);
   process.env.CONTACT_CONNECTION_REQUIRED = previous;
   delete require.cache[require.resolve('../src/config/env')];

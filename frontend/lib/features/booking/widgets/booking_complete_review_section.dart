@@ -4,6 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../utils/pricing_display.dart';
+import '../utils/booking_contact_preference.dart';
 import '../models/booking_complete_review.dart';
 import '../models/country_option.dart';
 
@@ -88,11 +89,6 @@ class BookingCompleteReviewSection extends StatelessWidget {
                   label: l10n.t('email'),
                   value: review.customerEmail.trim(),
                 ),
-              if (review.customerPhone.trim().isNotEmpty)
-                AppUi.summaryRow(
-                  label: l10n.t('phone'),
-                  value: review.customerPhone.trim(),
-                ),
               if (review.showCountryCode)
                 AppUi.summaryRow(
                   label: l10n.t('country'),
@@ -101,15 +97,25 @@ class BookingCompleteReviewSection extends StatelessWidget {
                     l10n,
                   ),
                 ),
-              if (review.messengerType.trim().isNotEmpty)
+              if (review.messengerType.trim().isNotEmpty &&
+                  review.messengerId.trim().isNotEmpty)
                 AppUi.summaryRow(
-                  label: l10n.t('messenger_type'),
-                  value: review.messengerType.trim(),
+                  label: l10n.t('booking_contact_method_summary'),
+                  value:
+                      '${l10n.t(BookingContactPreference.labelKey(review.messengerType))} · ${BookingContactPreference.usesPhone(BookingContactPreference.normalize(review.messengerType)) ? BookingContactPreference.formatInternationalPhone(review.messengerId) : review.messengerId.trim()}',
                 ),
-              if (review.messengerId.trim().isNotEmpty)
+              if (BookingContactPreference.allowsEmergencyPhone(
+                    BookingContactPreference.normalize(review.messengerType),
+                  ) &&
+                  review.customerPhone.trim().isNotEmpty)
                 AppUi.summaryRow(
-                  label: l10n.t('messenger_id'),
-                  value: review.messengerId.trim(),
+                  label: l10n.t('booking_contact_emergency_summary'),
+                  value: BookingContactPreference.formatInternationalPhone(
+                    BookingContactPreference.normalizeInternationalPhone(
+                      review.customerCountryCode,
+                      review.customerPhone,
+                    ),
+                  ),
                 ),
               if (review.showAdditionalRequests)
                 AppUi.summaryRow(
