@@ -7,6 +7,23 @@ import 'package:frontend/features/booking/services/recent_locations_storage.dart
 import 'support/booking_wizard_test_helpers.dart';
 
 void main() {
+  test('create request normalizes Korean contact phone to E.164', () async {
+    final controller = await buildContractAirportPickupController();
+    await controller.updateCustomerInfo(
+      phone: '010-1234-5678',
+      countryCode: '+82',
+      messengerType: 'WHATSAPP',
+      messengerId: '+821012345678',
+    );
+
+    final customer = Map<String, dynamic>.from(
+      controller.buildCreatePayload()['customer'] as Map,
+    );
+    expect(customer['phone'], '+821012345678');
+    expect(customer['messengerType'], 'WHATSAPP');
+    expect(customer['messengerId'], '+821012345678');
+  });
+
   test(
     'buildCreatePayload preserves full airport pickup create contract fields',
     () async {

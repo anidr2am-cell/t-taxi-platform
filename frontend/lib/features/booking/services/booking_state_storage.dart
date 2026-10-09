@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/booking_wizard_state.dart';
 import '../models/booking_wizard_steps.dart';
+import '../utils/booking_contact_preference.dart';
 import '../utils/transitional_messenger_placeholders.dart';
 
 /// TTL-backed local draft envelope for in-progress booking wizard input.
@@ -68,8 +69,10 @@ class BookingStateStorage {
   static BookingWizardState persistableState(BookingWizardState state) {
     return state.copyWith(
       step: BookingWizardSteps.clampStep(state.step),
-      messengerType: TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
-        state.messengerType,
+      messengerType: BookingContactPreference.normalize(
+        TransitionalMessengerPlaceholders.sanitizeMessengerTypeField(
+          state.messengerType,
+        ),
       ),
       messengerId: TransitionalMessengerPlaceholders.sanitizeMessengerIdField(
         state.messengerId,

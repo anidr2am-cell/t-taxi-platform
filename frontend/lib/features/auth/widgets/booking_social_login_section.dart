@@ -20,6 +20,7 @@ class BookingSocialLoginSection extends StatefulWidget {
     this.lineReturnContext,
     this.showKakaoButton,
     this.showLineButton,
+    this.showGoogleButton = true,
   });
 
   final AuthController? authController;
@@ -28,6 +29,7 @@ class BookingSocialLoginSection extends StatefulWidget {
   final SocialLoginReturnContext? lineReturnContext;
   final bool? showKakaoButton;
   final bool? showLineButton;
+  final bool showGoogleButton;
 
   @override
   State<BookingSocialLoginSection> createState() =>
@@ -121,18 +123,19 @@ class _BookingSocialLoginSectionState extends State<BookingSocialLoginSection> {
           errorMessage: controller.errorMessage,
           showKakaoButton: _shouldShowKakaoButton(controller),
           showLineButton: _shouldShowLineButton(controller),
+          showGoogleButton: widget.showGoogleButton,
           onLater: () => setState(() => _dismissed = true),
           onGoogleSignInPressed: controller.isLoading
               ? null
               : () => controller.signInWithGoogle(
-                    claimContext: widget.claimContext,
-                  ),
-          onKakaoSignInPressed: controller.isLoading ||
-                  widget.kakaoReturnContext == null
+                  claimContext: widget.claimContext,
+                ),
+          onKakaoSignInPressed:
+              controller.isLoading || widget.kakaoReturnContext == null
               ? null
               : () => controller.beginKakaoSignIn(widget.kakaoReturnContext!),
-          onLineSignInPressed: controller.isLoading ||
-                  widget.lineReturnContext == null
+          onLineSignInPressed:
+              controller.isLoading || widget.lineReturnContext == null
               ? null
               : () => controller.beginLineSignIn(widget.lineReturnContext!),
         );
@@ -153,9 +156,7 @@ class AuthScope extends InheritedWidget {
   }
 
   static AuthController? maybeOf(BuildContext context) {
-    return context
-        .getInheritedWidgetOfExactType<AuthScope>()
-        ?.controller;
+    return context.getInheritedWidgetOfExactType<AuthScope>()?.controller;
   }
 
   @override
@@ -170,6 +171,7 @@ class _PromptCard extends StatelessWidget {
     required this.errorMessage,
     required this.showKakaoButton,
     required this.showLineButton,
+    required this.showGoogleButton,
     required this.onLater,
     required this.onGoogleSignInPressed,
     required this.onKakaoSignInPressed,
@@ -181,6 +183,7 @@ class _PromptCard extends StatelessWidget {
   final String? errorMessage;
   final bool showKakaoButton;
   final bool showLineButton;
+  final bool showGoogleButton;
   final VoidCallback onLater;
   final VoidCallback? onGoogleSignInPressed;
   final VoidCallback? onKakaoSignInPressed;
@@ -219,14 +222,15 @@ class _PromptCard extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: AppTokens.spaceMd),
-              GoogleSignInButton(
-                label: l10n.t('auth_google_continue'),
-                locale: l10n.languageCode,
-                loading: isLoading,
-                onPressed: onGoogleSignInPressed,
-              ),
+              if (showGoogleButton)
+                GoogleSignInButton(
+                  label: l10n.t('auth_google_continue'),
+                  locale: l10n.languageCode,
+                  loading: isLoading,
+                  onPressed: onGoogleSignInPressed,
+                ),
               if (showKakaoButton) ...[
-                const SizedBox(height: AppTokens.spaceSm),
+                if (showGoogleButton) const SizedBox(height: AppTokens.spaceSm),
                 KakaoSignInButton(
                   label: l10n.t('auth_kakao_continue'),
                   loading: isLoading,
@@ -234,7 +238,8 @@ class _PromptCard extends StatelessWidget {
                 ),
               ],
               if (showLineButton) ...[
-                const SizedBox(height: AppTokens.spaceSm),
+                if (showGoogleButton || showKakaoButton)
+                  const SizedBox(height: AppTokens.spaceSm),
                 LineSignInButton(
                   label: l10n.t('auth_line_continue'),
                   loading: isLoading,
@@ -282,7 +287,10 @@ class _ConnectedCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.check_circle_outline, color: AppTokens.success),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: AppTokens.success,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(

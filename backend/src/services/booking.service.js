@@ -820,10 +820,9 @@ class BookingService {
     return isContactConnectionRequired();
   }
 
-  resolveInitialContactStatus() {
-    return this.shouldDeferDispatchUntilContactVerified()
-      ? CONTACT_STATUS.PENDING
-      : CONTACT_STATUS.VERIFIED;
+  resolveInitialContactStatus(customer = {}) {
+    void customer;
+    return CONTACT_STATUS.PENDING;
   }
 
   async dispatchAfterContactVerified(bookingRow, options = {}) {
@@ -1219,7 +1218,7 @@ class BookingService {
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
         status: BOOKING_STATUS.OPEN,
-        contactStatus: this.resolveInitialContactStatus(),
+        contactStatus: this.resolveInitialContactStatus(input.customer),
         serviceTypeId: serviceType.id,
         originAddress,
         originPlaceId: origin.placeId ?? null,
@@ -1243,7 +1242,7 @@ class BookingService {
         customerName: input.customer.name,
         nameSignText: input.options?.nameSign ? input.options.nameSignText : null,
         customerEmail: input.customer?.email ?? null,
-        customerPhone: input.customer.phone,
+        customerPhone: input.customer.phone || null,
         customerCountryCode: input.customer.countryCode?.trim() || null,
         specialRequests: input.additionalRequests ?? input.specialRequests ?? null,
         preferFemaleDriver: Boolean(input.options?.preferFemaleDriver),

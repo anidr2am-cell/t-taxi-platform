@@ -2027,8 +2027,27 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           ),
           AppUi.summaryRow(
             label: l10n.t('phone'),
-            value: customer['phone'] as String? ?? '',
+            value: (customer['phone'] as String?)?.trim().isNotEmpty == true
+                ? customer['phone'] as String
+                : '-',
           ),
+          if (customer['contactUnverified'] == true)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppTokens.spaceSm),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AppUi.statusBadge(
+                  l10n.t(
+                    customer['contactUnverifiedUrgent'] == true
+                        ? 'admin_contact_unverified_urgent'
+                        : 'admin_contact_unverified',
+                  ),
+                  tone: customer['contactUnverifiedUrgent'] == true
+                      ? AppStatusTone.error
+                      : AppStatusTone.warning,
+                ),
+              ),
+            ),
           AppUi.summaryRow(
             label: l10n.t('admin_contact_status'),
             value: l10n.t(
@@ -2099,7 +2118,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           if (customer['messengerType'] != null &&
               customer['messengerType'] != 'PENDING')
             AppUi.summaryRow(
-              label: l10n.t('messenger_type'),
+              label: l10n.t('admin_preferred_contact'),
               value: customer['messengerType'] as String,
             ),
           if (customer['messengerId'] != null &&

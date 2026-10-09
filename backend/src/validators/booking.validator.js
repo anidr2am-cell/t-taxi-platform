@@ -12,7 +12,10 @@ const {
   normalizeFlightNumber,
 } = require('../utils/flightNumber.util');
 const { marketingAttributionSchema } = require('../utils/marketingAttribution.util');
-const { stripTransitionalMessengerPlaceholders } = require('../utils/customerMessengerFields');
+const {
+  stripTransitionalMessengerPlaceholders,
+  normalizeMessengerType,
+} = require('../utils/customerMessengerFields');
 const { CUSTOMER_PAYMENT_METHODS, TRANSFER_CURRENCIES } = require('../utils/customerPayment');
 
 const luggageCountField = Joi.number().integer().min(0).default(0);
@@ -150,11 +153,32 @@ const createBookingSchema = Joi.object({
   customer: Joi.object({
     name: unicodeText({ max: 100 }),
     email: optionalEmailField,
-    phone: Joi.string().max(30).required(),
+    phone: Joi.string().trim().max(30).allow(null, '').empty('').default(null),
     countryCode: optionalCountryField,
     messengerType: Joi.string().trim().min(1).max(30).optional(),
     messengerId: Joi.string().trim().min(1).max(100).optional(),
-  }).required().custom((customer) => stripTransitionalMessengerPlaceholders(customer)),
+  }).required().custom((rawCustomer, helpers) => {
+    const customer = stripTransitionalMessengerPlaceholders(rawCustomer);
+    const type = normalizeMessengerType(customer.messengerType);
+    const id = customer.messengerId?.trim();
+    if ((type && !id) || (!type && id)) {
+      return helpers.message('messengerType and messengerId are required together');
+    }
+    // Keep phone-only requests from an already-open older web/app build working
+    // while the new contact preference UI is rolled out. New clients require a
+    // messenger selection before submission; when either messenger field is
+    // supplied, both fields are required here.
+    if (!type && !id) {
+      return customer;
+    }
+    if (['WHATSAPP', 'SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(id)) {
+      return helpers.message('WhatsApp and phone contacts must use an international number');
+    }
+    if (customer.phone && !/^\+[1-9]\d{6,14}$/.test(customer.phone)) {
+      return helpers.message('customer phone must use an international number');
+    }
+    return { ...customer, messengerType: type, messengerId: id };
+  }),
   payment: Joi.object({
     method: Joi.string().valid(...Object.values(CUSTOMER_PAYMENT_METHODS)).default('PAY_DRIVER'),
     transferCurrency: Joi.when('method', {

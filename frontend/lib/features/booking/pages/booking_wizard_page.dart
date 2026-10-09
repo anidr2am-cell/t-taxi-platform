@@ -31,6 +31,8 @@ import '../widgets/step_vehicle_select.dart';
 import '../widgets/wizard_compact.dart';
 import '../widgets/wizard_status_views.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
+import '../../auth/models/social_login_return_context.dart';
+import '../utils/booking_contact_preference.dart';
 
 class BookingWizardPage extends StatefulWidget {
   const BookingWizardPage({
@@ -61,6 +63,53 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
   final ScrollController _scrollController = ScrollController();
   int? _lastTrackedStep;
   bool _sessionStartedTracked = false;
+  String? _contactDefaultsSignature;
+
+  void _syncContactDefaults(String locale) {
+    if (!_controller.isInitialized) return;
+    final auth = AuthScope.maybeOf(context);
+    final user = auth?.user;
+    final signature =
+        '$locale:${user?.id}:${user?.authProvider}:${user?.name}:${user?.phone}';
+    if (_contactDefaultsSignature == signature) return;
+    _contactDefaultsSignature = signature;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _controller.applyCustomerContactDefaults(
+        languageCode: locale,
+        authProvider: user?.authProvider,
+        profileName: user?.name,
+        profilePhone: user?.phone,
+      );
+    });
+  }
+
+  Widget? _contactLoginPrompt(BookingWizardState state) {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) return null;
+    if (auth.isLoggedIn) return null;
+    final type = BookingContactPreference.normalize(state.messengerType);
+    if (type != BookingContactPreference.kakao &&
+        type != BookingContactPreference.line) {
+      return null;
+    }
+    final kakao = SocialLoginReturnContext.fromBookingWizard(
+      baseUri: Uri.base,
+      forLine: false,
+    );
+    final line = SocialLoginReturnContext.fromBookingWizard(
+      baseUri: Uri.base,
+      forLine: true,
+    );
+    return BookingSocialLoginSection(
+      showGoogleButton: false,
+      showKakaoButton: type == BookingContactPreference.kakao,
+      showLineButton: type == BookingContactPreference.line,
+      claimContext: type == BookingContactPreference.kakao ? kakao : line,
+      kakaoReturnContext: kakao,
+      lineReturnContext: line,
+    );
+  }
 
   void _syncAnalytics(BuildContext context) {
     if (!_controller.isInitialized) return;
@@ -318,6 +367,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         meetingVehicleInfo: AirportMeetingVehicleInfo(
           vehicleType: snapshot.selectedVehicle,
         ),
+        preferredChannel: snapshot.messengerType,
       );
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -465,11 +515,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
           nameFocusNode: _customerNameFocusNode,
           onNameChanged: (v) => _controller.updateCustomerInfo(name: v),
           onEmailChanged: (v) => _controller.updateCustomerInfo(email: v),
-          onPhoneChanged: (v) => _controller.updateCustomerInfo(phone: v),
-          onCountryChanged: (v) =>
-              _controller.updateCustomerInfo(countryCode: v),
+          onPhoneChanged: _controller.updateContactPhone,
+          onCountryChanged: _controller.updateContactDialCode,
+          onMessengerTypeChanged: _controller.updateContactType,
+          onMessengerIdChanged: (v) =>
+              _controller.updateCustomerInfo(messengerId: v),
           onAdditionalRequestsChanged: (v) =>
               _controller.updateCustomerInfo(additionalRequests: v),
+          loginPrompt: _contactLoginPrompt(state),
         );
       case BookingWizardSteps.review:
         return StepConfirmation(
@@ -506,6 +559,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
+        _syncContactDefaults(locale);
         if (!_controller.isInitialized) {
           return const Scaffold(body: WizardLoadingView());
         }

@@ -19,6 +19,7 @@ class BookingContactConnectArgs {
     this.selectedVehicle,
     this.isUrgent = false,
     this.meetingVehicleInfo,
+    this.preferredChannel,
   });
 
   final BookingCreateResult result;
@@ -34,4 +35,5 @@ class BookingContactConnectArgs {
   final String? selectedVehicle;
   final bool isUrgent;
   final AirportMeetingVehicleInfo? meetingVehicleInfo;
+  final String? preferredChannel;
 }

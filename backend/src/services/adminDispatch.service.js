@@ -16,6 +16,7 @@ const {
   ADMIN_RELEASED_REASON_CODE,
 } = require("../constants/bookingAssignmentRelease.constants");
 const { formatServiceDateTimeIso } = require("../utils/serviceDateTime.util");
+const { normalizeMessengerType } = require("../utils/customerMessengerFields");
 const { emitDriverAssignmentReleased } = require("../socket/realtime");
 const {
   assertBookingDispatchEligible,
@@ -186,6 +187,13 @@ class AdminDispatchService {
     const operations = this.adminOperationsService.evaluateOperations(row);
     const metadata = this.parseMetadata(row.metadata) ?? {};
     const locationNames = this.locationNamesFromMetadata(metadata);
+    const contactUnverified = !String(row.customer_phone ?? '').trim()
+      && (row.contact_status ?? 'VERIFIED') !== 'VERIFIED';
+    const pickupMs = new Date(row.scheduled_pickup_at).getTime();
+    const contactUnverifiedUrgent = contactUnverified
+      && Number.isFinite(pickupMs)
+      && pickupMs >= Date.now()
+      && pickupMs - Date.now() <= 24 * 60 * 60 * 1000;
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -209,6 +217,8 @@ class AdminDispatchService {
       contactStatus: row.contact_status ?? 'VERIFIED',
       contactChannel: row.contact_channel ?? null,
       contactRequestedAt: row.contact_requested_at ?? null,
+      contactUnverified,
+      contactUnverifiedUrgent,
       passengerCount,
       luggageSummary: this.formatLuggageSummary(row),
       vehicleType: {
@@ -566,8 +576,17 @@ class AdminDispatchService {
         email: row.customer_email,
         phone: row.customer_phone,
         countryCode: row.customer_country_code,
-        messengerType: metadata?.messengerType ?? null,
+        messengerType: normalizeMessengerType(metadata?.messengerType)
+          ?? metadata?.messengerType
+          ?? null,
         messengerId: metadata?.messengerId ?? null,
+        contactUnverified: !String(row.customer_phone ?? '').trim()
+          && (row.contact_status ?? 'VERIFIED') !== 'VERIFIED',
+        contactUnverifiedUrgent: !String(row.customer_phone ?? '').trim()
+          && (row.contact_status ?? 'VERIFIED') !== 'VERIFIED'
+          && Number.isFinite(new Date(row.scheduled_pickup_at).getTime())
+          && new Date(row.scheduled_pickup_at).getTime() >= Date.now()
+          && new Date(row.scheduled_pickup_at).getTime() - Date.now() <= 24 * 60 * 60 * 1000,
         contactStatus: row.contact_status ?? 'VERIFIED',
         contactChannel: row.contact_channel ?? null,
         contactRequestedAt: row.contact_requested_at ?? null,
