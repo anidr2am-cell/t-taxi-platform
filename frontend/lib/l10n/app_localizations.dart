@@ -622,7 +622,7 @@ class AppLocalizations {
       'payment_details_contact_admin':
           'Please contact an administrator for payment details.',
       'customer_price_conditions':
-          'Tolls, airport parking fees, and extra waiting charges may vary depending on the booking conditions.',
+          'The price shown is your final price. Highway tolls, airport parking and flight-delay waiting are all included — no extra charges.',
       'customer_luggage_guidance':
           'Add large suitcases and golf bags accurately so we can recommend a suitable vehicle. Capacity depends on the final vehicle assigned.',
       'customer_vehicle_guidance':
@@ -1592,9 +1592,6 @@ class AppLocalizations {
       'admin_pricing_dialog_copy_route': 'Copy route #{id}',
       'admin_pricing_sim_calculate': 'Calculate',
       'admin_pricing_sim_name_sign': 'Name sign',
-      'admin_pricing_sim_waiting': 'Waiting',
-      'admin_pricing_sim_parking': 'Parking',
-      'admin_pricing_sim_toll': 'Toll',
       'admin_pricing_sim_total': 'Total: {amount} {currency}',
       'admin_flight_sync_title': 'Automatic flight sync',
       'admin_flight_running': 'Running',
@@ -1867,11 +1864,11 @@ class AppLocalizations {
       'wizard_same_place_error': 'Origin and destination cannot be the same.',
       'wizard_swap_route': 'Swap locations',
       'wizard_trust_toll_included': 'Highway tolls included',
-      'wizard_trust_no_airport_parking': 'No airport parking fees',
+      'wizard_trust_no_airport_parking': 'Airport parking included',
       'wizard_trust_no_night_surcharge':
           'No late-night or early-morning surcharge',
       'wizard_trust_flight_delay_wait':
-          'Free waiting if your flight is delayed',
+          'Flight delayed? Pickup adjusted to your arrival',
       'wizard_places_searching': 'Searching places…',
       'wizard_places_no_results_hint':
           'No places matched. Try a different search term or pick a location on the map.',
@@ -2341,7 +2338,7 @@ class AppLocalizations {
           '예약자명과 입금자의 이름이 다른 경우 관리자에게 입금자명을 보내주셔야 처리가 완료됩니다.',
       'payment_details_contact_admin': '결제 안내가 보이지 않으면 관리자에게 문의해 주세요.',
       'customer_price_conditions':
-          '통행료, 공항 주차비 및 추가 대기요금은 예약 조건에 따라 달라질 수 있습니다.',
+          '표시된 요금이 최종 요금입니다. 고속도로 통행료·공항 주차비·항공편 지연 대기가 모두 포함되어 추가 요금이 없습니다.',
       'customer_luggage_guidance':
           '대형 캐리어와 골프백 수량을 정확히 입력해 주세요. 최종 수용 가능 여부는 배정 차량에 따라 달라질 수 있습니다.',
       'customer_vehicle_guidance': '승객 또는 수하물이 많으면 추천 차량보다 작은 차량은 선택할 수 없습니다.',
@@ -2529,9 +2526,9 @@ class AppLocalizations {
       'wizard_same_place_error': '출발지와 도착지가 같을 수 없습니다.',
       'wizard_swap_route': '출발지/도착지 교환',
       'wizard_trust_toll_included': '고속도로 통행료 포함',
-      'wizard_trust_no_airport_parking': '공항 주차비 없음',
+      'wizard_trust_no_airport_parking': '공항 주차비 포함',
       'wizard_trust_no_night_surcharge': '심야·새벽 추가요금 없음',
-      'wizard_trust_flight_delay_wait': '항공편 지연 시 무료 대기',
+      'wizard_trust_flight_delay_wait': '항공편 지연 시 도착 시각에 맞춰 픽업',
       'wizard_places_searching': '장소 검색 중…',
       'wizard_places_no_results_hint':
           '검색 결과가 없습니다. 다른 검색어를 입력하거나 지도에서 선택해 주세요.',
@@ -3095,9 +3092,6 @@ class AppLocalizations {
       'admin_pricing_dialog_copy_route': '노선 #{id} 복사',
       'admin_pricing_sim_calculate': '계산',
       'admin_pricing_sim_name_sign': '피켓',
-      'admin_pricing_sim_waiting': '대기',
-      'admin_pricing_sim_parking': '주차',
-      'admin_pricing_sim_toll': '통행료',
       'admin_pricing_sim_total': '합계: {amount} {currency}',
       'admin_flight_sync_title': '자동 항공편 동기화',
       'admin_flight_running': '실행 중',
@@ -3662,7 +3656,7 @@ class AppLocalizations {
       'payment_depositor_name_notice':
           '如果预订人姓名与汇款人姓名不同，请将汇款人姓名发送给管理员，以便完成处理。',
       'payment_details_contact_admin': '如未显示付款信息，请联系管理员。',
-      'customer_price_conditions': '过路费、机场停车费和额外等待费可能根据预约条件而有所不同。',
+      'customer_price_conditions': '显示的价格即为最终价格。已包含高速公路通行费、机场停车费及航班延误等待，无任何额外费用。',
       'customer_luggage_guidance': '请准确填写大件行李和高尔夫球包数量，以便推荐合适车辆。实际容量取决于最终分配车辆。',
       'customer_vehicle_guidance': '乘客或行李较多时，可能无法选择小于推荐车型的车辆。',
       'customer_vehicle_not_suitable': '不适合所选乘客或行李条件。',
@@ -4099,9 +4093,9 @@ class AppLocalizations {
       'wizard_same_place_error': '出发地和目的地不能相同。',
       'wizard_swap_route': '交换出发地/目的地',
       'wizard_trust_toll_included': '含高速公路通行费',
-      'wizard_trust_no_airport_parking': '无机场停车费',
+      'wizard_trust_no_airport_parking': '含机场停车费',
       'wizard_trust_no_night_surcharge': '无深夜/凌晨附加费',
-      'wizard_trust_flight_delay_wait': '航班延误时免费等待',
+      'wizard_trust_flight_delay_wait': '航班延误时按实际到达时间接机',
       'wizard_places_searching': '正在搜索地点…',
       'wizard_places_no_results_hint': '未找到地点。请尝试其他关键词或在地图上选择。',
       'wizard_summary_expand': '展开预约摘要',
@@ -4541,7 +4535,7 @@ class AppLocalizations {
       'payment_depositor_name_notice':
           '予約者名と振込名義が異なる場合は、処理完了のため振込名義を管理者へお知らせください。',
       'payment_details_contact_admin': '支払い情報が表示されない場合は、管理者へお問い合わせください。',
-      'customer_price_conditions': '通行料、空港駐車料金、追加待機料金は予約条件により変動する場合があります。',
+      'customer_price_conditions': '表示料金が最終料金です。高速道路料金・空港駐車場代・フライト遅延時の待機がすべて含まれ、追加料金はありません。',
       'customer_luggage_guidance':
           '大型スーツケースやゴルフバッグの数を正確に入力してください。実際の積載可否は割り当て車両により異なります。',
       'customer_vehicle_guidance': '乗客または荷物が多い場合、推奨より小さい車両は選択できないことがあります。',
@@ -5005,9 +4999,9 @@ class AppLocalizations {
       'wizard_same_place_error': '出発地と目的地を同じにすることはできません。',
       'wizard_swap_route': '出発地/目的地を入れ替え',
       'wizard_trust_toll_included': '高速道路通行料込み',
-      'wizard_trust_no_airport_parking': '空港駐車料金なし',
+      'wizard_trust_no_airport_parking': '空港駐車場代込み',
       'wizard_trust_no_night_surcharge': '深夜・早朝追加料金なし',
-      'wizard_trust_flight_delay_wait': 'フライト遅延時は無料待機',
+      'wizard_trust_flight_delay_wait': 'フライト遅延時は到着時刻に合わせてお迎え',
       'wizard_places_searching': '場所を検索中…',
       'wizard_places_no_results_hint': '該当する場所がありません。別のキーワードを試すか、地図から選択してください。',
       'wizard_summary_expand': '予約概要を表示',
@@ -5478,7 +5472,7 @@ class AppLocalizations {
       'payment_details_contact_admin':
           'หากไม่เห็นข้อมูลการชำระเงิน โปรดติดต่อผู้ดูแลระบบ',
       'customer_price_conditions':
-          'ค่าทางด่วน ค่าจอดรถสนามบิน และค่ารอเพิ่มเติมอาจแตกต่างกันตามเงื่อนไขการจอง',
+          'ราคาที่แสดงเป็นราคาสุดท้าย รวมค่าทางด่วน ค่าจอดรถสนามบิน และการรอกรณีเที่ยวบินล่าช้าแล้ว ไม่มีค่าใช้จ่ายเพิ่มเติม',
       'customer_luggage_guidance':
           'กรุณาระบุจำนวนกระเป๋าใบใหญ่และถุงกอล์ฟให้ถูกต้อง เพื่อให้เราแนะนำรถที่เหมาะสม ความจุจริงขึ้นอยู่กับรถที่ได้รับมอบหมาย',
       'customer_vehicle_guidance':
@@ -6031,9 +6025,9 @@ class AppLocalizations {
       'wizard_same_place_error': 'จุดต้นทางและปลายทางต้องไม่เหมือนกัน',
       'wizard_swap_route': 'สลับต้นทาง/ปลายทาง',
       'wizard_trust_toll_included': 'รวมค่าทางด่วนแล้ว',
-      'wizard_trust_no_airport_parking': 'ไม่มีค่าจอดรถสนามบิน',
+      'wizard_trust_no_airport_parking': 'รวมค่าจอดรถสนามบินแล้ว',
       'wizard_trust_no_night_surcharge': 'ไม่มีค่าบริการเพิ่มช่วงดึก/เช้ามืด',
-      'wizard_trust_flight_delay_wait': 'รอฟรีหากเที่ยวบินล่าช้า',
+      'wizard_trust_flight_delay_wait': 'เที่ยวบินล่าช้า ปรับเวลารับตามเวลาถึงจริง',
       'wizard_places_searching': 'กำลังค้นหาสถานที่…',
       'wizard_places_no_results_hint':
           'ไม่พบสถานที่ ลองคำค้นหาอื่นหรือเลือกจากแผนที่',

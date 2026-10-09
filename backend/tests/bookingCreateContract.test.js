@@ -214,6 +214,40 @@ test('createBooking stores server charge items and initial total_amount zero', a
   assert.equal(result.totalAmount, SERVER_PRICE.totalAmount);
 });
 
+test('createBooking persists no separate included-cost charge items for legacy option flags', async () => {
+  const includedFarePrice = {
+    ...SERVER_PRICE,
+    totalAmount: 1300,
+    chargeItems: [...SERVER_PRICE.chargeItems],
+  };
+  const pricingService = {
+    async calculate() {
+      return includedFarePrice;
+    },
+    async resolveServiceType() {
+      return { id: 1, code: 'AIRPORT_PICKUP', name: 'Airport Pickup' };
+    },
+  };
+  const { service, calls } = createHarness({ pricingService });
+
+  await service.createBooking({
+    ...CREATE_INPUT,
+    options: {
+      nameSign: false,
+      waiting: true,
+      parking: true,
+      toll: true,
+    },
+  }, null);
+
+  assert.equal(calls.chargeItems.length, 1);
+  assert.deepEqual(calls.chargeItems.map((item) => item.chargeType), ['VEHICLE_BASE']);
+  assert.equal(
+    calls.chargeItems.some((item) => ['TOLL_GATE', 'WAITING_CHARGE', 'OTHER'].includes(item.chargeType)),
+    false,
+  );
+});
+
 test('createBooking persists child tables and guest access token for guest booking', async () => {
   const { service, calls } = createHarness();
   await service.createBooking(CREATE_INPUT, null);

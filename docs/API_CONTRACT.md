@@ -584,6 +584,8 @@ Request/Response: `/auth/login` 동일, `role` must be `DRIVER`
 
 ### 3.10 POST `/bookings/{bookingNumber}/charges`
 
+> ⚠️ 2026-10 폐기: 요금 포함 정책으로 통행료·대기·주차 추가요금 미사용. 아래 계약은 기존 데이터 및 다른 관리자 조정 항목 호환을 위해 유지합니다.
+
 | Description | 추가 요금 라인 (Admin) |
 | Auth | Yes |
 | Role | ADMIN |

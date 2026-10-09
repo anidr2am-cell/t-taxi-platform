@@ -857,7 +857,9 @@ paths:
     post:
       tags: [Booking]
       summary: Add charge line item
-      description: Admin only — toll, driver extra, etc.
+      description: >-
+        Admin only — driver extra and other supported adjustments.
+        ⚠️ 2026-10 폐기: 요금 포함 정책으로 통행료·대기·주차 추가요금 미사용.
       operationId: addBookingCharge
       parameters:
         - $ref: '#/components/parameters/BookingNumber'

@@ -229,6 +229,8 @@ selectable = all active types WHERE sort_order >= recommendedIndex
 
 ### 3.2 요금 구성 (Charge Item 모델)
 
+> ⚠️ 2026-10 폐기: 요금 포함 정책으로 통행료·대기·주차 추가요금 미사용. 아래 항목은 기존 데이터와 설계 이력 설명을 위해 유지합니다.
+
 | charge_type (예) | 설명 | amount 부호 |
 |------------------|------|-------------|
 | `VEHICLE_BASE` | 차량 기본요금 × 대수 | + |
@@ -305,6 +307,8 @@ Step 6 — Coupons (Phase 2)
 
 Step 7 — Manual / Post-booking (Admin)
   TOLL, WAITING, DRIVER_EXTRA — 예약 후 추가 가능
+
+  ⚠️ 2026-10 폐기: 요금 포함 정책으로 TOLL/WAITING/PARKING 추가요금 미사용
 
 Step 8 — Total
   totalAmount = SUM(all charge_items.amount)

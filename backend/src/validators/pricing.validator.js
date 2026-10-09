@@ -19,6 +19,7 @@ const luggageDto = Joi.object({
 
 const bookingOptionsDto = Joi.object({
   nameSign: Joi.boolean().optional(),
+  // 2026-10 included-fare policy: accepted for compatibility and ignored by pricing.
   waiting: Joi.boolean().optional(),
   parking: Joi.boolean().optional(),
   toll: Joi.boolean().optional(),
@@ -145,6 +146,7 @@ const pricingSimulateSchema = Joi.object({
   vehicleTypeId: Joi.number().integer().positive().required(),
   options: Joi.object({
     nameSign: Joi.boolean().optional(),
+    // 2026-10 included-fare policy: accepted for compatibility and ignored by pricing.
     waiting: Joi.boolean().optional(),
     parking: Joi.boolean().optional(),
     toll: Joi.boolean().optional(),

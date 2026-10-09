@@ -60,6 +60,33 @@ const activePolicies = [
     effectiveFrom: null,
     effectiveTo: null,
   },
+  {
+    id: 4,
+    chargeType: CHARGE_POLICY_TYPES.WAITING,
+    calculationType: 'FIXED',
+    amount: 400,
+    isActive: true,
+    effectiveFrom: null,
+    effectiveTo: null,
+  },
+  {
+    id: 5,
+    chargeType: CHARGE_POLICY_TYPES.PARKING,
+    calculationType: 'FIXED',
+    amount: 300,
+    isActive: true,
+    effectiveFrom: null,
+    effectiveTo: null,
+  },
+  {
+    id: 6,
+    chargeType: CHARGE_POLICY_TYPES.TOLL,
+    calculationType: 'FIXED',
+    amount: 200,
+    isActive: true,
+    effectiveFrom: null,
+    effectiveTo: null,
+  },
 ];
 
 function createPricingService() {
@@ -150,4 +177,60 @@ test('admin simulate still includes night and airport surcharges', async () => {
   assert.ok(chargeTypes.includes(CHARGE_TYPES.AIRPORT_SURCHARGE));
   assert.ok(chargeTypes.includes(CHARGE_TYPES.NAME_SIGN));
   assert.equal(quote.totalAmount, 1300);
+});
+
+test('included waiting, parking, and toll policies never change customer quotes', async () => {
+  const pricingService = createPricingService();
+  const input = {
+    serviceTypeCode: 'AIRPORT_PICKUP',
+    originAirportIata: 'BKK',
+    destinationLocationCode: 'PATTAYA',
+    vehicleTypeCode: 'SUV',
+    scheduledPickupAt: '2099-07-01T10:30:00.000Z',
+  };
+
+  const withoutOptions = await pricingService.calculate(input);
+  const withIncludedOptions = await pricingService.calculate({
+    ...input,
+    options: { waiting: true, parking: true, toll: true },
+  });
+
+  assert.equal(withIncludedOptions.totalAmount, withoutOptions.totalAmount);
+  assert.deepEqual(withIncludedOptions.chargeItems, withoutOptions.chargeItems);
+  assert.equal(
+    withIncludedOptions.chargeItems.some((item) => [
+      CHARGE_TYPES.TOLL_GATE,
+      CHARGE_TYPES.WAITING_CHARGE,
+      CHARGE_TYPES.OTHER,
+    ].includes(item.chargeType)),
+    false,
+  );
+});
+
+test('admin simulation also ignores included waiting, parking, and toll options', async () => {
+  const pricingService = createPricingService();
+  const baseInput = {
+    serviceType: 'AIRPORT_PICKUP',
+    originLocationId: 1,
+    destinationLocationId: 8,
+    vehicleTypeId: 2,
+    scheduledPickupAt: '2099-07-01T10:30:00.000Z',
+  };
+
+  const withoutOptions = await pricingService.simulate(baseInput);
+  const withIncludedOptions = await pricingService.simulate({
+    ...baseInput,
+    options: { waiting: true, parking: true, toll: true },
+  });
+
+  assert.equal(withIncludedOptions.totalAmount, withoutOptions.totalAmount);
+  assert.deepEqual(withIncludedOptions.chargeItems, withoutOptions.chargeItems);
+  assert.equal(
+    withIncludedOptions.chargeItems.some((item) => [
+      CHARGE_TYPES.TOLL_GATE,
+      CHARGE_TYPES.WAITING_CHARGE,
+      CHARGE_TYPES.OTHER,
+    ].includes(item.chargeType)),
+    false,
+  );
 });
