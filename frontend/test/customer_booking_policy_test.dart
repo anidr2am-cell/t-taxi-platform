@@ -10,15 +10,18 @@ import 'package:frontend/providers/booking_provider.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  test('customer vehicle tiers show only fare-table vehicles (SEDAN, SUV, VAN)', () {
-    final tiers = BookingWizardController.customerVehicleTierOrder;
-    expect(tiers, contains('SEDAN'));
-    expect(tiers, contains('SUV'));
-    expect(tiers, contains('VAN'));
-    expect(tiers, isNot(contains('VIP_SUV')));
-    expect(tiers, isNot(contains('VIP_VAN')));
-    expect(tiers, isNot(contains('LUXURY')));
-  });
+  test(
+    'customer vehicle tiers show only fare-table vehicles (SEDAN, SUV, VAN)',
+    () {
+      final tiers = BookingWizardController.customerVehicleTierOrder;
+      expect(tiers, contains('SEDAN'));
+      expect(tiers, contains('SUV'));
+      expect(tiers, contains('VAN'));
+      expect(tiers, isNot(contains('VIP_SUV')));
+      expect(tiers, isNot(contains('VIP_VAN')));
+      expect(tiers, isNot(contains('LUXURY')));
+    },
+  );
 
   test('pricing display maps NAME_SIGN to localized picket label', () {
     final l10n = AppLocalizations('en');
@@ -35,21 +38,24 @@ void main() {
     expect(label, 'Name sign service (Picket)');
   });
 
-  test('pricing display hides internal distance estimate from VEHICLE_BASE label', () {
-    final l10n = AppLocalizations('en');
-    final label = PricingDisplay.chargeItemLabel(
-      l10n,
-      const ChargeLineItem(
-        chargeType: 'VEHICLE_BASE',
-        description: 'SEDAN CITY_TRANSFER (132.34 km est.)',
-        quantity: 1,
-        unitPrice: 1300,
-        amount: 1300,
-      ),
-    );
-    expect(label, 'Base price');
-    expect(label.contains('km'), isFalse);
-  });
+  test(
+    'pricing display hides internal distance estimate from VEHICLE_BASE label',
+    () {
+      final l10n = AppLocalizations('en');
+      final label = PricingDisplay.chargeItemLabel(
+        l10n,
+        const ChargeLineItem(
+          chargeType: 'VEHICLE_BASE',
+          description: 'SEDAN CITY_TRANSFER (132.34 km est.)',
+          quantity: 1,
+          unitPrice: 1300,
+          amount: 1300,
+        ),
+      );
+      expect(label, 'Base price');
+      expect(label.contains('km'), isFalse);
+    },
+  );
 
   test('pricing display localizes distance surcharge', () {
     final l10n = AppLocalizations('ko');
@@ -72,14 +78,16 @@ void main() {
         create: (_) => LocaleState(),
         child: MaterialApp(
           home: Scaffold(
-            body: StepCustomerInfo(
-              embedded: true,
-              state: const BookingWizardState(),
-              onNameChanged: (_) {},
-              onEmailChanged: (_) {},
-              onPhoneChanged: (_) {},
-              onCountryChanged: (_) {},
-              onAdditionalRequestsChanged: (_) {},
+            body: SingleChildScrollView(
+              child: StepCustomerInfo(
+                embedded: true,
+                state: const BookingWizardState(),
+                onNameChanged: (_) {},
+                onEmailChanged: (_) {},
+                onPhoneChanged: (_) {},
+                onCountryChanged: (_) {},
+                onAdditionalRequestsChanged: (_) {},
+              ),
             ),
           ),
         ),
@@ -90,6 +98,9 @@ void main() {
     expect(find.textContaining('(Required)'), findsNWidgets(2));
     expect(find.textContaining('(Required) Email'), findsNothing);
     expect(find.textContaining('(Required) Country'), findsNothing);
-    expect(find.textContaining('Messenger'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('booking-contact-KAKAO'), skipOffstage: false),
+      findsOneWidget,
+    );
   });
 }

@@ -213,6 +213,20 @@ test("service maps queue item without secrets", () => {
   assert.ok(!("boardingQrTokenHash" in item));
 });
 
+test("queue contact warning becomes urgent within 24 hours", () => {
+  const service = new AdminDispatchService(
+    {}, {}, {}, {}, settlementStub, null, null, scoringService,
+  );
+  const item = service.mapQueueItem(queueRow({
+    customer_phone: null,
+    contact_status: "PENDING",
+    scheduled_pickup_at: new Date(Date.now() + 60 * 60 * 1000),
+  }));
+
+  assert.equal(item.contactUnverified, true);
+  assert.equal(item.contactUnverifiedUrgent, true);
+});
+
 test("mapQueueItem exposes route endpoints with metadata location names", () => {
   const service = new AdminDispatchService(
     {},
@@ -1913,7 +1927,8 @@ test("booking detail exposes route customer pricing messenger and flight contrac
         destination_lng: 100.88,
         customer_name: "Kim Test",
         customer_email: null,
-        customer_phone: "+66123456789",
+        customer_phone: null,
+        contact_status: "PENDING",
         customer_country_code: null,
         special_requests: "Need child seat",
         payment_method: "PAY_DRIVER",
@@ -1992,6 +2007,7 @@ test("booking detail exposes route customer pricing messenger and flight contrac
   assert.equal(detail.route.destination.address, "Pattaya, Chon Buri, Thailand");
   assert.equal(detail.scheduledPickupAt, "2026-07-01T02:30:00.000Z");
   assert.equal(detail.vehicle.typeCode, "SUV");
+  assert.equal(detail.customer.contactUnverified, true);
   assert.deepEqual(detail.passengers, { adults: 2, children: 1, infants: 0 });
   assert.deepEqual(detail.luggage, {
     carriers20Inch: 1,
@@ -2002,7 +2018,7 @@ test("booking detail exposes route customer pricing messenger and flight contrac
   assert.equal(detail.flight.flightNumber, "TG409");
   assert.equal(detail.flight.airportIata, "BKK");
   assert.equal(detail.customer.name, "Kim Test");
-  assert.equal(detail.customer.phone, "+66123456789");
+  assert.equal(detail.customer.phone, null);
   assert.equal(detail.customer.messengerType, "LINE");
   assert.equal(detail.customer.messengerId, "line-user-id");
   assert.equal(detail.pricing.totalAmount, 1300);

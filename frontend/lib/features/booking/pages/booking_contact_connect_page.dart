@@ -478,6 +478,7 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
           for (final channel in orderedChannels) ...[
             _ChannelButton(
               channel: channel,
+              preferred: channel.code == widget.args?.preferredChannel,
               busy: _actionBusy,
               onTap: () => _handleChannelTap(channel),
             ),
@@ -522,6 +523,14 @@ class _BookingContactConnectPageState extends State<BookingContactConnectPage>
         _hasStartedConnection &&
         !keyboardVisible;
     final orderedChannels = orderContactChannels(_channels, locale);
+    final preferred = widget.args?.preferredChannel;
+    if (preferred != null) {
+      orderedChannels.sort((a, b) {
+        if (a.code == preferred) return -1;
+        if (b.code == preferred) return 1;
+        return 0;
+      });
+    }
     final selectedChannel = orderedChannels.cast<ContactChannel?>().firstWhere(
           (channel) => channel!.code == _selectedChannelCode,
           orElse: () => null,
@@ -742,11 +751,13 @@ class _ChannelButton extends StatelessWidget {
     required this.channel,
     required this.onTap,
     this.busy = false,
+    this.preferred = false,
   });
 
   final ContactChannel channel;
   final VoidCallback onTap;
   final bool busy;
+  final bool preferred;
 
   @override
   Widget build(BuildContext context) {
@@ -756,10 +767,20 @@ class _ChannelButton extends StatelessWidget {
       child: SizedBox(
         width: double.infinity,
         height: 48,
-        child: OutlinedButton(
-          onPressed: busy ? null : onTap,
-          child: Text(channel.displayName),
-        ),
+        child: preferred
+            ? FilledButton(
+                onPressed: busy ? null : onTap,
+                child: Text(
+                  context.l10n
+                      .t(channel.code == 'KAKAO'
+                          ? 'booking_contact_confirm_kakao'
+                          : 'booking_contact_confirm_line'),
+                ),
+              )
+            : OutlinedButton(
+                onPressed: busy ? null : onTap,
+                child: Text(channel.displayName),
+              ),
       ),
     );
   }

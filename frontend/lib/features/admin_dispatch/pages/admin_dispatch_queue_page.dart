@@ -1061,6 +1061,19 @@ class _BookingListCard extends StatelessWidget {
               ],
             ],
           ),
+          if (item['contactUnverified'] == true) ...[
+            const SizedBox(height: 6),
+            AppUi.statusBadge(
+              l10n.t(
+                item['contactUnverifiedUrgent'] == true
+                    ? 'admin_contact_unverified_urgent'
+                    : 'admin_contact_unverified',
+              ),
+              tone: item['contactUnverifiedUrgent'] == true
+                  ? AppStatusTone.error
+                  : AppStatusTone.warning,
+            ),
+          ],
           if (severity != null && severity.isNotEmpty) ...[
             const SizedBox(height: 6),
             AppUi.statusBadge(
@@ -1576,8 +1589,7 @@ List<InlineSpan> _adminRouteEndpointValueSpans(Map<String, dynamic> location) {
   if (name == null) {
     return [TextSpan(text: address ?? '-')];
   }
-  final showAddress =
-      address != null && address.isNotEmpty && address != name;
+  final showAddress = address != null && address.isNotEmpty && address != name;
   return [
     TextSpan(
       text: name,

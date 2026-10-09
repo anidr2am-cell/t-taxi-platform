@@ -144,7 +144,7 @@ test('booking validator strips transitional messenger placeholders from customer
   assert.equal(padded.value.customer.messengerId, undefined);
 });
 
-test('booking validator accepts optional customer messengerType and messengerId', () => {
+test('booking validator accepts an omitted messenger pair and rejects incomplete pairs', () => {
   const withoutMessenger = createBookingSchema.validate(validPayload({
     customer: {
       name: 'Kim',
@@ -163,9 +163,7 @@ test('booking validator accepts optional customer messengerType and messengerId'
       messengerType: 'LINE',
     },
   }));
-  assert.equal(messengerTypeOnly.error, undefined);
-  assert.equal(messengerTypeOnly.value.customer.messengerType, 'LINE');
-  assert.equal(messengerTypeOnly.value.customer.messengerId, undefined);
+  assert.ok(messengerTypeOnly.error);
 
   const messengerIdOnly = createBookingSchema.validate(validPayload({
     customer: {
@@ -174,9 +172,7 @@ test('booking validator accepts optional customer messengerType and messengerId'
       messengerId: 'line-user-id',
     },
   }));
-  assert.equal(messengerIdOnly.error, undefined);
-  assert.equal(messengerIdOnly.value.customer.messengerType, undefined);
-  assert.equal(messengerIdOnly.value.customer.messengerId, 'line-user-id');
+  assert.ok(messengerIdOnly.error);
 
   const withMessenger = createBookingSchema.validate(validPayload());
   assert.equal(withMessenger.error, undefined);
@@ -226,7 +222,7 @@ test('booking validator rejects invalid customer email', () => {
   assert.match(error.message, /email/i);
 });
 
-test('booking validator still requires customer name and phone', () => {
+test('booking validator requires customer name and allows Kakao or LINE without phone', () => {
   const missingName = createBookingSchema.validate(validPayload({
     customer: {
       phone: '+66123456789',
@@ -246,8 +242,8 @@ test('booking validator still requires customer name and phone', () => {
       messengerId: 'line-user-id',
     },
   }));
-  assert.ok(missingPhone.error);
-  assert.match(missingPhone.error.message, /phone/i);
+  assert.equal(missingPhone.error, undefined);
+  assert.equal(missingPhone.value.customer.phone, null);
 });
 
 test('booking validator accepts multilingual customer names and free-text places', () => {

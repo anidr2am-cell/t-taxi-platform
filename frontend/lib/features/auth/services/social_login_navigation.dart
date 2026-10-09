@@ -49,6 +49,13 @@ Future<void> navigateToSocialLoginReturnContext(
     return;
   }
 
+  if (returnContext?.returnToBooking == true) {
+    await Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil('/booking', (_) => false);
+    return;
+  }
+
   final destination = returnContext == null || returnContext.result == null
       ? const _SocialLoginFallbackPage()
       : BookingCompletePage(

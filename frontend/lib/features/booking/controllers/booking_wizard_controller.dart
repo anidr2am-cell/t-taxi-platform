@@ -17,6 +17,7 @@ import '../services/booking_state_storage.dart';
 import '../services/places_api_service.dart';
 import '../services/recent_locations_storage.dart';
 import '../utils/transitional_messenger_placeholders.dart';
+import '../utils/booking_contact_preference.dart';
 import '../utils/flight_time_format.dart';
 
 class BookingWizardController extends ChangeNotifier {
@@ -758,6 +759,94 @@ class BookingWizardController extends ChangeNotifier {
     );
   }
 
+  Future<void> applyCustomerContactDefaults({
+    required String languageCode,
+    String? authProvider,
+    String? profileName,
+    String? profilePhone,
+  }) async {
+    final changes = <String, String>{};
+    if (_state.customerName.trim().isEmpty &&
+        (profileName ?? '').trim().isNotEmpty) {
+      changes['name'] = profileName!.trim();
+    }
+    if (_state.messengerType.trim().isEmpty) {
+      changes['messengerType'] = BookingContactPreference.defaultFor(
+        languageCode: languageCode,
+        authProvider: authProvider,
+      );
+    }
+    if (_state.customerCountryCode.trim().isEmpty) {
+      changes['countryCode'] = BookingContactPreference.defaultDialCode(
+        languageCode,
+      );
+    }
+    final selectedType =
+        changes['messengerType'] ??
+        BookingContactPreference.normalize(_state.messengerType);
+    if (BookingContactPreference.usesPhone(selectedType) &&
+        _state.customerPhone.trim().isEmpty &&
+        (profilePhone ?? '').trim().isNotEmpty) {
+      changes['phone'] = profilePhone!.trim();
+      changes['messengerId'] = _normalizedPhone(
+        profilePhone,
+        changes['countryCode'] ?? _state.customerCountryCode,
+      );
+    }
+    if (changes.isEmpty) return;
+    await updateCustomerInfo(
+      name: changes['name'],
+      phone: changes['phone'],
+      countryCode: changes['countryCode'],
+      messengerType: changes['messengerType'],
+      messengerId: changes['messengerId'],
+    );
+  }
+
+  String _normalizedPhone(String value, String dialCode) {
+    final trimmed = value.trim();
+    if (trimmed.startsWith('+')) {
+      final normalized = '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
+      return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(normalized)
+          ? normalized
+          : '';
+    }
+    return BookingContactPreference.normalizeInternationalPhone(
+      dialCode,
+      value,
+    );
+  }
+
+  Future<void> updateContactType(String type) async {
+    final normalized = BookingContactPreference.normalize(type);
+    final phone = _normalizedPhone(
+      _state.customerPhone,
+      _state.customerCountryCode,
+    );
+    await updateCustomerInfo(
+      messengerType: normalized,
+      messengerId: BookingContactPreference.usesPhone(normalized) ? phone : '',
+    );
+  }
+
+  Future<void> updateContactPhone(String value) async {
+    final type = BookingContactPreference.normalize(_state.messengerType);
+    final normalized = _normalizedPhone(value, _state.customerCountryCode);
+    await updateCustomerInfo(
+      phone: value,
+      messengerId: BookingContactPreference.usesPhone(type) ? normalized : null,
+    );
+  }
+
+  Future<void> updateContactDialCode(String value) async {
+    final type = BookingContactPreference.normalize(_state.messengerType);
+    final normalized = _normalizedPhone(_state.customerPhone, value);
+    await updateCustomerInfo(
+      countryCode: value,
+      messengerId: BookingContactPreference.usesPhone(type) ? normalized : null,
+    );
+  }
+
   Future<bool> setPickupDate(DateTime value) async {
     final date = DateTime(value.year, value.month, value.day);
     final today = thailandNow();
@@ -923,7 +1012,16 @@ class BookingWizardController extends ChangeNotifier {
         },
       'customer': {
         'name': _state.customerName.trim(),
-        'phone': _state.customerPhone.trim(),
+        'phone':
+            _normalizedPhone(
+              _state.customerPhone,
+              _state.customerCountryCode,
+            ).isEmpty
+            ? null
+            : _normalizedPhone(
+                _state.customerPhone,
+                _state.customerCountryCode,
+              ),
         ..._optionalPersistableCustomerMessengerFields(),
       },
       'payment': {
@@ -1811,7 +1909,33 @@ class BookingWizardController extends ChangeNotifier {
 
   bool _isCustomerStepValid() {
     if (_state.customerName.trim().isEmpty) return false;
-    if (_state.customerPhone.trim().isEmpty) return false;
+    final type = BookingContactPreference.normalize(_state.messengerType);
+    // Phone-only drafts and already-open older clients remain resumable during
+    // the rollout. The current customer UI always applies a channel default,
+    // so newly entered bookings still require the selected channel details.
+    if (type.isEmpty) {
+      return _normalizedPhone(
+        _state.customerPhone,
+        _state.customerCountryCode,
+      ).isNotEmpty;
+    }
+    if (!BookingContactPreference.values.contains(type)) return false;
+    if (_state.messengerId.trim().isEmpty) return false;
+    if (BookingContactPreference.usesPhone(type) &&
+        _normalizedPhone(
+          _state.customerPhone,
+          _state.customerCountryCode,
+        ).isEmpty) {
+      return false;
+    }
+    if (BookingContactPreference.allowsEmergencyPhone(type) &&
+        _state.customerPhone.trim().isNotEmpty &&
+        _normalizedPhone(
+          _state.customerPhone,
+          _state.customerCountryCode,
+        ).isEmpty) {
+      return false;
+    }
     return true;
   }
 
@@ -1965,8 +2089,8 @@ class BookingWizardController extends ChangeNotifier {
         if (_state.customerName.trim().isEmpty) {
           return 'wizard_required_customer_name';
         }
-        if (_state.customerPhone.trim().isEmpty) {
-          return 'wizard_required_customer_phone';
+        if (!_isCustomerStepValid()) {
+          return 'wizard_required_customer_contact';
         }
         return 'wizard_required_customer';
       case BookingWizardSteps.review:

@@ -4,6 +4,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../models/booking_wizard_state.dart';
 import 'wizard_compact.dart';
+import 'booking_contact_preference_section.dart';
 
 class StepCustomerInfo extends StatefulWidget {
   final BookingWizardState state;
@@ -11,7 +12,10 @@ class StepCustomerInfo extends StatefulWidget {
   final ValueChanged<String> onEmailChanged;
   final ValueChanged<String> onPhoneChanged;
   final ValueChanged<String> onCountryChanged;
+  final ValueChanged<String>? onMessengerTypeChanged;
+  final ValueChanged<String>? onMessengerIdChanged;
   final ValueChanged<String> onAdditionalRequestsChanged;
+  final Widget? loginPrompt;
   final bool embedded;
   final FocusNode? nameFocusNode;
 
@@ -22,7 +26,10 @@ class StepCustomerInfo extends StatefulWidget {
     required this.onEmailChanged,
     required this.onPhoneChanged,
     required this.onCountryChanged,
+    this.onMessengerTypeChanged,
+    this.onMessengerIdChanged,
     required this.onAdditionalRequestsChanged,
+    this.loginPrompt,
     this.embedded = false,
     this.nameFocusNode,
   });
@@ -33,14 +40,12 @@ class StepCustomerInfo extends StatefulWidget {
 
 class _StepCustomerInfoState extends State<StepCustomerInfo> {
   late final TextEditingController _nameController;
-  late final TextEditingController _phoneController;
   late final TextEditingController _requestsController;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.state.customerName);
-    _phoneController = TextEditingController(text: widget.state.customerPhone);
     _requestsController = TextEditingController(
       text: widget.state.additionalRequests,
     );
@@ -49,7 +54,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
     _requestsController.dispose();
     super.dispose();
   }
@@ -75,7 +79,6 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final copy = _CustomerContactCopy(l10n.languageCode);
     final gap = widget.embedded ? WizardCompact.fieldGap : 12.0;
     final cardPadding = widget.embedded
         ? const EdgeInsets.all(WizardCompact.cardPadding)
@@ -102,52 +105,15 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
           ),
         ),
         SizedBox(height: gap),
-        AppUi.sectionHeader(context, title: copy.sectionTitle),
-        const SizedBox(height: 8),
         AppUi.surfaceCard(
           padding: cardPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Semantics(
-                label: _requiredSemanticsLabel(l10n, 'phone'),
-                textField: true,
-                child: TextField(
-                  controller: _phoneController,
-                  scrollPadding: WizardCompact.fieldScrollPadding,
-                  decoration: _fieldDecoration(
-                    l10n,
-                    l10n.t('phone'),
-                    required: true,
-                  ),
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  onChanged: widget.onPhoneChanged,
-                ),
-              ),
-              SizedBox(height: gap),
-              Container(
-                padding: cardPadding,
-                decoration: BoxDecoration(
-                  color: AppTokens.warningLight,
-                  borderRadius: AppTokens.borderRadiusMd,
-                  border: Border.all(color: AppTokens.border),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.info_outline, color: AppTokens.warning),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        l10n.t('customer_contact_sns_notice'),
-                        style: const TextStyle(height: 1.45),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          child: BookingContactPreferenceSection(
+            state: widget.state,
+            onTypeChanged: widget.onMessengerTypeChanged ?? (_) {},
+            onMessengerIdChanged: widget.onMessengerIdChanged ?? (_) {},
+            onPhoneChanged: widget.onPhoneChanged,
+            onDialCodeChanged: widget.onCountryChanged,
+            loginPrompt: widget.loginPrompt,
           ),
         ),
         SizedBox(height: gap),
@@ -167,26 +133,5 @@ class _StepCustomerInfoState extends State<StepCustomerInfo> {
       padding: AppUi.pagePadding(context),
       child: content,
     );
-  }
-}
-
-class _CustomerContactCopy {
-  _CustomerContactCopy(this.languageCode);
-
-  final String languageCode;
-
-  String get sectionTitle {
-    switch (languageCode) {
-      case 'ko':
-        return '연락처';
-      case 'zh':
-        return '联系方式';
-      case 'ja':
-        return '連絡先';
-      case 'th':
-        return 'ช่องทางติดต่อ';
-      default:
-        return 'Contact';
-    }
   }
 }

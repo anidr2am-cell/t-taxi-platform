@@ -22,6 +22,7 @@ class SocialLoginReturnContext {
     this.selectedVehicle,
     this.enableCustomerTools = false,
     this.returnToHome = false,
+    this.returnToBooking = false,
   });
 
   final String redirectUri;
@@ -37,13 +38,28 @@ class SocialLoginReturnContext {
   final String? selectedVehicle;
   final bool enableCustomerTools;
   final bool returnToHome;
+  final bool returnToBooking;
+
+  factory SocialLoginReturnContext.fromBookingWizard({
+    Uri? baseUri,
+    required bool forLine,
+  }) {
+    return SocialLoginReturnContext(
+      redirectUri: forLine
+          ? LineAuthConfig.buildRedirectUri(base: baseUri)
+          : KakaoAuthConfig.buildRedirectUri(base: baseUri),
+      serviceLabel: '',
+      returnToBooking: true,
+    );
+  }
 
   factory SocialLoginReturnContext.fromLanding({
     Uri? baseUri,
     String? redirectUri,
   }) {
     return SocialLoginReturnContext(
-      redirectUri: redirectUri ?? KakaoAuthConfig.buildRedirectUri(base: baseUri),
+      redirectUri:
+          redirectUri ?? KakaoAuthConfig.buildRedirectUri(base: baseUri),
       result: null,
       serviceLabel: '',
       returnToHome: true,
@@ -112,7 +128,8 @@ class SocialLoginReturnContext {
     bool returnToHome = false,
   }) {
     return SocialLoginReturnContext(
-      redirectUri: redirectUri ?? KakaoAuthConfig.buildRedirectUri(base: baseUri),
+      redirectUri:
+          redirectUri ?? KakaoAuthConfig.buildRedirectUri(base: baseUri),
       result: result,
       serviceLabel: serviceLabel,
       origin: origin,
@@ -142,15 +159,14 @@ class SocialLoginReturnContext {
     'selectedVehicle': selectedVehicle,
     'enableCustomerTools': enableCustomerTools,
     'returnToHome': returnToHome,
+    'returnToBooking': returnToBooking,
   };
 
   factory SocialLoginReturnContext.fromJson(Map<String, dynamic> json) {
     return SocialLoginReturnContext(
       redirectUri: json['redirectUri'] as String? ?? '',
       result: json['result'] is Map
-          ? _resultFromJson(
-              Map<String, dynamic>.from(json['result'] as Map),
-            )
+          ? _resultFromJson(Map<String, dynamic>.from(json['result'] as Map))
           : null,
       serviceLabel: json['serviceLabel'] as String? ?? '',
       origin: json['origin'] is Map
@@ -171,6 +187,7 @@ class SocialLoginReturnContext {
       selectedVehicle: json['selectedVehicle'] as String?,
       enableCustomerTools: json['enableCustomerTools'] == true,
       returnToHome: json['returnToHome'] == true,
+      returnToBooking: json['returnToBooking'] == true,
     );
   }
 
