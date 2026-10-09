@@ -25,7 +25,7 @@ services:
     networks:
       - tride-prod-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:2019/config/ >/dev/null"]
       interval: 30s
       timeout: 5s
       retries: 5
