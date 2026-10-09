@@ -1,6 +1,7 @@
-{
-	email {$ACME_EMAIL}
+www.trider.taxi {
+	redir https://trider.taxi{uri} permanent
 }
+
 
 {$TRIDE_DOMAIN} {
 	encode zstd gzip
