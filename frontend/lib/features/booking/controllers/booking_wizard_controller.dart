@@ -590,6 +590,22 @@ class BookingWizardController extends ChangeNotifier {
     );
   }
 
+  DateTime pickupDateTimeForPicker() {
+    final selected = selectedPickupDateTime();
+    if (selected != null) return selected;
+
+    final fallback = defaultPickupDateTime();
+    final date = pickupDateTimeFrom(_state.pickupDate, '00:00');
+    if (date == null) return fallback;
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      fallback.hour,
+      fallback.minute,
+    );
+  }
+
   DateTime? selectedPickupDateTime() {
     return pickupDateTimeFrom(_state.pickupDate, _state.pickupTime);
   }
@@ -735,6 +751,13 @@ class BookingWizardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> setPickupTime({required int hour24, required int minute}) async {
+    final base = pickupDateTimeForPicker();
+    return setPickupDateTime(
+      DateTime(base.year, base.month, base.day, hour24, minute),
+    );
+  }
+
   Future<bool> setPickupDate(DateTime value) async {
     final date = DateTime(value.year, value.month, value.day);
     final today = thailandNow();
@@ -745,15 +768,28 @@ class BookingWizardController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    final formattedDate = formatDate(date);
+    final combined = pickupDateTimeFrom(formattedDate, _state.pickupTime);
+    final isValid = combined == null || isPickupSelectable(combined);
+    final errorKey = combined != null && !isValid
+        ? (combined.isBefore(thailandNow())
+              ? 'pickup_date_past'
+              : 'pickup_time_minimum')
+        : null;
+
     _invalidateSubmitIdempotencyKey();
     _state = _state.copyWith(
-      pickupDate: formatDate(date),
+      pickupDate: formattedDate,
       clearPricing: true,
-      clearError: true,
+      errorMessage: errorKey,
+      clearError: errorKey == null,
     );
     await _persist();
     notifyListeners();
-    return true;
+    if (combined != null && isValid) {
+      await syncDerivedData();
+    }
+    return isValid;
   }
 
   Future<bool> applyConfirmedFlight({
