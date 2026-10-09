@@ -124,7 +124,9 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       return;
     }
 
-    final flightArrival = _bangkokWallClockFromIsoUtc(result.arrival.scheduledAt);
+    final flightArrival = _bangkokWallClockFromIsoUtc(
+      result.arrival.scheduledAt,
+    );
     final manualPickup = widget.controller.selectedPickupDateTime();
     if (flightArrival == null || manualPickup == null) {
       _resetPickupTimeConflict();
@@ -307,15 +309,17 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                 controller: _flightController,
                 focusNode: widget.focusNode,
                 scrollPadding: WizardCompact.fieldScrollPadding,
-                decoration: WizardCompact.inputDecoration(
-                  label: l10n.t('flight_number'),
-                  hint: l10n.t('flight_number_hint'),
-                  prefixIcon: const Icon(Icons.flight_outlined, size: 20),
-                ).copyWith(
-                  errorText: widget.state.errorMessage == 'flight_number_invalid'
-                      ? l10n.t('flight_number_invalid')
-                      : null,
-                ),
+                decoration:
+                    WizardCompact.inputDecoration(
+                      label: l10n.t('flight_number'),
+                      hint: l10n.t('flight_number_hint'),
+                      prefixIcon: const Icon(Icons.flight_outlined, size: 20),
+                    ).copyWith(
+                      errorText:
+                          widget.state.errorMessage == 'flight_number_invalid'
+                          ? l10n.t('flight_number_invalid')
+                          : null,
+                    ),
                 textCapitalization: TextCapitalization.characters,
                 onChanged: _onFlightNumberChanged,
               ),
@@ -332,7 +336,9 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Theme.of(context).colorScheme.onSecondaryContainer,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
                         ),
                       )
                     : Text(l10n.t('flight_lookup_search')),
@@ -380,8 +386,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
               result.airlineName!,
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
-          if ((result.airlineName ?? '').isNotEmpty)
-            const SizedBox(height: 6),
+          if ((result.airlineName ?? '').isNotEmpty) const SizedBox(height: 6),
           Text(
             result.routeLabel(),
             style: const TextStyle(fontSize: 14, height: 1.4),
@@ -414,7 +419,9 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
               key: const Key('flight_lookup_confirm_button'),
               onPressed: _confirmFlightLookup,
               icon: Icon(
-                _lookupConfirmed ? Icons.check_circle : Icons.check_circle_outline,
+                _lookupConfirmed
+                    ? Icons.check_circle
+                    : Icons.check_circle_outline,
                 size: 18,
                 color: _lookupConfirmed ? AppTokens.success : AppTokens.primary,
               ),
@@ -484,10 +491,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
           Text(
             key: const Key('flight_pickup_final_summary'),
             '${copy.finalPickupLabel}: ${_formatPickupSummary(l10n, selectedPickup)}',
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              height: 1.45,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w700, height: 1.45),
           ),
         ],
       ],
@@ -547,18 +551,13 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       initialMinute: selected.minute,
     );
     if (result == null) return;
-    await widget.controller.setPickupDateTime(
-      DateTime(
-        selected.year,
-        selected.month,
-        selected.day,
-        result.hour24,
-        result.minute,
-      ),
+    await widget.controller.setPickupTime(
+      hour24: result.hour24,
+      minute: result.minute,
     );
   }
 
-  Future<void> _applyManualTime(DateTime selected) async {
+  Future<void> _applyManualTime() async {
     final l10n = context.l10n;
     final parsed = PickupTimeFormat.parseManualInput(
       _manualTimeController.text,
@@ -569,35 +568,37 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       setState(() => _manualTimeErrorKey = 'pickup_time_invalid');
       return;
     }
-    setState(() => _manualTimeErrorKey = null);
-    await widget.controller.setPickupDateTime(
-      DateTime(
-        selected.year,
-        selected.month,
-        selected.day,
-        parsed.hour24,
-        parsed.minute,
-      ),
+    final accepted = await widget.controller.setPickupTime(
+      hour24: parsed.hour24,
+      minute: parsed.minute,
     );
+    if (!mounted) return;
+    setState(() {
+      _manualTimeErrorKey = accepted
+          ? null
+          : (widget.controller.state.errorMessage ?? 'pickup_time_minimum');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final selected =
-        widget.controller.selectedPickupDateTime() ??
-        widget.controller.defaultPickupDateTime();
+    final selected = widget.controller.pickupDateTimeForPicker();
     final min = widget.controller.earliestSelectablePickupDateTime();
     final showUrgentHint = widget.controller.isUrgentPickupWindowSelected();
+    final statePickupErrorKey =
+        {
+          'pickup_date_past',
+          'pickup_time_minimum',
+        }.contains(widget.state.errorMessage)
+        ? widget.state.errorMessage
+        : null;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!widget.embedded)
-          AppUi.sectionHeader(
-            context,
-            title: l10n.t('pickup_datetime'),
-          ),
+          AppUi.sectionHeader(context, title: l10n.t('pickup_datetime')),
         if (showUrgentHint) ...[
           if (widget.embedded) const SizedBox(height: WizardCompact.fieldGap),
           AppUi.surfaceCard(
@@ -624,15 +625,17 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
               child: Column(
                 children: [
                   _PickerRow(
+                    key: const Key('pickup_date_picker'),
                     compact: widget.embedded,
                     icon: Icons.calendar_today_outlined,
                     title: l10n.t('pickup_date'),
-                    value: widget.state.pickupDate ??
-                        l10n.t('pickup_date_select'),
+                    value:
+                        widget.state.pickupDate ?? l10n.t('pickup_date_select'),
                     onTap: () => _pickDate(context, selected, min),
                   ),
                   const Divider(height: 1),
                   _PickerRow(
+                    key: const Key('pickup_time_picker'),
                     compact: widget.embedded,
                     icon: Icons.schedule_outlined,
                     title: l10n.t('pickup_time'),
@@ -644,6 +647,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
             );
 
             final manualTimeField = TextField(
+              key: const Key('pickup_manual_time_field'),
               controller: _manualTimeController,
               decoration:
                   WizardCompact.inputDecoration(
@@ -657,9 +661,11 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
                   ).copyWith(
                     errorText: _manualTimeErrorKey != null
                         ? l10n.t(_manualTimeErrorKey!)
+                        : statePickupErrorKey != null
+                        ? l10n.t(statePickupErrorKey)
                         : null,
                   ),
-              onSubmitted: (_) => _applyManualTime(selected),
+              onSubmitted: (_) => _applyManualTime(),
               onChanged: (_) {
                 if (_manualTimeErrorKey != null) {
                   setState(() => _manualTimeErrorKey = null);
@@ -735,13 +741,7 @@ class _StepPickupDateTimeState extends State<StepPickupDateTime> {
       lastDate: DateTime(min.year + 2),
     );
     if (date == null) return;
-    if (widget.state.pickupTime == null) {
-      await widget.controller.setPickupDate(date);
-    } else {
-      await widget.controller.setPickupDateTime(
-        DateTime(date.year, date.month, date.day, selected.hour, selected.minute),
-      );
-    }
+    await widget.controller.setPickupDate(date);
   }
 }
 
@@ -813,6 +813,7 @@ class _FlightPickupConflictCopy {
 
 class _PickerRow extends StatelessWidget {
   const _PickerRow({
+    super.key,
     required this.icon,
     required this.title,
     required this.value,
