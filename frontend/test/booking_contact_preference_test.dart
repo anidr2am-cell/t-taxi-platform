@@ -142,6 +142,8 @@ void main() {
   testWidgets('shows all four choices and channel-specific inputs', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(375, 812));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(const _ContactHarness()));
     await tester.pumpAndSettle();
 
@@ -177,5 +179,6 @@ void main() {
     expect(find.byKey(const ValueKey('booking-contact-phone')), findsOneWidget);
     expect(find.text('010-1234-5678'), findsOneWidget);
     expect(find.text('LOGIN_ACTION'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }
