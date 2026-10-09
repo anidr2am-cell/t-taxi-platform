@@ -426,7 +426,8 @@ test('production proxy template uses isolated same-origin Caddy topology', () =>
   assert.match(proxyCompose, /TRIDE_DOMAIN: \$\{TRIDE_DOMAIN\}/);
   assert.match(proxyCompose, /ACME_EMAIL: \$\{ACME_EMAIL\}/);
   assert.match(caddyfile, /\{\$TRIDE_DOMAIN\}/);
-  assert.match(caddyfile, /email \{\$ACME_EMAIL\}/);
+  assert.match(caddyfile, /www\.trider\.taxi \{/);
+  assert.match(caddyfile, /redir https:\/\/trider\.taxi\{uri\} permanent/);
   assert.match(caddyfile, /@api path \/api \/api\/\*/);
   assert.match(caddyfile, /handle @api/);
   assert.match(caddyfile, /reverse_proxy tride-prod-backend:3000/);
@@ -437,6 +438,7 @@ test('production proxy template uses isolated same-origin Caddy topology', () =>
   assert.match(caddyfile, /Strict-Transport-Security/);
   assert.match(caddyfile, /X-Content-Type-Options "nosniff"/);
   assert.match(proxyCompose, /image: caddy:2\.8-alpine/);
+  assert.match(proxyCompose, /http:\/\/127\.0\.0\.1:2019\/config\//);
   assert.match(proxyCompose, /\$\{PROXY_HTTP_BIND:-0\.0\.0\.0\}:\$\{PROXY_HTTP_PORT:-80\}:80/);
   assert.match(proxyCompose, /\$\{PROXY_HTTPS_BIND:-0\.0\.0\.0\}:\$\{PROXY_HTTPS_PORT:-443\}:443/);
   assert.match(proxyCompose, /external: true/);
