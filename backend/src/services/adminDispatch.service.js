@@ -649,7 +649,7 @@ class AdminDispatchService {
             vehicle: this.mapAssignmentVehicle(activeAssignment),
             status: activeAssignment.status,
             isActive: true,
-            assignedAt: activeAssignment.assigned_at,
+            assignedAt: formatServiceDateTimeIso(activeAssignment.assigned_at),
             assignmentReason: activeAssignment.assignment_reason,
           }
         : null,
@@ -661,8 +661,8 @@ class AdminDispatchService {
         vehicle: this.mapAssignmentVehicle(item),
         status: item.status,
         isActive: item.is_active === 1,
-        assignedAt: item.assigned_at,
-        unassignedAt: item.unassigned_at,
+        assignedAt: formatServiceDateTimeIso(item.assigned_at),
+        unassignedAt: formatServiceDateTimeIso(item.unassigned_at),
         assignmentReason: item.assignment_reason,
       })),
       statusHistory: statusHistory.map((item) => ({
@@ -671,7 +671,7 @@ class AdminDispatchService {
         changedByRole: item.changed_by_role,
         reason: item.reason,
         memo: item.memo,
-        createdAt: item.created_at,
+        createdAt: formatServiceDateTimeIso(item.created_at),
       })),
       allowedActions: row.is_archived
         ? []

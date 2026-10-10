@@ -58,4 +58,18 @@ void main() {
       expect(parseBackendServiceDateTime('2026-07-22T20:24:03.024ZZ'), isNull);
     });
   });
+
+  group('formatBackendServiceDateTimeBangkok', () {
+    test('formats corrected UTC ISO as Bangkok wall clock', () {
+      expect(
+        formatBackendServiceDateTimeBangkok('2026-10-10T08:13:29.000Z'),
+        '2026-10-10 15:13',
+      );
+    });
+
+    test('returns null for missing or invalid values', () {
+      expect(formatBackendServiceDateTimeBangkok(null), isNull);
+      expect(formatBackendServiceDateTimeBangkok('not-a-date'), isNull);
+    });
+  });
 }

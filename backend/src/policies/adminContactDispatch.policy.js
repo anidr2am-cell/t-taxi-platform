@@ -1,5 +1,8 @@
 const CONTACT_STATUS = require('../constants/contactStatus');
 const BOOKING_STATUS = require('../constants/reservationStatus');
+const {
+  isBookingContactVerified,
+} = require('./bookingDispatchEligibility.policy');
 
 const CONTACT_DISPATCH_STATE = {
   NOT_APPLICABLE: 'NOT_APPLICABLE',
@@ -73,6 +76,7 @@ function canVerifyContact(input = {}) {
 function deriveContactDispatch(input = {}) {
   const contactStatus = normalizeContactStatus(input);
   const bookingStatus = normalizeBookingStatus(input);
+  const dispatchContactEligible = isBookingContactVerified({ contactStatus });
   const markers = readDispatchMarkers(input.metadata);
   const isOpen = bookingStatus === BOOKING_STATUS.OPEN;
   const contactFlow = hasContactFlowEvidence(input)
@@ -86,8 +90,11 @@ function deriveContactDispatch(input = {}) {
   if (!isOpen && contactFlow) {
     state = CONTACT_DISPATCH_STATE.NOT_OPEN;
   } else if (
-    contactStatus === CONTACT_STATUS.PENDING
-    || contactStatus === CONTACT_STATUS.CONFIRM_REQUESTED
+    !dispatchContactEligible
+    && (
+      contactStatus === CONTACT_STATUS.PENDING
+      || contactStatus === CONTACT_STATUS.CONFIRM_REQUESTED
+    )
   ) {
     state = CONTACT_DISPATCH_STATE.WAITING_CONTACT;
   } else if (markers.deliveryAttempted) {

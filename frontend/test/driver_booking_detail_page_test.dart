@@ -51,6 +51,28 @@ void main() {
     );
   });
 
+  testWidgets('shows confirmed trip time in Bangkok wall-clock format', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      _wrap(
+        _FakeDriverApi(
+          detail: _booking(
+            assignmentStatus: 'ACCEPTED',
+            acceptedAt: '2026-10-10T08:13:29.000Z',
+            standbyConfirmed: true,
+            standbyConfirmedAt: '2026-10-10T08:13:29.000Z',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-10-10 15:13'), findsOneWidget);
+    expect(find.text('2026-10-10T08:13:29.000Z'), findsNothing);
+  });
+
   testWidgets(
     'standby confirmation calls accept endpoint and unlocks start route',
     (tester) async {
@@ -971,9 +993,12 @@ DriverBooking _booking({
   List<String> actions = const ['VIEW_DETAILS'],
   String? phone = '+66123456789',
   String assignmentStatus = 'ASSIGNED',
+  String? acceptedAt,
   String? standbyReferenceTimeType,
   String? standbyReferenceTime,
   String? standbyAllowedAt,
+  bool standbyConfirmed = false,
+  String? standbyConfirmedAt,
   bool nameSignRequested = false,
   double? nameSignAmount,
   bool withCoordinates = false,
@@ -990,10 +1015,13 @@ DriverBooking _booking({
     bookingNumber: 'TX202607010001',
     status: status,
     assignmentStatus: assignmentStatus,
+    acceptedAt: acceptedAt,
     scheduledPickupAt: '2026-07-01 09:30:00',
     standbyReferenceTimeType: standbyReferenceTimeType ?? 'VEHICLE_DEPARTURE',
     standbyReferenceTime: standbyReferenceTime ?? '2026-07-01 09:30:00',
     standbyAllowedAt: standbyAllowedAt ?? '2026-07-01T01:30:00.000Z',
+    standbyConfirmed: standbyConfirmed,
+    standbyConfirmedAt: standbyConfirmedAt,
     serviceTypeName: 'Airport Pickup',
     pickupDate: '2026-07-01',
     pickupTime: '09:30',

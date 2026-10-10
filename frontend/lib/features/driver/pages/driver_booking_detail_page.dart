@@ -21,6 +21,7 @@ import '../models/driver_status.dart';
 import '../services/driver_api_service.dart';
 import '../services/driver_call_socket_service.dart';
 import '../utils/driver_assignment_ended.dart';
+import '../utils/driver_backend_datetime.dart';
 import '../utils/driver_money_format.dart';
 import '../widgets/driver_status_control.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
@@ -548,8 +549,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                             AppUi.summaryRow(
                               label: l10n.t('driver_standby_status'),
                               value:
-                                  booking.standbyConfirmedAt ??
-                                  booking.acceptedAt ??
+                                  formatBackendServiceDateTimeBangkok(
+                                    booking.standbyConfirmedAt ??
+                                        booking.acceptedAt,
+                                  ) ??
                                   l10n.t('driver_standby_confirmed'),
                               emphasize: true,
                             ),
