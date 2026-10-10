@@ -33,12 +33,25 @@ class DriverCustomerContactCard extends StatelessWidget {
   }
 
   Future<void> _copy(BuildContext context, String value) async {
-    await Clipboard.setData(ClipboardData(text: value));
+    var copied = false;
+    try {
+      await Clipboard.setData(ClipboardData(text: value));
+      copied = true;
+    } catch (_) {
+      // Clipboard access can fail on non-secure origins or when permission is
+      // denied. The contact value remains selectable as a manual fallback.
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(content: Text(context.l10n.t('driver_contact_copied'))),
+        SnackBar(
+          content: Text(
+            context.l10n.t(
+              copied ? 'driver_contact_copied' : 'driver_contact_copy_failed',
+            ),
+          ),
+        ),
       );
   }
 
@@ -50,7 +63,7 @@ class DriverCustomerContactCard extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 18),
-      label: Text(label),
+      label: Text(label, textAlign: TextAlign.center),
       style: OutlinedButton.styleFrom(
         foregroundColor: AppTokens.primary,
         side: const BorderSide(color: AppTokens.border),
@@ -102,7 +115,7 @@ class DriverCustomerContactCard extends StatelessWidget {
           ),
           const SizedBox(height: AppTokens.spaceSm),
           if (hasMessenger) ...[
-            Text(
+            SelectableText(
               '${channelLabel(type!)} · ${messengerUsesPhone ? _formatPhone(id!) : id}',
               key: const ValueKey('driverCustomerMessenger'),
             ),
@@ -150,7 +163,7 @@ class DriverCustomerContactCard extends StatelessWidget {
               ),
             ],
           ] else if (phone != null) ...[
-            Text(
+            SelectableText(
               '${l10n.t('driver_contact_phone')} · ${_formatPhone(phone)}',
               key: const ValueKey('driverCustomerLegacyPhone'),
             ),
@@ -168,7 +181,7 @@ class DriverCustomerContactCard extends StatelessWidget {
             ),
           if (showEmergencyPhone) ...[
             const SizedBox(height: AppTokens.spaceMd),
-            Text(
+            SelectableText(
               '${l10n.t('driver_contact_emergency_phone')} · ${_formatPhone(phone!)}',
               key: const ValueKey('driverCustomerEmergencyPhone'),
             ),

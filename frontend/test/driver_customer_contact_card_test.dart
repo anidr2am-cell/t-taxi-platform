@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/driver/driver_trip_contact.dart';
@@ -78,8 +79,93 @@ void main() {
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
+      expect(find.text('고객 연락 방법\n(ช่องทางติดต่อลูกค้า)'), findsOneWidget);
+      expect(find.text('ID 복사\n(คัดลอก ID)'), findsOneWidget);
+      expect(
+        find.text('고객 전화번호(긴급)\n(เบอร์โทรฉุกเฉินของลูกค้า) · +66 81 234 5678'),
+        findsOneWidget,
+      );
     });
   }
+
+  testWidgets('copy success shows bilingual feedback and ID is selectable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        'ko',
+        const DriverCustomerContactCard(
+          contact: DriverCustomerContact(
+            messengerType: 'KAKAO',
+            messengerId: 'trider-user',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async => null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    expect(find.byType(SelectableText), findsOneWidget);
+    await tester.tap(find.text('ID 복사\n(คัดลอก ID)'));
+    await tester.pump();
+
+    expect(
+      find.text('연락처 ID를 복사했습니다.\n(คัดลอก ID ติดต่อแล้ว)'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('copy failure shows bilingual fallback guidance', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        'th',
+        const DriverCustomerContactCard(
+          contact: DriverCustomerContact(
+            messengerType: 'LINE',
+            messengerId: 'line-user',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          throw PlatformException(code: 'clipboard-denied');
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    await tester.tap(find.text('ID 복사\n(คัดลอก ID)'));
+    await tester.pump();
+
+    expect(
+      find.text(
+        '복사하지 못했습니다. ID를 길게 눌러 직접 복사해 주세요.\n'
+        '(คัดลอกไม่สำเร็จ กรุณากด ID ค้างไว้เพื่อคัดลอกเอง)',
+      ),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('WhatsApp phone is not duplicated as emergency phone', (
     tester,

@@ -1094,6 +1094,8 @@ class AppLocalizations {
       'driver_contact_call': 'Call',
       'driver_contact_sms': 'Text',
       'driver_contact_copied': 'Contact ID copied.',
+      'driver_contact_copy_failed':
+          'Could not copy. Press and hold the contact ID to copy it manually.',
       'driver_contact_kakao_help':
           'If KakaoTalk is unavailable, ask the administrator to contact the customer.',
       'driver_contact_unavailable':
@@ -2991,6 +2993,8 @@ class AppLocalizations {
       'driver_contact_call': '전화',
       'driver_contact_sms': '문자',
       'driver_contact_copied': '연락처 ID를 복사했습니다.',
+      'driver_contact_copy_failed':
+          '복사하지 못했습니다. 연락처 ID를 길게 눌러 직접 복사해 주세요.',
       'driver_contact_kakao_help':
           '카카오톡이 없으면 관리자에게 고객 연락을 요청하세요.',
       'driver_contact_unavailable': '연락처 정보 없음 — 관리자에게 문의',
@@ -3945,6 +3949,7 @@ class AppLocalizations {
       'driver_contact_call': '拨打电话',
       'driver_contact_sms': '发短信',
       'driver_contact_copied': '已复制联系ID。',
+      'driver_contact_copy_failed': '复制失败。请长按联系ID手动复制。',
       'driver_contact_kakao_help': '如无法使用KakaoTalk，请联系管理员协助联系客户。',
       'driver_contact_unavailable': '无联系信息 — 请咨询管理员',
       'driver_release_assignment': '退回派单',
@@ -4853,6 +4858,8 @@ class AppLocalizations {
       'driver_contact_call': '電話',
       'driver_contact_sms': 'SMS',
       'driver_contact_copied': '連絡先IDをコピーしました。',
+      'driver_contact_copy_failed':
+          'コピーできませんでした。連絡先IDを長押ししてコピーしてください。',
       'driver_contact_kakao_help': 'カカオトークが使えない場合は、管理者にお客様への連絡を依頼してください。',
       'driver_contact_unavailable': '連絡先情報がありません — 管理者にお問い合わせください',
       'driver_release_assignment': '配車を返却',
@@ -5833,6 +5840,8 @@ class AppLocalizations {
       'driver_contact_call': 'โทร',
       'driver_contact_sms': 'ส่งข้อความ',
       'driver_contact_copied': 'คัดลอก ID ติดต่อแล้ว',
+      'driver_contact_copy_failed':
+          'คัดลอกไม่สำเร็จ กรุณากด ID ติดต่อค้างไว้เพื่อคัดลอกด้วยตนเอง',
       'driver_contact_kakao_help': 'หากใช้ KakaoTalk ไม่ได้ โปรดขอให้ผู้ดูแลติดต่อลูกค้า',
       'driver_contact_unavailable': 'ไม่มีข้อมูลติดต่อ — โปรดติดต่อผู้ดูแล',
       'driver_release_assignment': 'คืนงาน',
@@ -7018,6 +7027,27 @@ class AppLocalizations {
   };
 
   static const Map<String, String> _driverUiTranslations = {
+    'driver_contact_title': '고객 연락 방법\n(ช่องทางติดต่อลูกค้า)',
+    'driver_contact_kakao': '카카오톡\n(KakaoTalk)',
+    'driver_contact_line': 'LINE\n(ไลน์)',
+    'driver_contact_whatsapp': 'WhatsApp\n(วอตส์แอป)',
+    'driver_contact_phone_sms': '전화·문자\n(โทร·ส่งข้อความ)',
+    'driver_contact_phone': '고객 전화번호\n(เบอร์โทรลูกค้า)',
+    'driver_contact_emergency_phone':
+        '고객 전화번호(긴급)\n(เบอร์โทรฉุกเฉินของลูกค้า)',
+    'driver_contact_copy_id': 'ID 복사\n(คัดลอก ID)',
+    'driver_contact_open_whatsapp':
+        'WhatsApp 열기\n(เปิด WhatsApp)',
+    'driver_contact_call': '전화\n(โทร)',
+    'driver_contact_sms': '문자\n(ส่งข้อความ)',
+    'driver_contact_copied':
+        '연락처 ID를 복사했습니다.\n(คัดลอก ID ติดต่อแล้ว)',
+    'driver_contact_copy_failed':
+        '복사하지 못했습니다. ID를 길게 눌러 직접 복사해 주세요.\n(คัดลอกไม่สำเร็จ กรุณากด ID ค้างไว้เพื่อคัดลอกเอง)',
+    'driver_contact_kakao_help':
+        '카카오톡이 없으면 관리자에게 고객 연락을 요청하세요.\n(หากไม่มี KakaoTalk ให้ขอให้ผู้ดูแลติดต่อลูกค้า)',
+    'driver_contact_unavailable':
+        '연락처 정보 없음 — 관리자에게 문의\n(ไม่มีข้อมูลติดต่อ — กรุณาติดต่อผู้ดูแล)',
     'driver_support_title': '관리자에게 연락하기\n(ติดต่อผู้ดูแล)',
     'driver_support_resources': '자료실\n(เอกสาร)',
     'driver_support_faq': '자주 묻는 질문\n(คำถามที่พบบ่อย)',
