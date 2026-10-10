@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const CONTACT_STATUS = require('../src/constants/contactStatus');
 const BOOKING_STATUS = require('../src/constants/reservationStatus');
+const config = require('../src/config/env');
 const {
   CONTACT_DISPATCH_STATE,
   CONTACT_DISPATCH_MODE,
@@ -33,6 +34,7 @@ const cases = [
     },
     state: CONTACT_DISPATCH_STATE.WAITING_CONTACT,
     retryable: false,
+    contactConnectionRequired: true,
   },
   {
     name: 'CONFIRM_REQUESTED is waiting contact',
@@ -45,6 +47,7 @@ const cases = [
     state: CONTACT_DISPATCH_STATE.WAITING_CONTACT,
     retryable: false,
     verify: true,
+    contactConnectionRequired: true,
   },
   {
     name: 'VERIFIED contact flow without completed is dispatch pending',
@@ -151,13 +154,57 @@ const cases = [
 
 for (const fixture of cases) {
   test(`deriveContactDispatch: ${fixture.name}`, () => {
-    const derived = deriveContactDispatch(fixture.input);
-    assert.equal(derived.state, fixture.state);
-    assert.equal(derived.retryable, fixture.retryable);
-    assert.equal(isContactDispatchRetryable(fixture.input), fixture.retryable);
-    if (fixture.mode) {
-      assert.equal(derived.mode, fixture.mode);
+    const original = config.features.contactConnectionRequired;
+    config.features.contactConnectionRequired = fixture.contactConnectionRequired === true;
+    try {
+      const derived = deriveContactDispatch(fixture.input);
+      assert.equal(derived.state, fixture.state);
+      assert.equal(derived.retryable, fixture.retryable);
+      assert.equal(isContactDispatchRetryable(fixture.input), fixture.retryable);
+      if (fixture.mode) {
+        assert.equal(derived.mode, fixture.mode);
+      }
+      assert.equal(canVerifyContact(fixture.input), fixture.verify === true);
+    } finally {
+      config.features.contactConnectionRequired = original;
     }
-    assert.equal(canVerifyContact(fixture.input), fixture.verify === true);
+  });
+}
+
+for (const fixture of [
+  {
+    gate: false,
+    contactStatus: CONTACT_STATUS.PENDING,
+    expected: CONTACT_DISPATCH_STATE.NOT_APPLICABLE,
+  },
+  {
+    gate: false,
+    contactStatus: CONTACT_STATUS.VERIFIED,
+    expected: CONTACT_DISPATCH_STATE.NOT_APPLICABLE,
+  },
+  {
+    gate: true,
+    contactStatus: CONTACT_STATUS.PENDING,
+    expected: CONTACT_DISPATCH_STATE.WAITING_CONTACT,
+  },
+  {
+    gate: true,
+    contactStatus: CONTACT_STATUS.VERIFIED,
+    expected: CONTACT_DISPATCH_STATE.NOT_APPLICABLE,
+  },
+]) {
+  test(`dispatch display follows actual gate: gate=${fixture.gate}, status=${fixture.contactStatus}`, () => {
+    const original = config.features.contactConnectionRequired;
+    config.features.contactConnectionRequired = fixture.gate;
+    try {
+      const result = deriveContactDispatch({
+        contactStatus: fixture.contactStatus,
+        status: BOOKING_STATUS.OPEN,
+        metadata: {},
+      });
+      assert.equal(result.state, fixture.expected);
+    } finally {
+      config.features.contactConnectionRequired = original;
+    }
   });
 }

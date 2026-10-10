@@ -52,6 +52,18 @@ DateTime? parseBackendServiceDateTime(String? raw) {
   }
 }
 
+/// Formats a backend service instant as an Asia/Bangkok wall-clock value.
+/// This stays stable even when the browser or device uses another time zone.
+String? formatBackendServiceDateTimeBangkok(String? raw) {
+  final parsed = parseBackendServiceDateTime(raw);
+  if (parsed == null) return null;
+
+  final bangkok = parsed.toUtc().add(const Duration(hours: 7));
+  String twoDigits(int value) => value.toString().padLeft(2, '0');
+  return '${bangkok.year}-${twoDigits(bangkok.month)}-${twoDigits(bangkok.day)} '
+      '${twoDigits(bangkok.hour)}:${twoDigits(bangkok.minute)}';
+}
+
 /// Remaining time until an urgent negotiation expiry timestamp.
 Duration remainingUntilBackendServiceDateTime(
   String? raw, {

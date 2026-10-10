@@ -631,6 +631,17 @@ test('mapBase includes createdAt as ISO string from Bangkok wall clock', () => {
   assert.equal(mapped.createdAt, '2026-07-12T08:30:00.000Z');
 });
 
+test('mapBase serializes accepted timestamps from Bangkok wall clock to UTC ISO', () => {
+  const service = new DriverJobService({});
+  const mapped = service.mapBase(row({
+    assignment_status: 'ACCEPTED',
+    accepted_at: '2026-10-10 15:13:29',
+  }));
+
+  assert.equal(mapped.acceptedAt, '2026-10-10T08:13:29.000Z');
+  assert.equal(mapped.standbyConfirmedAt, '2026-10-10T08:13:29.000Z');
+});
+
 test('mapBase returns null createdAt when missing', () => {
   const service = new DriverJobService({});
   assert.equal(service.mapBase(row()).createdAt, null);

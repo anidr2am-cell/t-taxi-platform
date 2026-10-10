@@ -368,8 +368,26 @@ test('admin detail exposes derived contactDispatch and matching allowedActions',
       };
     },
     async findChargeItemsByBookingId() { return []; },
-    async findStatusLogsByBookingId() { return []; },
-    async findAssignmentsByBookingId() { return []; },
+    async findStatusLogsByBookingId() {
+      return [{
+        from_status: null,
+        to_status: BOOKING_STATUS.OPEN,
+        changed_by_role: 'SYSTEM',
+        reason: 'BOOKING_CREATED_OPEN_CALL',
+        memo: null,
+        created_at: '2026-10-10 15:13:29',
+      }];
+    },
+    async findAssignmentsByBookingId() {
+      return [{
+        id: 31,
+        driver_id: 2,
+        status: 'ASSIGNED',
+        is_active: 1,
+        assigned_at: '2026-10-10 15:13:29',
+        unassigned_at: null,
+      }];
+    },
     async countAdminUnreadForBooking() { return 0; },
   };
   const service = new AdminDispatchService(
@@ -385,12 +403,16 @@ test('admin detail exposes derived contactDispatch and matching allowedActions',
   service.commissionSettlementService = null;
   const detail = await service.getBookingDetail('TX202609260010', { id: 1, role: 'ADMIN' });
   assert.equal(detail.isUrgentRequest, true);
-  assert.equal(detail.contactDispatch.state, CONTACT_DISPATCH_STATE.WAITING_CONTACT);
+  assert.equal(detail.contactDispatch.state, CONTACT_DISPATCH_STATE.NOT_APPLICABLE);
   assert.equal(detail.contactDispatch.retryable, false);
   assert.equal(detail.contactDispatch.mode, 'URGENT');
   assert.ok(detail.allowedActions.includes('VERIFY_CONTACT'));
   assert.ok(!detail.allowedActions.includes('RETRY_CONTACT_DISPATCH'));
   assert.equal(detail.customer.contactRequestedAt, '2026-09-26 01:00:00');
+  assert.equal(detail.activeAssignment.assignedAt, '2026-10-10T08:13:29.000Z');
+  assert.equal(detail.assignmentHistory[0].assignedAt, '2026-10-10T08:13:29.000Z');
+  assert.equal(detail.assignmentHistory[0].unassignedAt, null);
+  assert.equal(detail.statusHistory[0].createdAt, '2026-10-10T08:13:29.000Z');
 });
 
 test('admin detail marks non-open contact flow NOT_OPEN without verify or retry actions', async () => {

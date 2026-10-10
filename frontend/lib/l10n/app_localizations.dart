@@ -1689,7 +1689,7 @@ class AppLocalizations {
       'admin_contact_dispatch_mode_standard': 'Open-call notification',
       'admin_contact_dispatch_mode_urgent': 'Urgent-call notification',
       'admin_contact_dispatch_state_not_applicable':
-          'No contact-dispatch record. The open call was attempted when the booking was created.',
+          'Contact confirmation is not required. Open-call notification started when the booking was created.',
       'admin_contact_dispatch_state_waiting_contact':
           'Driver notification waits until the contact connection is confirmed.',
       'admin_contact_dispatch_state_dispatch_pending':
@@ -3204,7 +3204,7 @@ class AppLocalizations {
       'admin_contact_dispatch_mode_standard': '오픈콜 알림',
       'admin_contact_dispatch_mode_urgent': '긴급콜 알림',
       'admin_contact_dispatch_state_not_applicable':
-          '연락 확인 후 배차 기록이 없습니다. 오픈콜은 예약 생성 시 시도되었습니다.',
+          '연락 확인이 필요하지 않습니다. 예약 생성 시 오픈콜 알림 발송을 시작했습니다.',
       'admin_contact_dispatch_state_waiting_contact':
           '연락 연결이 확인되기 전에는 기사 알림을 보내지 않습니다.',
       'admin_contact_dispatch_state_dispatch_pending':
@@ -3755,7 +3755,7 @@ class AppLocalizations {
       'admin_contact_dispatch_mode_standard': '公开派车通知',
       'admin_contact_dispatch_mode_urgent': '紧急派车通知',
       'admin_contact_dispatch_state_not_applicable':
-          '没有联系确认后的派车记录。公开派车已在创建预约时尝试。',
+          '无需确认联系方式。创建预约时已开始发送公开派车通知。',
       'admin_contact_dispatch_state_waiting_contact':
           '在联系确认之前不会发送司机通知。',
       'admin_contact_dispatch_state_dispatch_pending':
@@ -4652,7 +4652,7 @@ class AppLocalizations {
       'admin_contact_dispatch_mode_standard': 'オープンコール通知',
       'admin_contact_dispatch_mode_urgent': '緊急コール通知',
       'admin_contact_dispatch_state_not_applicable':
-          '連絡確認後の配車記録はありません。オープンコールは予約作成時に試行されました。',
+          '連絡確認は不要です。予約作成時にオープンコール通知の送信を開始しました。',
       'admin_contact_dispatch_state_waiting_contact':
           '連絡が確認されるまでドライバー通知は送りません。',
       'admin_contact_dispatch_state_dispatch_pending':
@@ -5616,7 +5616,7 @@ class AppLocalizations {
       'admin_contact_dispatch_mode_standard': 'การแจ้งเตือนคอลเปิด',
       'admin_contact_dispatch_mode_urgent': 'การแจ้งเตือนคอลเร่งด่วน',
       'admin_contact_dispatch_state_not_applicable':
-          'ไม่มีบันทึกการจ่ายงานหลังยืนยันการติดต่อ คอลเปิดถูกพยายามเมื่อสร้างการจอง',
+          'ไม่ต้องยืนยันการติดต่อ ระบบเริ่มส่งการแจ้งเตือนคอลเปิดเมื่อสร้างการจองแล้ว',
       'admin_contact_dispatch_state_waiting_contact':
           'จะยังไม่ส่งการแจ้งเตือนคนขับจนกว่าจะยืนยันการติดต่อ',
       'admin_contact_dispatch_state_dispatch_pending':

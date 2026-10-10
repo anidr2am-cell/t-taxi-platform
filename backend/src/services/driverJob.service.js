@@ -2,7 +2,10 @@ const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const SERVICE_TYPES = require('../constants/serviceTypes');
-const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
+const {
+  formatServiceDateTimeIso,
+  parseServiceDateTimeToMs,
+} = require('../utils/serviceDateTime.util');
 const {
   evaluateDriverAssignmentRelease,
 } = require('../policies/driverAssignmentRelease.policy');
@@ -267,14 +270,16 @@ class DriverJobService {
       bookingNumber: row.booking_number,
       status: row.status,
       assignmentStatus: row.assignment_status ?? null,
-      acceptedAt: row.accepted_at ?? null,
+      acceptedAt: formatServiceDateTimeIso(row.accepted_at),
       scheduledPickupAt: this.serviceDateTimeIso(row.scheduled_pickup_at),
       createdAt: this.serviceDateTimeIso(row.created_at),
       standbyReferenceTimeType: standbyReference.referenceTimeType,
       standbyReferenceTime: standbyReference.referenceTime,
       standbyAllowedAt,
       standbyConfirmed,
-      standbyConfirmedAt: standbyConfirmed ? row.accepted_at ?? null : null,
+      standbyConfirmedAt: standbyConfirmed
+        ? formatServiceDateTimeIso(row.accepted_at)
+        : null,
       canConfirmStandby: this.canConfirmStandby(row),
       serviceType: {
         code: row.service_type_code,
