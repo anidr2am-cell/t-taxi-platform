@@ -1705,6 +1705,20 @@ class BookingRepository {
 
     where.push(`
       (
+        ${this.unassignedBookingSql()}
+        AND EXISTS (
+          SELECT 1
+          FROM booking_driver_assignments suspended_release_bda
+          WHERE suspended_release_bda.booking_id = b.id
+            AND suspended_release_bda.is_active = 0
+            AND suspended_release_bda.deleted_at IS NULL
+            AND suspended_release_bda.assignment_reason = 'ADMIN_SUSPENDED_DRIVER_RELEASE'
+        )
+      )
+    `);
+
+    where.push(`
+      (
         b.scheduled_pickup_at < ?
         AND b.status IN ('PENDING', 'CONFIRMED', 'DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED')
       )
@@ -2213,7 +2227,36 @@ class BookingRepository {
           btd.golf_course_id,
           btd.golf_region,
           btd.driver_included,
-          a.iata_code AS airport_iata
+          a.iata_code AS airport_iata,
+          (
+            SELECT rbda.unassigned_at
+            FROM booking_driver_assignments rbda
+            WHERE rbda.booking_id = b.id
+              AND rbda.is_active = 0
+              AND rbda.deleted_at IS NULL
+              AND rbda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
+            ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+            LIMIT 1
+          ) AS last_driver_release_at,
+          (
+            SELECT rd.name
+            FROM booking_driver_assignments rbda
+            INNER JOIN drivers rd ON rd.id = rbda.driver_id AND rd.deleted_at IS NULL
+            WHERE rbda.booking_id = b.id
+              AND rbda.is_active = 0
+              AND rbda.deleted_at IS NULL
+              AND rbda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
+            ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+            LIMIT 1
+          ) AS last_released_driver_name,
+          (
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(bal.payload, '$.reasonCode'))
+            FROM booking_activity_logs bal
+            WHERE bal.booking_id = b.id
+              AND bal.activity_type IN ('DRIVER_RELEASED_ASSIGNMENT', 'DRIVER_SUSPENSION_REOPENED')
+            ORDER BY bal.id DESC
+            LIMIT 1
+          ) AS last_driver_release_reason_code
         FROM bookings b
         INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
         INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
