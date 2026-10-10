@@ -560,7 +560,7 @@ void main() {
       expect(DriverUx.tripStepInfo(qaBooking(status: 'CANCELLED')), isNull);
     });
 
-    testWidgets('detail hides removed customer contact and shows phone CTA', (
+    testWidgets('detail hides removed message action and shows contact card', (
       tester,
     ) async {
       await DriverUxQaHarness.configureViewport(
@@ -585,12 +585,12 @@ void main() {
 
       expect(find.textContaining('ขั้นตอนที่'), findsWidgets);
       expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsNothing);
-      await tester.scrollUntilVisible(
-        find.textContaining('โทรหาลูกค้า'),
-        500,
-        scrollable: find.byType(Scrollable).first,
+      await tester.drag(find.byType(ListView).first, const Offset(0, -1200));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('driverCustomerLegacyPhone')),
+        findsOneWidget,
       );
-      expect(find.textContaining('고객에게 전화 / โทรหาลูกค้า'), findsWidgets);
       expect(find.textContaining('DRIVER_ASSIGNED'), findsNothing);
       DriverUxQaHarness.expectNoOverflow(tester);
     });

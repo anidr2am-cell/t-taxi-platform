@@ -18,6 +18,7 @@ import '../services/driver_call_socket_service.dart';
 import '../utils/driver_assignment_ended.dart';
 import '../widgets/driver_today_trip_cards.dart';
 import '../widgets/driver_workflow_widgets.dart';
+import '../widgets/driver_customer_contact_card.dart';
 
 class DriverTodayPage extends StatefulWidget {
   const DriverTodayPage({
@@ -47,8 +48,8 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
   Future<_TodayData>? _future;
   Future<DriverStatus>? _statusFuture;
   Future<String?>? _nameFuture;
-  final Map<String, String?> _phoneCache = {};
-  final Set<String> _phoneLoading = {};
+  final Map<String, DriverBooking?> _contactCache = {};
+  final Set<String> _contactLoading = {};
   final Set<String> _notifiedOpenCalls = {};
   final Set<String> _notifiedUrgentCalls = {};
   DriverCallSocketService? _callSocket;
@@ -105,8 +106,8 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
         );
         if (!mounted) return;
         final bookingNumber = payload['bookingNumber']?.toString();
-        final reasonCode = payload['reasonCode']?.toString() ??
-            payload['reason']?.toString();
+        final reasonCode =
+            payload['reasonCode']?.toString() ?? payload['reason']?.toString();
         _refresh();
         if (bookingNumber == null || bookingNumber.isEmpty) return;
         final snackKey = DriverAssignmentEndedReason.snackbarKey(reasonCode);
@@ -147,10 +148,7 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
     await socket.connect(accessTokenLoader: _api.getSavedToken);
   }
 
-  void _handleUrgentSocketEvent(
-    String event,
-    Map<String, dynamic> payload,
-  ) {
+  void _handleUrgentSocketEvent(String event, Map<String, dynamic> payload) {
     DriverCallSocketBridge.instance.dispatch(event, payload);
     if (!mounted) return;
 
@@ -162,7 +160,9 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
         SystemSound.play(SystemSoundType.alert);
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.t('driver_urgent_call_new_arrived'))),
+        SnackBar(
+          content: Text(context.l10n.t('driver_urgent_call_new_arrived')),
+        ),
       );
     } else if (event == 'confirmed') {
       // Banner state is handled by [DriverUrgentNegotiationController].
@@ -187,8 +187,8 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
       _future = _loadTodayData();
       _statusFuture = _api.getStatus();
       _nameFuture = _api.getDriverDisplayName();
-      _phoneCache.clear();
-      _phoneLoading.clear();
+      _contactCache.clear();
+      _contactLoading.clear();
     });
     if (notifySession) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -259,23 +259,24 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
     _openDetail(booking);
   }
 
-  Future<void> _ensurePhone(DriverBooking booking) async {
-    if (_phoneCache.containsKey(booking.bookingNumber) ||
-        _phoneLoading.contains(booking.bookingNumber)) {
+  Future<void> _ensureContact(DriverBooking booking) async {
+    if (_contactCache.containsKey(booking.bookingNumber) ||
+        _contactLoading.contains(booking.bookingNumber)) {
       return;
     }
-    if (booking.customerPhone != null && booking.customerPhone!.isNotEmpty) {
-      _phoneCache[booking.bookingNumber] = booking.customerPhone;
+    if (booking.customerContact != null ||
+        (booking.customerPhone != null && booking.customerPhone!.isNotEmpty)) {
+      _contactCache[booking.bookingNumber] = booking;
       return;
     }
-    _phoneLoading.add(booking.bookingNumber);
+    _contactLoading.add(booking.bookingNumber);
     try {
       final detail = await _api.getBookingDetail(booking.bookingNumber);
-      _phoneCache[booking.bookingNumber] = detail.customerPhone;
+      _contactCache[booking.bookingNumber] = detail;
     } catch (_) {
-      _phoneCache[booking.bookingNumber] = null;
+      _contactCache[booking.bookingNumber] = null;
     } finally {
-      _phoneLoading.remove(booking.bookingNumber);
+      _contactLoading.remove(booking.bookingNumber);
       if (mounted) setState(() {});
     }
   }
@@ -307,10 +308,12 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
           final data = snapshot.data;
           final items = data?.jobs.items ?? [];
           final openCalls = data?.openCalls ?? [];
-          final regularOpenCalls =
-              openCalls.where((call) => !call.isUrgentRequest).toList();
-          final urgentOpenCalls =
-              openCalls.where((call) => call.isUrgentRequest).toList();
+          final regularOpenCalls = openCalls
+              .where((call) => !call.isUrgentRequest)
+              .toList();
+          final urgentOpenCalls = openCalls
+              .where((call) => call.isUrgentRequest)
+              .toList();
           final settlements = data?.settlements ?? {};
           final current = DriverUx.selectCurrentTrip(
             items,
@@ -328,12 +331,10 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
 
           if (current != null &&
               DriverUx.canContactCustomer(current.status) &&
-              (current.customerPhone == null ||
-                  current.customerPhone!.isEmpty) &&
-              !_phoneCache.containsKey(current.bookingNumber) &&
-              !_phoneLoading.contains(current.bookingNumber)) {
+              !_contactCache.containsKey(current.bookingNumber) &&
+              !_contactLoading.contains(current.bookingNumber)) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _ensurePhone(current);
+              if (mounted) _ensureContact(current);
             });
           }
 
@@ -424,6 +425,14 @@ class _DriverTodayPageState extends State<DriverTodayPage> {
                       settlement: settlements[current.bookingNumber],
                       onOpenPrimary: () => _openPrimary(current),
                     ),
+                    if (_contactCache[current.bookingNumber]
+                        case final detail?) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      DriverCustomerContactCard(
+                        contact: detail.customerContact,
+                        legacyPhone: detail.customerPhone,
+                      ),
+                    ],
                     const SizedBox(height: AppTokens.spaceMd),
                   ],
                   if (remaining.isNotEmpty) ...[
@@ -663,9 +672,7 @@ class _UrgentCallsPrompt extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onOpenJobs,
               icon: const Icon(Icons.priority_high),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTokens.warning,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: AppTokens.warning),
               label: Text(l10n.t('driver_home_urgent_calls_cta')),
             ),
           ),

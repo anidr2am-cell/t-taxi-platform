@@ -899,7 +899,7 @@ void main() {
     expect(find.textContaining('콜을 찾을 수 없습니다'), findsNothing);
   });
 
-  testWidgets('driver booking detail does not show customer message action', (
+  testWidgets('driver booking detail shows unified customer contact card', (
     tester,
   ) async {
     _useTallViewport(tester);
@@ -916,13 +916,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.textContaining('고객에게 전화'),
-      200,
-      scrollable: find.byType(Scrollable),
-    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -1200));
+    await tester.pumpAndSettle();
     expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsNothing);
-    expect(find.text('고객에게 전화 / โทรหาลูกค้า'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('driverCustomerLegacyPhone')),
+      findsOneWidget,
+    );
   });
 }
 

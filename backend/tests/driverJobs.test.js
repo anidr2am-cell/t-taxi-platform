@@ -296,6 +296,11 @@ test('driver can access assigned booking detail', async () => {
   assert.equal(detail.bookingNumber, 'TX202607010001');
   assert.equal(detail.assignmentStatus, 'ASSIGNED');
   assert.equal(detail.customerPhone, '+66123456789');
+  assert.deepEqual(detail.customerContact, {
+    messengerType: null,
+    messengerId: null,
+    phone: '+66123456789',
+  });
   assert.equal(detail.originLatitude, 13.69);
   assert.equal(detail.originLongitude, 100.7501);
   assert.equal(detail.destinationLatitude, 12.9236);
@@ -312,6 +317,80 @@ test('driver can access assigned booking detail', async () => {
   assert.equal(detail.passengers.adults, 2);
   assert.equal(detail.luggage.carriers24InchPlus, 2);
   assert.equal(detail.paymentMethod, 'PAY_DRIVER');
+});
+
+test('driver detail normalizes all supported and legacy messenger types', () => {
+  const service = new DriverJobService({});
+  const cases = [
+    ['KAKAO', 'KAKAO'],
+    ['kakao talk', 'KAKAO'],
+    ['LINE', 'LINE'],
+    ['whatsapp', 'WHATSAPP'],
+    ['PHONE/SMS', 'SMS'],
+  ];
+
+  for (const [storedType, expectedType] of cases) {
+    const detail = service.mapDetail(row({
+      metadata: JSON.stringify({ messengerType: storedType, messengerId: ' contact-id ' }),
+    }));
+    assert.deepEqual(detail.customerContact, {
+      messengerType: expectedType,
+      messengerId: 'contact-id',
+      phone: '+66123456789',
+    });
+  }
+});
+
+test('driver detail supports messenger contact with null phone', () => {
+  const service = new DriverJobService({});
+  const detail = service.mapDetail(row({
+    customer_phone: null,
+    metadata: JSON.stringify({ messengerType: 'LINE', messengerId: 'line-user' }),
+  }));
+
+  assert.equal(detail.customerPhone, null);
+  assert.deepEqual(detail.customerContact, {
+    messengerType: 'LINE',
+    messengerId: 'line-user',
+    phone: null,
+  });
+});
+
+test('driver detail exposes contact in every active trip contact state', () => {
+  const service = new DriverJobService({});
+  for (const status of ['DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP']) {
+    const detail = service.mapDetail(row({
+      status,
+      metadata: JSON.stringify({ messengerType: 'LINE', messengerId: 'line-user' }),
+    }));
+    assert.equal(detail.customerPhone, '+66123456789', status);
+    assert.equal(detail.customerContact.messengerType, 'LINE', status);
+  }
+});
+
+test('driver detail hides customer contact outside active trip contact states', () => {
+  const service = new DriverJobService({});
+  for (const status of ['SETTLEMENT_PENDING', 'COMPLETED', 'CANCELLED', 'NO_SHOW']) {
+    const detail = service.mapDetail(row({
+      status,
+      metadata: JSON.stringify({ messengerType: 'WHATSAPP', messengerId: '+66812345678' }),
+    }));
+    assert.equal(detail.customerPhone, null, status);
+    assert.equal(detail.customerContact, null, status);
+  }
+});
+
+test('scheduled booking list never exposes customer contact fields', async () => {
+  const service = new DriverJobService({
+    async findActiveDriverBookingsScheduled() {
+      return [row({
+        metadata: JSON.stringify({ messengerType: 'LINE', messengerId: 'line-user' }),
+      })];
+    },
+  });
+  const result = await service.listScheduled(44);
+  assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
+  assert.equal(Object.hasOwn(result.items[0], 'customerContact'), false);
 });
 
 test('driver cannot access another driver booking', async () => {
