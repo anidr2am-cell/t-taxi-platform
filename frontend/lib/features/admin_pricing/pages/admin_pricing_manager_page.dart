@@ -1316,9 +1316,6 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
   String? _routeId;
   String? _vehicleTypeId;
   bool _nameSign = false;
-  bool _waiting = false;
-  bool _parking = false;
-  bool _toll = false;
   bool _loading = false;
   String? _error;
   Map<String, dynamic>? _result;
@@ -1363,9 +1360,6 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
         'vehicleTypeId': int.parse(_vehicleTypeId!),
         'options': {
           'nameSign': _nameSign,
-          'waiting': _waiting,
-          'parking': _parking,
-          'toll': _toll,
         },
       });
       setState(() {
@@ -1428,9 +1422,6 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
           onChanged: (v) => setState(() => _vehicleTypeId = v),
         ),
         SwitchListTile(title: Text(l10n.t('admin_pricing_sim_name_sign')), value: _nameSign, onChanged: (v) => setState(() => _nameSign = v)),
-        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_waiting')), value: _waiting, onChanged: (v) => setState(() => _waiting = v)),
-        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_parking')), value: _parking, onChanged: (v) => setState(() => _parking = v)),
-        SwitchListTile(title: Text(l10n.t('admin_pricing_sim_toll')), value: _toll, onChanged: (v) => setState(() => _toll = v)),
             ],
           ),
         ),

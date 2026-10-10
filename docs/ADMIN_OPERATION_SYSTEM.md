@@ -90,6 +90,7 @@ C. 고객/기사 채팅
 D. 현장 이슈
    → 기사 전화 → Admin 상태 변경 (DRIVER_ARRIVED 등)
    → 추가 요금 (TOLL/WAITING) charge item 추가
+   → ⚠️ 2026-10 폐기: 요금 포함 정책으로 통행료·대기·주차 추가요금 미사용
 ```
 
 ### 1.3 마감 (22:00–24:00)
@@ -536,6 +537,8 @@ Admin map WebSocket `driver.location_updated`
 | 조건 | 요일, 시간대, 공항, 지역, 공휴일, 시즌 |
 
 #### C. Charge Policies (Surcharges)
+
+> ⚠️ 2026-10 폐기: 요금 포함 정책으로 통행료·대기·주차 추가요금 미사용. 기존 정책 관리는 이력 호환을 위해 유지합니다.
 
 | UI | CRUD `charge_policies` |
 |----|------------------------|

@@ -177,6 +177,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Total: 800 THB'), findsOneWidget);
+    expect(find.text('Waiting'), findsNothing);
+    expect(find.text('Parking'), findsNothing);
+    expect(find.text('Toll'), findsNothing);
+    expect(api.lastSimulateBody?['options'], {'nameSign': false});
   });
 
   testWidgets('pricing manager routes tab has no horizontal overflow at 360px', (tester) async {
@@ -223,6 +227,7 @@ class _FakePricingApi implements AdminPricingApiService {
 
   int createRouteCalls = 0;
   int updateRouteCalls = 0;
+  Map<String, dynamic>? lastSimulateBody;
 
   @override
   Future<Map<String, dynamic>> copyRoute(int id, Map<String, dynamic> body) async =>
@@ -286,6 +291,7 @@ class _FakePricingApi implements AdminPricingApiService {
 
   @override
   Future<Map<String, dynamic>> simulatePricing(Map<String, dynamic> body) async {
+    lastSimulateBody = body;
     if (simulateError != null) throw simulateError!;
     return {
       'matchedRoute': _sampleRoute(),

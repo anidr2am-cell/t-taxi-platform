@@ -16,6 +16,17 @@ const {
 const CUSTOMER_EXCLUDED_POLICY_TYPES = new Set([
   CHARGE_POLICY_TYPES.NIGHT,
   CHARGE_POLICY_TYPES.AIRPORT,
+  CHARGE_POLICY_TYPES.WAITING,
+  CHARGE_POLICY_TYPES.PARKING,
+  CHARGE_POLICY_TYPES.TOLL,
+]);
+
+// 2026-10 included-fare policy: these costs are included in every quoted fare.
+// Keep accepting legacy option flags, but never create a separate charge item.
+const INCLUDED_POLICY_TYPES = new Set([
+  CHARGE_POLICY_TYPES.WAITING,
+  CHARGE_POLICY_TYPES.PARKING,
+  CHARGE_POLICY_TYPES.TOLL,
 ]);
 
 const DISTANCE_INCLUDED_KM = 10;
@@ -235,6 +246,9 @@ class PricingService {
     const at = scheduledPickupAt ? new Date(scheduledPickupAt) : new Date();
 
     for (const policy of policies) {
+      if (INCLUDED_POLICY_TYPES.has(policy.chargeType)) {
+        continue;
+      }
       if (customerFacing && CUSTOMER_EXCLUDED_POLICY_TYPES.has(policy.chargeType)) {
         continue;
       }
@@ -441,12 +455,6 @@ class PricingService {
         return this.isWeekend(scheduledPickupAt);
       case CHARGE_POLICY_TYPES.AIRPORT:
         return this.isAirportService(serviceTypeCode);
-      case CHARGE_POLICY_TYPES.WAITING:
-        return Boolean(options?.waiting);
-      case CHARGE_POLICY_TYPES.PARKING:
-        return Boolean(options?.parking);
-      case CHARGE_POLICY_TYPES.TOLL:
-        return Boolean(options?.toll);
       default:
         return false;
     }
@@ -692,3 +700,4 @@ class PricingService {
 
 module.exports = PricingService;
 module.exports.CUSTOMER_EXCLUDED_POLICY_TYPES = CUSTOMER_EXCLUDED_POLICY_TYPES;
+module.exports.INCLUDED_POLICY_TYPES = INCLUDED_POLICY_TYPES;
