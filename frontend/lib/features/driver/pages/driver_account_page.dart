@@ -26,6 +26,7 @@ class DriverAccountPage extends StatefulWidget {
     this.deviceRegistrationService,
     this.onStatusChanged,
     this.showAppBar = true,
+    this.readOnly = false,
   });
 
   final DriverApiService? api;
@@ -33,6 +34,7 @@ class DriverAccountPage extends StatefulWidget {
   final NotificationDeviceRegistrationService? deviceRegistrationService;
   final VoidCallback? onStatusChanged;
   final bool showAppBar;
+  final bool readOnly;
 
   @override
   State<DriverAccountPage> createState() => _DriverAccountPageState();
@@ -186,21 +188,22 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
           const SizedBox(height: AppTokens.spaceMd),
           _AccountVehicleSection(profileFuture: _profileFuture, api: _api),
           const SizedBox(height: AppTokens.spaceMd),
-          _AccountMenuTile(
-            icon: Icons.notifications_outlined,
-            title: l10n.t('driver_account_notifications'),
-            badgeFuture: _unreadNotificationsFuture,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => DriverNotificationsPage(
-                  api: _api,
-                  deviceRegistrationService: _deviceRegistration,
-                  showAppBar: true,
+          if (!widget.readOnly)
+            _AccountMenuTile(
+              icon: Icons.notifications_outlined,
+              title: l10n.t('driver_account_notifications'),
+              badgeFuture: _unreadNotificationsFuture,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DriverNotificationsPage(
+                    api: _api,
+                    deviceRegistrationService: _deviceRegistration,
+                    showAppBar: true,
+                  ),
                 ),
-              ),
-            ).then((_) => _load()),
-          ),
+              ).then((_) => _load()),
+            ),
           _AccountMenuTile(
             icon: Icons.receipt_long_outlined,
             title: l10n.t('driver_account_settlement'),
@@ -220,40 +223,43 @@ class _DriverAccountPageState extends State<DriverAccountPage> {
               MaterialPageRoute(builder: (_) => const DriverSupportPage()),
             ),
           ),
-          _AccountMenuTile(
-            icon: Icons.person_outline,
-            title: l10n.t('driver_account_profile'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => DriverProfilePage(
-                  api: _api,
-                  deviceRegistrationService: _deviceRegistration,
-                  onStatusChanged: widget.onStatusChanged,
+          if (!widget.readOnly)
+            _AccountMenuTile(
+              icon: Icons.person_outline,
+              title: l10n.t('driver_account_profile'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DriverProfilePage(
+                    api: _api,
+                    deviceRegistrationService: _deviceRegistration,
+                    onStatusChanged: widget.onStatusChanged,
+                  ),
                 ),
               ),
             ),
-          ),
-          _AccountMenuTile(
-            icon: Icons.directions_car_outlined,
-            title: l10n.t('driver_vehicles_menu'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => DriverVehiclesPage(api: _api),
+          if (!widget.readOnly)
+            _AccountMenuTile(
+              icon: Icons.directions_car_outlined,
+              title: l10n.t('driver_vehicles_menu'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DriverVehiclesPage(api: _api),
+                ),
               ),
             ),
-          ),
           _AccountMenuTile(
             icon: Icons.language_outlined,
             title: l10n.t('driver_account_language'),
             onTap: _openLanguagePicker,
           ),
-          _AccountMenuTile(
-            icon: Icons.notifications_outlined,
-            title: l10n.t('driver_account_notification_settings'),
-            onTap: _enablingNotifications ? null : _enableNotifications,
-          ),
+          if (!widget.readOnly)
+            _AccountMenuTile(
+              icon: Icons.notifications_outlined,
+              title: l10n.t('driver_account_notification_settings'),
+              onTap: _enablingNotifications ? null : _enableNotifications,
+            ),
           const SizedBox(height: AppTokens.spaceMd),
           SizedBox(
             height: 52,
