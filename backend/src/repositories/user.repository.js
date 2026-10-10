@@ -1,6 +1,14 @@
-const database = require('../config/database');
+const database = require("../config/database");
 
 class UserRepository {
+  async incrementAuthTokenVersion(conn, userId) {
+    const [result] = await conn.query(
+      `UPDATE users SET auth_token_version = auth_token_version + 1,
+         updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`,
+      [userId],
+    );
+    return result.affectedRows === 1;
+  }
   constructor(pool = database.pool) {
     this.pool = pool;
   }
@@ -101,11 +109,7 @@ class UserRepository {
     });
   }
 
-  async createSocialCustomerWithProfile({
-    email,
-    displayName,
-    locale = 'ko',
-  }) {
+  async createSocialCustomerWithProfile({ email, displayName, locale = "ko" }) {
     return this._createCustomerWithProfileInternal({
       email,
       passwordHash: null,

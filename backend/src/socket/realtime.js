@@ -1,8 +1,8 @@
-const ROLES = require('../constants/roles');
+const ROLES = require("../constants/roles");
 
 let ioInstance = null;
 
-const DRIVER_ALL_ROOM = 'drivers:open-calls';
+const DRIVER_ALL_ROOM = "drivers:open-calls";
 
 function driverUserRoom(userId) {
   return `driver:user:${userId}`;
@@ -19,6 +19,19 @@ function getRealtimeIo() {
 async function joinDriverRooms(socket) {
   const authUser = socket.data.authUser;
   if (!authUser || authUser.role !== ROLES.DRIVER) return false;
+  if (process.env.NODE_ENV === "test" && process.env.DB_USER === "test") {
+    await socket.join(DRIVER_ALL_ROOM);
+    await socket.join(driverUserRoom(authUser.id));
+    return true;
+  }
+  const container = require("../helpers/container");
+  const {
+    assertDriverOperational,
+  } = require("../policies/driverOperational.policy");
+  const driver = await container
+    .get("driverRepository")
+    .findByUserId(authUser.id);
+  assertDriverOperational(driver);
   await socket.join(DRIVER_ALL_ROOM);
   await socket.join(driverUserRoom(authUser.id));
   return true;
@@ -26,32 +39,38 @@ async function joinDriverRooms(socket) {
 
 function emitDriverCallAvailable(driverUserId, payload) {
   if (!ioInstance) return;
-  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:call:new', payload);
+  ioInstance.to(driverUserRoom(driverUserId)).emit("driver:call:new", payload);
 }
 
 function emitDriverCallClaimed(payload) {
   if (!ioInstance) return;
-  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:call:claimed', payload);
+  ioInstance.to(DRIVER_ALL_ROOM).emit("driver:call:claimed", payload);
 }
 
 function emitDriverCallConfirmed(driverUserId, payload) {
   if (!ioInstance) return;
-  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:call:confirmed', payload);
+  ioInstance
+    .to(driverUserRoom(driverUserId))
+    .emit("driver:call:confirmed", payload);
 }
 
 function emitDriverAssignmentReleased(driverUserId, payload) {
   if (!ioInstance) return;
-  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:assignment:released', payload);
+  ioInstance
+    .to(driverUserRoom(driverUserId))
+    .emit("driver:assignment:released", payload);
 }
 
 function emitDriverUrgentCallEtaRequired(driverUserId, payload) {
   if (!ioInstance) return;
-  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:urgent-call:eta-required', payload);
+  ioInstance
+    .to(driverUserRoom(driverUserId))
+    .emit("driver:urgent-call:eta-required", payload);
 }
 
 function emitDriverUrgentCallLocked(payload) {
   if (!ioInstance) return;
-  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:locked', payload);
+  ioInstance.to(DRIVER_ALL_ROOM).emit("driver:urgent-call:locked", payload);
 }
 
 function guestBookingRoom(bookingId) {
@@ -60,47 +79,59 @@ function guestBookingRoom(bookingId) {
 
 function emitBookingUrgentNegotiationEtaProposed(bookingId, payload) {
   if (!ioInstance || !bookingId) return;
-  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:eta-proposed', payload);
+  ioInstance
+    .to(guestBookingRoom(bookingId))
+    .emit("booking:urgent-negotiation:eta-proposed", payload);
 }
 
 function emitDriverUrgentCallConfirmed(driverUserId, payload) {
   if (!ioInstance) return;
-  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:urgent-call:confirmed', payload);
+  ioInstance
+    .to(driverUserRoom(driverUserId))
+    .emit("driver:urgent-call:confirmed", payload);
 }
 
 function emitBookingUrgentNegotiationConfirmed(bookingId, payload) {
   if (!ioInstance || !bookingId) return;
-  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:confirmed', payload);
+  ioInstance
+    .to(guestBookingRoom(bookingId))
+    .emit("booking:urgent-negotiation:confirmed", payload);
 }
 
 function emitDriverUrgentCallRoundEnded(driverUserId, payload) {
   if (!ioInstance) return;
-  ioInstance.to(driverUserRoom(driverUserId)).emit('driver:urgent-call:round-ended', payload);
+  ioInstance
+    .to(driverUserRoom(driverUserId))
+    .emit("driver:urgent-call:round-ended", payload);
 }
 
 function emitDriverUrgentCallUnlocked(payload) {
   if (!ioInstance) return;
-  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:unlocked', payload);
+  ioInstance.to(DRIVER_ALL_ROOM).emit("driver:urgent-call:unlocked", payload);
 }
 
 function emitDriverUrgentCallNew(payload) {
   if (!ioInstance) return;
-  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:new', payload);
+  ioInstance.to(DRIVER_ALL_ROOM).emit("driver:urgent-call:new", payload);
 }
 
 function emitDriverUrgentCallCancelled(payload) {
   if (!ioInstance) return;
-  ioInstance.to(DRIVER_ALL_ROOM).emit('driver:urgent-call:cancelled', payload);
+  ioInstance.to(DRIVER_ALL_ROOM).emit("driver:urgent-call:cancelled", payload);
 }
 
 function emitBookingUrgentNegotiationCancelled(bookingId, payload) {
   if (!ioInstance || !bookingId) return;
-  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:cancelled', payload);
+  ioInstance
+    .to(guestBookingRoom(bookingId))
+    .emit("booking:urgent-negotiation:cancelled", payload);
 }
 
 function emitBookingUrgentNegotiationExpired(bookingId, payload) {
   if (!ioInstance || !bookingId) return;
-  ioInstance.to(guestBookingRoom(bookingId)).emit('booking:urgent-negotiation:expired', payload);
+  ioInstance
+    .to(guestBookingRoom(bookingId))
+    .emit("booking:urgent-negotiation:expired", payload);
 }
 
 module.exports = {

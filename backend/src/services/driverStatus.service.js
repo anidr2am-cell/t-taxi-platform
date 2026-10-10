@@ -1,24 +1,24 @@
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
-const logger = require('../utils/logger');
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
+const logger = require("../utils/logger");
 
 const DRIVER_STATUS = {
-  AVAILABLE: 'AVAILABLE',
-  OFFLINE: 'OFFLINE',
-  SUSPENDED: 'SUSPENDED',
+  AVAILABLE: "AVAILABLE",
+  OFFLINE: "OFFLINE",
+  SUSPENDED: "SUSPENDED",
 };
 
 const CALL_ELIGIBILITY = {
-  READY: 'READY',
-  OFFLINE: 'OFFLINE',
-  ACTIVE_TRIP: 'ACTIVE_TRIP',
-  UNPAID_SETTLEMENT: 'UNPAID_SETTLEMENT',
-  ACCOUNT_UNDER_REVIEW: 'ACCOUNT_UNDER_REVIEW',
-  ACCOUNT_RESTRICTED: 'ACCOUNT_RESTRICTED',
-  DRIVER_APPROVAL_PENDING: 'DRIVER_APPROVAL_PENDING',
-  VEHICLE_REVIEW_REQUIRED: 'VEHICLE_REVIEW_REQUIRED',
-  UNKNOWN_RESTRICTION: 'UNKNOWN_RESTRICTION',
+  READY: "READY",
+  OFFLINE: "OFFLINE",
+  ACTIVE_TRIP: "ACTIVE_TRIP",
+  UNPAID_SETTLEMENT: "UNPAID_SETTLEMENT",
+  ACCOUNT_UNDER_REVIEW: "ACCOUNT_UNDER_REVIEW",
+  ACCOUNT_RESTRICTED: "ACCOUNT_RESTRICTED",
+  DRIVER_APPROVAL_PENDING: "DRIVER_APPROVAL_PENDING",
+  VEHICLE_REVIEW_REQUIRED: "VEHICLE_REVIEW_REQUIRED",
+  UNKNOWN_RESTRICTION: "UNKNOWN_RESTRICTION",
 };
 
 class DriverStatusService {
@@ -30,8 +30,10 @@ class DriverStatusService {
 
   async buildCallEligibility(driver, hasActiveJob = null) {
     const activeJob = hasActiveJob ?? Number(driver.active_job_count ?? 0) > 0;
-    const online = Boolean(driver.is_online) && driver.status !== DRIVER_STATUS.OFFLINE;
-    const active = Boolean(driver.is_active) && Boolean(driver.user_is_active ?? 1);
+    const online =
+      Boolean(driver.is_online) && driver.status !== DRIVER_STATUS.OFFLINE;
+    const active =
+      Boolean(driver.is_active) && Boolean(driver.user_is_active ?? 1);
 
     if (!active || driver.status === DRIVER_STATUS.SUSPENDED) {
       return {
@@ -40,14 +42,22 @@ class DriverStatusService {
       };
     }
 
-    if (['UNDER_REVIEW', 'REVIEWING', 'ACCOUNT_UNDER_REVIEW'].includes(driver.status)) {
+    if (
+      ["UNDER_REVIEW", "REVIEWING", "ACCOUNT_UNDER_REVIEW"].includes(
+        driver.status,
+      )
+    ) {
       return {
         canReceiveCalls: false,
         reasonCode: CALL_ELIGIBILITY.ACCOUNT_UNDER_REVIEW,
       };
     }
 
-    if (['PENDING', 'PENDING_APPROVAL', 'APPROVAL_PENDING'].includes(driver.status)) {
+    if (
+      ["PENDING", "PENDING_APPROVAL", "APPROVAL_PENDING"].includes(
+        driver.status,
+      )
+    ) {
       return {
         canReceiveCalls: false,
         reasonCode: CALL_ELIGIBILITY.DRIVER_APPROVAL_PENDING,
@@ -61,8 +71,12 @@ class DriverStatusService {
       };
     }
 
-    if (this.commissionSettlementService
-      && await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)) {
+    if (
+      this.commissionSettlementService &&
+      (await this.commissionSettlementService.driverHasBlockingSettlement(
+        driver.id,
+      ))
+    ) {
       return {
         canReceiveCalls: false,
         reasonCode: CALL_ELIGIBILITY.UNPAID_SETTLEMENT,
@@ -94,7 +108,8 @@ class DriverStatusService {
     return {
       driverId: Number(driver.id),
       active: Boolean(driver.is_active) && Boolean(driver.user_is_active ?? 1),
-      online: Boolean(driver.is_online) && driver.status !== DRIVER_STATUS.OFFLINE,
+      online:
+        Boolean(driver.is_online) && driver.status !== DRIVER_STATUS.OFFLINE,
       status: driver.status,
       hasActiveJob: activeJob,
       lastSeenAt: driver.last_seen_at ?? null,
@@ -104,13 +119,13 @@ class DriverStatusService {
 
   assertCanGoOnline(driver) {
     if (!driver || !driver.is_active || driver.user_is_active === 0) {
-      throw new AppError('Driver not found', {
+      throw new AppError("Driver not found", {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
       });
     }
     if (driver.status === DRIVER_STATUS.SUSPENDED) {
-      throw new AppError('Driver is suspended', {
+      throw new AppError("Driver is suspended", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
       });
@@ -145,7 +160,10 @@ class DriverStatusService {
     let hasActiveJob = false;
     try {
       await conn.beginTransaction();
-      driver = await this.driverRepository.findByUserIdForUpdate(conn, driverUserId);
+      driver = await this.driverRepository.findByUserIdForUpdate(
+        conn,
+        driverUserId,
+      );
       this.assertCanGoOnline(driver);
       await this.assertSettlementEligible(driver.id);
       hasActiveJob = await this.driverRepository.hasActiveJob(conn, driver.id);
@@ -161,8 +179,11 @@ class DriverStatusService {
       conn.release();
     }
 
-    logger.info('Driver went online', { driverId: driver.id });
-    return this.getStatus(driverUserId).then((status) => ({ ...status, hasActiveJob }));
+    logger.info("Driver went online", { driverId: driver.id });
+    return this.getStatus(driverUserId).then((status) => ({
+      ...status,
+      hasActiveJob,
+    }));
   }
 
   async goOffline(driverUserId, { allowActiveJob = false } = {}) {
@@ -187,7 +208,9 @@ class DriverStatusService {
       }
       await this.driverRepository.updateOnlineState(conn, driver.id, {
         isOnline: false,
-        status: DRIVER_STATUS.OFFLINE,
+        status: driver.status === DRIVER_STATUS.SUSPENDED
+          ? DRIVER_STATUS.SUSPENDED
+          : DRIVER_STATUS.OFFLINE,
       });
       await conn.commit();
     } catch (err) {
@@ -197,15 +220,18 @@ class DriverStatusService {
       conn.release();
     }
 
-    logger.info('Driver went offline', { driverId: driver.id, hasActiveJob });
-    return this.getStatus(driverUserId).then((status) => ({ ...status, hasActiveJob }));
+    logger.info("Driver went offline", { driverId: driver.id, hasActiveJob });
+    return this.getStatus(driverUserId).then((status) => ({
+      ...status,
+      hasActiveJob,
+    }));
   }
 
   async goOfflineBestEffort(driverUserId) {
     try {
       await this.goOffline(driverUserId);
     } catch (err) {
-      logger.warn('Best-effort driver offline update failed', {
+      logger.warn("Best-effort driver offline update failed", {
         driverUserId,
         errorCode: err.errorCode,
       });

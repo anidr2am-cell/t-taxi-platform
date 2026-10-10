@@ -163,10 +163,12 @@ class AppLocalizations {
       'admin_manual_booking_origin': 'Pickup location',
       'admin_manual_booking_destination': 'Drop-off location',
       'admin_manual_booking_pickup_datetime': 'Pickup date & time',
-      'admin_manual_booking_pickup_datetime_hint': 'Select pickup date and time',
+      'admin_manual_booking_pickup_datetime_hint':
+          'Select pickup date and time',
       'admin_manual_booking_pickup_timezone': 'Thailand local time (UTC+7)',
       'admin_manual_booking_special_items_text': 'Special luggage notes',
-      'admin_manual_booking_special_items_hint': 'Describe oversized or unusual items',
+      'admin_manual_booking_special_items_hint':
+          'Describe oversized or unusual items',
       'admin_manual_booking_flight_pickup_date_required':
           'Select pickup date before flight lookup',
       'admin_manual_booking_flight_manual_fallback_hint':
@@ -174,8 +176,10 @@ class AppLocalizations {
       'admin_manual_booking_flight_pickup_conflict_warning':
           'Your pickup time and the flight scheduled arrival differ by {minutes} minutes.',
       'admin_manual_booking_flight_pickup_keep_manual': 'Keep my entered time',
-      'admin_manual_booking_flight_pickup_use_flight': 'Use flight arrival time',
-      'admin_manual_booking_flight_pickup_final_label': 'Final pickup request time',
+      'admin_manual_booking_flight_pickup_use_flight':
+          'Use flight arrival time',
+      'admin_manual_booking_flight_pickup_final_label':
+          'Final pickup request time',
       'admin_dispatch_driver_pickup_conflict':
           'Pickup time conflicts with another assigned job',
       'admin_manual_booking_vehicle_type': 'Vehicle class',
@@ -183,11 +187,13 @@ class AppLocalizations {
       'admin_manual_booking_name_sign_hint':
           'Adds 100 THB to the customer total. The driver pays that 100 THB to airport picket staff.',
       'admin_manual_booking_payout_amount': 'Driver payout amount (THB)',
-      'admin_manual_booking_customer_charge_amount': 'Customer payment amount (THB)',
+      'admin_manual_booking_customer_charge_amount':
+          'Customer payment amount (THB)',
       'admin_manual_booking_customer_charge_hint':
           'The driver payout is the final amount after picket cost. Company settlement = customer payment - driver payout.',
       'admin_manual_booking_payment_method': 'Payment collection',
-      'admin_manual_booking_payment_admin_collected': 'Admin already collected payment',
+      'admin_manual_booking_payment_admin_collected':
+          'Admin already collected payment',
       'admin_manual_booking_payment_driver_collects': 'Driver collects on site',
       'admin_manual_booking_customer_section': 'Customer',
       'admin_manual_booking_guest_name': 'Guest name',
@@ -201,7 +207,8 @@ class AppLocalizations {
       'admin_manual_booking_assign_driver': 'Assign driver',
       'admin_manual_booking_edit': 'Edit',
       'admin_manual_booking_edit_title': 'Edit admin manual call',
-      'admin_manual_booking_edit_not_allowed': 'This call cannot be edited in its current status',
+      'admin_manual_booking_edit_not_allowed':
+          'This call cannot be edited in its current status',
       'admin_manual_booking_cancel': 'Cancel call',
       'admin_manual_booking_cancel_confirm':
           'Cancel this admin manual call? Assigned drivers will be released.',
@@ -210,7 +217,8 @@ class AppLocalizations {
       'admin_manual_booking_update_submit': 'Save changes',
       'admin_manual_booking_update_success': 'Admin manual call updated',
       'admin_manual_booking_failed': 'Unable to create manual call',
-      'admin_manual_booking_validation_required': 'Please fill in all required fields',
+      'admin_manual_booking_validation_required':
+          'Please fill in all required fields',
       'admin_manual_booking_validation_customer':
           'Select a member or enter guest name and phone',
       'admin_manual_booking_preview_notice':
@@ -514,10 +522,12 @@ class AppLocalizations {
       'admin_settings_contact_whatsapp_enabled': 'Enable WhatsApp',
       'admin_settings_contact_wechat_enabled': 'Enable WeChat',
       'admin_settings_contact_whatsapp_phone': 'WhatsApp phone number',
-      'admin_settings_contact_wechat_account_id': 'WeChat account ID (optional)',
+      'admin_settings_contact_wechat_account_id':
+          'WeChat account ID (optional)',
       'admin_settings_upload_wechat_qr': 'Upload WeChat QR',
       'admin_settings_guest_lookup_inquiry': 'Booking lookup / messenger guide',
-      'admin_settings_guest_lookup_banner_enabled': 'Show inquiry banner on lookup results',
+      'admin_settings_guest_lookup_banner_enabled':
+          'Show inquiry banner on lookup results',
       'admin_settings_guest_lookup_banner_message': 'Banner message (optional)',
       'admin_settings_guest_lookup_kakao_url': 'KakaoTalk chat URL (optional)',
       'admin_settings_guest_lookup_line_url': 'LINE chat URL (optional)',
@@ -1703,13 +1713,15 @@ class AppLocalizations {
       'admin_contact_dispatch_delivery_caveat':
           'A completed delivery attempt does not guarantee the driver app received the notification.',
       'admin_contact_dispatch_retry_button': 'Retry driver notification',
-      'admin_contact_dispatch_retry_success': 'Driver notification retry started',
+      'admin_contact_dispatch_retry_success':
+          'Driver notification retry started',
       'admin_complete_trip_button': 'Complete trip',
       'admin_complete_trip_title': 'Complete this active trip?',
       'admin_complete_trip_message':
           'This ends the trip on the driver’s behalf and moves the booking to settlement pending. Continue only after confirming the ride has finished.',
       'admin_complete_trip_confirm': 'Complete trip',
-      'admin_complete_trip_success': 'Trip completed and moved to settlement pending',
+      'admin_complete_trip_success':
+          'Trip completed and moved to settlement pending',
       'admin_complete_trip_error': 'Unable to complete this trip',
       'admin_contact_dispatch_error_in_progress':
           'A driver notification is already in progress. Try again in a moment.',
@@ -1851,10 +1863,14 @@ class AppLocalizations {
       'flight_lookup_confirm': 'This is my flight',
       'flight_lookup_route_title': 'Find your arriving flight',
       'flight_departure_date': 'Flight departure date',
-      'flight_departure_date_help': 'Choose the local departure date printed on your ticket. Pickup uses the actual arrival date in Thailand.',
-      'flight_lookup_manual_fallback': 'We could not find the flight. Select the airport and enter the arrival time manually.',
-      'flight_lookup_airport_unsupported': 'This arrival airport cannot be selected automatically. Choose an airport below and enter the pickup time.',
-      'flight_lookup_applied_50_minutes': 'The arrival airport and pickup time (50 minutes after arrival, Thailand time) have been applied.',
+      'flight_departure_date_help':
+          'Choose the local departure date printed on your ticket. Pickup uses the actual arrival date in Thailand.',
+      'flight_lookup_manual_fallback':
+          'We could not find the flight. Select the airport and enter the arrival time manually.',
+      'flight_lookup_airport_unsupported':
+          'This arrival airport cannot be selected automatically. Choose an airport below and enter the pickup time.',
+      'flight_lookup_applied_50_minutes':
+          'The arrival airport and pickup time (50 minutes after arrival, Thailand time) have been applied.',
       'pickup_date_select': 'Select pick-up date',
       'booking_number_copied': 'Reservation number copied',
       'booking_number_copy_failed': 'Could not copy reservation number',
@@ -2184,8 +2200,7 @@ class AppLocalizations {
       'admin_manual_booking_flight_pickup_keep_manual': '직접 입력한 시간 사용',
       'admin_manual_booking_flight_pickup_use_flight': '항공편 시간 기준으로 변경',
       'admin_manual_booking_flight_pickup_final_label': '최종 픽업 요청시간',
-      'admin_dispatch_driver_pickup_conflict':
-          '다른 배정 콜과 픽업 시간이 충돌합니다',
+      'admin_dispatch_driver_pickup_conflict': '다른 배정 콜과 픽업 시간이 충돌합니다',
       'admin_manual_booking_vehicle_type': '차량 등급',
       'admin_manual_booking_passengers': '탑승 인원',
       'admin_manual_booking_name_sign_hint':
@@ -2211,8 +2226,7 @@ class AppLocalizations {
       'admin_manual_booking_edit_title': '관리자 콜 수정',
       'admin_manual_booking_edit_not_allowed': '현재 상태에서는 수정할 수 없습니다',
       'admin_manual_booking_cancel': '콜 취소',
-      'admin_manual_booking_cancel_confirm':
-          '관리자 등록 콜을 취소할까요? 배정된 기사는 해제됩니다.',
+      'admin_manual_booking_cancel_confirm': '관리자 등록 콜을 취소할까요? 배정된 기사는 해제됩니다.',
       'admin_manual_booking_cancel_success': '관리자 콜이 취소되었습니다',
       'admin_manual_booking_assign_success': '기사가 배정되었습니다',
       'admin_manual_booking_update_submit': '변경 저장',
@@ -2221,8 +2235,7 @@ class AppLocalizations {
       'admin_manual_booking_validation_required': '필수 항목을 모두 입력해주세요',
       'admin_manual_booking_validation_customer':
           '회원을 선택하거나 게스트 이름과 전화번호를 입력해주세요',
-      'admin_manual_booking_preview_notice':
-          '기사 화면 미리보기: 계좌 확인 안내 문구가 표시됩니다',
+      'admin_manual_booking_preview_notice': '기사 화면 미리보기: 계좌 확인 안내 문구가 표시됩니다',
       'driver_call_badge_admin_manual': '관리자 등록 콜',
       'driver_call_badge_no_commission': '커미션 없음',
       'driver_call_bank_account_confirm_notice':
@@ -2267,11 +2280,9 @@ class AppLocalizations {
       'landing_language_label': '언어',
       'support_title': '고객센터',
       'support_contact_channels_title': '고객센터 연결',
-      'support_contact_channels_hint':
-          '원하시는 메신저 아이콘을 눌러 바로 상담을 시작하세요',
+      'support_contact_channels_hint': '원하시는 메신저 아이콘을 눌러 바로 상담을 시작하세요',
       'support_wechat_qr_dialog_title': '위챗 QR 코드',
-      'support_wechat_qr_dialog_hint':
-          '위챗 앱에서 QR 코드를 스캔해 친구로 추가해 주세요',
+      'support_wechat_qr_dialog_hint': '위챗 앱에서 QR 코드를 스캔해 친구로 추가해 주세요',
       'support_page_intro':
           '예약이 어렵거나 문의가 필요하신 경우 고객센터로 문의해 주세요. 항공권, 호텔 바우처, 예약 캡처 이미지도 첨부할 수 있습니다.',
       'support_inquiry_button': '문의하기',
@@ -2405,16 +2416,14 @@ class AppLocalizations {
       'booking_messenger_handoff_description':
           '메신저를 한 번 선택하면 예약번호가 자동으로 복사됩니다. 열린 채팅창에 붙여넣어 전송만 해주세요.',
       'booking_messenger_handoff_channel': '{channel}으로 알림 받기',
-      'booking_messenger_handoff_copied':
-          '예약번호가 복사되었습니다. 채팅창에 붙여넣어 전송해 주세요.',
+      'booking_messenger_handoff_copied': '예약번호가 복사되었습니다. 채팅창에 붙여넣어 전송해 주세요.',
       'booking_messenger_handoff_optional': '지금 선택하지 않아도 예약에는 영향이 없습니다.',
       'booking_messenger_step_received': '예약 접수 완료',
       'booking_messenger_step_assigning': '차량 배정 중',
       'booking_messenger_step_assigned': '차량 사진·차량번호·기사 정보 안내',
       'booking_messenger_step_departure': '출발 전 안내 또는 중요한 변경 알림',
       'booking_contact_method_title': '연락받을 메신저를 선택해 주세요',
-      'booking_contact_method_description':
-          '예약 확정과 차량·기사 정보를 받을 연락 수단입니다.',
+      'booking_contact_method_description': '예약 확정과 차량·기사 정보를 받을 연락 수단입니다.',
       'booking_contact_method_summary': '연락 방법',
       'booking_contact_emergency_summary': '긴급 연락처',
       'booking_contact_kakao': '카카오톡',
@@ -2427,10 +2436,8 @@ class AppLocalizations {
       'booking_contact_emergency_phone_optional': '기사 긴급 연락용 전화번호 (선택)',
       'booking_contact_phone_required': '국제 전화번호',
       'booking_contact_phone_hint': '국가번호를 제외한 번호',
-      'booking_contact_kakao_login_hint':
-          '카카오로 로그인하면 다른 기기에서도 예약을 확인할 수 있어요.',
-      'booking_contact_line_login_hint':
-          'LINE으로 로그인하면 다른 기기에서도 예약을 확인할 수 있어요.',
+      'booking_contact_kakao_login_hint': '카카오로 로그인하면 다른 기기에서도 예약을 확인할 수 있어요.',
+      'booking_contact_line_login_hint': 'LINE으로 로그인하면 다른 기기에서도 예약을 확인할 수 있어요.',
       'booking_contact_confirm_kakao': '카카오톡으로 예약 확정 안내 받기',
       'booking_contact_confirm_line': 'LINE으로 예약 확정 안내 받기',
       'wizard_required_customer_contact': '필수 연락처 정보를 입력해 주세요.',
@@ -2516,10 +2523,14 @@ class AppLocalizations {
       'flight_lookup_confirm': '이 항공편이 맞습니다',
       'flight_lookup_route_title': '도착 항공편 조회',
       'flight_departure_date': '항공편 출발 날짜',
-      'flight_departure_date_help': '항공권에 적힌 출발지 현지 출발 날짜를 선택해 주세요. 픽업 날짜는 태국 실제 도착 날짜로 계산됩니다.',
-      'flight_lookup_manual_fallback': '항공편을 찾지 못했어요. 공항을 선택하고 도착 시간을 직접 입력해 주세요.',
-      'flight_lookup_airport_unsupported': '도착 공항을 자동으로 선택할 수 없습니다. 아래에서 공항을 선택하고 픽업 시간을 입력해 주세요.',
-      'flight_lookup_applied_50_minutes': '도착 공항과 태국 도착 시각 50분 후의 픽업 시간을 입력했습니다.',
+      'flight_departure_date_help':
+          '항공권에 적힌 출발지 현지 출발 날짜를 선택해 주세요. 픽업 날짜는 태국 실제 도착 날짜로 계산됩니다.',
+      'flight_lookup_manual_fallback':
+          '항공편을 찾지 못했어요. 공항을 선택하고 도착 시간을 직접 입력해 주세요.',
+      'flight_lookup_airport_unsupported':
+          '도착 공항을 자동으로 선택할 수 없습니다. 아래에서 공항을 선택하고 픽업 시간을 입력해 주세요.',
+      'flight_lookup_applied_50_minutes':
+          '도착 공항과 태국 도착 시각 50분 후의 픽업 시간을 입력했습니다.',
       'pickup_date_select': '픽업 날짜 선택',
       'booking_number_copied': '예약번호가 복사되었습니다',
       'booking_number_copy_failed': '예약번호를 복사하지 못했습니다',
@@ -2884,8 +2895,7 @@ class AppLocalizations {
       'guest_lookup_name': '예약자 이름',
       'guest_lookup_invalid_name': '예약자 이름을 입력해 주세요',
       'guest_lookup_contact_results_title': '일치하는 예약',
-      'guest_lookup_contact_detail_guidance':
-          '정확한 정보가 필요하면 예약번호로 조회해주세요.',
+      'guest_lookup_contact_detail_guidance': '정확한 정보가 필요하면 예약번호로 조회해주세요.',
       'guest_lookup_contact_back_to_list': '목록으로',
       'guest_lookup_pickup_period_morning': '오전',
       'guest_lookup_pickup_period_afternoon': '오후',
@@ -2929,14 +2939,11 @@ class AppLocalizations {
       'auth_kakao_callback_slow_loading': '처리 시간이 오래 걸리고 있어요. 새로고침해 주세요.',
       'auth_kakao_callback_refresh': '새로고침',
       'profile_completion_title': '프로필 완성',
-      'profile_completion_body':
-          'T-Rider 이용을 위해 이름과 전화번호를 입력해 주세요.',
+      'profile_completion_body': 'T-Rider 이용을 위해 이름과 전화번호를 입력해 주세요.',
       'profile_completion_submit': '저장하고 계속',
       'profile_completion_name_required': '이름을 입력해 주세요.',
-      'profile_completion_phone_required':
-          '올바른 전화번호를 입력해 주세요(5자 이상).',
-      'profile_completion_phone_duplicate':
-          '이미 다른 계정에서 사용 중인 전화번호입니다.',
+      'profile_completion_phone_required': '올바른 전화번호를 입력해 주세요(5자 이상).',
+      'profile_completion_phone_duplicate': '이미 다른 계정에서 사용 중인 전화번호입니다.',
       'auth_line_continue': 'LINE으로 계속하기',
       'auth_line_callback_error': 'LINE 로그인에 실패했습니다. 다시 시도해 주세요.',
       'auth_line_callback_state_mismatch': 'LINE 로그인을 확인할 수 없습니다. 다시 시도해 주세요.',
@@ -2993,10 +3000,8 @@ class AppLocalizations {
       'driver_contact_call': '전화',
       'driver_contact_sms': '문자',
       'driver_contact_copied': '연락처 ID를 복사했습니다.',
-      'driver_contact_copy_failed':
-          '복사하지 못했습니다. 연락처 ID를 길게 눌러 직접 복사해 주세요.',
-      'driver_contact_kakao_help':
-          '카카오톡이 없으면 관리자에게 고객 연락을 요청하세요.',
+      'driver_contact_copy_failed': '복사하지 못했습니다. 연락처 ID를 길게 눌러 직접 복사해 주세요.',
+      'driver_contact_kakao_help': '카카오톡이 없으면 관리자에게 고객 연락을 요청하세요.',
       'driver_contact_unavailable': '연락처 정보 없음 — 관리자에게 문의',
       'driver_release_assignment': '배정 반납',
       'driver_release_assignment_title': '이 예약의 배정을 반납하시겠습니까?',
@@ -3211,12 +3216,10 @@ class AppLocalizations {
           '연락은 확인됐지만 첫 기사 알림이 아직 저장되지 않았습니다.',
       'admin_contact_dispatch_state_delivery_retry_needed':
           '알림은 저장됐습니다. 서버 전달을 다시 시도해야 합니다.',
-      'admin_contact_dispatch_state_delivery_attempted':
-          '서버가 전달 시도를 마쳤습니다.',
+      'admin_contact_dispatch_state_delivery_attempted': '서버가 전달 시도를 마쳤습니다.',
       'admin_contact_dispatch_state_not_open':
           '더 이상 오픈 상태가 아닙니다. 기사 알림은 기록만 남아 있습니다.',
-      'admin_contact_dispatch_delivery_caveat':
-          '전달 시도 완료는 기사 앱 수신을 보장하지 않습니다.',
+      'admin_contact_dispatch_delivery_caveat': '전달 시도 완료는 기사 앱 수신을 보장하지 않습니다.',
       'admin_contact_dispatch_retry_button': '기사 알림 재시도',
       'admin_contact_dispatch_retry_success': '기사 알림 재시도를 시작했습니다',
       'admin_complete_trip_button': '운행 완료 처리',
@@ -3230,8 +3233,7 @@ class AppLocalizations {
           '기사 알림이 이미 진행 중입니다. 잠시 후 다시 시도해 주세요.',
       'admin_contact_dispatch_error_already_delivered':
           '이 예약은 이미 서버가 전달을 시도했습니다.',
-      'admin_contact_dispatch_error_not_retryable':
-          '이 예약은 기사 알림을 재시도할 수 없습니다.',
+      'admin_contact_dispatch_error_not_retryable': '이 예약은 기사 알림을 재시도할 수 없습니다.',
       'admin_contact_confirm_requested_hint':
           '고객이 메신저로 예약번호를 보냈다고 확인했습니다. 운영 메신저에서 동일 예약번호를 확인한 뒤 연결을 확인해 주세요.',
       'admin_contact_verify_button': '연결 확인',
@@ -3546,7 +3548,8 @@ class AppLocalizations {
       'admin_manual_booking_name_sign_hint': '客户总额增加100泰铢，司机需向机场举牌人员先支付100泰铢。',
       'admin_manual_booking_payout_amount': '司机支付金额 (THB)',
       'admin_manual_booking_customer_charge_amount': '客户支付金额 (THB)',
-      'admin_manual_booking_customer_charge_hint': '司机收入是已计入举牌费用后的最终金额。公司结算额＝客户付款－司机收入。',
+      'admin_manual_booking_customer_charge_hint':
+          '司机收入是已计入举牌费用后的最终金额。公司结算额＝客户付款－司机收入。',
       'admin_manual_booking_payment_method': '收款方式',
       'admin_manual_booking_payment_admin_collected': '管理员已收款',
       'admin_manual_booking_payment_driver_collects': '司机现场收款',
@@ -3688,10 +3691,10 @@ class AppLocalizations {
       'payment_bank_transfer_description':
           '选择韩元可查看韩国银行账户，选择泰铢可查看 PromptPay 二维码。',
       'payment_card_description': '如需刷卡付款，请联系管理员协助处理。',
-      'payment_depositor_name_notice':
-          '如果预订人姓名与汇款人姓名不同，请将汇款人姓名发送给管理员，以便完成处理。',
+      'payment_depositor_name_notice': '如果预订人姓名与汇款人姓名不同，请将汇款人姓名发送给管理员，以便完成处理。',
       'payment_details_contact_admin': '如未显示付款信息，请联系管理员。',
-      'customer_price_conditions': '显示的价格即为最终价格。已包含高速公路通行费、机场停车费及航班延误等待，无任何额外费用。',
+      'customer_price_conditions':
+          '显示的价格即为最终价格。已包含高速公路通行费、机场停车费及航班延误等待，无任何额外费用。',
       'customer_luggage_guidance': '请准确填写大件行李和高尔夫球包数量，以便推荐合适车辆。实际容量取决于最终分配车辆。',
       'customer_vehicle_guidance': '乘客或行李较多时，可能无法选择小于推荐车型的车辆。',
       'customer_vehicle_not_suitable': '不适合所选乘客或行李条件。',
@@ -3734,8 +3737,7 @@ class AppLocalizations {
       'contact_connect_wechat_id_copied': 'WeChat ID 已复制',
       'contact_connect_invalid_link': '联系连接链接无效',
       'booking_messenger_handoff_title': '您希望通过哪个聊天软件接收车辆和司机信息？',
-      'booking_messenger_handoff_description':
-          '选择一次即可自动复制预订号。只需在打开的聊天中粘贴并发送。',
+      'booking_messenger_handoff_description': '选择一次即可自动复制预订号。只需在打开的聊天中粘贴并发送。',
       'booking_messenger_handoff_channel': '通过 {channel} 接收通知',
       'booking_messenger_handoff_copied': '预订号已复制，请粘贴到聊天中并发送。',
       'booking_messenger_handoff_optional': '您可以跳过此步骤，不会影响预订。',
@@ -3756,35 +3758,24 @@ class AppLocalizations {
       'admin_contact_dispatch_mode_urgent': '紧急派车通知',
       'admin_contact_dispatch_state_not_applicable':
           '无需确认联系方式。创建预约时已开始发送公开派车通知。',
-      'admin_contact_dispatch_state_waiting_contact':
-          '在联系确认之前不会发送司机通知。',
-      'admin_contact_dispatch_state_dispatch_pending':
-          '联系已确认，但首次司机通知尚未保存。',
-      'admin_contact_dispatch_state_delivery_retry_needed':
-          '通知已保存，服务器仍需重试送达。',
-      'admin_contact_dispatch_state_delivery_attempted':
-          '服务器已完成送达尝试。',
-      'admin_contact_dispatch_state_not_open':
-          '此预约已不再开放，联系派车仅作为记录。',
-      'admin_contact_dispatch_delivery_caveat':
-          '送达尝试完成并不保证司机应用已收到通知。',
+      'admin_contact_dispatch_state_waiting_contact': '在联系确认之前不会发送司机通知。',
+      'admin_contact_dispatch_state_dispatch_pending': '联系已确认，但首次司机通知尚未保存。',
+      'admin_contact_dispatch_state_delivery_retry_needed': '通知已保存，服务器仍需重试送达。',
+      'admin_contact_dispatch_state_delivery_attempted': '服务器已完成送达尝试。',
+      'admin_contact_dispatch_state_not_open': '此预约已不再开放，联系派车仅作为记录。',
+      'admin_contact_dispatch_delivery_caveat': '送达尝试完成并不保证司机应用已收到通知。',
       'admin_contact_dispatch_retry_button': '重试司机通知',
       'admin_contact_dispatch_retry_success': '已开始重试司机通知',
       'admin_complete_trip_button': '完成行程',
       'admin_complete_trip_title': '要完成此行程吗？',
-      'admin_complete_trip_message':
-          '这将代替司机结束行程，并把订单转为待结算。请确认行程确实已结束后再继续。',
+      'admin_complete_trip_message': '这将代替司机结束行程，并把订单转为待结算。请确认行程确实已结束后再继续。',
       'admin_complete_trip_confirm': '完成行程',
       'admin_complete_trip_success': '行程已完成并转为待结算',
       'admin_complete_trip_error': '无法完成此行程',
-      'admin_contact_dispatch_error_in_progress':
-          '司机通知正在进行中，请稍后再试。',
-      'admin_contact_dispatch_error_already_delivered':
-          '服务器已对此预约尝试送达。',
-      'admin_contact_dispatch_error_not_retryable':
-          '此预约不符合司机通知重试条件。',
-      'admin_contact_confirm_requested_hint':
-          '顾客已确认在即时通讯中发送了预约号。请核对后确认连接。',
+      'admin_contact_dispatch_error_in_progress': '司机通知正在进行中，请稍后再试。',
+      'admin_contact_dispatch_error_already_delivered': '服务器已对此预约尝试送达。',
+      'admin_contact_dispatch_error_not_retryable': '此预约不符合司机通知重试条件。',
+      'admin_contact_confirm_requested_hint': '顾客已确认在即时通讯中发送了预约号。请核对后确认连接。',
       'admin_contact_verify_button': '确认连接',
       'admin_contact_verify_success': '联系连接已确认',
       'booking_contact_method_title': '请选择联系方式',
@@ -4428,15 +4419,15 @@ class AppLocalizations {
       'admin_manual_booking_flight_pickup_keep_manual': '入力した時間を使用',
       'admin_manual_booking_flight_pickup_use_flight': 'フライト到着時間に変更',
       'admin_manual_booking_flight_pickup_final_label': '最終ピックアップ希望時間',
-      'admin_dispatch_driver_pickup_conflict':
-          'ピックアップ時間がこのドライバーの他の割当と重なります',
+      'admin_dispatch_driver_pickup_conflict': 'ピックアップ時間がこのドライバーの他の割当と重なります',
       'admin_manual_booking_vehicle_type': '車両クラス',
       'admin_manual_booking_passengers': '乗客人数',
       'admin_manual_booking_name_sign_hint':
           '顧客支払額に100バーツを加算し、ドライバーが空港の係員へ100バーツを立替払いします。',
       'admin_manual_booking_payout_amount': 'ドライバー支払額 (THB)',
       'admin_manual_booking_customer_charge_amount': '顧客支払額 (THB)',
-      'admin_manual_booking_customer_charge_hint': 'ドライバー受取額はピケット費用反映後の最終額です。会社精算額＝顧客支払額－ドライバー受取額です。',
+      'admin_manual_booking_customer_charge_hint':
+          'ドライバー受取額はピケット費用反映後の最終額です。会社精算額＝顧客支払額－ドライバー受取額です。',
       'admin_manual_booking_payment_method': '支払い回収方法',
       'admin_manual_booking_payment_admin_collected': '管理者が既に受領済み',
       'admin_manual_booking_payment_driver_collects': '現地でドライバーが直接回収',
@@ -4509,11 +4500,9 @@ class AppLocalizations {
       'landing_language_label': '言語',
       'support_title': 'カスタマーセンター',
       'support_contact_channels_title': 'カスタマーセンター連絡',
-      'support_contact_channels_hint':
-          'ご希望のメッセンジャーアイコンをタップしてすぐに相談を始めてください',
+      'support_contact_channels_hint': 'ご希望のメッセンジャーアイコンをタップしてすぐに相談を始めてください',
       'support_wechat_qr_dialog_title': 'WeChat QRコード',
-      'support_wechat_qr_dialog_hint':
-          'WeChatアプリでQRコードをスキャンして友だち追加してください',
+      'support_wechat_qr_dialog_hint': 'WeChatアプリでQRコードをスキャンして友だち追加してください',
       'support_page_intro':
           '予約が難しい場合やお問い合わせが必要な場合は、カスタマーセンターへご連絡ください。航空券、ホテルバウチャー、予約画面の画像も添付できます。',
       'support_inquiry_button': '問い合わせる',
@@ -4585,7 +4574,8 @@ class AppLocalizations {
       'payment_depositor_name_notice':
           '予約者名と振込名義が異なる場合は、処理完了のため振込名義を管理者へお知らせください。',
       'payment_details_contact_admin': '支払い情報が表示されない場合は、管理者へお問い合わせください。',
-      'customer_price_conditions': '表示料金が最終料金です。高速道路料金・空港駐車場代・フライト遅延時の待機がすべて含まれ、追加料金はありません。',
+      'customer_price_conditions':
+          '表示料金が最終料金です。高速道路料金・空港駐車場代・フライト遅延時の待機がすべて含まれ、追加料金はありません。',
       'customer_luggage_guidance':
           '大型スーツケースやゴルフバッグの数を正確に入力してください。実際の積載可否は割り当て車両により異なります。',
       'customer_vehicle_guidance': '乗客または荷物が多い場合、推奨より小さい車両は選択できないことがあります。',
@@ -4659,12 +4649,9 @@ class AppLocalizations {
           '連絡は確認済みですが、最初のドライバー通知はまだ保存されていません。',
       'admin_contact_dispatch_state_delivery_retry_needed':
           '通知は保存済みです。サーバーの配信を再試行する必要があります。',
-      'admin_contact_dispatch_state_delivery_attempted':
-          'サーバーは配信の試行を完了しました。',
-      'admin_contact_dispatch_state_not_open':
-          'この予約はオープンではありません。連絡配車は記録のみです。',
-      'admin_contact_dispatch_delivery_caveat':
-          '配信試行の完了は、ドライバーアプリの受信を保証しません。',
+      'admin_contact_dispatch_state_delivery_attempted': 'サーバーは配信の試行を完了しました。',
+      'admin_contact_dispatch_state_not_open': 'この予約はオープンではありません。連絡配車は記録のみです。',
+      'admin_contact_dispatch_delivery_caveat': '配信試行の完了は、ドライバーアプリの受信を保証しません。',
       'admin_contact_dispatch_retry_button': 'ドライバー通知を再試行',
       'admin_contact_dispatch_retry_success': 'ドライバー通知の再試行を開始しました',
       'admin_complete_trip_button': '運行を完了',
@@ -4678,8 +4665,7 @@ class AppLocalizations {
           'ドライバー通知はすでに進行中です。しばらくしてから再試行してください。',
       'admin_contact_dispatch_error_already_delivered':
           'この予約はすでにサーバーが配信を試行しました。',
-      'admin_contact_dispatch_error_not_retryable':
-          'この予約はドライバー通知を再試行できません。',
+      'admin_contact_dispatch_error_not_retryable': 'この予約はドライバー通知を再試行できません。',
       'admin_contact_confirm_requested_hint':
           '顧客がメッセンジャーで予約番号を送信したと確認しました。同じ番号を確認してから接続を承認してください。',
       'admin_contact_verify_button': '接続を確認',
@@ -4698,10 +4684,8 @@ class AppLocalizations {
       'booking_contact_emergency_phone_optional': 'ドライバー緊急連絡用電話（任意）',
       'booking_contact_phone_required': '国際電話番号',
       'booking_contact_phone_hint': '国番号を除いた番号',
-      'booking_contact_kakao_login_hint':
-          'Kakaoでログインすると、別の端末でも予約を確認できます。',
-      'booking_contact_line_login_hint':
-          'LINEでログインすると、別の端末でも予約を確認できます。',
+      'booking_contact_kakao_login_hint': 'Kakaoでログインすると、別の端末でも予約を確認できます。',
+      'booking_contact_line_login_hint': 'LINEでログインすると、別の端末でも予約を確認できます。',
       'booking_contact_confirm_kakao': 'KakaoTalkで予約確定案内を受け取る',
       'booking_contact_confirm_line': 'LINEで予約確定案内を受け取る',
       'wizard_required_customer_contact': '必須の連絡先情報を入力してください。',
@@ -4793,14 +4777,11 @@ class AppLocalizations {
       'auth_kakao_callback_slow_loading': '処理に時間がかかっています。ページを更新してください。',
       'auth_kakao_callback_refresh': 'ページを更新',
       'profile_completion_title': 'プロフィールを完成',
-      'profile_completion_body':
-          'T-Riderをご利用いただくために、お名前と電話番号を入力してください。',
+      'profile_completion_body': 'T-Riderをご利用いただくために、お名前と電話番号を入力してください。',
       'profile_completion_submit': '保存して続行',
       'profile_completion_name_required': '名前を入力してください。',
-      'profile_completion_phone_required':
-          '有効な電話番号を入力してください（5文字以上）。',
-      'profile_completion_phone_duplicate':
-          'この電話番号は別のアカウントですでに使用されています。',
+      'profile_completion_phone_required': '有効な電話番号を入力してください（5文字以上）。',
+      'profile_completion_phone_duplicate': 'この電話番号は別のアカウントですでに使用されています。',
       'auth_line_continue': 'LINEで続ける',
       'auth_line_callback_error': 'LINEログインに失敗しました。もう一度お試しください。',
       'auth_line_callback_state_mismatch': 'LINEログインを確認できませんでした。もう一度お試しください。',
@@ -4858,8 +4839,7 @@ class AppLocalizations {
       'driver_contact_call': '電話',
       'driver_contact_sms': 'SMS',
       'driver_contact_copied': '連絡先IDをコピーしました。',
-      'driver_contact_copy_failed':
-          'コピーできませんでした。連絡先IDを長押ししてコピーしてください。',
+      'driver_contact_copy_failed': 'コピーできませんでした。連絡先IDを長押ししてコピーしてください。',
       'driver_contact_kakao_help': 'カカオトークが使えない場合は、管理者にお客様への連絡を依頼してください。',
       'driver_contact_unavailable': '連絡先情報がありません — 管理者にお問い合わせください',
       'driver_release_assignment': '配車を返却',
@@ -5037,9 +5017,12 @@ class AppLocalizations {
       'flight_lookup_confirm': 'この便で間違いありません',
       'flight_lookup_route_title': '到着便を検索',
       'flight_departure_date': 'フライト出発日',
-      'flight_departure_date_help': '航空券に記載された出発地の現地出発日を選択してください。ピックアップ日はタイへの実際の到着日で計算されます。',
-      'flight_lookup_manual_fallback': 'フライトが見つかりませんでした。空港を選び、到着時刻を手動で入力してください。',
-      'flight_lookup_airport_unsupported': '到着空港を自動選択できません。下から空港を選び、ピックアップ時刻を入力してください。',
+      'flight_departure_date_help':
+          '航空券に記載された出発地の現地出発日を選択してください。ピックアップ日はタイへの実際の到着日で計算されます。',
+      'flight_lookup_manual_fallback':
+          'フライトが見つかりませんでした。空港を選び、到着時刻を手動で入力してください。',
+      'flight_lookup_airport_unsupported':
+          '到着空港を自動選択できません。下から空港を選び、ピックアップ時刻を入力してください。',
       'flight_lookup_applied_50_minutes': '到着空港と、到着50分後のピックアップ時刻（タイ時間）を入力しました。',
       'pickup_date_select': 'ピックアップ日を選択',
       'booking_number_copied': '予約番号をコピーしました',
@@ -5383,7 +5366,8 @@ class AppLocalizations {
       'admin_manual_booking_pickup_datetime_hint': 'เลือกวันและเวลารับ',
       'admin_manual_booking_pickup_timezone': 'เวลาท้องถิ่นประเทศไทย (UTC+7)',
       'admin_manual_booking_special_items_text': 'หมายเหตุสัมภาระพิเศษ',
-      'admin_manual_booking_special_items_hint': 'อธิบายสัมภาระขนาดใหญ่หรือพิเศษ',
+      'admin_manual_booking_special_items_hint':
+          'อธิบายสัมภาระขนาดใหญ่หรือพิเศษ',
       'admin_manual_booking_flight_pickup_date_required':
           'เลือกวันรับก่อนค้นหาเที่ยวบิน',
       'admin_manual_booking_flight_manual_fallback_hint':
@@ -5391,7 +5375,8 @@ class AppLocalizations {
       'admin_manual_booking_flight_pickup_conflict_warning':
           'เวลารับที่คุณกรอกกับเวลาถึงตามกำหนดของเที่ยวบินต่างกัน {minutes} นาที',
       'admin_manual_booking_flight_pickup_keep_manual': 'ใช้เวลาที่กรอกเอง',
-      'admin_manual_booking_flight_pickup_use_flight': 'เปลี่ยนตามเวลาเที่ยวบิน',
+      'admin_manual_booking_flight_pickup_use_flight':
+          'เปลี่ยนตามเวลาเที่ยวบิน',
       'admin_manual_booking_flight_pickup_final_label': 'เวลารับสุดท้ายที่ขอ',
       'admin_dispatch_driver_pickup_conflict':
           'เวลารับขัดแย้งกับงานที่มอบหมายอื่นของคนขับคนนี้',
@@ -5427,7 +5412,8 @@ class AppLocalizations {
       'admin_manual_booking_update_submit': 'บันทึกการเปลี่ยนแปลง',
       'admin_manual_booking_update_success': 'อัปเดตคอลที่ลงทะเบียนแล้ว',
       'admin_manual_booking_failed': 'ไม่สามารถสร้างคอลด้วยตนเองได้',
-      'admin_manual_booking_validation_required': 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ',
+      'admin_manual_booking_validation_required':
+          'กรุณากรอกข้อมูลที่จำเป็นให้ครบ',
       'admin_manual_booking_validation_customer':
           'เลือกสมาชิกหรือกรอกชื่อและเบอร์โทรของผู้ใช้ทั่วไป',
       'admin_manual_booking_preview_notice':
@@ -5630,7 +5616,8 @@ class AppLocalizations {
       'admin_contact_dispatch_delivery_caveat':
           'การพยายามส่งสำเร็จไม่ได้รับประกันว่าแอปคนขับได้รับแจ้งเตือน',
       'admin_contact_dispatch_retry_button': 'ลองส่งแจ้งเตือนคนขับอีกครั้ง',
-      'admin_contact_dispatch_retry_success': 'เริ่มลองส่งแจ้งเตือนคนขับอีกครั้งแล้ว',
+      'admin_contact_dispatch_retry_success':
+          'เริ่มลองส่งแจ้งเตือนคนขับอีกครั้งแล้ว',
       'admin_complete_trip_button': 'จบการเดินทาง',
       'admin_complete_trip_title': 'จบการเดินทางนี้หรือไม่',
       'admin_complete_trip_message':
@@ -5659,7 +5646,8 @@ class AppLocalizations {
       'booking_contact_phone_sms': 'โทรศัพท์·ข้อความ',
       'booking_contact_kakao_id': 'KakaoTalk ID',
       'booking_contact_line_id': 'LINE ID',
-      'booking_contact_id_searchable_notice': 'กรอก ID ที่อนุญาตให้ค้นหาเพื่อนได้',
+      'booking_contact_id_searchable_notice':
+          'กรอก ID ที่อนุญาตให้ค้นหาเพื่อนได้',
       'booking_contact_emergency_phone_optional':
           'เบอร์ฉุกเฉินสำหรับคนขับ (ไม่บังคับ)',
       'booking_contact_phone_required': 'หมายเลขโทรศัพท์ระหว่างประเทศ',
@@ -5842,7 +5830,8 @@ class AppLocalizations {
       'driver_contact_copied': 'คัดลอก ID ติดต่อแล้ว',
       'driver_contact_copy_failed':
           'คัดลอกไม่สำเร็จ กรุณากด ID ติดต่อค้างไว้เพื่อคัดลอกด้วยตนเอง',
-      'driver_contact_kakao_help': 'หากใช้ KakaoTalk ไม่ได้ โปรดขอให้ผู้ดูแลติดต่อลูกค้า',
+      'driver_contact_kakao_help':
+          'หากใช้ KakaoTalk ไม่ได้ โปรดขอให้ผู้ดูแลติดต่อลูกค้า',
       'driver_contact_unavailable': 'ไม่มีข้อมูลติดต่อ — โปรดติดต่อผู้ดูแล',
       'driver_release_assignment': 'คืนงาน',
       'driver_release_assignment_title':
@@ -6078,10 +6067,14 @@ class AppLocalizations {
       'flight_lookup_confirm': 'นี่คือเที่ยวบินของฉัน',
       'flight_lookup_route_title': 'ค้นหาเที่ยวบินขาเข้า',
       'flight_departure_date': 'วันที่เที่ยวบินออกเดินทาง',
-      'flight_departure_date_help': 'เลือกวันที่ออกเดินทางตามเวลาท้องถิ่นที่ระบุบนตั๋ว วันที่รับจะคำนวณจากวันที่เดินทางถึงประเทศไทยจริง',
-      'flight_lookup_manual_fallback': 'ไม่พบเที่ยวบิน กรุณาเลือกสนามบินและกรอกเวลาถึงด้วยตนเอง',
-      'flight_lookup_airport_unsupported': 'ไม่สามารถเลือกสนามบินปลายทางนี้โดยอัตโนมัติ กรุณาเลือกสนามบินด้านล่างและกรอกเวลารับ',
-      'flight_lookup_applied_50_minutes': 'ตั้งค่าสนามบินปลายทางและเวลารับ 50 นาทีหลังเวลาถึงตามเวลาไทยแล้ว',
+      'flight_departure_date_help':
+          'เลือกวันที่ออกเดินทางตามเวลาท้องถิ่นที่ระบุบนตั๋ว วันที่รับจะคำนวณจากวันที่เดินทางถึงประเทศไทยจริง',
+      'flight_lookup_manual_fallback':
+          'ไม่พบเที่ยวบิน กรุณาเลือกสนามบินและกรอกเวลาถึงด้วยตนเอง',
+      'flight_lookup_airport_unsupported':
+          'ไม่สามารถเลือกสนามบินปลายทางนี้โดยอัตโนมัติ กรุณาเลือกสนามบินด้านล่างและกรอกเวลารับ',
+      'flight_lookup_applied_50_minutes':
+          'ตั้งค่าสนามบินปลายทางและเวลารับ 50 นาทีหลังเวลาถึงตามเวลาไทยแล้ว',
       'pickup_date_select': 'เลือกวันที่รับ',
       'booking_number_copied': 'คัดลอกหมายเลขจองแล้ว',
       'booking_number_copy_failed': 'ไม่สามารถคัดลอกหมายเลขจองได้',
@@ -6109,7 +6102,8 @@ class AppLocalizations {
       'wizard_trust_toll_included': 'รวมค่าทางด่วนแล้ว',
       'wizard_trust_no_airport_parking': 'รวมค่าจอดรถสนามบินแล้ว',
       'wizard_trust_no_night_surcharge': 'ไม่มีค่าบริการเพิ่มช่วงดึก/เช้ามืด',
-      'wizard_trust_flight_delay_wait': 'เที่ยวบินล่าช้า ปรับเวลารับตามเวลาถึงจริง',
+      'wizard_trust_flight_delay_wait':
+          'เที่ยวบินล่าช้า ปรับเวลารับตามเวลาถึงจริง',
       'wizard_places_searching': 'กำลังค้นหาสถานที่…',
       'wizard_places_no_results_hint':
           'ไม่พบสถานที่ ลองคำค้นหาอื่นหรือเลือกจากแผนที่',
@@ -7033,15 +7027,12 @@ class AppLocalizations {
     'driver_contact_whatsapp': 'WhatsApp\n(วอตส์แอป)',
     'driver_contact_phone_sms': '전화·문자\n(โทร·ส่งข้อความ)',
     'driver_contact_phone': '고객 전화번호\n(เบอร์โทรลูกค้า)',
-    'driver_contact_emergency_phone':
-        '고객 전화번호(긴급)\n(เบอร์โทรฉุกเฉินของลูกค้า)',
+    'driver_contact_emergency_phone': '고객 전화번호(긴급)\n(เบอร์โทรฉุกเฉินของลูกค้า)',
     'driver_contact_copy_id': 'ID 복사\n(คัดลอก ID)',
-    'driver_contact_open_whatsapp':
-        'WhatsApp 열기\n(เปิด WhatsApp)',
+    'driver_contact_open_whatsapp': 'WhatsApp 열기\n(เปิด WhatsApp)',
     'driver_contact_call': '전화\n(โทร)',
     'driver_contact_sms': '문자\n(ส่งข้อความ)',
-    'driver_contact_copied':
-        '연락처 ID를 복사했습니다.\n(คัดลอก ID ติดต่อแล้ว)',
+    'driver_contact_copied': '연락처 ID를 복사했습니다.\n(คัดลอก ID ติดต่อแล้ว)',
     'driver_contact_copy_failed':
         '복사하지 못했습니다. ID를 길게 눌러 직접 복사해 주세요.\n(คัดลอกไม่สำเร็จ กรุณากด ID ค้างไว้เพื่อคัดลอกเอง)',
     'driver_contact_kakao_help':
@@ -7071,20 +7062,28 @@ class AppLocalizations {
     'driver_password': '비밀번호\n(รหัสผ่าน)',
     'driver_forgot_password': '비밀번호를 잊어버리셨나요?\n(ลืมรหัสผ่านใช่ไหม?)',
     'driver_reset_title': '비밀번호 재설정\n(ตั้งรหัสผ่านใหม่)',
-    'driver_reset_request_help': '기사 계정의 전화번호 또는 이메일을 입력하세요. 등록된 이메일로 인증번호를 보내드립니다.\n(กรอกเบอร์โทรหรืออีเมล ระบบจะส่งรหัสไปยังอีเมลที่ลงทะเบียน)',
-    'driver_reset_code_help': '이메일로 받은 6자리 인증번호와 새 비밀번호를 입력하세요.\n(กรอกรหัส 6 หลักจากอีเมลและรหัสผ่านใหม่)',
+    'driver_reset_request_help':
+        '기사 계정의 전화번호 또는 이메일을 입력하세요. 등록된 이메일로 인증번호를 보내드립니다.\n(กรอกเบอร์โทรหรืออีเมล ระบบจะส่งรหัสไปยังอีเมลที่ลงทะเบียน)',
+    'driver_reset_code_help':
+        '이메일로 받은 6자리 인증번호와 새 비밀번호를 입력하세요.\n(กรอกรหัส 6 หลักจากอีเมลและรหัสผ่านใหม่)',
     'driver_reset_identifier': '전화번호 또는 이메일\n(เบอร์โทรหรืออีเมล)',
-    'driver_reset_identifier_required': '기사 계정을 정확히 입력해 주세요.\n(กรุณากรอกบัญชีคนขับให้ถูกต้อง)',
+    'driver_reset_identifier_required':
+        '기사 계정을 정확히 입력해 주세요.\n(กรุณากรอกบัญชีคนขับให้ถูกต้อง)',
     'driver_reset_code': '인증번호 6자리\n(รหัสยืนยัน 6 หลัก)',
-    'driver_reset_code_invalid': '6자리 인증번호를 입력해 주세요.\n(กรุณากรอกรหัสยืนยัน 6 หลัก)',
+    'driver_reset_code_invalid':
+        '6자리 인증번호를 입력해 주세요.\n(กรุณากรอกรหัสยืนยัน 6 หลัก)',
     'driver_reset_new_password': '새 비밀번호\n(รหัสผ่านใหม่)',
     'driver_reset_confirm_password': '새 비밀번호 확인\n(ยืนยันรหัสผ่านใหม่)',
-    'driver_reset_password_min': '새 비밀번호는 8자 이상이어야 합니다.\n(รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัว)',
-    'driver_reset_password_mismatch': '새 비밀번호가 일치하지 않습니다.\n(รหัสผ่านใหม่ไม่ตรงกัน)',
+    'driver_reset_password_min':
+        '새 비밀번호는 8자 이상이어야 합니다.\n(รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัว)',
+    'driver_reset_password_mismatch':
+        '새 비밀번호가 일치하지 않습니다.\n(รหัสผ่านใหม่ไม่ตรงกัน)',
     'driver_reset_send_code': '인증번호 받기 / รับรหัส',
     'driver_reset_save': '새 비밀번호 저장 / บันทึก',
-    'driver_reset_success': '비밀번호가 변경되었습니다. 새 비밀번호로 로그인하세요.\n(เปลี่ยนรหัสผ่านแล้ว กรุณาเข้าสู่ระบบด้วยรหัสใหม่)',
-    'driver_reset_failed': '인증번호가 올바르지 않거나 만료되었습니다. 다시 확인해 주세요.\n(รหัสไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบอีกครั้ง)',
+    'driver_reset_success':
+        '비밀번호가 변경되었습니다. 새 비밀번호로 로그인하세요.\n(เปลี่ยนรหัสผ่านแล้ว กรุณาเข้าสู่ระบบด้วยรหัสใหม่)',
+    'driver_reset_failed':
+        '인증번호가 올바르지 않거나 만료되었습니다. 다시 확인해 주세요.\n(รหัสไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบอีกครั้ง)',
     'driver_login': '로그인 / เข้าสู่ระบบ',
     'driver_application_cta': '기사 등록 신청 / สมัครคนขับ',
     'driver_load_failed': '정보를 불러올 수 없습니다\n(ไม่สามารถโหลดข้อมูลได้)',
@@ -7369,8 +7368,7 @@ class AppLocalizations {
     'driver_customer_total_amount': '고객 결제 총액\n(ยอดชำระรวมของลูกค้า)',
     'driver_company_commission':
         '회사에 납부할 수수료\n(ค่าคอมมิชชันที่ต้องชำระให้บริษัท)',
-    'driver_name_sign_advance':
-        '기사가 선지급할 피켓 비용\n(ค่าป้ายรับที่คนขับสำรองจ่าย)',
+    'driver_name_sign_advance': '기사가 선지급할 피켓 비용\n(ค่าป้ายรับที่คนขับสำรองจ่าย)',
     'driver_expected_income': '기사 예상 수입\n(รายได้โดยประมาณของคนขับ)',
     'driver_income_unavailable':
         '수입 정보를 확인할 수 없습니다. 관리자에게 문의해 주세요.\n(ไม่สามารถยืนยันข้อมูลรายได้ได้ กรุณาติดต่อผู้ดูแล)',

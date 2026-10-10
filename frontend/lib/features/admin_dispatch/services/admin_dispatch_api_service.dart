@@ -122,11 +122,7 @@ class AdminDispatchApiService {
         default:
           return client == null
               ? http.post(uri, headers: headers, body: encodedBody ?? '{}')
-              : client.post(
-                  uri,
-                  headers: headers,
-                  body: encodedBody ?? '{}',
-                );
+              : client.post(uri, headers: headers, body: encodedBody ?? '{}');
       }
     }
 
@@ -219,8 +215,7 @@ class AdminDispatchApiService {
     if (value is Map) {
       return Map<String, dynamic>.from(
         value.map(
-          (key, nested) =>
-              MapEntry(key.toString(), _deepNormalizeJson(nested)),
+          (key, nested) => MapEntry(key.toString(), _deepNormalizeJson(nested)),
         ),
       );
     }
@@ -235,9 +230,7 @@ class AdminDispatchApiService {
     if (data is! Map) {
       throw AdminDispatchApiException('Invalid booking detail response');
     }
-    return Map<String, dynamic>.from(
-      _deepNormalizeJson(data) as Map,
-    );
+    return Map<String, dynamic>.from(_deepNormalizeJson(data) as Map);
   }
 
   Future<Map<String, dynamic>> listBookingNotes(
@@ -313,6 +306,38 @@ class AdminDispatchApiService {
 
   Future<Map<String, dynamic>> restoreDriver(int driverId) async {
     final data = await _request('POST', '/admin/drivers/$driverId/restore');
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> getDriverSuspensionPreview(int driverId) async {
+    final data = await _request(
+      'GET',
+      '/admin/drivers/$driverId/suspension-preview',
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> suspendDriver(
+    int driverId,
+    String reason,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/drivers/$driverId/suspend',
+      body: {'reason': reason},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> unsuspendDriver(
+    int driverId,
+    String reason,
+  ) async {
+    final data = await _request(
+      'POST',
+      '/admin/drivers/$driverId/unsuspend',
+      body: {'reason': reason},
+    );
     return Map<String, dynamic>.from(data as Map);
   }
 
