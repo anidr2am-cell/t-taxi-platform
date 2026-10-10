@@ -371,6 +371,7 @@ test('open call list hides customer personal details before assignment', async (
   assert.equal(result.items[0].compatibleVehicles.length, 1);
   assert.equal(result.items[0].compatibleVehicles[0].driverVehicleId, 55);
   assert.equal(Object.hasOwn(result.items[0], 'customerPhone'), false);
+  assert.equal(Object.hasOwn(result.items[0], 'customerContact'), false);
   assert.equal(Object.hasOwn(result.items[0], 'customerEmail'), false);
   assert.equal(Object.hasOwn(result.items[0], 'specialInstructions'), false);
 });
@@ -951,6 +952,7 @@ test('releaseAssignment reopens booking, clears active assignment, and notifies 
   assert.equal(calls.notifications.length, 2);
   assert.equal(calls.notifications[0].notificationType, NOTIFICATION_TYPES.DRIVER_CALL_AVAILABLE);
   assert.equal(Object.hasOwn(calls.notifications[0].payload, 'customerPhone'), false);
+  assert.equal(Object.hasOwn(calls.notifications[0].payload, 'customerContact'), false);
   assert.equal(
     emitted.some((row) => row.room === driverUserRoom(42) && row.event === 'driver:assignment:released'),
     true,

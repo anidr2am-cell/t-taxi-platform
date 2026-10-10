@@ -29,6 +29,7 @@ class DriverBooking {
     this.flightStatus,
     this.latestEstimatedArrival,
     this.customerPhone,
+    this.customerContact,
     this.passengers,
     this.luggage,
     this.flight,
@@ -83,6 +84,7 @@ class DriverBooking {
   final String? flightStatus;
   final String? latestEstimatedArrival;
   final String? customerPhone;
+  final DriverCustomerContact? customerContact;
   final Map<String, dynamic>? passengers;
   final Map<String, dynamic>? luggage;
   final Map<String, dynamic>? flight;
@@ -167,6 +169,9 @@ class DriverBooking {
       flightStatus: json['flightStatus'] as String?,
       latestEstimatedArrival: json['latestEstimatedArrival'] as String?,
       customerPhone: json['customerPhone'] as String?,
+      customerContact: DriverCustomerContact.fromJsonOrNull(
+        json['customerContact'],
+      ),
       passengers: json['passengers'] == null
           ? null
           : Map<String, dynamic>.from(json['passengers'] as Map),
@@ -213,6 +218,40 @@ class DriverBooking {
       requiresBankAccountConfirmation:
           json['requiresBankAccountConfirmation'] == true,
     );
+  }
+}
+
+class DriverCustomerContact {
+  const DriverCustomerContact({
+    this.messengerType,
+    this.messengerId,
+    this.phone,
+  });
+
+  final String? messengerType;
+  final String? messengerId;
+  final String? phone;
+
+  bool get isEmpty =>
+      (messengerType == null || messengerType!.isEmpty) &&
+      (messengerId == null || messengerId!.isEmpty) &&
+      (phone == null || phone!.isEmpty);
+
+  static DriverCustomerContact? fromJsonOrNull(Object? raw) {
+    if (raw is! Map) return null;
+    final json = Map<String, dynamic>.from(raw);
+    String? value(String key) {
+      final candidate = json[key];
+      if (candidate is! String || candidate.trim().isEmpty) return null;
+      return candidate.trim();
+    }
+
+    final contact = DriverCustomerContact(
+      messengerType: value('messengerType')?.toUpperCase(),
+      messengerId: value('messengerId'),
+      phone: value('phone'),
+    );
+    return contact.isEmpty ? null : contact;
   }
 }
 

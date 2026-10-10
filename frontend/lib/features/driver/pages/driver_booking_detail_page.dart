@@ -26,6 +26,7 @@ import '../widgets/driver_status_control.dart';
 import '../widgets/driver_trip_confirm_dialog.dart';
 import '../widgets/driver_urgent_negotiation_banner.dart';
 import '../widgets/driver_workflow_widgets.dart';
+import '../widgets/driver_customer_contact_card.dart';
 
 class DriverBookingDetailPage extends StatefulWidget {
   DriverBookingDetailPage({
@@ -402,10 +403,7 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                     errorCode: apiErr.errorCode,
                     languageCode: l10n.languageCode,
                   )
-                : userFacingError(
-                    err,
-                    fallback: l10n.t('driver_detail_error'),
-                  );
+                : userFacingError(err, fallback: l10n.t('driver_detail_error'));
             final ended = apiErr?.isAssignmentEnded == true;
             return AppUi.errorState(
               message: message,
@@ -611,15 +609,18 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                                 label: l10n.t('driver_company_commission'),
                                 value: DriverMoneyFormat.money(
                                   booking.companyCommissionAmount!,
-                                  booking.companyCommissionCurrency ?? booking.currency,
+                                  booking.companyCommissionCurrency ??
+                                      booking.currency,
                                 ),
                               ),
-                            if (booking.nameSignRequested && booking.nameSignAmount != null)
+                            if (booking.nameSignRequested &&
+                                booking.nameSignAmount != null)
                               AppUi.summaryRow(
                                 label: l10n.t('driver_name_sign_advance'),
                                 value: DriverMoneyFormat.money(
                                   booking.nameSignAmount!,
-                                  booking.customerPaymentCurrency ?? booking.currency,
+                                  booking.customerPaymentCurrency ??
+                                      booking.currency,
                                 ),
                               ),
                             if (booking.driverExpectedIncomeAmount != null)
@@ -627,7 +628,8 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                                 label: l10n.t('driver_expected_income'),
                                 value: DriverMoneyFormat.money(
                                   booking.driverExpectedIncomeAmount!,
-                                  booking.driverExpectedIncomeCurrency ?? booking.currency,
+                                  booking.driverExpectedIncomeCurrency ??
+                                      booking.currency,
                                 ),
                                 emphasize: true,
                               ),
@@ -658,17 +660,10 @@ class _DriverBookingDetailPageState extends State<DriverBookingDetailPage> {
                               label: l10n.t('driver_detail_customer_name'),
                               value: booking.customerDisplayName!,
                             ),
-                          if (DriverUx.canContactCustomer(booking.status) &&
-                              DriverTripContact.hasCallablePhone(
-                                booking.customerPhone,
-                              ))
-                            AppUi.secondaryButton(
-                              label: l10n.t('driver_call_customer'),
-                              icon: Icons.phone_outlined,
-                              onPressed: () => DriverTripContact.callPhone(
-                                booking.customerPhone!,
-                              ),
-                              fullWidth: true,
+                          if (DriverUx.canContactCustomer(booking.status))
+                            DriverCustomerContactCard(
+                              contact: booking.customerContact,
+                              legacyPhone: booking.customerPhone,
                             ),
                         ],
                       ),
@@ -1008,25 +1003,34 @@ class _EndTripPaymentSummary extends StatelessWidget {
     }
     final commission = booking.companyCommissionAmount;
     if (commission != null && currency != null && currency.isNotEmpty) {
-      rows.add(AppUi.summaryRow(
-        label: l10n.t('driver_company_commission'),
-        value: DriverMoneyFormat.money(commission, currency),
-      ));
+      rows.add(
+        AppUi.summaryRow(
+          label: l10n.t('driver_company_commission'),
+          value: DriverMoneyFormat.money(commission, currency),
+        ),
+      );
     }
     final nameSignAmount = booking.nameSignAmount;
-    if (booking.nameSignRequested && nameSignAmount != null && currency != null && currency.isNotEmpty) {
-      rows.add(AppUi.summaryRow(
-        label: l10n.t('driver_name_sign_advance'),
-        value: DriverMoneyFormat.money(nameSignAmount, currency),
-      ));
+    if (booking.nameSignRequested &&
+        nameSignAmount != null &&
+        currency != null &&
+        currency.isNotEmpty) {
+      rows.add(
+        AppUi.summaryRow(
+          label: l10n.t('driver_name_sign_advance'),
+          value: DriverMoneyFormat.money(nameSignAmount, currency),
+        ),
+      );
     }
     final income = booking.driverExpectedIncomeAmount;
     if (income != null && currency != null && currency.isNotEmpty) {
-      rows.add(AppUi.summaryRow(
-        label: l10n.t('driver_expected_income'),
-        value: DriverMoneyFormat.money(income, currency),
-        emphasize: true,
-      ));
+      rows.add(
+        AppUi.summaryRow(
+          label: l10n.t('driver_expected_income'),
+          value: DriverMoneyFormat.money(income, currency),
+          emphasize: true,
+        ),
+      );
     }
     if (rows.isEmpty) {
       return const SizedBox.shrink();
@@ -1485,7 +1489,8 @@ class _ReleaseAssignmentDialogState extends State<_ReleaseAssignmentDialog> {
         ? _emergencyReasons
         : [..._emergencyReasons, ..._normalReasons];
     final detailRequired = _reasonCode == 'OTHER';
-    final canSubmit = _reasonCode != null &&
+    final canSubmit =
+        _reasonCode != null &&
         (!detailRequired || _detailController.text.trim().length >= 3);
 
     return AlertDialog(
@@ -1503,9 +1508,7 @@ class _ReleaseAssignmentDialogState extends State<_ReleaseAssignmentDialog> {
             ),
             if (widget.scheduledPickupAt != null) ...[
               const SizedBox(height: 4),
-              Text(
-                '${l10n.t('pickup_datetime')}: ${widget.scheduledPickupAt}',
-              ),
+              Text('${l10n.t('pickup_datetime')}: ${widget.scheduledPickupAt}'),
             ],
             if (widget.emergencyOnly) ...[
               const SizedBox(height: 12),
@@ -1549,7 +1552,10 @@ class _ReleaseAssignmentDialogState extends State<_ReleaseAssignmentDialog> {
             const SizedBox(height: 12),
             Text(
               l10n.t('driver_release_assignment_irreversible'),
-              style: const TextStyle(color: AppTokens.textSecondary, height: 1.4),
+              style: const TextStyle(
+                color: AppTokens.textSecondary,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -1568,11 +1574,11 @@ class _ReleaseAssignmentDialogState extends State<_ReleaseAssignmentDialog> {
           onPressed: !canSubmit
               ? null
               : () => Navigator.of(context).pop((
-                    reasonCode: _reasonCode!,
-                    detail: _detailController.text.trim().isEmpty
-                        ? null
-                        : _detailController.text.trim(),
-                  )),
+                  reasonCode: _reasonCode!,
+                  detail: _detailController.text.trim().isEmpty
+                      ? null
+                      : _detailController.text.trim(),
+                )),
           child: Text(l10n.t('driver_release_assignment_confirm')),
         ),
       ],

@@ -27,6 +27,25 @@ class DriverTripContact {
     return normalized.length >= 6;
   }
 
+  static String phoneDigits(String? phone) =>
+      phone?.replaceAll(RegExp(r'[^\d]'), '') ?? '';
+
+  static bool samePhone(String? left, String? right) {
+    final leftDigits = phoneDigits(left);
+    final rightDigits = phoneDigits(right);
+    return leftDigits.isNotEmpty && leftDigits == rightDigits;
+  }
+
+  static Uri? whatsappUri(String? phone) {
+    final digits = phoneDigits(phone);
+    return digits.isEmpty ? null : Uri.https('wa.me', '/$digits');
+  }
+
+  static Uri? smsUri(String? phone) {
+    final normalized = phone?.replaceAll(RegExp(r'[^\d+]'), '') ?? '';
+    return normalized.isEmpty ? null : Uri(scheme: 'sms', path: normalized);
+  }
+
   static Future<bool> openMaps(String address) async {
     final location = DriverBookingLocation(address: address);
     return openMapsForLocation(location);
@@ -201,7 +220,9 @@ class DriverTripContact {
       }
 
       // Compact identity like "BKKSUVARNABHUMI..."
-      if (compact.contains('$code${official.replaceAll(RegExp(r'[^A-Z0-9]'), '')}') &&
+      if (compact.contains(
+            '$code${official.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
+          ) &&
           official.length >= 8) {
         return airport;
       }
@@ -235,6 +256,18 @@ class DriverTripContact {
     if (normalized.isEmpty) return false;
     final uri = Uri.parse('tel:$normalized');
     if (!await canLaunchUrl(uri)) return false;
+    return launchUrl(uri);
+  }
+
+  static Future<bool> openWhatsApp(String phone) async {
+    final uri = whatsappUri(phone);
+    if (uri == null || !await canLaunchUrl(uri)) return false;
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  static Future<bool> sendSms(String phone) async {
+    final uri = smsUri(phone);
+    if (uri == null || !await canLaunchUrl(uri)) return false;
     return launchUrl(uri);
   }
 }
