@@ -7021,6 +7021,8 @@ class AppLocalizations {
   };
 
   static const Map<String, String> _driverUiTranslations = {
+    'driver_suspended_banner':
+        '이용이 제한되었습니다. 관리자에게 문의하세요.\n(การใช้งานถูกจำกัด กรุณาติดต่อผู้ดูแล)',
     'driver_contact_title': '고객 연락 방법\n(ช่องทางติดต่อลูกค้า)',
     'driver_contact_kakao': '카카오톡\n(KakaoTalk)',
     'driver_contact_line': 'LINE\n(ไลน์)',
