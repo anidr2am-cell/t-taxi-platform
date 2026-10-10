@@ -144,10 +144,13 @@ const archiveDriversSchema = Joi.object({
 const driverIdParamsSchema = Joi.object({
   id: Joi.number().integer().positive().required(),
 });
+const driverSuspensionReasonSchema = Joi.object({
+  reason: Joi.string().trim().min(3).max(500).required(),
+});
 
 const adminManualLocationSchema = Joi.object({
   address: unicodeText({ max: 500 }).required(),
-  placeId: Joi.string().max(255).allow(null, '').optional(),
+  placeId: Joi.string().max(255).allow(null, "").optional(),
   lat: Joi.number().optional(),
   lng: Joi.number().optional(),
   name: unicodeText({ max: 200, allowEmpty: true }).optional(),
@@ -164,7 +167,7 @@ const adminManualLuggageCreateSchema = Joi.object({
   carriers24InchPlus: Joi.number().integer().min(0).max(20).default(0),
   golfBags: Joi.number().integer().min(0).max(20).default(0),
   specialLuggageCount: Joi.number().integer().min(0).max(20).default(0),
-  specialItems: Joi.string().max(500).allow('', null).optional(),
+  specialItems: Joi.string().max(500).allow("", null).optional(),
 }).default({
   carriers20Inch: 0,
   carriers24InchPlus: 0,
@@ -205,25 +208,37 @@ const adminManualBookingCreateSchema = Joi.object({
   destination: adminManualLocationSchema.required(),
   scheduledPickupAt: Joi.string().isoDate().required(),
   vehicleTypeCode: Joi.string()
-    .valid('SEDAN', 'SUV', 'VIP_SUV', 'VAN', 'VIP_VAN')
+    .valid("SEDAN", "SUV", "VIP_SUV", "VAN", "VIP_VAN")
     .required(),
   serviceTypeCode: Joi.string()
-    .valid('AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'CITY_TRANSFER', 'GOLF_TRANSFER')
+    .valid(
+      "AIRPORT_PICKUP",
+      "AIRPORT_DROPOFF",
+      "CITY_TRANSFER",
+      "GOLF_TRANSFER",
+    )
     .optional(),
-  originAirportIata: Joi.string().length(3).uppercase().allow(null, '').optional(),
+  originAirportIata: Joi.string()
+    .length(3)
+    .uppercase()
+    .allow(null, "")
+    .optional(),
   passengers: adminManualPassengersCreateSchema,
   luggage: adminManualLuggageCreateSchema,
   transfer: adminManualTransferSchema,
   payoutAmount: Joi.number().positive().required(),
   customerChargeAmount: Joi.number().positive().optional(),
   paymentCollection: Joi.string()
-    .valid('DRIVER_COLLECTS', 'ADMIN_COLLECTED')
+    .valid("DRIVER_COLLECTS", "ADMIN_COLLECTED")
     .required(),
   customer: Joi.object({
     customerUserId: Joi.number().integer().positive().optional(),
     name: unicodeText({ max: 120, allowEmpty: true }).optional(),
-    phone: Joi.string().max(32).allow('', null).optional(),
-    email: Joi.string().email({ tlds: { allow: false } }).allow('', null).optional(),
+    phone: Joi.string().max(32).allow("", null).optional(),
+    email: Joi.string()
+      .email({ tlds: { allow: false } })
+      .allow("", null)
+      .optional(),
   }).required(),
   memo: unicodeText({ max: 1000, allowEmpty: true }).optional(),
   nameSign: Joi.boolean().default(false),
@@ -240,12 +255,21 @@ const adminManualBookingUpdateSchema = Joi.object({
   destination: adminManualLocationSchema.optional(),
   scheduledPickupAt: Joi.string().isoDate().optional(),
   vehicleTypeCode: Joi.string()
-    .valid('SEDAN', 'SUV', 'VIP_SUV', 'VAN', 'VIP_VAN')
+    .valid("SEDAN", "SUV", "VIP_SUV", "VAN", "VIP_VAN")
     .optional(),
   serviceTypeCode: Joi.string()
-    .valid('AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'CITY_TRANSFER', 'GOLF_TRANSFER')
+    .valid(
+      "AIRPORT_PICKUP",
+      "AIRPORT_DROPOFF",
+      "CITY_TRANSFER",
+      "GOLF_TRANSFER",
+    )
     .optional(),
-  originAirportIata: Joi.string().length(3).uppercase().allow(null, '').optional(),
+  originAirportIata: Joi.string()
+    .length(3)
+    .uppercase()
+    .allow(null, "")
+    .optional(),
   passengers: Joi.object({
     adults: Joi.number().integer().min(1).optional(),
     children: Joi.number().integer().min(0).optional(),
@@ -256,13 +280,16 @@ const adminManualBookingUpdateSchema = Joi.object({
   payoutAmount: Joi.number().positive().optional(),
   customerChargeAmount: Joi.number().positive().optional(),
   paymentCollection: Joi.string()
-    .valid('DRIVER_COLLECTS', 'ADMIN_COLLECTED')
+    .valid("DRIVER_COLLECTS", "ADMIN_COLLECTED")
     .optional(),
   customer: Joi.object({
     customerUserId: Joi.number().integer().positive().optional(),
     name: unicodeText({ max: 120, allowEmpty: true }).optional(),
-    phone: Joi.string().max(32).allow('', null).optional(),
-    email: Joi.string().email({ tlds: { allow: false } }).allow('', null).optional(),
+    phone: Joi.string().max(32).allow("", null).optional(),
+    email: Joi.string()
+      .email({ tlds: { allow: false } })
+      .allow("", null)
+      .optional(),
   }).optional(),
   memo: unicodeText({ max: 1000, allowEmpty: true }).optional(),
   nameSign: Joi.boolean().optional(),
@@ -280,7 +307,7 @@ const adminManualBookingCancelSchema = Joi.object({
 });
 
 const adminListDriversQuerySchema = Joi.object({
-  archived: Joi.boolean().truthy('true').falsy('false').optional(),
+  archived: Joi.boolean().truthy("true").falsy("false").optional(),
   bookingNumber: bookingNumberParam.optional(),
 });
 
@@ -298,6 +325,7 @@ module.exports = {
   archiveBookingsSchema,
   archiveDriversSchema,
   driverIdParamsSchema,
+  driverSuspensionReasonSchema,
   adminManualBookingCreateSchema,
   adminManualBookingUpdateSchema,
   adminManualBookingCancelSchema,

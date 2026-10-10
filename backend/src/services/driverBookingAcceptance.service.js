@@ -1,9 +1,12 @@
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
-const BOOKING_STATUS = require('../constants/reservationStatus');
-const ROLES = require('../constants/roles');
-const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
+const BOOKING_STATUS = require("../constants/reservationStatus");
+const ROLES = require("../constants/roles");
+const { parseServiceDateTimeToMs } = require("../utils/serviceDateTime.util");
+const {
+  assertDriverOperational,
+} = require("../policies/driverOperational.policy");
 
 const STANDBY_WINDOW_MS = 60 * 60 * 1000;
 
@@ -16,13 +19,16 @@ class DriverBookingAcceptanceService {
   }
 
   notFound() {
-    return new AppError('Booking not found', {
+    return new AppError("Booking not found", {
       statusCode: HTTP_STATUS.NOT_FOUND,
       errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
     });
   }
 
-  notAcceptable(errorCode = ERROR_CODES.BOOKING_NOT_ACCEPTABLE, message = 'Booking is not acceptable') {
+  notAcceptable(
+    errorCode = ERROR_CODES.BOOKING_NOT_ACCEPTABLE,
+    message = "Booking is not acceptable",
+  ) {
     return new AppError(message, {
       statusCode: HTTP_STATUS.CONFLICT,
       errorCode,
@@ -31,7 +37,7 @@ class DriverBookingAcceptanceService {
 
   assertActiveDriver(driver) {
     if (!driver || !driver.is_active || driver.user_is_active === 0) {
-      throw new AppError('Driver is inactive', {
+      throw new AppError("Driver is inactive", {
         statusCode: HTTP_STATUS.FORBIDDEN,
         errorCode: ERROR_CODES.DRIVER_INACTIVE,
       });
@@ -41,7 +47,7 @@ class DriverBookingAcceptanceService {
   acceptedAtIso(value) {
     const parsedMs = parseServiceDateTimeToMs(value);
     if (parsedMs != null) return new Date(parsedMs).toISOString();
-    throw new Error('Accepted assignment is missing accepted_at');
+    throw new Error("Accepted assignment is missing accepted_at");
   }
 
   assertWithinStandbyWindow(booking, now = new Date()) {
@@ -53,13 +59,13 @@ class DriverBookingAcceptanceService {
     if (referenceMs == null || !Number.isFinite(nowMs)) {
       throw this.notAcceptable(
         ERROR_CODES.DRIVER_STANDBY_REFERENCE_TIME_MISSING,
-        'Standby reference time is missing',
+        "Standby reference time is missing",
       );
     }
     if (nowMs < referenceMs - STANDBY_WINDOW_MS) {
       throw this.notAcceptable(
         ERROR_CODES.DRIVER_STANDBY_TOO_EARLY,
-        'Standby confirmation is too early',
+        "Standby confirmation is too early",
       );
     }
   }
@@ -75,9 +81,8 @@ class DriverBookingAcceptanceService {
   }
 
   async acceptBooking(driverUserId, bookingNumber, now = new Date()) {
-    const normalizedBookingNumber = this.driverJobService.validateBookingNumber(
-      bookingNumber,
-    );
+    const normalizedBookingNumber =
+      this.driverJobService.validateBookingNumber(bookingNumber);
     const conn = await this.pool.getConnection();
 
     try {
@@ -88,6 +93,7 @@ class DriverBookingAcceptanceService {
         driverUserId,
       );
       this.assertActiveDriver(driver);
+      assertDriverOperational(driver);
 
       const booking = await this.bookingRepository.findByBookingNumberForUpdate(
         conn,
@@ -106,19 +112,19 @@ class DriverBookingAcceptanceService {
       if (booking.status !== BOOKING_STATUS.DRIVER_ASSIGNED) {
         throw this.notAcceptable(
           ERROR_CODES.DRIVER_BOOKING_STATUS_NOT_ALLOWED,
-          'Booking status does not allow standby confirmation',
+          "Booking status does not allow standby confirmation",
         );
       }
 
-      if (assignment.status === 'ACCEPTED') {
+      if (assignment.status === "ACCEPTED") {
         const result = this.response(booking, assignment, true);
         await conn.commit();
         return result;
       }
-      if (assignment.status !== 'ASSIGNED') {
+      if (assignment.status !== "ASSIGNED") {
         throw this.notAcceptable(
           ERROR_CODES.DRIVER_ASSIGNMENT_NOT_ACTIVE,
-          'Driver assignment cannot be confirmed',
+          "Driver assignment cannot be confirmed",
         );
       }
 
@@ -144,15 +150,15 @@ class DriverBookingAcceptanceService {
         }
         throw this.notAcceptable(
           ERROR_CODES.DRIVER_ASSIGNMENT_NOT_ACTIVE,
-          'Driver assignment cannot be confirmed',
+          "Driver assignment cannot be confirmed",
         );
       }
 
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
-        activityType: 'DRIVER_BOOKING_ACCEPTED',
+        activityType: "DRIVER_BOOKING_ACCEPTED",
         actorUserId: driver.user_id,
         actorRole: ROLES.DRIVER,
-        description: 'Driver accepted assigned booking',
+        description: "Driver accepted assigned booking",
         payload: {
           bookingNumber: normalizedBookingNumber,
           assignmentId: assignment.id,

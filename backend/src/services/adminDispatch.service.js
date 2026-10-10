@@ -187,13 +187,15 @@ class AdminDispatchService {
     const operations = this.adminOperationsService.evaluateOperations(row);
     const metadata = this.parseMetadata(row.metadata) ?? {};
     const locationNames = this.locationNamesFromMetadata(metadata);
-    const contactUnverified = !String(row.customer_phone ?? '').trim()
-      && (row.contact_status ?? 'VERIFIED') !== 'VERIFIED';
+    const contactUnverified =
+      !String(row.customer_phone ?? "").trim() &&
+      (row.contact_status ?? "VERIFIED") !== "VERIFIED";
     const pickupMs = new Date(row.scheduled_pickup_at).getTime();
-    const contactUnverifiedUrgent = contactUnverified
-      && Number.isFinite(pickupMs)
-      && pickupMs >= Date.now()
-      && pickupMs - Date.now() <= 24 * 60 * 60 * 1000;
+    const contactUnverifiedUrgent =
+      contactUnverified &&
+      Number.isFinite(pickupMs) &&
+      pickupMs >= Date.now() &&
+      pickupMs - Date.now() <= 24 * 60 * 60 * 1000;
     return {
       bookingNumber: row.booking_number,
       status: row.status,
@@ -214,7 +216,7 @@ class AdminDispatchService {
       ),
       customerDisplayName: row.customer_name,
       customerPhone: row.customer_phone,
-      contactStatus: row.contact_status ?? 'VERIFIED',
+      contactStatus: row.contact_status ?? "VERIFIED",
       contactChannel: row.contact_channel ?? null,
       contactRequestedAt: row.contact_requested_at ?? null,
       contactUnverified,
@@ -247,8 +249,9 @@ class AdminDispatchService {
       primaryCta: operations.primaryCta,
       reassignment: row.last_driver_release_at
         ? {
-            inProgress: !row.assignment_id
-              && ['PENDING', 'OPEN', 'CONFIRMED'].includes(row.status),
+            inProgress:
+              !row.assignment_id &&
+              ["PENDING", "OPEN", "CONFIRMED"].includes(row.status),
             lastReleasedAt: row.last_driver_release_at,
             lastReleasedDriverName: row.last_released_driver_name ?? null,
             lastReleaseReasonCode: row.last_driver_release_reason_code ?? null,
@@ -311,6 +314,13 @@ class AdminDispatchService {
       averageRating:
         row.average_rating != null ? Number(row.average_rating) : null,
       reviewCount: Number(row.review_count ?? 0),
+      suspension: row.suspension_action
+        ? {
+            action: row.suspension_action,
+            reason: row.suspension_reason ?? null,
+            changedAt: formatServiceDateTimeIso(row.suspension_changed_at),
+          }
+        : null,
     };
   }
 
@@ -525,7 +535,8 @@ class AdminDispatchService {
     });
 
     const isAdminManual = row.booking_source === "ADMIN_MANUAL";
-    const manualManageable = isAdminManual && !TERMINAL_ASSIGN_STATUSES.has(row.status);
+    const manualManageable =
+      isAdminManual && !TERMINAL_ASSIGN_STATUSES.has(row.status);
     const contactDispatch = await this.resolveContactDispatch(row);
 
     return {
@@ -576,18 +587,22 @@ class AdminDispatchService {
         email: row.customer_email,
         phone: row.customer_phone,
         countryCode: row.customer_country_code,
-        messengerType: normalizeMessengerType(metadata?.messengerType)
-          ?? metadata?.messengerType
-          ?? null,
+        messengerType:
+          normalizeMessengerType(metadata?.messengerType) ??
+          metadata?.messengerType ??
+          null,
         messengerId: metadata?.messengerId ?? null,
-        contactUnverified: !String(row.customer_phone ?? '').trim()
-          && (row.contact_status ?? 'VERIFIED') !== 'VERIFIED',
-        contactUnverifiedUrgent: !String(row.customer_phone ?? '').trim()
-          && (row.contact_status ?? 'VERIFIED') !== 'VERIFIED'
-          && Number.isFinite(new Date(row.scheduled_pickup_at).getTime())
-          && new Date(row.scheduled_pickup_at).getTime() >= Date.now()
-          && new Date(row.scheduled_pickup_at).getTime() - Date.now() <= 24 * 60 * 60 * 1000,
-        contactStatus: row.contact_status ?? 'VERIFIED',
+        contactUnverified:
+          !String(row.customer_phone ?? "").trim() &&
+          (row.contact_status ?? "VERIFIED") !== "VERIFIED",
+        contactUnverifiedUrgent:
+          !String(row.customer_phone ?? "").trim() &&
+          (row.contact_status ?? "VERIFIED") !== "VERIFIED" &&
+          Number.isFinite(new Date(row.scheduled_pickup_at).getTime()) &&
+          new Date(row.scheduled_pickup_at).getTime() >= Date.now() &&
+          new Date(row.scheduled_pickup_at).getTime() - Date.now() <=
+            24 * 60 * 60 * 1000,
+        contactStatus: row.contact_status ?? "VERIFIED",
         contactChannel: row.contact_channel ?? null,
         contactRequestedAt: row.contact_requested_at ?? null,
         contactVerifiedAt: row.contact_verified_at ?? null,
@@ -617,8 +632,12 @@ class AdminDispatchService {
       flight: {
         flightNumber: row.flight_number,
         airportIata: row.airport_iata ?? row.airport_code_custom,
-        scheduledArrivalAt: formatServiceDateTimeIso(row.flight_scheduled_arrival_at),
-        estimatedArrivalAt: formatServiceDateTimeIso(row.flight_estimated_arrival_at),
+        scheduledArrivalAt: formatServiceDateTimeIso(
+          row.flight_scheduled_arrival_at,
+        ),
+        estimatedArrivalAt: formatServiceDateTimeIso(
+          row.flight_estimated_arrival_at,
+        ),
         delayStatus: row.delay_status,
         delayMinutes: row.delay_minutes,
         golfCourseId: row.golf_course_id ?? null,
@@ -1143,9 +1162,12 @@ class AdminDispatchService {
     return driver;
   }
 
-  async assertDriverPickupTimeAvailable(conn, driverId, scheduledPickupAt, {
-    excludeBookingId = null,
-  } = {}) {
+  async assertDriverPickupTimeAvailable(
+    conn,
+    driverId,
+    scheduledPickupAt,
+    { excludeBookingId = null } = {},
+  ) {
     const conflictRows =
       await this.driverRepository.findActiveAssignmentPickupsForConflict(
         conn,
@@ -1847,7 +1869,9 @@ class AdminDispatchService {
       conn.release();
     }
 
-    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    await this.bookingStatusService.dispatchOutboxAfterCommit(
+      transition.outboxId,
+    );
     if (releasedDriverUserId) {
       emitDriverAssignmentReleased(releasedDriverUserId, {
         bookingNumber,
@@ -1914,7 +1938,9 @@ class AdminDispatchService {
       conn.release();
     }
 
-    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    await this.bookingStatusService.dispatchOutboxAfterCommit(
+      transition.outboxId,
+    );
     if (transition.releasedDriverUserId) {
       emitDriverAssignmentReleased(transition.releasedDriverUserId, {
         bookingNumber,

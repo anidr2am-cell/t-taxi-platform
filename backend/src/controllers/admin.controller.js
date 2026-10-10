@@ -1,14 +1,20 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { success, paginate } = require('../utils/apiResponse');
-const container = require('../helpers/container');
+const asyncHandler = require("../utils/asyncHandler");
+const { success, paginate } = require("../utils/apiResponse");
+const container = require("../helpers/container");
 
-const getAdminDispatchService = () => container.get('adminDispatchService');
-const getAdminQrReissueService = () => container.get('adminQrReissueService');
-const getAdminBookingNoteService = () => container.get('adminBookingNoteService');
-const getBookingService = () => container.get('bookingService');
+const getAdminDispatchService = () => container.get("adminDispatchService");
+const getAdminQrReissueService = () => container.get("adminQrReissueService");
+const getAdminBookingNoteService = () =>
+  container.get("adminBookingNoteService");
+const getBookingService = () => container.get("bookingService");
+const getDriverSuspensionService = () =>
+  container.get("driverSuspensionService");
 
 const listBookings = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().listBookings(req.query, req.user);
+  const data = await getAdminDispatchService().listBookings(
+    req.query,
+    req.user,
+  );
   return paginate(res, {
     page: data.page,
     pageSize: data.pageSize,
@@ -37,19 +43,54 @@ const listDrivers = asyncHandler(async (req, res) => {
 });
 
 const archiveDrivers = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().archiveDrivers(req.body, req.user);
-  return success(res, data, 'Drivers archived');
+  const data = await getAdminDispatchService().archiveDrivers(
+    req.body,
+    req.user,
+  );
+  return success(res, data, "Drivers archived");
 });
 
 const restoreDriver = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().restoreDriver(req.params.id, req.user);
-  return success(res, data, 'Driver restored');
+  const data = await getAdminDispatchService().restoreDriver(
+    req.params.id,
+    req.user,
+  );
+  return success(res, data, "Driver restored");
 });
 
 const getDriverDeletionPreview = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().getDriverDeletionPreview(req.params.id);
+  const data = await getAdminDispatchService().getDriverDeletionPreview(
+    req.params.id,
+  );
   return success(res, data);
 });
+
+const getDriverSuspensionPreview = asyncHandler(async (req, res) =>
+  success(res, await getDriverSuspensionService().preview(req.params.id)),
+);
+const suspendDriver = asyncHandler(async (req, res) =>
+  success(
+    res,
+    await getDriverSuspensionService().suspend(
+      req.params.id,
+      req.body.reason,
+      req.user,
+    ),
+  ),
+);
+const unsuspendDriver = asyncHandler(async (req, res) =>
+  success(
+    res,
+    await getDriverSuspensionService().unsuspend(
+      req.params.id,
+      req.body.reason,
+      req.user,
+    ),
+  ),
+);
+const getDriverSuspensionHistory = asyncHandler(async (req, res) =>
+  success(res, await getDriverSuspensionService().history(req.params.id)),
+);
 
 const assignDriver = asyncHandler(async (req, res) => {
   const data = await getAdminDispatchService().assignDriver(
@@ -57,7 +98,7 @@ const assignDriver = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Driver assigned');
+  return success(res, data, "Driver assigned");
 });
 
 const reassignDriver = asyncHandler(async (req, res) => {
@@ -66,7 +107,7 @@ const reassignDriver = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Driver reassigned');
+  return success(res, data, "Driver reassigned");
 });
 
 const unassignDriver = asyncHandler(async (req, res) => {
@@ -75,7 +116,7 @@ const unassignDriver = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Driver unassigned');
+  return success(res, data, "Driver unassigned");
 });
 
 const completeActiveTrip = asyncHandler(async (req, res) => {
@@ -83,12 +124,14 @@ const completeActiveTrip = asyncHandler(async (req, res) => {
     req.params.bookingNumber,
     req.user,
   );
-  return success(res, data, 'Trip completed');
+  return success(res, data, "Trip completed");
 });
 
 const getDriverCandidates = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().getDriverCandidates(req.params.bookingNumber);
-  return success(res, data, 'OK');
+  const data = await getAdminDispatchService().getDriverCandidates(
+    req.params.bookingNumber,
+  );
+  return success(res, data, "OK");
 });
 
 const autoAssignDriver = asyncHandler(async (req, res) => {
@@ -97,7 +140,7 @@ const autoAssignDriver = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Driver assigned');
+  return success(res, data, "Driver assigned");
 });
 
 const reissueQr = asyncHandler(async (req, res) => {
@@ -106,7 +149,7 @@ const reissueQr = asyncHandler(async (req, res) => {
     req.body.type,
     req.user,
   );
-  return success(res, data, 'QR token reissued');
+  return success(res, data, "QR token reissued");
 });
 
 const listBookingNotes = asyncHandler(async (req, res) => {
@@ -124,17 +167,23 @@ const createBookingNote = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Internal note added', 201);
+  return success(res, data, "Internal note added", 201);
 });
 
 const archiveBookings = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().archiveBookings(req.body, req.user);
-  return success(res, data, 'Bookings archived');
+  const data = await getAdminDispatchService().archiveBookings(
+    req.body,
+    req.user,
+  );
+  return success(res, data, "Bookings archived");
 });
 
 const restoreBookings = asyncHandler(async (req, res) => {
-  const data = await getAdminDispatchService().restoreBookings(req.body, req.user);
-  return success(res, data, 'Bookings restored');
+  const data = await getAdminDispatchService().restoreBookings(
+    req.body,
+    req.user,
+  );
+  return success(res, data, "Bookings restored");
 });
 
 const processBookingNoShow = asyncHandler(async (req, res) => {
@@ -143,12 +192,15 @@ const processBookingNoShow = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Booking marked as no-show');
+  return success(res, data, "Booking marked as no-show");
 });
 
 const createManualBooking = asyncHandler(async (req, res) => {
-  const data = await getBookingService().createAdminManualBooking(req.body, req.user);
-  return success(res, data, 'Admin manual booking created', 201);
+  const data = await getBookingService().createAdminManualBooking(
+    req.body,
+    req.user,
+  );
+  return success(res, data, "Admin manual booking created", 201);
 });
 
 const updateManualBooking = asyncHandler(async (req, res) => {
@@ -157,7 +209,7 @@ const updateManualBooking = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Admin manual booking updated');
+  return success(res, data, "Admin manual booking updated");
 });
 
 const cancelManualBooking = asyncHandler(async (req, res) => {
@@ -166,7 +218,7 @@ const cancelManualBooking = asyncHandler(async (req, res) => {
     req.body,
     req.user,
   );
-  return success(res, data, 'Admin manual booking cancelled');
+  return success(res, data, "Admin manual booking cancelled");
 });
 
 module.exports = {
@@ -177,6 +229,10 @@ module.exports = {
   archiveDrivers,
   restoreDriver,
   getDriverDeletionPreview,
+  getDriverSuspensionPreview,
+  suspendDriver,
+  unsuspendDriver,
+  getDriverSuspensionHistory,
   assignDriver,
   reassignDriver,
   unassignDriver,
