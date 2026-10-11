@@ -1,10 +1,12 @@
-const database = require('../config/database');
-const SCORING = require('../constants/driverAssignmentScoring');
+const database = require("../config/database");
+const SCORING = require("../constants/driverAssignmentScoring");
 const {
   PICKUP_CONFLICT_MIN_GAP_MINUTES,
   PICKUP_CONFLICT_MIN_GAP_SECONDS,
-} = require('../policies/driverBookingConflictPolicy');
-const { compatibleDriverVehicleIdSubquerySql } = require('../utils/vehicleMatchTier');
+} = require("../policies/driverBookingConflictPolicy");
+const {
+  compatibleDriverVehicleIdSubquerySql,
+} = require("../utils/vehicleMatchTier");
 
 class DriverRepository {
   constructor(pool = database.pool) {
@@ -51,7 +53,25 @@ class DriverRepository {
             FROM reviews r
             WHERE r.driver_id = d.id
               AND r.moderation_status = 'VISIBLE'
-          ) AS review_count
+          ) AS review_count,
+          (
+            SELECT al.action FROM audit_logs al
+            WHERE al.entity_type = 'driver' AND al.entity_id = d.id
+              AND al.action IN ('DRIVER_SUSPENDED','DRIVER_UNSUSPENDED')
+            ORDER BY al.id DESC LIMIT 1
+          ) AS suspension_action,
+          (
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(al.payload, '$.reason')) FROM audit_logs al
+            WHERE al.entity_type = 'driver' AND al.entity_id = d.id
+              AND al.action IN ('DRIVER_SUSPENDED','DRIVER_UNSUSPENDED')
+            ORDER BY al.id DESC LIMIT 1
+          ) AS suspension_reason,
+          (
+            SELECT al.created_at FROM audit_logs al
+            WHERE al.entity_type = 'driver' AND al.entity_id = d.id
+              AND al.action IN ('DRIVER_SUSPENDED','DRIVER_UNSUSPENDED')
+            ORDER BY al.id DESC LIMIT 1
+          ) AS suspension_changed_at
         FROM drivers d
         LEFT JOIN vehicle_types vt ON vt.id = d.primary_vehicle_type_id AND vt.deleted_at IS NULL
         LEFT JOIN driver_vehicles dv ON dv.driver_id = d.id
@@ -209,6 +229,49 @@ class DriverRepository {
     );
   }
 
+  async updateSuspensionState(conn, driverId, { suspended, actorUserId }) {
+    const [result] = await conn.query(
+      `UPDATE drivers SET status = ?, is_online = 0, updated_by = ?,
+         updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`,
+      [suspended ? "SUSPENDED" : "OFFLINE", actorUserId, driverId],
+    );
+    return result.affectedRows === 1;
+  }
+
+  async listAssignmentsForSuspension(
+    executor,
+    driverId,
+    { forUpdate = false } = {},
+  ) {
+    const [rows] = await executor.query(
+      `SELECT b.id AS booking_id, b.booking_number, b.status,
+              b.scheduled_pickup_at, b.is_urgent_request,
+              bda.id AS assignment_id, bda.status AS assignment_status,
+              d.user_id AS driver_user_id
+       FROM booking_driver_assignments bda
+       INNER JOIN bookings b ON b.id = bda.booking_id
+         AND b.deleted_at IS NULL AND b.is_archived = 0
+       INNER JOIN drivers d ON d.id = bda.driver_id AND d.deleted_at IS NULL
+       WHERE bda.driver_id = ? AND bda.is_active = 1
+         AND bda.deleted_at IS NULL AND bda.status IN ('ASSIGNED','ACCEPTED')
+         AND b.status IN ('DRIVER_ASSIGNED','ON_ROUTE','DRIVER_ARRIVED','PICKED_UP')
+       ORDER BY b.booking_number ASC${forUpdate ? " FOR UPDATE" : ""}`,
+      [driverId],
+    );
+    return rows;
+  }
+
+  async listSuspensionHistory(driverId) {
+    const [rows] = await this.pool.query(
+      `SELECT action, payload, created_at, user_id
+       FROM audit_logs WHERE entity_type = 'driver' AND entity_id = ?
+         AND action IN ('DRIVER_SUSPENDED','DRIVER_UNSUSPENDED')
+       ORDER BY id DESC`,
+      [driverId],
+    );
+    return rows;
+  }
+
   async hasActiveJob(conn, driverId) {
     const [rows] = await conn.query(
       `
@@ -343,7 +406,12 @@ class DriverRepository {
     return rows[0] || null;
   }
 
-  async findCompatibleVehicleById(conn, driverId, vehicleId, bookingVehicleTypeId) {
+  async findCompatibleVehicleById(
+    conn,
+    driverId,
+    vehicleId,
+    bookingVehicleTypeId,
+  ) {
     const [rows] = await conn.query(
       `
         SELECT
@@ -404,10 +472,12 @@ class DriverRepository {
           AND u.role = 'DRIVER'
           AND u.is_active = 1
           AND u.deleted_at IS NULL
-        INNER JOIN driver_vehicles dv ON dv.id = ${compatibleDriverVehicleIdSubquerySql({
-          driverIdExpr: 'd.id',
-          bookingVehicleTypeIdParam: '?',
-        })}
+        INNER JOIN driver_vehicles dv ON dv.id = ${compatibleDriverVehicleIdSubquerySql(
+          {
+            driverIdExpr: "d.id",
+            bookingVehicleTypeIdParam: "?",
+          },
+        )}
         WHERE d.deleted_at IS NULL
           AND d.is_archived = 0
           AND d.is_active = 1
@@ -509,7 +579,7 @@ class DriverRepository {
 
   async findArchiveCandidatesForUpdate(conn, driverIds) {
     if (!driverIds.length) return [];
-    const placeholders = driverIds.map(() => '?').join(', ');
+    const placeholders = driverIds.map(() => "?").join(", ");
     const [rows] = await conn.query(
       `
         SELECT
@@ -577,7 +647,7 @@ class DriverRepository {
 
   async archiveDrivers(conn, driverIds, { actorUserId, reason }) {
     if (!driverIds.length) return 0;
-    const placeholders = driverIds.map(() => '?').join(', ');
+    const placeholders = driverIds.map(() => "?").join(", ");
     const [result] = await conn.query(
       `
         UPDATE drivers
@@ -625,11 +695,15 @@ class DriverRepository {
     );
   }
 
-  async findActiveAssignmentPickupsForConflict(conn, driverId, excludeBookingId = null) {
+  async findActiveAssignmentPickupsForConflict(
+    conn,
+    driverId,
+    excludeBookingId = null,
+  ) {
     const params = [driverId];
-    let excludeSql = '';
+    let excludeSql = "";
     if (excludeBookingId != null) {
-      excludeSql = 'AND b.id <> ?';
+      excludeSql = "AND b.id <> ?";
       params.push(excludeBookingId);
     }
     const [rows] = await conn.query(
@@ -748,7 +822,10 @@ class DriverRepository {
     return rows[0] || null;
   }
 
-  async updateSelfProfile(conn, { driverId, userId, name, phone, actorUserId }) {
+  async updateSelfProfile(
+    conn,
+    { driverId, userId, name, phone, actorUserId },
+  ) {
     await conn.query(
       `
         UPDATE drivers
@@ -788,7 +865,18 @@ class DriverRepository {
     }
   }
 
-  async updatePrimaryVehicle(conn, { vehicleId, driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId }) {
+  async updatePrimaryVehicle(
+    conn,
+    {
+      vehicleId,
+      driverId,
+      vehicleTypeId,
+      plateNumber,
+      modelName,
+      color,
+      actorUserId,
+    },
+  ) {
     await conn.query(
       `
         UPDATE driver_vehicles
@@ -801,7 +889,15 @@ class DriverRepository {
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND driver_id = ? AND deleted_at IS NULL
       `,
-      [vehicleTypeId, plateNumber, modelName, color, actorUserId, vehicleId, driverId],
+      [
+        vehicleTypeId,
+        plateNumber,
+        modelName,
+        color,
+        actorUserId,
+        vehicleId,
+        driverId,
+      ],
     );
     await conn.query(
       `
@@ -813,7 +909,10 @@ class DriverRepository {
     );
   }
 
-  async insertPrimaryVehicle(conn, { driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId }) {
+  async insertPrimaryVehicle(
+    conn,
+    { driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId },
+  ) {
     const [result] = await conn.query(
       `
         INSERT INTO driver_vehicles (
@@ -821,7 +920,15 @@ class DriverRepository {
           is_primary, is_active, created_by, updated_by
         ) VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?)
       `,
-      [driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId, actorUserId],
+      [
+        driverId,
+        vehicleTypeId,
+        plateNumber,
+        modelName,
+        color,
+        actorUserId,
+        actorUserId,
+      ],
     );
     await conn.query(
       `
@@ -1025,14 +1132,10 @@ class DriverRepository {
     return rows[0] || null;
   }
 
-  async insertPendingVehicle(conn, {
-    driverId,
-    vehicleTypeId,
-    plateNumber,
-    modelName,
-    color,
-    actorUserId,
-  }) {
+  async insertPendingVehicle(
+    conn,
+    { driverId, vehicleTypeId, plateNumber, modelName, color, actorUserId },
+  ) {
     const [result] = await conn.query(
       `
         INSERT INTO driver_vehicles (
@@ -1065,11 +1168,11 @@ class DriverRepository {
   }
 
   async listVehiclesForAdmin(filters, pagination) {
-    const where = ['dv.deleted_at IS NULL'];
+    const where = ["dv.deleted_at IS NULL"];
     const params = [];
 
     if (filters.status) {
-      where.push('dv.approval_status = ?');
+      where.push("dv.approval_status = ?");
       params.push(filters.status);
     }
     if (filters.search) {
@@ -1083,7 +1186,7 @@ class DriverRepository {
       params.push(like, like, like, like);
     }
 
-    const whereSql = `WHERE ${where.join(' AND ')}`;
+    const whereSql = `WHERE ${where.join(" AND ")}`;
     const [countRows] = await this.pool.query(
       `
         SELECT COUNT(*) AS total
@@ -1271,13 +1374,10 @@ class DriverRepository {
     );
   }
 
-  async insertVehicleAuditLog(conn, {
-    userId,
-    action,
-    entityId,
-    payload,
-    ipAddress = null,
-  }) {
+  async insertVehicleAuditLog(
+    conn,
+    { userId, action, entityId, payload, ipAddress = null },
+  ) {
     await conn.query(
       `
         INSERT INTO audit_logs (user_id, action, entity_type, entity_id, payload, ip_address)

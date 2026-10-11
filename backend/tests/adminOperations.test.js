@@ -444,6 +444,18 @@ test("needs action settlement conditions require DUE or OVERDUE", () => {
   assert.match(where.sql, /commission_status IN \('DUE', 'OVERDUE'\)/);
 });
 
+test("needs action includes bookings reopened after driver suspension regardless of pickup horizon", () => {
+  const repo = new BookingRepository({});
+  const where = repo.buildNeedsActionWhere({
+    operationsNow: "2026-07-11 10:00:00",
+    operationsUrgentCutoff: "2026-07-11 10:30:00",
+    adminUserId: null,
+  });
+
+  assert.match(where.sql, /assignment_reason = 'ADMIN_SUSPENDED_DRIVER_RELEASE'/);
+  assert.match(where.sql, /suspended_release_bda\.is_active = 0/);
+});
+
 test("needs action stale-status condition excludes active trips", () => {
   const repo = new BookingRepository({});
   const where = repo.buildNeedsActionWhere({

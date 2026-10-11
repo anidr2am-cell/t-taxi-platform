@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -251,10 +252,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
   @override
   Future<Map<String, dynamic>> completeTrip(String bookingNumber) async {
     completeTripCalls += 1;
-    return {
-      'bookingNumber': bookingNumber,
-      'status': 'SETTLEMENT_PENDING',
-    };
+    return {'bookingNumber': bookingNumber, 'status': 'SETTLEMENT_PENDING'};
   }
 
   @override
@@ -587,6 +585,72 @@ void main() {
       expect(captured.queryParameters['dateTo'], isNull);
     },
   );
+
+  test(
+    'driver suspension API methods use the registered admin route contract',
+    () async {
+      SharedPreferences.setMockInitialValues({'admin_access_token': 'token'});
+      final requests = <String>[];
+      final api = AdminDispatchApiService(
+        baseUrl: 'https://example.com',
+        client: MockClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          final data = request.url.path.endsWith('/suspension-history')
+              ? <dynamic>[]
+              : <String, dynamic>{};
+          return http.Response(
+            jsonEncode({'success': true, 'data': data}),
+            200,
+          );
+        }),
+      );
+
+      await api.getDriverSuspensionPreview(6);
+      await api.suspendDriver(6, 'QA route contract');
+      await api.unsuspendDriver(6, 'QA route contract');
+      await api.getDriverSuspensionHistory(6);
+
+      expect(requests, [
+        'GET /api/v1/admin/drivers/6/suspension-preview',
+        'POST /api/v1/admin/drivers/6/suspend',
+        'POST /api/v1/admin/drivers/6/unsuspend',
+        'GET /api/v1/admin/drivers/6/suspension-history',
+      ]);
+    },
+  );
+
+  test('driver suspension admin labels exist in all supported languages', () {
+    const keys = [
+      'admin_driver_suspend',
+      'admin_driver_unsuspend',
+      'admin_driver_suspended_badge',
+      'admin_driver_suspension_reason',
+      'admin_driver_suspend_reason_label',
+      'admin_driver_suspend_reason_required',
+      'admin_driver_unsuspend_reason_required',
+      'admin_driver_suspension_cancel',
+      'admin_driver_suspend_title',
+      'admin_driver_unsuspend_title',
+      'admin_driver_suspend_release_count',
+      'admin_driver_suspend_urgent',
+      'admin_driver_suspend_blocked',
+      'admin_driver_suspend_confirm',
+      'admin_driver_unsuspend_confirm',
+      'admin_driver_suspended',
+      'admin_driver_unsuspended',
+      'admin_driver_suspension_history',
+      'admin_driver_suspension_history_empty',
+      'admin_driver_suspension_history_suspended',
+      'admin_driver_suspension_history_unsuspended',
+      'admin_ops_reason_suspended_driver_reassignment',
+    ];
+    for (final language in AppLocalizations.supportedLanguages) {
+      final l10n = AppLocalizations(language);
+      for (final key in keys) {
+        expect(l10n.t(key), isNot(key), reason: '$language:$key');
+      }
+    }
+  });
 
   testWidgets('opens booking detail from queue', (tester) async {
     await tester.pumpWidget(
@@ -924,13 +988,8 @@ void main() {
       'activeAssignment': {'driverDisplayName': 'Driver A'},
       'allowedActions': ['COMPLETE_TRIP'],
     };
-    final settledDetail = {
-      ...activeDetail,
-      'allowedActions': <String>[],
-    };
-    final api = _FakeAdminApi(
-      detailResponses: [activeDetail, settledDetail],
-    );
+    final settledDetail = {...activeDetail, 'allowedActions': <String>[]};
+    final api = _FakeAdminApi(detailResponses: [activeDetail, settledDetail]);
     var changed = 0;
 
     await tester.pumpWidget(
@@ -2960,128 +3019,128 @@ void main() {
     expect(find.text('500 THB'), findsOneWidget);
   });
 
-  testWidgets('booking detail shows customer preference badges when requested', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AdminBookingDetailPage(
-          bookingNumber: 'TX202607010001',
-          api: _FakeAdminApi(
-            detailResponse: {
-              'bookingNumber': 'TX202607010001',
-              'status': 'CONFIRMED',
-              'route': {
-                'origin': {'address': 'BKK'},
-                'destination': {'address': 'Pattaya'},
+  testWidgets(
+    'booking detail shows customer preference badges when requested',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'CONFIRMED',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': ['ASSIGN_DRIVER'],
+                'options': {'preferFemaleDriver': true},
               },
-              'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {
-                'totalAmount': 1200,
-                'currency': 'THB',
-                'paymentMethod': 'PAY_DRIVER',
-              },
-              'allowedActions': ['ASSIGN_DRIVER'],
-              'options': {
-                'preferFemaleDriver': true,
-              },
-            },
-          ),
-          onChanged: () {},
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Prefer Female Driver'), findsOneWidget);
-  });
-
-  testWidgets('booking detail hides customer preference badges when not requested', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: AdminBookingDetailPage(
-          bookingNumber: 'TX202607010001',
-          api: _FakeAdminApi(
-            detailResponse: {
-              'bookingNumber': 'TX202607010001',
-              'status': 'CONFIRMED',
-              'route': {
-                'origin': {'address': 'BKK'},
-                'destination': {'address': 'Pattaya'},
-              },
-              'customer': {'name': 'Kim', 'phone': '+66123456789'},
-              'pricing': {
-                'totalAmount': 1200,
-                'currency': 'THB',
-                'paymentMethod': 'PAY_DRIVER',
-              },
-              'allowedActions': ['ASSIGN_DRIVER'],
-              'options': {
-                'preferFemaleDriver': false,
-              },
-            },
-          ),
-          onChanged: () {},
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Prefer Female Driver'), findsNothing);
-  });
-
-  testWidgets('recommend drivers dialog shows customer preference banner once', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => ElevatedButton(
-            onPressed: () => showRecommendDriversDialog(
-              context: context,
-              api: _FakeAdminApi(),
-              bookingNumber: 'TX202607010001',
-              preferFemaleDriver: true,
             ),
-            child: const Text('Open'),
+            onChanged: () {},
           ),
         ),
-      ),
-    );
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(
-      find.text('Customer preferences: Prefer Female Driver'),
-      findsOneWidget,
-    );
-    expect(find.text('Driver A (SUV)'), findsOneWidget);
-  });
+      expect(find.text('Prefer Female Driver'), findsOneWidget);
+    },
+  );
 
-  testWidgets('recommend drivers dialog hides preference banner when none requested', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => ElevatedButton(
-            onPressed: () => showRecommendDriversDialog(
-              context: context,
-              api: _FakeAdminApi(),
-              bookingNumber: 'TX202607010001',
+  testWidgets(
+    'booking detail hides customer preference badges when not requested',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AdminBookingDetailPage(
+            bookingNumber: 'TX202607010001',
+            api: _FakeAdminApi(
+              detailResponse: {
+                'bookingNumber': 'TX202607010001',
+                'status': 'CONFIRMED',
+                'route': {
+                  'origin': {'address': 'BKK'},
+                  'destination': {'address': 'Pattaya'},
+                },
+                'customer': {'name': 'Kim', 'phone': '+66123456789'},
+                'pricing': {
+                  'totalAmount': 1200,
+                  'currency': 'THB',
+                  'paymentMethod': 'PAY_DRIVER',
+                },
+                'allowedActions': ['ASSIGN_DRIVER'],
+                'options': {'preferFemaleDriver': false},
+              },
             ),
-            child: const Text('Open'),
+            onChanged: () {},
           ),
         ),
-      ),
-    );
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('Customer preferences:'), findsNothing);
-  });
+      expect(find.text('Prefer Female Driver'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'recommend drivers dialog shows customer preference banner once',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => showRecommendDriversDialog(
+                context: context,
+                api: _FakeAdminApi(),
+                bookingNumber: 'TX202607010001',
+                preferFemaleDriver: true,
+              ),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Customer preferences: Prefer Female Driver'),
+        findsOneWidget,
+      );
+      expect(find.text('Driver A (SUV)'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'recommend drivers dialog hides preference banner when none requested',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => showRecommendDriversDialog(
+                context: context,
+                api: _FakeAdminApi(),
+                bookingNumber: 'TX202607010001',
+              ),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Customer preferences:'), findsNothing);
+    },
+  );
 
   testWidgets('dispatch queue shows preference badge for flagged bookings', (
     tester,
@@ -3094,9 +3153,7 @@ void main() {
         'items': [
           {
             ..._queueItem('TX202607010001'),
-            'options': {
-              'preferFemaleDriver': true,
-            },
+            'options': {'preferFemaleDriver': true},
           },
         ],
       },

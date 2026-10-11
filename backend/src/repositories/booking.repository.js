@@ -829,7 +829,7 @@ class BookingRepository {
             WHERE released_bda.booking_id = b.id
               AND released_bda.is_active = 0
               AND released_bda.deleted_at IS NULL
-              AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+              AND released_bda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
             LIMIT 1
           ) AS has_driver_release_history,
           d.name AS driver_name,
@@ -1471,7 +1471,7 @@ class BookingRepository {
               AND released_bda.driver_id = d.id
               AND released_bda.is_active = 0
               AND released_bda.deleted_at IS NULL
-              AND released_bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+              AND released_bda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
               AND released_bda.unassigned_at > (UTC_TIMESTAMP() - INTERVAL 30 MINUTE)
           )
           AND NOT EXISTS (
@@ -1702,6 +1702,20 @@ class BookingRepository {
       )
     `);
     params.push(urgentCutoff);
+
+    where.push(`
+      (
+        ${this.unassignedBookingSql()}
+        AND EXISTS (
+          SELECT 1
+          FROM booking_driver_assignments suspended_release_bda
+          WHERE suspended_release_bda.booking_id = b.id
+            AND suspended_release_bda.is_active = 0
+            AND suspended_release_bda.deleted_at IS NULL
+            AND suspended_release_bda.assignment_reason = 'ADMIN_SUSPENDED_DRIVER_RELEASE'
+        )
+      )
+    `);
 
     where.push(`
       (
@@ -2042,7 +2056,7 @@ class BookingRepository {
           WHERE rbda.booking_id = b.id
             AND rbda.is_active = 0
             AND rbda.deleted_at IS NULL
-            AND rbda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+            AND rbda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
           ORDER BY rbda.unassigned_at DESC, rbda.id DESC
           LIMIT 1
         ) AS last_driver_release_at,
@@ -2053,7 +2067,7 @@ class BookingRepository {
           WHERE rbda.booking_id = b.id
             AND rbda.is_active = 0
             AND rbda.deleted_at IS NULL
-            AND rbda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+            AND rbda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
           ORDER BY rbda.unassigned_at DESC, rbda.id DESC
           LIMIT 1
         ) AS last_released_driver_name,
@@ -2061,7 +2075,7 @@ class BookingRepository {
           SELECT JSON_UNQUOTE(JSON_EXTRACT(bal.payload, '$.reasonCode'))
           FROM booking_activity_logs bal
           WHERE bal.booking_id = b.id
-            AND bal.activity_type = 'DRIVER_RELEASED_ASSIGNMENT'
+            AND bal.activity_type IN ('DRIVER_RELEASED_ASSIGNMENT', 'DRIVER_SUSPENSION_REOPENED')
           ORDER BY bal.id DESC
           LIMIT 1
         ) AS last_driver_release_reason_code
@@ -2213,7 +2227,36 @@ class BookingRepository {
           btd.golf_course_id,
           btd.golf_region,
           btd.driver_included,
-          a.iata_code AS airport_iata
+          a.iata_code AS airport_iata,
+          (
+            SELECT rbda.unassigned_at
+            FROM booking_driver_assignments rbda
+            WHERE rbda.booking_id = b.id
+              AND rbda.is_active = 0
+              AND rbda.deleted_at IS NULL
+              AND rbda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
+            ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+            LIMIT 1
+          ) AS last_driver_release_at,
+          (
+            SELECT rd.name
+            FROM booking_driver_assignments rbda
+            INNER JOIN drivers rd ON rd.id = rbda.driver_id AND rd.deleted_at IS NULL
+            WHERE rbda.booking_id = b.id
+              AND rbda.is_active = 0
+              AND rbda.deleted_at IS NULL
+              AND rbda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
+            ORDER BY rbda.unassigned_at DESC, rbda.id DESC
+            LIMIT 1
+          ) AS last_released_driver_name,
+          (
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(bal.payload, '$.reasonCode'))
+            FROM booking_activity_logs bal
+            WHERE bal.booking_id = b.id
+              AND bal.activity_type IN ('DRIVER_RELEASED_ASSIGNMENT', 'DRIVER_SUSPENSION_REOPENED')
+            ORDER BY bal.id DESC
+            LIMIT 1
+          ) AS last_driver_release_reason_code
         FROM bookings b
         INNER JOIN service_types st ON st.id = b.service_type_id AND st.deleted_at IS NULL
         INNER JOIN vehicle_types vt ON vt.id = b.vehicle_type_id AND vt.deleted_at IS NULL
@@ -2397,7 +2440,7 @@ class BookingRepository {
           AND bda.driver_id = ?
           AND bda.is_active = 0
           AND bda.deleted_at IS NULL
-          AND bda.assignment_reason = 'DRIVER_RELEASED_ASSIGNMENT'
+          AND bda.assignment_reason IN ('DRIVER_RELEASED_ASSIGNMENT', 'ADMIN_SUSPENDED_DRIVER_RELEASE')
           ${cooldownSql}
         LIMIT 1
       `,

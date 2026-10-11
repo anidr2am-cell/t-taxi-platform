@@ -1,4 +1,4 @@
-const BOOKING_STATUS = require('../constants/reservationStatus');
+const BOOKING_STATUS = require("../constants/reservationStatus");
 const {
   ADMIN_BOOKING_VIEWS,
   OPERATIONS_CTA,
@@ -9,20 +9,20 @@ const {
   ACTIVE_OPERATING_STATUSES,
   PRE_PICKUP_STATUSES,
   UNASSIGNED_BOOKING_STATUSES,
-} = require('../constants/adminOperations.constants');
+} = require("../constants/adminOperations.constants");
 const {
   SERVICE_TIME_ZONE,
   parseServiceDateTimeToMs,
   getElapsedMsSinceServiceDateTime,
-} = require('../utils/serviceDateTime.util');
+} = require("../utils/serviceDateTime.util");
 
 const VALID_VIEWS = new Set(Object.values(ADMIN_BOOKING_VIEWS));
 
 const SETTLEMENT_FILTER_STATUSES = new Set([
-  'RECEIPT_REJECTED',
-  'RECEIPT_SUBMITTED',
-  'RECEIPT_MISSING',
-  'ADMIN_CONFIRMED',
+  "RECEIPT_REJECTED",
+  "RECEIPT_SUBMITTED",
+  "RECEIPT_MISSING",
+  "ADMIN_CONFIRMED",
 ]);
 
 class AdminOperationsService {
@@ -31,37 +31,37 @@ class AdminOperationsService {
   }
 
   thailandDateParts(date) {
-    const parts = new Intl.DateTimeFormat('en-CA', {
+    const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone: SERVICE_TIME_ZONE,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     }).formatToParts(date);
     const part = (type) => parts.find((item) => item.type === type)?.value;
     return {
-      year: Number(part('year')),
-      month: Number(part('month')),
-      day: Number(part('day')),
-      date: `${part('year')}-${part('month')}-${part('day')}`,
+      year: Number(part("year")),
+      month: Number(part("month")),
+      day: Number(part("day")),
+      date: `${part("year")}-${part("month")}-${part("day")}`,
     };
   }
 
   formatThailandDateTime(value) {
     const date = value instanceof Date ? value : new Date(value);
-    const parts = new Intl.DateTimeFormat('en-US', {
+    const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: SERVICE_TIME_ZONE,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hourCycle: 'h23',
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
       hour12: false,
     }).formatToParts(date);
     const part = (type) => parts.find((item) => item.type === type)?.value;
-    const hour = part('hour') === '24' ? '00' : part('hour');
-    return `${part('year')}-${part('month')}-${part('day')} ${hour}:${part('minute')}:${part('second')}`;
+    const hour = part("hour") === "24" ? "00" : part("hour");
+    return `${part("year")}-${part("month")}-${part("day")} ${hour}:${part("minute")}:${part("second")}`;
   }
 
   serviceDayRange(date = this.now()) {
@@ -98,7 +98,8 @@ class AdminOperationsService {
     const lowRatingRaw = query.lowRating ?? query.low_rating;
     const unassignedRaw = query.unassigned;
     const hasInquiryRaw = query.hasInquiry ?? query.has_inquiry;
-    const archivedRaw = query.archived ?? query.archivedOnly ?? query.archived_only;
+    const archivedRaw =
+      query.archived ?? query.archivedOnly ?? query.archived_only;
 
     return {
       view,
@@ -108,18 +109,28 @@ class AdminOperationsService {
       assignmentState: query.assignmentState || null,
       serviceDateFrom: null,
       serviceDateTo: null,
-      serviceType: query.serviceType?.trim() || query.service_type?.trim() || null,
+      serviceType:
+        query.serviceType?.trim() || query.service_type?.trim() || null,
       origin: query.origin?.trim() || null,
       destination: query.destination?.trim() || null,
-      settlementStatus: query.settlementStatus?.trim() || query.settlement_status?.trim() || null,
+      settlementStatus:
+        query.settlementStatus?.trim() ||
+        query.settlement_status?.trim() ||
+        null,
       lowRating:
-        lowRatingRaw === 'true' || lowRatingRaw === true || lowRatingRaw === '1',
+        lowRatingRaw === "true" ||
+        lowRatingRaw === true ||
+        lowRatingRaw === "1",
       unassigned:
-        unassignedRaw === 'true' || unassignedRaw === true || unassignedRaw === '1',
+        unassignedRaw === "true" ||
+        unassignedRaw === true ||
+        unassignedRaw === "1",
       hasInquiry:
-        hasInquiryRaw === 'true' || hasInquiryRaw === true || hasInquiryRaw === '1',
+        hasInquiryRaw === "true" ||
+        hasInquiryRaw === true ||
+        hasInquiryRaw === "1",
       archivedOnly:
-        archivedRaw === 'true' || archivedRaw === true || archivedRaw === '1',
+        archivedRaw === "true" || archivedRaw === true || archivedRaw === "1",
       adminUserId: null,
     };
   }
@@ -145,10 +156,17 @@ class AdminOperationsService {
     const history = this.historyRange(DEFAULT_HISTORY_DAYS, now);
     const nowText = this.formatThailandDateTime(now);
     const urgentCutoff = this.formatThailandDateTime(
-      new Date(now.getTime() + OPERATIONS_THRESHOLDS.UNASSIGNED_URGENT_BEFORE_MS),
+      new Date(
+        now.getTime() + OPERATIONS_THRESHOLDS.UNASSIGNED_URGENT_BEFORE_MS,
+      ),
     );
 
-    const next = { ...filters, view, operationsNow: nowText, operationsUrgentCutoff: urgentCutoff };
+    const next = {
+      ...filters,
+      view,
+      operationsNow: nowText,
+      operationsUrgentCutoff: urgentCutoff,
+    };
 
     if (next.archivedOnly) {
       next.includeArchived = true;
@@ -181,17 +199,20 @@ class AdminOperationsService {
         break;
       case ADMIN_BOOKING_VIEWS.COMPLETED:
         next.status = BOOKING_STATUS.COMPLETED;
-        if (!next.serviceDateFrom) next.serviceDateFrom = history.serviceDateFrom;
+        if (!next.serviceDateFrom)
+          next.serviceDateFrom = history.serviceDateFrom;
         if (!next.serviceDateTo) next.serviceDateTo = history.serviceDateTo;
         break;
       case ADMIN_BOOKING_VIEWS.CANCELLED:
         next.cancelledTab = true;
-        if (!next.serviceDateFrom) next.serviceDateFrom = history.serviceDateFrom;
+        if (!next.serviceDateFrom)
+          next.serviceDateFrom = history.serviceDateFrom;
         if (!next.serviceDateTo) next.serviceDateTo = history.serviceDateTo;
         break;
       case ADMIN_BOOKING_VIEWS.ALL:
         if (!next.unassignedOnly) {
-          if (!next.serviceDateFrom) next.serviceDateFrom = history.serviceDateFrom;
+          if (!next.serviceDateFrom)
+            next.serviceDateFrom = history.serviceDateFrom;
           if (!next.serviceDateTo) next.serviceDateTo = history.serviceDateTo;
         }
         break;
@@ -211,10 +232,10 @@ class AdminOperationsService {
 
   applyUnassignedDefinition(filters) {
     const next = { ...filters };
-    if (next.unassigned || next.assignmentState === 'UNASSIGNED') {
+    if (next.unassigned || next.assignmentState === "UNASSIGNED") {
       next.unassignedOnly = true;
       next.unassigned = false;
-      next.assignmentState = 'UNASSIGNED';
+      next.assignmentState = "UNASSIGNED";
       if (!next.status) {
         next.statuses = UNASSIGNED_BOOKING_STATUSES;
       }
@@ -241,12 +262,14 @@ class AdminOperationsService {
     filters.view = view;
     filters.adminUserId = adminUserId;
     filters = this.applyUnassignedDefinition(filters);
-    return this.applyUnassignedDefinition(this.applyViewDefaults(filters, view));
+    return this.applyUnassignedDefinition(
+      this.applyViewDefaults(filters, view),
+    );
   }
 
   parseMetadata(raw) {
     if (!raw) return null;
-    if (typeof raw === 'object') return raw;
+    if (typeof raw === "object") return raw;
     try {
       return JSON.parse(raw);
     } catch {
@@ -262,7 +285,7 @@ class AdminOperationsService {
     const metadata = this.parseMetadata(row.metadata);
     return (
       row.status === BOOKING_STATUS.SETTLEMENT_PENDING &&
-      ['DUE', 'OVERDUE'].includes(row.commission_status) &&
+      ["DUE", "OVERDUE"].includes(row.commission_status) &&
       metadata?.commissionRejectionReason &&
       !row.commission_receipt_file_id
     );
@@ -271,7 +294,7 @@ class AdminOperationsService {
   hasReceiptSubmitted(row) {
     return (
       row.status === BOOKING_STATUS.SETTLEMENT_PENDING &&
-      ['DUE', 'OVERDUE'].includes(row.commission_status) &&
+      ["DUE", "OVERDUE"].includes(row.commission_status) &&
       row.commission_receipt_file_id
     );
   }
@@ -279,7 +302,7 @@ class AdminOperationsService {
   hasReceiptMissing(row) {
     return (
       row.status === BOOKING_STATUS.SETTLEMENT_PENDING &&
-      ['DUE', 'OVERDUE'].includes(row.commission_status) &&
+      ["DUE", "OVERDUE"].includes(row.commission_status) &&
       !row.commission_receipt_file_id &&
       !this.hasReceiptRejected(row)
     );
@@ -309,7 +332,7 @@ class AdminOperationsService {
 
     if (this.isLowRating(row)) {
       reasons.push({
-        code: 'LOW_RATING',
+        code: "LOW_RATING",
         severity: OPERATIONS_SEVERITY.URGENT,
         priority: 10,
       });
@@ -317,7 +340,7 @@ class AdminOperationsService {
 
     if (this.hasReceiptRejected(row)) {
       reasons.push({
-        code: 'RECEIPT_REJECTED',
+        code: "RECEIPT_REJECTED",
         severity: OPERATIONS_SEVERITY.URGENT,
         priority: 20,
       });
@@ -325,7 +348,7 @@ class AdminOperationsService {
 
     if (pickupMs != null && pickupMs < nowMs && unassigned) {
       reasons.push({
-        code: 'PICKUP_OVERDUE_UNASSIGNED',
+        code: "PICKUP_OVERDUE_UNASSIGNED",
         severity: OPERATIONS_SEVERITY.URGENT,
         priority: 30,
       });
@@ -337,7 +360,7 @@ class AdminOperationsService {
       PRE_PICKUP_STATUSES.includes(status)
     ) {
       reasons.push({
-        code: 'PICKUP_OVERDUE_STALLED',
+        code: "PICKUP_OVERDUE_STALLED",
         severity: OPERATIONS_SEVERITY.URGENT,
         priority: 40,
       });
@@ -345,7 +368,7 @@ class AdminOperationsService {
 
     if (this.hasAdminUnread(row)) {
       reasons.push({
-        code: 'CUSTOMER_INQUIRY',
+        code: "CUSTOMER_INQUIRY",
         severity: OPERATIONS_SEVERITY.URGENT,
         priority: 50,
       });
@@ -358,20 +381,35 @@ class AdminOperationsService {
       unassigned
     ) {
       reasons.push({
-        code: 'PICKUP_SOON_UNASSIGNED',
+        code: "PICKUP_SOON_UNASSIGNED",
         severity: OPERATIONS_SEVERITY.SOON,
         priority: 110,
       });
     }
 
-    if (unassigned && row.last_driver_release_at) {
+    if (
+      unassigned &&
+      row.last_driver_release_at &&
+      row.last_driver_release_reason_code === "ADMIN_SUSPENDED_DRIVER_RELEASE"
+    ) {
+      const remainingMs = pickupMs == null ? null : pickupMs - nowMs;
+      reasons.push({
+        code: "SUSPENDED_DRIVER_REASSIGNMENT",
+        severity:
+          remainingMs != null && remainingMs <= 24 * 60 * 60 * 1000
+            ? OPERATIONS_SEVERITY.URGENT
+            : OPERATIONS_SEVERITY.SOON,
+        priority:
+          remainingMs != null && remainingMs <= 24 * 60 * 60 * 1000 ? 22 : 102,
+      });
+    } else if (unassigned && row.last_driver_release_at) {
       const remainingMs = pickupMs == null ? null : pickupMs - nowMs;
       if (
         remainingMs != null &&
         remainingMs <= OPERATIONS_THRESHOLDS.UNASSIGNED_TWO_HOURS_MS
       ) {
         reasons.push({
-          code: 'CRITICAL_REASSIGNMENT',
+          code: "CRITICAL_REASSIGNMENT",
           severity: OPERATIONS_SEVERITY.CRITICAL,
           priority: 15,
         });
@@ -380,13 +418,13 @@ class AdminOperationsService {
         remainingMs < OPERATIONS_THRESHOLDS.UNASSIGNED_SIX_HOURS_MS
       ) {
         reasons.push({
-          code: 'URGENT_REASSIGNMENT',
+          code: "URGENT_REASSIGNMENT",
           severity: OPERATIONS_SEVERITY.URGENT,
           priority: 25,
         });
       } else {
         reasons.push({
-          code: 'DRIVER_RELEASED_REASSIGNMENT',
+          code: "DRIVER_RELEASED_REASSIGNMENT",
           severity: OPERATIONS_SEVERITY.SOON,
           priority: 105,
         });
@@ -398,7 +436,7 @@ class AdminOperationsService {
       pickupMs - nowMs <= OPERATIONS_THRESHOLDS.UNASSIGNED_TWO_HOURS_MS
     ) {
       reasons.push({
-        code: 'CRITICAL_UNASSIGNED',
+        code: "CRITICAL_UNASSIGNED",
         severity: OPERATIONS_SEVERITY.CRITICAL,
         priority: 18,
       });
@@ -409,7 +447,7 @@ class AdminOperationsService {
       pickupMs - nowMs < OPERATIONS_THRESHOLDS.UNASSIGNED_SIX_HOURS_MS
     ) {
       reasons.push({
-        code: 'URGENT_UNASSIGNED',
+        code: "URGENT_UNASSIGNED",
         severity: OPERATIONS_SEVERITY.URGENT,
         priority: 28,
       });
@@ -417,7 +455,7 @@ class AdminOperationsService {
 
     if (this.hasReceiptSubmitted(row)) {
       reasons.push({
-        code: 'RECEIPT_REVIEW',
+        code: "RECEIPT_REVIEW",
         severity: OPERATIONS_SEVERITY.SOON,
         priority: 120,
       });
@@ -425,7 +463,7 @@ class AdminOperationsService {
 
     if (this.hasReceiptMissing(row)) {
       reasons.push({
-        code: 'RECEIPT_MISSING',
+        code: "RECEIPT_MISSING",
         severity: OPERATIONS_SEVERITY.SOON,
         priority: 130,
       });
@@ -438,7 +476,7 @@ class AdminOperationsService {
         elapsed >= OPERATIONS_THRESHOLDS.DRIVER_ARRIVED_PICKUP_DELAY_MS
       ) {
         reasons.push({
-          code: 'BOARDING_DELAY',
+          code: "BOARDING_DELAY",
           severity: OPERATIONS_SEVERITY.REVIEW,
           priority: 210,
         });
@@ -452,14 +490,17 @@ class AdminOperationsService {
         elapsed >= OPERATIONS_THRESHOLDS.PICKED_UP_LONG_TRIP_MS
       ) {
         reasons.push({
-          code: 'LONG_TRIP',
+          code: "LONG_TRIP",
           severity: OPERATIONS_SEVERITY.REVIEW,
           priority: 220,
         });
       }
     }
 
-    if (!TERMINAL_BOOKING_STATUSES.includes(status) && status !== BOOKING_STATUS.SETTLEMENT_PENDING) {
+    if (
+      !TERMINAL_BOOKING_STATUSES.includes(status) &&
+      status !== BOOKING_STATUS.SETTLEMENT_PENDING
+    ) {
       const elapsed = getElapsedMsSinceServiceDateTime(row.updated_at, nowMs);
       if (
         elapsed != null &&
@@ -467,7 +508,7 @@ class AdminOperationsService {
         !ACTIVE_OPERATING_STATUSES.includes(status)
       ) {
         reasons.push({
-          code: 'STATUS_STALE',
+          code: "STATUS_STALE",
           severity: OPERATIONS_SEVERITY.REVIEW,
           priority: 230,
         });
@@ -509,16 +550,20 @@ class AdminOperationsService {
 
   mapSettlementState(row) {
     if (row.status !== BOOKING_STATUS.SETTLEMENT_PENDING) return null;
-    if (this.hasReceiptRejected(row)) return 'RECEIPT_REJECTED';
-    if (row.commission_status === 'PAID') return 'ADMIN_CONFIRMED';
-    if (this.hasReceiptSubmitted(row)) return 'RECEIPT_SUBMITTED';
-    return 'RECEIPT_MISSING';
+    if (this.hasReceiptRejected(row)) return "RECEIPT_REJECTED";
+    if (row.commission_status === "PAID") return "ADMIN_CONFIRMED";
+    if (this.hasReceiptSubmitted(row)) return "RECEIPT_SUBMITTED";
+    return "RECEIPT_MISSING";
   }
 
   buildPrimaryCta(row, primaryReason) {
     const status = row.status;
     if (!primaryReason) {
-      if (status === BOOKING_STATUS.COMPLETED || status === BOOKING_STATUS.CANCELLED || status === BOOKING_STATUS.NO_SHOW) {
+      if (
+        status === BOOKING_STATUS.COMPLETED ||
+        status === BOOKING_STATUS.CANCELLED ||
+        status === BOOKING_STATUS.NO_SHOW
+      ) {
         return OPERATIONS_CTA.VIEW_BOOKING;
       }
       if (ACTIVE_OPERATING_STATUSES.includes(status)) {
@@ -528,33 +573,38 @@ class AdminOperationsService {
     }
 
     switch (primaryReason.code) {
-      case 'LOW_RATING':
+      case "LOW_RATING":
         return OPERATIONS_CTA.REVIEW_RATING;
-      case 'RECEIPT_REJECTED':
+      case "RECEIPT_REJECTED":
         return OPERATIONS_CTA.SETTLEMENT_DETAIL;
-      case 'RECEIPT_REVIEW':
+      case "RECEIPT_REVIEW":
         return OPERATIONS_CTA.CONFIRM_SETTLEMENT;
-      case 'RECEIPT_MISSING':
+      case "RECEIPT_MISSING":
         return OPERATIONS_CTA.SETTLEMENT_DETAIL;
-      case 'PICKUP_OVERDUE_UNASSIGNED':
-      case 'PICKUP_SOON_UNASSIGNED':
-      case 'CRITICAL_REASSIGNMENT':
-      case 'URGENT_REASSIGNMENT':
-      case 'DRIVER_RELEASED_REASSIGNMENT':
-      case 'CRITICAL_UNASSIGNED':
-      case 'URGENT_UNASSIGNED':
+      case "PICKUP_OVERDUE_UNASSIGNED":
+      case "PICKUP_SOON_UNASSIGNED":
+      case "CRITICAL_REASSIGNMENT":
+      case "URGENT_REASSIGNMENT":
+      case "DRIVER_RELEASED_REASSIGNMENT":
+      case "CRITICAL_UNASSIGNED":
+      case "URGENT_UNASSIGNED":
         return OPERATIONS_CTA.ASSIGN_DRIVER;
-      case 'PICKUP_OVERDUE_STALLED':
-      case 'BOARDING_DELAY':
-      case 'LONG_TRIP':
-      case 'STATUS_STALE':
+      case "PICKUP_OVERDUE_STALLED":
+      case "BOARDING_DELAY":
+      case "LONG_TRIP":
+      case "STATUS_STALE":
         return OPERATIONS_CTA.CHECK_STATUS;
       default:
-        if (this.isUnassigned(row) && !TERMINAL_BOOKING_STATUSES.includes(status)) {
+        if (
+          this.isUnassigned(row) &&
+          !TERMINAL_BOOKING_STATUSES.includes(status)
+        ) {
           return OPERATIONS_CTA.ASSIGN_DRIVER;
         }
-        if (this.hasReceiptSubmitted(row)) return OPERATIONS_CTA.CONFIRM_SETTLEMENT;
-        if (status === BOOKING_STATUS.SETTLEMENT_PENDING) return OPERATIONS_CTA.SETTLEMENT_DETAIL;
+        if (this.hasReceiptSubmitted(row))
+          return OPERATIONS_CTA.CONFIRM_SETTLEMENT;
+        if (status === BOOKING_STATUS.SETTLEMENT_PENDING)
+          return OPERATIONS_CTA.SETTLEMENT_DETAIL;
         return OPERATIONS_CTA.VIEW_BOOKING;
     }
   }
@@ -562,16 +612,19 @@ class AdminOperationsService {
   buildNextAction(row, primaryReason) {
     const status = row.status;
     if (!primaryReason) {
-      if (this.isUnassigned(row) && !TERMINAL_BOOKING_STATUSES.includes(status)) {
-        return { code: 'ASSIGN_DRIVER', params: {} };
+      if (
+        this.isUnassigned(row) &&
+        !TERMINAL_BOOKING_STATUSES.includes(status)
+      ) {
+        return { code: "ASSIGN_DRIVER", params: {} };
       }
       if (this.hasReceiptSubmitted(row)) {
-        return { code: 'CONFIRM_SETTLEMENT', params: {} };
+        return { code: "CONFIRM_SETTLEMENT", params: {} };
       }
       if (status === BOOKING_STATUS.SETTLEMENT_PENDING) {
-        return { code: 'AWAIT_RECEIPT', params: {} };
+        return { code: "AWAIT_RECEIPT", params: {} };
       }
-      return { code: 'MONITOR', params: {} };
+      return { code: "MONITOR", params: {} };
     }
     return { code: primaryReason.code, params: {} };
   }
@@ -585,8 +638,12 @@ class AdminOperationsService {
       if (sevDiff !== 0) return sevDiff;
       const priDiff = (opsA.priority ?? 999) - (opsB.priority ?? 999);
       if (priDiff !== 0) return priDiff;
-      const pickupA = parseServiceDateTimeToMs(a.scheduledPickupAt) ?? Number.MAX_SAFE_INTEGER;
-      const pickupB = parseServiceDateTimeToMs(b.scheduledPickupAt) ?? Number.MAX_SAFE_INTEGER;
+      const pickupA =
+        parseServiceDateTimeToMs(a.scheduledPickupAt) ??
+        Number.MAX_SAFE_INTEGER;
+      const pickupB =
+        parseServiceDateTimeToMs(b.scheduledPickupAt) ??
+        Number.MAX_SAFE_INTEGER;
       if (pickupA !== pickupB) return pickupA - pickupB;
       return String(a.bookingNumber).localeCompare(String(b.bookingNumber));
     });
@@ -595,22 +652,22 @@ class AdminOperationsService {
   summaryViewKeys() {
     return [
       ADMIN_BOOKING_VIEWS.NEEDS_ACTION,
-      'unassigned',
+      "unassigned",
       ADMIN_BOOKING_VIEWS.TODAY,
       ADMIN_BOOKING_VIEWS.IN_PROGRESS,
       ADMIN_BOOKING_VIEWS.SETTLEMENT,
-      'issues',
+      "issues",
     ];
   }
 
   buildSummaryFilter(viewKey, adminUserId = null) {
-    if (viewKey === 'unassigned') {
+    if (viewKey === "unassigned") {
       return this.buildFilters(
-        { view: ADMIN_BOOKING_VIEWS.ALL, assignmentState: 'UNASSIGNED' },
+        { view: ADMIN_BOOKING_VIEWS.ALL, assignmentState: "UNASSIGNED" },
         adminUserId,
       );
     }
-    if (viewKey === 'issues') {
+    if (viewKey === "issues") {
       return this.buildFilters(
         { view: ADMIN_BOOKING_VIEWS.ISSUES },
         adminUserId,

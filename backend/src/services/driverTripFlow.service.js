@@ -1,15 +1,25 @@
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
-const BOOKING_STATUS = require('../constants/reservationStatus');
-const ROLES = require('../constants/roles');
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
+const BOOKING_STATUS = require("../constants/reservationStatus");
+const ROLES = require("../constants/roles");
+const {
+  assertDriverOperational,
+} = require("../policies/driverOperational.policy");
 
 class DriverTripFlowService {
-  constructor(pool, bookingRepository, bookingStatusService, driverJobService) {
+  constructor(
+    pool,
+    bookingRepository,
+    bookingStatusService,
+    driverJobService,
+    driverRepository = null,
+  ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.bookingStatusService = bookingStatusService;
     this.driverJobService = driverJobService;
+    this.driverRepository = driverRepository;
   }
 
   actor(driverUserId) {
@@ -66,18 +76,36 @@ class DriverTripFlowService {
   }
 
   async getUpdatedDetail(driverUserId, bookingNumber, extra = {}) {
-    const detail = await this.driverJobService.getDetail(driverUserId, bookingNumber);
+    const detail = await this.driverJobService.getDetail(
+      driverUserId,
+      bookingNumber,
+    );
     return { ...detail, ...extra };
   }
 
-  async runTransition(driverUserId, bookingNumber, toStatus, reason, options = {}) {
+  async runTransition(
+    driverUserId,
+    bookingNumber,
+    toStatus,
+    reason,
+    options = {},
+  ) {
     const conn = await this.pool.getConnection();
     let transition;
     let normalizedBookingNumber;
 
     try {
       await conn.beginTransaction();
-      const row = await this.loadActiveBookingForUpdate(conn, driverUserId, bookingNumber);
+      if (this.driverRepository) {
+        assertDriverOperational(
+          await this.driverRepository.findByUserIdForUpdate(conn, driverUserId),
+        );
+      }
+      const row = await this.loadActiveBookingForUpdate(
+        conn,
+        driverUserId,
+        bookingNumber,
+      );
       normalizedBookingNumber = row.booking_number;
       this.assertExpectedStatus(row, options.expectedFromStatus, toStatus);
       transition = await this.transitionInTransaction(
@@ -95,12 +123,17 @@ class DriverTripFlowService {
       conn.release();
     }
 
-    await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+    await this.bookingStatusService.dispatchOutboxAfterCommit(
+      transition.outboxId,
+    );
     this.bookingStatusService.emitDomainEvent(
       transition.domainEvent,
       transition.eventPayload,
     );
-    if (typeof this.bookingStatusService.handlePostCommitMileageEffects === 'function') {
+    if (
+      typeof this.bookingStatusService.handlePostCommitMileageEffects ===
+      "function"
+    ) {
       await this.bookingStatusService.handlePostCommitMileageEffects({
         bookingId: transition.bookingId,
         fromStatus: transition.fromStatus,
@@ -109,10 +142,10 @@ class DriverTripFlowService {
     }
 
     if (
-      toStatus === BOOKING_STATUS.COMPLETED
-      || toStatus === BOOKING_STATUS.CANCELLED
-      || toStatus === BOOKING_STATUS.NO_SHOW
-      || toStatus === BOOKING_STATUS.SETTLEMENT_PENDING
+      toStatus === BOOKING_STATUS.COMPLETED ||
+      toStatus === BOOKING_STATUS.CANCELLED ||
+      toStatus === BOOKING_STATUS.NO_SHOW ||
+      toStatus === BOOKING_STATUS.SETTLEMENT_PENDING
     ) {
       return {
         bookingNumber: normalizedBookingNumber,
@@ -131,7 +164,7 @@ class DriverTripFlowService {
       driverUserId,
       bookingNumber,
       BOOKING_STATUS.ON_ROUTE,
-      'DRIVER_START_ON_ROUTE',
+      "DRIVER_START_ON_ROUTE",
       { expectedFromStatus: BOOKING_STATUS.DRIVER_ASSIGNED },
     );
   }
@@ -141,7 +174,7 @@ class DriverTripFlowService {
       driverUserId,
       bookingNumber,
       BOOKING_STATUS.DRIVER_ARRIVED,
-      'DRIVER_MARK_ARRIVED',
+      "DRIVER_MARK_ARRIVED",
       { expectedFromStatus: BOOKING_STATUS.ON_ROUTE },
     );
   }
@@ -151,7 +184,7 @@ class DriverTripFlowService {
       driverUserId,
       bookingNumber,
       BOOKING_STATUS.PICKED_UP,
-      'DRIVER_MARK_PICKED_UP',
+      "DRIVER_MARK_PICKED_UP",
       { expectedFromStatus: BOOKING_STATUS.DRIVER_ARRIVED },
     );
   }
@@ -161,7 +194,7 @@ class DriverTripFlowService {
       driverUserId,
       bookingNumber,
       BOOKING_STATUS.SETTLEMENT_PENDING,
-      'DRIVER_END_TRIP',
+      "DRIVER_END_TRIP",
       { expectedFromStatus: BOOKING_STATUS.PICKED_UP },
     );
   }

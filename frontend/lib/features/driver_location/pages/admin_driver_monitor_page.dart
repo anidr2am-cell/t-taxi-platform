@@ -6,6 +6,8 @@ import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
+import '../../admin_dispatch/pages/admin_booking_detail_page.dart';
+import '../../driver/utils/driver_backend_datetime.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
 import '../services/driver_location_socket_service.dart';
@@ -243,6 +245,215 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
     }
   }
 
+  Future<void> _changeSuspension(Map<String, dynamic> driver) async {
+    final l10n = context.l10n;
+    final driverId = driver['driverId'] as int;
+    final suspended = driver['driverStatus'] == 'SUSPENDED';
+    Map<String, dynamic>? preview;
+    List<dynamic> history = const [];
+    try {
+      history = await _dispatchApi.getDriverSuspensionHistory(driverId);
+      if (!suspended) {
+        preview = await _dispatchApi.getDriverSuspensionPreview(driverId);
+      }
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userFacingError(err))));
+      return;
+    }
+    if (!mounted) return;
+    final reasonController = TextEditingController();
+    final blocking = (preview?['blocking'] as List? ?? const []);
+    final releasable = (preview?['releasable'] as List? ?? const []);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            l10n.t(
+              suspended
+                  ? 'admin_driver_unsuspend_title'
+                  : 'admin_driver_suspend_title',
+            ),
+          ),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (!suspended) ...[
+                    Text(
+                      '${l10n.t('admin_driver_suspend_release_count')}: ${releasable.length}',
+                    ),
+                    ...releasable.map((raw) {
+                      final item = Map<String, dynamic>.from(raw as Map);
+                      final urgent = item['within24Hours'] == true;
+                      final pickupAt = formatBackendServiceDateTimeBangkok(
+                        item['pickupAt'] as String?,
+                      );
+                      return ListTile(
+                        dense: true,
+                        tileColor: urgent ? AppTokens.warningLight : null,
+                        title: Text(item['bookingNumber'] as String? ?? ''),
+                        subtitle: Text(
+                          pickupAt ?? '-',
+                          style: urgent
+                              ? const TextStyle(
+                                  color: AppTokens.warning,
+                                  fontWeight: FontWeight.w700,
+                                )
+                              : null,
+                        ),
+                        trailing: urgent
+                            ? AppUi.statusBadge(
+                                l10n.t('admin_driver_suspend_urgent'),
+                                tone: AppStatusTone.warning,
+                              )
+                            : null,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => AdminBookingDetailPage(
+                              bookingNumber: item['bookingNumber'] as String,
+                              api: _dispatchApi,
+                              onChanged: _load,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    if (blocking.isNotEmpty) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      Text(
+                        l10n.t('admin_driver_suspend_blocked'),
+                        style: const TextStyle(
+                          color: AppTokens.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      ...blocking.map((raw) {
+                        final item = Map<String, dynamic>.from(raw as Map);
+                        final pickupAt = formatBackendServiceDateTimeBangkok(
+                          item['pickupAt'] as String?,
+                        );
+                        return ListTile(
+                          dense: true,
+                          title: Text(item['bookingNumber'] as String? ?? ''),
+                          subtitle: Text(pickupAt ?? '-'),
+                          trailing: const Icon(
+                            Icons.open_in_new,
+                            color: AppTokens.error,
+                          ),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => AdminBookingDetailPage(
+                                bookingNumber: item['bookingNumber'] as String,
+                                api: _dispatchApi,
+                                onChanged: _load,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                  const SizedBox(height: AppTokens.spaceSm),
+                  TextField(
+                    controller: reasonController,
+                    minLines: 2,
+                    maxLines: 4,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: InputDecoration(
+                      labelText: l10n.t(
+                        suspended
+                            ? 'admin_driver_unsuspend_reason_required'
+                            : 'admin_driver_suspend_reason_required',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppTokens.spaceMd),
+                  Text(
+                    l10n.t('admin_driver_suspension_history'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (history.isEmpty)
+                    Text(l10n.t('admin_driver_suspension_history_empty'))
+                  else
+                    ...history.take(5).map((raw) {
+                      final item = Map<String, dynamic>.from(raw as Map);
+                      final action = item['action'] == 'DRIVER_SUSPENDED'
+                          ? l10n.t('admin_driver_suspension_history_suspended')
+                          : l10n.t(
+                              'admin_driver_suspension_history_unsuspended',
+                            );
+                      final changedAt = formatBackendServiceDateTimeBangkok(
+                        item['createdAt'] as String?,
+                      );
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(action),
+                        subtitle: Text(
+                          '${item['reason'] ?? '-'}${changedAt == null ? '' : ' · $changedAt'}',
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(l10n.t('admin_driver_suspension_cancel')),
+            ),
+            FilledButton(
+              onPressed:
+                  blocking.isNotEmpty || reasonController.text.trim().length < 3
+                  ? null
+                  : () => Navigator.pop(dialogContext, true),
+              child: Text(
+                l10n.t(
+                  suspended
+                      ? 'admin_driver_unsuspend_confirm'
+                      : 'admin_driver_suspend_confirm',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    final reason = reasonController.text.trim();
+    reasonController.dispose();
+    if (confirmed != true) return;
+    try {
+      if (suspended) {
+        await _dispatchApi.unsuspendDriver(driverId, reason);
+      } else {
+        await _dispatchApi.suspendDriver(driverId, reason);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.t(
+              suspended ? 'admin_driver_unsuspended' : 'admin_driver_suspended',
+            ),
+          ),
+        ),
+      );
+      await _load();
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userFacingError(err))));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -390,6 +601,9 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                 archive is Map && archive['isArchived'] == true;
                             final activeJobs =
                                 driver['activeAssignmentCount'] as num? ?? 0;
+                            final suspended =
+                                driver['driverStatus'] == 'SUSPENDED';
+                            final suspension = driver['suspension'];
 
                             return AppUi.adminQueueCard(
                               onTap: () => setState(() => _selected = location),
@@ -469,6 +683,13 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                                 'Archived/Test',
                                                 tone: AppStatusTone.neutral,
                                               ),
+                                            if (suspended)
+                                              AppUi.statusBadge(
+                                                l10n.t(
+                                                  'admin_driver_suspended_badge',
+                                                ),
+                                                tone: AppStatusTone.error,
+                                              ),
                                           ],
                                         ),
                                         const SizedBox(height: 6),
@@ -518,7 +739,28 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                         if (location?.lastSeenAt != null) ...[
                                           const SizedBox(height: 4),
                                           Text(
-                                            '${l10n.t('admin_driver_last_seen')} ${location!.lastSeenAt}',
+                                            '${l10n.t('admin_driver_last_seen')} ${formatBackendServiceDateTimeBangkok(location!.lastSeenAt) ?? '-'}',
+                                            style: const TextStyle(
+                                              color: AppTokens.textMuted,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                        if (suspended && suspension is Map) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${l10n.t('admin_driver_suspend_reason_label')}: ${suspension['reason'] ?? '-'}',
+                                            style: const TextStyle(
+                                              color: AppTokens.error,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          Text(
+                                            formatBackendServiceDateTimeBangkok(
+                                                  suspension['changedAt']
+                                                      as String?,
+                                                ) ??
+                                                '-',
                                             style: const TextStyle(
                                               color: AppTokens.textMuted,
                                               fontSize: 12,
@@ -531,6 +773,24 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
+                                      if (!archived)
+                                        OutlinedButton.icon(
+                                          onPressed: () =>
+                                              _changeSuspension(driver),
+                                          icon: Icon(
+                                            suspended
+                                                ? Icons.lock_open
+                                                : Icons.block,
+                                            size: 16,
+                                          ),
+                                          label: Text(
+                                            l10n.t(
+                                              suspended
+                                                  ? 'admin_driver_unsuspend'
+                                                  : 'admin_driver_suspend',
+                                            ),
+                                          ),
+                                        ),
                                       if (_showArchived)
                                         OutlinedButton.icon(
                                           onPressed: () =>
@@ -601,8 +861,8 @@ class _MonitorActiveBookingRouteLine extends StatelessWidget {
     final value = hasName
         ? displayName!
         : (displayAddress != null && displayAddress.isNotEmpty
-            ? displayAddress
-            : null);
+              ? displayAddress
+              : null);
     if (value == null) {
       return const SizedBox.shrink();
     }

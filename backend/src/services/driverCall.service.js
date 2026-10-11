@@ -1,48 +1,48 @@
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
-const BOOKING_STATUS = require('../constants/reservationStatus');
-const ROLES = require('../constants/roles');
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
+const BOOKING_STATUS = require("../constants/reservationStatus");
+const ROLES = require("../constants/roles");
 const {
   emitDriverCallClaimed,
   emitDriverCallConfirmed,
-} = require('../socket/realtime');
+} = require("../socket/realtime");
 const {
   assertNoPickupTimeConflict,
-} = require('../policies/driverBookingConflictPolicy');
+} = require("../policies/driverBookingConflictPolicy");
+const {
+  assertDriverOperational,
+} = require("../policies/driverOperational.policy");
 const {
   ASSIGNMENT_RELEASE_MARKER,
   evaluateDriverAssignmentRelease,
   RELEASE_BLOCKED_REASON,
-} = require('../policies/driverAssignmentRelease.policy');
-const {
-  isVehicleCompatibleWithBooking,
-} = require('../utils/vehicleMatchTier');
+} = require("../policies/driverAssignmentRelease.policy");
+const { isVehicleCompatibleWithBooking } = require("../utils/vehicleMatchTier");
 const {
   assertBookingDispatchEligible,
-} = require('../policies/bookingDispatchEligibility.policy');
+} = require("../policies/bookingDispatchEligibility.policy");
 
-const OPEN_CALL_CLAIM_ASSIGNMENT_REASON = 'DRIVER_CLAIM_OPEN_CALL';
+const OPEN_CALL_CLAIM_ASSIGNMENT_REASON = "DRIVER_CLAIM_OPEN_CALL";
 
 const RELEASE_BLOCK_MESSAGES = {
   [RELEASE_BLOCKED_REASON.NOT_ASSIGNED_DRIVER]:
-    'Booking is not assigned to this driver',
+    "Booking is not assigned to this driver",
   [RELEASE_BLOCKED_REASON.NO_ACTIVE_ASSIGNMENT]:
-    'No active assignment to release',
+    "No active assignment to release",
   [RELEASE_BLOCKED_REASON.TRIP_ALREADY_STARTED]:
-    'Booking can only be released before the trip starts',
+    "Booking can only be released before the trip starts",
   [RELEASE_BLOCKED_REASON.WITHIN_TWO_HOURS]:
-    'Normal assignment release is blocked within 2 hours of pickup. Use an emergency reason if needed.',
+    "Normal assignment release is blocked within 2 hours of pickup. Use an emergency reason if needed.",
   [RELEASE_BLOCKED_REASON.BOOKING_TERMINAL_STATUS]:
-    'This booking can no longer be released',
+    "This booking can no longer be released",
   [RELEASE_BLOCKED_REASON.INVALID_PICKUP_TIME]:
-    'Booking pickup time is invalid for assignment release',
-  [RELEASE_BLOCKED_REASON.INVALID_REASON]:
-    'A valid release reason is required',
+    "Booking pickup time is invalid for assignment release",
+  [RELEASE_BLOCKED_REASON.INVALID_REASON]: "A valid release reason is required",
   [RELEASE_BLOCKED_REASON.REASON_DETAIL_REQUIRED]:
-    'Please provide details when selecting Other',
+    "Please provide details when selecting Other",
   [RELEASE_BLOCKED_REASON.CUSTOMER_REQUEST_NOT_ALLOWED]:
-    'Customer cancellation must use the customer cancel flow',
+    "Customer cancellation must use the customer cancel flow",
 };
 
 class DriverCallService {
@@ -105,7 +105,9 @@ class DriverCallService {
     return {
       bookingNumber: row.booking_number,
       status: row.status,
-      scheduledPickupAt: this.driverJobService.serviceDateTimeIso(row.scheduled_pickup_at),
+      scheduledPickupAt: this.driverJobService.serviceDateTimeIso(
+        row.scheduled_pickup_at,
+      ),
       pickupDate: row.pickup_date,
       pickupTime: row.pickup_time,
       createdAt: this.driverJobService.serviceDateTimeIso(row.created_at),
@@ -140,9 +142,10 @@ class DriverCallService {
       // EXACT = driver has approved active vehicle of the booking type.
       // COMPATIBLE_UPGRADE = higher-tier hierarchy vehicle covering a lower booking
       // (e.g. VAN driver seeing a SEDAN call). Frontend can badge non-exact rows.
-      vehicleMatchType: Number(row.is_exact_vehicle_match) === 1
-        ? 'EXACT'
-        : 'COMPATIBLE_UPGRADE',
+      vehicleMatchType:
+        Number(row.is_exact_vehicle_match) === 1
+          ? "EXACT"
+          : "COMPATIBLE_UPGRADE",
       isExactVehicleMatch: Number(row.is_exact_vehicle_match) === 1,
       compatibleVehicles,
       passengerCount: this.passengerCount(row),
@@ -166,17 +169,23 @@ class DriverCallService {
   async listOpenCalls(driverUserId) {
     const driver = await this.driverRepository.findByUserId(driverUserId);
     if (!driver || !driver.is_active || driver.user_is_active === 0) {
-      throw new AppError('Driver not found', {
+      throw new AppError("Driver not found", {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
       });
     }
+    assertDriverOperational(driver);
     if (this.commissionSettlementService) {
-      if (await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)) {
+      if (
+        await this.commissionSettlementService.driverHasBlockingSettlement(
+          driver.id,
+        )
+      ) {
         return {
           items: [],
-          blockedReason: 'UNPAID_SETTLEMENT',
-          message: 'ยังไม่สามารถรับงานใหม่ได้ กรุณาชำระค่าคอมมิชชั่นและรอการตรวจสอบจากแอดมิน',
+          blockedReason: "UNPAID_SETTLEMENT",
+          message:
+            "ยังไม่สามารถรับงานใหม่ได้ กรุณาชำระค่าคอมมิชชั่นและรอการตรวจสอบจากแอดมิน",
         };
       }
     }
@@ -190,7 +199,7 @@ class DriverCallService {
   }
 
   throwAlreadyClaimed() {
-    throw new AppError('Another driver has already claimed this booking', {
+    throw new AppError("Another driver has already claimed this booking", {
       statusCode: HTTP_STATUS.CONFLICT,
       errorCode: ERROR_CODES.ALREADY_ASSIGNED,
     });
@@ -230,7 +239,9 @@ class DriverCallService {
     if (!this.isOpenCallClaimAssignment(activeAssignment)) {
       return null;
     }
-    return this.buildClaimSuccessResponse(conn, driver.user_id, bookingNumber, { idempotent: true });
+    return this.buildClaimSuccessResponse(conn, driver.user_id, bookingNumber, {
+      idempotent: true,
+    });
   }
 
   async replayClaimAfterDupEntry(driverUserId, bookingNumber) {
@@ -238,7 +249,10 @@ class DriverCallService {
     try {
       await conn.beginTransaction();
 
-      const driver = await this.driverRepository.findByUserIdForUpdate(conn, driverUserId);
+      const driver = await this.driverRepository.findByUserIdForUpdate(
+        conn,
+        driverUserId,
+      );
       this.assertDriverCanClaim(driver);
 
       const booking = await this.bookingRepository.findByBookingNumberForUpdate(
@@ -246,7 +260,7 @@ class DriverCallService {
         bookingNumber,
       );
       if (!booking) {
-        throw new AppError('Booking not found', {
+        throw new AppError("Booking not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
         });
@@ -256,7 +270,12 @@ class DriverCallService {
         conn,
         booking.id,
       );
-      const replay = await this.tryReplayOpenCallClaim(conn, driver, active, bookingNumber);
+      const replay = await this.tryReplayOpenCallClaim(
+        conn,
+        driver,
+        active,
+        bookingNumber,
+      );
       if (replay) {
         await conn.commit();
         return replay;
@@ -270,7 +289,10 @@ class DriverCallService {
     }
   }
 
-  throwReleaseNotAllowed(message = 'Booking release is not allowed', extras = {}) {
+  throwReleaseNotAllowed(
+    message = "Booking release is not allowed",
+    extras = {},
+  ) {
     throw new AppError(message, {
       statusCode: HTTP_STATUS.CONFLICT,
       errorCode: ERROR_CODES.BOOKING_RELEASE_NOT_ALLOWED,
@@ -282,25 +304,27 @@ class DriverCallService {
     if (evaluation.releaseAssignmentAvailable) return evaluation;
     const reason = evaluation.assignmentReleaseBlockedReason;
     this.throwReleaseNotAllowed(
-      RELEASE_BLOCK_MESSAGES[reason] || 'Booking release is not allowed',
+      RELEASE_BLOCK_MESSAGES[reason] || "Booking release is not allowed",
       {
         reason,
         assignmentReleaseDeadline: evaluation.assignmentReleaseDeadline,
         reassignmentPriority: evaluation.reassignmentPriority,
-        releaseAssignmentEmergencyOnly: evaluation.releaseAssignmentEmergencyOnly,
+        releaseAssignmentEmergencyOnly:
+          evaluation.releaseAssignmentEmergencyOnly,
       },
     );
   }
 
   assertDriverCanClaim(driver) {
     if (!driver || !driver.is_active || driver.user_is_active === 0) {
-      throw new AppError('Driver not found', {
+      throw new AppError("Driver not found", {
         statusCode: HTTP_STATUS.NOT_FOUND,
         errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
       });
     }
-    if (!driver.is_online || driver.status !== 'AVAILABLE') {
-      throw new AppError('Driver must be online and available to claim calls', {
+    assertDriverOperational(driver);
+    if (!driver.is_online || driver.status !== "AVAILABLE") {
+      throw new AppError("Driver must be online and available to claim calls", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.DRIVER_NOT_AVAILABLE,
       });
@@ -343,7 +367,7 @@ class DriverCallService {
 
   assertBookingAssignmentReopenService() {
     if (!this.bookingAssignmentReopenService) {
-      throw new AppError('Assignment reopen service is unavailable', {
+      throw new AppError("Assignment reopen service is unavailable", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.INTERNAL_SERVER_ERROR,
       });
@@ -352,17 +376,18 @@ class DriverCallService {
 
   async claimOpenCall(driverUserId, bookingNumber, input = {}) {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
-    const requestedVehicleId = input.driverVehicleId == null
-      ? null
-      : Number(input.driverVehicleId);
+    const requestedVehicleId =
+      input.driverVehicleId == null ? null : Number(input.driverVehicleId);
     if (
-      requestedVehicleId != null
-      && (!Number.isInteger(requestedVehicleId) || requestedVehicleId <= 0)
+      requestedVehicleId != null &&
+      (!Number.isInteger(requestedVehicleId) || requestedVehicleId <= 0)
     ) {
-      throw new AppError('driverVehicleId is invalid', {
+      throw new AppError("driverVehicleId is invalid", {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
-        errors: [{ field: 'driverVehicleId', message: 'must be a positive integer' }],
+        errors: [
+          { field: "driverVehicleId", message: "must be a positive integer" },
+        ],
       });
     }
 
@@ -372,7 +397,10 @@ class DriverCallService {
     try {
       await conn.beginTransaction();
 
-      const driver = await this.driverRepository.findByUserIdForUpdate(conn, driverUserId);
+      const driver = await this.driverRepository.findByUserIdForUpdate(
+        conn,
+        driverUserId,
+      );
       this.assertDriverCanClaim(driver);
       await this.assertSettlementEligible(driver);
 
@@ -381,7 +409,7 @@ class DriverCallService {
         normalizedBookingNumber,
       );
       if (!booking) {
-        throw new AppError('Booking not found', {
+        throw new AppError("Booking not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
         });
@@ -491,10 +519,10 @@ class DriverCallService {
         toStatus: BOOKING_STATUS.DRIVER_ASSIGNED,
         changedByUserId: driver.user_id,
         changedByRole: ROLES.DRIVER,
-        reason: 'DRIVER_CLAIMED_OPEN_CALL',
+        reason: "DRIVER_CLAIMED_OPEN_CALL",
       });
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
-        activityType: 'DRIVER_CLAIMED_OPEN_CALL',
+        activityType: "DRIVER_CLAIMED_OPEN_CALL",
         actorUserId: driver.user_id,
         actorRole: ROLES.DRIVER,
         description: `Driver ${driver.name} claimed open booking`,
@@ -525,8 +553,11 @@ class DriverCallService {
       await conn.commit();
     } catch (err) {
       await conn.rollback();
-      if (err.code === 'ER_DUP_ENTRY') {
-        return this.replayClaimAfterDupEntry(driverUserId, normalizedBookingNumber);
+      if (err.code === "ER_DUP_ENTRY") {
+        return this.replayClaimAfterDupEntry(
+          driverUserId,
+          normalizedBookingNumber,
+        );
       }
       throw err;
     } finally {
@@ -554,7 +585,12 @@ class DriverCallService {
     );
   }
 
-  async releaseAssignment(driverUserId, bookingNumber, input = {}, options = {}) {
+  async releaseAssignment(
+    driverUserId,
+    bookingNumber,
+    input = {},
+    options = {},
+  ) {
     const normalizedBookingNumber = this.validateBookingNumber(bookingNumber);
     const conn = await this.pool.getConnection();
     let releasedDriverUserId = driverUserId;
@@ -565,9 +601,12 @@ class DriverCallService {
     try {
       await conn.beginTransaction();
 
-      const driver = await this.driverRepository.findByUserIdForUpdate(conn, driverUserId);
+      const driver = await this.driverRepository.findByUserIdForUpdate(
+        conn,
+        driverUserId,
+      );
       if (!driver || !driver.is_active || driver.user_is_active === 0) {
-        throw new AppError('Driver not found', {
+        throw new AppError("Driver not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
         });
@@ -578,7 +617,7 @@ class DriverCallService {
         normalizedBookingNumber,
       );
       if (!booking) {
-        throw new AppError('Booking not found', {
+        throw new AppError("Booking not found", {
           statusCode: HTTP_STATUS.NOT_FOUND,
           errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
         });
@@ -595,7 +634,9 @@ class DriverCallService {
           driver.id,
         );
         throw new AppError(
-          released ? 'Assignment already released' : 'Booking is not assigned to this driver',
+          released
+            ? "Assignment already released"
+            : "Booking is not assigned to this driver",
           {
             statusCode: HTTP_STATUS.CONFLICT,
             errorCode: released
@@ -606,7 +647,7 @@ class DriverCallService {
       }
 
       if (Number(active.driver_id) !== Number(driver.id)) {
-        throw new AppError('Booking is not assigned to this driver', {
+        throw new AppError("Booking is not assigned to this driver", {
           statusCode: HTTP_STATUS.CONFLICT,
           errorCode: ERROR_CODES.BOOKING_NOT_ASSIGNED_TO_DRIVER,
         });
@@ -664,12 +705,12 @@ class DriverCallService {
         bookingNumber: normalizedBookingNumber,
         bookingStatus: BOOKING_STATUS.OPEN,
         status: BOOKING_STATUS.OPEN,
-        assignmentStatus: 'CANCELLED',
+        assignmentStatus: "CANCELLED",
         released: true,
         reassignmentPriority: evaluation.reassignmentPriority,
         scheduledPickupAt: booking.scheduled_pickup_at,
         reasonCode: evaluation.reasonCode,
-        message: 'Assignment released and booking reopened for dispatch.',
+        message: "Assignment released and booking reopened for dispatch.",
       };
     } catch (err) {
       await conn.rollback();
@@ -681,7 +722,7 @@ class DriverCallService {
     await this.bookingAssignmentReopenService.emitReopenEvents({
       ...reopenEffects,
       releasedDriverUserId,
-      assignmentSocketReasonCode: 'DRIVER_RELEASED',
+      assignmentSocketReasonCode: "DRIVER_RELEASED",
       reassignmentPriority: releaseResult?.reassignmentPriority,
     });
 

@@ -1,13 +1,15 @@
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
-const BOOKING_STATUS = require('../constants/reservationStatus');
-const ROLES = require('../constants/roles');
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
+const BOOKING_STATUS = require("../constants/reservationStatus");
+const ROLES = require("../constants/roles");
 const {
   formatServiceDateTimeForApi,
   parseServiceDateTimeToMs,
-} = require('../utils/serviceDateTime.util');
-const { assertNoPickupTimeConflict } = require('../policies/driverBookingConflictPolicy');
+} = require("../utils/serviceDateTime.util");
+const {
+  assertNoPickupTimeConflict,
+} = require("../policies/driverBookingConflictPolicy");
 const {
   emitDriverUrgentCallEtaRequired,
   emitDriverUrgentCallLocked,
@@ -20,12 +22,15 @@ const {
   emitDriverUrgentCallCancelled,
   emitBookingUrgentNegotiationCancelled,
   emitBookingUrgentNegotiationExpired,
-} = require('../socket/realtime');
-const URGENT_NEGOTIATION_TIMEOUT_CONFIG = require('../constants/urgentNegotiationTimeoutConfig');
+} = require("../socket/realtime");
+const URGENT_NEGOTIATION_TIMEOUT_CONFIG = require("../constants/urgentNegotiationTimeoutConfig");
 const {
   assertBookingDispatchEligible,
-} = require('../policies/bookingDispatchEligibility.policy');
-const logger = require('../utils/logger');
+} = require("../policies/bookingDispatchEligibility.policy");
+const {
+  assertDriverOperational,
+} = require("../policies/driverOperational.policy");
+const logger = require("../utils/logger");
 
 class UrgentNegotiationService {
   constructor(
@@ -50,7 +55,7 @@ class UrgentNegotiationService {
   normalizeEtaMinutes(rawEtaMinutes) {
     const numeric = Number(rawEtaMinutes);
     if (!Number.isInteger(numeric) || numeric <= 0) {
-      this.throwAppError('ETA minutes must be a positive integer', {
+      this.throwAppError("ETA minutes must be a positive integer", {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.URGENT_ETA_INVALID,
       });
@@ -89,7 +94,9 @@ class UrgentNegotiationService {
         {
           statusCode: HTTP_STATUS.UNPROCESSABLE,
           errorCode: ERROR_CODES.URGENT_ETA_NOT_FAST_ENOUGH,
-          errors: [{ minRequiredEtaMinutes: minimum, submittedEtaMinutes: etaMinutes }],
+          errors: [
+            { minRequiredEtaMinutes: minimum, submittedEtaMinutes: etaMinutes },
+          ],
         },
       );
     }
@@ -98,7 +105,7 @@ class UrgentNegotiationService {
   assertLockWindowOpen(lockExpiresAt, nowMs = Date.now()) {
     const expiresMs = parseServiceDateTimeToMs(lockExpiresAt);
     if (expiresMs == null || nowMs >= expiresMs) {
-      this.throwAppError('Driver ETA submission window has expired', {
+      this.throwAppError("Driver ETA submission window has expired", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.URGENT_ETA_WINDOW_EXPIRED,
       });
@@ -108,7 +115,7 @@ class UrgentNegotiationService {
   assertDecisionWindowOpen(customerDecisionExpiresAt, nowMs = Date.now()) {
     const expiresMs = parseServiceDateTimeToMs(customerDecisionExpiresAt);
     if (expiresMs == null || nowMs >= expiresMs) {
-      this.throwAppError('Customer decision window has expired', {
+      this.throwAppError("Customer decision window has expired", {
         statusCode: HTTP_STATUS.CONFLICT,
         errorCode: ERROR_CODES.URGENT_DECISION_WINDOW_EXPIRED,
       });
@@ -124,14 +131,19 @@ class UrgentNegotiationService {
     if (!booking) return false;
     if (!Number(booking.is_urgent_request)) return false;
     if (booking.status !== BOOKING_STATUS.OPEN) return false;
-    if (Number(booking.urgent_negotiation_id) !== Number(negotiationId)) return false;
+    if (Number(booking.urgent_negotiation_id) !== Number(negotiationId))
+      return false;
     return true;
   }
 
   /**
    * Timeout worker lock order matches accept/lock paths: booking → negotiation → assignment.
    */
-  async loadTimeoutWorkerContext(conn, negotiationId, { expectedStatus, expiryField, nowMs }) {
+  async loadTimeoutWorkerContext(
+    conn,
+    negotiationId,
+    { expectedStatus, expiryField, nowMs },
+  ) {
     const snapshot = await this.urgentNegotiationRepository.findNegotiationById(
       conn,
       negotiationId,
@@ -176,9 +188,11 @@ class UrgentNegotiationService {
   }
 
   normalizeCustomerDecision(decision) {
-    const normalized = String(decision ?? '').trim().toUpperCase();
-    if (normalized !== 'ACCEPT' && normalized !== 'REJECT') {
-      this.throwAppError('Decision must be ACCEPT or REJECT', {
+    const normalized = String(decision ?? "")
+      .trim()
+      .toUpperCase();
+    if (normalized !== "ACCEPT" && normalized !== "REJECT") {
+      this.throwAppError("Decision must be ACCEPT or REJECT", {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
@@ -210,9 +224,10 @@ class UrgentNegotiationService {
       bookingId: booking.id,
       negotiationId: negotiation.id,
       attemptId: latestAttempt?.id ?? null,
-      attemptNumber: latestAttempt?.attempt_number ?? Number(negotiation.attempt_count || 0),
+      attemptNumber:
+        latestAttempt?.attempt_number ?? Number(negotiation.attempt_count || 0),
       driverId: driver.id,
-      status: lockedNegotiation?.status || 'LOCKED',
+      status: lockedNegotiation?.status || "LOCKED",
       lockExpiresAt: formatServiceDateTimeForApi(
         lockedNegotiation?.lock_expires_at,
       ),
@@ -257,7 +272,7 @@ class UrgentNegotiationService {
       attemptNumber: latestAttempt.attempt_number,
       driverId: lockedDriver.id,
       status: negotiation.status,
-      decision: 'ACCEPT',
+      decision: "ACCEPT",
       etaMinutes: latestAttempt.proposed_eta_minutes,
       assignmentId: activeAssignment.id,
       bookingStatus: booking.status,
@@ -267,10 +282,14 @@ class UrgentNegotiationService {
   }
 
   async lockNegotiation(driverUserId, bookingNumber) {
-    const normalizedBookingNumber = this.driverJobService.validateBookingNumber(bookingNumber);
+    const normalizedBookingNumber =
+      this.driverJobService.validateBookingNumber(bookingNumber);
     const normalizedDriverUserId = Number(driverUserId);
-    if (!Number.isFinite(normalizedDriverUserId) || normalizedDriverUserId <= 0) {
-      this.throwAppError('Invalid driver user id', {
+    if (
+      !Number.isFinite(normalizedDriverUserId) ||
+      normalizedDriverUserId <= 0
+    ) {
+      this.throwAppError("Invalid driver user id", {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
@@ -293,6 +312,7 @@ class UrgentNegotiationService {
           errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
         });
       }
+      assertDriverOperational(driver);
 
       const booking = await this.urgentNegotiationRepository.findBookingForUrgentLock(
         conn,
@@ -392,7 +412,7 @@ class UrgentNegotiationService {
         attemptId,
         attemptNumber,
         driverId: driver.id,
-        status: lockedNegotiation?.status || 'LOCKED',
+        status: lockedNegotiation?.status || "LOCKED",
         lockExpiresAt: formatServiceDateTimeForApi(
           lockedNegotiation?.lock_expires_at,
         ),
@@ -427,13 +447,17 @@ class UrgentNegotiationService {
   }
 
   async submitEta(driverUserId, bookingNumber, etaMinutes, options = {}) {
-    const normalizedBookingNumber = this.driverJobService.validateBookingNumber(bookingNumber);
+    const normalizedBookingNumber =
+      this.driverJobService.validateBookingNumber(bookingNumber);
     const normalizedDriverUserId = Number(driverUserId);
     const normalizedEtaMinutes = this.normalizeEtaMinutes(etaMinutes);
     const nowMs = options.nowMs ?? Date.now();
 
-    if (!Number.isFinite(normalizedDriverUserId) || normalizedDriverUserId <= 0) {
-      this.throwAppError('Invalid driver user id', {
+    if (
+      !Number.isFinite(normalizedDriverUserId) ||
+      normalizedDriverUserId <= 0
+    ) {
+      this.throwAppError("Invalid driver user id", {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
@@ -455,6 +479,7 @@ class UrgentNegotiationService {
           errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
         });
       }
+      assertDriverOperational(driver);
 
       const booking = await this.urgentNegotiationRepository.findBookingForUrgentLock(
         conn,
@@ -601,7 +626,8 @@ class UrgentNegotiationService {
   }
 
   async submitCustomerDecision(bookingNumber, decision, options = {}) {
-    const normalizedBookingNumber = this.driverJobService.validateBookingNumber(bookingNumber);
+    const normalizedBookingNumber =
+      this.driverJobService.validateBookingNumber(bookingNumber);
     const normalizedDecision = this.normalizeCustomerDecision(decision);
     const authUser = options.authUser ?? null;
     const guestAccessToken = options.guestAccessToken ?? null;
@@ -716,7 +742,7 @@ class UrgentNegotiationService {
       conn.release();
     }
 
-    if (normalizedDecision === 'ACCEPT' && !decisionResult?.idempotent) {
+    if (normalizedDecision === "ACCEPT" && !decisionResult?.idempotent) {
       emitDriverUrgentCallConfirmed(decisionResult.lockedDriverUserId, {
         bookingNumber: decisionResult.bookingNumber,
         negotiationId: decisionResult.negotiationId,
@@ -824,13 +850,13 @@ class UrgentNegotiationService {
       toStatus: BOOKING_STATUS.DRIVER_ASSIGNED,
       changedByUserId: actorUserId,
       changedByRole: ROLES.CUSTOMER,
-      reason: 'URGENT_CUSTOMER_CONFIRMED',
+      reason: "URGENT_CUSTOMER_CONFIRMED",
     });
     await this.bookingRepository.insertActivityLog(conn, booking.id, {
-      activityType: 'URGENT_CUSTOMER_CONFIRMED',
+      activityType: "URGENT_CUSTOMER_CONFIRMED",
       actorUserId,
       actorRole: ROLES.CUSTOMER,
-      description: 'Customer accepted urgent driver ETA proposal',
+      description: "Customer accepted urgent driver ETA proposal",
       payload: {
         bookingNumber: booking.booking_number,
         negotiationId: negotiation.id,
@@ -847,7 +873,7 @@ class UrgentNegotiationService {
       attemptNumber: latestAttempt.attempt_number,
       driverId: lockedDriver.id,
       status: confirmedNegotiation.status,
-      decision: 'ACCEPT',
+      decision: "ACCEPT",
       etaMinutes: latestAttempt.proposed_eta_minutes,
       assignmentId,
       bookingStatus: BOOKING_STATUS.DRIVER_ASSIGNED,
@@ -872,8 +898,8 @@ class UrgentNegotiationService {
     };
 
     if (driverUserId) {
-      socketActions.push(
-        () => emitDriverUrgentCallRoundEnded(driverUserId, {
+      socketActions.push(() =>
+        emitDriverUrgentCallRoundEnded(driverUserId, {
           ...broadcastPayload,
           attemptNumber,
         }),
@@ -891,7 +917,7 @@ class UrgentNegotiationService {
       bookingNumber: booking.booking_number,
       negotiationId,
       attemptCount,
-      closedReason: 'URGENT_NEGOTIATION_EXHAUSTED',
+      closedReason: "URGENT_NEGOTIATION_EXHAUSTED",
     };
     return [
       () => emitDriverUrgentCallCancelled(cancelledPayload),
@@ -936,14 +962,14 @@ class UrgentNegotiationService {
         booking.id,
         BOOKING_STATUS.CANCELLED,
         actorUserId,
-        { cancellationReason: 'URGENT_NEGOTIATION_EXHAUSTED' },
+        { cancellationReason: "URGENT_NEGOTIATION_EXHAUSTED" },
       );
       await this.bookingRepository.insertStatusLog(conn, booking.id, {
         fromStatus: booking.status,
         toStatus: BOOKING_STATUS.CANCELLED,
         changedByUserId: actorUserId,
         changedByRole: ROLES.CUSTOMER,
-        reason: 'URGENT_NEGOTIATION_EXHAUSTED',
+        reason: "URGENT_NEGOTIATION_EXHAUSTED",
       });
       await this.bookingRepository.insertActivityLog(conn, booking.id, {
         activityType,
@@ -1024,31 +1050,31 @@ class UrgentNegotiationService {
     };
   }
 
-  async handleCustomerReject(conn, {
-    booking,
-    negotiation,
-    latestAttempt,
-    actorUserId,
-  }) {
+  async handleCustomerReject(
+    conn,
+    { booking, negotiation, latestAttempt, actorUserId },
+  ) {
     const roundResult = await this.completeFailedNegotiationRound(conn, {
       booking,
       negotiation,
       latestAttempt,
-      fromStatus: 'AWAITING_CUSTOMER',
+      fromStatus: "AWAITING_CUSTOMER",
       minRequiredEtaMinutes: Number(latestAttempt.proposed_eta_minutes),
       actorUserId,
-      activityType: 'URGENT_NEGOTIATION_EXHAUSTED',
-      activityDescription: 'Urgent negotiation exhausted after customer rejections',
+      activityType: "URGENT_NEGOTIATION_EXHAUSTED",
+      activityDescription:
+        "Urgent negotiation exhausted after customer rejections",
     });
 
     return {
       ...roundResult,
-      decision: 'REJECT',
+      decision: "REJECT",
     };
   }
 
   async processExpiredNegotiations(options = {}) {
-    const batchSize = options.batchSize ?? URGENT_NEGOTIATION_TIMEOUT_CONFIG.DEFAULT_BATCH_SIZE;
+    const batchSize =
+      options.batchSize ?? URGENT_NEGOTIATION_TIMEOUT_CONFIG.DEFAULT_BATCH_SIZE;
     const nowMs = options.nowMs ?? Date.now();
     const startedAt = Date.now();
     const socketActions = [];
@@ -1073,7 +1099,7 @@ class UrgentNegotiationService {
         lockedProcessed += 1;
       } catch (err) {
         lockedFailed += 1;
-        logger.warn('Urgent negotiation driver ETA timeout processing failed', {
+        logger.warn("Urgent negotiation driver ETA timeout processing failed", {
           negotiationId: row.id,
           bookingNumber: row.booking_number,
           error: err.message,
@@ -1128,8 +1154,8 @@ class UrgentNegotiationService {
       await conn.beginTransaction();
 
       const context = await this.loadTimeoutWorkerContext(conn, negotiationId, {
-        expectedStatus: 'LOCKED',
-        expiryField: 'lock_expires_at',
+        expectedStatus: "LOCKED",
+        expiryField: "lock_expires_at",
         nowMs,
       });
       if (!context) {
@@ -1193,8 +1219,8 @@ class UrgentNegotiationService {
       await conn.beginTransaction();
 
       const context = await this.loadTimeoutWorkerContext(conn, negotiationId, {
-        expectedStatus: 'AWAITING_CUSTOMER',
-        expiryField: 'customer_decision_expires_at',
+        expectedStatus: "AWAITING_CUSTOMER",
+        expiryField: "customer_decision_expires_at",
         nowMs,
       });
       if (!context) {
@@ -1319,9 +1345,8 @@ class UrgentNegotiationService {
         customerDecisionExpiresAt: formatServiceDateTimeForApi(
           negotiation.customer_decision_expires_at,
         ),
-        closedReason: negotiation.status === 'CANCELLED'
-          ? negotiation.closed_reason
-          : null,
+        closedReason:
+          negotiation.status === "CANCELLED" ? negotiation.closed_reason : null,
       };
     } finally {
       conn.release();

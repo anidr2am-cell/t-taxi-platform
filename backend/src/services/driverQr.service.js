@@ -1,17 +1,27 @@
-const AppError = require('../utils/AppError');
-const HTTP_STATUS = require('../constants/httpStatus');
-const ERROR_CODES = require('../constants/errorCodes');
-const BOOKING_STATUS = require('../constants/reservationStatus');
-const ROLES = require('../constants/roles');
-const { hashToken } = require('../utils/tokenHash.util');
+const AppError = require("../utils/AppError");
+const HTTP_STATUS = require("../constants/httpStatus");
+const ERROR_CODES = require("../constants/errorCodes");
+const BOOKING_STATUS = require("../constants/reservationStatus");
+const ROLES = require("../constants/roles");
+const { hashToken } = require("../utils/tokenHash.util");
+const {
+  assertDriverOperational,
+} = require("../policies/driverOperational.policy");
 
 // Legacy QR scan service — kept for API/DB compatibility; driver button flow must not use this.
 class DriverQrService {
-  constructor(pool, bookingRepository, bookingStatusService, driverJobService) {
+  constructor(
+    pool,
+    bookingRepository,
+    bookingStatusService,
+    driverJobService,
+    driverRepository = null,
+  ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
     this.bookingStatusService = bookingStatusService;
     this.driverJobService = driverJobService;
+    this.driverRepository = driverRepository;
   }
 
   actor(driverUserId) {
@@ -19,7 +29,7 @@ class DriverQrService {
   }
 
   notFound() {
-    return new AppError('Booking not found', {
+    return new AppError("Booking not found", {
       statusCode: HTTP_STATUS.NOT_FOUND,
       errorCode: ERROR_CODES.BOOKING_NOT_FOUND,
     });
@@ -30,9 +40,9 @@ class DriverQrService {
   }
 
   validateToken(token) {
-    const value = String(token ?? '').trim();
+    const value = String(token ?? "").trim();
     if (!value) {
-      throw this.qrError('Invalid QR token', ERROR_CODES.INVALID_QR_TOKEN);
+      throw this.qrError("Invalid QR token", ERROR_CODES.INVALID_QR_TOKEN);
     }
     return value;
   }
@@ -56,12 +66,14 @@ class DriverQrService {
   }
 
   async verifyTokenIdentity(conn, row, tokenHash, purpose) {
-    const expectedField = purpose === 'BOARDING'
-      ? 'boarding_qr_token_hash'
-      : 'dropoff_qr_token_hash';
-    const otherField = purpose === 'BOARDING'
-      ? 'dropoff_qr_token_hash'
-      : 'boarding_qr_token_hash';
+    const expectedField =
+      purpose === "BOARDING"
+        ? "boarding_qr_token_hash"
+        : "dropoff_qr_token_hash";
+    const otherField =
+      purpose === "BOARDING"
+        ? "dropoff_qr_token_hash"
+        : "boarding_qr_token_hash";
 
     if (row[expectedField] === tokenHash) {
       return;
@@ -69,16 +81,19 @@ class DriverQrService {
 
     if (row[otherField] === tokenHash) {
       throw this.qrError(
-        'QR token type does not match this operation',
+        "QR token type does not match this operation",
         ERROR_CODES.QR_TOKEN_TYPE_MISMATCH,
         HTTP_STATUS.CONFLICT,
       );
     }
 
-    const owner = await this.bookingRepository.findQrTokenBooking(conn, tokenHash);
+    const owner = await this.bookingRepository.findQrTokenBooking(
+      conn,
+      tokenHash,
+    );
     if (owner?.id && owner.id !== row.id) {
       throw this.qrError(
-        'QR token belongs to a different booking',
+        "QR token belongs to a different booking",
         ERROR_CODES.QR_TOKEN_BOOKING_MISMATCH,
         HTTP_STATUS.CONFLICT,
       );
@@ -86,13 +101,13 @@ class DriverQrService {
 
     if (owner?.token_type && owner.token_type !== purpose) {
       throw this.qrError(
-        'QR token type does not match this operation',
+        "QR token type does not match this operation",
         ERROR_CODES.QR_TOKEN_TYPE_MISMATCH,
         HTTP_STATUS.CONFLICT,
       );
     }
 
-    throw this.qrError('Invalid QR token', ERROR_CODES.INVALID_QR_TOKEN);
+    throw this.qrError("Invalid QR token", ERROR_CODES.INVALID_QR_TOKEN);
   }
 
   async transitionInTransaction(conn, bookingNumber, status, actor, reason) {
@@ -106,7 +121,10 @@ class DriverQrService {
   }
 
   async getUpdatedDetail(driverUserId, bookingNumber, extra = {}) {
-    const detail = await this.driverJobService.getDetail(driverUserId, bookingNumber);
+    const detail = await this.driverJobService.getDetail(
+      driverUserId,
+      bookingNumber,
+    );
     return { ...detail, ...extra };
   }
 
@@ -120,9 +138,17 @@ class DriverQrService {
 
     try {
       await conn.beginTransaction();
-      const row = await this.loadActiveBookingForUpdate(conn, driverUserId, bookingNumber);
+      if (this.driverRepository)
+        assertDriverOperational(
+          await this.driverRepository.findByUserIdForUpdate(conn, driverUserId),
+        );
+      const row = await this.loadActiveBookingForUpdate(
+        conn,
+        driverUserId,
+        bookingNumber,
+      );
       normalizedBookingNumber = row.booking_number;
-      await this.verifyTokenIdentity(conn, row, tokenHash, 'BOARDING');
+      await this.verifyTokenIdentity(conn, row, tokenHash, "BOARDING");
 
       if (row.boarding_qr_used_at && row.status === BOOKING_STATUS.PICKED_UP) {
         idempotent = true;
@@ -130,13 +156,16 @@ class DriverQrService {
       } else {
         if (row.boarding_qr_used_at) {
           throw this.qrError(
-            'QR token has already been used',
+            "QR token has already been used",
             ERROR_CODES.QR_TOKEN_ALREADY_USED,
             HTTP_STATUS.CONFLICT,
           );
         }
         if (this.isExpired(row.boarding_qr_expires_at)) {
-          throw this.qrError('QR token has expired', ERROR_CODES.QR_TOKEN_EXPIRED);
+          throw this.qrError(
+            "QR token has expired",
+            ERROR_CODES.QR_TOKEN_EXPIRED,
+          );
         }
         if (row.status !== BOOKING_STATUS.DRIVER_ARRIVED) {
           this.bookingStatusService.validateTransition(
@@ -146,10 +175,13 @@ class DriverQrService {
           );
         }
 
-        const consumed = await this.bookingRepository.markBoardingQrUsed(conn, row.id);
+        const consumed = await this.bookingRepository.markBoardingQrUsed(
+          conn,
+          row.id,
+        );
         if (!consumed) {
           throw this.qrError(
-            'QR token has already been used',
+            "QR token has already been used",
             ERROR_CODES.QR_TOKEN_ALREADY_USED,
             HTTP_STATUS.CONFLICT,
           );
@@ -160,7 +192,7 @@ class DriverQrService {
           normalizedBookingNumber,
           BOOKING_STATUS.PICKED_UP,
           this.actor(driverUserId),
-          'DRIVER_SCAN_BOARDING_QR',
+          "DRIVER_SCAN_BOARDING_QR",
         );
         await conn.commit();
       }
@@ -172,7 +204,9 @@ class DriverQrService {
     }
 
     if (transition) {
-      await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+      await this.bookingStatusService.dispatchOutboxAfterCommit(
+        transition.outboxId,
+      );
       this.bookingStatusService.emitDomainEvent(
         transition.domainEvent,
         transition.eventPayload,
@@ -195,23 +229,37 @@ class DriverQrService {
 
     try {
       await conn.beginTransaction();
-      const row = await this.loadActiveBookingForUpdate(conn, driverUserId, bookingNumber);
+      if (this.driverRepository)
+        assertDriverOperational(
+          await this.driverRepository.findByUserIdForUpdate(conn, driverUserId),
+        );
+      const row = await this.loadActiveBookingForUpdate(
+        conn,
+        driverUserId,
+        bookingNumber,
+      );
       normalizedBookingNumber = row.booking_number;
-      await this.verifyTokenIdentity(conn, row, tokenHash, 'DROPOFF');
+      await this.verifyTokenIdentity(conn, row, tokenHash, "DROPOFF");
 
-      if (row.dropoff_qr_used_at && row.status === BOOKING_STATUS.SETTLEMENT_PENDING) {
+      if (
+        row.dropoff_qr_used_at &&
+        row.status === BOOKING_STATUS.SETTLEMENT_PENDING
+      ) {
         idempotent = true;
         await conn.commit();
       } else {
         if (row.dropoff_qr_used_at) {
           throw this.qrError(
-            'QR token has already been used',
+            "QR token has already been used",
             ERROR_CODES.QR_TOKEN_ALREADY_USED,
             HTTP_STATUS.CONFLICT,
           );
         }
         if (this.isExpired(row.dropoff_qr_expires_at)) {
-          throw this.qrError('QR token has expired', ERROR_CODES.QR_TOKEN_EXPIRED);
+          throw this.qrError(
+            "QR token has expired",
+            ERROR_CODES.QR_TOKEN_EXPIRED,
+          );
         }
         if (row.status !== BOOKING_STATUS.PICKED_UP) {
           this.bookingStatusService.validateTransition(
@@ -221,10 +269,13 @@ class DriverQrService {
           );
         }
 
-        const consumed = await this.bookingRepository.markDropoffQrUsed(conn, row.id);
+        const consumed = await this.bookingRepository.markDropoffQrUsed(
+          conn,
+          row.id,
+        );
         if (!consumed) {
           throw this.qrError(
-            'QR token has already been used',
+            "QR token has already been used",
             ERROR_CODES.QR_TOKEN_ALREADY_USED,
             HTTP_STATUS.CONFLICT,
           );
@@ -235,7 +286,7 @@ class DriverQrService {
           normalizedBookingNumber,
           BOOKING_STATUS.SETTLEMENT_PENDING,
           this.actor(driverUserId),
-          'DRIVER_SCAN_DROPOFF_QR',
+          "DRIVER_SCAN_DROPOFF_QR",
         );
         await conn.commit();
       }
@@ -247,12 +298,17 @@ class DriverQrService {
     }
 
     if (transition) {
-      await this.bookingStatusService.dispatchOutboxAfterCommit(transition.outboxId);
+      await this.bookingStatusService.dispatchOutboxAfterCommit(
+        transition.outboxId,
+      );
       this.bookingStatusService.emitDomainEvent(
         transition.domainEvent,
         transition.eventPayload,
       );
-      if (typeof this.bookingStatusService.handlePostCommitMileageEffects === 'function') {
+      if (
+        typeof this.bookingStatusService.handlePostCommitMileageEffects ===
+        "function"
+      ) {
         await this.bookingStatusService.handlePostCommitMileageEffects({
           bookingId: transition.bookingId,
           fromStatus: transition.fromStatus,

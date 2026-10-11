@@ -44,6 +44,7 @@ const DriverJobService = require("../services/driverJob.service");
 const DriverCallService = require("../services/driverCall.service");
 const BookingAssignmentReopenService = require("../services/bookingAssignmentReopen.service");
 const DriverStatusService = require("../services/driverStatus.service");
+const DriverSuspensionService = require("../services/driverSuspension.service");
 const DriverRepository = require("../repositories/driver.repository");
 const DriverLocationRepository = require("../repositories/driverLocation.repository");
 const DriverLocationService = require("../services/driverLocation.service");
@@ -274,7 +275,10 @@ container.register(
     ),
 );
 container.register("bookingRepository", () => new BookingRepository());
-container.register("adminBookingNoteRepository", () => new AdminBookingNoteRepository());
+container.register(
+  "adminBookingNoteRepository",
+  () => new AdminBookingNoteRepository(),
+);
 container.register(
   "bookingNoShowPenaltyRepository",
   () => new BookingNoShowPenaltyRepository(),
@@ -393,11 +397,7 @@ container.register(
 );
 container.register(
   "customerProfileService",
-  (c) =>
-    new CustomerProfileService(
-      database.pool,
-      c.get("userRepository"),
-    ),
+  (c) => new CustomerProfileService(database.pool, c.get("userRepository")),
 );
 container.register(
   "adminDashboardService",
@@ -468,6 +468,18 @@ container.register(
     ),
 );
 container.register("driverRepository", () => new DriverRepository());
+container.register(
+  "driverSuspensionService",
+  (c) =>
+    new DriverSuspensionService({
+      pool: database.pool,
+      driverRepository: c.get("driverRepository"),
+      userRepository: c.get("userRepository"),
+      bookingRepository: c.get("bookingRepository"),
+      bookingAssignmentReopenService: c.get("bookingAssignmentReopenService"),
+      driverCallService: c.get("driverCallService"),
+    }),
+);
 container.register(
   "driverLocationRepository",
   () => new DriverLocationRepository(),
@@ -553,6 +565,7 @@ container.register(
       c.get("bookingRepository"),
       c.get("bookingStatusService"),
       c.get("driverJobService"),
+      c.get("driverRepository"),
     ),
 );
 container.register(
@@ -573,6 +586,7 @@ container.register(
       c.get("bookingRepository"),
       c.get("bookingStatusService"),
       c.get("driverJobService"),
+      c.get("driverRepository"),
     ),
 );
 container.register(
@@ -736,7 +750,9 @@ container.register(
     new BookingIdempotencyCleanupWorker({
       pool: database.pool,
       bookingIdempotencyRepository: c.get("bookingIdempotencyRepository"),
-      settlementReceiptIdempotencyRepository: c.get("settlementReceiptIdempotencyRepository"),
+      settlementReceiptIdempotencyRepository: c.get(
+        "settlementReceiptIdempotencyRepository",
+      ),
       config: {
         batchSize: config.external.bookingIdempotencyCleanupBatchSize,
       },

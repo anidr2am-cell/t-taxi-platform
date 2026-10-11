@@ -1,10 +1,10 @@
-const express = require('express');
-const adminController = require('../controllers/admin.controller');
-const driverLocationController = require('../controllers/driverLocation.controller');
-const validate = require('../middlewares/validate.middleware');
-const { authMiddleware } = require('../middlewares/auth.middleware');
-const roleMiddleware = require('../middlewares/role.middleware');
-const ROLES = require('../constants/roles');
+const express = require("express");
+const adminController = require("../controllers/admin.controller");
+const driverLocationController = require("../controllers/driverLocation.controller");
+const validate = require("../middlewares/validate.middleware");
+const { authMiddleware } = require("../middlewares/auth.middleware");
+const roleMiddleware = require("../middlewares/role.middleware");
+const ROLES = require("../constants/roles");
 const {
   adminBookingListQuerySchema,
   bookingNumberParamsSchema,
@@ -23,183 +23,230 @@ const {
   adminManualBookingUpdateSchema,
   adminManualBookingCancelSchema,
   adminListDriversQuerySchema,
-} = require('../validators/admin.validator');
-const { adminDriverLocationQuerySchema } = require('../validators/driverLocation.validator');
+  driverSuspensionReasonSchema,
+} = require("../validators/admin.validator");
+const {
+  adminDriverLocationQuerySchema,
+} = require("../validators/driverLocation.validator");
 
 const router = express.Router();
-const adminOnly = [authMiddleware, roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN])];
+const adminOnly = [
+  authMiddleware,
+  roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN]),
+];
 
-router.get(
-  '/bookings/summary',
-  adminOnly,
-  adminController.getBookingsSummary,
-);
+router.get("/bookings/summary", adminOnly, adminController.getBookingsSummary);
 
 router.post(
-  '/bookings/manual',
+  "/bookings/manual",
   adminOnly,
   validate({ body: adminManualBookingCreateSchema }),
   adminController.createManualBooking,
 );
 
 router.patch(
-  '/bookings/:bookingNumber/manual',
+  "/bookings/:bookingNumber/manual",
   adminOnly,
-  validate({ params: bookingNumberParamsSchema, body: adminManualBookingUpdateSchema }),
+  validate({
+    params: bookingNumberParamsSchema,
+    body: adminManualBookingUpdateSchema,
+  }),
   adminController.updateManualBooking,
 );
 
 router.post(
-  '/bookings/:bookingNumber/manual/cancel',
+  "/bookings/:bookingNumber/manual/cancel",
   adminOnly,
-  validate({ params: bookingNumberParamsSchema, body: adminManualBookingCancelSchema }),
+  validate({
+    params: bookingNumberParamsSchema,
+    body: adminManualBookingCancelSchema,
+  }),
   adminController.cancelManualBooking,
 );
 
 router.get(
-  '/bookings',
+  "/bookings",
   adminOnly,
   validate({ query: adminBookingListQuerySchema }),
   adminController.listBookings,
 );
 
 router.get(
-  '/bookings/:bookingNumber',
+  "/bookings/:bookingNumber",
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   adminController.getBookingDetail,
 );
 
 router.post(
-  '/bookings/archive',
+  "/bookings/archive",
   adminOnly,
   validate({ body: archiveBookingsSchema }),
   adminController.archiveBookings,
 );
 
 router.post(
-  '/bookings/restore',
+  "/bookings/restore",
   adminOnly,
   validate({ body: archiveBookingsSchema }),
   adminController.restoreBookings,
 );
 
 router.get(
-  '/bookings/:bookingNumber/notes',
+  "/bookings/:bookingNumber/notes",
   adminOnly,
-  validate({ params: bookingNumberParamsSchema, query: adminBookingNotesQuerySchema }),
+  validate({
+    params: bookingNumberParamsSchema,
+    query: adminBookingNotesQuerySchema,
+  }),
   adminController.listBookingNotes,
 );
 
 router.post(
-  '/bookings/:bookingNumber/notes',
+  "/bookings/:bookingNumber/notes",
   adminOnly,
-  validate({ params: bookingNumberParamsSchema, body: createAdminBookingNoteSchema }),
+  validate({
+    params: bookingNumberParamsSchema,
+    body: createAdminBookingNoteSchema,
+  }),
   adminController.createBookingNote,
 );
 
 router.post(
-  '/bookings/:bookingNumber/no-show',
+  "/bookings/:bookingNumber/no-show",
   adminOnly,
-  validate({ params: bookingNumberParamsSchema, body: processBookingNoShowSchema }),
+  validate({
+    params: bookingNumberParamsSchema,
+    body: processBookingNoShowSchema,
+  }),
   adminController.processBookingNoShow,
 );
 
 router.post(
-  '/bookings/:bookingNumber/assign-driver',
+  "/bookings/:bookingNumber/assign-driver",
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: assignDriverSchema }),
   adminController.assignDriver,
 );
 
 router.post(
-  '/bookings/:bookingNumber/reassign-driver',
+  "/bookings/:bookingNumber/reassign-driver",
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: reassignDriverSchema }),
   adminController.reassignDriver,
 );
 
 router.post(
-  '/bookings/:bookingNumber/unassign-driver',
+  "/bookings/:bookingNumber/unassign-driver",
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: unassignDriverSchema }),
   adminController.unassignDriver,
 );
 
 router.post(
-  '/bookings/:bookingNumber/complete-trip',
+  "/bookings/:bookingNumber/complete-trip",
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   adminController.completeActiveTrip,
 );
 
 router.get(
-  '/bookings/:bookingNumber/driver-candidates',
+  "/bookings/:bookingNumber/driver-candidates",
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   adminController.getDriverCandidates,
 );
 
 router.post(
-  '/bookings/:bookingNumber/auto-assign',
+  "/bookings/:bookingNumber/auto-assign",
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: autoAssignDriverSchema }),
   adminController.autoAssignDriver,
 );
 
 router.post(
-  '/bookings/:bookingNumber/qr/reissue',
+  "/bookings/:bookingNumber/qr/reissue",
   adminOnly,
   validate({ params: bookingNumberParamsSchema, body: qrReissueSchema }),
   adminController.reissueQr,
 );
 
 router.get(
-  '/drivers',
+  "/drivers",
   adminOnly,
   validate({ query: adminListDriversQuerySchema }),
   adminController.listDrivers,
 );
 
 router.post(
-  '/drivers/archive',
+  "/drivers/archive",
   adminOnly,
   validate({ body: archiveDriversSchema }),
   adminController.archiveDrivers,
 );
 
 router.post(
-  '/drivers/:id/restore',
+  "/drivers/:id/restore",
   adminOnly,
   validate({ params: driverIdParamsSchema }),
   adminController.restoreDriver,
 );
 
 router.get(
-  '/drivers/:id/deletion-preview',
+  "/drivers/:id/deletion-preview",
   adminOnly,
   validate({ params: driverIdParamsSchema }),
   adminController.getDriverDeletionPreview,
 );
+router.get(
+  "/drivers/:id/suspension-preview",
+  adminOnly,
+  validate({ params: driverIdParamsSchema }),
+  adminController.getDriverSuspensionPreview,
+);
+router.get(
+  "/drivers/:id/suspension-history",
+  adminOnly,
+  validate({ params: driverIdParamsSchema }),
+  adminController.getDriverSuspensionHistory,
+);
+router.post(
+  "/drivers/:id/suspend",
+  adminOnly,
+  validate({
+    params: driverIdParamsSchema,
+    body: driverSuspensionReasonSchema,
+  }),
+  adminController.suspendDriver,
+);
+router.post(
+  "/drivers/:id/unsuspend",
+  adminOnly,
+  validate({
+    params: driverIdParamsSchema,
+    body: driverSuspensionReasonSchema,
+  }),
+  adminController.unsuspendDriver,
+);
 
 router.get(
-  '/drivers/locations',
+  "/drivers/locations",
   adminOnly,
   validate({ query: adminDriverLocationQuerySchema }),
   driverLocationController.listAdminDriverLocations,
 );
 
-const bookingContactConnectionController = require('../controllers/bookingContactConnection.controller');
+const bookingContactConnectionController = require("../controllers/bookingContactConnection.controller");
 
 router.post(
-  '/bookings/:bookingNumber/contact/verify',
+  "/bookings/:bookingNumber/contact/verify",
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   bookingContactConnectionController.adminVerifyContact,
 );
 
 router.post(
-  '/bookings/:bookingNumber/contact/dispatch-retry',
+  "/bookings/:bookingNumber/contact/dispatch-retry",
   adminOnly,
   validate({ params: bookingNumberParamsSchema }),
   bookingContactConnectionController.adminRetryContactDispatch,

@@ -69,6 +69,7 @@ function errorMiddleware(err, req, res, next) {
       'bookingNumber',
       'bookingStatus',
       'releasedAt',
+      'bookingNumbers',
     ]) {
       if (err.details[key] != null && err.details[key] !== '') {
         details[key] = err.details[key];
