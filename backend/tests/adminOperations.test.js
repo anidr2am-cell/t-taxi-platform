@@ -64,6 +64,46 @@ test("completed tab applies 30-day history range", () => {
   assert.ok(filters.serviceDateTo);
 });
 
+test("exact booking number search bypasses view, date, status, and archive filters", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const repo = new BookingRepository();
+  const filters = service.buildFilters({
+    view: ADMIN_BOOKING_VIEWS.CANCELLED,
+    search: "  tx202610100001  ",
+    status: "CANCELLED",
+    archived: "true",
+    dateFrom: "2026-07-01",
+    dateTo: "2026-07-02",
+  });
+
+  assert.equal(filters.exactBookingNumber, "TX202610100001");
+  const built = repo.buildAdminBookingFilters(filters);
+  assert.equal(
+    built.whereSql,
+    "b.deleted_at IS NULL AND b.booking_number = ?",
+  );
+  assert.deepEqual(built.params, ["TX202610100001"]);
+});
+
+test("partial and general admin searches retain existing view filters and LIKE matching", () => {
+  const service = new AdminOperationsService(() => fixedNow());
+  const repo = new BookingRepository();
+  const filters = service.buildFilters({
+    view: ADMIN_BOOKING_VIEWS.CANCELLED,
+    search: "TX20261010",
+  });
+
+  assert.equal(filters.exactBookingNumber, null);
+  assert.equal(filters.cancelledTab, true);
+  assert.ok(filters.serviceDateFrom);
+  assert.ok(filters.serviceDateTo);
+  const built = repo.buildAdminBookingFilters(filters);
+  assert.match(built.whereSql, /b\.status IN \('CANCELLED', 'NO_SHOW'\)/);
+  assert.match(built.whereSql, /b\.scheduled_pickup_at >= \?/);
+  assert.match(built.whereSql, /b\.booking_number LIKE \?/);
+  assert.ok(built.params.includes("%TX20261010%"));
+});
+
 test("evaluateOperations marks overdue unassigned as urgent", () => {
   const service = new AdminOperationsService(() => fixedNow());
   const ops = service.evaluateOperations({

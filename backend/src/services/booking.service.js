@@ -33,6 +33,7 @@ const {
   normalizeAirportIata,
 } = require('../constants/thailandAirports.constants');
 const logger = require('../utils/logger');
+const { formatServiceDateTimeIso } = require('../utils/serviceDateTime.util');
 const {
   normalizeCustomerPayment,
   operationalPaymentMethod,
@@ -116,7 +117,7 @@ class BookingService {
     return {
       bookingNumber,
       status: BOOKING_STATUS.OPEN,
-      scheduledPickupAt,
+      scheduledPickupAt: formatServiceDateTimeIso(scheduledPickupAt),
       origin: originAddress,
       destination: destinationAddress,
       pickupLocation: this.locationDetails({
