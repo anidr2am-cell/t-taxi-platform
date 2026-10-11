@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
 import '../../admin_dispatch/pages/admin_booking_detail_page.dart';
+import '../../driver/utils/driver_backend_datetime.dart';
 import '../models/driver_location.dart';
 import '../services/driver_location_api_service.dart';
 import '../services/driver_location_socket_service.dart';
@@ -249,16 +250,18 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
     final driverId = driver['driverId'] as int;
     final suspended = driver['driverStatus'] == 'SUSPENDED';
     Map<String, dynamic>? preview;
-    if (!suspended) {
-      try {
+    List<dynamic> history = const [];
+    try {
+      history = await _dispatchApi.getDriverSuspensionHistory(driverId);
+      if (!suspended) {
         preview = await _dispatchApi.getDriverSuspensionPreview(driverId);
-      } catch (err) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(userFacingError(err))));
-        return;
       }
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userFacingError(err))));
+      return;
     }
     if (!mounted) return;
     final reasonController = TextEditingController();
@@ -350,6 +353,33 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                       labelText: l10n.t('admin_driver_suspension_reason'),
                     ),
                   ),
+                  const SizedBox(height: AppTokens.spaceMd),
+                  Text(
+                    l10n.t('admin_driver_suspension_history'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (history.isEmpty)
+                    Text(l10n.t('admin_driver_suspension_history_empty'))
+                  else
+                    ...history.take(5).map((raw) {
+                      final item = Map<String, dynamic>.from(raw as Map);
+                      final action = item['action'] == 'DRIVER_SUSPENDED'
+                          ? l10n.t('admin_driver_suspension_history_suspended')
+                          : l10n.t(
+                              'admin_driver_suspension_history_unsuspended',
+                            );
+                      final changedAt = formatBackendServiceDateTimeBangkok(
+                        item['createdAt'] as String?,
+                      );
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(action),
+                        subtitle: Text(
+                          '${item['reason'] ?? '-'}${changedAt == null ? '' : ' · $changedAt'}',
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -689,7 +719,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                         if (location?.lastSeenAt != null) ...[
                                           const SizedBox(height: 4),
                                           Text(
-                                            '${l10n.t('admin_driver_last_seen')} ${location!.lastSeenAt}',
+                                            '${l10n.t('admin_driver_last_seen')} ${formatBackendServiceDateTimeBangkok(location!.lastSeenAt) ?? '-'}',
                                             style: const TextStyle(
                                               color: AppTokens.textMuted,
                                               fontSize: 12,
@@ -706,7 +736,11 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                             ),
                                           ),
                                           Text(
-                                            '${suspension['changedAt'] ?? ''}',
+                                            formatBackendServiceDateTimeBangkok(
+                                                  suspension['changedAt']
+                                                      as String?,
+                                                ) ??
+                                                '-',
                                             style: const TextStyle(
                                               color: AppTokens.textMuted,
                                               fontSize: 12,

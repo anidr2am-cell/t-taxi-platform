@@ -24,9 +24,7 @@ void main() {
     () async {
       SharedPreferences.setMockInitialValues({});
       final storage = DriverTokenStorage();
-      await storage.write(
-        const AuthTokens(accessToken: 'driver-token'),
-      );
+      await storage.write(const AuthTokens(accessToken: 'driver-token'));
       Uri? uri;
       Map<String, String>? headers;
       Map<String, dynamic>? body;
@@ -145,70 +143,76 @@ void main() {
     expect(result.available, true);
   });
 
-  test('customer location uses bearer token when useCustomerAuth and no guest token', () async {
-    Uri? uri;
-    Map<String, String>? headers;
-    final api = DriverLocationApiService(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        uri = request.url;
-        headers = request.headers;
-        return http.Response(
-          jsonEncode({
-            'success': true,
-            'data': {
-              'available': true,
-              'driver': {
-                'displayName': 'Somchai',
-                'latitude': 12.9,
-                'longitude': 100.8,
-                'stale': false,
+  test(
+    'customer location uses bearer token when useCustomerAuth and no guest token',
+    () async {
+      Uri? uri;
+      Map<String, String>? headers;
+      final api = DriverLocationApiService(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          uri = request.url;
+          headers = request.headers;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'available': true,
+                'driver': {
+                  'displayName': 'Somchai',
+                  'latitude': 12.9,
+                  'longitude': 100.8,
+                  'stale': false,
+                },
               },
-            },
-          }),
-          200,
-        );
-      }),
-    );
+            }),
+            200,
+          );
+        }),
+      );
 
-    final result = await api.getGuestDriverLocation(
-      bookingId: 10,
-      useCustomerAuth: true,
-      customerAccessToken: 'customer-jwt',
-    );
+      final result = await api.getGuestDriverLocation(
+        bookingId: 10,
+        useCustomerAuth: true,
+        customerAccessToken: 'customer-jwt',
+      );
 
-    expect(uri!.path, '/api/v1/public/bookings/10/driver-location');
-    expect(headers!['Authorization'], 'Bearer customer-jwt');
-    expect(headers!.containsKey('X-Guest-Access-Token'), isFalse);
-    expect(result.available, true);
-  });
+      expect(uri!.path, '/api/v1/public/bookings/10/driver-location');
+      expect(headers!['Authorization'], 'Bearer customer-jwt');
+      expect(headers!.containsKey('X-Guest-Access-Token'), isFalse);
+      expect(result.available, true);
+    },
+  );
 
-  test('guest token takes precedence over customer JWT in location API headers', () async {
-    Map<String, String>? headers;
-    final api = DriverLocationApiService(
-      baseUrl: 'http://localhost:3000',
-      client: MockClient((request) async {
-        headers = request.headers;
-        return http.Response(
-          jsonEncode({
-            'success': true,
-            'data': {'available': true, 'driver': null},
-          }),
-          200,
-        );
-      }),
-    );
+  test(
+    'guest token takes precedence over customer JWT in location API headers',
+    () async {
+      Map<String, String>? headers;
+      final api = DriverLocationApiService(
+        baseUrl: 'http://localhost:3000',
+        client: MockClient((request) async {
+          headers = request.headers;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {'available': true, 'driver': null},
+            }),
+            200,
+          );
+        }),
+      );
 
-    await api.getGuestDriverLocation(
-      bookingId: 10,
-      guestAccessToken: 'guest-token',
-      customerAccessToken: 'customer-jwt',
-      useCustomerAuth: true,
-    );
+      await api.getGuestDriverLocation(
+        bookingId: 10,
+        guestAccessToken: 'guest-token',
+        customerAccessToken: 'customer-jwt',
+        useCustomerAuth: true,
+      );
 
-    expect(headers!['X-Guest-Access-Token'], 'guest-token');
-    expect(headers!.containsKey('Authorization'), isFalse);
-  });
+      expect(headers!['X-Guest-Access-Token'], 'guest-token');
+      expect(headers!.containsKey('Authorization'), isFalse);
+    },
+  );
 
   testWidgets(
     'driver location waits in assigned status before automatic sharing',
@@ -699,6 +703,55 @@ void main() {
   );
 
   testWidgets(
+    'admin monitor formats suspension and location times in Bangkok',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdminDriverMonitorPage(
+              api: _FakeAdminLocationApi(
+                items: const [
+                  DriverLocation(
+                    driverId: 2,
+                    displayName: 'Suspended QA Driver',
+                    latitude: 13.7,
+                    longitude: 100.5,
+                    lastSeenAt: '2026-10-10T08:14:30.000Z',
+                    stale: false,
+                  ),
+                ],
+              ),
+              dispatchApi: _FakeDispatchDriversApi(
+                drivers: const [
+                  {
+                    'driverId': 2,
+                    'displayName': 'Suspended QA Driver',
+                    'activeState': 'ACTIVE',
+                    'onlineState': 'OFFLINE',
+                    'driverStatus': 'SUSPENDED',
+                    'activeAssignmentCount': 0,
+                    'suspension': {
+                      'reason': 'QA',
+                      'changedAt': '2026-10-10T08:13:29.000Z',
+                    },
+                  },
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('2026-10-10 15:13'), findsOneWidget);
+      expect(find.textContaining('2026-10-10 15:14'), findsOneWidget);
+      expect(find.text('Suspended'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'guest tracking waits in assigned status without socket subscribe',
     (tester) async {
       final api = _FakeGuestLocationApi(
@@ -934,80 +987,82 @@ void main() {
     expect(find.text('Driver location'), findsNothing);
   });
 
-  testWidgets('customer tracking uses JWT for api and socket when guest token missing', (
-    tester,
-  ) async {
-    final api = _FakeGuestLocationApi(
-      result: GuestDriverLocationResult(
-        available: true,
-        bookingNumber: 'TX202607010001',
-        bookingStatus: 'ON_ROUTE',
-        driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
-      ),
-    );
-    final socket = _FakeLocationSocket();
+  testWidgets(
+    'customer tracking uses JWT for api and socket when guest token missing',
+    (tester) async {
+      final api = _FakeGuestLocationApi(
+        result: GuestDriverLocationResult(
+          available: true,
+          bookingNumber: 'TX202607010001',
+          bookingStatus: 'ON_ROUTE',
+          driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+        ),
+      );
+      final socket = _FakeLocationSocket();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: GuestDriverTrackingSection(
-            bookingId: 99,
-            guestAccessToken: '',
-            bookingStatus: 'ON_ROUTE',
-            useCustomerAuth: true,
-            customerAccessToken: 'customer-jwt',
-            api: api,
-            socket: socket,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GuestDriverTrackingSection(
+              bookingId: 99,
+              guestAccessToken: '',
+              bookingStatus: 'ON_ROUTE',
+              useCustomerAuth: true,
+              customerAccessToken: 'customer-jwt',
+              api: api,
+              socket: socket,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(api.calls, 1);
-    expect(api.lastGuestToken, isEmpty);
-    expect(api.lastCustomerToken, 'customer-jwt');
-    expect(api.lastUseCustomerAuth, isTrue);
-    expect(socket.connectedAccessToken, 'customer-jwt');
-    expect(socket.connectedGuestToken, isNull);
-    expect(socket.subscribedBookingId, 99);
-    expect(find.text('Driver location sharing'), findsOneWidget);
-  });
+      expect(api.calls, 1);
+      expect(api.lastGuestToken, isEmpty);
+      expect(api.lastCustomerToken, 'customer-jwt');
+      expect(api.lastUseCustomerAuth, isTrue);
+      expect(socket.connectedAccessToken, 'customer-jwt');
+      expect(socket.connectedGuestToken, isNull);
+      expect(socket.subscribedBookingId, 99);
+      expect(find.text('Driver location sharing'), findsOneWidget);
+    },
+  );
 
-  testWidgets('guest token still preferred over customer JWT when both are present', (
-    tester,
-  ) async {
-    final api = _FakeGuestLocationApi(
-      result: GuestDriverLocationResult(
-        available: true,
-        bookingStatus: 'ON_ROUTE',
-        driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
-      ),
-    );
-    final socket = _FakeLocationSocket();
+  testWidgets(
+    'guest token still preferred over customer JWT when both are present',
+    (tester) async {
+      final api = _FakeGuestLocationApi(
+        result: GuestDriverLocationResult(
+          available: true,
+          bookingStatus: 'ON_ROUTE',
+          driver: _guestDriver(recordedAt: DateTime.now().toIso8601String()),
+        ),
+      );
+      final socket = _FakeLocationSocket();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: GuestDriverTrackingSection(
-            bookingId: 99,
-            guestAccessToken: 'guest-token',
-            bookingStatus: 'ON_ROUTE',
-            useCustomerAuth: true,
-            customerAccessToken: 'customer-jwt',
-            api: api,
-            socket: socket,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GuestDriverTrackingSection(
+              bookingId: 99,
+              guestAccessToken: 'guest-token',
+              bookingStatus: 'ON_ROUTE',
+              useCustomerAuth: true,
+              customerAccessToken: 'customer-jwt',
+              api: api,
+              socket: socket,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(api.lastGuestToken, 'guest-token');
-    expect(api.lastCustomerToken, 'customer-jwt');
-    expect(socket.connectedGuestToken, 'guest-token');
-    expect(socket.connectedAccessToken, isNull);
-  });
+      expect(api.lastGuestToken, 'guest-token');
+      expect(api.lastCustomerToken, 'customer-jwt');
+      expect(socket.connectedGuestToken, 'guest-token');
+      expect(socket.connectedAccessToken, isNull);
+    },
+  );
 }
 
 class _FakeLocationSocket extends DriverLocationSocketService {
@@ -1051,8 +1106,7 @@ class _FakeDispatchDriversApi extends AdminDispatchApiService {
   Future<List<dynamic>> listDrivers({
     bool? archived,
     String? bookingNumber,
-  }) async =>
-      drivers;
+  }) async => drivers;
 }
 
 class _FakeAdminLocationApi extends DriverLocationApiService {

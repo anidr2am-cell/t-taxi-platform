@@ -122,6 +122,8 @@ class AdminOperationsUx {
         return l10n.t('admin_ops_reason_urgent_reassignment');
       case 'DRIVER_RELEASED_REASSIGNMENT':
         return l10n.t('admin_ops_reason_driver_released_reassignment');
+      case 'SUSPENDED_DRIVER_REASSIGNMENT':
+        return l10n.t('admin_ops_reason_suspended_driver_reassignment');
       case 'CRITICAL_UNASSIGNED':
         return l10n.t('admin_ops_reason_critical_unassigned');
       case 'URGENT_UNASSIGNED':
@@ -180,6 +182,7 @@ class AdminOperationsUx {
         return l10n.t('admin_ops_next_receipt_missing');
       case 'PICKUP_OVERDUE_UNASSIGNED':
       case 'PICKUP_SOON_UNASSIGNED':
+      case 'SUSPENDED_DRIVER_REASSIGNMENT':
         return l10n.t('admin_ops_next_assign_driver');
       case 'CUSTOMER_INQUIRY':
         return l10n.t('admin_ops_next_customer_inquiry');

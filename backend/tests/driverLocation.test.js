@@ -710,3 +710,20 @@ test('socket customer JWT cannot subscribe to another users booking', async () =
   assert.equal(socket.joinedRooms.size, 0);
   assert.equal(ack.error.code, ERROR_CODES.BOOKING_NOT_ACCESSIBLE);
 });
+
+test('admin driver location timestamps serialize Bangkok wall clock as UTC instants', () => {
+  const service = new DriverLocationService({}, {});
+  const mapped = service.mapLocationRow({
+    driver_id: 7,
+    driver_name: 'QA Driver',
+    current_lat: 13.7,
+    current_lng: 100.5,
+    location_recorded_at: new Date('2026-10-10T15:13:29.000Z'),
+    last_seen_at: null,
+    location_updated_at: new Date('2026-10-10T15:14:30.000Z'),
+    is_online: 1,
+  });
+
+  assert.equal(mapped.recordedAt, '2026-10-10T08:13:29.000Z');
+  assert.equal(mapped.lastSeenAt, '2026-10-10T08:14:30.000Z');
+});

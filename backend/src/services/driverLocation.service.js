@@ -3,6 +3,7 @@ const HTTP_STATUS = require('../constants/httpStatus');
 const ERROR_CODES = require('../constants/errorCodes');
 const ROLES = require('../constants/roles');
 const { hashToken } = require('../utils/tokenHash.util');
+const { formatServiceDateTimeIso } = require('../utils/serviceDateTime.util');
 const {
   FRESH_LOCATION_MS,
   TRACKABLE_BOOKING_STATUSES,
@@ -159,8 +160,10 @@ class DriverLocationService {
       accuracyMeters: row.current_accuracy_meters == null ? null : Number(row.current_accuracy_meters),
       heading: row.current_heading == null ? null : Number(row.current_heading),
       speedKph: row.current_speed_kph == null ? null : Number(row.current_speed_kph),
-      recordedAt: row.location_recorded_at,
-      lastSeenAt: row.last_seen_at ?? row.location_updated_at,
+      recordedAt: formatServiceDateTimeIso(row.location_recorded_at),
+      lastSeenAt: formatServiceDateTimeIso(
+        row.last_seen_at ?? row.location_updated_at,
+      ),
       online: row.is_online == null ? undefined : Boolean(row.is_online),
       stale: this.isStale(row.location_updated_at),
     };

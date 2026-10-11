@@ -317,6 +317,14 @@ class AdminDispatchApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<List<dynamic>> getDriverSuspensionHistory(int driverId) async {
+    final data = await _request(
+      'GET',
+      '/admin/drivers/$driverId/suspension-history',
+    );
+    return List<dynamic>.from(data as List);
+  }
+
   Future<Map<String, dynamic>> suspendDriver(
     int driverId,
     String reason,
