@@ -3,22 +3,27 @@ const {
   assertDriverOperational,
 } = require("../policies/driverOperational.policy");
 
+function isAllowedWhileSuspended(req) {
+  const readOnlyAccountPath =
+    req.method === "GET" &&
+    [
+      "/status",
+      "/profile",
+      "/profile/avatar",
+      "/profile/vehicle-photo",
+      "/vehicles",
+      "/rating-summary",
+    ].includes(req.path);
+  return (
+    readOnlyAccountPath ||
+    (req.method === "POST" && req.path === "/offline") ||
+    req.path.startsWith("/settlements")
+  );
+}
+
 async function driverOperationalMiddleware(req, _res, next) {
   try {
-    const readOnlyAccountPath =
-      req.method === "GET" &&
-      [
-        "/status",
-        "/profile",
-        "/profile/avatar",
-        "/profile/vehicle-photo",
-        "/vehicles",
-      ].includes(req.path);
-    const allowed =
-      readOnlyAccountPath ||
-      (req.method === "POST" && req.path === "/offline") ||
-      req.path.startsWith("/settlements");
-    if (allowed) {
+    if (isAllowedWhileSuspended(req)) {
       return next();
     }
     if (process.env.NODE_ENV === "test" && process.env.DB_USER === "test") {
@@ -41,3 +46,4 @@ async function driverOperationalMiddleware(req, _res, next) {
 }
 
 module.exports = driverOperationalMiddleware;
+module.exports.isAllowedWhileSuspended = isAllowedWhileSuspended;

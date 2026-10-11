@@ -4,6 +4,9 @@ const assert = require('node:assert/strict');
 const DriverSuspensionService = require('../src/services/driverSuspension.service');
 const { assertDriverOperational } = require('../src/policies/driverOperational.policy');
 const ERROR_CODES = require('../src/constants/errorCodes');
+const {
+  isAllowedWhileSuspended,
+} = require('../src/middlewares/driverOperational.middleware');
 
 function service() {
   return new DriverSuspensionService({
@@ -26,6 +29,17 @@ test('operational policy blocks suspended drivers with stable 403 code', () => {
 test('operational policy allows available and offline drivers', () => {
   assert.doesNotThrow(() => assertDriverOperational({ status: 'AVAILABLE', is_active: 1, user_is_active: 1 }));
   assert.doesNotThrow(() => assertDriverOperational({ status: 'OFFLINE', is_active: 1, user_is_active: 1 }));
+});
+
+test('suspended driver can read rating summary but cannot use rating writes', () => {
+  assert.equal(
+    isAllowedWhileSuspended({ method: 'GET', path: '/rating-summary' }),
+    true,
+  );
+  assert.equal(
+    isAllowedWhileSuspended({ method: 'POST', path: '/rating-summary' }),
+    false,
+  );
 });
 
 test('suspension preview releases only future unstarted assignments', () => {

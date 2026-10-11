@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/core/network/token_storage.dart';
+import 'package:frontend/theme/app_tokens.dart';
 import 'package:frontend/features/driver/services/driver_session.dart';
 import 'package:frontend/features/driver/services/driver_token_storage.dart';
 import 'package:frontend/features/driver_location/models/driver_location.dart';
@@ -748,6 +749,59 @@ void main() {
       expect(find.textContaining('2026-10-10 15:13'), findsOneWidget);
       expect(find.textContaining('2026-10-10 15:14'), findsOneWidget);
       expect(find.text('Suspended'), findsOneWidget);
+      expect(find.text('Suspension reason: QA'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'suspension preview formats Bangkok pickup time and localizes controls',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdminDriverMonitorPage(
+              api: _FakeAdminLocationApi(items: const []),
+              dispatchApi: _FakeDispatchDriversApi(
+                drivers: const [
+                  {
+                    'driverId': 6,
+                    'displayName': 'Preview Driver',
+                    'activeState': 'ACTIVE',
+                    'onlineState': 'OFFLINE',
+                    'driverStatus': 'AVAILABLE',
+                    'activeAssignmentCount': 1,
+                  },
+                ],
+                preview: const {
+                  'releasable': [
+                    {
+                      'bookingNumber': 'QA_URGENT',
+                      'pickupAt': '2026-10-13T22:31:56.000Z',
+                      'within24Hours': true,
+                    },
+                  ],
+                  'blocking': [],
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Suspend'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2026-10-14 05:31'), findsOneWidget);
+      expect(find.text('Within 24 hours'), findsOneWidget);
+      expect(find.text('Suspension reason (required)'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      final urgentTile = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'QA_URGENT'),
+      );
+      expect(urgentTile.tileColor, AppTokens.warningLight);
     },
   );
 
@@ -1098,15 +1152,29 @@ class _FakeLocationSocket extends DriverLocationSocketService {
 }
 
 class _FakeDispatchDriversApi extends AdminDispatchApiService {
-  _FakeDispatchDriversApi({required this.drivers});
+  _FakeDispatchDriversApi({
+    required this.drivers,
+    this.preview = const {'releasable': [], 'blocking': []},
+    this.history = const [],
+  });
 
   final List<Map<String, dynamic>> drivers;
+  final Map<String, dynamic> preview;
+  final List<dynamic> history;
 
   @override
   Future<List<dynamic>> listDrivers({
     bool? archived,
     String? bookingNumber,
   }) async => drivers;
+
+  @override
+  Future<Map<String, dynamic>> getDriverSuspensionPreview(int driverId) async =>
+      preview;
+
+  @override
+  Future<List<dynamic>> getDriverSuspensionHistory(int driverId) async =>
+      history;
 }
 
 class _FakeAdminLocationApi extends DriverLocationApiService {

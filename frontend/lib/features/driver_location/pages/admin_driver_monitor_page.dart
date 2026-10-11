@@ -290,11 +290,24 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                     ),
                     ...releasable.map((raw) {
                       final item = Map<String, dynamic>.from(raw as Map);
+                      final urgent = item['within24Hours'] == true;
+                      final pickupAt = formatBackendServiceDateTimeBangkok(
+                        item['pickupAt'] as String?,
+                      );
                       return ListTile(
                         dense: true,
+                        tileColor: urgent ? AppTokens.warningLight : null,
                         title: Text(item['bookingNumber'] as String? ?? ''),
-                        subtitle: Text(item['pickupAt'] as String? ?? ''),
-                        trailing: item['within24Hours'] == true
+                        subtitle: Text(
+                          pickupAt ?? '-',
+                          style: urgent
+                              ? const TextStyle(
+                                  color: AppTokens.warning,
+                                  fontWeight: FontWeight.w700,
+                                )
+                              : null,
+                        ),
+                        trailing: urgent
                             ? AppUi.statusBadge(
                                 l10n.t('admin_driver_suspend_urgent'),
                                 tone: AppStatusTone.warning,
@@ -322,10 +335,13 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                       ),
                       ...blocking.map((raw) {
                         final item = Map<String, dynamic>.from(raw as Map);
+                        final pickupAt = formatBackendServiceDateTimeBangkok(
+                          item['pickupAt'] as String?,
+                        );
                         return ListTile(
                           dense: true,
                           title: Text(item['bookingNumber'] as String? ?? ''),
-                          subtitle: Text(item['pickupAt'] as String? ?? ''),
+                          subtitle: Text(pickupAt ?? '-'),
                           trailing: const Icon(
                             Icons.open_in_new,
                             color: AppTokens.error,
@@ -350,7 +366,11 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                     maxLines: 4,
                     onChanged: (_) => setDialogState(() {}),
                     decoration: InputDecoration(
-                      labelText: l10n.t('admin_driver_suspension_reason'),
+                      labelText: l10n.t(
+                        suspended
+                            ? 'admin_driver_unsuspend_reason_required'
+                            : 'admin_driver_suspend_reason_required',
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppTokens.spaceMd),
@@ -387,7 +407,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(l10n.t('cancel')),
+              child: Text(l10n.t('admin_driver_suspension_cancel')),
             ),
             FilledButton(
               onPressed:
@@ -729,7 +749,7 @@ class _AdminDriverMonitorPageState extends State<AdminDriverMonitorPage> {
                                         if (suspended && suspension is Map) ...[
                                           const SizedBox(height: 4),
                                           Text(
-                                            '${l10n.t('admin_driver_suspension_reason')}: ${suspension['reason'] ?? '-'}',
+                                            '${l10n.t('admin_driver_suspend_reason_label')}: ${suspension['reason'] ?? '-'}',
                                             style: const TextStyle(
                                               color: AppTokens.error,
                                               fontSize: 12,
