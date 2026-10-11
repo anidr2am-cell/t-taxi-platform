@@ -7,7 +7,11 @@ const FLIGHT_SYNC_STATUS = require('../constants/flightSyncStatus');
 const FLIGHT_SYNC_CONFIG = require('../constants/flightSyncConfig');
 const { EVENTS } = require('../events');
 const { isNotificationOutboxEvent } = require('../utils/outboxPayload.util');
-const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
+const {
+  formatInstantAsServiceDateTime,
+  formatServiceDateTimeIso,
+  parseServiceDateTimeToMs,
+} = require('../utils/serviceDateTime.util');
 
 const TERMINAL_BOOKING_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'NO_SHOW']);
 const CONFIG_MISSING = 'CONFIG_MISSING';
@@ -63,19 +67,29 @@ class AdminFlightMonitorService {
       bookingId: row.booking_id,
       bookingNumber: row.booking_number,
       bookingStatus: row.booking_status,
-      scheduledPickupAt: row.scheduled_pickup_at_text ?? row.scheduled_pickup_at,
+      scheduledPickupAt: formatServiceDateTimeIso(
+        row.scheduled_pickup_at_text ?? row.scheduled_pickup_at,
+      ),
       flightNumber: row.flight_number,
       airlineCode: row.airline_code,
       flightDate: row.flight_date,
       departureAirportIata: row.departure_airport_iata,
       arrivalAirportIata: row.arrival_airport_iata,
-      scheduledArrivalAt: row.flight_scheduled_arrival_at_text ?? row.flight_scheduled_arrival_at,
-      estimatedArrivalAt: row.flight_estimated_arrival_at_text ?? row.flight_estimated_arrival_at,
-      actualArrivalAt: row.flight_actual_arrival_at_text ?? row.flight_actual_arrival_at,
+      scheduledArrivalAt: formatServiceDateTimeIso(
+        row.flight_scheduled_arrival_at_text ?? row.flight_scheduled_arrival_at,
+      ),
+      estimatedArrivalAt: formatServiceDateTimeIso(
+        row.flight_estimated_arrival_at_text ?? row.flight_estimated_arrival_at,
+      ),
+      actualArrivalAt: formatServiceDateTimeIso(
+        row.flight_actual_arrival_at_text ?? row.flight_actual_arrival_at,
+      ),
       delayMinutes: row.delay_minutes == null ? null : Number(row.delay_minutes),
       delayStatus: row.delay_status,
       flightStatus: row.flight_status,
-      lastSyncedAt: row.last_synced_at_text ?? row.last_synced_at,
+      lastSyncedAt: formatServiceDateTimeIso(
+        row.last_synced_at_text ?? row.last_synced_at,
+      ),
       syncStatus: row.sync_status,
       syncError: row.sync_error,
     };
@@ -123,10 +137,7 @@ class AdminFlightMonitorService {
   }
 
   parseProviderDateTime(value) {
-    if (!value) return null;
-    const parsed = Date.parse(value);
-    if (Number.isNaN(parsed)) return null;
-    return new Date(parsed).toISOString().slice(0, 19).replace('T', ' ');
+    return formatInstantAsServiceDateTime(value);
   }
 
   buildDelayStatus(delayMinutes) {
@@ -304,7 +315,7 @@ class AdminFlightMonitorService {
       });
     }
 
-    const nowSql = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const nowSql = formatInstantAsServiceDateTime(new Date(this.nowFn()));
     const actorUserId = actorUser?.id ?? null;
 
     if (!this.syncEnabled || !this.flightService.isProviderConfigured()) {

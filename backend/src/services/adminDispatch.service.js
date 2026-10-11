@@ -638,6 +638,10 @@ class AdminDispatchService {
         estimatedArrivalAt: formatServiceDateTimeIso(
           row.flight_estimated_arrival_at,
         ),
+        actualArrivalAt: formatServiceDateTimeIso(
+          row.flight_actual_arrival_at,
+        ),
+        lastSyncedAt: formatServiceDateTimeIso(row.last_synced_at),
         delayStatus: row.delay_status,
         delayMinutes: row.delay_minutes,
         golfCourseId: row.golf_course_id ?? null,

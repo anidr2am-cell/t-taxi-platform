@@ -6,7 +6,13 @@ import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../admin_dispatch/pages/admin_booking_detail_page.dart';
 import '../../admin_dispatch/services/admin_dispatch_api_service.dart';
+import '../../driver/utils/driver_backend_datetime.dart';
 import '../services/admin_flight_api_service.dart';
+
+String _flightBangkokDateTime(dynamic value) {
+  final raw = value?.toString();
+  return formatBackendServiceDateTimeBangkok(raw) ?? '-';
+}
 
 class AdminFlightMonitorPage extends StatefulWidget {
   const AdminFlightMonitorPage({super.key, this.api, this.dispatchApi});
@@ -415,13 +421,18 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                                     ),
                                     AppUi.summaryRow(
                                       label: l10n.t('admin_flight_pickup'),
-                                      value: _text(item['scheduledPickupAt']),
+                                      value: _flightBangkokDateTime(
+                                        item['scheduledPickupAt'],
+                                      ),
                                     ),
                                     Text(
                                       l10n
                                           .t('admin_flight_sync_line')
                                           .replaceAll('{status}', _text(item['syncStatus']))
-                                          .replaceAll('{last}', _text(item['lastSyncedAt'])),
+                                          .replaceAll(
+                                            '{last}',
+                                            _flightBangkokDateTime(item['lastSyncedAt']),
+                                          ),
                                       style: const TextStyle(
                                         color: AppTokens.textSecondary,
                                         fontSize: 13,

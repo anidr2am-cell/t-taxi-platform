@@ -55,9 +55,9 @@ class _FakeFlightApi extends AdminFlightApiService {
               'flightNumber': 'TG409',
               'departureAirportIata': 'SIN',
               'arrivalAirportIata': 'BKK',
-              'scheduledPickupAt': '2026-07-01 09:30:00',
-              'scheduledArrivalAt': '2026-07-01 12:00:00',
-              'estimatedArrivalAt': '2026-07-01 12:15:00',
+              'scheduledPickupAt': '2026-07-01T02:30:00.000Z',
+              'scheduledArrivalAt': '2026-07-01T05:00:00.000Z',
+              'estimatedArrivalAt': '2026-07-01T05:15:00.000Z',
               'actualArrivalAt': null,
               'delayMinutes': 15,
               'flightStatus': 'DELAYED',
@@ -133,6 +133,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('TX202607010001'), findsOneWidget);
     expect(find.textContaining('TG409'), findsOneWidget);
+    expect(find.text('2026-07-01 09:30'), findsOneWidget);
   });
 
   testWidgets('shows automatic sync disabled and provider missing status', (tester) async {

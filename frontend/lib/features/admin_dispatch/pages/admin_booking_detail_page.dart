@@ -2438,12 +2438,16 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       if (flight['scheduledArrivalAt'] != null)
         AppUi.summaryRow(
           label: 'Scheduled arrival',
-          value: flight['scheduledArrivalAt'] as String,
+          value: _formatBangkokServiceDateTime(
+            flight['scheduledArrivalAt'] as String?,
+          ),
         ),
       if (flight['estimatedArrivalAt'] != null)
         AppUi.summaryRow(
           label: 'Estimated arrival',
-          value: flight['estimatedArrivalAt'] as String,
+          value: _formatBangkokServiceDateTime(
+            flight['estimatedArrivalAt'] as String?,
+          ),
         ),
       if (flight['delayStatus'] != null)
         AppUi.summaryRow(
