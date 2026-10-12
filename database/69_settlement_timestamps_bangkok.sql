@@ -21,7 +21,13 @@ INSERT IGNORE INTO migration_69_settlement_paid_backup
   (booking_id, original_paid_at, corrected_paid_at)
 SELECT id, commission_paid_at, DATE_ADD(commission_paid_at, INTERVAL 7 HOUR)
 FROM bookings
-WHERE commission_paid_at IS NOT NULL AND @settlement_ts_v2_done = 0;
+WHERE commission_paid_at IS NOT NULL AND @settlement_ts_v2_done = 0
+  -- Shift only values whose UTC origin is corroborated by the approval instant.
+  -- Legacy imports without that evidence must be reviewed separately.
+  AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.commissionApprovedAt')) REGEXP 'Z$'
+  AND ABS(TIMESTAMPDIFF(SECOND, commission_paid_at,
+    STR_TO_DATE(LEFT(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(metadata,
+      '$.commissionApprovedAt')), 'T', ' '), 19), '%Y-%m-%d %H:%i:%s'))) <= 2;
 
 SET @settlement_ts_v2_sql = IF(
   @settlement_ts_v2_done = 0,
