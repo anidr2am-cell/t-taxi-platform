@@ -31,6 +31,7 @@ test('download page and metadata expose release verification fields in Korean an
   assert.match(html, /แอปคนขับ T-Rider/);
   assert.match(html, /출처를 알 수 없는 앱 설치/);
   assert.match(html, /ติดตั้งแอปที่ไม่รู้จัก/);
+  assert.match(html, /driver-app\.apk\?v=\{\{VERSION_CODE\}\}/);
   for (const marker of [
     '{{VERSION_NAME}}',
     '{{VERSION_CODE}}',
@@ -47,4 +48,5 @@ test('download page and metadata expose release verification fields in Korean an
   );
   assert.match(publishScript, /ToString\('yyyy-MM-ddTHH:mm:sszzz'\)/);
   assert.match(publishScript, /ToString\('yyyy-MM-dd HH:mm'\)/);
+  assert.match(publishScript, /Replace\("`r`n", "`n"\)/);
 });

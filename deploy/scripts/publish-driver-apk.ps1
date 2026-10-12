@@ -88,6 +88,9 @@ mv -f '$RemoteDirectory/driver-app.apk.part' '$RemoteDirectory/driver-app.apk'
 mv -f '$RemoteDirectory/index.html.part' '$RemoteDirectory/index.html'
 mv -f '$RemoteDirectory/release.json.part' '$RemoteDirectory/release.json'
 "@
+  # PowerShell here-strings use CRLF on Windows. Normalize before passing the
+  # script to a POSIX shell so carriage returns never become filename bytes.
+  $remoteCommand = $remoteCommand.Replace("`r`n", "`n")
   ssh $SshHost $remoteCommand
   if ($LASTEXITCODE -ne 0) { throw 'Remote SHA-256 verification or atomic publish failed.' }
   Write-Output "Published version $VersionName+$VersionCode"
