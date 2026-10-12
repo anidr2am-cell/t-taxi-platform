@@ -36,13 +36,34 @@ class _AdminScreenState extends State<AdminScreen> {
   late int _selectedIndex;
   int _sessionEpoch = 0;
   final _drawerKey = GlobalKey<ScaffoldState>();
+  final _railScrollController = ScrollController();
 
-  static const _authGatedIndices = {0, 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  static const _authGatedIndices = {
+    0,
+    2,
+    3,
+    4,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+  };
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTab.clamp(0, 16);
+  }
+
+  @override
+  void dispose() {
+    _railScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _logout() async {
@@ -126,32 +147,51 @@ class _AdminScreenState extends State<AdminScreen> {
     }
 
     Widget buildRail({required bool extended}) {
-      return NavigationRail(
-        selectedIndex: _selectedIndex,
-        extended: extended,
-        minExtendedWidth: 200,
-        onDestinationSelected: selectIndex,
-        labelType: extended
-            ? NavigationRailLabelType.none
-            : NavigationRailLabelType.all,
-        backgroundColor: AppTokens.surface,
-        selectedIconTheme: const IconThemeData(color: AppTokens.primary),
-        selectedLabelTextStyle: const TextStyle(
-          color: AppTokens.primaryDark,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
+      return LayoutBuilder(
+        builder: (context, constraints) => Scrollbar(
+          controller: _railScrollController,
+          child: SingleChildScrollView(
+            key: const Key('admin_navigation_rail_scroll'),
+            controller: _railScrollController,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: NavigationRail(
+                  selectedIndex: _selectedIndex,
+                  extended: extended,
+                  minExtendedWidth: 200,
+                  onDestinationSelected: selectIndex,
+                  labelType: extended
+                      ? NavigationRailLabelType.none
+                      : NavigationRailLabelType.all,
+                  backgroundColor: AppTokens.surface,
+                  selectedIconTheme: const IconThemeData(
+                    color: AppTokens.primary,
+                  ),
+                  selectedLabelTextStyle: const TextStyle(
+                    color: AppTokens.primaryDark,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                  unselectedLabelTextStyle: const TextStyle(
+                    color: AppTokens.textSecondary,
+                    fontSize: 11,
+                  ),
+                  destinations: List.generate(menuItems.length, (index) {
+                    return NavigationRailDestination(
+                      icon: Icon(icons[index]),
+                      selectedIcon: Icon(
+                        selectedIcons[index],
+                        color: AppTokens.primary,
+                      ),
+                      label: Text(menuItems[index]),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ),
         ),
-        unselectedLabelTextStyle: const TextStyle(
-          color: AppTokens.textSecondary,
-          fontSize: 11,
-        ),
-        destinations: List.generate(menuItems.length, (index) {
-          return NavigationRailDestination(
-            icon: Icon(icons[index]),
-            selectedIcon: Icon(selectedIcons[index], color: AppTokens.primary),
-            label: Text(menuItems[index]),
-          );
-        }),
       );
     }
 
