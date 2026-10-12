@@ -6,6 +6,7 @@
  */
 const SERVICE_TIME_ZONE = 'Asia/Bangkok';
 const SERVICE_UTC_OFFSET = '+07:00';
+const SERVICE_UTC_OFFSET_MS = 7 * 60 * 60 * 1000;
 const MYSQL_DATETIME_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(\.\d{1,6})?$/;
 
 function formatMysqlDateTimeFromDate(value) {
@@ -16,6 +17,14 @@ function formatMysqlDateTimeFromDate(value) {
   const mi = String(value.getUTCMinutes()).padStart(2, '0');
   const s = String(value.getUTCSeconds()).padStart(2, '0');
   return `${y}-${mo}-${d} ${h}:${mi}:${s}`;
+}
+
+/** Convert an absolute instant to the naive Bangkok wall clock stored in DATETIME. */
+function formatInstantAsServiceDateTime(value) {
+  if (value == null || value === '') return null;
+  const ms = value instanceof Date ? value.getTime() : Date.parse(String(value));
+  if (Number.isNaN(ms)) return null;
+  return formatMysqlDateTimeFromDate(new Date(ms + SERVICE_UTC_OFFSET_MS));
 }
 
 /**
@@ -108,6 +117,7 @@ module.exports = {
   SERVICE_TIME_ZONE,
   SERVICE_UTC_OFFSET,
   formatMysqlDateTimeFromDate,
+  formatInstantAsServiceDateTime,
   formatServiceDateTimeForApi,
   formatServiceDateTimeIso,
   parseServiceDateTimeToMs,

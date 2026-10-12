@@ -2227,6 +2227,8 @@ class BookingRepository {
           btd.flight_number,
           btd.flight_scheduled_arrival_at,
           btd.flight_estimated_arrival_at,
+          btd.flight_actual_arrival_at,
+          btd.last_synced_at,
           btd.delay_status,
           btd.delay_minutes,
           btd.airport_code_custom,

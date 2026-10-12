@@ -214,6 +214,9 @@ test('service maps row without sensitive fields', () => {
   assert.equal(mapped.bookingNumber, 'TX202607010001');
   assert.equal(mapped.flightNumber, 'TG409');
   assert.equal(mapped.delayMinutes, 15);
+  assert.equal(mapped.scheduledPickupAt, '2026-07-01T02:30:00.000Z');
+  assert.equal(mapped.scheduledArrivalAt, '2026-07-01T05:00:00.000Z');
+  assert.equal(mapped.estimatedArrivalAt, '2026-07-01T05:15:00.000Z');
   assert.ok(!('customer_user_id' in mapped));
   assert.ok(!('customerUserId' in mapped));
 });
@@ -303,6 +306,8 @@ test('sync maps provider response and calculates delay metadata', async () => {
   assert.equal(persisted.data.flightStatus, FLIGHT_STATUS.DELAYED);
   assert.equal(persisted.data.departureAirportIata, 'SIN');
   assert.equal(persisted.data.arrivalAirportIata, 'BKK');
+  assert.equal(persisted.data.flightScheduledArrivalAt, '2026-07-01 19:00:00');
+  assert.equal(persisted.data.flightEstimatedArrivalAt, '2026-07-01 19:20:00');
 });
 
 test('sync rejects completed bookings without changing booking status', async () => {

@@ -8,9 +8,24 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  formatInstantAsServiceDateTime,
   formatServiceDateTimeForApi,
   parseServiceDateTimeToMs,
 } = require('../src/utils/serviceDateTime.util');
+
+test('formatInstantAsServiceDateTime stores an instant as Bangkok wall clock', () => {
+  assert.equal(
+    formatInstantAsServiceDateTime('2026-07-01T12:00:00.000Z'),
+    '2026-07-01 19:00:00',
+  );
+});
+
+test('formatInstantAsServiceDateTime handles Bangkok date rollover', () => {
+  assert.equal(
+    formatInstantAsServiceDateTime('2026-07-01T18:30:00.000Z'),
+    '2026-07-02 01:30:00',
+  );
+});
 
 test('formatServiceDateTimeForApi serializes mysql2 Date as naive Bangkok string', () => {
   const mysql2Date = new Date(Date.UTC(2026, 6, 23, 3, 24, 3, 24));
