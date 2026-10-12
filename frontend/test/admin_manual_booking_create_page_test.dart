@@ -151,6 +151,18 @@ Future<void> _tapSubmit(WidgetTester tester) async {
 }
 
 void main() {
+  test('normalizes domestic admin phone input to E.164', () {
+    expect(
+      normalizeAdminManualPhone('+82', '010-1234-5678'),
+      '+821012345678',
+    );
+    expect(normalizeAdminManualPhone('+66', '081-234-5678'), '+66812345678');
+    expect(
+      normalizeAdminManualPhone('+82', '+821012345678'),
+      '+821012345678',
+    );
+  });
+
   testWidgets('blocks submit when payout amount is missing', (tester) async {
     await _pumpAdminPage(tester);
     await _tapSubmit(tester);
@@ -186,8 +198,22 @@ void main() {
     await tester.tap(find.text('카카오톡').last);
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const Key('adminManualMessengerId')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('adminManualPhoneDialCode-+82')),
+      findsOneWidget,
+    );
     expect(find.text('카카오톡 ID (선택)'), findsOneWidget);
     expect(find.text('카카오톡 가입 전화번호 (필수)'), findsOneWidget);
+    await tester.tap(messenger);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('WhatsApp').last);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('adminManualMessengerId')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('adminManualPhoneDialCode-+66')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('adminManualBookingGuestPhone')), findsOneWidget);
     expect(
       find.text('생성 후 바로 배정', skipOffstage: false),
       findsOneWidget,

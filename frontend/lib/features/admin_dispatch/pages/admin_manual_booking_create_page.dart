@@ -12,6 +12,7 @@ import '../../booking/models/location_option.dart';
 import '../../booking/models/service_type_option.dart';
 import '../../../services/api_service.dart';
 import '../../booking/utils/pickup_time_format.dart';
+import '../../booking/utils/booking_contact_preference.dart';
 import '../../booking/utils/thailand_pickup_datetime.dart';
 import '../../booking/widgets/google_places_search_field.dart';
 import '../../booking/widgets/pickup_time_picker_sheet.dart';
@@ -53,6 +54,21 @@ bool _bookingDetailBool(dynamic value) {
   if (value == true || value == 1 || value == '1') return true;
   if (value is String && value.toLowerCase() == 'true') return true;
   return false;
+}
+
+@visibleForTesting
+String normalizeAdminManualPhone(String dialCode, String value) {
+  final trimmed = value.trim();
+  if (trimmed.startsWith('+')) {
+    final international = '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
+    return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(international)
+        ? international
+        : '';
+  }
+  return BookingContactPreference.normalizeInternationalPhone(
+    dialCode,
+    trimmed,
+  );
 }
 
 List<dynamic> _bookingDetailList(dynamic value) {
@@ -145,6 +161,7 @@ class _AdminManualBookingCreatePageState
   String _dispatchMode = 'OPEN';
   int? _selectedDirectDriverId;
   String? _messengerType;
+  String _guestPhoneDialCode = '+66';
   List<Map<String, dynamic>> _directDrivers = const [];
   bool _loadingDirectDrivers = false;
   List<String> _golfRegions = const [];
@@ -738,16 +755,23 @@ class _AdminManualBookingCreatePageState
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_required'));
       return;
     }
-    final messengerId = _messengerIdController.text.trim();
+    final enteredMessengerId = _messengerIdController.text.trim();
     final hasMessenger = _messengerType != null;
-    final guestPhone = _guestPhoneController.text.trim();
-    final kakaoPhoneMissing = _messengerType == 'KAKAO' &&
-        !RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(guestPhone);
-    if (kakaoPhoneMissing) {
+    final enteredPhone = _guestPhoneController.text.trim();
+    final guestPhone = enteredPhone.isEmpty
+        ? ''
+        : normalizeAdminManualPhone(_guestPhoneDialCode, enteredPhone);
+    final phoneRequired = const {'KAKAO', 'WHATSAPP', 'SMS'}
+        .contains(_messengerType);
+    if ((phoneRequired && guestPhone.isEmpty) ||
+        (enteredPhone.isNotEmpty && guestPhone.isEmpty)) {
       setState(() => _submitError =
-          context.l10n.t('admin_manual_booking_kakao_phone_required'));
+          context.l10n.t('admin_manual_booking_validation_customer'));
       return;
     }
+    final messengerId = const {'WHATSAPP', 'SMS'}.contains(_messengerType)
+        ? guestPhone
+        : enteredMessengerId;
     if (_selectedCustomer == null &&
         (_guestNameController.text.trim().isEmpty ||
             (guestPhone.isEmpty && !hasMessenger))) {
@@ -792,9 +816,7 @@ class _AdminManualBookingCreatePageState
               }
             : {
                 'name': _guestNameController.text.trim(),
-                'phone': _guestPhoneController.text.trim().isEmpty
-                    ? null
-                    : _guestPhoneController.text.trim(),
+                'phone': guestPhone.isEmpty ? null : guestPhone,
                 if (_guestEmailController.text.trim().isNotEmpty)
                   'email': _guestEmailController.text.trim(),
                 if (hasMessenger) 'messengerType': _messengerType,
@@ -897,6 +919,49 @@ class _AdminManualBookingCreatePageState
       customer.phone,
       customer.email,
     ].where((part) => part != null && part.trim().isNotEmpty).join(' · ');
+  }
+
+  Widget _phoneInput(AppLocalizations l10n) {
+    final required = const {'KAKAO', 'WHATSAPP', 'SMS'}
+        .contains(_messengerType);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 105,
+          child: DropdownButtonFormField<String>(
+            key: ValueKey('adminManualPhoneDialCode-$_guestPhoneDialCode'),
+            initialValue: _guestPhoneDialCode,
+            items: const ['+66', '+82', '+81', '+86']
+                .map((code) => DropdownMenuItem(value: code, child: Text(code)))
+                .toList(),
+            onChanged: _submitting
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _guestPhoneDialCode = value);
+                    }
+                  },
+          ),
+        ),
+        const SizedBox(width: AppTokens.spaceSm),
+        Expanded(
+          child: TextFormField(
+            key: const Key('adminManualBookingGuestPhone'),
+            controller: _guestPhoneController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: _messengerType == 'KAKAO'
+                  ? l10n.t('admin_manual_booking_kakao_phone_required')
+                  : required
+                  ? '${l10n.t('field_required')} ${l10n.t('phone')}'
+                  : l10n.t('admin_manual_booking_guest_phone'),
+              hintText: '010-1234-5678',
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -1571,19 +1636,7 @@ class _AdminManualBookingCreatePageState
                         ),
                       ),
                       const SizedBox(height: AppTokens.spaceSm),
-                      TextFormField(
-                        key: const Key('adminManualBookingGuestPhone'),
-                        controller: _guestPhoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: _messengerType == 'KAKAO'
-                              ? l10n.t('admin_manual_booking_kakao_phone_required')
-                              : l10n.t('admin_manual_booking_guest_phone'),
-                          helperText: _messengerType == 'KAKAO'
-                              ? l10n.t('admin_manual_booking_kakao_phone_help')
-                              : null,
-                        ),
-                      ),
+                      _phoneInput(l10n),
                       const SizedBox(height: AppTokens.spaceSm),
                       TextFormField(
                         controller: _guestEmailController,
@@ -1629,35 +1682,24 @@ class _AdminManualBookingCreatePageState
                       ],
                       onChanged: _submitting ? null : (value) => setState(() {
                         _messengerType = value;
-                        if (value == null) _messengerIdController.clear();
+                        _guestPhoneDialCode = value == 'KAKAO' ? '+82' : '+66';
+                        if (value == null ||
+                            const {'WHATSAPP', 'SMS'}.contains(value)) {
+                          _messengerIdController.clear();
+                        }
                       }),
                     ),
                     if (_messengerType != null) ...[
                       const SizedBox(height: AppTokens.spaceSm),
-                      if (_messengerType == 'KAKAO' &&
-                          _selectedCustomer != null) ...[
-                        TextFormField(
-                          key: const Key('adminManualBookingKakaoPhone'),
-                          controller: _guestPhoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            labelText: l10n.t(
-                              'admin_manual_booking_kakao_phone_required',
-                            ),
-                            hintText: '+821012345678',
-                            helperText: l10n.t(
-                              'admin_manual_booking_kakao_phone_help',
-                            ),
-                          ),
-                        ),
+                      if (_selectedCustomer != null) ...[
+                        _phoneInput(l10n),
                         const SizedBox(height: AppTokens.spaceSm),
                       ],
-                      TextFormField(
+                      if (const {'KAKAO', 'LINE'}.contains(_messengerType))
+                        TextFormField(
                         key: const Key('adminManualMessengerId'),
                         controller: _messengerIdController,
-                        keyboardType: const {'WHATSAPP', 'SMS'}.contains(_messengerType)
-                            ? TextInputType.phone
-                            : TextInputType.text,
+                        keyboardType: TextInputType.text,
                         decoration: InputDecoration(
                           labelText: _messengerType == 'KAKAO'
                               ? l10n.t('admin_manual_booking_kakao_id_optional')
