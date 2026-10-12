@@ -41,19 +41,34 @@ class CustomerContactCard extends StatelessWidget {
     final phone = contact.phone;
     final messengerDigits = _digits(id);
     final phoneIsDuplicate =
-        (type == 'WHATSAPP' || type == 'SMS') &&
-        messengerDigits.isNotEmpty && messengerDigits == _digits(phone);
+        (type == 'KAKAO' || type == 'WHATSAPP' || type == 'SMS') &&
+        messengerDigits.isNotEmpty &&
+        messengerDigits == _digits(phone);
 
     Widget actions(List<Widget> children) =>
         Wrap(spacing: 8, runSpacing: 8, children: children);
     final rows = <Widget>[];
-    if (type == 'KAKAO' || type == 'LINE') {
-      if (id != null && id.isNotEmpty) {
+    if (type == 'KAKAO') {
+      if (phone != null && _digits(phone).isNotEmpty) {
+        rows.add(SelectableText('${l10n.contactKakao} · $phone'));
         rows.add(
-          SelectableText(
-            '${type == 'KAKAO' ? l10n.contactKakao : 'LINE'} · $id',
-          ),
+          actions([
+            OutlinedButton.icon(
+              onPressed: () => _copy(context, phone),
+              icon: const Icon(Icons.copy),
+              label: Text(l10n.contactCopyPhone),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _open(Uri(scheme: 'tel', path: phone)),
+              icon: const Icon(Icons.call),
+              label: Text(l10n.contactCall),
+            ),
+          ]),
         );
+        rows.add(Text(l10n.contactKakaoPhoneHelp));
+      }
+      if (id != null && id.isNotEmpty) {
+        rows.add(SelectableText('${l10n.contactKakao} ID · $id'));
         rows.add(
           actions([
             OutlinedButton.icon(
@@ -64,7 +79,20 @@ class CustomerContactCard extends StatelessWidget {
           ]),
         );
       }
-      if (type == 'KAKAO') rows.add(Text(l10n.contactKakaoHelp));
+      rows.add(Text(l10n.contactKakaoHelp));
+    } else if (type == 'LINE') {
+      if (id != null && id.isNotEmpty) {
+        rows.add(SelectableText('LINE · $id'));
+        rows.add(
+          actions([
+            OutlinedButton.icon(
+              onPressed: () => _copy(context, id),
+              icon: const Icon(Icons.copy),
+              label: Text(l10n.contactCopyId),
+            ),
+          ]),
+        );
+      }
     } else if (type == 'WHATSAPP' && id != null && messengerDigits.isNotEmpty) {
       rows.add(SelectableText('WhatsApp · $id'));
       rows.add(
@@ -93,7 +121,10 @@ class CustomerContactCard extends StatelessWidget {
         ]),
       );
     }
-    if (phone != null && _digits(phone).isNotEmpty && !phoneIsDuplicate) {
+    if (phone != null &&
+        _digits(phone).isNotEmpty &&
+        !phoneIsDuplicate &&
+        type != 'KAKAO') {
       rows.add(
         SelectableText(
           '${type == null ? l10n.contactPhoneSms : l10n.contactEmergencyPhone} · $phone',

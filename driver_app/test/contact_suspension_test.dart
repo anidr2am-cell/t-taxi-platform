@@ -43,6 +43,25 @@ void main() {
     expect(find.byType(SelectableText), findsOneWidget);
   });
 
+  testWidgets('Kakao phone is primary, ID is optional, and legacy ID-only remains visible', (tester) async {
+    await tester.pumpWidget(localizedMaterialApp(home: const Scaffold(body: Column(children: [
+      CustomerContactCard(contact: CustomerContact(
+        messengerType: 'KAKAO', messengerId: 'qa-kakao', phone: '+821012345678',
+      )),
+      CustomerContactCard(contact: CustomerContact(
+        messengerType: 'KAKAO', messengerId: 'legacy-id-only',
+      )),
+    ]))));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('+821012345678'), findsOneWidget);
+    expect(find.textContaining('qa-kakao'), findsOneWidget);
+    expect(find.textContaining('legacy-id-only'), findsOneWidget);
+    expect(find.text('번호 복사'), findsOneWidget);
+    expect(find.text('ID 복사'), findsNWidgets(2));
+    expect(find.text('번호를 연락처에 저장하면 카카오톡 친구 목록에 나타납니다.'), findsOneWidget);
+  });
+
   for (final fails in [false, true]) {
     testWidgets('clipboard ${fails ? 'failure' : 'success'} is visible', (tester) async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {

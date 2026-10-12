@@ -570,6 +570,7 @@ class AppLocalizations {
       _s('이용이 제한되었습니다. 관리자에게 문의하세요.', 'การใช้งานถูกระงับ กรุณาติดต่อผู้ดูแล');
   String get customerContactTitle => _s('고객 연락 방법', 'ช่องทางติดต่อลูกค้า');
   String get contactCopyId => _s('ID 복사', 'คัดลอก ID');
+  String get contactCopyPhone => _s('번호 복사', 'คัดลอกหมายเลข');
   String get contactCopied => _s('복사했습니다.', 'คัดลอกแล้ว');
   String get contactCopyFailed =>
       _s('복사하지 못했습니다. 길게 눌러 복사해 주세요.', 'คัดลอกไม่สำเร็จ กดค้างเพื่อคัดลอก');
@@ -581,6 +582,10 @@ class AppLocalizations {
   String get contactKakaoHelp => _s(
     '카카오톡이 없으면 관리자에게 고객 연락을 요청하세요.',
     'หากไม่มี KakaoTalk ให้ขอผู้ดูแลช่วยติดต่อลูกค้า',
+  );
+  String get contactKakaoPhoneHelp => _s(
+    '번호를 연락처에 저장하면 카카오톡 친구 목록에 나타납니다.',
+    'บันทึกหมายเลขนี้ในรายชื่อติดต่อ แล้วลูกค้าจะปรากฏในรายชื่อเพื่อน KakaoTalk',
   );
   String get contactUnavailable =>
       _s('연락처 정보 없음 — 관리자에게 문의', 'ไม่มีข้อมูลติดต่อ — กรุณาสอบถามผู้ดูแล');
