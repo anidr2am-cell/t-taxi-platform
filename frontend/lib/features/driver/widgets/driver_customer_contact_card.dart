@@ -82,10 +82,13 @@ class DriverCustomerContactCard extends StatelessWidget {
     final id = _nonEmpty(contact?.messengerId);
     final phone = _nonEmpty(contact?.phone) ?? _nonEmpty(legacyPhone);
     final hasMessenger = type != null && id != null;
+    final isKakao = type == 'KAKAO';
+    final hasKakaoContact = isKakao && (phone != null || id != null);
     final messengerUsesPhone = type == 'WHATSAPP' || type == 'SMS';
     final showEmergencyPhone =
         phone != null &&
         hasMessenger &&
+        !isKakao &&
         (!messengerUsesPhone || !DriverTripContact.samePhone(phone, id));
 
     String channelLabel(String code) => switch (code) {
@@ -114,7 +117,59 @@ class DriverCustomerContactCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          if (hasMessenger) ...[
+          if (hasKakaoContact) ...[
+            if (phone != null) ...[
+              SelectableText(
+                '${channelLabel('KAKAO')} · ${_formatPhone(phone)}',
+                key: const ValueKey('driverCustomerMessenger'),
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              Wrap(
+                spacing: AppTokens.spaceSm,
+                runSpacing: AppTokens.spaceSm,
+                children: [
+                  _action(
+                    icon: Icons.copy_outlined,
+                    label: l10n.t('driver_contact_copy_phone'),
+                    onPressed: () => _copy(context, phone),
+                  ),
+                  if (DriverTripContact.hasCallablePhone(phone))
+                    _action(
+                      icon: Icons.phone_outlined,
+                      label: l10n.t('driver_contact_call'),
+                      onPressed: () => DriverTripContact.callPhone(phone),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              Text(
+                l10n.t('driver_contact_kakao_phone_help'),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTokens.textSecondary),
+              ),
+            ],
+            if (id != null) ...[
+              if (phone != null) const SizedBox(height: AppTokens.spaceMd),
+              SelectableText(
+                '${l10n.t('driver_contact_kakao')} ID · $id',
+                key: const ValueKey('driverCustomerKakaoId'),
+              ),
+              const SizedBox(height: AppTokens.spaceSm),
+              _action(
+                icon: Icons.copy_outlined,
+                label: l10n.t('driver_contact_copy_id'),
+                onPressed: () => _copy(context, id),
+              ),
+            ],
+            const SizedBox(height: AppTokens.spaceSm),
+            Text(
+              l10n.t('driver_contact_kakao_help'),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTokens.textSecondary),
+            ),
+          ] else if (hasMessenger) ...[
             SelectableText(
               '${channelLabel(type!)} · ${messengerUsesPhone ? _formatPhone(id!) : id}',
               key: const ValueKey('driverCustomerMessenger'),
@@ -153,15 +208,6 @@ class DriverCustomerContactCard extends StatelessWidget {
                 ],
               ],
             ),
-            if (type == 'KAKAO') ...[
-              const SizedBox(height: AppTokens.spaceSm),
-              Text(
-                l10n.t('driver_contact_kakao_help'),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppTokens.textSecondary),
-              ),
-            ],
           ] else if (phone != null) ...[
             SelectableText(
               '${l10n.t('driver_contact_phone')} · ${_formatPhone(phone)}',

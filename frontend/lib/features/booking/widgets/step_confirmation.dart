@@ -341,8 +341,16 @@ class StepConfirmation extends StatelessWidget {
             AppUi.summaryRow(label: l10n.t('name'), value: state.customerName),
             AppUi.summaryRow(
               label: l10n.t('booking_contact_method_summary'),
-              value:
-                  '${l10n.t(BookingContactPreference.labelKey(state.messengerType))} · ${BookingContactPreference.usesPhone(BookingContactPreference.normalize(state.messengerType)) ? BookingContactPreference.formatInternationalPhone(state.messengerId) : state.messengerId.trim()}',
+              value: BookingContactPreference.summaryValue(
+                type: state.messengerType,
+                channelLabel: l10n.t(
+                  BookingContactPreference.labelKey(state.messengerType),
+                ),
+                messengerId: state.messengerId,
+                dialCode: state.customerCountryCode,
+                localNumber: state.customerPhone,
+                idLabel: l10n.t('booking_contact_kakao_id'),
+              ),
             ),
             if (BookingContactPreference.allowsEmergencyPhone(
                   BookingContactPreference.normalize(state.messengerType),

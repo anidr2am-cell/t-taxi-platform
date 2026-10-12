@@ -76,15 +76,17 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('driverCustomerEmergencyPhone')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(tester.takeException(), isNull);
       expect(find.text('고객 연락 방법\n(ช่องทางติดต่อลูกค้า)'), findsOneWidget);
       expect(find.text('ID 복사\n(คัดลอก ID)'), findsOneWidget);
+      expect(find.textContaining('+66 81 234 5678'), findsOneWidget);
       expect(
-        find.text('고객 전화번호(긴급)\n(เบอร์โทรฉุกเฉินของลูกค้า) · +66 81 234 5678'),
+        find.byKey(const ValueKey('driverCustomerKakaoId')),
         findsOneWidget,
       );
+      expect(find.text('번호 복사\n(คัดลอกหมายเลข)'), findsOneWidget);
     });
   }
 
@@ -123,6 +125,38 @@ void main() {
       find.text('연락처 ID를 복사했습니다.\n(คัดลอก ID ติดต่อแล้ว)'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('Kakao phone-only and legacy ID-only contacts remain visible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        'ko',
+        const Column(
+          children: [
+            DriverCustomerContactCard(
+              contact: DriverCustomerContact(
+                messengerType: 'KAKAO',
+                phone: '+821012345678',
+              ),
+            ),
+            DriverCustomerContactCard(
+              contact: DriverCustomerContact(
+                messengerType: 'KAKAO',
+                messengerId: 'legacy-kakao-id',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('+82 10 1234 5678'), findsOneWidget);
+    expect(find.textContaining('legacy-kakao-id'), findsOneWidget);
+    expect(find.text('번호 복사\n(คัดลอกหมายเลข)'), findsOneWidget);
+    expect(find.text('ID 복사\n(คัดลอก ID)'), findsOneWidget);
   });
 
   testWidgets('copy failure shows bilingual fallback guidance', (tester) async {

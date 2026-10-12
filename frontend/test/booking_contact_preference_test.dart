@@ -45,15 +45,17 @@ class _ContactHarnessState extends State<_ContactHarness> {
   }
 }
 
-Widget _app(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
+Widget _app(Widget child, {String languageCode = 'ko'}) => MaterialApp(
+  locale: Locale(languageCode),
   localizationsDelegates: [
-    AppLocalizationsDelegate('ko'),
+    AppLocalizationsDelegate(languageCode),
     GlobalMaterialLocalizations.delegate,
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
-  supportedLocales: const [Locale('ko')],
+  supportedLocales: AppLocalizations.supportedLanguages
+      .map(Locale.new)
+      .toList(),
   home: Scaffold(body: child),
 );
 
@@ -100,6 +102,9 @@ void main() {
         'booking_contact_phone_sms',
         'booking_contact_method_summary',
         'booking_contact_emergency_summary',
+        'booking_contact_kakao_id_optional',
+        'booking_contact_kakao_phone_required',
+        'booking_contact_kakao_phone_help',
         'booking_contact_confirm_kakao',
         'booking_contact_confirm_line',
         'admin_contact_unverified',
@@ -185,21 +190,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test(
-    'Kakao draft without emergency phone can restore past customer step',
-    () async {
-      final controller = await buildContractAirportPickupController();
-      await controller.updateCustomerInfo(
-        name: 'QA Customer',
-        phone: '',
-        messengerType: 'KAKAO',
-        messengerId: 'qa_kakao',
-      );
+  for (final languageCode in AppLocalizations.supportedLanguages) {
+    testWidgets(
+      'Kakao phone guidance wraps without overflow at 375px in $languageCode',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(375, 812));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          _app(const _ContactHarness(), languageCode: languageCode),
+        );
+        await tester.pumpAndSettle();
 
-      expect(
-        controller.safeEntryStep(controller.state, BookingWizardSteps.review),
-        BookingWizardSteps.review,
-      );
-    },
-  );
+        final l10n = AppLocalizations(languageCode);
+        final helper = find.text(l10n.t('booking_contact_kakao_phone_help'));
+        expect(helper, findsOneWidget);
+        await tester.ensureVisible(helper);
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        final field = tester.widget<TextField>(
+          find.byKey(const ValueKey('booking-contact-phone')),
+        );
+        expect(field.decoration?.helperMaxLines, 3);
+      },
+    );
+  }
+
+  test('Kakao contact requires a phone and keeps its ID optional', () async {
+    final controller = await buildContractAirportPickupController();
+    await controller.updateCustomerInfo(
+      name: 'QA Customer',
+      phone: '',
+      messengerType: 'KAKAO',
+      messengerId: 'qa_kakao',
+    );
+
+    expect(
+      controller.safeEntryStep(controller.state, BookingWizardSteps.review),
+      BookingWizardSteps.customer,
+    );
+
+    await controller.updateCustomerInfo(
+      phone: '010-1234-5678',
+      countryCode: '+82',
+      messengerId: '',
+    );
+    expect(
+      controller.safeEntryStep(controller.state, BookingWizardSteps.review),
+      BookingWizardSteps.review,
+    );
+    final customer = controller.buildCreatePayload()['customer'] as Map;
+    expect(customer['phone'], '+821012345678');
+    expect(customer['messengerType'], 'KAKAO');
+    expect(customer.containsKey('messengerId'), isFalse);
+  });
 }

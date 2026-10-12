@@ -782,14 +782,16 @@ class BookingWizardController extends ChangeNotifier {
     final selectedType =
         changes['messengerType'] ??
         BookingContactPreference.normalize(_state.messengerType);
-    if (BookingContactPreference.usesPhone(selectedType) &&
+    if (BookingContactPreference.requiresPhone(selectedType) &&
         _state.customerPhone.trim().isEmpty &&
         (profilePhone ?? '').trim().isNotEmpty) {
       changes['phone'] = profilePhone!.trim();
-      changes['messengerId'] = _normalizedPhone(
-        profilePhone,
-        changes['countryCode'] ?? _state.customerCountryCode,
-      );
+      if (BookingContactPreference.usesPhone(selectedType)) {
+        changes['messengerId'] = _normalizedPhone(
+          profilePhone,
+          changes['countryCode'] ?? _state.customerCountryCode,
+        );
+      }
     }
     if (changes.isEmpty) return;
     await updateCustomerInfo(
@@ -804,7 +806,8 @@ class BookingWizardController extends ChangeNotifier {
   String _normalizedPhone(String value, String dialCode) {
     final trimmed = value.trim();
     if (trimmed.startsWith('+')) {
-      final normalized = '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
+      final normalized =
+          '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
       return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(normalized)
           ? normalized
           : '';
@@ -817,12 +820,13 @@ class BookingWizardController extends ChangeNotifier {
 
   Future<void> updateContactType(String type) async {
     final normalized = BookingContactPreference.normalize(type);
-    final phone = _normalizedPhone(
-      _state.customerPhone,
-      _state.customerCountryCode,
-    );
+    final countryCode = normalized == BookingContactPreference.kakao
+        ? '+82'
+        : _state.customerCountryCode;
+    final phone = _normalizedPhone(_state.customerPhone, countryCode);
     await updateCustomerInfo(
       messengerType: normalized,
+      countryCode: countryCode,
       messengerId: BookingContactPreference.usesPhone(normalized) ? phone : '',
     );
   }
@@ -1922,8 +1926,11 @@ class BookingWizardController extends ChangeNotifier {
       ).isNotEmpty;
     }
     if (!BookingContactPreference.values.contains(type)) return false;
-    if (state.messengerId.trim().isEmpty) return false;
-    if (BookingContactPreference.usesPhone(type) &&
+    if (type != BookingContactPreference.kakao &&
+        state.messengerId.trim().isEmpty) {
+      return false;
+    }
+    if (BookingContactPreference.requiresPhone(type) &&
         _normalizedPhone(
           state.customerPhone,
           state.customerCountryCode,
