@@ -738,11 +738,19 @@ class _AdminManualBookingCreatePageState
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_required'));
       return;
     }
-    final hasMessenger = _messengerType != null
-        && _messengerIdController.text.trim().isNotEmpty;
+    final messengerId = _messengerIdController.text.trim();
+    final hasMessenger = _messengerType != null;
+    final guestPhone = _guestPhoneController.text.trim();
+    final kakaoPhoneMissing = _messengerType == 'KAKAO' &&
+        !RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(guestPhone);
+    if (kakaoPhoneMissing) {
+      setState(() => _submitError =
+          context.l10n.t('admin_manual_booking_kakao_phone_required'));
+      return;
+    }
     if (_selectedCustomer == null &&
         (_guestNameController.text.trim().isEmpty ||
-            (_guestPhoneController.text.trim().isEmpty && !hasMessenger))) {
+            (guestPhone.isEmpty && !hasMessenger))) {
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_customer'));
       return;
     }
@@ -779,7 +787,8 @@ class _AdminManualBookingCreatePageState
             ? {
                 'customerUserId': _selectedCustomer!.id,
                 if (hasMessenger) 'messengerType': _messengerType,
-                if (hasMessenger) 'messengerId': _messengerIdController.text.trim(),
+                if (messengerId.isNotEmpty) 'messengerId': messengerId,
+                if (guestPhone.isNotEmpty) 'phone': guestPhone,
               }
             : {
                 'name': _guestNameController.text.trim(),
@@ -789,7 +798,7 @@ class _AdminManualBookingCreatePageState
                 if (_guestEmailController.text.trim().isNotEmpty)
                   'email': _guestEmailController.text.trim(),
                 if (hasMessenger) 'messengerType': _messengerType,
-                if (hasMessenger) 'messengerId': _messengerIdController.text.trim(),
+                if (messengerId.isNotEmpty) 'messengerId': messengerId,
               },
         'memo': _memoController.text.trim().isEmpty
             ? null
@@ -1567,7 +1576,12 @@ class _AdminManualBookingCreatePageState
                         controller: _guestPhoneController,
                         keyboardType: TextInputType.phone,
                         decoration: InputDecoration(
-                          labelText: l10n.t('admin_manual_booking_guest_phone'),
+                          labelText: _messengerType == 'KAKAO'
+                              ? l10n.t('admin_manual_booking_kakao_phone_required')
+                              : l10n.t('admin_manual_booking_guest_phone'),
+                          helperText: _messengerType == 'KAKAO'
+                              ? l10n.t('admin_manual_booking_kakao_phone_help')
+                              : null,
                         ),
                       ),
                       const SizedBox(height: AppTokens.spaceSm),
@@ -1620,6 +1634,24 @@ class _AdminManualBookingCreatePageState
                     ),
                     if (_messengerType != null) ...[
                       const SizedBox(height: AppTokens.spaceSm),
+                      if (_messengerType == 'KAKAO' &&
+                          _selectedCustomer != null) ...[
+                        TextFormField(
+                          key: const Key('adminManualBookingKakaoPhone'),
+                          controller: _guestPhoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: l10n.t(
+                              'admin_manual_booking_kakao_phone_required',
+                            ),
+                            hintText: '+821012345678',
+                            helperText: l10n.t(
+                              'admin_manual_booking_kakao_phone_help',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppTokens.spaceSm),
+                      ],
                       TextFormField(
                         key: const Key('adminManualMessengerId'),
                         controller: _messengerIdController,
@@ -1627,11 +1659,14 @@ class _AdminManualBookingCreatePageState
                             ? TextInputType.phone
                             : TextInputType.text,
                         decoration: InputDecoration(
-                          labelText: l10n.t('admin_manual_booking_messenger_id'),
+                          labelText: _messengerType == 'KAKAO'
+                              ? l10n.t('admin_manual_booking_kakao_id_optional')
+                              : l10n.t('admin_manual_booking_messenger_id'),
                           hintText: l10n.t('admin_manual_booking_messenger_id_hint'),
                         ),
                         validator: (value) {
-                          if (_messengerType == null) return null;
+                          if (_messengerType == null ||
+                              _messengerType == 'KAKAO') return null;
                           if (value == null || value.trim().isEmpty) {
                             return l10n.t('admin_manual_booking_validation_required');
                           }

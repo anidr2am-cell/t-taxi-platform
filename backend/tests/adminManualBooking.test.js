@@ -381,7 +381,7 @@ test('createAdminManualBooking directly assigns one driver without public call n
   input.driverId = 42;
   input.customer = {
     name: 'QA Direct',
-    phone: null,
+    phone: '+821012345678',
     messengerType: 'KakaoTalk',
     messengerId: 'qa-direct-kakao',
   };
@@ -432,7 +432,7 @@ for (const [driverId, expectedCode] of [
   });
 }
 
-test('admin manual validator normalizes messenger and requires the pair', () => {
+test('admin manual validator requires a Kakao phone and keeps its ID optional', () => {
   const base = {
     origin: { address: 'A' },
     destination: { address: 'B' },
@@ -446,13 +446,34 @@ test('admin manual validator normalizes messenger and requires the pair', () => 
     ...base,
     customer: {
       name: 'Guest',
-      phone: null,
+      phone: '+821012345678',
       messengerType: 'KakaoTalk',
       messengerId: 'qa-id',
     },
   });
   assert.equal(accepted.error, undefined);
   assert.equal(accepted.value.customer.messengerType, 'KAKAO');
+
+  const phoneOnly = adminManualBookingCreateSchema.validate({
+    ...base,
+    customer: {
+      name: 'Guest',
+      phone: '+821012345678',
+      messengerType: 'KAKAO',
+    },
+  });
+  assert.equal(phoneOnly.error, undefined);
+  assert.equal(phoneOnly.value.customer.messengerId, undefined);
+
+  const missingPhone = adminManualBookingCreateSchema.validate({
+    ...base,
+    customer: {
+      name: 'Guest',
+      messengerType: 'KAKAO',
+      messengerId: 'qa-id',
+    },
+  });
+  assert.ok(missingPhone.error);
 
   const rejected = adminManualBookingCreateSchema.validate({
     ...base,

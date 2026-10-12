@@ -248,16 +248,27 @@ const adminManualBookingCreateSchema = Joi.object({
   }).required().custom((customer, helpers) => {
     const type = normalizeMessengerType(customer.messengerType);
     const id = customer.messengerId?.trim();
-    if ((type && !id) || (!type && id)) {
-      return helpers.message('messengerType and messengerId are required together');
-    }
     if (customer.messengerType && !type) {
       return helpers.message('unsupported messengerType');
+    }
+    if (!type && id) {
+      return helpers.message('messengerType is required when messengerId is supplied');
+    }
+    const phone = customer.phone?.trim();
+    if (type === 'KAKAO' && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
+      return helpers.message('KakaoTalk requires an international customer phone number');
+    }
+    if (type && type !== 'KAKAO' && !id) {
+      return helpers.message('messengerId is required for the selected messengerType');
     }
     if (['WHATSAPP', 'SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(id)) {
       return helpers.message('WhatsApp and phone contacts must use an international number');
     }
-    return { ...customer, messengerType: type, messengerId: id };
+    return {
+      ...customer,
+      messengerType: type,
+      ...(id ? { messengerId: id } : { messengerId: undefined }),
+    };
   }),
   memo: unicodeText({ max: 1000, allowEmpty: true }).optional(),
   nameSign: Joi.boolean().default(false),

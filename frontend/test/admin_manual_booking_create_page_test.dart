@@ -186,7 +186,12 @@ void main() {
     await tester.tap(find.text('카카오톡').last);
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const Key('adminManualMessengerId')), findsOneWidget);
-    expect(find.text('생성 후 바로 배정'), findsOneWidget);
+    expect(find.text('카카오톡 ID (선택)'), findsOneWidget);
+    expect(find.text('카카오톡 가입 전화번호 (필수)'), findsOneWidget);
+    expect(
+      find.text('생성 후 바로 배정', skipOffstage: false),
+      findsOneWidget,
+    );
   });
 
   testWidgets('edit mode tolerates sparse booking detail maps', (tester) async {
