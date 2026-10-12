@@ -26,15 +26,36 @@ test('normalizes legacy messenger labels', () => {
   assert.equal(normalizeMessengerType('phone'), 'SMS');
 });
 
-test('allows Kakao and LINE without a phone', () => {
-  for (const messengerType of ['KAKAO', 'LINE']) {
-    const result = createBookingSchema.validate(payload({
-      messengerType,
-      messengerId: 'searchable-id',
-    }));
-    assert.equal(result.error, undefined);
-    assert.equal(result.value.customer.phone, null);
-  }
+test('requires a KakaoTalk phone but keeps the Kakao ID optional', () => {
+  assert.ok(createBookingSchema.validate(payload({
+    messengerType: 'KAKAO',
+    messengerId: 'searchable-id',
+  })).error);
+
+  const phoneOnly = createBookingSchema.validate(payload({
+    messengerType: 'KAKAO',
+    phone: '+821012345678',
+  }));
+  assert.equal(phoneOnly.error, undefined);
+  assert.equal(phoneOnly.value.customer.phone, '+821012345678');
+  assert.equal(phoneOnly.value.customer.messengerId, undefined);
+
+  const withId = createBookingSchema.validate(payload({
+    messengerType: 'KAKAO',
+    messengerId: 'searchable-id',
+    phone: '+821012345678',
+  }));
+  assert.equal(withId.error, undefined);
+  assert.equal(withId.value.customer.messengerId, 'searchable-id');
+});
+
+test('keeps LINE ID required and its emergency phone optional', () => {
+  const result = createBookingSchema.validate(payload({
+    messengerType: 'LINE',
+    messengerId: 'searchable-id',
+  }));
+  assert.equal(result.error, undefined);
+  assert.equal(result.value.customer.phone, null);
 });
 
 test('requires messenger type and id as a pair', () => {

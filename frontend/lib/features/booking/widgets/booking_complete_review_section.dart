@@ -97,12 +97,19 @@ class BookingCompleteReviewSection extends StatelessWidget {
                     l10n,
                   ),
                 ),
-              if (review.messengerType.trim().isNotEmpty &&
-                  review.messengerId.trim().isNotEmpty)
+              if (review.messengerType.trim().isNotEmpty)
                 AppUi.summaryRow(
                   label: l10n.t('booking_contact_method_summary'),
-                  value:
-                      '${l10n.t(BookingContactPreference.labelKey(review.messengerType))} · ${BookingContactPreference.usesPhone(BookingContactPreference.normalize(review.messengerType)) ? BookingContactPreference.formatInternationalPhone(review.messengerId) : review.messengerId.trim()}',
+                  value: BookingContactPreference.summaryValue(
+                    type: review.messengerType,
+                    channelLabel: l10n.t(
+                      BookingContactPreference.labelKey(review.messengerType),
+                    ),
+                    messengerId: review.messengerId,
+                    dialCode: review.customerCountryCode,
+                    localNumber: review.customerPhone,
+                    idLabel: l10n.t('booking_contact_kakao_id'),
+                  ),
                 ),
               if (BookingContactPreference.allowsEmergencyPhone(
                     BookingContactPreference.normalize(review.messengerType),

@@ -159,17 +159,28 @@ const createBookingSchema = Joi.object({
     messengerId: Joi.string().trim().min(1).max(100).optional(),
   }).required().custom((rawCustomer, helpers) => {
     const customer = stripTransitionalMessengerPlaceholders(rawCustomer);
+    const suppliedType = customer.messengerType?.trim();
     const type = normalizeMessengerType(customer.messengerType);
     const id = customer.messengerId?.trim();
-    if ((type && !id) || (!type && id)) {
-      return helpers.message('messengerType and messengerId are required together');
-    }
     // Keep phone-only requests from an already-open older web/app build working
     // while the new contact preference UI is rolled out. New clients require a
-    // messenger selection before submission; when either messenger field is
-    // supplied, both fields are required here.
+    // messenger selection before submission. Channel-specific requirements
+    // below keep KAKAO phone-first while preserving legacy phone-only clients.
+    if (suppliedType && !type) {
+      return helpers.message('unsupported messengerType');
+    }
     if (!type && !id) {
       return customer;
+    }
+    if (!type && id) {
+      return helpers.message('messengerType is required when messengerId is supplied');
+    }
+    const phone = customer.phone?.trim();
+    if (type === 'KAKAO' && !/^\+[1-9]\d{6,14}$/.test(phone || '')) {
+      return helpers.message('KakaoTalk requires an international customer phone number');
+    }
+    if (type !== 'KAKAO' && !id) {
+      return helpers.message('messengerId is required for the selected messengerType');
     }
     if (['WHATSAPP', 'SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(id)) {
       return helpers.message('WhatsApp and phone contacts must use an international number');
@@ -177,7 +188,11 @@ const createBookingSchema = Joi.object({
     if (customer.phone && !/^\+[1-9]\d{6,14}$/.test(customer.phone)) {
       return helpers.message('customer phone must use an international number');
     }
-    return { ...customer, messengerType: type, messengerId: id };
+    return {
+      ...customer,
+      messengerType: type,
+      ...(id ? { messengerId: id } : { messengerId: undefined }),
+    };
   }),
   payment: Joi.object({
     method: Joi.string().valid(...Object.values(CUSTOMER_PAYMENT_METHODS)).default('PAY_DRIVER'),

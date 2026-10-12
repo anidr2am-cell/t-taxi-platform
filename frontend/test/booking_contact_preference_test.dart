@@ -100,6 +100,9 @@ void main() {
         'booking_contact_phone_sms',
         'booking_contact_method_summary',
         'booking_contact_emergency_summary',
+        'booking_contact_kakao_id_optional',
+        'booking_contact_kakao_phone_required',
+        'booking_contact_kakao_phone_help',
         'booking_contact_confirm_kakao',
         'booking_contact_confirm_line',
         'admin_contact_unverified',
@@ -185,21 +188,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test(
-    'Kakao draft without emergency phone can restore past customer step',
-    () async {
-      final controller = await buildContractAirportPickupController();
-      await controller.updateCustomerInfo(
-        name: 'QA Customer',
-        phone: '',
-        messengerType: 'KAKAO',
-        messengerId: 'qa_kakao',
-      );
+  test('Kakao contact requires a phone and keeps its ID optional', () async {
+    final controller = await buildContractAirportPickupController();
+    await controller.updateCustomerInfo(
+      name: 'QA Customer',
+      phone: '',
+      messengerType: 'KAKAO',
+      messengerId: 'qa_kakao',
+    );
 
-      expect(
-        controller.safeEntryStep(controller.state, BookingWizardSteps.review),
-        BookingWizardSteps.review,
-      );
-    },
-  );
+    expect(
+      controller.safeEntryStep(controller.state, BookingWizardSteps.review),
+      BookingWizardSteps.customer,
+    );
+
+    await controller.updateCustomerInfo(
+      phone: '010-1234-5678',
+      countryCode: '+82',
+      messengerId: '',
+    );
+    expect(
+      controller.safeEntryStep(controller.state, BookingWizardSteps.review),
+      BookingWizardSteps.review,
+    );
+    final customer = controller.buildCreatePayload()['customer'] as Map;
+    expect(customer['phone'], '+821012345678');
+    expect(customer['messengerType'], 'KAKAO');
+    expect(customer.containsKey('messengerId'), isFalse);
+  });
 }

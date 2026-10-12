@@ -95,7 +95,10 @@ class _BookingContactPreferenceSectionState
         ? BookingContactPreference.defaultFor(languageCode: l10n.languageCode)
         : savedType;
     final isPhone = BookingContactPreference.usesPhone(type);
+    final isKakao = type == BookingContactPreference.kakao;
     final emergencyPhone = BookingContactPreference.allowsEmergencyPhone(type);
+    final showsPhone =
+        BookingContactPreference.requiresPhone(type) || emergencyPhone;
     final dialCode = widget.state.customerCountryCode.trim().isEmpty
         ? BookingContactPreference.defaultDialCode(l10n.languageCode)
         : widget.state.customerCountryCode.trim();
@@ -158,21 +161,11 @@ class _BookingContactPreferenceSectionState
           ],
         ),
         const SizedBox(height: AppTokens.spaceMd),
-        if (!isPhone)
-          TextField(
-            key: const ValueKey('booking-messenger-id'),
-            controller: _idController,
-            decoration: InputDecoration(
-              labelText:
-                  '${l10n.t('field_required')} ${type == BookingContactPreference.kakao ? l10n.t('booking_contact_kakao_id') : l10n.t('booking_contact_line_id')}',
-              helperText: l10n.t('booking_contact_id_searchable_notice'),
-            ),
-            onChanged: widget.onMessengerIdChanged,
-          ),
-        if (isPhone || emergencyPhone) ...[
-          if (!isPhone) const SizedBox(height: AppTokens.spaceMd),
+        if (showsPhone) ...[
           Text(
-            isPhone
+            isKakao
+                ? l10n.t('booking_contact_kakao_phone_required')
+                : isPhone
                 ? l10n.t('booking_contact_phone_required')
                 : l10n.t('booking_contact_emergency_phone_optional'),
             style: const TextStyle(fontWeight: FontWeight.w700),
@@ -207,10 +200,13 @@ class _BookingContactPreferenceSectionState
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    labelText: isPhone
+                    labelText: BookingContactPreference.requiresPhone(type)
                         ? '${l10n.t('field_required')} ${l10n.t('phone')}'
                         : l10n.t('phone'),
                     hintText: l10n.t('booking_contact_phone_hint'),
+                    helperText: isKakao
+                        ? l10n.t('booking_contact_kakao_phone_help')
+                        : null,
                   ),
                   onChanged: widget.onPhoneChanged,
                 ),
@@ -218,7 +214,23 @@ class _BookingContactPreferenceSectionState
             ],
           ),
         ],
-        if (widget.loginPrompt != null && emergencyPhone) ...[
+        if (!isPhone) ...[
+          if (showsPhone) const SizedBox(height: AppTokens.spaceMd),
+          TextField(
+            key: const ValueKey('booking-messenger-id'),
+            controller: _idController,
+            decoration: InputDecoration(
+              labelText: type == BookingContactPreference.kakao
+                  ? l10n.t('booking_contact_kakao_id_optional')
+                  : '${l10n.t('field_required')} ${l10n.t('booking_contact_line_id')}',
+              helperText: type == BookingContactPreference.line
+                  ? l10n.t('booking_contact_id_searchable_notice')
+                  : null,
+            ),
+            onChanged: widget.onMessengerIdChanged,
+          ),
+        ],
+        if (widget.loginPrompt != null && (isKakao || emergencyPhone)) ...[
           const SizedBox(height: AppTokens.spaceSm),
           Text(
             type == BookingContactPreference.kakao

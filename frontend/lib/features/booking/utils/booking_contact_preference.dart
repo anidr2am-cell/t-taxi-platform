@@ -44,8 +44,45 @@ class BookingContactPreference {
   };
 
   static bool usesPhone(String type) => type == whatsapp || type == sms;
-  static bool allowsEmergencyPhone(String type) =>
-      type == kakao || type == line;
+  static bool requiresPhone(String type) => type == kakao || usesPhone(type);
+  static bool allowsEmergencyPhone(String type) => type == line;
+
+  static String contactPhone(
+    String type,
+    String dialCode,
+    String localNumber,
+  ) {
+    if (!requiresPhone(type) && !allowsEmergencyPhone(type)) return '';
+    final value = localNumber.trim();
+    if (value.startsWith('+')) {
+      final normalized = '+${value.substring(1).replaceAll(RegExp(r'\D'), '')}';
+      return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(normalized)
+          ? normalized
+          : '';
+    }
+    return normalizeInternationalPhone(dialCode, value);
+  }
+
+  static String summaryValue({
+    required String type,
+    required String channelLabel,
+    required String messengerId,
+    required String dialCode,
+    required String localNumber,
+    String? idLabel,
+  }) {
+    final normalizedType = normalize(type);
+    final phone = contactPhone(normalizedType, dialCode, localNumber);
+    final primary = requiresPhone(normalizedType)
+        ? formatInternationalPhone(phone)
+        : messengerId.trim();
+    final id = normalizedType == kakao ? messengerId.trim() : '';
+    return [
+      channelLabel,
+      if (primary.isNotEmpty) primary,
+      if (id.isNotEmpty) '${idLabel ?? 'ID'} $id',
+    ].join(' · ');
+  }
 
   static String labelKey(String? value) => switch (normalize(value)) {
     kakao => 'booking_contact_kakao',
