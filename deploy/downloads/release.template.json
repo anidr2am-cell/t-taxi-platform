@@ -1,0 +1,9 @@
+{
+  "versionName": "{{VERSION_NAME}}",
+  "versionCode": {{VERSION_CODE}},
+  "fileName": "driver-app.apk",
+  "fileSizeBytes": {{FILE_SIZE_BYTES}},
+  "sha256": "{{SHA256}}",
+  "signingCertificateSha256": "{{CERT_SHA256}}",
+  "publishedAt": "{{PUBLISHED_AT}}"
+}
