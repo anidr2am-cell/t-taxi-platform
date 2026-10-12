@@ -45,7 +45,9 @@ if ($actualCertificate -ne $expectedCertificate) {
 
 $file = Get-Item -LiteralPath $resolvedApk
 $sha256 = (Get-FileHash -LiteralPath $resolvedApk -Algorithm SHA256).Hash.ToUpperInvariant()
-$publishedAt = [DateTimeOffset]::Now.ToOffset([TimeSpan]::FromHours(7)).ToString('yyyy-MM-ddTHH:mm:sszzz')
+$bangkokNow = [DateTimeOffset]::Now.ToOffset([TimeSpan]::FromHours(7))
+$publishedAt = $bangkokNow.ToString('yyyy-MM-ddTHH:mm:sszzz')
+$publishedAtDisplay = $bangkokNow.ToString('yyyy-MM-dd HH:mm')
 $fileSize = '{0:N1} MB' -f ($file.Length / 1MB)
 
 $staging = Join-Path ([IO.Path]::GetTempPath()) ("trider-apk-publish-" + [guid]::NewGuid())
@@ -59,6 +61,7 @@ try {
     '{{SHA256}}' = $sha256
     '{{CERT_SHA256}}' = $actualCertificate
     '{{PUBLISHED_AT}}' = $publishedAt
+    '{{PUBLISHED_AT_DISPLAY}}' = $publishedAtDisplay
   }
   foreach ($templateName in @('index.template.html', 'release.template.json')) {
     $content = Get-Content -LiteralPath (Join-Path $templateRoot $templateName) -Raw -Encoding UTF8

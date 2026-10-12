@@ -31,8 +31,20 @@ test('download page and metadata expose release verification fields in Korean an
   assert.match(html, /แอปคนขับ T-Rider/);
   assert.match(html, /출처를 알 수 없는 앱 설치/);
   assert.match(html, /ติดตั้งแอปที่ไม่รู้จัก/);
-  for (const marker of ['{{VERSION_NAME}}', '{{VERSION_CODE}}', '{{SHA256}}', '{{PUBLISHED_AT}}']) {
+  for (const marker of [
+    '{{VERSION_NAME}}',
+    '{{VERSION_CODE}}',
+    '{{SHA256}}',
+    '{{PUBLISHED_AT_DISPLAY}}',
+  ]) {
     assert.match(html, new RegExp(marker.replace(/[{}]/g, '\\$&')));
   }
   assert.match(release, /signingCertificateSha256/);
+  assert.match(release, /"publishedAt": "{{PUBLISHED_AT}}"/);
+  const publishScript = fs.readFileSync(
+    path.join(root, 'deploy', 'scripts', 'publish-driver-apk.ps1'),
+    'utf8',
+  );
+  assert.match(publishScript, /ToString\('yyyy-MM-ddTHH:mm:sszzz'\)/);
+  assert.match(publishScript, /ToString\('yyyy-MM-dd HH:mm'\)/);
 });
