@@ -12,6 +12,7 @@ import '../../booking/models/location_option.dart';
 import '../../booking/models/service_type_option.dart';
 import '../../../services/api_service.dart';
 import '../../booking/utils/pickup_time_format.dart';
+import '../../booking/utils/booking_contact_preference.dart';
 import '../../booking/utils/thailand_pickup_datetime.dart';
 import '../../booking/widgets/google_places_search_field.dart';
 import '../../booking/widgets/pickup_time_picker_sheet.dart';
@@ -53,6 +54,21 @@ bool _bookingDetailBool(dynamic value) {
   if (value == true || value == 1 || value == '1') return true;
   if (value is String && value.toLowerCase() == 'true') return true;
   return false;
+}
+
+@visibleForTesting
+String normalizeAdminManualPhone(String dialCode, String value) {
+  final trimmed = value.trim();
+  if (trimmed.startsWith('+')) {
+    final international = '+${trimmed.substring(1).replaceAll(RegExp(r'\D'), '')}';
+    return RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(international)
+        ? international
+        : '';
+  }
+  return BookingContactPreference.normalizeInternationalPhone(
+    dialCode,
+    trimmed,
+  );
 }
 
 List<dynamic> _bookingDetailList(dynamic value) {
@@ -110,6 +126,7 @@ class _AdminManualBookingCreatePageState
   final _guestNameController = TextEditingController();
   final _guestPhoneController = TextEditingController();
   final _guestEmailController = TextEditingController();
+  final _messengerIdController = TextEditingController();
   final _memoController = TextEditingController();
   final _nameSignTextController = TextEditingController();
   final _specialItemsTextController = TextEditingController();
@@ -141,6 +158,12 @@ class _AdminManualBookingCreatePageState
   String? _golfRegion;
   int? _golfCourseId;
   bool _driverIncluded = false;
+  String _dispatchMode = 'OPEN';
+  int? _selectedDirectDriverId;
+  String? _messengerType;
+  String _guestPhoneDialCode = '+66';
+  List<Map<String, dynamic>> _directDrivers = const [];
+  bool _loadingDirectDrivers = false;
   List<String> _golfRegions = const [];
   List<Map<String, dynamic>> _golfCourses = const [];
 
@@ -240,6 +263,58 @@ class _AdminManualBookingCreatePageState
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadForEdit());
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGolfRegions());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDirectDrivers());
+  }
+
+  bool _vehicleCodeCompatible(String? driverCode) {
+    if (driverCode == null || driverCode.isEmpty) return false;
+    if (driverCode == _vehicleTypeCode) return true;
+    const tiers = {'SEDAN': 1, 'SUV': 2, 'VAN': 3};
+    final requested = tiers[_vehicleTypeCode];
+    final driver = tiers[driverCode];
+    return requested != null && driver != null && driver >= requested;
+  }
+
+  List<Map<String, dynamic>> get _eligibleDirectDrivers => _directDrivers
+      .where((driver) {
+        final archive = _bookingDetailMap(driver['archive']);
+        final vehicle = _bookingDetailMap(driver['primaryVehicle']);
+        final vehicleCodes = _bookingDetailList(driver['vehicleTypeCodes'])
+            .map((code) => code.toString())
+            .toList(growable: false);
+        return driver['activeState'] == 'ACTIVE'
+            && driver['driverStatus'] != 'SUSPENDED'
+            && driver['assignmentEligible'] == true
+            && archive['isArchived'] != true
+            && (vehicleCodes.any(_vehicleCodeCompatible)
+                || _vehicleCodeCompatible(
+                  _bookingDetailString(vehicle['vehicleTypeCode']),
+                ));
+      })
+      .toList(growable: false);
+
+  Future<void> _loadDirectDrivers() async {
+    if (_isEditMode) return;
+    setState(() => _loadingDirectDrivers = true);
+    try {
+      final rows = await _dispatchApi.listDrivers();
+      if (!mounted) return;
+      setState(() {
+        _directDrivers = rows
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList(growable: false);
+        _loadingDirectDrivers = false;
+        if (!_eligibleDirectDrivers.any(
+          (driver) => _bookingDetailInt(driver['driverId']) == _selectedDirectDriverId,
+        )) {
+          _selectedDirectDriverId = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingDirectDrivers = false);
+    }
   }
 
   Future<void> _loadGolfRegions() async {
@@ -572,6 +647,7 @@ class _AdminManualBookingCreatePageState
     _guestNameController.dispose();
     _guestPhoneController.dispose();
     _guestEmailController.dispose();
+    _messengerIdController.dispose();
     _memoController.dispose();
     _nameSignTextController.dispose();
     _specialItemsTextController.dispose();
@@ -679,10 +755,33 @@ class _AdminManualBookingCreatePageState
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_required'));
       return;
     }
+    final enteredMessengerId = _messengerIdController.text.trim();
+    final hasMessenger = _messengerType != null;
+    final enteredPhone = _guestPhoneController.text.trim();
+    final guestPhone = enteredPhone.isEmpty
+        ? ''
+        : normalizeAdminManualPhone(_guestPhoneDialCode, enteredPhone);
+    final phoneRequired = const {'KAKAO', 'WHATSAPP', 'SMS'}
+        .contains(_messengerType);
+    if ((phoneRequired && guestPhone.isEmpty) ||
+        (enteredPhone.isNotEmpty && guestPhone.isEmpty)) {
+      setState(() => _submitError =
+          context.l10n.t('admin_manual_booking_validation_customer'));
+      return;
+    }
+    final messengerId = const {'WHATSAPP', 'SMS'}.contains(_messengerType)
+        ? guestPhone
+        : enteredMessengerId;
     if (_selectedCustomer == null &&
         (_guestNameController.text.trim().isEmpty ||
-            _guestPhoneController.text.trim().isEmpty)) {
+            (guestPhone.isEmpty && !hasMessenger))) {
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_customer'));
+      return;
+    }
+    if (!_isEditMode &&
+        _dispatchMode == 'DIRECT' &&
+        _selectedDirectDriverId == null) {
+      setState(() => _submitError = context.l10n.t('admin_manual_booking_driver_required'));
       return;
     }
     if (_nameSign && _nameSignTextController.text.trim().isEmpty) {
@@ -709,12 +808,19 @@ class _AdminManualBookingCreatePageState
         'customerChargeAmount': customerCharge,
         'paymentCollection': _paymentCollection,
         'customer': _selectedCustomer != null
-            ? {'customerUserId': _selectedCustomer!.id}
+            ? {
+                'customerUserId': _selectedCustomer!.id,
+                if (hasMessenger) 'messengerType': _messengerType,
+                if (messengerId.isNotEmpty) 'messengerId': messengerId,
+                if (guestPhone.isNotEmpty) 'phone': guestPhone,
+              }
             : {
                 'name': _guestNameController.text.trim(),
-                'phone': _guestPhoneController.text.trim(),
+                'phone': guestPhone.isEmpty ? null : guestPhone,
                 if (_guestEmailController.text.trim().isNotEmpty)
                   'email': _guestEmailController.text.trim(),
+                if (hasMessenger) 'messengerType': _messengerType,
+                if (messengerId.isNotEmpty) 'messengerId': messengerId,
               },
         'memo': _memoController.text.trim().isEmpty
             ? null
@@ -774,6 +880,7 @@ class _AdminManualBookingCreatePageState
           preferFemaleDriver: payload['preferFemaleDriver'] as bool,
           originAirportIata: payload['originAirportIata'] as String?,
           transfer: payload['transfer'] as Map<String, dynamic>?,
+          driverId: _dispatchMode == 'DIRECT' ? _selectedDirectDriverId : null,
         );
       }
       if (!mounted) return;
@@ -812,6 +919,49 @@ class _AdminManualBookingCreatePageState
       customer.phone,
       customer.email,
     ].where((part) => part != null && part.trim().isNotEmpty).join(' · ');
+  }
+
+  Widget _phoneInput(AppLocalizations l10n) {
+    final required = const {'KAKAO', 'WHATSAPP', 'SMS'}
+        .contains(_messengerType);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 105,
+          child: DropdownButtonFormField<String>(
+            key: ValueKey('adminManualPhoneDialCode-$_guestPhoneDialCode'),
+            initialValue: _guestPhoneDialCode,
+            items: const ['+66', '+82', '+81', '+86']
+                .map((code) => DropdownMenuItem(value: code, child: Text(code)))
+                .toList(),
+            onChanged: _submitting
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _guestPhoneDialCode = value);
+                    }
+                  },
+          ),
+        ),
+        const SizedBox(width: AppTokens.spaceSm),
+        Expanded(
+          child: TextFormField(
+            key: const Key('adminManualBookingGuestPhone'),
+            controller: _guestPhoneController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: _messengerType == 'KAKAO'
+                  ? l10n.t('admin_manual_booking_kakao_phone_required')
+                  : required
+                  ? '${l10n.t('field_required')} ${l10n.t('phone')}'
+                  : l10n.t('admin_manual_booking_guest_phone'),
+              hintText: '010-1234-5678',
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -924,6 +1074,75 @@ class _AdminManualBookingCreatePageState
                   ),
                 ),
                 const SizedBox(height: AppTokens.spaceSm),
+              ],
+              if (!_isEditMode) ...[
+                AppUi.surfaceCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.t('admin_manual_booking_dispatch_mode'),
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      RadioListTile<String>(
+                        key: const Key('adminManualDispatchOpen'),
+                        contentPadding: EdgeInsets.zero,
+                        value: 'OPEN',
+                        groupValue: _dispatchMode,
+                        onChanged: _submitting ? null : (value) => setState(() {
+                          _dispatchMode = value ?? 'OPEN';
+                          _selectedDirectDriverId = null;
+                        }),
+                        title: Text(l10n.t('admin_manual_booking_dispatch_open')),
+                      ),
+                      RadioListTile<String>(
+                        key: const Key('adminManualDispatchDirect'),
+                        contentPadding: EdgeInsets.zero,
+                        value: 'DIRECT',
+                        groupValue: _dispatchMode,
+                        onChanged: _submitting ? null : (value) => setState(
+                          () => _dispatchMode = value ?? 'OPEN',
+                        ),
+                        title: Text(l10n.t('admin_manual_booking_dispatch_direct')),
+                      ),
+                      if (_dispatchMode == 'DIRECT') ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        if (_loadingDirectDrivers)
+                          const Center(child: CircularProgressIndicator())
+                        else
+                          DropdownButtonFormField<int>(
+                            key: const Key('adminManualDirectDriver'),
+                            value: _eligibleDirectDrivers.any(
+                              (driver) => _bookingDetailInt(driver['driverId'])
+                                  == _selectedDirectDriverId,
+                            ) ? _selectedDirectDriverId : null,
+                            decoration: InputDecoration(
+                              labelText: l10n.t('admin_manual_booking_driver'),
+                              hintText: l10n.t('admin_manual_booking_driver_hint'),
+                            ),
+                            items: _eligibleDirectDrivers.map((driver) {
+                              final vehicle = _bookingDetailMap(driver['primaryVehicle']);
+                              final name = _bookingDetailString(driver['displayName'])
+                                  ?? '#${driver['driverId']}';
+                              final vehicleCode = _bookingDetailString(
+                                vehicle['vehicleTypeCode'],
+                              );
+                              return DropdownMenuItem<int>(
+                                value: _bookingDetailInt(driver['driverId']),
+                                child: Text(
+                                  vehicleCode == null ? name : '$name · $vehicleCode',
+                                ),
+                              );
+                            }).toList(growable: false),
+                            onChanged: _submitting ? null : (value) => setState(
+                              () => _selectedDirectDriverId = value,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
               ],
               AppUi.surfaceCard(
                 backgroundColor: AppTokens.primaryLight,
@@ -1133,7 +1352,17 @@ class _AdminManualBookingCreatePageState
                           )
                           .toList(growable: false),
                       onChanged: (value) {
-                        if (value != null) setState(() => _vehicleTypeCode = value);
+                        if (value != null) {
+                          setState(() {
+                            _vehicleTypeCode = value;
+                            if (!_eligibleDirectDrivers.any(
+                              (driver) => _bookingDetailInt(driver['driverId'])
+                                  == _selectedDirectDriverId,
+                            )) {
+                              _selectedDirectDriverId = null;
+                            }
+                          });
+                        }
                       },
                     ),
                   ],
@@ -1407,14 +1636,7 @@ class _AdminManualBookingCreatePageState
                         ),
                       ),
                       const SizedBox(height: AppTokens.spaceSm),
-                      TextFormField(
-                        key: const Key('adminManualBookingGuestPhone'),
-                        controller: _guestPhoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: l10n.t('admin_manual_booking_guest_phone'),
-                        ),
-                      ),
+                      _phoneInput(l10n),
                       const SizedBox(height: AppTokens.spaceSm),
                       TextFormField(
                         controller: _guestEmailController,
@@ -1431,6 +1653,67 @@ class _AdminManualBookingCreatePageState
                       TextButton(
                         onPressed: () => setState(() => _selectedCustomer = null),
                         child: Text(l10n.t('admin_manual_booking_clear_customer')),
+                      ),
+                    ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    DropdownButtonFormField<String?>(
+                      key: const Key('adminManualMessengerType'),
+                      value: _messengerType,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('admin_manual_booking_messenger_type'),
+                      ),
+                      items: [
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(l10n.t('admin_manual_booking_messenger_none')),
+                        ),
+                        for (final type in const [
+                          'KAKAO',
+                          'LINE',
+                          'WHATSAPP',
+                          'SMS',
+                        ])
+                          DropdownMenuItem<String?>(
+                            value: type,
+                            child: Text(l10n.t(
+                              'admin_manual_booking_messenger_${type.toLowerCase()}',
+                            )),
+                          ),
+                      ],
+                      onChanged: _submitting ? null : (value) => setState(() {
+                        _messengerType = value;
+                        _guestPhoneDialCode = value == 'KAKAO' ? '+82' : '+66';
+                        if (value == null ||
+                            const {'WHATSAPP', 'SMS'}.contains(value)) {
+                          _messengerIdController.clear();
+                        }
+                      }),
+                    ),
+                    if (_messengerType != null) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      if (_selectedCustomer != null) ...[
+                        _phoneInput(l10n),
+                        const SizedBox(height: AppTokens.spaceSm),
+                      ],
+                      if (const {'KAKAO', 'LINE'}.contains(_messengerType))
+                        TextFormField(
+                        key: const Key('adminManualMessengerId'),
+                        controller: _messengerIdController,
+                        keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          labelText: _messengerType == 'KAKAO'
+                              ? l10n.t('admin_manual_booking_kakao_id_optional')
+                              : l10n.t('admin_manual_booking_messenger_id'),
+                          hintText: l10n.t('admin_manual_booking_messenger_id_hint'),
+                        ),
+                        validator: (value) {
+                          if (_messengerType == null ||
+                              _messengerType == 'KAKAO') return null;
+                          if (value == null || value.trim().isEmpty) {
+                            return l10n.t('admin_manual_booking_validation_required');
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ],
@@ -1470,7 +1753,9 @@ class _AdminManualBookingCreatePageState
                   label: Text(
                     _isEditMode
                         ? l10n.t('admin_manual_booking_update_submit')
-                        : l10n.t('admin_manual_booking_submit'),
+                        : _dispatchMode == 'DIRECT'
+                            ? l10n.t('admin_manual_booking_direct_submit')
+                            : l10n.t('admin_manual_booking_submit'),
                   ),
                 ),
               ),

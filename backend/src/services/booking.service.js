@@ -26,6 +26,9 @@ const {
 const {
   isContactConnectionRequired,
 } = require('../policies/bookingDispatchEligibility.policy');
+const {
+  assertNoPickupTimeConflict,
+} = require('../policies/driverBookingConflictPolicy');
 const CONTACT_STATUS = require('../constants/contactStatus');
 const SERVICE_TYPES = require('../constants/serviceTypes');
 const {
@@ -80,6 +83,7 @@ class BookingService {
     bookingIdempotencyService = null,
     couponService = null,
     mileageService = null,
+    bookingStatusService = null,
   ) {
     this.pool = pool;
     this.bookingRepository = bookingRepository;
@@ -98,6 +102,7 @@ class BookingService {
     this.bookingIdempotencyService = bookingIdempotencyService;
     this.couponService = couponService;
     this.mileageService = mileageService;
+    this.bookingStatusService = bookingStatusService;
   }
 
   buildOpenCallPayload({
@@ -1541,8 +1546,9 @@ class BookingService {
 
     const customerName = customerInput.name?.trim();
     const customerPhone = customerInput.phone?.trim();
-    if (!customerName || !customerPhone) {
-      throw new AppError('Customer name and phone are required for guest bookings', {
+    const messenger = pickPersistableMessengerMetadata(customerInput);
+    if (!customerName || (!customerPhone && !messenger.messengerType)) {
+      throw new AppError('Customer name and a contact method are required for guest bookings', {
         statusCode: HTTP_STATUS.BAD_REQUEST,
         errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
@@ -1553,6 +1559,59 @@ class BookingService {
       customerPhone,
       customerEmail: customerInput.email?.trim() || null,
     };
+  }
+
+  async resolveAdminManualDirectDriver(conn, driverId, vehicleTypeId, scheduledPickupAt) {
+    if (!this.driverRepository || !this.bookingStatusService) {
+      throw new AppError('Direct assignment is unavailable', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+      });
+    }
+    const driver = await this.driverRepository.findByIdForUpdate(conn, driverId);
+    if (!driver) {
+      throw new AppError('Driver not found', {
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        errorCode: ERROR_CODES.DRIVER_NOT_FOUND,
+      });
+    }
+    if (
+      Number(driver.is_active) !== 1
+      || Number(driver.is_archived) === 1
+      || driver.status === 'SUSPENDED'
+    ) {
+      throw new AppError('Driver is not eligible for assignment', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+      });
+    }
+    if (
+      this.commissionSettlementService
+      && await this.commissionSettlementService.driverHasBlockingSettlement(driver.id)
+    ) {
+      throw new AppError('Driver has a blocking settlement', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.DRIVER_NOT_ELIGIBLE,
+      });
+    }
+    const vehicle = await this.driverRepository.findMatchingVehicle(
+      conn,
+      driver.id,
+      vehicleTypeId,
+    );
+    if (!vehicle) {
+      throw new AppError('Driver has no compatible approved vehicle', {
+        statusCode: HTTP_STATUS.CONFLICT,
+        errorCode: ERROR_CODES.DRIVER_VEHICLE_NOT_FOUND,
+      });
+    }
+    const conflictRows = await this.driverRepository.findActiveAssignmentPickupsForConflict(
+      conn,
+      driver.id,
+      null,
+    );
+    assertNoPickupTimeConflict(conflictRows, scheduledPickupAt);
+    return { driver, vehicle };
   }
 
   mapAdminManualCustomerFromFieldsRow(fieldsRow) {
@@ -2018,8 +2077,9 @@ class BookingService {
 
     try {
       await conn.beginTransaction();
-      let outboxId = null;
+      const outboxIds = [];
       let persistedOpenCallNotifications = [];
+      let directAssignment = null;
 
       const bookingNumber = await this.bookingNumberService.generateNext(conn);
       const scheduledPickupAtIso = input.scheduledPickupAt;
@@ -2046,6 +2106,13 @@ class BookingService {
         { payoutAmount, nameSign },
       );
       const metadata = { adminManualPricing: manualPricing };
+      const messengerMetadata = pickPersistableMessengerMetadata(input.customer);
+      if (messengerMetadata.messengerType) {
+        metadata.messengerType = messengerMetadata.messengerType;
+      }
+      if (messengerMetadata.messengerId) {
+        metadata.messengerId = messengerMetadata.messengerId;
+      }
       if (originLocationMetadata) metadata.originLocation = originLocationMetadata;
       if (destinationLocationMetadata) metadata.destinationLocation = destinationLocationMetadata;
 
@@ -2056,7 +2123,7 @@ class BookingService {
       const bookingId = await this.bookingRepository.insertBooking(conn, {
         bookingNumber,
         status: BOOKING_STATUS.OPEN,
-        contactStatus: CONTACT_STATUS.VERIFIED,
+        contactStatus: this.resolveInitialContactStatus(input.customer),
         serviceTypeId: serviceType.id,
         bookingSource: 'ADMIN_MANUAL',
         commissionExempt: manualPricing.commissionExempt,
@@ -2145,6 +2212,51 @@ class BookingService {
         },
       });
 
+      if (input.driverId != null) {
+        const { driver, vehicle } = await this.resolveAdminManualDirectDriver(
+          conn,
+          input.driverId,
+          vehicleType.id,
+          scheduledPickupAt,
+        );
+        const assignmentId = await this.bookingRepository.insertDriverAssignment(conn, {
+          bookingId,
+          driverId: driver.id,
+          driverVehicleId: vehicle.id,
+          assignedByUserId: adminUser.id,
+          assignmentReason: 'ADMIN_MANUAL_DIRECT_ASSIGNMENT',
+        });
+        const transition = await this.bookingStatusService.transitionInTransaction(
+          conn,
+          bookingNumber,
+          {
+            status: BOOKING_STATUS.DRIVER_ASSIGNED,
+            reason: 'ADMIN_MANUAL_DIRECT_ASSIGNMENT',
+          },
+          { id: adminUser.id, role: adminUser.role },
+          { skipAccessCheck: true },
+        );
+        if (transition.outboxId) outboxIds.push(transition.outboxId);
+        await this.bookingRepository.insertActivityLog(conn, bookingId, {
+          activityType: 'DRIVER_ASSIGNED',
+          actorUserId: adminUser.id,
+          actorRole: adminUser.role,
+          description: `Driver ${driver.name} assigned during admin manual booking creation`,
+          payload: {
+            bookingNumber,
+            driverId: driver.id,
+            assignmentId,
+            assignmentReason: 'ADMIN_MANUAL_DIRECT_ASSIGNMENT',
+          },
+        });
+        directAssignment = {
+          assignmentId,
+          driverId: driver.id,
+          driverUserId: driver.user_id,
+          driverName: driver.name,
+        };
+      }
+
       const pricing = {
         routeId: null,
         currency: 'THB',
@@ -2177,11 +2289,13 @@ class BookingService {
         },
       );
 
-      const eligibleDrivers = await this.getEligibleDriversForOpenBooking(
-        conn,
-        vehicleType.id,
-        scheduledPickupAt,
-      );
+      const eligibleDrivers = directAssignment || this.shouldDeferDispatchUntilContactVerified()
+        ? []
+        : await this.getEligibleDriversForOpenBooking(
+            conn,
+            vehicleType.id,
+            scheduledPickupAt,
+          );
       const openCallTargets = this.mapEligibleDriversToTargets(eligibleDrivers);
       persistedOpenCallNotifications = await this.persistOpenCallNotificationsTx(conn, {
         drivers: eligibleDrivers,
@@ -2192,7 +2306,7 @@ class BookingService {
       });
 
       if (this.outboxRepository) {
-        outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
+        const outboxId = await this.outboxRepository.insertNotificationEvent(conn, {
           aggregateId: bookingId,
           eventType: EVENTS.BOOKING_CREATED,
           payload: {
@@ -2203,6 +2317,7 @@ class BookingService {
             customerUserId: customer.customerUserId,
           },
         });
+        if (outboxId) outboxIds.push(outboxId);
       }
 
       const booking = await this.bookingRepository.findById(bookingId, conn);
@@ -2212,8 +2327,8 @@ class BookingService {
       }
 
       this.queuePostCommitTask('admin-manual-booking-notifications', async () => {
-        if (this.outboxProcessor && outboxId) {
-          await this.outboxProcessor.dispatchOutboxIds([outboxId]);
+        if (this.outboxProcessor && outboxIds.length) {
+          await this.outboxProcessor.dispatchOutboxIds(outboxIds);
         }
         await this.deliverPersistedContactNotifications(persistedOpenCallNotifications);
       });
@@ -2245,6 +2360,7 @@ class BookingService {
         payoutAmount,
         customerChargeAmount,
         openCallTargets: openCallTargets.length,
+        directAssignment,
       };
     } catch (err) {
       await conn.rollback();

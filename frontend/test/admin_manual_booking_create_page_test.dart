@@ -73,8 +73,33 @@ class _FakeDispatchApi extends AdminDispatchApiService {
     bool preferFemaleDriver = false,
     String? originAirportIata,
     Map<String, dynamic>? transfer,
+    int? driverId,
   }) {
     return onCreate();
+  }
+
+  @override
+  Future<List<dynamic>> listDrivers({bool? archived, String? bookingNumber}) async {
+    return [
+      {
+        'driverId': 2,
+        'displayName': 'QA Driver',
+        'activeState': 'ACTIVE',
+        'driverStatus': 'OFFLINE',
+        'assignmentEligible': true,
+        'archive': {'isArchived': false},
+        'primaryVehicle': {'vehicleTypeCode': 'SEDAN'},
+      },
+      {
+        'driverId': 14,
+        'displayName': 'Suspended Driver',
+        'activeState': 'ACTIVE',
+        'driverStatus': 'SUSPENDED',
+        'assignmentEligible': false,
+        'archive': {'isArchived': false},
+        'primaryVehicle': {'vehicleTypeCode': 'SEDAN'},
+      },
+    ];
   }
 }
 
@@ -126,10 +151,73 @@ Future<void> _tapSubmit(WidgetTester tester) async {
 }
 
 void main() {
+  test('normalizes domestic admin phone input to E.164', () {
+    expect(
+      normalizeAdminManualPhone('+82', '010-1234-5678'),
+      '+821012345678',
+    );
+    expect(normalizeAdminManualPhone('+66', '081-234-5678'), '+66812345678');
+    expect(
+      normalizeAdminManualPhone('+82', '+821012345678'),
+      '+821012345678',
+    );
+  });
+
   testWidgets('blocks submit when payout amount is missing', (tester) async {
     await _pumpAdminPage(tester);
     await _tapSubmit(tester);
     expect(find.text('필수 항목을 모두 입력해주세요'), findsOneWidget);
+  });
+
+  testWidgets('direct dispatch lists eligible drivers and messenger fields', (
+    tester,
+  ) async {
+    await _pumpAdminPage(tester);
+    final direct = find.byKey(const Key('adminManualDispatchDirect'));
+    await tester.ensureVisible(direct);
+    await tester.tap(direct);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('adminManualDirectDriver')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('adminManualDirectDriver')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.textContaining('QA Driver'), findsWidgets);
+    expect(find.textContaining('Suspended Driver'), findsNothing);
+    await tester.tap(find.textContaining('QA Driver').last);
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final messenger = find.byKey(const Key('adminManualMessengerType'));
+    await tester.scrollUntilVisible(
+      messenger,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(messenger);
+    await tester.pump();
+    await tester.tap(messenger);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('카카오톡').last);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('adminManualMessengerId')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('adminManualPhoneDialCode-+82')),
+      findsOneWidget,
+    );
+    expect(find.text('카카오톡 ID (선택)'), findsOneWidget);
+    expect(find.text('카카오톡 가입 전화번호 (필수)'), findsOneWidget);
+    await tester.tap(messenger);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('WhatsApp').last);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('adminManualMessengerId')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('adminManualPhoneDialCode-+66')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('adminManualBookingGuestPhone')), findsOneWidget);
+    expect(
+      find.text('생성 후 바로 배정', skipOffstage: false),
+      findsOneWidget,
+    );
   });
 
   testWidgets('edit mode tolerates sparse booking detail maps', (tester) async {

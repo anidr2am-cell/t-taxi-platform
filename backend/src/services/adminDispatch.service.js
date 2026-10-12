@@ -310,6 +310,10 @@ class AdminDispatchService {
             modelName: row.primary_vehicle_model,
           }
         : null,
+      vehicleTypeCodes: String(row.active_vehicle_type_codes ?? "")
+        .split(",")
+        .map((code) => code.trim())
+        .filter(Boolean),
       activeAssignmentCount: Number(row.active_assignment_count ?? 0),
       averageRating:
         row.average_rating != null ? Number(row.average_rating) : null,

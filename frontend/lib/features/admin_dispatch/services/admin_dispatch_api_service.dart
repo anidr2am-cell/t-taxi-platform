@@ -502,6 +502,7 @@ class AdminDispatchApiService {
     bool preferFemaleDriver = false,
     String? originAirportIata,
     Map<String, dynamic>? transfer,
+    int? driverId,
   }) async {
     final body = <String, dynamic>{
       'origin': origin,
@@ -524,6 +525,7 @@ class AdminDispatchApiService {
       if (originAirportIata != null && originAirportIata.isNotEmpty)
         'originAirportIata': originAirportIata,
       if (transfer != null) 'transfer': transfer,
+      if (driverId != null) 'driverId': driverId,
     };
     final data = await _request('POST', '/admin/bookings/manual', body: body);
     return Map<String, dynamic>.from(data as Map);

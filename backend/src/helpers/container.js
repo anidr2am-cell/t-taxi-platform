@@ -347,6 +347,7 @@ container.register(
       c.get("bookingIdempotencyService"),
       c.get("couponService"),
       c.get("mileageService"),
+      c.get("bookingStatusService"),
     ),
 );
 container.register(
