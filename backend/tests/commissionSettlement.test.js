@@ -6,6 +6,7 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh
 
 const fs = require('fs');
 const path = require('path');
+process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(require('os').tmpdir(), 'settlement-tests-'));
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');

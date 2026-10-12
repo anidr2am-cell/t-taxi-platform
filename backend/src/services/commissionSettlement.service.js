@@ -781,7 +781,7 @@ class CommissionSettlementService {
         updatedBy: driverUserId,
       });
 
-      metadata.commissionReceiptSubmittedAt = new Date().toISOString();
+      metadata.commissionReceiptSubmittedAt = this.formatDateTime(new Date());
       delete metadata.commissionRejectionReason;
 
       await this.bookingRepository.updateCommissionFields(conn, row.id, {
@@ -989,7 +989,7 @@ class CommissionSettlementService {
       }
 
       const metadata = this.parseMetadata(row.metadata);
-      const approvedAt = new Date().toISOString();
+      const approvedAt = this.formatDateTime(new Date());
       const reviewEntry = {
         action: 'APPROVED',
         approvalMode: APPROVAL_MODES.RECEIPT_VERIFIED,
@@ -1152,7 +1152,7 @@ class CommissionSettlementService {
         });
       }
 
-      const approvedAt = new Date().toISOString();
+      const approvedAt = this.formatDateTime(new Date());
       const reviewEntry = {
         action: 'APPROVED',
         approvalMode: APPROVAL_MODES.MANUAL_WITHOUT_RECEIPT,
@@ -1304,7 +1304,7 @@ class CommissionSettlementService {
           action: 'REJECTED',
           reason,
           reviewedByUserId: user.id,
-          reviewedAt: new Date().toISOString(),
+          reviewedAt: this.formatDateTime(new Date()),
         },
       ];
 

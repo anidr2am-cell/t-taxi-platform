@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../platform_settings/services/platform_settings_api_service.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../driver/utils/driver_money_format.dart';
+import '../../driver/utils/driver_backend_datetime.dart';
 import '../../driver/driver_auth.dart';
 import '../../driver/driver_ux.dart';
 import '../services/driver_settlement_api_service.dart';
@@ -223,7 +224,7 @@ class _DriverSettlementListPageState extends State<DriverSettlementListPage> {
                                       .t('driver_settlement_due')
                                       .replaceAll(
                                         '{date}',
-                                        item['dueAt'] as String,
+                                        formatBackendServiceDateTimeBangkok(item['dueAt']?.toString()) ?? '-',
                                       ),
                                   style: const TextStyle(
                                     color: AppTokens.textSecondary,
@@ -597,7 +598,7 @@ class _DriverSettlementDetailPageState
                         const SizedBox(height: AppTokens.spaceSm),
                         AppUi.summaryRow(
                           label: l10n.t('driver_settlement_due_label'),
-                          value: _detail?['dueAt'] as String,
+                          value: formatBackendServiceDateTimeBangkok(_detail?['dueAt']?.toString()) ?? '-',
                         ),
                       ],
                       const SizedBox(height: AppTokens.spaceSm),

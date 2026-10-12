@@ -4,6 +4,7 @@ process.env.DB_NAME = process.env.DB_NAME || 'ttaxi_test';
 
 const fs = require('fs');
 const path = require('path');
+process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(require('os').tmpdir(), 'settlement-idempotency-tests-'));
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');

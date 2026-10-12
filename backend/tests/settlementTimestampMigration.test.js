@@ -8,5 +8,7 @@ test('settlement timestamp migration is one-time and rollback is inverse', () =>
   const rollback = fs.readFileSync(path.join(__dirname, '..', '..', 'database', 'rollback', '69_settlement_timestamps_bangkok.rollback.sql'), 'utf8');
   assert.match(migration, /DATE_ADD\(commission_paid_at, INTERVAL 7 HOUR\)/);
   assert.match(migration, /69_settlement_timestamps_bangkok/);
-  assert.match(rollback, /DATE_SUB\(commission_paid_at, INTERVAL 7 HOUR\)/);
+  assert.match(rollback, /SET b\.commission_paid_at = s\.original_paid_at/);
+  assert.match(rollback, /b\.commission_paid_at = s\.corrected_paid_at/);
+  assert.match(migration, /START TRANSACTION/);
 });
