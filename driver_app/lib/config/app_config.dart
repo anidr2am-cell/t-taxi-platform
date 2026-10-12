@@ -22,7 +22,7 @@ class AppConfig {
       AppEnvironment.prod => const AppConfig(
         environment: AppEnvironment.prod,
         appName: 'TRide Driver',
-        apiBaseUrl: '',
+        apiBaseUrl: 'https://trider.taxi',
       ),
     };
   }

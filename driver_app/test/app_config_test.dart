@@ -76,11 +76,12 @@ void main() {
     );
   });
 
-  test('PROD remains identified with its API intentionally disabled', () {
+  test('PROD uses the production HTTPS origin without duplicated API paths', () {
     final config = AppConfig.forEnvironment(AppEnvironment.prod);
     expect(config.environment, AppEnvironment.prod);
     expect(config.appName, 'TRide Driver');
-    expect(config.apiBaseUrl, isEmpty);
-    expect(() => config.endpoint('/api/v1/auth/login'), throwsStateError);
+    expect(config.apiBaseUrl, 'https://trider.taxi');
+    expect(config.endpoint('/api/v1/auth/login').toString(),
+        'https://trider.taxi/api/v1/auth/login');
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/time/bangkok_datetime.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/app_localizations_extensions.dart';
@@ -161,13 +162,11 @@ class _SettlementCard extends StatelessWidget {
         item.currency;
     final commissionAmount =
         item.companyCommissionAmount ?? item.commissionAmount;
-    final commissionCurrency =
-        item.companyCommissionCurrency ?? item.currency;
+    final commissionCurrency = item.companyCommissionCurrency ?? item.currency;
     final driverIncomeCurrency =
         item.driverExpectedIncomeCurrency ?? item.currency;
     final nameSignAmount = item.nameSignAmount;
-    final showNameSignNote =
-        nameSignAmount != null && nameSignAmount > 0;
+    final showNameSignNote = nameSignAmount != null && nameSignAmount > 0;
 
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -261,7 +260,7 @@ class _SettlementCard extends StatelessWidget {
                     if (item.dueAt != null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        l10n.dueAtLabel(item.dueAt!),
+                        l10n.dueAtLabel(formatBangkokDateTime(item.dueAt)),
                         key: Key('settlementDueAt-${item.bookingNumber}'),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),

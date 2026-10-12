@@ -6,7 +6,7 @@ import 'package:tride_driver/l10n/app_localizations.dart';
 void main() {
   group('pickupDelayInfo', () {
     test('returns not past when pickup is in the future', () {
-      final now = DateTime(2026, 7, 18, 14, 30);
+      final now = DateTime.parse('2026-07-18T14:30:00+07:00');
       final info = pickupDelayInfo(
         scheduledPickupAt: '2026-07-18T15:00:00+07:00',
         pickupDate: null,
@@ -20,7 +20,7 @@ void main() {
     });
 
     test('returns delay info when pickup time has passed', () {
-      final now = DateTime(2026, 7, 18, 17, 0);
+      final now = DateTime.parse('2026-07-18T17:00:00+07:00');
       final info = pickupDelayInfo(
         scheduledPickupAt: '2026-07-18T14:00:00+07:00',
         pickupDate: null,
@@ -34,7 +34,7 @@ void main() {
     });
 
     test('handles date change across midnight', () {
-      final now = DateTime(2026, 7, 19, 1, 30);
+      final now = DateTime.parse('2026-07-19T01:30:00+07:00');
       final info = pickupDelayInfo(
         scheduledPickupAt: '2026-07-18T23:30:00+07:00',
         pickupDate: null,
@@ -48,7 +48,7 @@ void main() {
     });
 
     test('falls back to pickupDate and pickupTime fields', () {
-      final now = DateTime(2026, 7, 18, 15, 30);
+      final now = DateTime.parse('2026-07-18T15:30:00+07:00');
       final info = pickupDelayInfo(
         scheduledPickupAt: null,
         pickupDate: '2026-07-18',

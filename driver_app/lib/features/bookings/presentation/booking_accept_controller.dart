@@ -143,6 +143,7 @@ class BookingAcceptController {
           expireAuth: true,
         );
       case ApiFailureKind.forbidden:
+      case ApiFailureKind.driverSuspended:
         return BookingAcceptOutcome(
           kind: BookingAcceptOutcomeKind.forbidden,
           error: error,

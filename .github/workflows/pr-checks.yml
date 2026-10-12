@@ -82,6 +82,22 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
 
+  driver-app-test:
+    name: Driver app Flutter tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: driver_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.6"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test
+
   frontend-web-build:
     name: Frontend web build
     runs-on: ubuntu-latest

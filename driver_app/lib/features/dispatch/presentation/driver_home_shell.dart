@@ -61,6 +61,9 @@ class _DriverHomeShellState extends State<DriverHomeShell>
   int _settlementRefreshRequest = 0;
   int _openCallsRefreshRequest = 0;
   int _settlementBadge = 0;
+  bool _statusLoading = true;
+  bool _suspended = false;
+  int _restrictedIndex = 0;
 
   int? get _settlementIndex => widget.settlementApi == null ? null : 2;
   int? get _accountIndex {
@@ -72,8 +75,26 @@ class _DriverHomeShellState extends State<DriverHomeShell>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_initializeAccess());
+  }
+
+  Future<void> _initializeAccess() async {
+    try {
+      final status = await widget.dispatchRepository.getStatus();
+      if (!mounted) return;
+      _suspended = status.status == 'SUSPENDED';
+      if (_suspended) {
+        widget.driverSocket?.disconnect();
+        widget.fcmMessageService?.detachShellNavigator();
+      } else {
+        unawaited(_initializeFcm());
+      }
+    } catch (_) {
+      // Individual screens retain their existing retry and unauthorized handling.
+    } finally {
+      if (mounted) setState(() => _statusLoading = false);
+    }
     unawaited(_refreshSettlementBadge());
-    unawaited(_initializeFcm());
   }
 
   @override
@@ -86,15 +107,7 @@ class _DriverHomeShellState extends State<DriverHomeShell>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(_refreshFcmRegistration());
-    }
-  }
-
-  Future<void> _refreshFcmRegistration() async {
-    try {
-      await widget.fcmTokenService?.registerIfNeeded();
-    } catch (_) {
-      // FCM re-registration on resume must not block the main driver workflow.
+      unawaited(_initializeAccess());
     }
   }
 
@@ -161,6 +174,91 @@ class _DriverHomeShellState extends State<DriverHomeShell>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (_statusLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_suspended) {
+      final pages = <Widget>[
+        if (widget.settlementApi != null)
+          SettlementListPage(
+            api: widget.settlementApi!,
+            onUnauthorized: widget.onUnauthorized,
+            refreshRequest: _settlementRefreshRequest,
+            onChanged: _refreshSettlementBadge,
+          ),
+        if (widget.accountApi != null)
+          AccountPage(
+            accountApi: widget.accountApi!,
+            dispatchRepository: widget.dispatchRepository,
+            localeController: widget.localeController,
+            onUnauthorized: widget.onUnauthorized,
+            onLogout: widget.onLogout,
+            supportContactApi: widget.supportContactApi,
+          ),
+      ];
+      final destinations = <NavigationDestination>[
+        if (widget.settlementApi != null)
+          NavigationDestination(
+            icon: const Icon(Icons.payments_outlined),
+            selectedIcon: const Icon(Icons.payments),
+            label: l10n.tabSettlement,
+          ),
+        if (widget.accountApi != null)
+          NavigationDestination(
+            icon: const Icon(Icons.account_circle_outlined),
+            selectedIcon: const Icon(Icons.account_circle),
+            label: l10n.tabAccount,
+          ),
+      ];
+      return Scaffold(
+        body: Column(
+          children: [
+            Material(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.block,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          l10n.suspendedBanner,
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: pages.isEmpty ? const SizedBox.shrink() : IndexedStack(
+                index: _restrictedIndex.clamp(0, pages.length - 1),
+                children: pages,
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: destinations.length > 1
+            ? NavigationBar(
+                selectedIndex: _restrictedIndex,
+                onDestinationSelected: (value) =>
+                    setState(() => _restrictedIndex = value),
+                destinations: destinations,
+              )
+            : null,
+      );
+    }
     return Scaffold(
       body: Stack(
         children: [
