@@ -2,6 +2,7 @@ enum ApiFailureKind {
   invalidCredentials,
   unauthorized,
   forbidden,
+  driverSuspended,
   notFound,
   standbyTooEarly,
   standbyReferenceTimeMissing,
@@ -55,6 +56,7 @@ class ApiException implements Exception {
     ApiFailureKind.invalidCredentials => '계정 또는 비밀번호를 확인해 주세요.',
     ApiFailureKind.unauthorized => '로그인이 만료되었습니다. 다시 로그인해 주세요.',
     ApiFailureKind.forbidden => '예약을 수락할 수 없습니다. 관리자에게 문의해 주세요.',
+    ApiFailureKind.driverSuspended => '이용이 제한되었습니다. 관리자에게 문의해 주세요.',
     ApiFailureKind.notFound => '예약 정보를 찾을 수 없습니다.',
     ApiFailureKind.standbyTooEarly => '아직 대기 확정 시간이 아닙니다. 대기 가능 시간을 확인해 주세요.',
     ApiFailureKind.standbyReferenceTimeMissing =>

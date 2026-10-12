@@ -59,10 +59,8 @@ class ApiClient {
       return await _requestBytes(
         path: path,
         bearerToken: bearerToken,
-        send: (token) => _httpClient.get(
-          _assetEndpoint(path),
-          headers: _headers(token),
-        ),
+        send: (token) =>
+            _httpClient.get(_assetEndpoint(path), headers: _headers(token)),
       );
     } on ApiException {
       rethrow;
@@ -100,10 +98,8 @@ class ApiClient {
     return _request(
       path: path,
       bearerToken: bearerToken,
-      send: (token) => _httpClient.delete(
-        _endpoint(path),
-        headers: _headers(token),
-      ),
+      send: (token) =>
+          _httpClient.delete(_endpoint(path), headers: _headers(token)),
     );
   }
 
@@ -332,6 +328,14 @@ class ApiClient {
     if (response.statusCode == 401) {
       throw ApiException(
         ApiFailureKind.unauthorized,
+        statusCode: response.statusCode,
+        errorCode: errorCode,
+        errors: errors,
+      );
+    }
+    if (response.statusCode == 403 && errorCode == 'DRIVER_SUSPENDED') {
+      throw ApiException(
+        ApiFailureKind.driverSuspended,
         statusCode: response.statusCode,
         errorCode: errorCode,
         errors: errors,

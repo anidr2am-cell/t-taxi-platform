@@ -40,7 +40,9 @@ class BookingStatus {
   final String raw;
   final BookingStatusCode code;
 
-  @Deprecated('Use localizedLabel(AppLocalizations) from app_localizations_extensions')
+  @Deprecated(
+    'Use localizedLabel(AppLocalizations) from app_localizations_extensions',
+  )
   String get label => raw;
 }
 
@@ -495,6 +497,25 @@ class FlightInfo {
   final int? delayMinutes;
 }
 
+class CustomerContact {
+  const CustomerContact({this.messengerType, this.messengerId, this.phone});
+
+  factory CustomerContact.fromJson(Object? value) {
+    if (value is! Map<String, dynamic>) return const CustomerContact();
+    return CustomerContact(
+      messengerType: _optionalString(value['messengerType'])?.toUpperCase(),
+      messengerId: _optionalString(value['messengerId']),
+      phone: _optionalString(value['phone']),
+    );
+  }
+
+  final String? messengerType;
+  final String? messengerId;
+  final String? phone;
+
+  bool get isEmpty => messengerId == null && phone == null;
+}
+
 class BookingDetail {
   const BookingDetail({
     required this.summary,
@@ -510,6 +531,7 @@ class BookingDetail {
     required this.nameSignPhotoUrl,
     required this.isAdminManualCall,
     required this.requiresBankAccountConfirmation,
+    required this.customerContact,
   });
 
   factory BookingDetail.fromEnvelope(Map<String, dynamic> envelope) {
@@ -538,6 +560,7 @@ class BookingDetail {
       isAdminManualCall: data['isAdminManualCall'] == true,
       requiresBankAccountConfirmation:
           data['requiresBankAccountConfirmation'] == true,
+      customerContact: CustomerContact.fromJson(data['customerContact']),
     );
   }
 
@@ -554,6 +577,7 @@ class BookingDetail {
   final String? nameSignPhotoUrl;
   final bool isAdminManualCall;
   final bool requiresBankAccountConfirmation;
+  final CustomerContact customerContact;
 
   bool get canAccept => summary.canAccept;
 
@@ -571,6 +595,7 @@ class BookingDetail {
     nameSignPhotoUrl: nameSignPhotoUrl,
     isAdminManualCall: isAdminManualCall,
     requiresBankAccountConfirmation: requiresBankAccountConfirmation,
+    customerContact: customerContact,
   );
 
   BookingDetail copyWithNameSignPhotoUrl(String nameSignPhotoUrl) =>
@@ -588,6 +613,7 @@ class BookingDetail {
         nameSignPhotoUrl: nameSignPhotoUrl,
         isAdminManualCall: isAdminManualCall,
         requiresBankAccountConfirmation: requiresBankAccountConfirmation,
+        customerContact: customerContact,
       );
 }
 

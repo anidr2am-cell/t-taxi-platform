@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../../../core/time/bangkok_datetime.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/app_localizations.dart';
@@ -126,10 +127,7 @@ class _SettlementDetailPageState extends State<SettlementDetailPage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _load,
-                        child: Text(l10n.retry),
-                      ),
+                      FilledButton(onPressed: _load, child: Text(l10n.retry)),
                     ],
                   ),
                 ),
@@ -223,7 +221,10 @@ class _SettlementDetailBody extends StatelessWidget {
                     detail.receiptStatus ?? 'NONE',
                   ),
                   if (detail.dueAt != null)
-                    _row(l10n.dueDateLabel, detail.dueAt!),
+                    _row(
+                      l10n.dueDateLabel,
+                      formatBangkokDateTime(detail.dueAt),
+                    ),
                   if (detail.rejectionReason != null)
                     _row(l10n.rejectionReasonLabel, detail.rejectionReason!),
                   if (detail.approvalMode == 'MANUAL_WITHOUT_RECEIPT')

@@ -169,7 +169,7 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Card(
+                  if (_status?.status != 'SUSPENDED') Card(
                     child: SwitchListTile(
                       key: const Key('accountOnlineToggle'),
                       contentPadding: const EdgeInsets.symmetric(
@@ -185,7 +185,7 @@ class _AccountPageState extends State<AccountPage> {
                   const SizedBox(height: 12),
                   _PrimaryVehicleCard(vehicle: _profile!.vehicle),
                   const SizedBox(height: 16),
-                  ListTile(
+                  if (_status?.status != 'SUSPENDED') ListTile(
                     key: const Key('openProfileEdit'),
                     leading: const Icon(Icons.person_outline),
                     title: Text(l10n.editProfile),
@@ -202,7 +202,7 @@ class _AccountPageState extends State<AccountPage> {
                       if (changed == true) await _load();
                     },
                   ),
-                  ListTile(
+                  if (_status?.status != 'SUSPENDED') ListTile(
                     key: const Key('openVehicleList'),
                     leading: const Icon(Icons.directions_car_outlined),
                     title: Text(l10n.manageVehicles),

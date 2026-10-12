@@ -1,9 +1,18 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+}
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
 android {
@@ -53,19 +62,29 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Production signing is intentionally not configured in this PR.
-            // Never fall back to the debug key for a release artifact.
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
 
 gradle.taskGraph.whenReady {
     if (allTasks.any { it.name.contains("ProdRelease", ignoreCase = true) }) {
-        throw GradleException(
-            "Production release signing is not configured. Configure it through the approved secure release process."
-        )
+        if (!keystorePropertiesFile.exists()) {
+            throw GradleException("Production release signing is not configured.")
+        }
     }
 }
 

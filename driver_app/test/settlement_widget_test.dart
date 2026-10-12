@@ -182,7 +182,7 @@ void main() {
     await pumpSettlementList(tester, api);
 
     expect(find.byKey(const Key('settlementStatus-DUE')), findsOneWidget);
-    expect(find.textContaining('마감: 2026-07-30T23:59:00.000+07:00'), findsOneWidget);
+    expect(find.textContaining('마감: 2026-07-30 23:59'), findsOneWidget);
   });
 
   testWidgets('list card shows fallback when payment amounts are missing', (

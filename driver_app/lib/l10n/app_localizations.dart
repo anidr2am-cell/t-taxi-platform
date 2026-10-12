@@ -564,6 +564,28 @@ class AppLocalizations {
       );
   String get commissionFee => _s('수수료', 'ค่าคอมมิชชัน');
   String dueAtLabel(String dueAt) => _s('마감: $dueAt', 'ครบกำหนด: $dueAt');
+  String get errorDriverSuspended =>
+      _s('이용이 제한되었습니다. 관리자에게 문의하세요.', 'การใช้งานถูกระงับ กรุณาติดต่อผู้ดูแล');
+  String get suspendedBanner =>
+      _s('이용이 제한되었습니다. 관리자에게 문의하세요.', 'การใช้งานถูกระงับ กรุณาติดต่อผู้ดูแล');
+  String get customerContactTitle => _s('고객 연락 방법', 'ช่องทางติดต่อลูกค้า');
+  String get contactCopyId => _s('ID 복사', 'คัดลอก ID');
+  String get contactCopied => _s('복사했습니다.', 'คัดลอกแล้ว');
+  String get contactCopyFailed =>
+      _s('복사하지 못했습니다. 길게 눌러 복사해 주세요.', 'คัดลอกไม่สำเร็จ กดค้างเพื่อคัดลอก');
+  String get contactOpenWhatsApp => _s('WhatsApp 열기', 'เปิด WhatsApp');
+  String get contactCall => _s('전화', 'โทร');
+  String get contactSms => _s('문자', 'ข้อความ');
+  String get contactEmergencyPhone =>
+      _s('고객 전화번호(긴급)', 'เบอร์ลูกค้า (ฉุกเฉิน)');
+  String get contactKakaoHelp => _s(
+    '카카오톡이 없으면 관리자에게 고객 연락을 요청하세요.',
+    'หากไม่มี KakaoTalk ให้ขอผู้ดูแลช่วยติดต่อลูกค้า',
+  );
+  String get contactUnavailable =>
+      _s('연락처 정보 없음 — 관리자에게 문의', 'ไม่มีข้อมูลติดต่อ — กรุณาสอบถามผู้ดูแล');
+  String get contactKakao => _s('카카오톡', 'KakaoTalk');
+  String get contactPhoneSms => _s('전화·문자', 'โทร·ข้อความ');
   String get amountUnavailable =>
       _s('금액 정보 없음', 'ไม่มีข้อมูลจำนวนเงิน');
 

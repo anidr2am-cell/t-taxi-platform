@@ -16,6 +16,7 @@ import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
 import 'booking_meeting_gate.dart';
 import 'booking_status_label.dart';
+import 'customer_contact_card.dart';
 import 'pickup_schedule.dart';
 import 'release_assignment_actions.dart';
 import 'release_assignment_ui.dart';
@@ -34,18 +35,18 @@ enum _TripAction {
   final String serverAction;
 
   String label(AppLocalizations l10n) => switch (this) {
-        _TripAction.startRoute => l10n.tripActionStartRouteLabel,
-        _TripAction.arrive => l10n.tripActionArriveLabel,
-        _TripAction.pickedUp => l10n.tripActionPickedUpLabel,
-        _TripAction.endTrip => l10n.tripActionEndTripLabel,
-      };
+    _TripAction.startRoute => l10n.tripActionStartRouteLabel,
+    _TripAction.arrive => l10n.tripActionArriveLabel,
+    _TripAction.pickedUp => l10n.tripActionPickedUpLabel,
+    _TripAction.endTrip => l10n.tripActionEndTripLabel,
+  };
 
   String confirmMessage(AppLocalizations l10n) => switch (this) {
-        _TripAction.startRoute => l10n.tripActionStartRouteConfirm,
-        _TripAction.arrive => l10n.tripActionArriveConfirm,
-        _TripAction.pickedUp => l10n.tripActionPickedUpConfirm,
-        _TripAction.endTrip => l10n.tripActionEndTripConfirm,
-      };
+    _TripAction.startRoute => l10n.tripActionStartRouteConfirm,
+    _TripAction.arrive => l10n.tripActionArriveConfirm,
+    _TripAction.pickedUp => l10n.tripActionPickedUpConfirm,
+    _TripAction.endTrip => l10n.tripActionEndTripConfirm,
+  };
 }
 
 class BookingDetailScreen extends StatefulWidget {
@@ -681,8 +682,9 @@ class _DetailBody extends StatelessWidget {
             key: const Key('pickupDelayBanner'),
             content: Text(message),
             leading: const Icon(Icons.info_outline),
-            backgroundColor:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest,
             actions: const [SizedBox.shrink()],
           ),
         Row(
@@ -846,10 +848,14 @@ class _DetailBody extends StatelessWidget {
             ),
           ],
         ),
+        CustomerContactCard(contact: detail.customerContact),
         _Section(
           title: l10n.sectionCustomerAndPassengers,
           children: [
-            _Info(label: l10n.labelCustomerName, value: booking.customerDisplayName),
+            _Info(
+              label: l10n.labelCustomerName,
+              value: booking.customerDisplayName,
+            ),
             _Info(
               label: l10n.labelTotalPassengers,
               value: booking.passengerCount == null
@@ -886,7 +892,10 @@ class _DetailBody extends StatelessWidget {
                   ? null
                   : l10n.delayMinutes(flight.delayMinutes!),
             ),
-            _Info(label: l10n.labelVehicle, value: vehicle.isEmpty ? null : vehicle),
+            _Info(
+              label: l10n.labelVehicle,
+              value: vehicle.isEmpty ? null : vehicle,
+            ),
           ],
         ),
         _Section(

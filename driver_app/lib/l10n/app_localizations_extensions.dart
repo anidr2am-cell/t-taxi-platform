@@ -10,6 +10,7 @@ extension ApiExceptionLocalization on ApiException {
         ApiFailureKind.invalidCredentials => l10n.errorInvalidCredentials,
         ApiFailureKind.unauthorized => l10n.errorUnauthorized,
         ApiFailureKind.forbidden => l10n.errorForbidden,
+        ApiFailureKind.driverSuspended => l10n.errorDriverSuspended,
         ApiFailureKind.notFound => l10n.errorNotFound,
         ApiFailureKind.standbyTooEarly => l10n.errorStandbyTooEarly,
         ApiFailureKind.standbyReferenceTimeMissing =>
