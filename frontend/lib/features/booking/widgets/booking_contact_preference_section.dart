@@ -207,6 +207,7 @@ class _BookingContactPreferenceSectionState
                     helperText: isKakao
                         ? l10n.t('booking_contact_kakao_phone_help')
                         : null,
+                    helperMaxLines: isKakao ? 3 : null,
                   ),
                   onChanged: widget.onPhoneChanged,
                 ),

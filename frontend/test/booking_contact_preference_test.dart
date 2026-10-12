@@ -45,15 +45,17 @@ class _ContactHarnessState extends State<_ContactHarness> {
   }
 }
 
-Widget _app(Widget child) => MaterialApp(
-  locale: const Locale('ko'),
+Widget _app(Widget child, {String languageCode = 'ko'}) => MaterialApp(
+  locale: Locale(languageCode),
   localizationsDelegates: [
-    AppLocalizationsDelegate('ko'),
+    AppLocalizationsDelegate(languageCode),
     GlobalMaterialLocalizations.delegate,
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
-  supportedLocales: const [Locale('ko')],
+  supportedLocales: AppLocalizations.supportedLanguages
+      .map(Locale.new)
+      .toList(),
   home: Scaffold(body: child),
 );
 
@@ -187,6 +189,31 @@ void main() {
     expect(find.text('LOGIN_ACTION'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  for (final languageCode in AppLocalizations.supportedLanguages) {
+    testWidgets(
+      'Kakao phone guidance wraps without overflow at 375px in $languageCode',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(375, 812));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          _app(const _ContactHarness(), languageCode: languageCode),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = AppLocalizations(languageCode);
+        final helper = find.text(l10n.t('booking_contact_kakao_phone_help'));
+        expect(helper, findsOneWidget);
+        await tester.ensureVisible(helper);
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        final field = tester.widget<TextField>(
+          find.byKey(const ValueKey('booking-contact-phone')),
+        );
+        expect(field.decoration?.helperMaxLines, 3);
+      },
+    );
+  }
 
   test('Kakao contact requires a phone and keeps its ID optional', () async {
     final controller = await buildContractAirportPickupController();
