@@ -101,9 +101,16 @@ class AdminOperationsService {
     const archivedRaw =
       query.archived ?? query.archivedOnly ?? query.archived_only;
 
+    const search = query.search?.trim() || null;
+    const normalizedExactBookingNumber = search?.toUpperCase() ?? null;
+
     return {
       view,
-      search: query.search?.trim() || null,
+      search,
+      exactBookingNumber:
+        normalizedExactBookingNumber && /^TX\d{12}$/.test(normalizedExactBookingNumber)
+          ? normalizedExactBookingNumber
+          : null,
       status: query.status || null,
       driverId: query.driverId ? Number(query.driverId) : null,
       assignmentState: query.assignmentState || null,
@@ -261,6 +268,9 @@ class AdminOperationsService {
     filters = this.applyDateQuery(filters, query);
     filters.view = view;
     filters.adminUserId = adminUserId;
+    if (filters.exactBookingNumber) {
+      return filters;
+    }
     filters = this.applyUnassignedDefinition(filters);
     return this.applyUnassignedDefinition(
       this.applyViewDefaults(filters, view),

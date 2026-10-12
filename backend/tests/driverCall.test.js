@@ -580,6 +580,45 @@ test('buildOpenCallPayload includes structured locations from metadata', () => {
   assert.equal(payload.destination, 'Pattaya Beach Road');
 });
 
+test('new and reopened open-call payloads share UTC ISO pickup contract', () => {
+  const service = new BookingService(
+    null,
+    {},
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  );
+  const payload = service.buildOpenCallPayload({
+    bookingNumber: 'TX202607130001',
+    scheduledPickupAt: '2026-07-13 10:30:00',
+    originAddress: 'BKK Airport',
+    destinationAddress: 'Pattaya',
+    serviceType: { code: 'AIRPORT_PICKUP', name: 'Airport pickup' },
+    vehicleType: { code: 'SEDAN', name: 'Sedan' },
+    pricing: { totalAmount: 1000, currency: 'THB' },
+    luggage: {},
+  });
+  const { service: driverCallService } = createHarness();
+  const reopened = driverCallService.mapOpenCall(openCallRow({
+    scheduled_pickup_at: '2026-07-13 10:30:00',
+  }));
+
+  assert.equal(payload.scheduledPickupAt, '2026-07-13T03:30:00.000Z');
+  assert.equal(reopened.scheduledPickupAt, payload.scheduledPickupAt);
+  assert.equal(
+    new Date(payload.scheduledPickupAt).toISOString(),
+    '2026-07-13T03:30:00.000Z',
+  );
+});
+
 test('buildOpenCallPayload includes nameTh from metadata', () => {
   const service = new BookingService(
     null,

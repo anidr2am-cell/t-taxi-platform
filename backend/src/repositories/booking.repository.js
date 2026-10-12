@@ -1835,6 +1835,12 @@ class BookingRepository {
     const where = ['b.deleted_at IS NULL'];
     const params = [];
 
+    if (filters.exactBookingNumber) {
+      where.push('b.booking_number = ?');
+      params.push(filters.exactBookingNumber);
+      return { whereSql: where.join(' AND '), params };
+    }
+
     if (filters.archivedOnly) {
       where.push('b.is_archived = 1');
     } else if (!filters.includeArchived) {

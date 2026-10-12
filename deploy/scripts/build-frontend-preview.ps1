@@ -8,8 +8,31 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-if ($ApiBaseUrl -match '^https?://(localhost|127\.0\.0\.1)(:|/|$)') {
-  throw 'Preview API_BASE_URL must not point to localhost.'
+function Assert-PreviewOriginUrl {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Value
+  )
+
+  $parsed = $null
+  if (-not [Uri]::TryCreate($Value, [UriKind]::Absolute, [ref]$parsed) -or
+      ($parsed.Scheme -ne 'http' -and $parsed.Scheme -ne 'https')) {
+    throw "Preview $Name must be an absolute http(s) origin URL."
+  }
+  if ($parsed.AbsolutePath -ne '/' -or $parsed.Query -or $parsed.Fragment -or $parsed.UserInfo) {
+    throw "Preview $Name must contain only scheme, host, and optional port; paths such as /api are not allowed."
+  }
+  if ($parsed.Host -in @('localhost', '127.0.0.1', '::1')) {
+    throw "Preview $Name must not point to localhost."
+  }
+}
+
+Assert-PreviewOriginUrl -Name 'API_BASE_URL' -Value $ApiBaseUrl
+if (-not [string]::IsNullOrWhiteSpace($SocketUrl)) {
+  Assert-PreviewOriginUrl -Name 'SOCKET_URL' -Value $SocketUrl
 }
 
 $frontendDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..\frontend')).Path
