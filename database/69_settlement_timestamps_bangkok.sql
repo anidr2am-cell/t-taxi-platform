@@ -22,12 +22,25 @@ INSERT IGNORE INTO migration_69_settlement_paid_backup
 SELECT id, commission_paid_at, DATE_ADD(commission_paid_at, INTERVAL 7 HOUR)
 FROM bookings
 WHERE commission_paid_at IS NOT NULL AND @settlement_ts_v2_done = 0
-  -- Shift only values whose UTC origin is corroborated by the approval instant.
-  -- Legacy imports without that evidence must be reviewed separately.
-  AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.commissionApprovedAt')) REGEXP 'Z$'
-  AND ABS(TIMESTAMPDIFF(SECOND, commission_paid_at,
-    STR_TO_DATE(LEFT(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(metadata,
-      '$.commissionApprovedAt')), 'T', ' '), 19), '%Y-%m-%d %H:%i:%s'))) <= 2;
+  AND (
+    -- 47 rows have a matching UTC approval instant in metadata.
+    (
+      JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.commissionApprovedAt')) REGEXP 'Z$'
+      AND ABS(TIMESTAMPDIFF(SECOND, commission_paid_at,
+        STR_TO_DATE(LEFT(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(metadata,
+          '$.commissionApprovedAt')), 'T', ' '), 19), '%Y-%m-%d %H:%i:%s'))) <= 2
+    )
+    -- These five receipt-approved rows predate approval metadata. Their paid
+    -- timestamps are exactly seven hours before completion, matching the old
+    -- UTC writer against the Asia/Bangkok completion timestamp.
+    OR booking_number IN (
+      'TX202607090005',
+      'TX202607110002',
+      'TX202607110003',
+      'TX202607120002',
+      'TX202607130002'
+    )
+  );
 
 SET @settlement_ts_v2_sql = IF(
   @settlement_ts_v2_done = 0,
