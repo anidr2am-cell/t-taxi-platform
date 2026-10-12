@@ -5,6 +5,7 @@ import '../../../theme/app_tokens.dart';
 import '../../../utils/user_facing_error.dart';
 import '../../../widgets/app_ui.dart';
 import '../../settlement/utils/settlement_receipt.dart';
+import '../../driver/utils/driver_backend_datetime.dart';
 import '../services/admin_settlement_api_service.dart';
 import '../utils/admin_settlement_test_data_filter.dart';
 
@@ -166,17 +167,18 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                                     ),
                                     const SizedBox(height: 2),
                                     _AdminSettlementRouteSummary(
-                                      origin: _adminSettlementRouteEndpointFromItem(
-                                        item['origin'],
-                                      ),
+                                      origin:
+                                          _adminSettlementRouteEndpointFromItem(
+                                            item['origin'],
+                                          ),
                                       destination:
                                           _adminSettlementRouteEndpointFromItem(
-                                        item['destination'],
-                                      ),
+                                            item['destination'],
+                                          ),
                                     ),
                                     if (item['dueAt'] != null)
                                       Text(
-                                        'Due: ${item['dueAt']}',
+                                        'Due: ${formatBackendServiceDateTimeBangkok(item['dueAt']?.toString()) ?? '-'}',
                                         style: const TextStyle(
                                           color: AppTokens.textMuted,
                                           fontSize: 12,
@@ -546,7 +548,9 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                         style: const TextStyle(fontSize: 18),
                       ),
                       if (_detail?['dueAt'] != null)
-                        Text('Due: ${_detail?['dueAt']}'),
+                        Text(
+                          'Due: ${formatBackendServiceDateTimeBangkok(_detail?['dueAt']?.toString()) ?? '-'}',
+                        ),
                       const SizedBox(height: AppTokens.spaceSm),
                       _AdminSettlementRouteLine(
                         label: context.l10n.t('origin'),
@@ -606,7 +610,11 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                         if (approval['approvedAt'] != null)
                           AppUi.summaryRow(
                             label: _settlementText(context, 'approved_at'),
-                            value: '${approval['approvedAt']}',
+                            value:
+                                formatBackendServiceDateTimeBangkok(
+                                  approval['approvedAt']?.toString(),
+                                ) ??
+                                '-',
                           ),
                         if ((approval['note'] as String?)?.isNotEmpty == true)
                           AppUi.summaryRow(
@@ -734,8 +742,7 @@ List<InlineSpan> _adminSettlementRouteEndpointValueSpans(
   if (name == null) {
     return [TextSpan(text: address ?? '-')];
   }
-  final showAddress =
-      address != null && address.isNotEmpty && address != name;
+  final showAddress = address != null && address.isNotEmpty && address != name;
   return [
     TextSpan(
       text: name,
