@@ -110,6 +110,7 @@ class _AdminManualBookingCreatePageState
   final _guestNameController = TextEditingController();
   final _guestPhoneController = TextEditingController();
   final _guestEmailController = TextEditingController();
+  final _messengerIdController = TextEditingController();
   final _memoController = TextEditingController();
   final _nameSignTextController = TextEditingController();
   final _specialItemsTextController = TextEditingController();
@@ -141,6 +142,11 @@ class _AdminManualBookingCreatePageState
   String? _golfRegion;
   int? _golfCourseId;
   bool _driverIncluded = false;
+  String _dispatchMode = 'OPEN';
+  int? _selectedDirectDriverId;
+  String? _messengerType;
+  List<Map<String, dynamic>> _directDrivers = const [];
+  bool _loadingDirectDrivers = false;
   List<String> _golfRegions = const [];
   List<Map<String, dynamic>> _golfCourses = const [];
 
@@ -240,6 +246,58 @@ class _AdminManualBookingCreatePageState
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadForEdit());
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGolfRegions());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDirectDrivers());
+  }
+
+  bool _vehicleCodeCompatible(String? driverCode) {
+    if (driverCode == null || driverCode.isEmpty) return false;
+    if (driverCode == _vehicleTypeCode) return true;
+    const tiers = {'SEDAN': 1, 'SUV': 2, 'VAN': 3};
+    final requested = tiers[_vehicleTypeCode];
+    final driver = tiers[driverCode];
+    return requested != null && driver != null && driver >= requested;
+  }
+
+  List<Map<String, dynamic>> get _eligibleDirectDrivers => _directDrivers
+      .where((driver) {
+        final archive = _bookingDetailMap(driver['archive']);
+        final vehicle = _bookingDetailMap(driver['primaryVehicle']);
+        final vehicleCodes = _bookingDetailList(driver['vehicleTypeCodes'])
+            .map((code) => code.toString())
+            .toList(growable: false);
+        return driver['activeState'] == 'ACTIVE'
+            && driver['driverStatus'] != 'SUSPENDED'
+            && driver['assignmentEligible'] == true
+            && archive['isArchived'] != true
+            && (vehicleCodes.any(_vehicleCodeCompatible)
+                || _vehicleCodeCompatible(
+                  _bookingDetailString(vehicle['vehicleTypeCode']),
+                ));
+      })
+      .toList(growable: false);
+
+  Future<void> _loadDirectDrivers() async {
+    if (_isEditMode) return;
+    setState(() => _loadingDirectDrivers = true);
+    try {
+      final rows = await _dispatchApi.listDrivers();
+      if (!mounted) return;
+      setState(() {
+        _directDrivers = rows
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList(growable: false);
+        _loadingDirectDrivers = false;
+        if (!_eligibleDirectDrivers.any(
+          (driver) => _bookingDetailInt(driver['driverId']) == _selectedDirectDriverId,
+        )) {
+          _selectedDirectDriverId = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingDirectDrivers = false);
+    }
   }
 
   Future<void> _loadGolfRegions() async {
@@ -572,6 +630,7 @@ class _AdminManualBookingCreatePageState
     _guestNameController.dispose();
     _guestPhoneController.dispose();
     _guestEmailController.dispose();
+    _messengerIdController.dispose();
     _memoController.dispose();
     _nameSignTextController.dispose();
     _specialItemsTextController.dispose();
@@ -679,10 +738,18 @@ class _AdminManualBookingCreatePageState
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_required'));
       return;
     }
+    final hasMessenger = _messengerType != null
+        && _messengerIdController.text.trim().isNotEmpty;
     if (_selectedCustomer == null &&
         (_guestNameController.text.trim().isEmpty ||
-            _guestPhoneController.text.trim().isEmpty)) {
+            (_guestPhoneController.text.trim().isEmpty && !hasMessenger))) {
       setState(() => _submitError = context.l10n.t('admin_manual_booking_validation_customer'));
+      return;
+    }
+    if (!_isEditMode &&
+        _dispatchMode == 'DIRECT' &&
+        _selectedDirectDriverId == null) {
+      setState(() => _submitError = context.l10n.t('admin_manual_booking_driver_required'));
       return;
     }
     if (_nameSign && _nameSignTextController.text.trim().isEmpty) {
@@ -709,12 +776,20 @@ class _AdminManualBookingCreatePageState
         'customerChargeAmount': customerCharge,
         'paymentCollection': _paymentCollection,
         'customer': _selectedCustomer != null
-            ? {'customerUserId': _selectedCustomer!.id}
+            ? {
+                'customerUserId': _selectedCustomer!.id,
+                if (hasMessenger) 'messengerType': _messengerType,
+                if (hasMessenger) 'messengerId': _messengerIdController.text.trim(),
+              }
             : {
                 'name': _guestNameController.text.trim(),
-                'phone': _guestPhoneController.text.trim(),
+                'phone': _guestPhoneController.text.trim().isEmpty
+                    ? null
+                    : _guestPhoneController.text.trim(),
                 if (_guestEmailController.text.trim().isNotEmpty)
                   'email': _guestEmailController.text.trim(),
+                if (hasMessenger) 'messengerType': _messengerType,
+                if (hasMessenger) 'messengerId': _messengerIdController.text.trim(),
               },
         'memo': _memoController.text.trim().isEmpty
             ? null
@@ -774,6 +849,7 @@ class _AdminManualBookingCreatePageState
           preferFemaleDriver: payload['preferFemaleDriver'] as bool,
           originAirportIata: payload['originAirportIata'] as String?,
           transfer: payload['transfer'] as Map<String, dynamic>?,
+          driverId: _dispatchMode == 'DIRECT' ? _selectedDirectDriverId : null,
         );
       }
       if (!mounted) return;
@@ -924,6 +1000,75 @@ class _AdminManualBookingCreatePageState
                   ),
                 ),
                 const SizedBox(height: AppTokens.spaceSm),
+              ],
+              if (!_isEditMode) ...[
+                AppUi.surfaceCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.t('admin_manual_booking_dispatch_mode'),
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      RadioListTile<String>(
+                        key: const Key('adminManualDispatchOpen'),
+                        contentPadding: EdgeInsets.zero,
+                        value: 'OPEN',
+                        groupValue: _dispatchMode,
+                        onChanged: _submitting ? null : (value) => setState(() {
+                          _dispatchMode = value ?? 'OPEN';
+                          _selectedDirectDriverId = null;
+                        }),
+                        title: Text(l10n.t('admin_manual_booking_dispatch_open')),
+                      ),
+                      RadioListTile<String>(
+                        key: const Key('adminManualDispatchDirect'),
+                        contentPadding: EdgeInsets.zero,
+                        value: 'DIRECT',
+                        groupValue: _dispatchMode,
+                        onChanged: _submitting ? null : (value) => setState(
+                          () => _dispatchMode = value ?? 'OPEN',
+                        ),
+                        title: Text(l10n.t('admin_manual_booking_dispatch_direct')),
+                      ),
+                      if (_dispatchMode == 'DIRECT') ...[
+                        const SizedBox(height: AppTokens.spaceSm),
+                        if (_loadingDirectDrivers)
+                          const Center(child: CircularProgressIndicator())
+                        else
+                          DropdownButtonFormField<int>(
+                            key: const Key('adminManualDirectDriver'),
+                            value: _eligibleDirectDrivers.any(
+                              (driver) => _bookingDetailInt(driver['driverId'])
+                                  == _selectedDirectDriverId,
+                            ) ? _selectedDirectDriverId : null,
+                            decoration: InputDecoration(
+                              labelText: l10n.t('admin_manual_booking_driver'),
+                              hintText: l10n.t('admin_manual_booking_driver_hint'),
+                            ),
+                            items: _eligibleDirectDrivers.map((driver) {
+                              final vehicle = _bookingDetailMap(driver['primaryVehicle']);
+                              final name = _bookingDetailString(driver['displayName'])
+                                  ?? '#${driver['driverId']}';
+                              final vehicleCode = _bookingDetailString(
+                                vehicle['vehicleTypeCode'],
+                              );
+                              return DropdownMenuItem<int>(
+                                value: _bookingDetailInt(driver['driverId']),
+                                child: Text(
+                                  vehicleCode == null ? name : '$name · $vehicleCode',
+                                ),
+                              );
+                            }).toList(growable: false),
+                            onChanged: _submitting ? null : (value) => setState(
+                              () => _selectedDirectDriverId = value,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppTokens.spaceMd),
               ],
               AppUi.surfaceCard(
                 backgroundColor: AppTokens.primaryLight,
@@ -1133,7 +1278,17 @@ class _AdminManualBookingCreatePageState
                           )
                           .toList(growable: false),
                       onChanged: (value) {
-                        if (value != null) setState(() => _vehicleTypeCode = value);
+                        if (value != null) {
+                          setState(() {
+                            _vehicleTypeCode = value;
+                            if (!_eligibleDirectDrivers.any(
+                              (driver) => _bookingDetailInt(driver['driverId'])
+                                  == _selectedDirectDriverId,
+                            )) {
+                              _selectedDirectDriverId = null;
+                            }
+                          });
+                        }
                       },
                     ),
                   ],
@@ -1433,6 +1588,57 @@ class _AdminManualBookingCreatePageState
                         child: Text(l10n.t('admin_manual_booking_clear_customer')),
                       ),
                     ],
+                    const SizedBox(height: AppTokens.spaceMd),
+                    DropdownButtonFormField<String?>(
+                      key: const Key('adminManualMessengerType'),
+                      value: _messengerType,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('admin_manual_booking_messenger_type'),
+                      ),
+                      items: [
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(l10n.t('admin_manual_booking_messenger_none')),
+                        ),
+                        for (final type in const [
+                          'KAKAO',
+                          'LINE',
+                          'WHATSAPP',
+                          'SMS',
+                        ])
+                          DropdownMenuItem<String?>(
+                            value: type,
+                            child: Text(l10n.t(
+                              'admin_manual_booking_messenger_${type.toLowerCase()}',
+                            )),
+                          ),
+                      ],
+                      onChanged: _submitting ? null : (value) => setState(() {
+                        _messengerType = value;
+                        if (value == null) _messengerIdController.clear();
+                      }),
+                    ),
+                    if (_messengerType != null) ...[
+                      const SizedBox(height: AppTokens.spaceSm),
+                      TextFormField(
+                        key: const Key('adminManualMessengerId'),
+                        controller: _messengerIdController,
+                        keyboardType: const {'WHATSAPP', 'SMS'}.contains(_messengerType)
+                            ? TextInputType.phone
+                            : TextInputType.text,
+                        decoration: InputDecoration(
+                          labelText: l10n.t('admin_manual_booking_messenger_id'),
+                          hintText: l10n.t('admin_manual_booking_messenger_id_hint'),
+                        ),
+                        validator: (value) {
+                          if (_messengerType == null) return null;
+                          if (value == null || value.trim().isEmpty) {
+                            return l10n.t('admin_manual_booking_validation_required');
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1470,7 +1676,9 @@ class _AdminManualBookingCreatePageState
                   label: Text(
                     _isEditMode
                         ? l10n.t('admin_manual_booking_update_submit')
-                        : l10n.t('admin_manual_booking_submit'),
+                        : _dispatchMode == 'DIRECT'
+                            ? l10n.t('admin_manual_booking_direct_submit')
+                            : l10n.t('admin_manual_booking_submit'),
                   ),
                 ),
               ),

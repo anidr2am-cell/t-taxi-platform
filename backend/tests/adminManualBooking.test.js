@@ -14,6 +14,7 @@ const BOOKING_STATUS = require('../src/constants/reservationStatus');
 const NOTIFICATION_TYPES = require('../src/constants/notificationTypes');
 const { EVENTS } = require('../src/events');
 const { driverUserRoom, setRealtimeIo } = require('../src/socket/realtime');
+const { adminManualBookingCreateSchema } = require('../src/validators/admin.validator');
 
 const ADMIN = { id: 1, role: 'ADMIN' };
 
@@ -44,6 +45,8 @@ function createHarness({
     socket: [],
     outbox: [],
     dispatchedOutboxIds: [],
+    assignments: [],
+    statusTransitions: [],
     commits: 0,
     rollbacks: 0,
   };
@@ -125,11 +128,15 @@ function createHarness({
     },
     async insertStatusLog() {},
     async insertActivityLog() {},
+    async insertDriverAssignment(_conn, row) {
+      calls.assignments.push(row);
+      return 77;
+    },
     async findById() {
       return {
         id: 10,
         booking_number: 'TX202607130001',
-        status: BOOKING_STATUS.OPEN,
+        status: calls.assignments.length ? BOOKING_STATUS.DRIVER_ASSIGNED : BOOKING_STATUS.OPEN,
         payment_status: calls.booking?.paymentMethod === 'ADMIN_COLLECTED' ? 'PAID' : 'UNPAID',
         total_amount: calls.chargeItems[0]?.amount ?? 0,
         currency: 'THB',
@@ -231,6 +238,16 @@ function createHarness({
       async listEligibleForOpenBooking() {
         return [{ id: 7, user_id: 42 }];
       },
+      async findByIdForUpdate(_conn, id) {
+        if (id === 98) return { id, user_id: 198, name: 'Suspended', is_active: 1, is_archived: 0, status: 'SUSPENDED' };
+        return { id, user_id: 142, name: 'Direct Driver', is_active: 1, is_archived: 0, status: 'OFFLINE' };
+      },
+      async findMatchingVehicle(_conn, id) {
+        return id === 97 ? null : { id: 501 };
+      },
+      async findActiveAssignmentPickupsForConflict(_conn, id) {
+        return id === 96 ? [{ id: 99, scheduled_pickup_at: '2026-12-01T02:00:00.000Z' }] : [];
+      },
     },
     () => ({
       buildDirectNotificationSpec(notification) {
@@ -248,11 +265,20 @@ function createHarness({
         if (deliveryBlocker) await deliveryBlocker;
       },
     }),
-    null,
+    {
+      async driverHasBlockingSettlement(id) { return id === 95; },
+    },
     null,
     null,
     null,
     { couponRepository },
+    null,
+    {
+      async transitionInTransaction(_conn, bookingNumber, input) {
+        calls.statusTransitions.push({ bookingNumber, ...input });
+        return { outboxId: 31 };
+      },
+    },
   );
 
   setRealtimeIo({
@@ -300,7 +326,7 @@ test('createAdminManualBooking links member, marks commission exempt, and broadc
     assert.equal(calls.booking.commissionExempt, true);
     assert.equal(calls.booking.customerUserId, 55);
     assert.equal(calls.booking.customerName, 'Member Kim');
-    assert.equal(calls.booking.contactStatus, 'VERIFIED');
+    assert.equal(calls.booking.contactStatus, 'PENDING');
     assert.equal(calls.booking.paymentMethod, 'PAY_DRIVER');
     assert.equal(calls.chargeItems[0].amount, 800);
     assert.equal(result.bookingNumber, 'TX202607130001');
@@ -348,6 +374,91 @@ test('createAdminManualBooking responds without waiting for push delivery', asyn
     setRealtimeIo(null);
     restoreContainer();
   }
+});
+
+test('createAdminManualBooking directly assigns one driver without public call notifications', async () => {
+  const { service, calls, input, restoreContainer } = createHarness();
+  input.driverId = 42;
+  input.customer = {
+    name: 'QA Direct',
+    phone: null,
+    messengerType: 'KakaoTalk',
+    messengerId: 'qa-direct-kakao',
+  };
+  try {
+    const result = await service.createAdminManualBooking(input, ADMIN);
+    await flushPostCommitTasks();
+
+    assert.equal(calls.booking.contactStatus, 'PENDING');
+    assert.equal(calls.booking.metadata.messengerType, 'KAKAO');
+    assert.equal(calls.booking.metadata.messengerId, 'qa-direct-kakao');
+    assert.equal(calls.assignments.length, 1);
+    assert.equal(calls.assignments[0].driverId, 42);
+    assert.equal(calls.statusTransitions[0].status, BOOKING_STATUS.DRIVER_ASSIGNED);
+    assert.equal(calls.notifications.length, 0);
+    assert.equal(calls.socket.length, 0);
+    assert.equal(result.status, BOOKING_STATUS.DRIVER_ASSIGNED);
+    assert.equal(result.openCallTargets, 0);
+    assert.equal(result.directAssignment.driverId, 42);
+    assert.deepEqual(calls.dispatchedOutboxIds, [[31, 30]]);
+  } finally {
+    setRealtimeIo(null);
+    restoreContainer();
+  }
+});
+
+for (const [driverId, expectedCode] of [
+  [98, 'DRIVER_NOT_ELIGIBLE'],
+  [97, 'DRIVER_VEHICLE_NOT_FOUND'],
+  [96, 'DRIVER_BOOKING_TIME_CONFLICT'],
+  [95, 'DRIVER_NOT_ELIGIBLE'],
+]) {
+  test(`createAdminManualBooking rejects ineligible direct driver ${driverId}`, async () => {
+    const { service, calls, input, restoreContainer } = createHarness();
+    input.driverId = driverId;
+    try {
+      await assert.rejects(
+        service.createAdminManualBooking(input, ADMIN),
+        (error) => error.errorCode === expectedCode,
+      );
+      assert.equal(calls.commits, 0);
+      assert.equal(calls.rollbacks, 1);
+      assert.equal(calls.notifications.length, 0);
+      assert.equal(calls.socket.length, 0);
+    } finally {
+      setRealtimeIo(null);
+      restoreContainer();
+    }
+  });
+}
+
+test('admin manual validator normalizes messenger and requires the pair', () => {
+  const base = {
+    origin: { address: 'A' },
+    destination: { address: 'B' },
+    scheduledPickupAt: '2026-12-01T02:30:00.000Z',
+    vehicleTypeCode: 'SEDAN',
+    payoutAmount: 800,
+    paymentCollection: 'DRIVER_COLLECTS',
+    driverId: 42,
+  };
+  const accepted = adminManualBookingCreateSchema.validate({
+    ...base,
+    customer: {
+      name: 'Guest',
+      phone: null,
+      messengerType: 'KakaoTalk',
+      messengerId: 'qa-id',
+    },
+  });
+  assert.equal(accepted.error, undefined);
+  assert.equal(accepted.value.customer.messengerType, 'KAKAO');
+
+  const rejected = adminManualBookingCreateSchema.validate({
+    ...base,
+    customer: { name: 'Guest', messengerType: 'LINE' },
+  });
+  assert.ok(rejected.error);
 });
 
 test('createAdminManualBooking marks name sign for drivers when picket enabled', async () => {

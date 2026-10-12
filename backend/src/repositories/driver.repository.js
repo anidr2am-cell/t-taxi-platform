@@ -33,6 +33,17 @@ class DriverRepository {
           dv.plate_number AS primary_vehicle_plate,
           dv.model_name AS primary_vehicle_model,
           (
+            SELECT GROUP_CONCAT(DISTINCT vt2.code ORDER BY vt2.code SEPARATOR ',')
+            FROM driver_vehicles dv2
+            INNER JOIN vehicle_types vt2
+              ON vt2.id = dv2.vehicle_type_id
+             AND vt2.deleted_at IS NULL
+            WHERE dv2.driver_id = d.id
+              AND dv2.is_active = 1
+              AND COALESCE(dv2.approval_status, 'APPROVED') = 'APPROVED'
+              AND dv2.deleted_at IS NULL
+          ) AS active_vehicle_type_codes,
+          (
             SELECT COUNT(*)
             FROM booking_driver_assignments bda
             INNER JOIN bookings b ON b.id = bda.booking_id AND b.deleted_at IS NULL AND b.is_archived = 0

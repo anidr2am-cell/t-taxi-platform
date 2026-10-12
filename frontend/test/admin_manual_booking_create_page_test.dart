@@ -73,8 +73,33 @@ class _FakeDispatchApi extends AdminDispatchApiService {
     bool preferFemaleDriver = false,
     String? originAirportIata,
     Map<String, dynamic>? transfer,
+    int? driverId,
   }) {
     return onCreate();
+  }
+
+  @override
+  Future<List<dynamic>> listDrivers({bool? archived, String? bookingNumber}) async {
+    return [
+      {
+        'driverId': 2,
+        'displayName': 'QA Driver',
+        'activeState': 'ACTIVE',
+        'driverStatus': 'OFFLINE',
+        'assignmentEligible': true,
+        'archive': {'isArchived': false},
+        'primaryVehicle': {'vehicleTypeCode': 'SEDAN'},
+      },
+      {
+        'driverId': 14,
+        'displayName': 'Suspended Driver',
+        'activeState': 'ACTIVE',
+        'driverStatus': 'SUSPENDED',
+        'assignmentEligible': false,
+        'archive': {'isArchived': false},
+        'primaryVehicle': {'vehicleTypeCode': 'SEDAN'},
+      },
+    ];
   }
 }
 
@@ -130,6 +155,38 @@ void main() {
     await _pumpAdminPage(tester);
     await _tapSubmit(tester);
     expect(find.text('필수 항목을 모두 입력해주세요'), findsOneWidget);
+  });
+
+  testWidgets('direct dispatch lists eligible drivers and messenger fields', (
+    tester,
+  ) async {
+    await _pumpAdminPage(tester);
+    final direct = find.byKey(const Key('adminManualDispatchDirect'));
+    await tester.ensureVisible(direct);
+    await tester.tap(direct);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('adminManualDirectDriver')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('adminManualDirectDriver')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.textContaining('QA Driver'), findsWidgets);
+    expect(find.textContaining('Suspended Driver'), findsNothing);
+    await tester.tap(find.textContaining('QA Driver').last);
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final messenger = find.byKey(const Key('adminManualMessengerType'));
+    await tester.scrollUntilVisible(
+      messenger,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(messenger);
+    await tester.pump();
+    await tester.tap(messenger);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('카카오톡').last);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('adminManualMessengerId')), findsOneWidget);
+    expect(find.text('생성 후 바로 배정'), findsOneWidget);
   });
 
   testWidgets('edit mode tolerates sparse booking detail maps', (tester) async {

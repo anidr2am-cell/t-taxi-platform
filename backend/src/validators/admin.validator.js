@@ -12,6 +12,9 @@ const {
 } = require("../utils/flightNumber.util");
 const BOOKING_STATUS = require("../constants/reservationStatus");
 const {
+  normalizeMessengerType,
+} = require("../utils/customerMessengerFields");
+const {
   ADMIN_BOOKING_VIEWS,
 } = require("../constants/adminOperations.constants");
 const adminBookingListQuerySchema = paginationQuery
@@ -204,6 +207,7 @@ const adminManualTransferSchema = Joi.object({
 }).optional();
 
 const adminManualBookingCreateSchema = Joi.object({
+  driverId: Joi.number().integer().positive().optional(),
   origin: adminManualLocationSchema.required(),
   destination: adminManualLocationSchema.required(),
   scheduledPickupAt: Joi.string().isoDate().required(),
@@ -239,7 +243,22 @@ const adminManualBookingCreateSchema = Joi.object({
       .email({ tlds: { allow: false } })
       .allow("", null)
       .optional(),
-  }).required(),
+    messengerType: Joi.string().trim().min(1).max(30).optional(),
+    messengerId: Joi.string().trim().min(1).max(100).optional(),
+  }).required().custom((customer, helpers) => {
+    const type = normalizeMessengerType(customer.messengerType);
+    const id = customer.messengerId?.trim();
+    if ((type && !id) || (!type && id)) {
+      return helpers.message('messengerType and messengerId are required together');
+    }
+    if (customer.messengerType && !type) {
+      return helpers.message('unsupported messengerType');
+    }
+    if (['WHATSAPP', 'SMS'].includes(type) && !/^\+[1-9]\d{6,14}$/.test(id)) {
+      return helpers.message('WhatsApp and phone contacts must use an international number');
+    }
+    return { ...customer, messengerType: type, messengerId: id };
+  }),
   memo: unicodeText({ max: 1000, allowEmpty: true }).optional(),
   nameSign: Joi.boolean().default(false),
   nameSignText: Joi.when("nameSign", {
