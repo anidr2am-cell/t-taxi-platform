@@ -6,6 +6,7 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh
 
 const fs = require('fs');
 const path = require('path');
+process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(require('os').tmpdir(), 'settlement-tests-'));
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
@@ -1605,4 +1606,34 @@ test('admin list reconciliation failure does not create partial obligation', asy
   await service.listAdminSettlements({}, '/api/v1/admin/settlements');
   assert.equal(updateCalls, 1);
   assert.equal(rolledBack, true);
+});
+
+test('settlement timestamps serialize Bangkok wall-clock as UTC ISO', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const item = service.mapSettlementListItem(settlementRow({
+    completed_at: '2026-10-10 15:13:29',
+    commission_due_at: '2026-10-12 15:13:29',
+    commission_paid_at: '2026-10-11 09:00:00',
+    receipt_uploaded_at: '2026-10-10 16:00:00',
+    commission_receipt_file_id: 77,
+    receipt_mime_type: 'image/png',
+    metadata: JSON.stringify({ commissionApprovedAt: '2026-10-11T02:00:00.000Z' }),
+  }), '/api/v1/driver/settlements', ROLES.DRIVER);
+  assert.equal(item.completedAt, '2026-10-10T08:13:29.000Z');
+  assert.equal(item.dueAt, '2026-10-12T08:13:29.000Z');
+  assert.equal(item.receiptUploadedAt, '2026-10-10T09:00:00.000Z');
+  assert.equal(item.approvalRecordedAt, '2026-10-11T02:00:00.000Z');
+});
+
+test('settlement overdue boundary uses Bangkok service datetime', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  const row = settlementRow({ commission_due_at: '2026-10-10 15:13:29' });
+  assert.equal(service.isOverdue(row, new Date('2026-10-10T08:13:29.000Z')), false);
+  assert.equal(service.isOverdue(row, new Date('2026-10-10T08:13:29.001Z')), true);
+  assert.equal(service.isOverdue(row, new Date('2026-10-10T08:13:28.999Z')), false);
+});
+
+test('commission due date preserves Bangkok wall-clock when adding days', () => {
+  const service = new CommissionSettlementService({}, {}, {}, {}, {});
+  assert.equal(service.addDaysToServiceDateTime('2026-10-10 23:30:00', 2), '2026-10-12 23:30:00');
 });

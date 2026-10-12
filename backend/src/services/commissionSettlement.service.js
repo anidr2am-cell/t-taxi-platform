@@ -16,6 +16,11 @@ const {
   computeIdempotencyExpiresAt,
 } = require('../utils/settlementReceiptIdempotency.util');
 const { assertReceiptUploadSignature } = require('../utils/fileSignatureValidation.util');
+const {
+  formatInstantAsServiceDateTime,
+  formatServiceDateTimeIso,
+  parseServiceDateTimeToMs,
+} = require('../utils/serviceDateTime.util');
 
 const ADMIN_RECONCILE_BATCH_LIMIT = 100;
 const APPROVAL_MODES = {
@@ -131,13 +136,13 @@ class CommissionSettlementService {
   }
 
   formatDateTime(date) {
-    return date.toISOString().slice(0, 19).replace('T', ' ');
+    return formatInstantAsServiceDateTime(date);
   }
 
-  addDays(date, days) {
-    const result = new Date(date);
-    result.setDate(result.getDate() + Number(days));
-    return result;
+  addDaysToServiceDateTime(value, days) {
+    const baseMs = parseServiceDateTimeToMs(value);
+    if (baseMs == null) return null;
+    return formatInstantAsServiceDateTime(new Date(baseMs + Number(days) * 86400000));
   }
 
   async getCommissionConfig(conn) {
@@ -204,7 +209,8 @@ class CommissionSettlementService {
       return false;
     }
     if (!row.commission_due_at) return false;
-    return new Date(row.commission_due_at).getTime() < now.getTime();
+    const dueAtMs = parseServiceDateTimeToMs(row.commission_due_at);
+    return dueAtMs != null && dueAtMs < now.getTime();
   }
 
   isSettlementBlocking(row, metadata, now = new Date()) {
@@ -327,7 +333,7 @@ class CommissionSettlementService {
         'destination',
         row.destination_address,
       ),
-      completedAt: row.completed_at,
+      completedAt: formatServiceDateTimeIso(row.completed_at),
       commissionAmount: row.commission_amount != null ? Number(row.commission_amount) : null,
       customerPaymentAmount,
       customerPaymentCurrency: customerPaymentAmount == null ? null : row.currency,
@@ -341,15 +347,21 @@ class CommissionSettlementService {
       currency: row.currency,
       commissionStatus,
       blocksNewCalls,
-      dueAt: row.commission_due_at,
+      dueAt: formatServiceDateTimeIso(row.commission_due_at),
       receiptStatus,
-      receiptSubmittedAt: row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
-      receiptUploadedAt: row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
+      receiptSubmittedAt: formatServiceDateTimeIso(
+        row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
+      ),
+      receiptUploadedAt: formatServiceDateTimeIso(
+        row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt ?? null,
+      ),
       rejectionReason: metadata.commissionRejectionReason ?? null,
       approvalMode: metadata.commissionApprovalMode ?? null,
       approvalNote: metadata.commissionApprovalNote ?? null,
       approvedByUserId: metadata.commissionApprovedByUserId ?? null,
-      approvalRecordedAt: metadata.commissionApprovedAt ?? row.commission_paid_at ?? null,
+      approvalRecordedAt: formatServiceDateTimeIso(
+        metadata.commissionApprovedAt ?? row.commission_paid_at ?? null,
+      ),
       receiptMissingAtApproval: metadata.commissionReceiptMissingAtApproval ?? false,
     };
     if (this.hasCommissionReceipt(row)) {
@@ -376,7 +388,7 @@ class CommissionSettlementService {
       canApprove: this.computeCanApprove(row, metadata),
       bookingSummary: {
         bookingNumber: row.booking_number,
-        completedAt: row.completed_at,
+        completedAt: formatServiceDateTimeIso(row.completed_at),
         totalAmount: Number(row.total_amount),
         currency: row.currency,
       },
@@ -385,12 +397,14 @@ class CommissionSettlementService {
         displayName: row.driver_name,
         phone: row.driver_phone,
       },
-      commissionPaidAt: row.commission_paid_at,
+      commissionPaidAt: formatServiceDateTimeIso(row.commission_paid_at),
       approval: {
         mode: metadata.commissionApprovalMode ?? null,
         note: metadata.commissionApprovalNote ?? null,
         approvedByUserId: metadata.commissionApprovedByUserId ?? null,
-        approvedAt: metadata.commissionApprovedAt ?? row.commission_paid_at ?? null,
+        approvedAt: formatServiceDateTimeIso(
+          metadata.commissionApprovedAt ?? row.commission_paid_at ?? null,
+        ),
         receiptMissingAtApproval: metadata.commissionReceiptMissingAtApproval ?? false,
       },
       receiptMetadata: this.hasCommissionReceipt(row)
@@ -398,10 +412,15 @@ class CommissionSettlementService {
             mimeType: row.receipt_mime_type,
             fileSize: row.receipt_file_size,
             originalFilename: row.receipt_original_filename,
-            uploadedAt: row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt,
+            uploadedAt: formatServiceDateTimeIso(
+              row.receipt_uploaded_at ?? metadata.commissionReceiptSubmittedAt,
+            ),
           }
         : null,
-      reviewHistory: metadata.commissionReviewHistory ?? [],
+      reviewHistory: (metadata.commissionReviewHistory ?? []).map((entry) => ({
+        ...entry,
+        reviewedAt: formatServiceDateTimeIso(entry.reviewedAt),
+      })),
     };
   }
 
@@ -469,9 +488,9 @@ class CommissionSettlementService {
       const amount = fixedAmount != null
         ? Math.round(Number(fixedAmount) * 100) / 100
         : Math.round(Number(booking.total_amount) * ratePercent / 100 * 100) / 100;
-      const completedAt = booking.completed_at ? new Date(booking.completed_at) : new Date();
+      const completedAt = booking.completed_at ?? this.formatDateTime(new Date());
       const dueAt = dueDays != null && Number.isFinite(dueDays)
-        ? this.formatDateTime(this.addDays(completedAt, dueDays))
+        ? this.addDaysToServiceDateTime(completedAt, dueDays)
         : null;
 
       await this.bookingRepository.updateCommissionFields(conn, booking.id, {
@@ -762,7 +781,7 @@ class CommissionSettlementService {
         updatedBy: driverUserId,
       });
 
-      metadata.commissionReceiptSubmittedAt = new Date().toISOString();
+      metadata.commissionReceiptSubmittedAt = this.formatDateTime(new Date());
       delete metadata.commissionRejectionReason;
 
       await this.bookingRepository.updateCommissionFields(conn, row.id, {
@@ -970,7 +989,7 @@ class CommissionSettlementService {
       }
 
       const metadata = this.parseMetadata(row.metadata);
-      const approvedAt = new Date().toISOString();
+      const approvedAt = this.formatDateTime(new Date());
       const reviewEntry = {
         action: 'APPROVED',
         approvalMode: APPROVAL_MODES.RECEIPT_VERIFIED,
@@ -1133,7 +1152,7 @@ class CommissionSettlementService {
         });
       }
 
-      const approvedAt = new Date().toISOString();
+      const approvedAt = this.formatDateTime(new Date());
       const reviewEntry = {
         action: 'APPROVED',
         approvalMode: APPROVAL_MODES.MANUAL_WITHOUT_RECEIPT,
@@ -1285,7 +1304,7 @@ class CommissionSettlementService {
           action: 'REJECTED',
           reason,
           reviewedByUserId: user.id,
-          reviewedAt: new Date().toISOString(),
+          reviewedAt: this.formatDateTime(new Date()),
         },
       ];
 
