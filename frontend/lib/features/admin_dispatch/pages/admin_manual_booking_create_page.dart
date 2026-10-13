@@ -1009,12 +1009,12 @@ class _AdminManualBookingCreatePageState
           SnackBar(content: Text(context.l10n.t('admin_manual_booking_update_success'))),
         );
       } else if (!_isEditMode && bookingNumber != null) {
+        final successMessage = _dispatchMode == 'DIRECT'
+            ? '${context.l10n.t('admin_manual_booking_assign_success')} · '
+                '${context.l10n.t('booking_number_label')}: $bookingNumber'
+            : '${context.l10n.t('admin_manual_booking_success')} $bookingNumber';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${context.l10n.t('admin_manual_booking_success')} $bookingNumber',
-            ),
-          ),
+          SnackBar(content: Text(successMessage)),
         );
         await _openDetail();
       }

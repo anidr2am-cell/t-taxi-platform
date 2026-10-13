@@ -314,6 +314,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(find.textContaining('TX202610130001'), findsWidgets);
+    expect(find.textContaining('기사가 배정되었습니다'), findsOneWidget);
+    expect(find.textContaining('오픈콜이 생성되었습니다'), findsNothing);
     expect(find.byType(AdminManualBookingCreatePage), findsNothing);
   });
 
