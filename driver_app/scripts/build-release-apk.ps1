@@ -24,7 +24,7 @@ $previousVersionCode = [int]$published.versionCode
 $previousGradleOpts = $env:GRADLE_OPTS
 # Keep enough native memory available on build machines where the repository's
 # 8 GiB Gradle daemon setting would otherwise exhaust physical RAM.
-$env:GRADLE_OPTS = '-Dorg.gradle.jvmargs="-Xmx4G -XX:MaxMetaspaceSize=2G -XX:ReservedCodeCacheSize=256m"'
+$env:GRADLE_OPTS = '-Dorg.gradle.workers.max=2 -Dorg.gradle.jvmargs="-Xmx2G -XX:MaxMetaspaceSize=1G -XX:ReservedCodeCacheSize=256m"'
 Push-Location $driverRoot
 try {
   & flutter build apk --release --flavor prod -t lib/main_prod.dart
