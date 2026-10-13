@@ -942,9 +942,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('고객에게 메시지 보내기 / ส่งข้อความหาลูกค้า'), findsNothing);
     expect(
-      find.byKey(const ValueKey('driverCustomerLegacyPhone')),
+      find.byKey(const ValueKey('driverCustomerContactAdminButton')),
       findsOneWidget,
     );
+    expect(find.textContaining('고객 연락은 관리자를 통해 진행합니다.'), findsOneWidget);
   });
 }
 

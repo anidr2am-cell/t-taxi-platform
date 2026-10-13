@@ -588,7 +588,7 @@ void main() {
       await tester.drag(find.byType(ListView).first, const Offset(0, -1200));
       await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey('driverCustomerLegacyPhone')),
+        find.byKey(const ValueKey('driverCustomerContactAdminButton')),
         findsOneWidget,
       );
       expect(find.textContaining('DRIVER_ASSIGNED'), findsNothing);
