@@ -11,7 +11,7 @@ test('production frontend serves APK from an external read-only directory', () =
   assert.match(compose, /\/srv\/tride\/downloads:\/usr\/share\/nginx\/html\/downloads:ro/);
   assert.match(nginx, /location = \/downloads\/driver-app\.apk/);
   assert.match(nginx, /application\/vnd\.android\.package-archive/);
-  assert.match(nginx, /no-cache, must-revalidate/);
+  assert.match(nginx, /add_header Cache-Control "no-store" always;/);
   assert.match(nginx, /location \/downloads\//);
 });
 

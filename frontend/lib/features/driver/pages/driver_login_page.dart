@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../../utils/user_facing_error.dart';
+import '../utils/driver_login_error.dart';
 import '../../driver_settlement/services/driver_settlement_api_service.dart';
 import '../pages/driver_shell_page.dart';
 import '../services/driver_api_service.dart';
@@ -77,17 +77,8 @@ class _DriverLoginPageState extends State<DriverLoginPage> {
         password: _passwordController.text,
       );
       if (mounted) _openHome();
-    } on DriverApiException catch (err) {
-      if (mounted) setState(() => _error = err.message);
     } catch (err) {
-      if (mounted) {
-        setState(
-          () => _error = userFacingError(
-            err,
-            fallback: context.l10n.t('ui_action_failed'),
-          ),
-        );
-      }
+      if (mounted) setState(() => _error = driverLoginError(context.l10n, err));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

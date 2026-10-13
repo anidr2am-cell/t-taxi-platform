@@ -78,7 +78,7 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = userFacingError(err, fallback: 'Could not load recommendations');
+        _error = userFacingError(err, fallback: context.l10n.t('admin_ui_could_not_load_recommendations'));
         _loading = false;
       });
     }
@@ -97,11 +97,11 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: AppTokens.borderRadiusLg),
-      title: const Text('Recommend drivers'),
+      title: Text(context.l10n.t('admin_ui_recommend_drivers')),
       content: SizedBox(
         width: 560,
         child: _loading
-            ? AppUi.loadingState(message: 'Loading candidates...')
+            ? AppUi.loadingState(message: context.l10n.t('admin_ui_loading_candidates'))
             : _error != null
                 ? AppUi.errorState(message: _error!, onRetry: _load)
                 : SingleChildScrollView(
@@ -115,7 +115,7 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
                           const SizedBox(height: AppTokens.spaceMd),
                         ],
                         if (_candidates.isEmpty)
-                          AppUi.emptyState(title: 'No eligible drivers found for this booking.'),
+                          AppUi.emptyState(title: context.l10n.t('admin_ui_no_eligible_drivers_found_for_this_booking')),
                         ..._candidates.asMap().entries.map((entry) {
                           final index = entry.key;
                           final map = Map<String, dynamic>.from(entry.value as Map);
@@ -129,7 +129,7 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
                         }),
                         if (_excluded.isNotEmpty) ...[
                           const SizedBox(height: AppTokens.spaceMd),
-                          AppUi.sectionHeader(context, title: 'Excluded'),
+                          AppUi.sectionHeader(context, title: context.l10n.t('admin_ui_excluded')),
                           ..._excluded.map((row) {
                             final map = Map<String, dynamic>.from(row as Map);
                             return AppUi.surfaceCard(
@@ -157,10 +157,10 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
                   ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.t('admin_ui_cancel'))),
         if (!_loading && _error == null && _candidates.isNotEmpty) ...[
           AppUi.secondaryButton(
-            label: 'Assign recommended',
+            label: context.l10n.t('admin_ui_assign_recommended'),
             icon: Icons.star_outline,
             onPressed: recommendedId == null
                 ? null
@@ -175,7 +175,7 @@ class _RecommendDriversDialogState extends State<_RecommendDriversDialog> {
           ),
           const SizedBox(width: 8),
           AppUi.primaryButton(
-            label: 'Assign selected',
+            label: context.l10n.t('admin_ui_assign_selected'),
             icon: Icons.check,
             onPressed: _selectedDriverId == null
                 ? null
@@ -253,7 +253,7 @@ class _CandidateCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (isRecommended) AppUi.statusBadge('Recommended', tone: AppStatusTone.warning),
+                if (isRecommended) AppUi.statusBadge(context.l10n.t('admin_ui_recommended'), tone: AppStatusTone.warning),
               ],
             ),
             const SizedBox(height: 10),
@@ -261,12 +261,12 @@ class _CandidateCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                AppUi.statusBadge('Score ${map['score']}', tone: AppStatusTone.info),
+                AppUi.statusBadge(context.l10n.t('admin_ui_score_score').replaceAll('{score}', '${map['score']}'), tone: AppStatusTone.info),
                 AppUi.statusBadge(
-                  online ? 'Online' : 'Offline',
+                  online ? context.l10n.t('admin_ui_online') : context.l10n.t('admin_ui_offline'),
                   tone: online ? AppStatusTone.success : AppStatusTone.neutral,
                 ),
-                AppUi.statusBadge('Jobs ${map['activeJobCount']}', tone: AppStatusTone.neutral),
+                AppUi.statusBadge(context.l10n.t('admin_ui_jobs_count').replaceAll('{count}', '${map['activeJobCount']}'), tone: AppStatusTone.neutral),
                 if (map['distanceKm'] != null)
                   AppUi.statusBadge('${map['distanceKm']} km', tone: AppStatusTone.info),
               ],
@@ -285,7 +285,7 @@ class _CandidateCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  selected ? 'Selected' : 'Tap to select',
+                  selected ? context.l10n.t('admin_ui_selected') : context.l10n.t('admin_ui_tap_to_select'),
                   style: TextStyle(
                     color: selected ? AppTokens.primaryDark : AppTokens.textMuted,
                     fontWeight: FontWeight.w600,

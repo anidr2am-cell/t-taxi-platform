@@ -106,15 +106,15 @@ class _AdminNotificationQueuePageState
   String _messageForPushResult(NotificationDeviceRegistrationResult result) {
     switch (result.status) {
       case NotificationDeviceRegistrationStatus.registered:
-        return 'Notifications enabled';
+        return context.l10n.t('admin_ui_notifications_enabled');
       case NotificationDeviceRegistrationStatus.permissionDenied:
-        return 'Notification permission was denied';
+        return context.l10n.t('admin_ui_notification_permission_was_denied');
       case NotificationDeviceRegistrationStatus.unsupported:
-        return 'Push notifications are not supported in this browser';
+        return context.l10n.t('admin_ui_push_notifications_are_not_supported_in_this_browser');
       case NotificationDeviceRegistrationStatus.configMissing:
-        return 'Push notifications are not configured for this environment';
+        return context.l10n.t('admin_ui_push_notifications_are_not_configured_for_this_environment');
       case NotificationDeviceRegistrationStatus.failed:
-        return result.message ?? 'Notification registration failed';
+        return result.message ?? context.l10n.t('admin_ui_notification_registration_failed');
     }
   }
 
@@ -151,7 +151,7 @@ class _AdminNotificationQueuePageState
           AppUi.adminFilterBar(
             children: [
               FilterChip(
-                label: const Text('Unread only'),
+                label: Text(context.l10n.t('admin_ui_unread_only')),
                 selected: _unreadOnly,
                 onSelected: (v) {
                   setState(() => _unreadOnly = v);
@@ -160,20 +160,20 @@ class _AdminNotificationQueuePageState
               ),
               DropdownButton<String?>(
                 value: _typeFilter,
-                hint: const Text('Type'),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('All types')),
+                hint: Text(context.l10n.t('admin_ui_type')),
+                items: [
+                  DropdownMenuItem(value: null, child: Text(context.l10n.t('admin_ui_all_types'))),
                   DropdownMenuItem(
                     value: 'BOOKING_CREATED',
-                    child: Text('Booking created'),
+                    child: Text(context.l10n.t('admin_ui_booking_created')),
                   ),
                   DropdownMenuItem(
                     value: 'RECEIPT_SUBMITTED',
-                    child: Text('Receipt submitted'),
+                    child: Text(context.l10n.t('admin_ui_receipt_submitted')),
                   ),
                   DropdownMenuItem(
                     value: 'REVIEW_SUBMITTED',
-                    child: Text('Review submitted'),
+                    child: Text(context.l10n.t('admin_ui_review_submitted')),
                   ),
                 ],
                 onChanged: (v) {
@@ -184,7 +184,7 @@ class _AdminNotificationQueuePageState
               IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
               ElevatedButton(
                 onPressed: _markingAll ? null : _markAll,
-                child: Text(_markingAll ? 'Marking...' : 'Mark all read'),
+                child: Text(_markingAll ? 'Marking...' : context.l10n.t('admin_ui_mark_all_read')),
               ),
               OutlinedButton.icon(
                 onPressed: _enablingNotifications ? null : _enableNotifications,
@@ -192,7 +192,7 @@ class _AdminNotificationQueuePageState
                 label: Text(
                   _enablingNotifications
                       ? 'Enabling...'
-                      : 'Enable notifications',
+                      : context.l10n.t('admin_ui_enable_notifications'),
                 ),
               ),
             ],
@@ -219,7 +219,7 @@ class _AdminNotificationQueuePageState
                   )
                 : _items.isEmpty
                 ? AppUi.emptyState(
-                    title: 'No notifications',
+                    title: context.l10n.t('admin_ui_no_notifications'),
                     icon: Icons.notifications_none_outlined,
                   )
                 : RefreshIndicator(

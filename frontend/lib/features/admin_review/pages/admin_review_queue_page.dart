@@ -79,15 +79,15 @@ class _AdminReviewQueuePageState extends State<AdminReviewQueuePage> {
               width: 220,
               child: TextField(
                 controller: _searchController,
-                decoration: const InputDecoration(labelText: 'Search'),
+                decoration: InputDecoration(labelText: 'Search'),
                 onSubmitted: (_) => _load(),
               ),
             ),
             DropdownButton<String?>(
               value: _statusFilter,
-              hint: const Text('Status'),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All')),
+              hint: Text(context.l10n.t('admin_ui_status')),
+              items: [
+                DropdownMenuItem(value: null, child: Text(context.l10n.t('admin_ui_all'))),
                 DropdownMenuItem(value: 'VISIBLE', child: Text('Visible')),
                 DropdownMenuItem(value: 'HIDDEN', child: Text('Hidden')),
               ],
@@ -98,9 +98,9 @@ class _AdminReviewQueuePageState extends State<AdminReviewQueuePage> {
             ),
             DropdownButton<int?>(
               value: _ratingFilter,
-              hint: const Text('Rating'),
+              hint: Text('Rating'),
               items: [
-                const DropdownMenuItem(value: null, child: Text('All ratings')),
+                DropdownMenuItem(value: null, child: Text(context.l10n.t('admin_ui_all_ratings'))),
                 ...List.generate(
                   5,
                   (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1} stars')),
@@ -125,7 +125,7 @@ class _AdminReviewQueuePageState extends State<AdminReviewQueuePage> {
                     )
                   : _items.isEmpty
                       ? AppUi.emptyState(
-                          title: 'No reviews',
+                          title: context.l10n.t('admin_ui_no_reviews'),
                           icon: Icons.rate_review_outlined,
                         )
                       : RefreshIndicator(
@@ -251,11 +251,11 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hide review?'),
-        content: const Text('This review will be excluded from driver ratings.'),
+        title: Text(context.l10n.t('admin_ui_hide_review')),
+        content: Text(context.l10n.t('admin_ui_this_review_will_be_excluded_from_driver_ratings')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hide')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.t('admin_ui_cancel'))),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(context.l10n.t('admin_ui_hide'))),
         ],
       ),
     );
@@ -280,10 +280,10 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restore review?'),
+        title: Text(context.l10n.t('admin_ui_restore_review')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Restore')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.l10n.t('admin_ui_cancel'))),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(context.l10n.t('admin_ui_restore'))),
         ],
       ),
     );
@@ -311,7 +311,7 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
       body: _loading
           ? AppUi.loadingState()
           : _error != null && _detail == null
-              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: 'Retry')
+              ? AppUi.errorState(message: _error!, onRetry: _load, retryLabel: context.l10n.t('admin_ui_retry'))
               : ListView(
                   padding: AppUi.pagePadding(context),
                   children: [
@@ -349,7 +349,7 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
                     if (_detail?['hiddenReason'] != null) ...[
                       const SizedBox(height: AppTokens.spaceSm),
                       AppUi.summaryRow(
-                        label: 'Hidden reason',
+                        label: context.l10n.t('admin_ui_hidden_reason'),
                         value: _detail?['hiddenReason'] as String,
                       ),
                     ],
@@ -357,14 +357,14 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
                     if (status == 'VISIBLE') ...[
                       TextField(
                         controller: _reasonController,
-                        decoration: const InputDecoration(labelText: 'Hide reason'),
+                        decoration: InputDecoration(labelText: context.l10n.t('admin_ui_hide_reason')),
                       ),
                       const SizedBox(height: AppTokens.spaceSm),
                       SizedBox(
                         height: 48,
                         child: ElevatedButton(
                           onPressed: _submitting ? null : _hide,
-                          child: Text(_submitting ? 'Working...' : 'Hide review'),
+                          child: Text(_submitting ? 'Working...' : context.l10n.t('admin_ui_hide_review')),
                         ),
                       ),
                     ],
@@ -373,7 +373,7 @@ class _AdminReviewDetailPageState extends State<AdminReviewDetailPage> {
                         height: 48,
                         child: ElevatedButton(
                           onPressed: _submitting ? null : _restore,
-                          child: Text(_submitting ? 'Working...' : 'Restore review'),
+                          child: Text(_submitting ? 'Working...' : context.l10n.t('admin_ui_restore_review')),
                         ),
                       ),
                     if (_error != null)
