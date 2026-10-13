@@ -87,7 +87,7 @@ function distanceCharge(result) {
   return result.chargeItems.find((item) => item.chargeType === CHARGE_TYPES.DISTANCE_SURCHARGE);
 }
 
-test('distance steps include 10 km and add 100 THB for every started 10 km beyond it', () => {
+test('route-distance difference includes 10 km and adds 100 THB for every started 10 km beyond it', () => {
   const service = makeService();
   assert.equal(service.distanceSteps(10), 0);
   assert.equal(service.distanceSteps(10.01), 1);
@@ -111,7 +111,7 @@ test('airport pickup keeps the configured fare inside the destination 10 km area
   assert.equal(result.routeId, 10);
 });
 
-test('airport pickup adds 100 THB per 10 km step outside the included area', async () => {
+test('airport pickup charges only when the actual trip is longer than the reference route', async () => {
   const result = await makeService().calculate({
     serviceTypeCode: 'AIRPORT_PICKUP',
     vehicleTypeCode: 'SEDAN',
@@ -119,42 +119,58 @@ test('airport pickup adds 100 THB per 10 km step outside the included area', asy
     destinationRegion: 'Hotel outside Pattaya',
     originLat: 13.69,
     originLng: 100.75,
-    destinationLat: 13.08,
+    destinationLat: 12.8,
     destinationLng: 100.8825,
   });
-  assert.equal(result.totalAmount, 1200);
-  assert.equal(distanceCharge(result).amount, 200);
+  assert.equal(result.totalAmount, 1100);
+  assert.equal(distanceCharge(result).amount, 100);
   assert.equal(result.routeId, 10);
 });
 
-test('airport dropoff uses the nearest configured route and measures the custom origin', async () => {
+test('airport dropoff uses the same total-trip distance rule in reverse', async () => {
   const result = await makeService().calculate({
     serviceTypeCode: 'AIRPORT_DROPOFF',
     vehicleTypeCode: 'SEDAN',
     originLocationCode: 'Unknown Pattaya hotel',
     destinationLocationCode: 'BKK',
-    originLat: 13.08,
+    originLat: 12.8,
     originLng: 100.8825,
     destinationLat: 13.69,
     destinationLng: 100.75,
   });
-  assert.equal(result.totalAmount, 1200);
-  assert.equal(distanceCharge(result).amount, 200);
+  assert.equal(result.totalAmount, 1100);
+  assert.equal(distanceCharge(result).amount, 100);
   assert.equal(result.routeId, 20);
 });
 
-test('city transfer gives each endpoint its own included 10 km area', async () => {
+test('city transfer compares actual and reference total trip distance', async () => {
   const result = await makeService().calculate({
     serviceTypeCode: 'CITY_TRANSFER',
     vehicleTypeCode: 'SEDAN',
     originLocationCode: 'Unknown Bangkok hotel',
     destinationRegion: 'Unknown Pattaya hotel',
-    originLat: 13.87,
+    originLat: 13.9,
     originLng: 100.5018,
-    destinationLat: 13.04,
+    destinationLat: 12.8,
     destinationLng: 100.8825,
   });
-  assert.equal(result.totalAmount, 1500);
-  assert.equal(distanceCharge(result).amount, 200);
+  assert.equal(result.totalAmount, 1600);
+  assert.equal(distanceCharge(result).amount, 300);
   assert.equal(result.routeId, 30);
+});
+
+test('a shorter trip never receives a route distance surcharge', async () => {
+  const result = await makeService().calculate({
+    serviceTypeCode: 'AIRPORT_PICKUP',
+    vehicleTypeCode: 'SEDAN',
+    originAirportIata: 'BKK',
+    destinationRegion: 'Sriracha hotel',
+    originLat: 13.69,
+    originLng: 100.75,
+    destinationLat: 13.1542112,
+    destinationLng: 100.9836189,
+  });
+  assert.equal(result.totalAmount, 1000);
+  assert.equal(distanceCharge(result), undefined);
+  assert.equal(result.routeId, 10);
 });
