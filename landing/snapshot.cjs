@@ -10,6 +10,6 @@ const destinations={PATTAYA:'파타야',BANGKOK:'방콕',HUA_HIN:'후아힌',RAY
  }rows.push({airport,destination,label:destinations[destination],prices});}
  // Only public support settings; no production DB access or writes.
  const r=await fetch('https://trider.taxi/api/v1/bookings/contact-channels/public');if(!r.ok)throw Error('Public channel settings unavailable');const settings=await r.json();
- const snapshot={capturedAt:new Date().toISOString(),fareSource:base,contactSource:'https://trider.taxi/api/v1/bookings/contact-channels/public',rows,channels:settings.data.channels.filter(c=>['KAKAO','LINE','WHATSAPP'].includes(c.code)),capacity:[{code:'SEDAN',people:2,small:2,large:0,golf:0},{code:'SUV',people:3,small:2,large:2,golf:1},{code:'VAN',people:8,small:8,large:8,golf:4}]};
+ const snapshot={capturedAt:new Date().toISOString(),fareSource:base,contactSource:'https://trider.taxi/api/v1/bookings/contact-channels/public',rows,channels:settings.data.channels.filter(c=>['KAKAO','LINE','WHATSAPP'].includes(c.code))};
  fs.writeFileSync('landing/snapshot.json',JSON.stringify(snapshot,null,2));console.log(JSON.stringify({routes:rows.length,quotes:rows.length*3,channels:snapshot.channels.map(c=>c.code),example:rows[0]}));
 })().catch(e=>{console.error(e.message);process.exit(1)});

@@ -550,7 +550,7 @@ void main() {
 
       expect(find.text('안심 취소·환불'), findsOneWidget);
       expect(find.text('기사 품질 관리'), findsOneWidget);
-      expect(find.textContaining('24시간 이내 위약금 없이'), findsOneWidget);
+      expect(find.textContaining('픽업 예정 시각까지 2시간보다 많이 남았다면'), findsOneWidget);
       expect(find.textContaining('즉시 배차를 정지'), findsOneWidget);
     });
 
@@ -595,3 +595,4 @@ void main() {
     }
   });
 }
+

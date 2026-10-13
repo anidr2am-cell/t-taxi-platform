@@ -115,3 +115,11 @@ STAGE 2 PLAN (approval required)
 7. Decide/update two Flutter home actions using a web-only external-home helper (no engine/font changes).
 8. HTTPS STG regression: old worker refresh, OAuth callbacks, guest lookup, payment/completion state, support/privacy/blog/downloads, accessibility and 5-language 375px layouts.
 9. After Edward approval: production backup, protected-path checks, frontend-only deploy (backend first if new landing-data API), verification and rollback to previous image/root config. No production deployment in stage 1.
+
+REVISION — Edward decisions, 2026-10-14 (supersedes initial draft proposals)
+Cash booking requires no deposit; cash paid after arrival. Bank transfer/card available via administrator. 24-hour consultation confirmed.
+Customer cancellation: trip not started and more than 2 hours remain; booking lookup cancellation is free with full refund.
+Vehicle cards contain only illustrations and names plus a recommendation prompt. Capacity data/display/integration removed from static landing; existing recommendation rules and database untouched. Future landing-data API should omit capacity fields.
+Hero fare and SEO amount derive from BKK-PATTAYA SEDAN snapshot and live quote response (hero only); no second fare constant. Korean decorative copy replaces English.
+Flutter two policy keys updated in all five languages; unconfirmed 48h price-match clause and driver-report service commitments retained for Edward review.
+OPERATIONS_POLICY.md obsolete 24h cancellation sentence aligned with confirmed policy; its unconfirmed price-match sentence retained.

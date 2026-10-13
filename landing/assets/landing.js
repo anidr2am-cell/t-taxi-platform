@@ -15,6 +15,7 @@
      if(!r.ok||body.success!==true||typeof total!=='number'||!Number.isFinite(total)||total<=0)throw Error('Quote unavailable');
      if(id!==requestId)return;
      const cell=document.querySelector(`[data-airport-row="${airport}"][data-destination="${row.destination}"] [data-price="${vehicle}"]`);cell.textContent=money(total);
+     if(airport==='BKK'&&row.destination==='PATTAYA'&&vehicle==='SEDAN')document.querySelector('#hero-price-amount').textContent=money(total);
     }catch{failed=true;}
    }));
   }));

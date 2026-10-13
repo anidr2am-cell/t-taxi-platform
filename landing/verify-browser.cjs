@@ -1,12 +1,19 @@
 const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('node:assert/strict');
-const base='http://159.89.192.55:3115',out='C:/TTaxi-screens/static-landing-ko';fs.mkdirSync(out,{recursive:true});
+const base='http://159.89.192.55:3115',out='C:/TTaxi-screens/static-landing-ko-policy';fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
  const results={screens:[],requests:[],checks:[],performance:[]};
  for(const width of [375,1440]){
   const ctx=await browser.newContext({viewport:{width,height:width===375?812:1000}});const p=await ctx.newPage();
   p.on('response',r=>{if(r.url().includes('/api/'))results.requests.push({url:r.url(),method:r.request().method(),http:r.status(),backend:r.headers()['x-preview-backend']});});
   await p.goto(base);await p.getByRole('heading',{level:1}).waitFor();await p.getByText('최신 견적 API 확인 완료',{exact:false}).waitFor();
-  assert.equal(await p.locator('#reviews').isVisible(),false);assert.equal(await p.locator('html').evaluate(e=>e.scrollWidth>innerWidth),false);
+  assert.equal(await p.locator('#reviews').isVisible(),false);
+  for(const keyword of ['수완나품','파타야','택시','1,000바트','추가요금 없음','24시간 상담']) {
+   assert((await p.title()).includes(keyword));assert((await p.locator('meta[name="description"]').getAttribute('content')).includes(keyword));
+  }
+  assert.equal(await p.locator('#hero-price-amount').textContent(),await p.locator('[data-airport-row="BKK"][data-destination="PATTAYA"] [data-price="SEDAN"]').textContent());
+  assert(!/\d|최대|정원|수용 없음/.test(await p.locator('.fleet-section').innerText()));
+  assert.deepEqual(await p.locator('.vehicle h3').allTextContents(),['세단','SUV','밴']);
+  for(const text of await p.locator('.eyebrow,.journey-top').allTextContents())assert(!/[A-Za-z]/.test(text));assert.equal(await p.locator('html').evaluate(e=>e.scrollWidth>innerWidth),false);
   await p.getByRole('button',{name:'거부',exact:true}).click();assert.equal(await p.evaluate(()=>localStorage.getItem('tride_analytics_consent')),'denied');
   await p.getByRole('button',{name:'돈므앙 DMK',exact:true}).click();await p.getByText('최신 견적 API 확인 완료',{exact:false}).waitFor();
   assert.equal(await p.locator('tr[data-airport-row="DMK"]:visible').count(),4);
@@ -29,5 +36,6 @@ const base='http://159.89.192.55:3115',out='C:/TTaxi-screens/static-landing-ko';
  }
  fs.writeFileSync(out+'/browser-verification.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results.checks));
 }finally{await browser.close();}})().catch(e=>{console.error(e.stack);process.exit(1)});
+
 
 

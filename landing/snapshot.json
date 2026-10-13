@@ -117,28 +117,5 @@
       "displayName": "WhatsApp",
       "phoneNumber": "+66815693445"
     }
-  ],
-  "capacity": [
-    {
-      "code": "SEDAN",
-      "people": 2,
-      "small": 2,
-      "large": 0,
-      "golf": 0
-    },
-    {
-      "code": "SUV",
-      "people": 3,
-      "small": 2,
-      "large": 2,
-      "golf": 1
-    },
-    {
-      "code": "VAN",
-      "people": 8,
-      "small": 8,
-      "large": 8,
-      "golf": 4
-    }
   ]
 }
