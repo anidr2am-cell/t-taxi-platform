@@ -6,8 +6,8 @@
 import http from 'node:http';
 import { URL } from 'node:url';
 
-const PORT = 3099;
-const HOST = '127.0.0.1';
+const PORT = Number(process.env.QA_PORT ?? 3099);
+const HOST = process.env.QA_HOST ?? '127.0.0.1';
 
 /** @type {Record<string, object>} */
 const bookings = {
