@@ -8,6 +8,11 @@ const SERVICE_TYPES = require('../constants/serviceTypes');
 const logger = require('../utils/logger');
 const { estimateRoadDistanceKm } = require('../utils/geo.util');
 const {
+  ROUTE_DISTANCE_INCLUDED_KM,
+  ROUTE_DISTANCE_STEP_KM,
+  ROUTE_DISTANCE_STEP_PRICE,
+} = require('../constants/cityTransferDistance.constants');
+const {
   isEffectiveAt,
   mapPolicyTypeToChargeType,
   roundMoney,
@@ -29,9 +34,6 @@ const INCLUDED_POLICY_TYPES = new Set([
   CHARGE_POLICY_TYPES.TOLL,
 ]);
 
-const DISTANCE_INCLUDED_KM = 10;
-const DISTANCE_STEP_KM = 10;
-const DISTANCE_STEP_PRICE = 100;
 const REFERENCE_ROUTE_SERVICES = new Set([
   SERVICE_TYPES.AIRPORT_PICKUP,
   SERVICE_TYPES.AIRPORT_DROPOFF,
@@ -103,20 +105,42 @@ class PricingService {
   }
 
   distanceSteps(distanceKm) {
-    if (distanceKm <= DISTANCE_INCLUDED_KM) return 0;
-    return Math.ceil((distanceKm - DISTANCE_INCLUDED_KM) / DISTANCE_STEP_KM);
+    if (distanceKm <= ROUTE_DISTANCE_INCLUDED_KM) return 0;
+    return Math.ceil(
+      (distanceKm - ROUTE_DISTANCE_INCLUDED_KM) / ROUTE_DISTANCE_STEP_KM,
+    );
   }
 
   distanceAdjustment(route, coords, vehicleCount = 1) {
-    const distances = this.routeEndpointDistances(route, coords);
-    if (!distances) return null;
-    const originSteps = this.distanceSteps(distances.originDistanceKm);
-    const destinationSteps = this.distanceSteps(distances.destinationDistanceKm);
-    const totalSteps = originSteps + destinationSteps;
+    // Endpoint deviation remains the reference-route matching metric. The fare
+    // adjustment itself compares total estimated travel distance, so a place
+    // that is closer than the selected route anchor can never cost more merely
+    // because it sits away from that anchor.
+    const endpointDistances = this.routeEndpointDistances(route, coords);
+    const actualDistanceKm = estimateRoadDistanceKm(
+      coords.originLat,
+      coords.originLng,
+      coords.destinationLat,
+      coords.destinationLng,
+    );
+    const referenceDistanceKm = estimateRoadDistanceKm(
+      route.originLatitude,
+      route.originLongitude,
+      route.destinationLatitude,
+      route.destinationLongitude,
+    );
+    if (!endpointDistances || actualDistanceKm == null || referenceDistanceKm == null) {
+      return null;
+    }
+    const excessDistanceKm = Math.max(0, actualDistanceKm - referenceDistanceKm);
+    const totalSteps = this.distanceSteps(excessDistanceKm);
     return {
-      ...distances,
+      ...endpointDistances,
+      actualDistanceKm,
+      referenceDistanceKm,
+      excessDistanceKm: Math.round(excessDistanceKm * 100) / 100,
       totalSteps,
-      amount: roundMoney(totalSteps * DISTANCE_STEP_PRICE * vehicleCount),
+      amount: roundMoney(totalSteps * ROUTE_DISTANCE_STEP_PRICE * vehicleCount),
     };
   }
 
