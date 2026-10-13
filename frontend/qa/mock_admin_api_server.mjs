@@ -207,6 +207,34 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  if (path === '/api/v1/vehicles/types' && req.method === 'GET') {
+    return json(res, 200, {
+      data: [
+        { code: 'SEDAN', isActive: true },
+        { code: 'SUV', isActive: true },
+        { code: 'VIP_SUV', isActive: true },
+        { code: 'VAN', isActive: true },
+      ],
+    });
+  }
+
+  if (path === '/api/v1/bookings/pricing/calculate' && req.method === 'POST') {
+    const body = await readBody(req);
+    const totalAmount = body?.nameSign === true ? 1100 : 1000;
+    return json(res, 200, {
+      data: {
+        currency: 'THB',
+        totalAmount,
+        chargeItems: [
+          { chargeType: 'VEHICLE_BASE', amount: 1000 },
+          ...(body?.nameSign === true
+            ? [{ chargeType: 'NAME_SIGN', amount: 100 }]
+            : []),
+        ],
+      },
+    });
+  }
+
   if (path === '/api/golf-regions' && req.method === 'GET') {
     return json(res, 200, ['East', 'West']);
   }
@@ -301,6 +329,25 @@ const server = http.createServer(async (req, res) => {
   if (path === '/api/v1/admin/drivers' && req.method === 'GET') {
     const bookingNumber = url.searchParams.get('bookingNumber') ?? '';
     return json(res, 200, { data: listDrivers(bookingNumber) });
+  }
+
+  if (path === '/api/v1/admin/bookings/manual' && req.method === 'POST') {
+    const body = await readBody(req);
+    const bookingNumber = 'TX202610130099';
+    bookings[bookingNumber] = buildBookingDetail({
+      bookingNumber,
+      status: body?.driverId ? 'DRIVER_ASSIGNED' : 'OPEN',
+      route: {
+        origin: body?.origin ?? {},
+        destination: body?.destination ?? {},
+      },
+      vehicle: { typeCode: body?.vehicleTypeCode ?? 'SEDAN' },
+      customer: body?.customer ?? {},
+      scheduledPickupAt: body?.scheduledPickupAt,
+    });
+    return json(res, 201, {
+      data: { bookingNumber, status: bookings[bookingNumber].status },
+    });
   }
 
   const bookingNotesMatch = path.match(
