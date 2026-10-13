@@ -242,10 +242,12 @@ class _DriverHomeShellState extends State<DriverHomeShell>
               ),
             ),
             Expanded(
-              child: pages.isEmpty ? const SizedBox.shrink() : IndexedStack(
-                index: _restrictedIndex.clamp(0, pages.length - 1),
-                children: pages,
-              ),
+              child: pages.isEmpty
+                  ? const SizedBox.shrink()
+                  : IndexedStack(
+                      index: _restrictedIndex.clamp(0, pages.length - 1),
+                      children: pages,
+                    ),
             ),
           ],
         ),
@@ -281,6 +283,7 @@ class _DriverHomeShellState extends State<DriverHomeShell>
               offstage: _selectedIndex != 1,
               child: BookingListScreen(
                 repository: widget.bookingRepository,
+                supportContactApi: widget.supportContactApi,
                 onUnauthorized: widget.onUnauthorized,
                 socketEvents: widget.driverSocket?.events,
                 refreshRequest: _tripsRefreshRequest,

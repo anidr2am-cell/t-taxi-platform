@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../../support/data/support_contact_api.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,7 +17,9 @@ import 'booking_accept_controller.dart';
 import 'booking_display_formatters.dart';
 import 'booking_meeting_gate.dart';
 import 'booking_status_label.dart';
-import 'customer_contact_card.dart';
+import 'administrator_contact_card.dart';
+import '../../support/presentation/driver_support_page.dart'
+    hide ExternalUrlLauncher;
 import 'pickup_schedule.dart';
 import 'release_assignment_actions.dart';
 import 'release_assignment_ui.dart';
@@ -59,6 +62,7 @@ class BookingDetailScreen extends StatefulWidget {
     this.externalUrlLauncher,
     this.now,
     this.socketEvents,
+    this.supportContactApi,
     this.nameSignPhotoPicker,
   });
 
@@ -69,6 +73,7 @@ class BookingDetailScreen extends StatefulWidget {
   final ExternalUrlLauncher? externalUrlLauncher;
   final DateTime Function()? now;
   final Stream<DriverSocketEvent>? socketEvents;
+  final SupportContactDataSource? supportContactApi;
   final NameSignPhotoPicker? nameSignPhotoPicker;
 
   @override
@@ -533,6 +538,18 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             onRetry: _load,
           ),
           (false, final detail?, _) => _DetailBody(
+            onContactAdministrator: widget.supportContactApi == null
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => DriverSupportPage(
+                          api: widget.supportContactApi!,
+                          launchExternal: widget.externalUrlLauncher,
+                        ),
+                      ),
+                    );
+                  },
             detail: detail,
             accepting: _accepting,
             performingAction: _performingAction,
@@ -607,6 +624,7 @@ class _DetailError extends StatelessWidget {
 
 class _DetailBody extends StatelessWidget {
   const _DetailBody({
+    this.onContactAdministrator,
     required this.detail,
     required this.accepting,
     required this.performingAction,
@@ -622,6 +640,7 @@ class _DetailBody extends StatelessWidget {
   });
 
   final BookingDetail detail;
+  final VoidCallback? onContactAdministrator;
   final bool accepting;
   final bool performingAction;
   final _TripAction? tripAction;
@@ -848,7 +867,7 @@ class _DetailBody extends StatelessWidget {
             ),
           ],
         ),
-        CustomerContactCard(contact: detail.customerContact),
+        AdministratorContactCard(onContact: onContactAdministrator),
         _Section(
           title: l10n.sectionCustomerAndPassengers,
           children: [

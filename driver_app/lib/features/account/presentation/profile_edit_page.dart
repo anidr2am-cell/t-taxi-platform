@@ -28,13 +28,24 @@ class ProfileEditPage extends StatefulWidget {
 }
 
 class _ProfileEditPageState extends State<ProfileEditPage> {
-  static const _vehicleTypes = [
-    'SEDAN',
-    'SUV',
-    'VIP_SUV',
-    'VAN',
-    'LUXURY',
-  ];
+  List<String> _vehicleTypes = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVehicleTypes();
+  }
+
+  Future<void> _loadVehicleTypes() async {
+    try {
+      final types = await widget.api.getVehicleTypes();
+      if (!mounted) return;
+      setState(() => _vehicleTypes = types.map((type) => type.code).toList());
+    } on ApiException catch (error) {
+      if (mounted)
+        _message(error.localizedMessage(AppLocalizations.of(context)));
+    }
+  }
 
   late final _name = TextEditingController(text: widget.initialProfile.name);
   late final _phone = TextEditingController(text: widget.initialProfile.phone);
@@ -168,9 +179,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       _profile = await widget.api.getProfile();
       if (!mounted) return;
       setState(_imageLoads.clear);
-      _message(
-        avatar ? l10n.profilePhotoChanged : l10n.vehiclePhotoChanged,
-      );
+      _message(avatar ? l10n.profilePhotoChanged : l10n.vehiclePhotoChanged);
     } on ApiException catch (error) {
       if (!mounted) return;
       final message =
