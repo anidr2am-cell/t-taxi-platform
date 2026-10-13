@@ -10,38 +10,31 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Get-ApkSignerPath {
-  if (Get-Command apksigner -ErrorAction SilentlyContinue) {
-    return (Get-Command apksigner).Source
-  }
-  $androidRoot = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { $env:ANDROID_SDK_ROOT }
-  if (-not $androidRoot) { throw 'ANDROID_HOME or ANDROID_SDK_ROOT is required to locate apksigner.' }
-  $candidate = Get-ChildItem -Path (Join-Path $androidRoot 'build-tools') -Filter 'apksigner.bat' -Recurse |
-    Sort-Object { [version]$_.Directory.Name } -Descending |
-    Select-Object -First 1
-  if (-not $candidate) { throw 'apksigner was not found in the Android SDK build-tools.' }
-  return $candidate.FullName
-}
-
-function Normalize-Fingerprint([string]$Value) {
-  return ($Value -replace '[^0-9A-Fa-f]', '').ToUpperInvariant()
-}
-
 $resolvedApk = (Resolve-Path -LiteralPath $ApkPath).Path
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $templateRoot = Join-Path $repoRoot 'deploy\downloads'
-$apksigner = Get-ApkSignerPath
-$verification = & $apksigner verify --verbose --print-certs $resolvedApk 2>&1
-if ($LASTEXITCODE -ne 0) { throw 'APK signature verification failed.' }
-$digestLine = $verification | Where-Object { $_ -match 'certificate SHA-256 digest:\s*(.+)$' } | Select-Object -First 1
-if (-not $digestLine) { throw 'APK signer certificate SHA-256 was not reported.' }
-$digestMatch = [regex]::Match([string]$digestLine, 'certificate SHA-256 digest:\s*(.+)$')
-if (-not $digestMatch.Success) { throw 'APK signer certificate SHA-256 could not be parsed.' }
-$actualCertificate = Normalize-Fingerprint $digestMatch.Groups[1].Value
-$expectedCertificate = Normalize-Fingerprint $ExpectedCertificateSha256
-if ($actualCertificate -ne $expectedCertificate) {
-  throw "APK signing certificate mismatch. Expected $expectedCertificate, got $actualCertificate."
+$remoteReleaseJson = ssh $SshHost "cat '$RemoteDirectory/release.json'"
+if ($LASTEXITCODE -ne 0) { throw 'Unable to read the currently published release metadata.' }
+$publishedRelease = ($remoteReleaseJson -join "`n") | ConvertFrom-Json
+$previousVersionCode = [int]$publishedRelease.versionCode
+$previousVersionName = [string]$publishedRelease.versionName
+if ($VersionCode -le $previousVersionCode) {
+  throw "VersionCode $VersionCode must be greater than published versionCode $previousVersionCode."
 }
+if ($VersionName -notmatch '^[0-9A-Za-z._-]+$' -or $previousVersionName -notmatch '^[0-9A-Za-z._-]+$') {
+  throw 'Release version names contain unsupported characters.'
+}
+$verification = & (Join-Path $repoRoot 'driver_app\scripts\verify-release-apk.ps1') `
+  -ApkPath $resolvedApk `
+  -ExpectedVersionName $VersionName `
+  -ExpectedVersionCode $VersionCode `
+  -PreviousVersionCode $previousVersionCode `
+  -ExpectedCertificateSha256 $ExpectedCertificateSha256
+if ($LASTEXITCODE -ne 0) { throw 'APK release verification failed before publish.' }
+$verification | Write-Output
+$certificateLine = $verification | Where-Object { $_ -like 'CERT_SHA256=*' } | Select-Object -First 1
+if (-not $certificateLine) { throw 'Verified certificate fingerprint was not reported.' }
+$actualCertificate = $certificateLine.Substring('CERT_SHA256='.Length)
 
 $file = Get-Item -LiteralPath $resolvedApk
 $sha256 = (Get-FileHash -LiteralPath $resolvedApk -Algorithm SHA256).Hash.ToUpperInvariant()
@@ -49,6 +42,11 @@ $bangkokNow = [DateTimeOffset]::Now.ToOffset([TimeSpan]::FromHours(7))
 $publishedAt = $bangkokNow.ToString('yyyy-MM-ddTHH:mm:sszzz')
 $publishedAtDisplay = $bangkokNow.ToString('yyyy-MM-dd HH:mm')
 $fileSize = '{0:N1} MB' -f ($file.Length / 1MB)
+$remoteParent = [regex]::Replace($RemoteDirectory.TrimEnd('/'), '/[^/]+$', '')
+if (-not $remoteParent -or $remoteParent -eq $RemoteDirectory) { throw 'RemoteDirectory must be an absolute POSIX path.' }
+$backupRoot = "$remoteParent/downloads-backup"
+$backupStamp = $bangkokNow.ToString('yyyyMMdd-HHmmss')
+$backupDirectory = "$backupRoot/$previousVersionName+$previousVersionCode-$backupStamp"
 
 $staging = Join-Path ([IO.Path]::GetTempPath()) ("trider-apk-publish-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $staging | Out-Null
@@ -84,6 +82,11 @@ set -eu
 actual=`$(sha256sum '$RemoteDirectory/driver-app.apk.part' | awk '{print `$1}' | tr '[:lower:]' '[:upper:]')
 test "`$actual" = '$sha256'
 chmod 0644 '$RemoteDirectory/driver-app.apk.part' '$RemoteDirectory/index.html.part' '$RemoteDirectory/release.json.part'
+install -d -m 0755 '$backupDirectory'
+ln '$RemoteDirectory/driver-app.apk' '$backupDirectory/driver-app.apk'
+test -f '$backupDirectory/driver-app.apk'
+if [ -f '$RemoteDirectory/index.html' ]; then cp '$RemoteDirectory/index.html' '$backupDirectory/index.html'; fi
+if [ -f '$RemoteDirectory/release.json' ]; then cp '$RemoteDirectory/release.json' '$backupDirectory/release.json'; fi
 mv -f '$RemoteDirectory/driver-app.apk.part' '$RemoteDirectory/driver-app.apk'
 mv -f '$RemoteDirectory/index.html.part' '$RemoteDirectory/index.html'
 mv -f '$RemoteDirectory/release.json.part' '$RemoteDirectory/release.json'
@@ -96,6 +99,7 @@ mv -f '$RemoteDirectory/release.json.part' '$RemoteDirectory/release.json'
   Write-Output "Published version $VersionName+$VersionCode"
   Write-Output "SHA256=$sha256"
   Write-Output "CERT_SHA256=$actualCertificate"
+  Write-Output "PREVIOUS_APK_BACKUP=$backupDirectory/driver-app.apk"
 } finally {
   Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
 }

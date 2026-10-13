@@ -50,3 +50,35 @@ test('download page and metadata expose release verification fields in Korean an
   assert.match(publishScript, /ToString\('yyyy-MM-dd HH:mm'\)/);
   assert.match(publishScript, /Replace\("`r`n", "`n"\)/);
 });
+
+test('driver release build is pinned to the production flavor and entrypoint', () => {
+  const buildScript = fs.readFileSync(
+    path.join(root, 'driver_app', 'scripts', 'build-release-apk.ps1'),
+    'utf8',
+  );
+  assert.match(buildScript, /flutter build apk --release --flavor prod -t lib\/main_prod\.dart/);
+  assert.match(buildScript, /verify-release-apk\.ps1/);
+  assert.match(buildScript, /app-prod-release\.apk[\s\S]+Remove-Item/);
+  assert.doesNotMatch(buildScript, /\[string\]\$Flavor|\[string\]\$Target/);
+});
+
+test('build and publish share endpoint, package, version and signer verification', () => {
+  const verifier = fs.readFileSync(
+    path.join(root, 'driver_app', 'scripts', 'verify-release-apk.ps1'),
+    'utf8',
+  );
+  const publishScript = fs.readFileSync(
+    path.join(root, 'deploy', 'scripts', 'publish-driver-apk.ps1'),
+    'utf8',
+  );
+  assert.match(verifier, /com\.trider\.driver/);
+  assert.match(verifier, /https:\/\/trider\.taxi/);
+  for (const forbidden of ['10.0.2.2', 'localhost', '127.0.0.1', '103.60.127.213', 'taxi.kecosystem.com', '159.89.192.55']) {
+    assert.match(verifier, new RegExp(forbidden.replaceAll('.', '\\.')));
+  }
+  assert.match(verifier, /versionCode[^\n]+greater than published versionCode/);
+  assert.match(publishScript, /verify-release-apk\.ps1/);
+  assert.match(publishScript, /downloads-backup/);
+  assert.match(publishScript, /ln '\$RemoteDirectory\/driver-app\.apk' '\$backupDirectory\/driver-app\.apk'/);
+  assert.match(publishScript, /mv -f '\$RemoteDirectory\/driver-app\.apk\.part' '\$RemoteDirectory\/driver-app\.apk'/);
+});
