@@ -230,6 +230,10 @@ class _FakePricingApi implements AdminPricingApiService {
   Map<String, dynamic>? lastSimulateBody;
 
   @override
+  Future<List<String>> listActiveVehicleTypeCodes() async =>
+      const ['SEDAN', 'SUV', 'VIP_SUV', 'VAN'];
+
+  @override
   Future<Map<String, dynamic>> copyRoute(int id, Map<String, dynamic> body) async =>
       {'route': _sampleRoute(), 'copiedVehiclePriceCount': 1};
 

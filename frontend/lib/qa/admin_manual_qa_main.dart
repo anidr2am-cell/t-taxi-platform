@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 import '../features/admin_dispatch/pages/admin_booking_detail_page.dart';
 import '../features/admin_dispatch/pages/admin_manual_booking_create_page.dart';
 import '../features/admin_dispatch/services/admin_dispatch_api_service.dart';
+import '../features/booking/models/location_option.dart';
 import '../features/booking/services/flight_lookup_api_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
@@ -155,6 +156,14 @@ class _AdminManualQaHomeState extends State<AdminManualQaHome> {
             onTap: () => _openManualCallPage(context, editBookingNumber: null),
           ),
           ListTile(
+            title: const Text('Create manual call — standard price QA'),
+            subtitle: const Text(
+              'BKK → Pattaya · automatic fare · direct dispatch success',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openSeededManualCallPage(context),
+          ),
+          ListTile(
             title: const Text('Edit TX202609240001'),
             subtitle: const Text('Sparse string coords fixture'),
             trailing: const Icon(Icons.chevron_right),
@@ -180,6 +189,40 @@ class _AdminManualQaHomeState extends State<AdminManualQaHome> {
             onTap: () => _openBookingDetail(context, 'TX202609240003'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openSeededManualCallPage(BuildContext context) {
+    final l10n = context.l10n;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminManualQaOperationalShell(
+          title: l10n.t('admin_manual_booking_menu'),
+          child: AdminManualBookingCreatePage(
+            dispatchApi: _dispatchApi,
+            flightLookupApi: _flightLookupApi,
+            initialOrigin: const LocationOption(
+              id: 'qa-bkk',
+              displayName: 'BKK — Suvarnabhumi Airport',
+              kind: LocationKind.airport,
+              code: 'BKK',
+              latitude: 13.6900,
+              longitude: 100.7501,
+            ),
+            initialDestination: const LocationOption(
+              id: 'qa-pattaya',
+              displayName: 'Pattaya QA',
+              kind: LocationKind.city,
+              code: 'PATTAYA',
+              latitude: 12.9236,
+              longitude: 100.8825,
+            ),
+            initialServiceTypeCode: 'AIRPORT_PICKUP',
+            initialPickupAt: DateTime(2030, 10, 16, 10, 0),
+          ),
+        ),
       ),
     );
   }

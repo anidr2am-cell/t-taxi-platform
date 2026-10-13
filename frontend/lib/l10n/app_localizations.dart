@@ -191,6 +191,10 @@ class AppLocalizations {
           'Customer payment amount (THB)',
       'admin_manual_booking_customer_charge_hint':
           'The driver payout is the final amount after picket cost. Company settlement = customer payment - driver payout.',
+      'admin_manual_booking_standard_price_loading': 'Calculating the standard price…',
+      'admin_manual_booking_standard_price_error': 'No standard fare is registered for this route. Enter the amount manually.',
+      'admin_manual_booking_standard_price_refill': 'Fill with standard price again',
+      'admin_manual_booking_standard_price_applied': 'Filled from the same standard fare used for customer bookings.',
       'admin_manual_booking_payment_method': 'Payment collection',
       'admin_manual_booking_payment_admin_collected':
           'Admin already collected payment',
@@ -2267,6 +2271,10 @@ class AppLocalizations {
       'admin_manual_booking_customer_charge_amount': '고객 결제 금액 (THB)',
       'admin_manual_booking_customer_charge_hint':
           '기사 지급 금액은 피켓 비용을 반영한 최종 금액입니다. 회사 정산액 = 고객 결제액 - 기사 지급액입니다.',
+      'admin_manual_booking_standard_price_loading': '표준가를 계산하고 있습니다…',
+      'admin_manual_booking_standard_price_error': '이 구간에 등록된 표준가가 없습니다. 금액을 직접 입력해주세요.',
+      'admin_manual_booking_standard_price_refill': '표준가로 다시 채우기',
+      'admin_manual_booking_standard_price_applied': '고객 예약과 같은 표준 요금으로 자동 입력했습니다.',
       'admin_manual_booking_payment_method': '결제 방식',
       'admin_manual_booking_payment_admin_collected': '관리자가 이미 결제 받음',
       'admin_manual_booking_payment_driver_collects': '현장에서 기사가 직접 수금',
@@ -3654,6 +3662,10 @@ class AppLocalizations {
       'admin_manual_booking_customer_charge_amount': '客户支付金额 (THB)',
       'admin_manual_booking_customer_charge_hint':
           '司机收入是已计入举牌费用后的最终金额。公司结算额＝客户付款－司机收入。',
+      'admin_manual_booking_standard_price_loading': '正在计算标准价格…',
+      'admin_manual_booking_standard_price_error': '此路线没有已登记的标准价格，请手动输入金额。',
+      'admin_manual_booking_standard_price_refill': '重新填入标准价格',
+      'admin_manual_booking_standard_price_applied': '已按客户预约使用的相同标准价格自动填入。',
       'admin_manual_booking_payment_method': '收款方式',
       'admin_manual_booking_payment_admin_collected': '管理员已收款',
       'admin_manual_booking_payment_driver_collects': '司机现场收款',
@@ -4578,6 +4590,10 @@ class AppLocalizations {
       'admin_manual_booking_customer_charge_amount': '顧客支払額 (THB)',
       'admin_manual_booking_customer_charge_hint':
           'ドライバー受取額はピケット費用反映後の最終額です。会社精算額＝顧客支払額－ドライバー受取額です。',
+      'admin_manual_booking_standard_price_loading': '標準料金を計算しています…',
+      'admin_manual_booking_standard_price_error': 'この区間には標準料金が登録されていません。金額を手動で入力してください。',
+      'admin_manual_booking_standard_price_refill': '標準料金を再入力',
+      'admin_manual_booking_standard_price_applied': '顧客予約と同じ標準料金を自動入力しました。',
       'admin_manual_booking_payment_method': '支払い回収方法',
       'admin_manual_booking_payment_admin_collected': '管理者が既に受領済み',
       'admin_manual_booking_payment_driver_collects': '現地でドライバーが直接回収',
@@ -5585,6 +5601,10 @@ class AppLocalizations {
       'admin_manual_booking_customer_charge_amount': 'ยอดที่ลูกค้าจ่าย (THB)',
       'admin_manual_booking_customer_charge_hint':
           'ยอดคนขับเป็นยอดสุทธิหลังรวมค่าป้ายแล้ว ยอดชำระบริษัท = ยอดลูกค้า - ยอดคนขับ',
+      'admin_manual_booking_standard_price_loading': 'กำลังคำนวณราคามาตรฐาน…',
+      'admin_manual_booking_standard_price_error': 'ไม่มีราคามาตรฐานสำหรับเส้นทางนี้ กรุณากรอกยอดด้วยตนเอง',
+      'admin_manual_booking_standard_price_refill': 'กรอกราคามาตรฐานอีกครั้ง',
+      'admin_manual_booking_standard_price_applied': 'กรอกอัตโนมัติด้วยราคามาตรฐานเดียวกับการจองของลูกค้า',
       'admin_manual_booking_payment_method': 'วิธีรับเงิน',
       'admin_manual_booking_payment_admin_collected': 'แอดมินรับเงินแล้ว',
       'admin_manual_booking_payment_driver_collects': 'คนขับเก็บเงินหน้างาน',

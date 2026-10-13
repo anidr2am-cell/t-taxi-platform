@@ -6,8 +6,8 @@
 import http from 'node:http';
 import { URL } from 'node:url';
 
-const PORT = 3099;
-const HOST = '127.0.0.1';
+const PORT = Number(process.env.QA_PORT ?? 3099);
+const HOST = process.env.QA_HOST ?? '127.0.0.1';
 
 /** @type {Record<string, object>} */
 const bookings = {
@@ -131,6 +131,10 @@ function listDrivers(bookingNumber) {
       displayName: 'QA Active No Conflict',
       phone: '+66801000001',
       eligibilityState: 'AVAILABLE',
+      activeState: 'ACTIVE',
+      driverStatus: 'OFFLINE',
+      archive: { isArchived: false },
+      primaryVehicle: { vehicleTypeCode: 'SEDAN' },
       activeAssignmentCount: 1,
       assignmentEligible: true,
       pickupTimeConflict: false,
@@ -140,6 +144,10 @@ function listDrivers(bookingNumber) {
       displayName: 'QA Conflict Exactly 60m',
       phone: '+66801000002',
       eligibilityState: 'AVAILABLE',
+      activeState: 'ACTIVE',
+      driverStatus: 'OFFLINE',
+      archive: { isArchived: false },
+      primaryVehicle: { vehicleTypeCode: 'SEDAN' },
       activeAssignmentCount: 1,
       assignmentEligible: false,
       pickupTimeConflict: true,
@@ -149,6 +157,10 @@ function listDrivers(bookingNumber) {
       displayName: 'QA Gap 61m OK',
       phone: '+66801000003',
       eligibilityState: 'AVAILABLE',
+      activeState: 'ACTIVE',
+      driverStatus: 'OFFLINE',
+      archive: { isArchived: false },
+      primaryVehicle: { vehicleTypeCode: 'SUV' },
       activeAssignmentCount: 1,
       assignmentEligible: true,
       pickupTimeConflict: false,
@@ -158,6 +170,10 @@ function listDrivers(bookingNumber) {
       displayName: 'QA Settlement Blocked',
       phone: '+66801000004',
       eligibilityState: 'BLOCKED',
+      activeState: 'ACTIVE',
+      driverStatus: 'OFFLINE',
+      archive: { isArchived: false },
+      primaryVehicle: { vehicleTypeCode: 'VAN' },
       activeAssignmentCount: 0,
       assignmentEligible: false,
       pickupTimeConflict: false,
@@ -203,6 +219,34 @@ const server = http.createServer(async (req, res) => {
       data: {
         accessToken: 'qa-mock-admin-token',
         user: { id: 1, role: 'ADMIN', email: 'qa-admin@example.test' },
+      },
+    });
+  }
+
+  if (path === '/api/v1/vehicles/types' && req.method === 'GET') {
+    return json(res, 200, {
+      data: [
+        { code: 'SEDAN', isActive: true },
+        { code: 'SUV', isActive: true },
+        { code: 'VIP_SUV', isActive: true },
+        { code: 'VAN', isActive: true },
+      ],
+    });
+  }
+
+  if (path === '/api/v1/bookings/pricing/calculate' && req.method === 'POST') {
+    const body = await readBody(req);
+    const totalAmount = body?.nameSign === true ? 1100 : 1000;
+    return json(res, 200, {
+      data: {
+        currency: 'THB',
+        totalAmount,
+        chargeItems: [
+          { chargeType: 'VEHICLE_BASE', amount: 1000 },
+          ...(body?.nameSign === true
+            ? [{ chargeType: 'NAME_SIGN', amount: 100 }]
+            : []),
+        ],
       },
     });
   }
@@ -301,6 +345,25 @@ const server = http.createServer(async (req, res) => {
   if (path === '/api/v1/admin/drivers' && req.method === 'GET') {
     const bookingNumber = url.searchParams.get('bookingNumber') ?? '';
     return json(res, 200, { data: listDrivers(bookingNumber) });
+  }
+
+  if (path === '/api/v1/admin/bookings/manual' && req.method === 'POST') {
+    const body = await readBody(req);
+    const bookingNumber = 'TX202610130099';
+    bookings[bookingNumber] = buildBookingDetail({
+      bookingNumber,
+      status: body?.driverId ? 'DRIVER_ASSIGNED' : 'OPEN',
+      route: {
+        origin: body?.origin ?? {},
+        destination: body?.destination ?? {},
+      },
+      vehicle: { typeCode: body?.vehicleTypeCode ?? 'SEDAN' },
+      customer: body?.customer ?? {},
+      scheduledPickupAt: body?.scheduledPickupAt,
+    });
+    return json(res, 201, {
+      data: { bookingNumber, status: bookings[bookingNumber].status },
+    });
   }
 
   const bookingNotesMatch = path.match(

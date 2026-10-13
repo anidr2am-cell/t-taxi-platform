@@ -25,6 +25,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   List<dynamic> _routes = [];
   List<dynamic> _prices = [];
   List<dynamic> _policies = [];
+  List<String> _vehicleTypes = kVehicleTypes;
 
   bool _loading = true;
   String? _error;
@@ -65,6 +66,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
         _api.listRoutes(includeInactive: true),
         _api.listVehiclePrices(includeInactive: true),
         _api.listChargePolicies(includeInactive: true),
+        _api.listActiveVehicleTypeCodes(),
       ]);
       if (!mounted) return;
       setState(() {
@@ -72,6 +74,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
         _routes = results[1] as List<dynamic>;
         _prices = results[2] as List<dynamic>;
         _policies = results[3] as List<dynamic>;
+        final activeTypes = results[4] as List<String>;
+        _vehicleTypes = activeTypes.isEmpty ? kVehicleTypes : activeTypes;
         _loading = false;
       });
     } catch (err) {
@@ -368,7 +372,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
       existing != null ? '${existing['routeId']}' : (_routes.isNotEmpty ? '${_routes.first['id']}' : null),
     );
     final vehicleType = ValueNotifier<String>(
-      existing?['vehicleTypeCode'] as String? ?? kVehicleTypes.first,
+      existing?['vehicleTypeCode'] as String? ?? _vehicleTypes.first,
     );
     final priceCtrl = TextEditingController(text: '${existing?['price'] ?? ''}');
     final currencyCtrl = TextEditingController(text: existing?['currency'] as String? ?? 'THB');
@@ -419,7 +423,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         key: ValueKey(selected),
                         initialValue: selected,
                         decoration: const InputDecoration(labelText: 'Vehicle type'),
-                        items: kVehicleTypes
+                        items: _vehicleTypes
                             .map((code) => DropdownMenuItem(value: code, child: Text(code)))
                             .toList(),
                         onChanged: existing == null ? (v) => vehicleType.value = v ?? selected : null,

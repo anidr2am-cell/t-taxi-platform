@@ -3,7 +3,10 @@ param(
   [ValidateNotNullOrEmpty()]
   [string]$ApiBaseUrl,
 
-  [string]$SocketUrl = ''
+  [string]$SocketUrl = '',
+
+  [ValidateSet('lib/main.dart', 'lib/qa/admin_manual_qa_main.dart')]
+  [string]$Target = 'lib/main.dart'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,6 +41,7 @@ if (-not [string]::IsNullOrWhiteSpace($SocketUrl)) {
 $frontendDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..\frontend')).Path
 $flutterArgs = @(
   'build', 'web', '--release', '--no-wasm-dry-run',
+  '--target', $Target,
   '--dart-define=APP_ENV=preview',
   "--dart-define=API_BASE_URL=$ApiBaseUrl"
 )

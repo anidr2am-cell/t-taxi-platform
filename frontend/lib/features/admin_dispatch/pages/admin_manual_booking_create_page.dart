@@ -8,10 +8,13 @@ import '../../../widgets/app_ui.dart';
 import '../../admin_coupon/services/admin_coupon_api_service.dart';
 import '../../booking/models/flight_lookup_models.dart';
 import '../../booking/services/flight_lookup_api_service.dart';
+import '../../booking/services/booking_api_service.dart';
+import '../../booking/services/vehicle_type_api_service.dart';
 import '../../booking/models/location_option.dart';
 import '../../booking/models/service_type_option.dart';
 import '../../../services/api_service.dart';
 import '../../booking/utils/pickup_time_format.dart';
+import '../../booking/utils/pricing_location_params.dart';
 import '../../booking/utils/booking_contact_preference.dart';
 import '../../booking/utils/thailand_pickup_datetime.dart';
 import '../../booking/widgets/google_places_search_field.dart';
@@ -104,13 +107,29 @@ class AdminManualBookingCreatePage extends StatefulWidget {
     this.dispatchApi,
     this.couponApi,
     this.flightLookupApi,
+    this.bookingApi,
+    this.vehicleTypeApi,
     this.editBookingNumber,
+    this.initialOrigin,
+    this.initialDestination,
+    this.initialServiceTypeCode,
+    this.initialPickupAt,
   });
 
   final AdminDispatchApiService? dispatchApi;
   final AdminCouponApiService? couponApi;
   final FlightLookupApiService? flightLookupApi;
+  final BookingApiService? bookingApi;
+  final VehicleTypeApiService? vehicleTypeApi;
   final String? editBookingNumber;
+  @visibleForTesting
+  final LocationOption? initialOrigin;
+  @visibleForTesting
+  final LocationOption? initialDestination;
+  @visibleForTesting
+  final String? initialServiceTypeCode;
+  @visibleForTesting
+  final DateTime? initialPickupAt;
 
   @override
   State<AdminManualBookingCreatePage> createState() =>
@@ -135,6 +154,9 @@ class _AdminManualBookingCreatePageState
       widget.dispatchApi ?? const AdminDispatchApiService();
   AdminCouponApiService get _couponApi =>
       widget.couponApi ?? const AdminCouponApiService();
+  BookingApiService get _bookingApi => widget.bookingApi ?? BookingApiService();
+  VehicleTypeApiService get _vehicleTypeApi =>
+      widget.vehicleTypeApi ?? VehicleTypeApiService();
 
   LocationOption? _origin;
   LocationOption? _destination;
@@ -166,6 +188,13 @@ class _AdminManualBookingCreatePageState
   bool _loadingDirectDrivers = false;
   List<String> _golfRegions = const [];
   List<Map<String, dynamic>> _golfCourses = const [];
+  List<String> _activeVehicleTypes = const ['SEDAN', 'SUV', 'VIP_SUV', 'VAN'];
+  bool _loadingStandardPrice = false;
+  bool _applyingStandardPrice = false;
+  bool _customerChargeManuallyEdited = false;
+  bool _standardPriceStale = false;
+  String? _standardPriceError;
+  int _pricingRequestGeneration = 0;
 
   bool _searching = false;
   bool _submitting = false;
@@ -177,14 +206,6 @@ class _AdminManualBookingCreatePageState
   String? _loadEditError;
   List<AdminCustomerSearchResult> _searchResults = const [];
   AdminCustomerSearchResult? _selectedCustomer;
-
-  static const _vehicleTypes = [
-    'SEDAN',
-    'SUV',
-    'VIP_SUV',
-    'VAN',
-    'VIP_VAN',
-  ];
 
   static const _serviceTypeCodes = [
     'CITY_TRANSFER',
@@ -257,6 +278,11 @@ class _AdminManualBookingCreatePageState
   @override
   void initState() {
     super.initState();
+    _origin = widget.initialOrigin;
+    _destination = widget.initialDestination;
+    _serviceTypeCode = widget.initialServiceTypeCode ?? _serviceTypeCode;
+    _pickupAt = widget.initialPickupAt;
+    _customerChargeController.addListener(_onCustomerChargeEdited);
     final initialEdit = widget.editBookingNumber?.trim();
     if (initialEdit != null && initialEdit.isNotEmpty) {
       _editingBookingNumber = initialEdit;
@@ -264,6 +290,33 @@ class _AdminManualBookingCreatePageState
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGolfRegions());
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDirectDrivers());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadVehicleTypes());
+  }
+
+  void _onCustomerChargeEdited() {
+    if (_applyingStandardPrice || _isEditMode) return;
+    _customerChargeManuallyEdited = true;
+  }
+
+  Future<void> _loadVehicleTypes() async {
+    try {
+      final values = await _vehicleTypeApi.listActiveCodes();
+      final supportedValues = values.where((code) => code != 'VIP_VAN').toList();
+      if (!mounted) return;
+      setState(() {
+        if (supportedValues.isNotEmpty) {
+          _activeVehicleTypes = supportedValues;
+        }
+        if (!_activeVehicleTypes.contains(_vehicleTypeCode)) {
+          _vehicleTypeCode = _activeVehicleTypes.first;
+          _selectedDirectDriverId = null;
+        }
+      });
+      _onQuoteInputsChanged();
+    } catch (_) {
+      // Keep the safe built-in list when the active-type endpoint is unavailable.
+      _onQuoteInputsChanged();
+    }
   }
 
   bool _vehicleCodeCompatible(String? driverCode) {
@@ -379,8 +432,9 @@ class _AdminManualBookingCreatePageState
   }
 
   List<String> get _vehicleTypeOptions {
-    if (_vehicleTypes.contains(_vehicleTypeCode)) return _vehicleTypes;
-    return [..._vehicleTypes, _vehicleTypeCode];
+    if (_activeVehicleTypes.contains(_vehicleTypeCode)) return _activeVehicleTypes;
+    if (_vehicleTypeCode == 'VIP_VAN') return _activeVehicleTypes;
+    return [..._activeVehicleTypes, _vehicleTypeCode];
   }
 
   bool get _showsFlightSection =>
@@ -641,6 +695,7 @@ class _AdminManualBookingCreatePageState
 
   @override
   void dispose() {
+    _customerChargeController.removeListener(_onCustomerChargeEdited);
     _searchController.dispose();
     _payoutController.dispose();
     _customerChargeController.dispose();
@@ -675,6 +730,7 @@ class _AdminManualBookingCreatePageState
         _nameSignTextController.clear();
       }
     });
+    _onQuoteInputsChanged();
   }
 
   Future<void> _searchCustomers() async {
@@ -737,6 +793,7 @@ class _AdminManualBookingCreatePageState
         time.minute,
       );
     });
+    _onQuoteInputsChanged();
   }
 
   Map<String, dynamic> _locationPayload(LocationOption location) {
@@ -747,6 +804,59 @@ class _AdminManualBookingCreatePageState
       if (location.longitude != null) 'lng': location.longitude,
       if (location.name != null) 'name': location.name,
     };
+  }
+
+  void _onQuoteInputsChanged() {
+    if (_isEditMode || _origin == null || _destination == null) return;
+    if (_customerChargeManuallyEdited) {
+      if (!_standardPriceStale && mounted) setState(() => _standardPriceStale = true);
+      return;
+    }
+    _fillStandardPrice();
+  }
+
+  Future<void> _fillStandardPrice() async {
+    final origin = _origin;
+    final destination = _destination;
+    final service = BookingServiceTypeX.fromApiCode(_serviceTypeCode);
+    if (origin == null || destination == null || service == null) return;
+    final generation = ++_pricingRequestGeneration;
+    setState(() { _loadingStandardPrice = true; _standardPriceError = null; });
+    final locations = pricingLocationParams(
+      service: service, origin: origin, destination: destination,
+    );
+    try {
+      final result = await _bookingApi.calculatePricing(
+        serviceTypeCode: _serviceTypeCode,
+        vehicleTypeCode: _vehicleTypeCode,
+        originAirportIata: locations['originAirportIata'],
+        destinationRegion: locations['destinationRegion'],
+        originLocationCode: locations['originLocationCode'],
+        destinationLocationCode: locations['destinationLocationCode'],
+        nameSign: _nameSign,
+        scheduledPickupAt: _pickupAt == null ? null : ThailandPickupDateTime.serializeWallClock(_pickupAt!),
+        adults: _adults, children: _children, infants: _infants,
+        luggage20: _luggage20, luggage24: _luggage24,
+        golfBags: _golfBags, specialLuggageCount: _specialLuggageCount,
+        originLat: origin.latitude, originLng: origin.longitude,
+        destinationLat: destination.latitude, destinationLng: destination.longitude,
+      );
+      if (!mounted || generation != _pricingRequestGeneration) return;
+      _applyingStandardPrice = true;
+      _customerChargeController.text = result.totalAmount.round().toString();
+      _applyingStandardPrice = false;
+      setState(() {
+        _loadingStandardPrice = false;
+        _standardPriceStale = false;
+        _customerChargeManuallyEdited = false;
+      });
+    } catch (_) {
+      if (!mounted || generation != _pricingRequestGeneration) return;
+      setState(() {
+        _loadingStandardPrice = false;
+        _standardPriceError = context.l10n.t('admin_manual_booking_standard_price_error');
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -884,19 +994,29 @@ class _AdminManualBookingCreatePageState
         );
       }
       if (!mounted) return;
+      final bookingNumber =
+          result['bookingNumber'] as String? ?? _editingBookingNumber;
       setState(() {
         _submitting = false;
-        final bookingNumber =
-            result['bookingNumber'] as String? ?? _editingBookingNumber;
         _createdBookingNumber = bookingNumber;
-        if (_isEditMode && widget.editBookingNumber != null) {
-          Navigator.of(context).pop(true);
-        }
       });
+      if (_isEditMode && widget.editBookingNumber != null) {
+        Navigator.of(context).pop(true);
+        return;
+      }
       if (_isEditMode && widget.editBookingNumber == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.t('admin_manual_booking_update_success'))),
         );
+      } else if (!_isEditMode && bookingNumber != null) {
+        final successMessage = _dispatchMode == 'DIRECT'
+            ? '${context.l10n.t('admin_manual_booking_assign_success')} · '
+                '${context.l10n.t('booking_number_label')}: $bookingNumber'
+            : '${context.l10n.t('admin_manual_booking_success')} $bookingNumber';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
+        await _openDetail();
       }
     } on AdminDispatchApiException catch (error) {
       if (!mounted) return;
@@ -1210,17 +1330,24 @@ class _AdminManualBookingCreatePageState
                       label: l10n.t('admin_manual_booking_origin'),
                       languageCode: languageCode,
                       selected: _origin,
-                      onSelected: (value) => setState(() => _origin = value),
+                      onSelected: (value) {
+                        setState(() => _origin = value);
+                        _onQuoteInputsChanged();
+                      },
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                     GooglePlacesSearchField(
                       label: l10n.t('admin_manual_booking_destination'),
                       languageCode: languageCode,
                       selected: _destination,
-                      onSelected: (value) => setState(() => _destination = value),
+                      onSelected: (value) {
+                        setState(() => _destination = value);
+                        _onQuoteInputsChanged();
+                      },
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                     DropdownButtonFormField<String>(
+                      key: const Key('adminManualBookingServiceType'),
                       value: _serviceTypeCode,
                       decoration: InputDecoration(
                         labelText: l10n.t('service_type'),
@@ -1255,6 +1382,7 @@ class _AdminManualBookingCreatePageState
                               _golfCourses = const [];
                             }
                           });
+                          _onQuoteInputsChanged();
                         }
                       },
                     ),
@@ -1332,13 +1460,16 @@ class _AdminManualBookingCreatePageState
                         onConfirmedLookup: (result) => setState(
                           () => _applyFlightLookup(result),
                         ),
-                        onPickupAtApply: (value) =>
-                            setState(() => _pickupAt = value),
+                        onPickupAtApply: (value) {
+                          setState(() => _pickupAt = value);
+                          _onQuoteInputsChanged();
+                        },
                         flightLookupApi: widget.flightLookupApi,
                       ),
                     ],
                     const SizedBox(height: AppTokens.spaceMd),
                     DropdownButtonFormField<String>(
+                      key: const Key('adminManualBookingVehicleType'),
                       value: _vehicleTypeCode,
                       decoration: InputDecoration(
                         labelText: l10n.t('admin_manual_booking_vehicle_type'),
@@ -1362,6 +1493,7 @@ class _AdminManualBookingCreatePageState
                               _selectedDirectDriverId = null;
                             }
                           });
+                          _onQuoteInputsChanged();
                         }
                       },
                     ),
@@ -1527,6 +1659,7 @@ class _AdminManualBookingCreatePageState
                     ),
                     const SizedBox(height: AppTokens.spaceMd),
                     TextFormField(
+                      key: const Key('adminManualBookingCustomerChargeAmount'),
                       controller: _customerChargeController,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -1535,6 +1668,28 @@ class _AdminManualBookingCreatePageState
                         helperText: l10n.t('admin_manual_booking_customer_charge_hint'),
                       ),
                     ),
+                    if (_loadingStandardPrice)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTokens.spaceSm),
+                        child: Text(l10n.t('admin_manual_booking_standard_price_loading')),
+                      )
+                    else if (_standardPriceStale)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          key: const Key('adminManualBookingRefillStandardPrice'),
+                          onPressed: _submitting ? null : _fillStandardPrice,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(l10n.t('admin_manual_booking_standard_price_refill')),
+                        ),
+                      )
+                    else if (_standardPriceError != null)
+                      Text(_standardPriceError!, style: const TextStyle(color: AppTokens.error))
+                    else if (_customerChargeController.text.isNotEmpty && !_isEditMode)
+                      Text(
+                        l10n.t('admin_manual_booking_standard_price_applied'),
+                        style: const TextStyle(color: AppTokens.success),
+                      ),
                     const SizedBox(height: AppTokens.spaceLg),
                     Text(
                       l10n.t('admin_manual_booking_payment_method'),
