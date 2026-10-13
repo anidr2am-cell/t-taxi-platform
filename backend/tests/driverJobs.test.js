@@ -295,12 +295,9 @@ test('driver can access assigned booking detail', async () => {
 
   assert.equal(detail.bookingNumber, 'TX202607010001');
   assert.equal(detail.assignmentStatus, 'ASSIGNED');
-  assert.equal(detail.customerPhone, '+66123456789');
-  assert.deepEqual(detail.customerContact, {
-    messengerType: null,
-    messengerId: null,
-    phone: '+66123456789',
-  });
+  assert.equal(detail.customerPhone, null);
+  assert.equal(detail.customerEmail, null);
+  assert.equal(detail.customerContact, null);
   assert.equal(detail.originLatitude, 13.69);
   assert.equal(detail.originLongitude, 100.7501);
   assert.equal(detail.destinationLatitude, 12.9236);
@@ -319,7 +316,7 @@ test('driver can access assigned booking detail', async () => {
   assert.equal(detail.paymentMethod, 'PAY_DRIVER');
 });
 
-test('driver detail normalizes all supported and legacy messenger types', () => {
+test('driver detail never exposes supported or legacy messenger contacts', () => {
   const service = new DriverJobService({});
   const cases = [
     ['KAKAO', 'KAKAO'],
@@ -329,15 +326,15 @@ test('driver detail normalizes all supported and legacy messenger types', () => 
     ['PHONE/SMS', 'SMS'],
   ];
 
-  for (const [storedType, expectedType] of cases) {
+  for (const [storedType] of cases) {
     const detail = service.mapDetail(row({
       metadata: JSON.stringify({ messengerType: storedType, messengerId: ' contact-id ' }),
     }));
-    assert.deepEqual(detail.customerContact, {
-      messengerType: expectedType,
-      messengerId: 'contact-id',
-      phone: '+66123456789',
-    });
+    assert.equal(detail.customerPhone, null);
+    assert.equal(detail.customerEmail, null);
+    assert.equal(detail.customerContact, null);
+    assert.equal(JSON.stringify(detail).includes('contact-id'), false);
+    assert.equal(JSON.stringify(detail).includes('+66123456789'), false);
   }
 });
 
@@ -349,22 +346,22 @@ test('driver detail supports messenger contact with null phone', () => {
   }));
 
   assert.equal(detail.customerPhone, null);
-  assert.deepEqual(detail.customerContact, {
-    messengerType: 'LINE',
-    messengerId: 'line-user',
-    phone: null,
-  });
+  assert.equal(detail.customerEmail, null);
+  assert.equal(detail.customerContact, null);
+  assert.equal(JSON.stringify(detail).includes('line-user'), false);
 });
 
-test('driver detail exposes contact in every active trip contact state', () => {
+test('driver detail hides customer contact in every active trip state', () => {
   const service = new DriverJobService({});
   for (const status of ['DRIVER_ASSIGNED', 'ON_ROUTE', 'DRIVER_ARRIVED', 'PICKED_UP']) {
     const detail = service.mapDetail(row({
       status,
       metadata: JSON.stringify({ messengerType: 'LINE', messengerId: 'line-user' }),
     }));
-    assert.equal(detail.customerPhone, '+66123456789', status);
-    assert.equal(detail.customerContact.messengerType, 'LINE', status);
+    assert.equal(detail.customerPhone, null, status);
+    assert.equal(detail.customerEmail, null, status);
+    assert.equal(detail.customerContact, null, status);
+    assert.equal(JSON.stringify(detail).includes('line-user'), false, status);
   }
 });
 
@@ -376,6 +373,7 @@ test('driver detail hides customer contact outside active trip contact states', 
       metadata: JSON.stringify({ messengerType: 'WHATSAPP', messengerId: '+66812345678' }),
     }));
     assert.equal(detail.customerPhone, null, status);
+    assert.equal(detail.customerEmail, null, status);
     assert.equal(detail.customerContact, null, status);
   }
 });

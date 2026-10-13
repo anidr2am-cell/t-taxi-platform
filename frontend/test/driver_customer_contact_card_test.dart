@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/features/driver/driver_trip_contact.dart';
 import 'package:frontend/features/driver/models/driver_booking.dart';
+import 'package:frontend/features/driver/pages/driver_support_page.dart';
 import 'package:frontend/features/driver/widgets/driver_customer_contact_card.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 
 void main() {
-  test('customerContact parses nullable response fields', () {
+  test('driver booking accepts redacted contact fields', () {
     final booking = DriverBooking.fromJson({
       'bookingNumber': 'TX202610100001',
       'status': 'DRIVER_ASSIGNED',
@@ -16,41 +15,18 @@ void main() {
       'vehicleType': {'name': 'Sedan'},
       'passengerCount': 1,
       'customerPhone': null,
-      'customerContact': {
-        'messengerType': 'line',
-        'messengerId': ' line-user ',
-        'phone': null,
-      },
+      'customerEmail': null,
+      'customerContact': null,
     });
 
     expect(booking.customerPhone, isNull);
-    expect(booking.customerContact?.messengerType, 'LINE');
-    expect(booking.customerContact?.messengerId, 'line-user');
-    expect(booking.customerContact?.phone, isNull);
+    expect(booking.customerContact, isNull);
   });
 
-  test(
-    'contact URI helpers reject empty values and normalize E.164 numbers',
-    () {
-      expect(DriverTripContact.whatsappUri(null), isNull);
-      expect(DriverTripContact.smsUri(''), isNull);
-      expect(
-        DriverTripContact.whatsappUri('+82 10-1234-5678').toString(),
-        'https://wa.me/821012345678',
-      );
-      expect(
-        DriverTripContact.smsUri('+66 81 234 5678').toString(),
-        'sms:+66812345678',
-      );
-      expect(
-        DriverTripContact.samePhone('+82 10-1234-5678', '+821012345678'),
-        isTrue,
-      );
-    },
-  );
-
   for (final locale in AppLocalizations.supportedLanguages) {
-    testWidgets('contact card renders at 375px in $locale', (tester) async {
+    testWidgets('administrator-only contact card fits 375px in $locale', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(375, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -62,199 +38,47 @@ void main() {
           const DriverCustomerContactCard(
             contact: DriverCustomerContact(
               messengerType: 'KAKAO',
-              messengerId: 'trider-user',
+              messengerId: 'must-not-render',
               phone: '+66812345678',
             ),
+            legacyPhone: '+66999999999',
           ),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('driverCustomerMessenger')),
+        find.text(
+          '고객 연락은 관리자를 통해 진행합니다.\n'
+          '(การติดต่อลูกค้าดำเนินการผ่านผู้ดูแล)',
+        ),
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey('driverCustomerEmergencyPhone')),
-        findsNothing,
+        find.byKey(const ValueKey('driverCustomerContactAdminButton')),
+        findsOneWidget,
       );
+      expect(find.textContaining('must-not-render'), findsNothing);
+      expect(find.textContaining('+66812345678'), findsNothing);
+      expect(find.textContaining('+66999999999'), findsNothing);
       expect(tester.takeException(), isNull);
-      expect(find.text('고객 연락 방법\n(ช่องทางติดต่อลูกค้า)'), findsOneWidget);
-      expect(find.text('ID 복사\n(คัดลอก ID)'), findsOneWidget);
-      expect(find.textContaining('+66 81 234 5678'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('driverCustomerKakaoId')),
-        findsOneWidget,
-      );
-      expect(find.text('번호 복사\n(คัดลอกหมายเลข)'), findsOneWidget);
     });
   }
 
-  testWidgets('copy success shows bilingual feedback and ID is selectable', (
+  testWidgets('administrator contact button opens existing support flow', (
     tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(
-        'ko',
-        const DriverCustomerContactCard(
-          contact: DriverCustomerContact(
-            messengerType: 'KAKAO',
-            messengerId: 'trider-user',
-          ),
-        ),
-      ),
+      _wrap('ko', const DriverCustomerContactCard(contact: null)),
     );
     await tester.pumpAndSettle();
 
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (call) async => null,
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
-
-    expect(find.byType(SelectableText), findsOneWidget);
-    await tester.tap(find.text('ID 복사\n(คัดลอก ID)'));
-    await tester.pump();
-
-    expect(
-      find.text('연락처 ID를 복사했습니다.\n(คัดลอก ID ติดต่อแล้ว)'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('Kakao phone-only and legacy ID-only contacts remain visible', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(
-        'ko',
-        const Column(
-          children: [
-            DriverCustomerContactCard(
-              contact: DriverCustomerContact(
-                messengerType: 'KAKAO',
-                phone: '+821012345678',
-              ),
-            ),
-            DriverCustomerContactCard(
-              contact: DriverCustomerContact(
-                messengerType: 'KAKAO',
-                messengerId: 'legacy-kakao-id',
-              ),
-            ),
-          ],
-        ),
-      ),
+    await tester.tap(
+      find.byKey(const ValueKey('driverCustomerContactAdminButton')),
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('+82 10 1234 5678'), findsOneWidget);
-    expect(find.textContaining('legacy-kakao-id'), findsOneWidget);
-    expect(find.text('번호 복사\n(คัดลอกหมายเลข)'), findsOneWidget);
-    expect(find.text('ID 복사\n(คัดลอก ID)'), findsOneWidget);
-  });
-
-  testWidgets('copy failure shows bilingual fallback guidance', (tester) async {
-    await tester.pumpWidget(
-      _wrap(
-        'th',
-        const DriverCustomerContactCard(
-          contact: DriverCustomerContact(
-            messengerType: 'LINE',
-            messengerId: 'line-user',
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (call) async {
-        if (call.method == 'Clipboard.setData') {
-          throw PlatformException(code: 'clipboard-denied');
-        }
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
-
-    await tester.tap(find.text('ID 복사\n(คัดลอก ID)'));
-    await tester.pump();
-
-    expect(
-      find.text(
-        '복사하지 못했습니다. ID를 길게 눌러 직접 복사해 주세요.\n'
-        '(คัดลอกไม่สำเร็จ กรุณากด ID ค้างไว้เพื่อคัดลอกเอง)',
-      ),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('WhatsApp phone is not duplicated as emergency phone', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(
-        'en',
-        const DriverCustomerContactCard(
-          contact: DriverCustomerContact(
-            messengerType: 'WHATSAPP',
-            messengerId: '+821012345678',
-            phone: '+82 10-1234-5678',
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const ValueKey('driverCustomerMessenger')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('driverCustomerEmergencyPhone')),
-      findsNothing,
-    );
-  });
-
-  testWidgets('legacy phone and missing contact have explicit fallbacks', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(
-        'en',
-        const Column(
-          children: [
-            DriverCustomerContactCard(
-              contact: null,
-              legacyPhone: '+66812345678',
-            ),
-            DriverCustomerContactCard(contact: null),
-          ],
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const ValueKey('driverCustomerLegacyPhone')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('driverCustomerContactUnavailable')),
-      findsOneWidget,
-    );
+    expect(find.byType(DriverSupportPage), findsOneWidget);
   });
 }
 
