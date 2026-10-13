@@ -92,6 +92,16 @@ class AdminPricingApiService {
     return Map<String, dynamic>.from(data as Map);
   }
 
+  Future<List<String>> listActiveVehicleTypeCodes() async {
+    final data = await _request('GET', '/vehicles/types');
+    final rows = data is List ? data : const <dynamic>[];
+    return rows
+        .whereType<Map>()
+        .map((row) => row['code']?.toString().trim().toUpperCase() ?? '')
+        .where((code) => code.isNotEmpty && code != 'VIP_VAN')
+        .toList(growable: false);
+  }
+
   Future<List<dynamic>> listRoutes({bool includeInactive = true}) async {
     final data = await _request('GET', '/admin/routes', query: {
       'includeInactive': includeInactive.toString(),
@@ -169,7 +179,6 @@ const kVehicleTypes = [
   'SUV',
   'VIP_SUV',
   'VAN',
-  'VIP_VAN',
   'LUXURY',
 ];
 

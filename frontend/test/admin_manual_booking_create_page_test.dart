@@ -1,10 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:frontend/features/admin_coupon/services/admin_coupon_api_service.dart';
 import 'package:frontend/features/admin_dispatch/pages/admin_manual_booking_create_page.dart';
 import 'package:frontend/features/admin_dispatch/services/admin_dispatch_api_service.dart';
+import 'package:frontend/features/booking/models/location_option.dart';
+import 'package:frontend/features/booking/services/booking_api_service.dart';
+import 'package:frontend/features/booking/services/vehicle_type_api_service.dart';
 import 'package:frontend/l10n/app_localizations.dart';
 
 class _FakeCouponApi extends AdminCouponApiService {
@@ -15,6 +22,29 @@ class _FakeCouponApi extends AdminCouponApiService {
     return const [];
   }
 }
+
+BookingApiService _fakeBookingApi({int totalAmount = 1000}) {
+  return BookingApiService.test(
+    client: MockClient((request) async {
+      if (request.url.path.endsWith('/bookings/pricing/calculate')) {
+        return http.Response(
+          '{"data":{"currency":"THB","totalAmount":$totalAmount,"chargeItems":[]}}',
+          200,
+        );
+      }
+      return http.Response('{"message":"not found"}', 404);
+    }),
+    baseUrl: 'http://test.invalid',
+  );
+}
+
+VehicleTypeApiService _fakeVehicleTypeApi() => VehicleTypeApiService(
+  client: MockClient((_) async => http.Response(
+    '{"data":[{"code":"SEDAN"},{"code":"SUV"},{"code":"VIP_SUV"},{"code":"VAN"}]}',
+    200,
+  )),
+  baseUrl: 'http://test.invalid',
+);
 
 class _FakeDispatchApi extends AdminDispatchApiService {
   _FakeDispatchApi(
@@ -128,6 +158,8 @@ Future<void> _pumpAdminPage(WidgetTester tester) async {
   await tester.pumpWidget(
     _wrap(
       AdminManualBookingCreatePage(
+        bookingApi: _fakeBookingApi(),
+        vehicleTypeApi: _fakeVehicleTypeApi(),
         couponApi: const _FakeCouponApi(),
         dispatchApi: _FakeDispatchApi(() async {
           throw StateError('should not submit');
@@ -167,6 +199,122 @@ void main() {
     await _pumpAdminPage(tester);
     await _tapSubmit(tester);
     expect(find.text('필수 항목을 모두 입력해주세요'), findsOneWidget);
+  });
+
+  testWidgets('fills customer amount from customer pricing and preserves edits', (tester) async {
+    await tester.pumpWidget(_wrap(AdminManualBookingCreatePage(
+      bookingApi: _fakeBookingApi(totalAmount: 1100),
+      vehicleTypeApi: _fakeVehicleTypeApi(),
+      couponApi: const _FakeCouponApi(),
+      dispatchApi: _FakeDispatchApi(() async => throw StateError('no submit')),
+      initialOrigin: const LocationOption(
+        id: 'bkk', displayName: 'BKK', kind: LocationKind.airport, code: 'BKK'),
+      initialDestination: const LocationOption(
+        id: 'pattaya', displayName: 'Pattaya', kind: LocationKind.city, code: 'PATTAYA'),
+      initialServiceTypeCode: 'AIRPORT_PICKUP',
+    )));
+    await tester.pumpAndSettle();
+    final amount = find.byKey(const Key('adminManualBookingCustomerChargeAmount'));
+    await tester.scrollUntilVisible(amount, 500, scrollable: find.byType(Scrollable).first);
+    await tester.pump();
+    expect(tester.widget<TextFormField>(amount).controller!.text, '1100');
+
+    await tester.enterText(amount, '1250');
+    final service = find.byKey(const Key('adminManualBookingServiceType'));
+    await tester.scrollUntilVisible(service, -500, scrollable: find.byType(Scrollable).first);
+    await tester.tap(service);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('도시간 이동').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.scrollUntilVisible(amount, 500, scrollable: find.byType(Scrollable).first);
+    expect(tester.widget<TextFormField>(amount).controller!.text, '1250');
+    final refill = find.byKey(const Key('adminManualBookingRefillStandardPrice'));
+    expect(refill, findsOneWidget);
+    await tester.ensureVisible(refill);
+    await tester.pump();
+    await tester.tap(refill);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextFormField>(amount).controller!.text, '1100');
+  });
+
+  testWidgets('active vehicle list excludes VIP_VAN', (tester) async {
+    await _pumpAdminPage(tester);
+    final picker = find.byKey(const Key('adminManualBookingVehicleType'));
+    await tester.ensureVisible(picker);
+    await tester.tap(picker);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('VIP_VAN'), findsNothing);
+    expect(find.text('VAN'), findsOneWidget);
+  });
+
+  testWidgets('direct create blocks duplicate submit and opens created booking', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final createResult = Completer<Map<String, dynamic>>();
+    final dispatchApi = _FakeDispatchApi(() => createResult.future);
+    await tester.pumpWidget(_wrap(AdminManualBookingCreatePage(
+      bookingApi: _fakeBookingApi(totalAmount: 1000),
+      vehicleTypeApi: _fakeVehicleTypeApi(),
+      couponApi: const _FakeCouponApi(),
+      dispatchApi: dispatchApi,
+      initialOrigin: const LocationOption(
+        id: 'bkk', displayName: 'BKK', kind: LocationKind.airport, code: 'BKK'),
+      initialDestination: const LocationOption(
+        id: 'pattaya', displayName: 'Pattaya', kind: LocationKind.city, code: 'PATTAYA'),
+      initialServiceTypeCode: 'AIRPORT_PICKUP',
+      initialPickupAt: DateTime.now().add(const Duration(days: 3)),
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('adminManualDispatchDirect')));
+    await tester.pumpAndSettle();
+    final driver = find.byKey(const Key('adminManualDirectDriver'));
+    await tester.tap(driver);
+    await tester.pump();
+    await tester.tap(find.textContaining('QA Driver').last);
+    await tester.pump();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('adminManualBookingPayoutAmount')),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.byKey(const Key('adminManualBookingPayoutAmount')),
+      '800',
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('adminManualBookingGuestName')),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.byKey(const Key('adminManualBookingGuestName')),
+      'QA Guest',
+    );
+    await tester.enterText(
+      find.byKey(const Key('adminManualBookingGuestPhone')),
+      '0812345678',
+    );
+    final submit = find.byKey(const Key('adminManualBookingSubmit'));
+    await tester.scrollUntilVisible(
+      submit,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(submit);
+    await tester.pump();
+    expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+
+    createResult.complete({'bookingNumber': 'TX202610130001'});
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.textContaining('TX202610130001'), findsWidgets);
+    expect(find.byType(AdminManualBookingCreatePage), findsNothing);
   });
 
   testWidgets('direct dispatch lists eligible drivers and messenger fields', (
@@ -224,6 +372,8 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         AdminManualBookingCreatePage(
+          bookingApi: _fakeBookingApi(),
+          vehicleTypeApi: _fakeVehicleTypeApi(),
           couponApi: const _FakeCouponApi(),
           dispatchApi: _FakeDispatchApi(
             () async => throw StateError('no create'),
@@ -252,6 +402,8 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         AdminManualBookingCreatePage(
+          bookingApi: _fakeBookingApi(),
+          vehicleTypeApi: _fakeVehicleTypeApi(),
           couponApi: const _FakeCouponApi(),
           dispatchApi: _FakeDispatchApi(
             () async => throw StateError('no create'),
@@ -295,6 +447,8 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         AdminManualBookingCreatePage(
+          bookingApi: _fakeBookingApi(),
+          vehicleTypeApi: _fakeVehicleTypeApi(),
           couponApi: const _FakeCouponApi(),
           dispatchApi: _FakeDispatchApi(() async => throw StateError('no create')),
           editBookingNumber: 'TX202609240001',
@@ -312,6 +466,8 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         AdminManualBookingCreatePage(
+          bookingApi: _fakeBookingApi(),
+          vehicleTypeApi: _fakeVehicleTypeApi(),
           couponApi: const _FakeCouponApi(),
           dispatchApi: _FakeDispatchApi(
             () async => throw StateError('no create'),
