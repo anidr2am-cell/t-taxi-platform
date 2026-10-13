@@ -1,0 +1,117 @@
+STATIC LANDING STAGE 1 — READ-ONLY INVESTIGATION AND KOREAN PREVIEW
+Base: e750cfb (main). Production deployment NOT performed.
+
+ROUTING
+Production nginx: deploy/docker/nginx.frontend.production.conf:19,31,80,90,107,121,126,131,141.
+Recommended change in stage 2: add exact `location = /` that serves /landing/index.html.
+Keep Flutter /index.html and all existing assets in their current locations. Do not replace Flutter index.
+Query strings do not participate in nginx location selection: /booking?service=... remains Flutter.
+Existing /api/, /socket.io/, /blog/, /downloads/, robots, sitemaps, ownership verification files stay separate.
+Preview nginx is landing/preview-nginx.conf ONLY; production nginx/compose/proxy were not edited.
+
+Flutter routes (frontend/lib/main.dart:128-160):
+/booking, /booking/contact-connect, /booking/lookup, /my-bookings,
+/account, /profile/complete, /privacy-policy, /support, /admin,
+/driver, /driver/login, /driver/apply, /driver/application-status, /driver/home, /driver/jobs.
+There is no registered /my alias. Do not invent it.
+OAuth: /auth/kakao/callback and /auth/line/callback.
+Sources: frontend/lib/features/auth/pages/kakao_oauth_callback_page.dart:27, line_oauth_callback_page.dart:26.
+Booking completion is a stateful MaterialPageRoute (booking_wizard_page.dart:397).
+Social login uses route label /booking/complete (social_login_navigation.dart:9), but it is not a standalone recoverable route in main.dart.
+Payment selection is inside the booking wizard (booking_wizard_page.dart:538-539); no separate public /payment route is registered.
+Preserve these stateful flows; do not manufacture a direct completion/payment URL.
+
+Internal home navigation requiring stage 2 decision:
+frontend/lib/features/auth/services/social_login_navigation.dart:48
+frontend/lib/features/booking/pages/booking_complete_page.dart:498
+Both use Navigator.pushNamedAndRemoveUntil('/'). This stays inside Flutter, so nginx cannot redirect it to the new landing.
+Stage 1 preserves both. Stage 2 should use a web-only document navigation to / for explicit HOME actions, while retaining existing native navigation behavior.
+Other '/' literals in frontend/lib are path normalization/analytics, not home links.
+
+SERVICE WORKER / PWA
+Existing cleanup worker: deploy/docker/flutter_service_worker_cleanup.js:1-18; installed into build output by Dockerfile.frontend:84.
+It skipWaiting(), unregisters itself, and navigates existing clients; it has no fetch handler or precache list.
+Preserve worker URL and cleanup behavior. Landing registers no new worker. This avoids root scope intercepting /booking or /blog.
+Old clients with a previous caching worker still need the cleanup activation. HTTP IP preview is not a secure context, so old-worker transition cannot be validated there.
+Stage 2 requires HTTPS isolated STG and an old-worker browser profile, tested with normal refreshes.
+Customer manifest: frontend/web/manifest.json — id /, start_url /.
+Driver manifest: frontend/web/manifest-driver.json — id /driver, start_url /driver, scope /driver.
+Landing links the existing customer manifest. Flutter still chooses driver/customer manifest in its untouched index.html:58-70.
+No manifest source, Flutter fonts/fallbacks/renderer/index.html/web engine settings changed.
+
+FARES
+Public calculation API exists: POST /api/v1/bookings/pricing/calculate (booking.routes.js:43-47).
+Controller pricing.controller.js:15-17 calls PricingService.calculate only; it does not create a booking.
+Full route catalog is admin-only: admin.pricing.routes.js:26-30. No public whole-fare-table endpoint currently exists.
+Stage 1: 9 registered pickup routes (BKK 5, DMK 4) and 3 vehicle prices each, captured with 27 calculation requests to isolated STG.
+Snapshot: landing/snapshot.json (source origin and capturedAt included). Build embeds actual table values in HTML; JS refreshes the selected airport via the same calculation API.
+On error or invalid response, preserve the dated snapshot and show an explicit stale-price warning. Never replace failures with zero or claim successful refresh.
+The landing lists regional basic-route prices for 1 vehicle. Exact addresses, distance surcharge and NAME_SIGN options remain in final booking quote.
+Stage 2 recommended endpoint: GET /api/v1/public/landing-data (proposal only, NOT implemented).
+Return active/effective pickup routes + SEDAN/SUV/VAN calculated prices + active capacity rules + public support channels + asOf.
+Reuse pricing service, filter inactive types/expired prices, whitelist fields, no personal information. Cache short-term and invalidate after admin fare changes.
+Generate HTML snapshot from this endpoint at build time, then update in browser in one request rather than 15 parallel calculations.
+Publish stale date/status when updates fail. Keep SEO snapshot and runtime values traceable to the same calculator.
+
+CAPACITY
+Read isolated DB only: vehicle_capacity_rules joined with active vehicle_types.
+Source query matches backend/src/repositories/vehicle.repository.js:58-77; matching logic vehicleRecommendation.service.js:59-70,117.
+SEDAN: passengers 2 / 20-inch 2 / 24-inch+ 0 / golf 0.
+SUV: passengers 3 / 20-inch 2 / 24-inch+ 2 / golf 1.
+VAN: passengers 8 / 20-inch 8 / 24-inch+ 8 / golf 4.
+These are per-field upper limits, not a promise all maxima fit together. Cards explicitly say the actual combination must use booking recommendations.
+Golf-transfer-specific capacity rules are separate from this generic card; do not substitute the historical golf group capacity (e.g. 6) for this DB rule.
+Public GET /vehicles/types exposes vehicle_types capacities, not the full vehicle_capacity_rules. Stage 2 landing endpoint should expose the latter through a whitelisted DTO.
+
+POLICY / COPY
+Included-fare policy: docs/OPERATIONS_POLICY.md:58; tolls, airport parking and flight-delay waiting included.
+NAME_SIGN and distance surcharge remain; do not imply every option and address has the same basic price.
+Payment: backend/src/utils/customerPayment.js:1-18 supports PAY_DRIVER/BANK_TRANSFER/CARD.
+frontend/lib/l10n/app_localizations.dart:2446 says cash is paid to driver on arrival; :2449 says card via administrator.
+No universal post-trip-only payment, no-deposit rule is enforced. Therefore draft promises cash on arrival ONLY, and transfers/card according to administrator guidance.
+Cancellation: customerBookingCancellation.policy.js:7,53,110 — strictly before pickup minus 2h, and trip not started.
+Current fee decision docs/OPERATIONS_POLICY.md:27 is full refund/no fee.
+Outdated conflicting docs text at :47 and l10n:2148 says within 24h after confirmation. Not copied into draft.
+Stage 2 must reconcile obsolete policy documentation/customer trust text separately with Edward; stage 1 changes neither existing code nor policy.
+Children/infants count as passengers (vehicleRecommendation.service.js:16). No claim of free child seats or guaranteed child-seat stock.
+No invented reviews, ratings, customer counts, business hours or competitor content.
+
+SUPPORT
+Existing public GET /api/v1/bookings/contact-channels/public.
+Code: booking.routes.js:49, bookingContactConnection.controller.js:29, platformSettings.service.js:89,168.
+Public configured KAKAO/LINE/WHATSAPP URLs captured by public GET only. No production DB access.
+Isolated STG currently returns channels=[]; draft preserves the actual configured public snapshot. When preview API returns configured channels, runtime links update.
+WeChat is kept in the existing Flutter /support screen; landing offers 'all support channels' there rather than inventing a QR link.
+
+ANALYTICS / CONSENT
+Current GA4: frontend/web/index.html:21-53 and frontend/lib/core/analytics/ga4_booking_analytics_sink.dart:65.
+Production GA4 default public ID: docker-compose.production.yml:104 (G-1BRG6R9LWY).
+Default consent denied; ad storage/user data/personalization denied; SPA manual page_view avoids duplicate automatic events.
+Shared consent key: tride_analytics_consent (analytics_consent.dart:32). Values granted/denied.
+Shared attribution keys: tride_marketing_first_touch, tride_marketing_last_touch (marketing_attribution.dart:220-221), schema_version 2, TTL 90d.
+Landing reuses these keys/contracts, captures only sanitized campaign data after consent, clears attribution on deny, and provides cookie settings.
+Preview sends NO GA traffic, including after acceptance. Stage 2 adds the separate static-page consent-mode bridge, same measurement ID, one page_view and service CTA events without phone/booking IDs.
+Cross-page consent persists because storage is same-origin. No changes to Flutter index.html are necessary.
+
+PREVIEW / VALIDATION
+http://159.89.192.55:3115/ static landing; /booking etc untouched Flutter.
+http://159.89.192.55:3116/ comparison Flutter home (same Flutter build, same isolated backend).
+Network tride-landing-ko-net; unique backend tride-landing-ko-backend; response header X-Preview-Backend.
+Isolated DB tride-cleanup146-db reused through isolated network alias tride-landing-ko-db.
+New containers have no tride-prod-net connection. Read-only network check confirms production's original 4 containers only.
+Downloads in this preview redirect to existing public https://trider.taxi/downloads/ (no APK copied or changed).
+Browser tests: 375/1440 overflow, airport table switching, quote success/failure snapshot, consent persisted into Flutter, 4 actual service-link clicks.
+25 route contracts, including byte-identical Flutter index on 18 paths; blog/manifest/cleanup worker/health tested.
+A preview-only assembly path error was caught and fixed before final verification. assemble-preview.cjs now keeps /blog under /blog and asserts Flutter index SHA.
+No production deployment, booking creation, operational DB queries, migrations or production container restarts.
+
+STAGE 2 PLAN (approval required)
+1. Confirm design and policy copy, including conflicting legacy cancellation wording and any desired no-deposit policy.
+2. Add public landing-data DTO/cache and build-time snapshot freshness checks; no database schema migration expected.
+3. Extract ko/en/zh/ja/th copy. Korean canonical /; others /en/, /zh/, /ja/, /th/. Language switch points to real pages; no automatic crawler language redirects.
+4. Per-language title/description/OG/canonical/hreflang all five + x-default. Localized alt text and FAQ. Add accurate Organization/Service structured data; no fabricated rating/review schema.
+5. Integrate GA4 consent bridge; test granted/denied, UTM first/last touch and booking continuity. Preserve all Flutter font/renderer settings.
+6. Integrate landing into frontend image and exact-root nginx route only. Preserve blog/downloads/API/OAuth and customer/driver manifests.
+7. Decide/update two Flutter home actions using a web-only external-home helper (no engine/font changes).
+8. HTTPS STG regression: old worker refresh, OAuth callbacks, guest lookup, payment/completion state, support/privacy/blog/downloads, accessibility and 5-language 375px layouts.
+9. After Edward approval: production backup, protected-path checks, frontend-only deploy (backend first if new landing-data API), verification and rollback to previous image/root config. No production deployment in stage 1.

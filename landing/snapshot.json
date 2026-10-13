@@ -1,0 +1,144 @@
+{
+  "capturedAt": "2026-10-13T18:19:03.552Z",
+  "fareSource": "http://159.89.192.55:3113",
+  "contactSource": "https://trider.taxi/api/v1/bookings/contact-channels/public",
+  "rows": [
+    {
+      "airport": "BKK",
+      "destination": "PATTAYA",
+      "label": "파타야",
+      "prices": {
+        "SEDAN": 1000,
+        "SUV": 1300,
+        "VAN": 1700
+      }
+    },
+    {
+      "airport": "BKK",
+      "destination": "BANGKOK",
+      "label": "방콕",
+      "prices": {
+        "SEDAN": 550,
+        "SUV": 600,
+        "VAN": 1100
+      }
+    },
+    {
+      "airport": "BKK",
+      "destination": "HUA_HIN",
+      "label": "후아힌",
+      "prices": {
+        "SEDAN": 2000,
+        "SUV": 2200,
+        "VAN": 2700
+      }
+    },
+    {
+      "airport": "BKK",
+      "destination": "RAYONG",
+      "label": "라용",
+      "prices": {
+        "SEDAN": 1500,
+        "SUV": 1700,
+        "VAN": 2100
+      }
+    },
+    {
+      "airport": "BKK",
+      "destination": "AYUTTHAYA",
+      "label": "아유타야",
+      "prices": {
+        "SEDAN": 1200,
+        "SUV": 1400,
+        "VAN": 1800
+      }
+    },
+    {
+      "airport": "DMK",
+      "destination": "PATTAYA",
+      "label": "파타야",
+      "prices": {
+        "SEDAN": 1400,
+        "SUV": 1600,
+        "VAN": 2200
+      }
+    },
+    {
+      "airport": "DMK",
+      "destination": "BANGKOK",
+      "label": "방콕",
+      "prices": {
+        "SEDAN": 600,
+        "SUV": 800,
+        "VAN": 1200
+      }
+    },
+    {
+      "airport": "DMK",
+      "destination": "HUA_HIN",
+      "label": "후아힌",
+      "prices": {
+        "SEDAN": 2000,
+        "SUV": 2200,
+        "VAN": 2700
+      }
+    },
+    {
+      "airport": "DMK",
+      "destination": "RAYONG",
+      "label": "라용",
+      "prices": {
+        "SEDAN": 1800,
+        "SUV": 2000,
+        "VAN": 2500
+      }
+    }
+  ],
+  "channels": [
+    {
+      "code": "LINE",
+      "enabled": true,
+      "displayName": "LINE",
+      "addUrl": "https://lin.ee/55A9phq",
+      "accountId": "",
+      "qrImageUrl": null
+    },
+    {
+      "code": "KAKAO",
+      "enabled": true,
+      "displayName": "KakaoTalk",
+      "addUrl": "https://open.kakao.com/o/suG4krMi",
+      "accountId": "",
+      "qrImageUrl": null
+    },
+    {
+      "code": "WHATSAPP",
+      "enabled": true,
+      "displayName": "WhatsApp",
+      "phoneNumber": "+66815693445"
+    }
+  ],
+  "capacity": [
+    {
+      "code": "SEDAN",
+      "people": 2,
+      "small": 2,
+      "large": 0,
+      "golf": 0
+    },
+    {
+      "code": "SUV",
+      "people": 3,
+      "small": 2,
+      "large": 2,
+      "golf": 1
+    },
+    {
+      "code": "VAN",
+      "people": 8,
+      "small": 8,
+      "large": 8,
+      "golf": 4
+    }
+  ]
+}
