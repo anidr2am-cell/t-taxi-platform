@@ -9,14 +9,6 @@ const {
 const {
   evaluateDriverAssignmentRelease,
 } = require('../policies/driverAssignmentRelease.policy');
-const { normalizeMessengerType } = require('../utils/customerMessengerFields');
-
-const CUSTOMER_CONTACT_STATUSES = new Set([
-  'DRIVER_ASSIGNED',
-  'ON_ROUTE',
-  'DRIVER_ARRIVED',
-  'PICKED_UP',
-]);
 const {
   resolveAssignmentEndedReason,
   safeMessageForEndedReason,
@@ -369,23 +361,13 @@ class DriverJobService {
   }
 
   mapDetail(row) {
-    const canExposeCustomerContact = CUSTOMER_CONTACT_STATUSES.has(row.status);
-    const metadata = this.metadata(row);
-    const messengerType = normalizeMessengerType(metadata.messengerType);
-    const customerPhone = canExposeCustomerContact ? row.customer_phone ?? null : null;
     const detail = {
       ...this.mapBase(row),
-      customerPhone,
-      customerContact: canExposeCustomerContact
-        ? {
-          messengerType,
-          messengerId: messengerType && typeof metadata.messengerId === 'string'
-            && metadata.messengerId.trim()
-            ? metadata.messengerId.trim()
-            : null,
-          phone: customerPhone,
-        }
-        : null,
+      // Customer contact details are administrator-only. Keep the legacy
+      // response fields so installed driver clients remain schema-compatible.
+      customerPhone: null,
+      customerEmail: null,
+      customerContact: null,
       passengers: {
         adults: Number(row.adults || 0),
         children: Number(row.children || 0),

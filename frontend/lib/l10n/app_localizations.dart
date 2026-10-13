@@ -209,8 +209,10 @@ class AppLocalizations {
           'Messenger ID or international number',
       'admin_manual_booking_messenger_id_hint':
           'Enter the ID, or a number starting with +',
-      'admin_manual_booking_kakao_phone_required': 'KakaoTalk registered phone (required)',
-      'admin_manual_booking_kakao_phone_help': 'Enter an E.164 number beginning with +.',
+      'admin_manual_booking_kakao_phone_required':
+          'KakaoTalk registered phone (required)',
+      'admin_manual_booking_kakao_phone_help':
+          'Enter an E.164 number beginning with +.',
       'admin_manual_booking_kakao_id_optional': 'KakaoTalk ID (optional)',
       'admin_manual_booking_messenger_none': 'Not selected',
       'admin_manual_booking_messenger_kakao': 'KakaoTalk',
@@ -732,8 +734,10 @@ class AppLocalizations {
       'booking_contact_phone_sms': 'Phone · text',
       'booking_contact_kakao_id': 'KakaoTalk ID',
       'booking_contact_kakao_id_optional': 'KakaoTalk ID (optional)',
-      'booking_contact_kakao_phone_required': 'Phone number registered with KakaoTalk',
-      'booking_contact_kakao_phone_help': 'Enter the phone number registered with KakaoTalk.',
+      'booking_contact_kakao_phone_required':
+          'Phone number registered with KakaoTalk',
+      'booking_contact_kakao_phone_help':
+          'Enter the phone number registered with KakaoTalk.',
       'booking_contact_line_id': 'LINE ID',
       'booking_contact_id_searchable_notice':
           'Enter an ID that allows others to find you.',
@@ -1118,6 +1122,8 @@ class AppLocalizations {
       'driver_accept_booking_processing': 'Confirming standby',
       'driver_success_accept_booking': 'Standby confirmed',
       'driver_contact_title': 'Customer contact method',
+      'driver_contact_via_admin':
+          'Customer contact is handled through the administrator.',
       'driver_contact_kakao': 'KakaoTalk',
       'driver_contact_line': 'LINE',
       'driver_contact_whatsapp': 'WhatsApp',
@@ -1126,7 +1132,8 @@ class AppLocalizations {
       'driver_contact_emergency_phone': 'Emergency customer phone',
       'driver_contact_copy_id': 'Copy ID',
       'driver_contact_copy_phone': 'Copy number',
-      'driver_contact_kakao_phone_help': 'Save this number in your contacts to see the customer in your KakaoTalk friends list.',
+      'driver_contact_kakao_phone_help':
+          'Save this number in your contacts to see the customer in your KakaoTalk friends list.',
       'driver_contact_open_whatsapp': 'Open WhatsApp',
       'driver_contact_call': 'Call',
       'driver_contact_sms': 'Text',
@@ -3083,6 +3090,7 @@ class AppLocalizations {
       'admin_ops_reason_critical_unassigned': '최긴급 · 미배차',
       'admin_ops_reason_urgent_unassigned': '주의 · 미배차',
       'driver_contact_title': '고객 연락 방법',
+      'driver_contact_via_admin': '고객 연락은 관리자를 통해 진행합니다.',
       'driver_contact_kakao': '카카오톡',
       'driver_contact_line': 'LINE',
       'driver_contact_whatsapp': 'WhatsApp',
@@ -4068,6 +4076,7 @@ class AppLocalizations {
       'admin_ops_reason_critical_unassigned': '紧急 · 未派车',
       'admin_ops_reason_urgent_unassigned': '加急 · 未派车',
       'driver_contact_title': '客户联系方式',
+      'driver_contact_via_admin': '客户联系由管理员协助处理。',
       'driver_contact_kakao': 'KakaoTalk',
       'driver_contact_line': 'LINE',
       'driver_contact_whatsapp': 'WhatsApp',
@@ -5012,6 +5021,7 @@ class AppLocalizations {
       'admin_ops_reason_critical_unassigned': '最優先 · 未配車',
       'admin_ops_reason_urgent_unassigned': '至急 · 未配車',
       'driver_contact_title': 'お客様への連絡方法',
+      'driver_contact_via_admin': 'お客様への連絡は管理者を通じて行います。',
       'driver_contact_kakao': 'カカオトーク',
       'driver_contact_line': 'LINE',
       'driver_contact_whatsapp': 'WhatsApp',
@@ -5020,7 +5030,8 @@ class AppLocalizations {
       'driver_contact_emergency_phone': 'お客様の緊急連絡先',
       'driver_contact_copy_id': 'IDをコピー',
       'driver_contact_copy_phone': '電話番号をコピー',
-      'driver_contact_kakao_phone_help': 'この番号を連絡先に保存すると、KakaoTalkの友だち一覧に表示されます。',
+      'driver_contact_kakao_phone_help':
+          'この番号を連絡先に保存すると、KakaoTalkの友だち一覧に表示されます。',
       'driver_contact_open_whatsapp': 'WhatsAppを開く',
       'driver_contact_call': '電話',
       'driver_contact_sms': 'SMS',
@@ -5591,8 +5602,10 @@ class AppLocalizations {
           'ไอดีแชตหรือหมายเลขโทรศัพท์ระหว่างประเทศ',
       'admin_manual_booking_messenger_id_hint':
           'กรอกไอดีหรือหมายเลขที่ขึ้นต้นด้วย +',
-      'admin_manual_booking_kakao_phone_required': 'หมายเลขที่ลงทะเบียน KakaoTalk (จำเป็น)',
-      'admin_manual_booking_kakao_phone_help': 'กรอกหมายเลขสากลที่ขึ้นต้นด้วย +',
+      'admin_manual_booking_kakao_phone_required':
+          'หมายเลขที่ลงทะเบียน KakaoTalk (จำเป็น)',
+      'admin_manual_booking_kakao_phone_help':
+          'กรอกหมายเลขสากลที่ขึ้นต้นด้วย +',
       'admin_manual_booking_kakao_id_optional': 'KakaoTalk ID (ไม่บังคับ)',
       'admin_manual_booking_messenger_none': 'ไม่เลือก',
       'admin_manual_booking_messenger_kakao': 'KakaoTalk',
@@ -5854,8 +5867,10 @@ class AppLocalizations {
       'booking_contact_phone_sms': 'โทรศัพท์·ข้อความ',
       'booking_contact_kakao_id': 'KakaoTalk ID',
       'booking_contact_kakao_id_optional': 'KakaoTalk ID (ไม่บังคับ)',
-      'booking_contact_kakao_phone_required': 'หมายเลขโทรศัพท์ที่ลงทะเบียน KakaoTalk',
-      'booking_contact_kakao_phone_help': 'กรอกหมายเลขโทรศัพท์ที่ใช้ลงทะเบียน KakaoTalk',
+      'booking_contact_kakao_phone_required':
+          'หมายเลขโทรศัพท์ที่ลงทะเบียน KakaoTalk',
+      'booking_contact_kakao_phone_help':
+          'กรอกหมายเลขโทรศัพท์ที่ใช้ลงทะเบียน KakaoTalk',
       'booking_contact_line_id': 'LINE ID',
       'booking_contact_id_searchable_notice':
           'กรอก ID ที่อนุญาตให้ค้นหาเพื่อนได้',
@@ -6054,6 +6069,7 @@ class AppLocalizations {
       'admin_ops_reason_critical_unassigned': 'เร่งด่วนมาก · ยังไม่มอบหมาย',
       'admin_ops_reason_urgent_unassigned': 'เร่งด่วน · ยังไม่มอบหมาย',
       'driver_contact_title': 'ช่องทางติดต่อลูกค้า',
+      'driver_contact_via_admin': 'การติดต่อลูกค้าดำเนินการผ่านผู้ดูแล',
       'driver_contact_kakao': 'KakaoTalk',
       'driver_contact_line': 'LINE',
       'driver_contact_whatsapp': 'WhatsApp',
@@ -6062,7 +6078,8 @@ class AppLocalizations {
       'driver_contact_emergency_phone': 'เบอร์ฉุกเฉินของลูกค้า',
       'driver_contact_copy_id': 'คัดลอก ID',
       'driver_contact_copy_phone': 'คัดลอกหมายเลข',
-      'driver_contact_kakao_phone_help': 'บันทึกหมายเลขนี้ในรายชื่อติดต่อ แล้วลูกค้าจะปรากฏในรายชื่อเพื่อน KakaoTalk',
+      'driver_contact_kakao_phone_help':
+          'บันทึกหมายเลขนี้ในรายชื่อติดต่อ แล้วลูกค้าจะปรากฏในรายชื่อเพื่อน KakaoTalk',
       'driver_contact_open_whatsapp': 'เปิด WhatsApp',
       'driver_contact_call': 'โทร',
       'driver_contact_sms': 'ส่งข้อความ',
@@ -7263,6 +7280,8 @@ class AppLocalizations {
     'driver_suspended_banner':
         '이용이 제한되었습니다. 관리자에게 문의하세요.\n(การใช้งานถูกจำกัด กรุณาติดต่อผู้ดูแล)',
     'driver_contact_title': '고객 연락 방법\n(ช่องทางติดต่อลูกค้า)',
+    'driver_contact_via_admin':
+        '고객 연락은 관리자를 통해 진행합니다.\n(การติดต่อลูกค้าดำเนินการผ่านผู้ดูแล)',
     'driver_contact_kakao': '카카오톡\n(KakaoTalk)',
     'driver_contact_line': 'LINE\n(ไลน์)',
     'driver_contact_whatsapp': 'WhatsApp\n(วอตส์แอป)',
