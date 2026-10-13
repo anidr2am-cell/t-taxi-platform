@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../support/data/support_contact_api.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/app_localizations.dart';
@@ -17,6 +18,7 @@ class BookingListScreen extends StatefulWidget {
     required this.repository,
     required this.onUnauthorized,
     this.socketEvents,
+    this.supportContactApi,
     this.refreshRequest = 0,
     this.now,
   });
@@ -24,6 +26,7 @@ class BookingListScreen extends StatefulWidget {
   final BookingReader repository;
   final Future<void> Function() onUnauthorized;
   final Stream<DriverSocketEvent>? socketEvents;
+  final SupportContactDataSource? supportContactApi;
   final int refreshRequest;
   final DateTime Function()? now;
 
@@ -262,6 +265,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
                         repository: widget.repository,
                         onUnauthorized: widget.onUnauthorized,
                         socketEvents: widget.socketEvents,
+                        supportContactApi: widget.supportContactApi,
                         now: widget.now,
                       ),
                     ),
