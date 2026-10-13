@@ -156,7 +156,7 @@ void main() {
     expect(find.text('TX202609240003'), findsWidgets);
     expect(find.textContaining('850 THB'), findsOneWidget);
 
-    final assignButton = find.text('Assign driver');
+    final assignButton = find.widgetWithText(ElevatedButton, '기사 배정');
     await tester.scrollUntilVisible(
       assignButton,
       500,

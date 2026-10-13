@@ -68,13 +68,13 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
             children: [
               DropdownButton<String?>(
                 value: _statusFilter,
-                hint: const Text('Status'),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('All')),
-                  DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
+                hint: Text(context.l10n.t('admin_ui_status')),
+                items: [
+                  DropdownMenuItem(value: null, child: Text(context.l10n.t('admin_ui_all'))),
+                  DropdownMenuItem(value: 'PENDING', child: Text(context.l10n.t('admin_ui_pending'))),
                   DropdownMenuItem(
                     value: 'RECEIPT_SUBMITTED',
-                    child: Text('Receipt submitted'),
+                    child: Text(context.l10n.t('admin_ui_receipt_submitted')),
                   ),
                   DropdownMenuItem(value: 'OVERDUE', child: Text('Overdue')),
                   DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
@@ -88,7 +88,7 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
               FilterChip(
                 selected: _includeTestData,
                 avatar: const Icon(Icons.science_outlined, size: 18),
-                label: const Text('테스트 데이터 포함 보기'),
+                label: Text('테스트 데이터 포함 보기'),
                 onSelected: (selected) {
                   setState(() => _includeTestData = selected);
                 },
@@ -107,7 +107,7 @@ class _AdminSettlementQueuePageState extends State<AdminSettlementQueuePage> {
                   )
                 : _visibleItems.isEmpty
                 ? AppUi.emptyState(
-                    title: 'No settlements',
+                    title: context.l10n.t('admin_ui_no_settlements'),
                     icon: Icons.receipt_long_outlined,
                   )
                 : RefreshIndicator(
@@ -292,18 +292,18 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Approve settlement'),
+        title: Text(context.l10n.t('admin_ui_approve_settlement')),
         content: Text(
           'Approve settlement for ${widget.bookingNumber} and complete this booking?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.t('admin_ui_cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Approve'),
+            child: Text(context.l10n.t('admin_ui_approve')),
           ),
         ],
       ),
@@ -453,7 +453,7 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Transfer slip'),
+          title: Text(context.l10n.t('admin_ui_transfer_slip')),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 560),
             child: receipt.contentType.startsWith('image/')
@@ -461,21 +461,21 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                     receipt.bytes,
                     fit: BoxFit.contain,
                     errorBuilder: (_, _, _) =>
-                        const Text('Unable to load transfer slip'),
+                        Text(context.l10n.t('admin_ui_unable_to_load_transfer_slip')),
                   )
                 : Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.description_outlined, size: 52),
                       const SizedBox(height: AppTokens.spaceSm),
-                      Text(receipt.filename ?? 'Transfer slip'),
+                      Text(receipt.filename ?? context.l10n.t('admin_ui_transfer_slip')),
                     ],
                   ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text('Close'),
             ),
           ],
         ),
@@ -485,7 +485,7 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              userFacingError(err, fallback: 'Unable to load transfer slip'),
+              userFacingError(err, fallback: context.l10n.t('admin_ui_unable_to_load_transfer_slip')),
             ),
           ),
         );
@@ -514,7 +514,7 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
           ? AppUi.errorState(
               message: _error!,
               onRetry: _load,
-              retryLabel: 'Retry',
+              retryLabel: context.l10n.t('admin_ui_retry'),
             )
           : ListView(
               padding: AppUi.pagePadding(context),
@@ -636,7 +636,7 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                 if (hasReceipt) ...[
                   const SizedBox(height: AppTokens.spaceMd),
                   AppUi.secondaryButton(
-                    label: 'View transfer slip',
+                    label: context.l10n.t('admin_ui_view_transfer_slip'),
                     icon: Icons.receipt_long_outlined,
                     onPressed: _submitting ? null : _viewReceipt,
                     fullWidth: true,
@@ -646,7 +646,7 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                   const SizedBox(height: AppTokens.spaceMd),
                   AppUi.adminDetailSection(
                     context: context,
-                    title: 'Review receipt',
+                    title: context.l10n.t('admin_ui_review_receipt'),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -654,14 +654,14 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                           height: 48,
                           child: FilledButton(
                             onPressed: _submitting ? null : _approve,
-                            child: const Text('Approve'),
+                            child: Text(context.l10n.t('admin_ui_approve')),
                           ),
                         ),
                         const SizedBox(height: AppTokens.spaceMd),
                         TextField(
                           controller: _reasonController,
-                          decoration: const InputDecoration(
-                            labelText: 'Rejection reason',
+                          decoration: InputDecoration(
+                            labelText: context.l10n.t('admin_ui_rejection_reason'),
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -670,7 +670,7 @@ class _AdminSettlementDetailPageState extends State<AdminSettlementDetailPage> {
                           height: 48,
                           child: OutlinedButton(
                             onPressed: _submitting ? null : _reject,
-                            child: const Text('Reject'),
+                            child: Text(context.l10n.t('admin_ui_reject')),
                           ),
                         ),
                       ],

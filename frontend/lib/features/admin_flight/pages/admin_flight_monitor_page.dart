@@ -194,15 +194,15 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
   }
 
   String _cycleSummary(Map<String, dynamic>? cycle) {
-    if (cycle == null) return 'No cycle yet';
-    return 'selected ${_text(cycle['selected'])} · success ${_text(cycle['succeeded'])} · failed ${_text(cycle['failed'])} · skipped ${_text(cycle['skipped'])}';
+    if (cycle == null) return context.l10n.t('admin_ui_no_cycle_yet');
+    return context.l10n.t('admin_ui_selected_selected_success_success_failed_failed_skipped_skipped').replaceAll('{selected}', _text(cycle['selected'])).replaceAll('{success}', _text(cycle['succeeded'])).replaceAll('{failed}', _text(cycle['failed'])).replaceAll('{skipped}', _text(cycle['skipped']));
   }
 
   Widget _syncStatusPanel() {
     final l10n = context.l10n;
 
     if (_statusLoading) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.all(AppTokens.spaceMd),
         child: LinearProgressIndicator(),
       );
@@ -456,7 +456,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
                                         IconButton(
-                                          tooltip: 'Open booking',
+                                          tooltip: context.l10n.t('admin_ui_open_booking'),
                                           onPressed: () => _openBooking(item),
                                           icon: const Icon(Icons.open_in_new),
                                         ),
@@ -467,7 +467,7 @@ class _AdminFlightMonitorPageState extends State<AdminFlightMonitorPage> {
                                                 child: CircularProgressIndicator(strokeWidth: 2),
                                               )
                                             : IconButton(
-                                                tooltip: 'Sync flight',
+                                                tooltip: context.l10n.t('admin_ui_sync_flight'),
                                                 onPressed: () => _syncItem(item),
                                                 icon: const Icon(Icons.sync),
                                               ),

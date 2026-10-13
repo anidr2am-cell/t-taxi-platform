@@ -220,22 +220,22 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                   TextFormField(
                     controller: originCtrl,
                     decoration: InputDecoration(
-                      labelText: 'Origin code',
+                      labelText: context.l10n.t('admin_ui_origin_code'),
                       errorText: fieldErrors?['originLocationCode'],
                     ),
                     enabled: existing == null,
                     validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Origin is required' : null,
+                        v == null || v.trim().isEmpty ? context.l10n.t('admin_ui_origin_is_required') : null,
                   ),
                   TextFormField(
                     controller: destCtrl,
                     decoration: InputDecoration(
-                      labelText: 'Destination code',
+                      labelText: context.l10n.t('admin_ui_destination_code'),
                       errorText: fieldErrors?['destinationLocationCode'],
                     ),
                     enabled: existing == null,
                     validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Destination is required' : null,
+                        v == null || v.trim().isEmpty ? context.l10n.t('admin_ui_destination_is_required') : null,
                   ),
                   ValueListenableBuilder(
                     valueListenable: active,
@@ -325,11 +325,11 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             child: TextFormField(
               controller: destCtrl,
               decoration: InputDecoration(
-                labelText: 'New destination code',
+                labelText: context.l10n.t('admin_ui_new_destination_code'),
                 errorText: fieldErrors?['destinationLocationCode'],
               ),
               validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Destination is required' : null,
+                  v == null || v.trim().isEmpty ? context.l10n.t('admin_ui_destination_is_required') : null,
             ),
           ),
           actions: [
@@ -357,7 +357,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                         if (mounted) setState(() => _saving = false);
                       }
                     },
-              child: const Text('Copy'),
+              child: Text(context.l10n.t('admin_ui_copy')),
             ),
           ],
         ),
@@ -404,7 +404,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       builder: (context, selected, child) => DropdownButtonFormField<String>(
                         key: ValueKey(selected),
                         initialValue: selected,
-                        decoration: const InputDecoration(labelText: 'Route'),
+                        decoration: InputDecoration(labelText: 'Route'),
                         items: _routes
                             .map((row) {
                               final map = Map<String, dynamic>.from(row as Map);
@@ -422,7 +422,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       builder: (context, selected, child) => DropdownButtonFormField<String>(
                         key: ValueKey(selected),
                         initialValue: selected,
-                        decoration: const InputDecoration(labelText: 'Vehicle type'),
+                        decoration: InputDecoration(labelText: context.l10n.t('admin_ui_vehicle_type')),
                         items: _vehicleTypes
                             .map((code) => DropdownMenuItem(value: code, child: Text(code)))
                             .toList(),
@@ -432,13 +432,13 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     TextFormField(
                       controller: priceCtrl,
                       decoration: InputDecoration(
-                        labelText: 'Price',
+                        labelText: context.l10n.t('admin_ui_price'),
                         errorText: fieldErrors?['price'],
                       ),
                       keyboardType: TextInputType.number,
                       validator: (v) {
                         final n = double.tryParse(v ?? '');
-                        if (n == null || n <= 0) return 'Price must be greater than 0';
+                        if (n == null || n <= 0) return context.l10n.t('admin_ui_price_must_be_greater_than_0');
                         return null;
                       },
                     ),
@@ -452,20 +452,20 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     ),
                     TextFormField(
                       controller: fromCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Effective from (ISO, optional)',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.t('admin_ui_effective_from_iso_optional'),
                       ),
                     ),
                     TextFormField(
                       controller: toCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Effective to (ISO, optional)',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.t('admin_ui_effective_to_iso_optional'),
                       ),
                     ),
                     ValueListenableBuilder(
                       valueListenable: active,
                       builder: (context, selected, child) => SwitchListTile(
-                        title: const Text('Active'),
+                        title: Text(context.l10n.t('admin_ui_active')),
                         value: selected,
                         onChanged: (v) => active.value = v,
                       ),
@@ -565,7 +565,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     builder: (context, selected, child) => DropdownButtonFormField<String>(
                       key: ValueKey(selected),
                       initialValue: selected,
-                      decoration: const InputDecoration(labelText: 'Charge type'),
+                      decoration: InputDecoration(labelText: context.l10n.t('admin_ui_charge_type')),
                       items: kChargePolicyTypes
                           .map((code) => DropdownMenuItem(value: code, child: Text(code)))
                           .toList(),
@@ -577,7 +577,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                     builder: (context, selected, child) => DropdownButtonFormField<String>(
                       key: ValueKey(selected),
                       initialValue: selected,
-                      decoration: const InputDecoration(labelText: 'Calculation type'),
+                      decoration: InputDecoration(labelText: context.l10n.t('admin_ui_calculation_type')),
                       items: kCalculationTypes
                           .map((code) => DropdownMenuItem(value: code, child: Text(code)))
                           .toList(),
@@ -586,21 +586,21 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                   ),
                   TextFormField(
                     controller: amountCtrl,
-                    decoration: const InputDecoration(labelText: 'Amount'),
+                    decoration: InputDecoration(labelText: context.l10n.t('admin_ui_amount')),
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       final n = double.tryParse(v ?? '');
-                      if (n == null || n < 0) return 'Amount must be zero or greater';
+                      if (n == null || n < 0) return context.l10n.t('admin_ui_amount_must_be_zero_or_greater');
                       return null;
                     },
                   ),
                   TextFormField(
                     controller: fromCtrl,
-                    decoration: const InputDecoration(labelText: 'Effective from (optional)'),
+                    decoration: InputDecoration(labelText: context.l10n.t('admin_ui_effective_from_optional')),
                   ),
                   TextFormField(
                     controller: toCtrl,
-                    decoration: const InputDecoration(labelText: 'Effective to (optional)'),
+                    decoration: InputDecoration(labelText: context.l10n.t('admin_ui_effective_to_optional')),
                   ),
                   ValueListenableBuilder(
                     valueListenable: active,
@@ -616,7 +616,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.l10n.t('admin_ui_cancel'))),
           FilledButton(
             onPressed: _saving
                 ? null
@@ -788,15 +788,15 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       : SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: DataTable(
-                            columns: const [
+                            columns: [
                               DataColumn(label: Text('ID')),
                               DataColumn(label: Text('Service')),
                               DataColumn(label: Text('Origin')),
                               DataColumn(label: Text('Destination')),
-                              DataColumn(label: Text('Active')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_active'))),
                               DataColumn(label: Text('Prices')),
                               DataColumn(label: Text('Updated')),
-                              DataColumn(label: Text('Actions')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_actions'))),
                             ],
                             rows: _filteredRoutes.map((row) {
                               final map = Map<String, dynamic>.from(row as Map);
@@ -805,7 +805,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                                 DataCell(Text('${map['serviceTypeCode']}')),
                                 DataCell(Text('${map['originLocationCode']}')),
                                 DataCell(Text('${map['destinationLocationCode']}')),
-                                DataCell(Text(map['isActive'] == true ? 'Yes' : 'No')),
+                                DataCell(Text(map['isActive'] == true ? context.l10n.t('admin_ui_yes') : context.l10n.t('admin_ui_no'))),
                                 DataCell(Text('${_priceCountForRoute(map['id'] as int)}')),
                                 DataCell(Text('${map['updatedAt'] ?? '-'}')),
                                 DataCell(_routeActions(map)),
@@ -830,12 +830,12 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
           onPressed: () => _showRouteDialog(existing: map),
         ),
         IconButton(
-          tooltip: 'Copy',
+          tooltip: context.l10n.t('admin_ui_copy'),
           icon: const Icon(Icons.copy),
           onPressed: () => _copyRoute(map),
         ),
         IconButton(
-          tooltip: 'View prices',
+          tooltip: context.l10n.t('admin_ui_view_prices'),
           icon: const Icon(Icons.price_change),
           onPressed: () {
             setState(() {
@@ -850,8 +850,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             icon: const Icon(Icons.block),
             onPressed: () async {
               if (!await _confirm(
-                'Deactivate route',
-                'This route will be excluded from customer pricing.',
+                context.l10n.t('admin_ui_deactivate_route'),
+                context.l10n.t('admin_ui_this_route_will_be_excluded_from_customer_pricing'),
               )) {
                 return;
               }
@@ -920,8 +920,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             icon: const Icon(Icons.block),
             onPressed: () async {
               if (!await _confirm(
-                'Deactivate price',
-                'This price will no longer apply to customer pricing.',
+                context.l10n.t('admin_ui_deactivate_price'),
+                context.l10n.t('admin_ui_this_price_will_no_longer_apply_to_customer_pricing'),
               )) {
                 return;
               }
@@ -971,10 +971,10 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          AppUi.summaryRow(label: 'Vehicle', value: '${map['vehicleTypeCode']}'),
-          AppUi.summaryRow(label: 'Price', value: '${map['price']} ${map['currency']}'),
-          AppUi.summaryRow(label: 'Effective from', value: '${map['effectiveFrom'] ?? '-'}'),
-          AppUi.summaryRow(label: 'Effective to', value: '${map['effectiveTo'] ?? '-'}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_vehicle'), value: '${map['vehicleTypeCode']}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_price'), value: '${map['price']} ${map['currency']}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_effective_from'), value: '${map['effectiveFrom'] ?? '-'}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_effective_to'), value: '${map['effectiveTo'] ?? '-'}'),
           const SizedBox(height: AppTokens.spaceSm),
           _priceActions(map),
         ],
@@ -1053,15 +1053,15 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       : SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: DataTable(
-                            columns: const [
+                            columns: [
                               DataColumn(label: Text('Route')),
-                              DataColumn(label: Text('Vehicle')),
-                              DataColumn(label: Text('Price')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_vehicle'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_price'))),
                               DataColumn(label: Text('Currency')),
-                              DataColumn(label: Text('Effective from')),
-                              DataColumn(label: Text('Effective to')),
-                              DataColumn(label: Text('Status')),
-                              DataColumn(label: Text('Actions')),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_effective_from'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_effective_to'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_status'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_actions'))),
                             ],
                             rows: _filteredPrices.map((row) {
                               final map = Map<String, dynamic>.from(row as Map);
@@ -1105,8 +1105,8 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             icon: const Icon(Icons.block),
             onPressed: () async {
               if (!await _confirm(
-                'Deactivate policy',
-                'This policy will be excluded from pricing calculations.',
+                context.l10n.t('admin_ui_deactivate_policy'),
+                context.l10n.t('admin_ui_this_policy_will_be_excluded_from_pricing_calculations'),
               )) {
                 return;
               }
@@ -1141,10 +1141,10 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
             ],
           ),
           const SizedBox(height: AppTokens.spaceSm),
-          AppUi.summaryRow(label: 'Calculation', value: '${map['calculationType']}'),
-          AppUi.summaryRow(label: 'Amount', value: '${map['amount']}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_calculation'), value: '${map['calculationType']}'),
+          AppUi.summaryRow(label: context.l10n.t('admin_ui_amount'), value: '${map['amount']}'),
           AppUi.summaryRow(
-            label: 'Period',
+            label: context.l10n.t('admin_ui_period'),
             value: '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}',
           ),
           const SizedBox(height: AppTokens.spaceSm),
@@ -1203,14 +1203,14 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                       : SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: DataTable(
-                            columns: const [
-                              DataColumn(label: Text('Type')),
-                              DataColumn(label: Text('Calculation')),
-                              DataColumn(label: Text('Amount')),
-                              DataColumn(label: Text('Active')),
-                              DataColumn(label: Text('Period')),
-                              DataColumn(label: Text('Status')),
-                              DataColumn(label: Text('Actions')),
+                            columns: [
+                              DataColumn(label: Text(context.l10n.t('admin_ui_type'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_calculation'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_amount'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_active'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_period'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_status'))),
+                              DataColumn(label: Text(context.l10n.t('admin_ui_actions'))),
                             ],
                             rows: _filteredPolicies.map((row) {
                               final map = Map<String, dynamic>.from(row as Map);
@@ -1219,7 +1219,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
                                 DataCell(Text('${map['chargeType']}')),
                                 DataCell(Text('${map['calculationType']}')),
                                 DataCell(Text('${map['amount']}')),
-                                DataCell(Text(map['isActive'] == true ? 'Yes' : 'No')),
+                                DataCell(Text(map['isActive'] == true ? context.l10n.t('admin_ui_yes') : context.l10n.t('admin_ui_no'))),
                                 DataCell(Text(
                                     '${map['effectiveFrom'] ?? '-'} → ${map['effectiveTo'] ?? '-'}')),
                                 DataCell(Text(status)),
@@ -1346,7 +1346,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
           orElse: () => null,
         );
     if (route == null || _vehicleTypeId == null) {
-      setState(() => _error = 'Select a route and vehicle type');
+      setState(() => _error = context.l10n.t('admin_ui_select_a_route_and_vehicle_type'));
       return;
     }
 
@@ -1414,7 +1414,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
           key: Key('simulator_vehicle_dropdown:${_vehicleTypeId ?? ''}'),
           initialValue: _vehicleTypeId,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Vehicle type'),
+          decoration: InputDecoration(labelText: context.l10n.t('admin_ui_vehicle_type')),
           items: vehicleOptions
               .map(
                 (price) => DropdownMenuItem(
@@ -1464,9 +1464,9 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
                   ),
                 ),
                 const SizedBox(height: AppTokens.spaceSm),
-                Text('Subtotal: ${_result!['subtotal']}  Discount: ${_result!['discount']}'),
+                Text(context.l10n.t('admin_ui_subtotal_subtotal_discount_discount').replaceAll('{subtotal}', '${_result!['subtotal']}').replaceAll('{discount}', '${_result!['discount']}')),
                 const SizedBox(height: AppTokens.spaceSm),
-                Text('Matched route: ${_result!['matchedRoute']?['id']}'),
+                Text(context.l10n.t('admin_ui_matched_route_id').replaceAll('{id}', '${_result!['matchedRoute']?['id']}')),
                 Text(
                   'Base price: ${_result!['vehicleBasePrice']?['price']} ${_result!['vehicleBasePrice']?['currency']}',
                 ),
@@ -1476,7 +1476,7 @@ class _PricingSimulatorPanelState extends State<_PricingSimulatorPanel> {
           const SizedBox(height: AppTokens.spaceSm),
           AppUi.adminDetailSection(
             context: context,
-            title: 'Charge items',
+            title: context.l10n.t('admin_ui_charge_items'),
             child: Column(
               children: ((_result!['chargeItems'] as List<dynamic>? ?? []).map(
                 (item) {

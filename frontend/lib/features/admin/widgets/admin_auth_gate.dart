@@ -87,7 +87,7 @@ class _AdminAuthGateState extends State<AdminAuthGate> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Admin login required',
+                context.l10n.t('admin_ui_admin_login_required'),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: AppTokens.primaryDark,
@@ -96,15 +96,15 @@ class _AdminAuthGateState extends State<AdminAuthGate> {
               const SizedBox(height: AppTokens.spaceMd),
               TextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                autofillHints: const [AutofillHints.username],
+                decoration: InputDecoration(labelText: context.l10n.t('email')),
+                autofillHints: [AutofillHints.username],
               ),
               const SizedBox(height: AppTokens.spaceSm),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: InputDecoration(labelText: context.l10n.t('password')),
                 obscureText: true,
-                autofillHints: const [AutofillHints.password],
+                autofillHints: [AutofillHints.password],
                 onSubmitted: (_) => _login(),
               ),
               if (_error != null) ...[
@@ -129,7 +129,7 @@ class _AdminAuthGateState extends State<AdminAuthGate> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Sign in'),
+                      : Text(context.l10n.t('admin_ui_sign_in')),
                 ),
               ),
             ],

@@ -683,7 +683,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Driver assigned successfully')),
+          SnackBar(content: Text(context.l10n.t('admin_ui_driver_assigned_successfully'))),
         );
       }
     } catch (err) {
@@ -725,7 +725,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Driver assigned successfully')),
+          SnackBar(content: Text(context.l10n.t('admin_ui_driver_assigned_successfully'))),
         );
       }
     } catch (err) {
@@ -869,11 +869,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.t('admin_ui_cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
+            child: Text(context.l10n.t('admin_ui_confirm')),
           ),
         ],
       ),
@@ -1982,7 +1982,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             location: destination,
           ),
           AppUi.summaryRow(
-            label: 'Vehicle',
+            label: context.l10n.t('admin_ui_vehicle'),
             value: vehicle['typeName'] as String? ?? '-',
           ),
           if (_hasFlight(detail)) ..._flightRows(l10n, detail),
@@ -2218,7 +2218,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
             ],
             if (assignment['assignedAt'] != null)
               AppUi.summaryRow(
-                label: 'Assigned at',
+                label: context.l10n.t('admin_ui_assigned_at'),
                 value: assignment['assignedAt'] as String,
               ),
             AppUi.summaryRow(
@@ -2432,31 +2432,31 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       ),
       if (flight['airportIata'] != null)
         AppUi.summaryRow(
-          label: 'Airport',
+          label: context.l10n.t('admin_ui_airport'),
           value: flight['airportIata'] as String,
         ),
       if (flight['scheduledArrivalAt'] != null)
         AppUi.summaryRow(
-          label: 'Scheduled arrival',
+          label: context.l10n.t('admin_ui_scheduled_arrival'),
           value: _formatBangkokServiceDateTime(
             flight['scheduledArrivalAt'] as String?,
           ),
         ),
       if (flight['estimatedArrivalAt'] != null)
         AppUi.summaryRow(
-          label: 'Estimated arrival',
+          label: context.l10n.t('admin_ui_estimated_arrival'),
           value: _formatBangkokServiceDateTime(
             flight['estimatedArrivalAt'] as String?,
           ),
         ),
       if (flight['delayStatus'] != null)
         AppUi.summaryRow(
-          label: 'Delay status',
+          label: context.l10n.t('admin_ui_delay_status'),
           value: flight['delayStatus'] as String,
         ),
       if (flight['delayMinutes'] != null)
         AppUi.summaryRow(
-          label: 'Delay minutes',
+          label: context.l10n.t('admin_ui_delay_minutes'),
           value: '${flight['delayMinutes']}',
         ),
     ];
@@ -2497,7 +2497,7 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
           ),
           if (pricing['paymentStatus'] != null)
             AppUi.summaryRow(
-              label: 'Payment status',
+              label: context.l10n.t('admin_ui_payment_status'),
               value: pricing['paymentStatus'] as String,
             ),
           if (_settlementVisible(detail)) ...[
