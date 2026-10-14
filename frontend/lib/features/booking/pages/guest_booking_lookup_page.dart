@@ -33,6 +33,7 @@ class GuestBookingLookupPage extends StatefulWidget {
     this.reviewApi,
     this.trackingBuilder,
     this.initialResult,
+    this.initialBookingNumber,
     this.customerBookingsApiService,
     this.tokenStorage,
   });
@@ -43,6 +44,7 @@ class GuestBookingLookupPage extends StatefulWidget {
   final BookingReviewApi? reviewApi;
   final Widget Function(GuestBookingLookupResult result)? trackingBuilder;
   final GuestBookingLookupResult? initialResult;
+  final String? initialBookingNumber;
   final CustomerBookingsApiService? customerBookingsApiService;
   final AuthTokenStorage? tokenStorage;
 
@@ -113,14 +115,16 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   Future<void> _loadCached() async {
     final cached = await _lookupService.loadCached();
     if (!mounted) return;
-    if (cached != null) {
+    if (cached != null && widget.initialBookingNumber == null) {
       _bookingNumberController.text = cached.bookingNumber;
       if (cached.customerPhone != null && cached.customerPhone!.isNotEmpty) {
         _phoneController.text = cached.customerPhone!;
       }
     }
     setState(() {
-      _result = cached;
+      _result = widget.initialBookingNumber == null ? cached : null;
+      if (widget.initialBookingNumber != null)
+        _bookingNumberController.text = widget.initialBookingNumber!;
       _loading = false;
     });
   }

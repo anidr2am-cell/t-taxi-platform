@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/admin_review_request_card.dart';
 
 import '../../booking/utils/booking_status_display.dart';
 import '../../booking/utils/review_tags.dart';
@@ -683,7 +684,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.t('admin_ui_driver_assigned_successfully'))),
+          SnackBar(
+            content: Text(
+              context.l10n.t('admin_ui_driver_assigned_successfully'),
+            ),
+          ),
         );
       }
     } catch (err) {
@@ -725,7 +730,11 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.t('admin_ui_driver_assigned_successfully'))),
+          SnackBar(
+            content: Text(
+              context.l10n.t('admin_ui_driver_assigned_successfully'),
+            ),
+          ),
         );
       }
     } catch (err) {
@@ -1067,6 +1076,15 @@ class _AdminBookingDetailPageState extends State<AdminBookingDetailPage> {
                       const SizedBox(height: AppTokens.spaceMd),
                       _noShowPenaltySection(l10n, detail),
                     ],
+                    AdminReviewRequestCard(
+                      key: ValueKey(
+                        'admin_review_request_${widget.bookingNumber}',
+                      ),
+                      bookingNumber: widget.bookingNumber,
+                      api: widget.api,
+                      onChanged: widget.onChanged,
+                    ),
+                    const SizedBox(height: AppTokens.spaceMd),
                     if (detail['customerReview'] is Map) ...[
                       const SizedBox(height: AppTokens.spaceMd),
                       KeyedSubtree(

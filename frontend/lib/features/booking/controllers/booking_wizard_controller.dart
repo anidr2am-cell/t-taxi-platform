@@ -1204,21 +1204,27 @@ class BookingWizardController extends ChangeNotifier {
     );
   }
 
-  Future<BookingCreateResult?> submitBooking({String? accessToken}) async {
+  Future<BookingCreateResult?> submitBooking({
+    String? accessToken,
+    String? locale,
+  }) async {
     return _submitBooking(
       bookingMode: 'STANDARD',
       validatePickup: isStandardPickupAllowed,
       accessToken: accessToken,
+      locale: locale,
     );
   }
 
   Future<BookingCreateResult?> submitUrgentBooking({
     String? accessToken,
+    String? locale,
   }) async {
     return _submitBooking(
       bookingMode: 'URGENT',
       validatePickup: isUrgentPickupWindow,
       accessToken: accessToken,
+      locale: locale,
     );
   }
 
@@ -1226,6 +1232,7 @@ class BookingWizardController extends ChangeNotifier {
     required String bookingMode,
     required bool Function(DateTime value) validatePickup,
     String? accessToken,
+    String? locale,
   }) async {
     if (_isSubmitting || _isLoading) return null;
     if (!canSubmitAll(validatePickup: validatePickup)) return null;
@@ -1259,7 +1266,10 @@ class BookingWizardController extends ChangeNotifier {
       for (var attempt = 0; attempt <= maxInProgressRetries; attempt++) {
         try {
           final result = await _api.createBooking(
-            buildCreatePayload(bookingMode: bookingMode),
+            {
+              ...buildCreatePayload(bookingMode: bookingMode),
+              if (locale != null) 'locale': locale,
+            },
             idempotencyKey: idempotencyKey,
             accessToken: accessToken,
           );

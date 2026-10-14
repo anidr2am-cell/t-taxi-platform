@@ -76,6 +76,7 @@ function createHarness({
     async findByBookingNumberForUpdate() {
       return booking;
     },
+    async markReviewRequestEligible() {},
     async updateStatus(_conn, bookingId, status, actorUserId, statusFields) {
       calls.updateStatus += 1;
       records.updateStatus = { bookingId, status, actorUserId, statusFields };

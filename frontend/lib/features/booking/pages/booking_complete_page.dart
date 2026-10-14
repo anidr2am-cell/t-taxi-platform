@@ -212,9 +212,8 @@ class _BookingCompletePageState extends State<BookingCompletePage> {
 
   bool get _canShowReviewForm =>
       widget.enableCustomerTools &&
-      _status == 'COMPLETED' &&
-      _hasBookingCustomerAuth &&
-      widget.review == null;
+      const ['SETTLEMENT_PENDING', 'COMPLETED'].contains(_status) &&
+      _hasBookingCustomerAuth;
 
   bool get _canShowCancel => _hasBookingCustomerAuth;
 

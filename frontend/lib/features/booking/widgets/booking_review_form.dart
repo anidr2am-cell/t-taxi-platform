@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
+import '../../platform_settings/services/platform_settings_api_service.dart';
+import '../services/booking_analytics.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -106,7 +109,8 @@ class BookingReviewApiException implements Exception {
   String toString() => message;
 }
 
-bool isValidReviewRating(int? rating) => rating != null && rating >= 1 && rating <= 5;
+bool isValidReviewRating(int? rating) =>
+    rating != null && rating >= 1 && rating <= 5;
 
 class BookingReviewForm extends StatefulWidget {
   const BookingReviewForm({
@@ -117,6 +121,8 @@ class BookingReviewForm extends StatefulWidget {
     this.api,
     this.initialState,
     this.onSubmitted,
+    this.googleReviewUrl,
+    this.settingsApi = const PlatformSettingsApiService(),
   });
 
   final String bookingNumber;
@@ -125,6 +131,8 @@ class BookingReviewForm extends StatefulWidget {
   final BookingReviewApi? api;
   final Map<String, dynamic>? initialState;
   final VoidCallback? onSubmitted;
+  final String? googleReviewUrl;
+  final PlatformSettingsApiService settingsApi;
 
   @override
   State<BookingReviewForm> createState() => BookingReviewFormState();
@@ -133,6 +141,7 @@ class BookingReviewForm extends StatefulWidget {
 class BookingReviewFormState extends State<BookingReviewForm> {
   late final BookingReviewApi _api = widget.api ?? const BookingReviewApi();
   bool _loading = true;
+  String _googleReviewUrl = '';
   bool _submitting = false;
   String? _error;
   Map<String, dynamic>? _state;
@@ -143,6 +152,7 @@ class BookingReviewFormState extends State<BookingReviewForm> {
   @override
   void initState() {
     super.initState();
+    _loadGoogleReviewUrl();
     if (widget.initialState != null) {
       _state = widget.initialState;
       _loading = false;
@@ -150,6 +160,36 @@ class BookingReviewFormState extends State<BookingReviewForm> {
       _load();
     }
     _commentController.addListener(_onCommentChanged);
+  }
+
+  Future<void> _loadGoogleReviewUrl() async {
+    try {
+      final value =
+          widget.googleReviewUrl ??
+          (await widget.settingsApi.getPublic())['googleReviewUrl']
+              as String? ??
+          '';
+      final uri = Uri.tryParse(value);
+      if (mounted &&
+          uri != null &&
+          uri.scheme == 'https' &&
+          uri.host.isNotEmpty) {
+        setState(() => _googleReviewUrl = value);
+      }
+    } catch (_) {
+      /* A settings outage must not block the internal review. */
+    }
+  }
+
+  Future<void> _openGoogleReview() async {
+    BookingAnalytics.instance.track('google_review_clicked', {
+      'locale': context.l10n.languageCode,
+    });
+    await launchUrl(
+      Uri.parse(_googleReviewUrl),
+      mode: LaunchMode.externalApplication,
+      webOnlyWindowName: '_blank',
+    );
   }
 
   void _onCommentChanged() => setState(() {});
@@ -168,7 +208,8 @@ class BookingReviewFormState extends State<BookingReviewForm> {
     });
     try {
       final guestToken =
-          widget.guestAccessToken ?? await _api.loadGuestToken(widget.bookingNumber);
+          widget.guestAccessToken ??
+          await _api.loadGuestToken(widget.bookingNumber);
       final customerToken = widget.customerAccessToken;
       final state = await _api.getReview(
         bookingNumber: widget.bookingNumber,
@@ -217,7 +258,8 @@ class BookingReviewFormState extends State<BookingReviewForm> {
     });
     try {
       final guestToken =
-          widget.guestAccessToken ?? await _api.loadGuestToken(widget.bookingNumber);
+          widget.guestAccessToken ??
+          await _api.loadGuestToken(widget.bookingNumber);
       final customerToken = widget.customerAccessToken;
       final tags = ReviewTags.sanitizeSelection(_rating!, _selectedTags);
       final comment = _commentController.text.trim();
@@ -243,7 +285,10 @@ class BookingReviewFormState extends State<BookingReviewForm> {
       }
       if (!mounted) return;
       setState(() {
-        _error = userFacingError(err, fallback: context.l10n.t('ui_action_failed'));
+        _error = userFacingError(
+          err,
+          fallback: context.l10n.t('ui_action_failed'),
+        );
         _submitting = false;
       });
     }
@@ -324,7 +369,10 @@ class BookingReviewFormState extends State<BookingReviewForm> {
           const SizedBox(height: 6),
           Text(
             l10n.t('review_success_body'),
-            style: const TextStyle(color: AppTokens.textSecondary, height: 1.45),
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              height: 1.45,
+            ),
           ),
           if (rating != null) ...[
             const SizedBox(height: AppTokens.spaceSm),
@@ -373,6 +421,39 @@ class BookingReviewFormState extends State<BookingReviewForm> {
 
   @override
   Widget build(BuildContext context) {
+    final internal = _buildInternalReview(context);
+    if (_state?['eligible'] != true) return internal;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppUi.surfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                context.l10n.t('review_experience_title'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              if (_googleReviewUrl.isNotEmpty) ...[
+                const SizedBox(height: AppTokens.spaceMd),
+                OutlinedButton.icon(
+                  key: const ValueKey('google_review_button'),
+                  onPressed: _openGoogleReview,
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(context.l10n.t('review_google_button')),
+                ),
+              ],
+              const SizedBox(height: AppTokens.spaceSm),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceMd),
+        internal,
+      ],
+    );
+  }
+
+  Widget _buildInternalReview(BuildContext context) {
     final l10n = context.l10n;
 
     if (_loading) {
@@ -384,7 +465,10 @@ class BookingReviewFormState extends State<BookingReviewForm> {
     if (_error != null && (_state == null)) {
       return Column(
         children: [
-          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
           const SizedBox(height: 8),
           OutlinedButton(onPressed: _load, child: Text(l10n.t('driver_retry'))),
         ],
@@ -403,10 +487,10 @@ class BookingReviewFormState extends State<BookingReviewForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            l10n.t('review_card_title'),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            l10n.t('review_internal_option'),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
@@ -452,7 +536,9 @@ class BookingReviewFormState extends State<BookingReviewForm> {
             label: l10n.t('review_submit_button'),
             icon: Icons.check_circle_outline,
             loading: _submitting,
-            onPressed: _submitting || !isValidReviewRating(_rating) ? null : _submit,
+            onPressed: _submitting || !isValidReviewRating(_rating)
+                ? null
+                : _submit,
           ),
         ],
       ),

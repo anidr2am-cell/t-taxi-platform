@@ -55,6 +55,18 @@ class BookingRepository {
         ) AS name_sign_amount`;
   }
 
+  async resolveBookingLocale(conn, userId, requestedLocale) {
+    const { LOCALES } = require('../utils/reviewRequest.util');
+    let locale = requestedLocale;
+    if (userId) {
+      const [users] = await conn.query('SELECT locale FROM users WHERE id = ?', [userId]);
+      locale = requestedLocale || users[0]?.locale;
+    }
+    locale = LOCALES.includes(locale) ? locale : 'ko';
+    if (userId) await conn.query('UPDATE users SET locale = ? WHERE id = ?', [locale, userId]);
+    return locale;
+  }
+
   async insertBooking(conn, row) {
     const [result] = await conn.query(
       `
@@ -1835,12 +1847,25 @@ class BookingRepository {
     const where = ['b.deleted_at IS NULL'];
     const params = [];
 
-    if (filters.exactBookingNumber) {
+    if (filters.exactBookingNumber && !filters.reviewRequestsOnly) {
       where.push('b.booking_number = ?');
       params.push(filters.exactBookingNumber);
       return { whereSql: where.join(' AND '), params };
     }
 
+    // An explicit request queue ignores view/date defaults, but never backfills old trips.
+    if (filters.reviewRequestsOnly) {
+      where.push(`b.is_archived = 0 AND b.status IN ('SETTLEMENT_PENDING', 'COMPLETED')
+        AND COALESCE(b.driver_id, (SELECT last_bda.driver_id FROM booking_driver_assignments last_bda
+          WHERE last_bda.booking_id = b.id AND last_bda.deleted_at IS NULL
+          ORDER BY last_bda.updated_at DESC, last_bda.id DESC LIMIT 1)) IS NOT NULL
+        AND JSON_EXTRACT(b.metadata, '$.reviewRequestEligibleAt') IS NOT NULL
+        AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(b.metadata, '$.reviewRequest.optedOut')), 'false') <> 'true'
+        AND JSON_EXTRACT(b.metadata, '$.reviewRequest.sentAt') IS NULL`);
+      if (filters.exactBookingNumber) { where.push('b.booking_number = ?'); params.push(filters.exactBookingNumber); }
+      else if (filters.search) { where.push('b.booking_number LIKE ?'); params.push(`%${filters.search}%`); }
+      return { whereSql: where.join(' AND '), params };
+    }
     if (filters.archivedOnly) {
       where.push('b.is_archived = 1');
     } else if (!filters.includeArchived) {
@@ -2611,6 +2636,12 @@ class BookingRepository {
       [bookingNumber],
     );
     return rows[0] || null;
+  }
+
+  async markReviewRequestEligible(conn, bookingId, occurredAt) {
+    await conn.query(`UPDATE bookings SET metadata = JSON_SET(COALESCE(metadata, JSON_OBJECT()),
+      '$.reviewRequestEligibleAt', ?) WHERE id = ?
+      AND JSON_EXTRACT(metadata, '$.reviewRequestEligibleAt') IS NULL`, [occurredAt, bookingId]);
   }
 
   async updateCommissionFields(conn, bookingId, fields) {

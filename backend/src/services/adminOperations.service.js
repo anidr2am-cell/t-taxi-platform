@@ -106,6 +106,7 @@ class AdminOperationsService {
 
     return {
       view,
+      reviewRequestsOnly: [true, "true", "1"].includes(query.reviewRequestsOnly),
       search,
       exactBookingNumber:
         normalizedExactBookingNumber && /^TX\d{12}$/.test(normalizedExactBookingNumber)

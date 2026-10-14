@@ -98,7 +98,8 @@ describe('Support inquiry routes', () => {
           attachments: [],
         };
       },
-      async updateStatus(id, status) {
+      async markReviewRequestEligible() {},
+    async updateStatus(id, status) {
         return {
           id,
           publicId: 'SUP-260708-ABC123',

@@ -89,6 +89,24 @@ class AdminDispatchApiService {
     await prefs.setString(_tokenKey, data['accessToken'] as String);
   }
 
+  Future<Map<String, dynamic>> getReviewRequest(String bookingNumber) async =>
+      Map<String, dynamic>.from(
+        await _request('GET', '/admin/bookings/$bookingNumber/review-request')
+            as Map,
+      );
+
+  Future<Map<String, dynamic>> recordReviewRequest(
+    String bookingNumber,
+    Map<String, dynamic> body,
+  ) async => Map<String, dynamic>.from(
+    await _request(
+          'POST',
+          '/admin/bookings/$bookingNumber/review-request',
+          body: body,
+        )
+        as Map,
+  );
+
   Future<dynamic> _request(
     String method,
     String path, {
@@ -168,6 +186,7 @@ class AdminDispatchApiService {
     String? origin,
     String? destination,
     String? settlementStatus,
+    bool? reviewRequestsOnly,
     bool? lowRating,
     bool? unassigned,
     bool? hasInquiry,
@@ -198,6 +217,7 @@ class AdminDispatchApiService {
     if (settlementStatus != null && settlementStatus.isNotEmpty) {
       query['settlementStatus'] = settlementStatus;
     }
+    if (reviewRequestsOnly == true) query['reviewRequestsOnly'] = 'true';
     if (lowRating == true) query['lowRating'] = 'true';
     if (unassigned == true) query['unassigned'] = 'true';
     if (hasInquiry == true) query['hasInquiry'] = 'true';

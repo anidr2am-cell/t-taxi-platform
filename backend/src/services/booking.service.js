@@ -1177,6 +1177,7 @@ class BookingService {
         : this.addDays(now, 30);
 
       const metadata = {};
+      metadata.locale = await this.bookingRepository.resolveBookingLocale(conn, customerUserId, input.locale);
       const customerPayment = normalizeCustomerPayment(input.payment);
       metadata.customerPayment = customerPayment;
       const messengerMetadata = pickPersistableMessengerMetadata(input.customer);

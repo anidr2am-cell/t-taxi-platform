@@ -155,6 +155,7 @@ function createHarness(overrides = {}) {
       calls.assignments.push(row);
       return 99;
     },
+    async markReviewRequestEligible() {},
     async updateStatus(_conn, bookingId, status, actorUserId) {
       calls.statusUpdates.push({ bookingId, status, actorUserId });
     },

@@ -182,6 +182,7 @@ function createBookingHarness({
   };
   const idempotencyService = new BookingIdempotencyService(idempotencyRepository);
   const bookingRepository = {
+    async resolveBookingLocale(_conn, _userId, locale) { return locale || "ko"; },
     async insertBooking() {
       calls.insertBooking += 1;
       if (failAfterPending) {
@@ -364,6 +365,7 @@ test('E concurrent same-key requests create only one booking', async () => {
   };
   const idempotencyService = new BookingIdempotencyService(idempotencyRepository);
   const bookingRepository = {
+    async resolveBookingLocale(_conn, _userId, locale) { return locale || "ko"; },
     async insertBooking() {
       calls.insertBooking += 1;
       await createGate;

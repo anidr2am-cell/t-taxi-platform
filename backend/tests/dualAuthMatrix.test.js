@@ -289,6 +289,7 @@ function buildCancelService({ customerUserId = null } = {}) {
         status: BOOKING_STATUS.DRIVER_ASSIGNED,
       });
     },
+    async markReviewRequestEligible() {},
     async updateStatus() {},
     async insertStatusLog() {},
     async insertActivityLog() {},

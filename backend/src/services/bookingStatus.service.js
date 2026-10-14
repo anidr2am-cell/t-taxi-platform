@@ -387,6 +387,11 @@ class BookingStatusService {
       cancellationReason: input.reason ?? input.memo ?? null,
     });
 
+    if (requestedToStatus === BOOKING_STATUS.SETTLEMENT_PENDING
+      || (fromStatus === BOOKING_STATUS.PICKED_UP && toStatus === BOOKING_STATUS.COMPLETED)) {
+      await this.bookingRepository.markReviewRequestEligible(conn, booking.id, occurredAt);
+    }
+
     if (requestedToStatus === BOOKING_STATUS.SETTLEMENT_PENDING) {
       const storedCommissionAmount = Number(booking.commission_amount);
       const commissionAmount = commissionExempt

@@ -69,6 +69,7 @@ function createEndTripHarness(initialBooking = createBooking()) {
       if (driverUserId !== booking.driver_user_id) return null;
       return { booking_number: booking.booking_number, status: booking.status };
     },
+    async markReviewRequestEligible() {},
     async updateStatus(_c, bookingId, status) {
       booking = { ...booking, status };
     },

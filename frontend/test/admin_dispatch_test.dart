@@ -61,6 +61,9 @@ class _FakeAdminApi extends AdminDispatchApiService {
   final Object? candidatesError;
 
   @override
+  Future<Map<String, dynamic>> getReviewRequest(String bookingNumber) async => {'eligible': false};
+
+  @override
   Future<String?> getSavedToken() async => token;
 
   @override
@@ -75,6 +78,7 @@ class _FakeAdminApi extends AdminDispatchApiService {
     String? origin,
     String? destination,
     String? settlementStatus,
+    bool? reviewRequestsOnly,
     bool? lowRating,
     bool? unassigned,
     bool? hasInquiry,
@@ -766,6 +770,8 @@ void main() {
 
     expect(find.text('Needs action'), findsWidgets);
     expect(find.text('TX-NEW'), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
     expect(find.text('TX-EXISTING'), findsOneWidget);
   });
 

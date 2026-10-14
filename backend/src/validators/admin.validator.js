@@ -54,6 +54,7 @@ const adminBookingListQuerySchema = paginationQuery
         "ADMIN_CONFIRMED",
       )
       .optional(),
+    reviewRequestsOnly: Joi.boolean().optional(),
     lowRating: Joi.boolean().optional(),
     low_rating: Joi.boolean().optional(),
     unassigned: Joi.boolean().optional(),

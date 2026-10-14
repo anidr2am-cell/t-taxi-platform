@@ -35,6 +35,24 @@ const adminOnly = [
   roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN]),
 ];
 
+const Joi = require('joi');
+const { LOCALES, CHANNELS } = require('../utils/reviewRequest.util');
+const { success } = require('../utils/apiResponse');
+const asyncHandler = require('../utils/asyncHandler');
+const container = require('../helpers/container');
+router.get('/bookings/:bookingNumber/review-request', adminOnly,
+  validate({ params: bookingNumberParamsSchema }),
+  asyncHandler(async (req, res) => success(res, await container.get('reviewRequestService').get(req.params.bookingNumber))));
+router.post('/bookings/:bookingNumber/review-request', adminOnly,
+  validate({ params: bookingNumberParamsSchema, body: Joi.object({
+    action: Joi.string().valid('COPY', 'SENT', 'OPT_OUT').required(),
+    locale: Joi.string().valid(...LOCALES).when('action', { is: 'OPT_OUT', then: Joi.optional(), otherwise: Joi.required() }),
+    channel: Joi.string().valid(...CHANNELS).when('action', { is: 'SENT', then: Joi.required(), otherwise: Joi.forbidden() }),
+    confirmResend: Joi.boolean().optional(),
+    optedOut: Joi.boolean().when('action', { is: 'OPT_OUT', then: Joi.required(), otherwise: Joi.forbidden() }),
+  }).unknown(false) }),
+  asyncHandler(async (req, res) => success(res, await container.get('reviewRequestService').update(req.params.bookingNumber, req.body, req.user))));
+
 router.get("/bookings/summary", adminOnly, adminController.getBookingsSummary);
 
 router.post(

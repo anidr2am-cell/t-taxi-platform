@@ -28,6 +28,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       'accountName',
       'accountNumber',
       'promptPayNumber',
+      'googleReviewUrl',
     ])
       key: TextEditingController(),
   };
@@ -285,6 +286,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           title: l10n.t('admin_settings_bank'),
           child: Column(
             children: [
+              _field(
+                'googleReviewUrl',
+                l10n.t('admin_settings_google_review_url'),
+              ),
               _field('bankName', l10n.t('admin_settings_bank_name')),
               _field('accountName', l10n.t('admin_settings_account_name')),
               _field('accountNumber', l10n.t('admin_settings_account_number')),
@@ -310,7 +315,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               KeyedSubtree(
-                key: const ValueKey('admin_settings_guest_lookup_banner_toggle'),
+                key: const ValueKey(
+                  'admin_settings_guest_lookup_banner_toggle',
+                ),
                 child: SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
@@ -342,7 +349,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 child: AppUi.primaryButton(
                   label: l10n.t('admin_settings_guest_lookup_save'),
                   loading: _savingContactChannels,
-                  onPressed: _savingContactChannels ? null : _saveContactChannels,
+                  onPressed: _savingContactChannels
+                      ? null
+                      : _saveContactChannels,
                 ),
               ),
             ],
@@ -393,7 +402,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 value: _contactWhatsappEnabled,
                 onChanged: _savingContactChannels
                     ? null
-                    : (value) => setState(() => _contactWhatsappEnabled = value),
+                    : (value) =>
+                          setState(() => _contactWhatsappEnabled = value),
               ),
               TextField(
                 key: const ValueKey('admin_settings_contact_whatsapp_phone'),
@@ -436,7 +446,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 child: AppUi.primaryButton(
                   label: l10n.t('admin_settings_contact_channels_save'),
                   loading: _savingContactChannels,
-                  onPressed: _savingContactChannels ? null : _saveContactChannels,
+                  onPressed: _savingContactChannels
+                      ? null
+                      : _saveContactChannels,
                 ),
               ),
             ],

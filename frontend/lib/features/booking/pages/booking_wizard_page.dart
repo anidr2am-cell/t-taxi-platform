@@ -317,8 +317,14 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
     final accessToken = await _customerAccessTokenForSubmit();
 
     final result = bookingMode == 'URGENT'
-        ? await _controller.submitUrgentBooking(accessToken: accessToken)
-        : await _controller.submitBooking(accessToken: accessToken);
+        ? await _controller.submitUrgentBooking(
+            accessToken: accessToken,
+            locale: l10n.languageCode,
+          )
+        : await _controller.submitBooking(
+            accessToken: accessToken,
+            locale: l10n.languageCode,
+          );
     if (result == null) {
       if (_controller.state.errorMessage != null) {
         messenger.showSnackBar(
