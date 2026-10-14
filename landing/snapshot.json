@@ -1,0 +1,201 @@
+{
+  "capturedAt": "2026-10-14T00:41:37.982Z",
+  "fareSource": "https://exports-usb-handy-topic.trycloudflare.com",
+  "contactSource": "https://exports-usb-handy-topic.trycloudflare.com/api/v1/public/landing-data",
+  "rows": [
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "BKK",
+      "originLabel": "Suvarnabhumi Airport",
+      "destination": "PATTAYA",
+      "label": "Pattaya",
+      "prices": {
+        "SEDAN": 1000,
+        "SUV": 1300,
+        "VAN": 1700
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_DROPOFF",
+      "origin": "BANGKOK",
+      "originLabel": "Bangkok",
+      "destination": "BKK",
+      "label": "Suvarnabhumi Airport",
+      "prices": {
+        "SEDAN": 700,
+        "SUV": 800,
+        "VAN": 1200
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_DROPOFF",
+      "origin": "PATTAYA",
+      "originLabel": "Pattaya",
+      "destination": "DMK",
+      "label": "Don Mueang International Airport",
+      "prices": {
+        "SEDAN": 1400,
+        "SUV": 1600,
+        "VAN": 2300
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "BKK",
+      "originLabel": "Suvarnabhumi Airport",
+      "destination": "AYUTTHAYA",
+      "label": "Ayutthaya",
+      "prices": {
+        "SEDAN": 1200,
+        "SUV": 1400,
+        "VAN": 1800
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "BKK",
+      "originLabel": "Suvarnabhumi Airport",
+      "destination": "BANGKOK",
+      "label": "Bangkok",
+      "prices": {
+        "SEDAN": 550,
+        "SUV": 600,
+        "VAN": 1100
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "BKK",
+      "originLabel": "Suvarnabhumi Airport",
+      "destination": "HUA_HIN",
+      "label": "Hua Hin",
+      "prices": {
+        "SEDAN": 2000,
+        "SUV": 2200,
+        "VAN": 2700
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "BKK",
+      "originLabel": "Suvarnabhumi Airport",
+      "destination": "RAYONG",
+      "label": "Rayong",
+      "prices": {
+        "SEDAN": 1500,
+        "SUV": 1700,
+        "VAN": 2100
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "DMK",
+      "originLabel": "Don Mueang International Airport",
+      "destination": "BANGKOK",
+      "label": "Bangkok",
+      "prices": {
+        "SEDAN": 600,
+        "SUV": 800,
+        "VAN": 1200
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "DMK",
+      "originLabel": "Don Mueang International Airport",
+      "destination": "HUA_HIN",
+      "label": "Hua Hin",
+      "prices": {
+        "SEDAN": 2000,
+        "SUV": 2200,
+        "VAN": 2700
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "DMK",
+      "originLabel": "Don Mueang International Airport",
+      "destination": "PATTAYA",
+      "label": "Pattaya",
+      "prices": {
+        "SEDAN": 1400,
+        "SUV": 1600,
+        "VAN": 2200
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "DMK",
+      "originLabel": "Don Mueang International Airport",
+      "destination": "RAYONG",
+      "label": "Rayong",
+      "prices": {
+        "SEDAN": 1800,
+        "SUV": 2000,
+        "VAN": 2500
+      }
+    },
+    {
+      "serviceTypeCode": "CITY_TRANSFER",
+      "origin": "BANGKOK",
+      "originLabel": "Bangkok",
+      "destination": "PATTAYA",
+      "label": "Pattaya",
+      "prices": {
+        "SEDAN": 1300,
+        "SUV": 1600,
+        "VAN": 2000
+      }
+    },
+    {
+      "serviceTypeCode": "CITY_TRANSFER",
+      "origin": "PATTAYA",
+      "originLabel": "Pattaya",
+      "destination": "BANGKOK",
+      "label": "Bangkok",
+      "prices": {
+        "SEDAN": 1300,
+        "SUV": 1500,
+        "VAN": 2000
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_DROPOFF",
+      "origin": "PATTAYA",
+      "originLabel": "Pattaya",
+      "destination": "BKK",
+      "label": "Suvarnabhumi Airport",
+      "prices": {
+        "SEDAN": 1000,
+        "SUV": 1300,
+        "VAN": 1700
+      }
+    }
+  ],
+  "channels": [
+    {
+      "code": "LINE",
+      "displayName": "LINE",
+      "addUrl": "https://lin.ee/55A9phq",
+      "phoneNumber": null,
+      "accountId": null,
+      "qrImageUrl": null
+    },
+    {
+      "code": "KAKAO",
+      "displayName": "KakaoTalk",
+      "addUrl": "https://open.kakao.com/o/suG4krMi",
+      "phoneNumber": null,
+      "accountId": null,
+      "qrImageUrl": null
+    },
+    {
+      "code": "WHATSAPP",
+      "displayName": "WhatsApp",
+      "addUrl": null,
+      "phoneNumber": "+66815693445",
+      "accountId": null,
+      "qrImageUrl": null
+    }
+  ]
+}

@@ -47,6 +47,12 @@ import 'widgets/analytics_consent_banner.dart';
 
 const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
 final Ga4RouteObserver _ga4RouteObserver = Ga4RouteObserver();
+final Map<String, WidgetBuilder> _landingUtilityRoutes = {
+  '/booking/lookup': (_) =>
+      const GuestBookingLookupPage(enableCustomerTools: true),
+  '/support': (_) => const CustomerSupportPage(),
+  '/privacy-policy': (_) => const PrivacyPolicyPage(),
+};
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +63,9 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => LocaleState()),
+        ChangeNotifierProvider(
+          create: (_) => LocaleState(entryUri: kIsWeb ? Uri.base : null),
+        ),
         ChangeNotifierProvider(create: (_) => BookingState()),
         ChangeNotifierProvider(create: (_) => AuthController()),
       ],
@@ -74,7 +82,9 @@ void _bootstrapWebAnalytics() {
   Ga4AnalyticsBootstrap.ensureInitialized(
     consentService: AnalyticsConsentProvider.instance,
   );
-  _ga4RouteObserver.trackInitialRoute(Uri.base.path.isEmpty ? '/' : Uri.base.path);
+  _ga4RouteObserver.trackInitialRoute(
+    Uri.base.path.isEmpty ? '/' : Uri.base.path,
+  );
 }
 
 class _AppRoot extends StatelessWidget {
@@ -132,10 +142,10 @@ class TTaxiApp extends StatelessWidget {
             routeArgs: args is BookingWizardRouteArgs ? args : null,
           );
         },
-        '/booking/contact-connect': (_) => const BookingContactConnectRouteLoader(),
+        '/booking/contact-connect': (_) =>
+            const BookingContactConnectRouteLoader(),
         '/admin': (_) => const AdminScreen(initialTab: 1),
-        '/booking/lookup': (_) =>
-            const GuestBookingLookupPage(enableCustomerTools: true),
+        ..._landingUtilityRoutes,
         '/my-bookings': (_) => const MyBookingsPage(),
         '/account': (_) => const AccountPage(),
         ProfileCompletionPage.routeName: (context) {
@@ -156,8 +166,6 @@ class TTaxiApp extends StatelessWidget {
             const DriverPwaInstallPromptHost(child: DriverShellPage()),
         '/driver/jobs': (_) =>
             const DriverPwaInstallPromptHost(child: DriverShellPage()),
-        '/support': (_) => const CustomerSupportPage(),
-        '/privacy-policy': (_) => const PrivacyPolicyPage(),
         if (_enableE2ERoutes) ...{
           '/admin/e2e/settlement-detail': (_) =>
               AdminE2ESettlementDetailRoute(uri: Uri.base),
@@ -168,6 +176,7 @@ class TTaxiApp extends StatelessWidget {
       },
       onGenerateRoute: (settings) {
         return buildBookingEntryRoute(settings) ??
+            buildLandingUtilityRoute(settings) ??
             buildKakaoOAuthCallbackRoute(settings) ??
             buildLineOAuthCallbackRoute(settings) ??
             buildE2ERoute(settings);
@@ -177,6 +186,10 @@ class TTaxiApp extends StatelessWidget {
           RouteSettings(name: initialRoute),
         );
         if (bookingRoute != null) return [bookingRoute];
+        final utilityRoute = buildLandingUtilityRoute(
+          RouteSettings(name: initialRoute),
+        );
+        if (utilityRoute != null) return [utilityRoute];
 
         final kakaoRoute = buildKakaoOAuthCallbackRoute(
           RouteSettings(name: initialRoute),
@@ -211,6 +224,16 @@ class TTaxiApp extends StatelessWidget {
       },
     );
   }
+}
+
+@visibleForTesting
+Route<dynamic>? buildLandingUtilityRoute(RouteSettings settings) {
+  final uri = Uri.tryParse(settings.name ?? '');
+  if (uri == null || !uri.hasQuery) return null;
+  final builder = _landingUtilityRoutes[uri.path];
+  return builder == null
+      ? null
+      : MaterialPageRoute<void>(settings: settings, builder: builder);
 }
 
 @visibleForTesting
