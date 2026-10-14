@@ -6,7 +6,7 @@ lang: ja
 category: golf
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14
 related:
   - pattaya-golf-price-match-guarantee-ja
   - trounding-golf-join-bar-benefits-ja
@@ -52,7 +52,7 @@ related:
 
 ## 人数とゴルフバッグに合う車両選び
 
-セダンは最大2人とゴルフバッグ2個、SUVは3人と3個、バンは6人と6個まで利用できます。人数だけでなく、ゴルフバッグの数も確認して車両をお選びください。
+人数と荷物を入力すると、適した車種をご案内します。
 
 **ブラパーゴルフクラブのグリーンフィー**と送迎費を合算する際も、車両の定員内で計画することが大切です。4人または6人の場合は、18ホールのバン料金2,300バーツを実際の乗車人数で割って計算します。
 

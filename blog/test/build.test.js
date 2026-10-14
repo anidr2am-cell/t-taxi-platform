@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const dist = path.join(root, 'blog', 'dist');
+const updatedFor = (slug) => fs.readFileSync(path.join(root, 'blog', 'posts', `${slug}.md`), 'utf8')
+  .match(/^updated:\s*(\S+)/m)[1];
 
 test('blog build emits crawlable pages and SEO metadata', () => {
   execFileSync(process.execPath, ['blog/build.js'], { cwd: root });
@@ -18,7 +20,7 @@ test('blog build emits crawlable pages and SEO metadata', () => {
   assert.match(html, /rel="canonical" href="https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-pattaya"/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /"@type":"Article"/);
-  assert.match(html, /최종 업데이트:.*2026-10-01/s);
+  assert.match(html, new RegExp(`최종 업데이트:.*${updatedFor('suvarnabhumi-to-pattaya')}`, 's'));
   assert.match(html, /세단 1,000바트|1,000바트/);
   assert.match(html, /href="https:\/\/trider\.taxi\/">지금 예약하기<\/a>/);
   assert.match(html, /href="https:\/\/open\.kakao\.com\/o\/suG4krMi"/);
@@ -34,7 +36,7 @@ test('blog build emits lists, categories, and standalone sitemap', () => {
   assert.ok(fs.existsSync(path.join(dist, 'category', 'airport', 'index.html')));
   const sitemap = fs.readFileSync(path.join(dist, 'sitemap-blog.xml'), 'utf8');
   assert.match(sitemap, /https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-pattaya/);
-  assert.match(sitemap, /<loc>https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-pattaya<\/loc><lastmod>2026-10-01<\/lastmod>/);
+  assert.ok(sitemap.includes(`<loc>https://trider.taxi/blog/suvarnabhumi-to-pattaya</loc><lastmod>${updatedFor('suvarnabhumi-to-pattaya')}</lastmod>`));
   const postsDir = path.join(root, 'blog', 'posts');
   const latestUpdated = fs.readdirSync(postsDir)
     .filter((file) => file.endsWith('.md'))
@@ -43,7 +45,7 @@ test('blog build emits lists, categories, and standalone sitemap', () => {
     .sort()
     .at(-1);
   assert.ok(sitemap.includes(`<loc>https://trider.taxi/blog/</loc><lastmod>${latestUpdated}</lastmod>`));
-  assert.match(sitemap, /<loc>https:\/\/trider\.taxi\/blog\/suvarnabhumi-to-bangkok-city<\/loc><lastmod>2026-10-03<\/lastmod>/);
+  assert.ok(sitemap.includes(`<loc>https://trider.taxi/blog/suvarnabhumi-to-bangkok-city</loc><lastmod>${updatedFor('suvarnabhumi-to-bangkok-city')}</lastmod>`));
   assert.doesNotMatch(sitemap, /<url><loc>[^<]+<\/loc><\/url>/);
 });
 
