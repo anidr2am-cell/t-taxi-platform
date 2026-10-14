@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-10-14T00:41:37.982Z",
-  "fareSource": "https://exports-usb-handy-topic.trycloudflare.com",
-  "contactSource": "https://exports-usb-handy-topic.trycloudflare.com/api/v1/public/landing-data",
+  "capturedAt": "2026-10-14T03:08:09.896Z",
+  "fareSource": "https://thanks-procurement-hosting-transaction.trycloudflare.com",
+  "contactSource": "https://thanks-procurement-hosting-transaction.trycloudflare.com/api/v1/public/landing-data",
   "rows": [
     {
       "serviceTypeCode": "AIRPORT_PICKUP",
@@ -58,9 +58,9 @@
       "destination": "BANGKOK",
       "label": "Bangkok",
       "prices": {
-        "SEDAN": 550,
+        "SEDAN": 500,
         "SUV": 600,
-        "VAN": 1100
+        "VAN": 1000
       }
     },
     {
@@ -169,6 +169,30 @@
         "SEDAN": 1000,
         "SUV": 1300,
         "VAN": 1700
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "BKK",
+      "originLabel": "Suvarnabhumi Airport",
+      "destination": "DMK",
+      "label": "Don Mueang International Airport",
+      "prices": {
+        "SEDAN": 600,
+        "SUV": 700,
+        "VAN": 1000
+      }
+    },
+    {
+      "serviceTypeCode": "AIRPORT_PICKUP",
+      "origin": "DMK",
+      "originLabel": "Don Mueang International Airport",
+      "destination": "BKK",
+      "label": "Suvarnabhumi Airport",
+      "prices": {
+        "SEDAN": 600,
+        "SUV": 700,
+        "VAN": 1000
       }
     }
   ],

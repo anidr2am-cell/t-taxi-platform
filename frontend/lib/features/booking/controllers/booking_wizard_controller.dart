@@ -16,6 +16,8 @@ import '../services/booking_api_service.dart';
 import '../services/booking_state_storage.dart';
 import '../services/places_api_service.dart';
 import '../services/recent_locations_storage.dart';
+import '../utils/pricing_location_params.dart'
+    show airportDestinationCodeFromOption;
 import '../utils/transitional_messenger_placeholders.dart';
 import '../utils/booking_contact_preference.dart';
 import '../utils/flight_time_format.dart';
@@ -1557,7 +1559,9 @@ class BookingWizardController extends ChangeNotifier {
 
     if (service == BookingServiceType.airportPickup) {
       originAirportIata = _airportIataFromOption(origin);
-      destinationLocationCode = _internalLocationCodeFromOption(destination);
+      destinationLocationCode =
+          airportDestinationCodeFromOption(destination) ??
+          _internalLocationCodeFromOption(destination);
       destinationRegion = destinationLocationCode == null
           ? _regionFromLocation(destination)
           : null;
