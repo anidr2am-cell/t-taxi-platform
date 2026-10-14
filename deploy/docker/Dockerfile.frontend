@@ -104,6 +104,7 @@ COPY --from=blog-build /app/blog/dist/sitemap-blog.xml /usr/share/nginx/html/sit
 COPY --from=landing-build /app/landing/dist /usr/share/nginx/html/landing
 COPY --from=landing-build /app/landing/dist/landing-assets /usr/share/nginx/html/landing-assets
 COPY --from=landing-build /app/landing/dist/sitemap.xml /usr/share/nginx/html/sitemap.xml
+COPY --from=landing-build /app/landing/dist/sitemap-landing.xml /usr/share/nginx/html/sitemap-landing.xml
 COPY --from=landing-build /app/landing/dist/robots.txt /usr/share/nginx/html/robots.txt
 
 EXPOSE 80
