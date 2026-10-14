@@ -1,15 +1,7 @@
+'use strict';
 const fs=require('node:fs');
-const base=process.argv[2];if(!/^http:\/\/159\.89\.192\.55:\d+$/.test(base||''))throw Error('Use isolated preview origin');
-const destinations={PATTAYA:'파타야',BANGKOK:'방콕',HUA_HIN:'후아힌',RAYONG:'라용',AYUTTHAYA:'아유타야'};
-(async()=>{
- const rows=[];for(const airport of ['BKK','DMK'])for(const destination of (airport==='BKK'?['PATTAYA','BANGKOK','HUA_HIN','RAYONG','AYUTTHAYA']:['PATTAYA','BANGKOK','HUA_HIN','RAYONG'])){
- const prices={};for(const vehicle of ['SEDAN','SUV','VAN']){
- const input={serviceTypeCode:'AIRPORT_PICKUP',vehicleTypeCode:vehicle,originLocationCode:airport,destinationLocationCode:destination,vehicleCount:1,options:{}};
- const r=await fetch(base+'/api/v1/bookings/pricing/calculate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)});const body=await r.json();
- if(r.status!==200||!body.success||typeof body.data.totalAmount!=='number'||body.data.totalAmount<=0)throw Error(JSON.stringify({airport,destination,vehicle,body}));prices[vehicle]=body.data.totalAmount;
- }rows.push({airport,destination,label:destinations[destination],prices});}
- // Only public support settings; no production DB access or writes.
- const r=await fetch('https://trider.taxi/api/v1/bookings/contact-channels/public');if(!r.ok)throw Error('Public channel settings unavailable');const settings=await r.json();
- const snapshot={capturedAt:new Date().toISOString(),fareSource:base,contactSource:'https://trider.taxi/api/v1/bookings/contact-channels/public',rows,channels:settings.data.channels.filter(c=>['KAKAO','LINE','WHATSAPP'].includes(c.code))};
- fs.writeFileSync('landing/snapshot.json',JSON.stringify(snapshot,null,2));console.log(JSON.stringify({routes:rows.length,quotes:rows.length*3,channels:snapshot.channels.map(c=>c.code),example:rows[0]}));
-})().catch(e=>{console.error(e.message);process.exit(1)});
+const base=process.argv[2],url=new URL(base||'');
+if(!((url.protocol==='https:'&&url.hostname.endsWith('.trycloudflare.com'))||(url.protocol==='http:'&&url.hostname==='159.89.192.55'&&url.port)))throw Error('Use the isolated preview origin');
+if(url.pathname!=='/'||url.search||url.hash)throw Error('Origin must not include a path');
+(async()=>{const r=await fetch(url.origin+'/api/v1/public/landing-data'),body=await r.json();if(!r.ok||body.success!==true||!body.data?.rows?.length)throw Error('Landing API unavailable');
+fs.writeFileSync('landing/snapshot.json',JSON.stringify({capturedAt:body.data.updatedAt,fareSource:url.origin,contactSource:url.origin+'/api/v1/public/landing-data',rows:body.data.rows,channels:body.data.channels},null,2)+'\n');console.log(JSON.stringify({routes:body.data.rows.length,channels:body.data.channels.map(c=>c.code)}));})().catch(e=>{console.error(e.message);process.exit(1)});

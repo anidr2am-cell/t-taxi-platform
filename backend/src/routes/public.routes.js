@@ -16,6 +16,7 @@ const homeBannerController = require('../controllers/homeBanner.controller');
 const { bannerIdParamSchema } = require('../validators/homeBanner.validator');
 
 const router = express.Router();
+router.get('/landing-data', createRateLimit({ windowMs: 60_000, max: 30 }), require('../controllers/landingData.controller').get);
 const bookingLookupRateLimit = createRateLimit({
   windowMs: 60_000,
   max: process.env.NODE_ENV === 'production' ? 10 : 30,

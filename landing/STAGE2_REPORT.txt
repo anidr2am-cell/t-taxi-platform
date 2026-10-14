@@ -1,0 +1,79 @@
+정적 랜딩 2단계 검증 보고서 — 2026-10-14
+브랜치: codex/static-landing-ko
+운영 배포·운영 DB 변경·운영 DNS/Cloudflare 설정 변경: 실행하지 않음.
+
+1. HTTPS 미리보기
+ko: https://exports-usb-handy-topic.trycloudflare.com/
+en: https://exports-usb-handy-topic.trycloudflare.com/en/
+th: https://exports-usb-handy-topic.trycloudflare.com/th/
+ja: https://exports-usb-handy-topic.trycloudflare.com/ja/
+zh: https://exports-usb-handy-topic.trycloudflare.com/zh/
+임시 Quick Tunnel 주소입니다. 운영 Cloudflare 계정·DNS·프록시 설정을 변경하지 않았으며 터널이 종료되면 주소가 유지되지 않습니다.
+미리보기 HTML은 X-Robots-Tag: noindex, nofollow. 운영용 빌드는 https://trider.taxi canonical을 사용합니다.
+
+2. 언어별 title / description
+언어 | title | description
+ko | 수완나품·파타야 택시 1,000바트 | 추가요금 없음·24시간 상담 | T-Rider | 수완나품 → 파타야 택시 세단 1,000바트. 통행료·공항 주차비·항공편 지연 대기 추가요금 없음. 24시간 상담, 예약금 없이 예약하고 현금은 도착 후 결제. 계좌이체·카드도 관리자 안내로 가능합니다.
+en | Suvarnabhumi to Pattaya taxi 1,000 THB | No extra charges | T-Rider | Book a Suvarnabhumi to Pattaya sedan for 1,000 THB. Tolls, airport parking and flight-delay waiting included. No deposit, cash on arrival and 24-hour support.
+th | แท็กซี่สุวรรณภูมิไปพัทยา 1,000 บาท | ไม่มีค่าใช้จ่ายเพิ่ม | T-Rider | รถเก๋งสุวรรณภูมิไปพัทยา 1,000 บาท รวมค่าทางด่วน ค่าจอดรถสนามบิน และรอเที่ยวบินล่าช้า ไม่ต้องมัดจำ จ่ายเงินสดเมื่อถึงปลายทาง สอบถามได้ 24 ชั่วโมง
+ja | スワンナプーム空港からパタヤへ タクシー1,000バーツ | T-Rider | スワンナプーム空港→パタヤはセダン1,000バーツ。高速道路料金・空港駐車場代・フライト遅延時の待機込み。予約金不要、現金は到着後にお支払い。24時間お問い合わせいただけます。
+zh | 素万那普机场到芭提雅出租车 1,000泰铢 | 无额外费用 | T-Rider | 素万那普机场到芭提雅，轿车1,000泰铢。已含高速通行费、机场停车费和航班延误等待，无需订金，现金到达后支付。支持转账及管理员协助刷卡，24小时咨询。
+
+3. 구현
+GET /api/v1/public/landing-data: 예약 생성 없는 읽기 전용 계산. 활성·적용 기간 노선과 활성 SEDAN/SUV/VAN을 기존 PricingService.calculate(options={})로 계산합니다.
+응답은 currency, updatedAt, rows(serviceTypeCode, origin, originLabel, destination, label, prices), channels(code, displayName, addUrl, phoneNumber, accountId, qrImageUrl)만 포함합니다. 고객 개인정보, 내부 ID·좌표·정원은 없습니다. 채널 정보는 기존 공개 고객센터 설정을 재사용합니다.
+서버 메모리 캐시 5분, 동시 갱신 합치기, HTTP public max-age=300, 기존 rate-limit 미들웨어로 IP 키당 30회/분. 실패 응답은 캐시에 저장하지 않습니다.
+빌드 snapshot: 2026-10-14T00:41:37.982Z; 전체 노선 14개, 공항 픽업 요금표 9개 노선 × 3개 차량. 격리 STG에 기존 공개 사업자 고객센터 3채널만 설정해 검증했습니다. 운영 설정·고객 데이터는 변경하지 않았습니다.
+정적 HTML에 번역 본문·요금표·FAQ가 직접 포함됩니다. 런타임에는 API 한 번으로 가격·노선·고객센터를 갱신합니다. 실패/잘못된 금액 응답은 날짜가 표시된 빌드 기본값을 유지합니다.
+ko=/, en=/en/, th=/th/, ja=/ja/, zh=/zh/. 브라우저 언어로 강제 이동하지 않습니다. 예약 링크의 lang=ko/en/th/ja/zh를 LocaleState 초기값으로 적용합니다.
+쿼리가 있는 예약 조회·고객센터·개인정보처리방침도 기존 동일 페이지 빌더로 열리도록 보완했습니다. OAuth·다른 업무 경로는 가로채지 않습니다.
+고객센터 정렬은 기존 Flutter ContactChannel 규칙과 동일: ko 카카오 우선 / th LINE 우선 / en·ja WhatsApp 우선 / zh WeChat→LINE→WhatsApp→카카오. 비활성 채널은 제외됩니다.
+언어별 canonical, hreflang 5개+x-default, Open Graph, Twitter summary_large_image, 공통 공유 PNG 1장, TaxiService+FAQPage, sitemap.xml 및 robots.txt를 생성합니다. 후기·평점 구조화 데이터는 없습니다.
+GA는 기존 GA4_MEASUREMENT_ID와 tride_analytics_consent 계약을 재사용합니다. 동의 전에는 GA 스크립트도 로드하지 않습니다. 철회 시 ga-disable 및 consent denied로 막습니다. URL의 쿼리·고객 연락처를 이벤트에 보내지 않습니다.
+이벤트: landing_service_click / landing_fare_origin_change / landing_support_click / landing_language_change. 미리보기는 실제 GA 전송을 비활성화했고 동의·이벤트는 통제된 GA 모의 응답으로 검증했습니다.
+48시간 이내 낮은 견적 차액 환불 약속을 Flutter 5개 언어에서 제거했습니다. 무료 취소·전액 환불(운행 시작 전·픽업까지 2시간 초과)은 유지합니다. 기사 신고 24시간 회신·중대 사안 즉시 배차 정지는 FAQ 9번째 항목에 추가했습니다. 항공편 지연 시 픽업 자동 조정 문구도 유지합니다.
+차량 정원 숫자·연동, DB 정원 규칙, Flutter 폰트·fallback·웹 엔진·index.html·렌더러, APK, 운영 프록시는 변경하지 않았습니다.
+
+4. 검증 결과
+백엔드 전체: 1,630개 중 1,625 통과, 5 skip, 실패 0. 공개 DTO/캐시/실패 복구 및 배포 설정 집중 테스트 24개 통과.
+Flutter 변경 집중 테스트: 15개 통과. 전체: 1,153 통과, 골든 9개 실패. 정확한 분류는 개인정보처리방침 8개 + 비회원 조회 문의 배너 1개입니다.
+수정 전 74d4bd8을 별도 임시 디렉터리에 추출해 동일한 테스트를 실행했고 동일한 골든 9개 실패를 재현했습니다. 문서 파일도 함께 추출해 원본 문서 일치 검사를 통과한 상태로 대조했습니다. 골든·폰트·렌더러는 변경하지 않았습니다.
+HTTPS 실제 브라우저: 5언어 × 375/1440px = 10 화면, 가로 overflow 0. 언어별 공항 픽업 링크 실제 클릭 5개와 예약 화면 언어 확인. en 조회 / th 고객센터 / ja 개인정보처리방침 링크도 실제 클릭해 해당 언어 화면 확인.
+기존 경로 25개: Flutter 18개 경로의 index SHA-256 동일, 블로그 2개·manifest 2개·cleanup worker·health 200, downloads는 의도한 기존 운영 다운로드 페이지 302. 실제 예약 생성은 하지 않았습니다.
+5언어 HTML에서 canonical/alternate 6개/FAQ 구조화 데이터 9항목 확인. JavaScript 비활성화 5페이지에서도 본문·요금표 9행·FAQ 9항목 확인. sitemap 5 URL 및 robots의 /admin /driver /api 제외 확인.
+API 실패 시 기본값 유지, 잘못된 금액 시 전체 기본값 유지, 신규 노선 동적 반영은 통제된 브라우저 응답으로 검증했습니다.
+실제 빌드가 만든 관리자·기사 로그인 요청: https://exports-usb-handy-topic.trycloudflare.com/api/v1/auth/login; 존재하지 않는 QA ID로 각각 401 JSON, X-Preview-Backend=tride-landing-i18n-backend 확인. 운영 계정은 사용하지 않았습니다.
+네트워크: 운영 tride-prod-net은 기존 4개, 중복 별칭 0. 이번 백엔드·프론트·터널·비교용 컨테이너는 tride-landing-ko-net만 사용합니다.
+
+5. 서비스워커/캐시
+실제 Flutter 첫 화면 + 테스트용 구형 루트 탐색 캐시 워커로 이전 상태를 재현했습니다(과거 운영 워커 원본을 추출한 것은 아닙니다). 전환 전 controller=true, 등록 1, flutter-app-cache에 Flutter index 존재를 확인했습니다.
+정적 랜딩으로 전환 후 일반 새로고침 1회: 정적 본문 표시, controller=false, 등록 0. 기존 flutter-app-cache 저장소는 남지만 응답을 가로채는 워커가 없어 사용되지 않습니다. 강력 새로고침·수동 캐시 삭제는 하지 않았습니다.
+HTML: public, max-age=60, must-revalidate. CSS/JS/로고/공유 이미지는 SHA-256 일부를 파일명에 포함하고 public, max-age=31536000, immutable. 존재하지 않는 해시 자산은 404 + no-store. 기존 보안 응답 헤더를 보존합니다.
+HTTPS 임시 Cloudflare 앞단에서 HTML/CSS/JS/API/404의 실제 헤더를 확인했습니다. cf-cache-status는 DYNAMIC이었습니다. 이는 임시 터널 결과이며 운영 Cloudflare 캐시 규칙을 검사·변경했다는 의미는 아닙니다.
+
+6. 스크린샷·근거 파일
+C:/TTaxi-screens/static-landing-stage2/
+각 언어 {ko,en,th,ja,zh}-{375,1440}-full.png 및 -hero.png; booking-{언어}-375.png.
+verification.json / cache-migration.json / cache-headers.json / analytics-consent.json / login-paths.json / utility-links.json / network-isolation.json / baseline-goldens-final.log.
+
+7. 운영 배포 계획 — 아직 실행하지 않음
+1) 승인 후 PR/CI 검토, 운영 git status clean·PREVIOUS_HEAD·변경 범위·운영 네트워크 4개/중복 0 확인. database/와 deploy/production-proxy 변경은 0이어야 합니다.
+2) 기존 runbook 제3절과 BACKUP_RESTORE_RUNBOOK대로 DB+업로드 백업, MYSQL_PWD 방식, SHA-256 및 Drive 파일 수 확인. 현재 nginx 파일과 이전 이미지 식별자를 외부 백업 폴더에 함께 보존합니다. 비밀값은 출력하지 않습니다.
+3) DB 마이그레이션 없음. 신규 공개 API를 위해 백엔드 먼저 --no-deps로 배포하고 health/readiness와 landing-data 응답 확인.
+4) 프론트 이미지 빌드: Dockerfile.frontend landing-build가 5언어 파일을 생성합니다. production은 trider.taxi canonical 및 기존 GA 측정 ID, 미리보기는 GA 전송 비활성화입니다.
+5) 정적 파일 위치 /usr/share/nginx/html/landing/{index.html,en/index.html,th/index.html,ja/index.html,zh/index.html}; 해시 자산 /usr/share/nginx/html/landing-assets/. Flutter index.html은 루트에 그대로 보존됩니다. sitemap.xml·robots.txt만 생성본으로 복사합니다. 블로그·다운로드 볼륨은 유지됩니다.
+6) nginx는 정확히 /, /en/, /th/, /ja/, /zh/만 정적으로 라우팅합니다. /booking(쿼리 포함), 관리자·기사·조회·OAuth·API·소켓·블로그·다운로드 경로는 기존 처리 유지. 백엔드→프론트 순서 --no-deps 재빌드, DB·운영 프록시 재시작 금지.
+   docker compose --env-file deploy/docker/.env.production -f deploy/docker/docker-compose.production.yml config >/dev/null
+   docker compose --env-file deploy/docker/.env.production -f deploy/docker/docker-compose.production.yml up -d --build --no-deps tride-prod-backend
+   docker compose --env-file deploy/docker/.env.production -f deploy/docker/docker-compose.production.yml up -d --build --no-deps tride-prod-frontend
+7) Cloudflare 변경은 기본적으로 필요 없는 원본 캐시 헤더 설계입니다. 단 운영에 Cache Everything/Edge TTL 등 헤더를 덮어쓰는 규칙이 있는지는 배포 전에 읽기 전용으로 확인해야 합니다. 이번에는 확인·변경하지 않았습니다. 필요 시 HTML 5개 URL만 대상별 purge를 별도 승인받고, 전체 purge는 하지 않습니다.
+8) 운영 5언어 페이지·25경로·공개 landing-data·기존 health/readiness·견적/항공편 실제 GET/계산 호출·번들/정책/GA 동의·캐시를 확인합니다. 운영 예약 생성과 실제 기사 로그인은 하지 않습니다.
+
+8. 롤백 — 준비만
+빠른 화면 롤백: 외부에 백업한 기존 nginx.frontend.production.conf를 복원해 정적 정확 경로 5개를 제거한 뒤 프론트 nginx만 문법 검사·reload합니다. 기존 Flutter index는 바꾸지 않았으므로 / 접속 시 Flutter 첫 화면으로 돌아갑니다. DB·프록시는 건드리지 않습니다.
+   cp "$BACKUP_DIR/nginx.frontend.production.conf" deploy/docker/nginx.frontend.production.conf
+   docker exec tride-prod-frontend nginx -t
+   docker exec tride-prod-frontend nginx -s reload
+BACKUP_DIR은 승인된 배포 시 실제 생성하는 외부 백업 경로입니다. 아직 운영 백업 폴더를 만들거나 위 명령을 실행하지 않았습니다.
+전체 코드 롤백이 필요하면 clean 여부와 외부 백업을 확인한 뒤 PREVIOUS_HEAD로 돌아가 백엔드·프론트만 --no-deps로 재빌드합니다. 스키마 롤백은 없습니다. APK·다운로드 파일은 변경하지 않습니다.
+내부 Flutter의 예약 완료/소셜 로그인 후 홈 액션 2개는 기존 Navigator(/) 동작을 보존했습니다. 이는 Flutter 내부 홈을 표시하며, 외부 / 접속이나 새로고침은 정적 랜딩으로 갑니다. 이번 단계에서 예약 완료·OAuth 흐름을 추가로 바꾸지 않았습니다.

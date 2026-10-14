@@ -1,0 +1,4 @@
+const vehicleNames={SEDAN:'Sedan',SUV:'SUV',VAN:'Van'};
+function art(v){const van=v==='VAN';return `<svg class="vehicle-art" viewBox="0 0 300 140" role="img" aria-label="${vehicleNames[v]} 차량 일러스트, 실사진 교체 가능"><ellipse cx="150" cy="114" rx="119" ry="9" fill="#EEF2F4"/><path d="${van?'M36 95V37Q36 25 50 25h170q24 0 30 25l15 31v18H36z':'M28 94V74q0-10 14-13l25-6 28-30h90l35 37 39 7q14 3 14 17v13H28z'}" fill="${van?'#084F50':v==='SUV'?'#0B6E6E':'#DDE5E8'}"/><path d="${van?'M52 36h164l16 36H52z':'M100 35h78l26 27H78z'}" fill="#b6d7db"/><path d="M144 34v29" stroke="#fff" stroke-width="4"/><circle cx="80" cy="100" r="19" fill="#1E2A32"/><circle cx="224" cy="100" r="19" fill="#1E2A32"/><circle cx="80" cy="100" r="9" fill="#DDE5E8"/><circle cx="224" cy="100" r="9" fill="#DDE5E8"/><path d="M32 79h20m193 0h20" stroke="#C9922E" stroke-width="6"/></svg>`;}
+
+module.exports=art;

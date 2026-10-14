@@ -25,8 +25,8 @@ void main() {
         expect(description, contains(marker));
         expect(hint, contains(marker));
       }
-      // The unconfirmed price-match clause must stay for Edward's review.
-      expect(description, contains('48'));
+      // The withdrawn price-match promise must not appear in any locale.
+      expect(description, isNot(contains('48')));
       expect(description, isNot(contains('24')));
       await tester.pumpWidget(MaterialApp(
         locale: Locale(language),

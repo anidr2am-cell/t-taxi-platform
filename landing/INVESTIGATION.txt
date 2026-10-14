@@ -123,3 +123,6 @@ Vehicle cards contain only illustrations and names plus a recommendation prompt.
 Hero fare and SEO amount derive from BKK-PATTAYA SEDAN snapshot and live quote response (hero only); no second fare constant. Korean decorative copy replaces English.
 Flutter two policy keys updated in all five languages; unconfirmed 48h price-match clause and driver-report service commitments retained for Edward review.
 OPERATIONS_POLICY.md obsolete 24h cancellation sentence aligned with confirmed policy; its unconfirmed price-match sentence retained.
+
+STAGE 2 — 2026-10-14
+Implemented approved five-language/SEO/public-API work. STAGE2_REPORT.txt supersedes the stage-2 proposals and provisional promise notes above. Production deployment was not performed.

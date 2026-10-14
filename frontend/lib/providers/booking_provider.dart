@@ -245,6 +245,13 @@ class BookingState extends ChangeNotifier {
 class LocaleState extends ChangeNotifier {
   String _languageCode = 'ko';
 
+  LocaleState({Uri? entryUri}) {
+    final code = entryUri?.queryParameters['lang'];
+    if (const ['ko', 'en', 'zh', 'ja', 'th'].contains(code)) {
+      _languageCode = code!;
+    }
+  }
+
   String get languageCode => _languageCode;
 
   void setLanguage(String code) {
