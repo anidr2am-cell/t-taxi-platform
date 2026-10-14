@@ -1,4 +1,4 @@
--- Restore original prices; deactivate only the six new prices and two new routes.
+-- Restore original prices; deactivate only new prices and new routes.
 -- Never delete routes/prices, so bookings referencing them remain valid.
 -- Keep migration_73_fares_backup for audit and reapplication. No capacity changes.
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -10,12 +10,12 @@ BEGIN
  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
  START TRANSACTION;
  SELECT COUNT(*) INTO n FROM migration_73_fares_backup;
- IF n<>9 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='73 rollback STOP: backup must contain 9 targets'; END IF;
+ IF n<>36 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='73 rollback STOP: backup must contain 36 targets'; END IF;
  SELECT COUNT(*) INTO n FROM migration_73_fares_backup WHERE applied=1;
- IF n=9 THEN
+ IF n=36 THEN
   SELECT COUNT(*) INTO n FROM migration_73_fares_backup b JOIN vehicle_prices vp ON vp.id=b.applied_price_id
    WHERE vp.price=b.new_price AND vp.is_active=1 AND vp.deleted_at IS NULL;
-  IF n<>9 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='73 rollback STOP: current prices changed independently'; END IF;
+  IF n<>36 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='73 rollback STOP: current prices changed independently'; END IF;
   UPDATE vehicle_prices vp JOIN migration_73_fares_backup b ON vp.id=b.old_price_id
    SET vp.price=b.old_price,vp.is_active=b.old_price_active,vp.updated_at=b.old_price_updated_at;
   UPDATE vehicle_prices vp JOIN migration_73_fares_backup b ON vp.id=b.applied_price_id SET vp.is_active=0 WHERE b.old_price_id IS NULL;
