@@ -6,7 +6,7 @@ lang: ko
 category: golf
 translationKey: burapha-cc-green-fee
 date: 2026-10-06
-updated: 2026-10-06
+updated: 2026-10-14
 related:
   - pattaya-golf-price-match-guarantee
   - pattaya-golf-transfer-price
@@ -53,7 +53,7 @@ related:
 
 ## 인원과 골프백에 맞는 차량
 
-세단은 최대 2명과 골프백 2개, SUV는 3명과 골프백 3개, 밴은 6명과 골프백 6개까지 이용할 수 있습니다. 인원뿐 아니라 골프백 수를 함께 확인해 차량을 선택하세요.
+인원과 짐을 입력하면 맞는 차량을 추천해 드립니다.
 
 **부라파CC 그린피**와 차량비를 합산할 때에도 차량 정원을 넘지 않는 구성이 중요합니다. 4명이나 6명이면 밴 18홀 요금 2,300바트를 실제 탑승 인원으로 나눠 계산합니다.
 

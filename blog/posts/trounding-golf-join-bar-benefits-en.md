@@ -6,7 +6,7 @@ lang: en
 category: golf
 translationKey: trounding-golf-join-bar-benefits
 date: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14
 related:
   - pattaya-golf-price-match-guarantee-en
   - burapha-cc-green-fee-en
@@ -44,9 +44,9 @@ The price match guarantee applies to products sold by TRounding. TRider transfer
 
 ## Airport and golf course transfers with TRider
 
-Fixed fares from Suvarnabhumi Airport to Pattaya, including tolls, are THB 1,000 for a sedan, THB 1,300 for an SUV and THB 1,700 for a van. From Don Mueang Airport to Pattaya, fares are THB 1,500 for a sedan, THB 1,800 for an SUV and THB 2,100 for a van.
+Fixed fares from Suvarnabhumi Airport to Pattaya, including tolls, are THB 1,000 for a sedan, THB 1,300 for an SUV and THB 1,700 for a van. From Don Mueang Airport to Pattaya, fares are THB 1,400 for a sedan, THB 1,600 for an SUV and THB 2,200 for a van.
 
-Transfers between Pattaya and golf courses include the return journey and driver waiting during the round. Vehicle capacities are 2 passengers and 2 golf bags for a sedan, 3 passengers and 3 golf bags for an SUV, and 6 passengers and 6 golf bags for a van. When travelling together, only the vehicle transfer cost can be shared.
+Transfers between Pattaya and golf courses include the return journey and driver waiting during the round. Enter your passenger and luggage details to receive a suitable vehicle recommendation. When travelling together, only the vehicle transfer cost can be shared.
 
 Green fees, caddie fees and cart fees stay the same per person regardless of party size. Only the transfer cost is shared between passengers.
 

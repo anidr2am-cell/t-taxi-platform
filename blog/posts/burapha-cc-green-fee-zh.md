@@ -6,7 +6,7 @@ lang: zh
 category: golf
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14
 related:
   - pattaya-golf-price-match-guarantee-zh
   - trounding-golf-join-bar-benefits-zh
@@ -52,7 +52,7 @@ related:
 
 ## 按人数与球包数量选车
 
-轿车最多可乘坐2人并携带2个球包，SUV为3人及3个球包，面包车为6人及6个球包。选车时请同时确认人数与球包数量。
+输入人数和行李信息，即可获得合适的车型推荐。
 
 合计**布拉帕高尔夫球场果岭费**与车费时，也要遵守车辆载客容量。4人或6人出行，可将18洞面包车费用2,300泰铢除以实际乘车人数。
 

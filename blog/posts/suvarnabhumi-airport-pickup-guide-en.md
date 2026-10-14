@@ -6,7 +6,7 @@ lang: en
 category: airport
 translationKey: suvarnabhumi-airport-pickup-guide
 date: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 ---
 
 If you have booked a pickup from Suvarnabhumi Airport (BKK), check the meeting point and assigned vehicle before you arrive. TRider pickups meet at **Gate 7**, with detailed meeting instructions available after booking.
@@ -17,11 +17,7 @@ You can see a photo of the assigned vehicle in advance. Keep it with your bookin
 
 Choose a vehicle that fits both your group and luggage.
 
-| Vehicle | Passengers | Suitcases | Golf bags |
-| --- | ---: | ---: | ---: |
-| Sedan | 2 | 2 | 2 |
-| SUV | 3 | 3 | 3 |
-| Van | 6 | 6 | 6 |
+Enter your passenger and luggage details to receive a suitable vehicle recommendation.
 
 When travelling with parents or extra luggage, check the suitcase count as well as the number of passengers.
 
@@ -31,7 +27,7 @@ Meet your driver at **Gate 7**. Follow the instructions provided after booking r
 
 ## What if my flight is delayed?
 
-The driver waits free of charge when your flight is delayed, with no waiting-time limit. Check your booking instructions if the arrival time changes.
+If your flight is delayed, pickup is adjusted to your actual arrival time. Highway tolls, airport parking and flight-delay waiting are included, with no extra charges. Check your booking instructions if the arrival time changes.
 
 ## Is there a late-night surcharge?
 

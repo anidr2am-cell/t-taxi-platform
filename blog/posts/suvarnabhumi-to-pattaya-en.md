@@ -6,7 +6,7 @@ lang: en
 category: airport
 translationKey: suvarnabhumi-to-pattaya
 date: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-14
 ---
 
 There are three straightforward ways to travel from Suvarnabhumi Airport (BKK) to Pattaya: an airport taxi, a bus or a pre-booked private transfer. The best choice depends on your group size, luggage and arrival schedule.
@@ -23,17 +23,19 @@ Airport taxi and bus conditions can change, so check the latest information befo
 
 ## TRider fares from BKK to Pattaya
 
-TRider's fixed fares include tolls, with no late-night surcharge.
+Highway tolls, airport parking and flight-delay waiting are included, with no extra charges. There is no late-night surcharge.
 
-| Vehicle | Passengers and luggage | Fixed fare |
-| --- | --- | ---: |
-| Sedan | 2 passengers · 2 suitcases | THB 1,000 |
-| SUV | 3 passengers · 3 suitcases | THB 1,300 |
-| Van | 6 passengers · 6 suitcases | THB 1,700 |
+| Vehicle | Fixed fare |
+| --- | ---: |
+| Sedan | THB 1,000 |
+| SUV | THB 1,300 |
+| Van | THB 1,700 |
+
+Enter your passenger and luggage details to receive a suitable vehicle recommendation.
 
 ## What happens if my flight is delayed?
 
-The driver waits free of charge when your flight is delayed, with no waiting-time limit. You can also check a photo of the assigned vehicle before the trip.
+If your flight is delayed, pickup is adjusted to your actual arrival time. You can also check a photo of the assigned vehicle before the trip.
 
 ## Where do I meet the driver?
 
@@ -41,6 +43,6 @@ The meeting point at Suvarnabhumi Airport is **Gate 7**. Check your booking inst
 
 ## Payment and cancellation
 
-You can pay by cash, card or bank transfer. There are no cancellation restrictions.
+No deposit is required. Pay cash to the driver after arriving at your destination, or contact the administrator for bank transfer and card payment. You can cancel through booking lookup free of charge and receive a full refund before the trip starts, provided more than 2 hours remain before pickup.
 
 Choose a vehicle that fits both your group and luggage, and confirm your transfer before landing for a simpler start to your Pattaya trip.

@@ -6,7 +6,7 @@ lang: en
 category: golf
 translationKey: burapha-cc-green-fee
 date: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14
 related:
   - pattaya-golf-price-match-guarantee-en
   - trounding-golf-join-bar-benefits-en
@@ -52,7 +52,7 @@ Green fees, caddie fees and cart fees stay the same per person regardless of par
 
 ## Choose a vehicle for your passengers and golf bags
 
-A sedan carries up to 2 passengers and 2 golf bags, an SUV up to 3 passengers and 3 golf bags, and a van up to 6 passengers and 6 golf bags. Check both the number of travellers and the number of bags before choosing.
+Enter your passenger and luggage details to receive a suitable vehicle recommendation.
 
 When combining the **Burapha Golf Club green fee** with transport, stay within the vehicle's capacity. For 4 or 6 passengers, divide the THB 2,300 van fare for 18 holes by the actual number travelling.
 
