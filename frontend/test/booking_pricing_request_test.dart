@@ -22,6 +22,55 @@ import 'package:http/testing.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final route in [
+    ('BKK', 'DMK', 'Don Mueang International Airport (DMK)'),
+    ('DMK', 'BKK', 'Suvarnabhumi Airport (BKK)'),
+  ]) {
+    test(
+      'controller sends airport destination code for ${route.$1} to ${route.$2}',
+      () async {
+        final api = _CapturingBookingApi();
+        final controller = BookingWizardController(
+          apiService: api,
+          storage: _MemoryBookingStateStorage(),
+          recentLocationsStorage: RecentLocationsStorage(
+            guestRepository: _MemoryRecentLocationsRepository(),
+          ),
+          now: () => DateTime.utc(2026, 6, 29, 3),
+        );
+        await controller.initialize();
+        await controller.selectService(BookingServiceType.airportPickup);
+        await controller.setOrigin(
+          LocationOption(
+            id: route.$1,
+            displayName: route.$1,
+            kind: LocationKind.airport,
+            code: route.$1,
+          ),
+        );
+        await controller.setDestination(
+          LocationOption(
+            id: 'place:${route.$2}',
+            displayName: route.$3,
+            name: route.$3,
+            kind: LocationKind.place,
+            code: 'BANGKOK',
+            region: 'Bangkok',
+          ),
+        );
+        await controller.setPickupDateTime(DateTime(2026, 7, 1, 9, 30));
+        await controller.updatePassengersAndLuggage(adults: 2);
+        await controller.loadRecommendation();
+        await controller.selectVehicle('SEDAN');
+        await controller.loadPricing();
+        expect(api.lastPricingRequest!['originAirportIata'], route.$1);
+        expect(api.lastPricingRequest!['destinationLocationCode'], route.$2);
+        expect(api.lastPricingRequest!['destinationRegion'], isNull);
+        controller.dispose();
+      },
+    );
+  }
+
   test(
     'calculatePricing sends contract body with passengers, luggage, and options',
     () async {

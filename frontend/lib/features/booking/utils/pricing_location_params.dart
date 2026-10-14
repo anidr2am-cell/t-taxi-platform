@@ -61,7 +61,9 @@ Map<String, String?> pricingLocationParams({
 
   if (service == BookingServiceType.airportPickup) {
     originAirportIata = airportIataFromOption(origin);
-    destinationLocationCode = internalLocationCodeFromOption(destination);
+    destinationLocationCode =
+        airportDestinationCodeFromOption(destination) ??
+        internalLocationCodeFromOption(destination);
     destinationRegion = destinationLocationCode == null
         ? regionFromLocation(destination)
         : null;
@@ -145,6 +147,35 @@ String? internalLocationCodeFromOption(LocationOption? location) {
   ].whereType<String>().join(' ').toUpperCase();
   for (final entry in _knownLocationCodeByText.entries) {
     if (text.contains(entry.key)) return entry.value;
+  }
+  return null;
+}
+
+// Resolve an airport selected as a Places result before its city/address region.
+// Match the place name exactly after removing airport descriptors, never an
+// airport name embedded in a hotel name or address.
+String? airportDestinationCodeFromOption(LocationOption? location) {
+  if (location == null) return null;
+  if (location.kind == LocationKind.airport)
+    return airportIataFromOption(location);
+  final explicit = location.code?.trim().toUpperCase();
+  if (_knownAirportIataByText.containsValue(explicit)) return explicit;
+  var name = (location.name ?? location.displayName).trim().toUpperCase();
+  name = name.replaceAll(RegExp(r'\((BKK|DMK|HKT|CNX|UTP)\)'), '');
+  name = name.replaceAll(
+    RegExp(
+      r'INTERNATIONAL|AIRPORT|국제|공항|國際|国际|機場|机场|国際|空港|ท่าอากาศยาน|สนามบิน|นานาชาติ',
+    ),
+    '',
+  );
+  String compact(String value) => value.replaceAll(RegExp(r'[\s_\-]'), '');
+  final aliases = <String, String>{
+    ..._knownAirportIataByText,
+    '수완나품': 'BKK',
+    '돈므앙': 'DMK',
+  };
+  for (final entry in aliases.entries) {
+    if (compact(name) == compact(entry.key.toUpperCase())) return entry.value;
   }
   return null;
 }
