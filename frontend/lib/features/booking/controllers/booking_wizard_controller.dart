@@ -100,6 +100,7 @@ class BookingWizardController extends ChangeNotifier {
   BookingWizardState _state = const BookingWizardState();
   bool _isLoading = false;
   String? _submitIdempotencyKey;
+  String? _submitLocale;
   bool _isSubmitting = false;
   bool _isInitialized = false;
   bool _returnToReview = false;
@@ -1246,6 +1247,7 @@ class BookingWizardController extends ChangeNotifier {
     _isSubmitting = true;
     _setLoading(true);
     final idempotencyKey = _ensureSubmitIdempotencyKey();
+    final submissionLocale = _submitLocale ??= locale;
     const maxInProgressRetries = 3;
     try {
       if (!await _ensurePricingCoordinates()) {
@@ -1268,7 +1270,7 @@ class BookingWizardController extends ChangeNotifier {
           final result = await _api.createBooking(
             {
               ...buildCreatePayload(bookingMode: bookingMode),
-              if (locale != null) 'locale': locale,
+              if (submissionLocale != null) 'locale': submissionLocale,
             },
             idempotencyKey: idempotencyKey,
             accessToken: accessToken,
@@ -1285,6 +1287,7 @@ class BookingWizardController extends ChangeNotifier {
             totalPrice: result.totalAmount,
           );
           _submitIdempotencyKey = null;
+          _submitLocale = null;
           await _storage.clear();
           _state = const BookingWizardState();
           notifyListeners();
@@ -1329,6 +1332,7 @@ class BookingWizardController extends ChangeNotifier {
 
   void _invalidateSubmitIdempotencyKey() {
     _submitIdempotencyKey = null;
+    _submitLocale = null;
   }
 
   String _ensureSubmitIdempotencyKey() {

@@ -115,14 +115,19 @@ class _GuestBookingLookupPageState extends State<GuestBookingLookupPage> {
   Future<void> _loadCached() async {
     final cached = await _lookupService.loadCached();
     if (!mounted) return;
-    if (cached != null && widget.initialBookingNumber == null) {
+    final useCached =
+        cached != null &&
+        (widget.initialBookingNumber == null ||
+            widget.initialBookingNumber!.trim().toUpperCase() ==
+                cached.bookingNumber);
+    if (useCached) {
       _bookingNumberController.text = cached.bookingNumber;
       if (cached.customerPhone != null && cached.customerPhone!.isNotEmpty) {
         _phoneController.text = cached.customerPhone!;
       }
     }
     setState(() {
-      _result = widget.initialBookingNumber == null ? cached : null;
+      _result = useCached ? cached : null;
       if (widget.initialBookingNumber != null)
         _bookingNumberController.text = widget.initialBookingNumber!;
       _loading = false;

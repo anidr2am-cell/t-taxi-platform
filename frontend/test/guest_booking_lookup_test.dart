@@ -21,6 +21,40 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets(
+    'review deep link keeps matching cached guest access but never shows a different booking',
+    (tester) async {
+      final service = _FakeLookupService(
+        cached: _result().copyWith(status: 'DRIVER_ASSIGNED'),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            lookupService: service,
+            initialBookingNumber: 'TX202607010001',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Driver A'), findsWidgets);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GuestBookingLookupPage(
+            key: const ValueKey('another_booking'),
+            lookupService: service,
+            initialBookingNumber: 'TX202610140003',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Driver A'), findsNothing);
+      final field = tester.widget<TextFormField>(
+        find.byKey(const ValueKey('guest_lookup_booking_number')),
+      );
+      expect(field.controller!.text, 'TX202610140003');
+    },
+  );
+
   testWidgets('initialResult shows booking detail immediately', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -875,7 +909,9 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('Before the trip starts, you can cancel through booking lookup free of charge for a full refund if pickup is more than 2 hours away.'),
+        find.text(
+          'Before the trip starts, you can cancel through booking lookup free of charge for a full refund if pickup is more than 2 hours away.',
+        ),
         findsOneWidget,
       );
     },
@@ -1086,9 +1122,7 @@ void main() {
     final service = _FakeContactLookupService();
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: GuestBookingLookupPage(lookupService: service),
-      ),
+      MaterialApp(home: GuestBookingLookupPage(lookupService: service)),
     );
     await tester.pumpAndSettle();
 
@@ -1096,10 +1130,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('guest_lookup_name')), findsOneWidget);
-    expect(find.byKey(const ValueKey('guest_lookup_booking_number')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('guest_lookup_booking_number')),
+      findsNothing,
+    );
 
-    await tester.enterText(find.byKey(const ValueKey('guest_lookup_name')), 'Kim Test');
-    await tester.enterText(find.byKey(const ValueKey('guest_lookup_phone')), '+66812345678');
+    await tester.enterText(
+      find.byKey(const ValueKey('guest_lookup_name')),
+      'Kim Test',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('guest_lookup_phone')),
+      '+66812345678',
+    );
     await tester.tap(find.text('Find booking'));
     await tester.pumpAndSettle();
 
@@ -1334,4 +1377,3 @@ class _FakeContactLookupService extends GuestBookingLookupService {
     });
   }
 }
-

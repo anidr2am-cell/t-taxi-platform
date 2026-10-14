@@ -217,6 +217,18 @@ class InProgressThenSuccessfulApi extends IdempotencyTrackingApi {
 }
 
 void main() {
+  test(
+    'booking submission carries the viewed locale and preserves it for the same idempotent retry',
+    () async {
+      final api = FailingThenSuccessfulApi(1);
+      final controller = await buildContractAirportPickupController(api: api);
+      await controller.submitBooking(locale: 'th');
+      await controller.submitBooking(locale: 'en');
+      expect(api.lastCreateRequest?['locale'], 'th');
+      expect(api.idempotencyKeys[0], api.idempotencyKeys[1]);
+    },
+  );
+
   test('BookingApiService.generateIdempotencyKey returns UUID v4 format', () {
     final key = BookingApiService.generateIdempotencyKey();
     expect(
@@ -227,18 +239,21 @@ void main() {
     );
   });
 
-  test('submitBooking sends Idempotency-Key header on createBooking call', () async {
-    final api = IdempotencyTrackingApi();
-    final controller = await buildContractAirportPickupController(api: api);
+  test(
+    'submitBooking sends Idempotency-Key header on createBooking call',
+    () async {
+      final api = IdempotencyTrackingApi();
+      final controller = await buildContractAirportPickupController(api: api);
 
-    await controller.submitBooking();
+      await controller.submitBooking();
 
-    expect(api.createCallCount, 1);
-    expect(api.idempotencyKeys.single, isNotNull);
-    expect(api.idempotencyKeys.single, isNotEmpty);
-    expect(api.lastCreateRequest?['serviceTypeCode'], 'AIRPORT_PICKUP');
-    expect(api.lastCreateRequest?.containsKey('totalAmount'), isFalse);
-  });
+      expect(api.createCallCount, 1);
+      expect(api.idempotencyKeys.single, isNotNull);
+      expect(api.idempotencyKeys.single, isNotEmpty);
+      expect(api.lastCreateRequest?['serviceTypeCode'], 'AIRPORT_PICKUP');
+      expect(api.lastCreateRequest?.containsKey('totalAmount'), isFalse);
+    },
+  );
 
   test('submit retry reuses the same idempotency key', () async {
     final api = FailingThenSuccessfulApi(1);
@@ -254,29 +269,32 @@ void main() {
     expect(api.idempotencyKeys[0], api.idempotencyKeys[1]);
   });
 
-  test('meaningful booking change generates a new idempotency key on next submit', () async {
-    final api = FailingThenSuccessfulApi(1);
-    final controller = await buildContractAirportPickupController(api: api);
+  test(
+    'meaningful booking change generates a new idempotency key on next submit',
+    () async {
+      final api = FailingThenSuccessfulApi(1);
+      final controller = await buildContractAirportPickupController(api: api);
 
-    await controller.submitBooking();
-    await controller.setDestination(
-      const LocationOption(
-        id: 'place:rayong',
-        displayName: 'Rayong',
-        kind: LocationKind.place,
-        code: 'RAYONG',
-        placeId: 'google-rayong',
-        name: 'Rayong',
-        address: 'Rayong, Thailand',
-        latitude: 12.6814,
-        longitude: 101.2816,
-      ),
-    );
-    await controller.submitBooking();
+      await controller.submitBooking();
+      await controller.setDestination(
+        const LocationOption(
+          id: 'place:rayong',
+          displayName: 'Rayong',
+          kind: LocationKind.place,
+          code: 'RAYONG',
+          placeId: 'google-rayong',
+          name: 'Rayong',
+          address: 'Rayong, Thailand',
+          latitude: 12.6814,
+          longitude: 101.2816,
+        ),
+      );
+      await controller.submitBooking();
 
-    expect(api.idempotencyKeys.length, 2);
-    expect(api.idempotencyKeys[0], isNot(equals(api.idempotencyKeys[1])));
-  });
+      expect(api.idempotencyKeys.length, 2);
+      expect(api.idempotencyKeys[0], isNot(equals(api.idempotencyKeys[1])));
+    },
+  );
 
   test(
     'submit retries IDEMPOTENCY_REQUEST_IN_PROGRESS with same key and limited backoff',
