@@ -4,6 +4,8 @@ const config = require('../config/env');
 const fs = require('node:fs');
 const { isCustomerEmail, renderCustomerEmail } = require('../templates/customerEmail');
 const { emailPolicyError } = require('../policies/notificationEmail.policy');
+const { smtpFailureEvidence } = require('../policies/emailAttempt.policy');
+const { encrypt, decrypt } = require('../utils/tokenEncryption.util');
 
 const CONFIG_MISSING = 'CONFIG_MISSING';
 const INVALID_RECIPIENT = 'PERMANENT_INVALID_RECIPIENT';
@@ -125,7 +127,7 @@ class EmailNotificationAdapter {
       || message.includes('recipient address rejected');
   }
 
-  async send(notification, _recipient) {
+  async send(notification, recipient = {}) {
     const policyError = emailPolicyError(notification);
     if (policyError) return { status: DELIVERY_STATUS.SKIPPED, error: policyError };
     if (!this.isConfigured()) {
@@ -146,14 +148,28 @@ class EmailNotificationAdapter {
         }
         emailNotification = { ...notification, google_review_url: googleUrl };
       }
-      const transport = await this.createTransport();
-      await transport.sendMail({
+      const restored = recipient.emailAttempt?.envelope ? JSON.parse(decrypt(recipient.emailAttempt.envelope)) : null;
+      if (restored && restored.to !== to) throw Object.assign(new Error('Recipient changed'), { code: 'EMAIL_RECIPIENT_CHANGED' });
+      const message = {
         from: this.normalizeFrom(),
         to,
         ...this.buildMessage(emailNotification),
-      });
-      return { status: DELIVERY_STATUS.DELIVERED };
+        ...(restored || {}),
+        ...(recipient.emailAttempt ? { messageId: recipient.emailAttempt.messageId,
+          headers: { 'X-TRider-Email-Trace': recipient.emailAttempt.traceId } } : {}),
+      };
+      if (recipient.saveEmailEnvelope) await recipient.saveEmailEnvelope(encrypt(JSON.stringify(message)));
+      const transport = await this.createTransport();
+      const info = await transport.sendMail(message);
+      return { status: DELIVERY_STATUS.DELIVERED,
+        ...(recipient.emailAttempt ? { emailTrace: { outcome: 'ACCEPTED',
+          providerMessageId: String(info?.response || '').match(/queued as\s+<?([A-Za-z0-9_.@+-]+)>?/i)?.[1] || null } } : {}) };
     } catch (err) {
+      if (recipient.emailAttempt) {
+        const evidence = smtpFailureEvidence(err);
+        return { status: DELIVERY_STATUS.FAILED, permanent: true, emailTrace: evidence,
+          error: `${evidence.outcome === 'NOT_ACCEPTED' ? 'PERMANENT_EMAIL_NOT_ACCEPTED' : 'PERMANENT_EMAIL_SEND_UNCERTAIN'}:${evidence.errorCode}` };
+      }
       if (this.isPermanentSmtpError(err)) {
         return { status: DELIVERY_STATUS.FAILED, error: INVALID_RECIPIENT, permanent: true };
       }

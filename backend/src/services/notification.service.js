@@ -727,6 +727,10 @@ class NotificationService {
             continue;
           }
           if (emailAudience(notification) === ROLES.CUSTOMER) {
+            if ((adapter.isConfigured && !adapter.isConfigured()) || (adapter.getRecipientEmail && !adapter.getRecipientEmail(notification))) {
+              await this.recordDeliveryResult(notificationId, delivery, await adapter.send(notification, recipient));
+              continue;
+            }
             // Reserve before SMTP, under a booking row lock. An ambiguous send is
             // never retried: avoiding duplicate customer mail takes precedence.
             const claim = await this.notificationRepository.claimCustomerEmail(notification, delivery);
@@ -736,11 +740,13 @@ class NotificationService {
               continue;
             }
             delivery.emailReserved = true;
+            delivery.emailAttempt = claim.attempt;
           }
         }
         const result = delivery.channel === NOTIFICATION_CHANNELS.FCM
           ? await this.sendFcmToActiveDevices(notification, recipient)
-          : await adapter.send(notification, recipient);
+          : await adapter.send(notification, { ...recipient, emailAttempt: delivery.emailAttempt,
+            saveEmailEnvelope: delivery.emailAttempt ? (encrypted) => this.notificationRepository.saveEmailEnvelope(delivery.emailAttempt.id, encrypted) : undefined });
         await this.recordDeliveryResult(notificationId, delivery, result);
       } catch (err) {
         await this.recordDeliveryResult(notificationId, delivery, {
@@ -813,6 +819,10 @@ class NotificationService {
     const conn = await this.pool.getConnection();
     try {
       await conn.beginTransaction();
+      if (delivery.emailAttempt) {
+        await this.notificationRepository.finishEmailAttempt(conn, delivery.emailAttempt.id,
+          result.emailTrace || { outcome: result.status === DELIVERY_STATUS.DELIVERED ? 'ACCEPTED' : 'UNKNOWN', errorCode: result.error });
+      }
       const deliveredAt = result.status === DELIVERY_STATUS.DELIVERED
         ? new Date().toISOString().slice(0, 19).replace('T', ' ')
         : null;
@@ -828,6 +838,7 @@ class NotificationService {
         !delivery.emailReserved,
       );
       await conn.commit();
+      return true;
     } catch (err) {
       await conn.rollback();
       logger.warn('Notification delivery update failed', {
@@ -835,6 +846,7 @@ class NotificationService {
         channel: delivery.channel,
         error: this.safeDeliveryError(err),
       });
+      return false;
     } finally {
       conn.release();
     }
@@ -870,6 +882,47 @@ class NotificationService {
       total,
       items: rows.map((row) => this.mapDeliveryStatusItem(row)),
     };
+  }
+
+  async listEmailReviews(query = {}) {
+    const page = Math.max(1, Number(query.page) || 1);
+    const items = await this.notificationRepository.emailReviewRows(query.includeHandled === true || query.includeHandled === 'true', page);
+    return { items, page, hasMore: items.length === 100 };
+  }
+
+  async reviewEmailDelivery(id, input, actor) {
+    if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(actor?.role)) throw new AppError('Administrator required', { statusCode: 403 });
+    const delivery = await this.notificationRepository.findEmailDelivery(id);
+    if (!delivery) throw new AppError('Email delivery not found', { statusCode: 404 });
+    if (input.action !== 'RETRY_APPROVED') {
+      const recorded = await this.notificationRepository.addEmailReview(id, actor.id, input.action, input.reason);
+      if (!recorded) throw new AppError('Customer email not found', { statusCode: 404 });
+      return { recorded: true };
+    }
+    const notification = await this.notificationRepository.findById(delivery.notification_id);
+    if (!notification || emailAudience(notification) !== ROLES.CUSTOMER || emailPolicyError(notification)) {
+      throw new AppError('Email recovery blocked by policy', { statusCode: 409, errorCode: 'EMAIL_RECOVERY_BLOCKED' });
+    }
+    const emailAdapter = this.adapters.EMAIL;
+    if (!emailAdapter || (emailAdapter.isConfigured && !emailAdapter.isConfigured())
+      || (emailAdapter.getRecipientEmail && !emailAdapter.getRecipientEmail(notification))) {
+      throw new AppError('Email delivery unavailable', { statusCode: 409, errorCode: 'EMAIL_RECOVERY_BLOCKED' });
+    }
+    const claim = await this.notificationRepository.claimCustomerEmail(notification, delivery, {
+      expectedAttemptId: input.expectedAttemptId, actorUserId: actor.id, reason: input.reason,
+    });
+    if (!claim.allowed) throw new AppError('Email non-acceptance must be proven', { statusCode: 409, errorCode: 'EMAIL_RECOVERY_BLOCKED' });
+    delivery.emailReserved = true;
+    delivery.emailAttempt = claim.attempt;
+    let result;
+    try {
+      result = await emailAdapter.send(notification, { emailAttempt: claim.attempt,
+        saveEmailEnvelope: (encrypted) => this.notificationRepository.saveEmailEnvelope(claim.attempt.id, encrypted) });
+    } catch (err) {
+      result = { status: DELIVERY_STATUS.FAILED, error: 'PERMANENT_EMAIL_SEND_UNCERTAIN', emailTrace: { outcome: 'UNKNOWN', errorCode: this.safeDeliveryError(err) } };
+    }
+    const trackingSaved = await this.recordDeliveryResult(notification.id, delivery, result);
+    return { deliveryId: id, deliveryStatus: result.status, outcome: result.emailTrace?.outcome || 'UNKNOWN', trackingSaved };
   }
 
   mapListItem(row) {

@@ -1,7 +1,10 @@
 const database = require('../config/database');
 const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const DELIVERY_STATUS = require('../constants/notificationDeliveryStatus');
-const { customerEmailSlot } = require('../policies/notificationEmail.policy');
+const { customerEmailSlot, CUSTOMER_EMAIL_TYPES } = require('../policies/notificationEmail.policy');
+const { canRecoverAttempt } = require('../policies/emailAttempt.policy');
+const { randomUUID } = require('node:crypto');
+const { formatServiceDateTimeIso } = require('../utils/serviceDateTime.util');
 
 class NotificationRepository {
   constructor(pool = database.pool) {
@@ -161,7 +164,7 @@ class NotificationRepository {
     return row;
   }
 
-  async claimCustomerEmail(notification, delivery) {
+  async claimCustomerEmail(notification, delivery, recovery = null) {
     if (!notification.booking_id) return { allowed: false, error: 'EMAIL_POLICY_BOOKING_REQUIRED' };
     const conn = await this.pool.getConnection();
     try {
@@ -173,19 +176,30 @@ class NotificationRepository {
       }
       const [[current]] = await conn.query('SELECT delivery_status, attempt_count, last_error FROM notification_deliveries WHERE id = ? FOR UPDATE', [delivery.id]);
       if (!current || ['DELIVERED', 'SKIPPED'].includes(current.delivery_status)
-        || current.last_error?.startsWith('PERMANENT_EMAIL_')) {
+        || (!recovery && current.last_error?.startsWith('PERMANENT_EMAIL_'))) {
         await conn.commit();
         return { alreadyProcessed: true };
+      }
+      let previousEnvelope = null;
+      if (recovery) {
+        const [[attempt]] = await conn.query('SELECT * FROM notification_email_attempts WHERE delivery_id = ? ORDER BY id DESC LIMIT 1 FOR UPDATE', [delivery.id]);
+        const [[review]] = await conn.query("SELECT COUNT(*) AS n FROM notification_email_reviews WHERE delivery_id = ? AND action = 'ACCEPTED_CONFIRMED'", [delivery.id]);
+        if (!attempt || Number(attempt.id) !== recovery.expectedAttemptId || !canRecoverAttempt(attempt) || !attempt.envelope_encrypted || Number(review.n)) {
+          await conn.commit();
+          return { allowed: false, error: 'EMAIL_RECOVERY_NOT_PROVEN' };
+        }
+        previousEnvelope = attempt.envelope_encrypted;
       }
       // Count historical sends too, including other customer event types. Failed
       // attempts may have been accepted by SMTP; count conservatively, not twice.
       const [history] = await conn.query(`SELECT n.type FROM notification_deliveries d
         JOIN notifications n ON n.id = d.notification_id LEFT JOIN users u ON u.id = n.user_id
-        WHERE n.booking_id = ? AND d.channel = 'EMAIL'
+        WHERE n.booking_id = ? AND d.channel = 'EMAIL' AND d.id <> ?
           AND COALESCE(n.audience_role, IF(n.recipient_type = 'GUEST_BOOKING', 'CUSTOMER', u.role)) = 'CUSTOMER'
           AND (d.delivery_status = 'DELIVERED' OR d.last_error LIKE 'PERMANENT_EMAIL_%'
+            OR EXISTS (SELECT 1 FROM notification_email_reviews hr WHERE hr.delivery_id=d.id AND hr.action='ACCEPTED_CONFIRMED')
             OR (d.attempt_count > 0 AND d.delivery_status <> 'SKIPPED'
-              AND COALESCE(d.last_error, '') <> 'PERMANENT_INVALID_RECIPIENT'))`, [notification.booking_id]);
+              AND COALESCE(d.last_error, '') <> 'PERMANENT_INVALID_RECIPIENT'))`, [notification.booking_id, recovery ? delivery.id : 0]);
       let error = history.length >= 2 ? 'EMAIL_POLICY_BOOKING_LIMIT' : null;
       if (history.some((row) => customerEmailSlot(row.type) === customerEmailSlot(notification.type))) {
         error = 'EMAIL_POLICY_SLOT_ALREADY_USED';
@@ -200,14 +214,95 @@ class NotificationRepository {
         await conn.commit();
         return { allowed: false, error };
       }
+      if (recovery) {
+        await conn.query(`INSERT INTO notification_email_reviews (delivery_id,attempt_id,action,actor_user_id,reason)
+          VALUES (?,?,'RETRY_APPROVED',?,?)`, [delivery.id, recovery.expectedAttemptId, recovery.actorUserId, recovery.reason]);
+      }
+      const traceId = randomUUID();
+      const messageId = `<trider-email-${delivery.id}@trider.taxi>`;
+      const [insert] = await conn.query('INSERT INTO notification_email_attempts (delivery_id,trace_id,message_id,envelope_encrypted) VALUES (?,?,?,?)', [delivery.id, traceId, messageId, previousEnvelope]);
       await conn.query(`UPDATE notification_deliveries SET attempt_count = attempt_count + 1,
         last_error = 'PERMANENT_EMAIL_SEND_RESERVED', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [delivery.id]);
       await conn.commit();
-      return { allowed: true };
+      return { allowed: true, attempt: { id: insert.insertId, traceId, messageId, envelope: previousEnvelope } };
     } catch (err) {
       await conn.rollback();
       throw err;
     } finally { conn.release(); }
+  }
+
+  async finishEmailAttempt(conn, attemptId, evidence) {
+    await conn.query(`UPDATE notification_email_attempts SET outcome = ?,provider_message_id = ?,
+      error_code = ?,smtp_command = ?,smtp_response_code = ?,finished_at = CURRENT_TIMESTAMP WHERE id = ? AND outcome = 'SENDING'`,
+    [evidence.outcome, evidence.providerMessageId || null, evidence.errorCode ? String(evidence.errorCode).slice(0,80) : null,
+      evidence.smtpCommand || null, evidence.smtpResponseCode || null, attemptId]);
+  }
+
+  async saveEmailEnvelope(attemptId, encrypted) {
+    const [result] = await this.pool.query("UPDATE notification_email_attempts SET envelope_encrypted=? WHERE id=? AND outcome='SENDING'", [encrypted, attemptId]);
+    if (result.affectedRows !== 1) throw new Error('EMAIL_SNAPSHOT_NOT_SAVED');
+  }
+
+  async findEmailDelivery(id) {
+    const [[row]] = await this.pool.query("SELECT id,notification_id,channel,delivery_status,attempt_count,last_error FROM notification_deliveries WHERE id=? AND channel='EMAIL'", [id]);
+    return row || null;
+  }
+
+  async emailReviewRows(includeHandled = false, page = 1) {
+    const [rows] = await this.pool.query(`SELECT d.id deliveryId,n.id notificationId,n.type notificationType,
+      n.booking_id bookingId,b.booking_number bookingNumber,d.delivery_status deliveryStatus,
+      d.last_error lastError,d.attempt_count attemptCount,d.updated_at updatedAt,
+      a.id attemptId,a.trace_id traceId,a.message_id messageId,a.provider_message_id providerMessageId,
+      a.outcome,a.error_code errorCode,a.smtp_command smtpCommand,a.smtp_response_code smtpResponseCode,
+      (a.envelope_encrypted IS NOT NULL) hasEnvelope,
+      a.started_at startedAt,a.finished_at finishedAt,
+      (SELECT COUNT(*) FROM notification_email_reviews ar WHERE ar.delivery_id=d.id AND ar.action='ACCEPTED_CONFIRMED') acceptedConfirmed,
+      (a.outcome='SENDING' AND a.started_at < NOW()-INTERVAL 10 MINUTE) stale,
+      r.action reviewAction,r.reason reviewReason,r.actor_user_id reviewerId,r.created_at reviewedAt
+      FROM notification_deliveries d JOIN notifications n ON n.id=d.notification_id
+      LEFT JOIN bookings b ON b.id=n.booking_id
+      LEFT JOIN notification_email_attempts a ON a.id=(SELECT MAX(a2.id) FROM notification_email_attempts a2 WHERE a2.delivery_id=d.id)
+      LEFT JOIN notification_email_reviews r ON r.id=(SELECT MAX(r2.id) FROM notification_email_reviews r2 WHERE r2.delivery_id=d.id)
+      WHERE d.channel='EMAIL' AND n.deleted_at IS NULL
+        AND (n.audience_role='CUSTOMER' OR n.recipient_type='GUEST_BOOKING')
+        AND (a.outcome IN ('UNKNOWN','NOT_ACCEPTED')
+          ${includeHandled ? "OR (a.outcome='ACCEPTED' AND r.id IS NOT NULL)" : ''}
+          OR (a.outcome='SENDING' AND a.started_at<NOW()-INTERVAL 10 MINUTE)
+          OR (a.id IS NULL AND d.last_error LIKE 'PERMANENT_EMAIL_%'
+            AND (d.delivery_status='FAILED' OR d.updated_at<NOW()-INTERVAL 10 MINUTE)))
+        ${includeHandled ? '' : "AND (r.id IS NULL OR r.action IN ('KEEP_BLOCKED','RETRY_APPROVED'))"}
+      ORDER BY d.id DESC LIMIT 100 OFFSET ?`, [(page - 1) * 100]);
+    return rows.map((r) => ({ ...r, updatedAt: formatServiceDateTimeIso(r.updatedAt), startedAt: formatServiceDateTimeIso(r.startedAt),
+      finishedAt: formatServiceDateTimeIso(r.finishedAt), reviewedAt: formatServiceDateTimeIso(r.reviewedAt),
+      recoverable: canRecoverAttempt({ outcome: r.outcome,
+      error_code: r.errorCode, smtp_command: r.smtpCommand, smtp_response_code: r.smtpResponseCode })
+      && Boolean(r.hasEnvelope) && CUSTOMER_EMAIL_TYPES.has(r.notificationType)
+      && !['DELIVERED','SKIPPED'].includes(r.deliveryStatus) && !Number(r.acceptedConfirmed) }));
+  }
+
+  async emailAttemptHistory(deliveryId) {
+    const [attempts] = await this.pool.query('SELECT id,delivery_id,trace_id,message_id,provider_message_id,outcome,error_code,smtp_command,smtp_response_code,started_at,finished_at FROM notification_email_attempts WHERE delivery_id=? ORDER BY id', [deliveryId]);
+    const [reviews] = await this.pool.query('SELECT * FROM notification_email_reviews WHERE delivery_id=? ORDER BY id', [deliveryId]);
+    return { attempts: attempts.map((a) => ({ ...a, started_at: formatServiceDateTimeIso(a.started_at), finished_at: formatServiceDateTimeIso(a.finished_at) })),
+      reviews: reviews.map((r) => ({ ...r, created_at: formatServiceDateTimeIso(r.created_at) })) };
+  }
+
+  async addEmailReview(deliveryId, actorUserId, action, reason) {
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [[row]] = await conn.query(`SELECT n.booking_id FROM notification_deliveries d JOIN notifications n ON n.id=d.notification_id
+        WHERE d.id=? AND d.channel='EMAIL' AND (n.audience_role='CUSTOMER' OR n.recipient_type='GUEST_BOOKING')`, [deliveryId]);
+      if (!row?.booking_id) { await conn.commit(); return false; }
+      await conn.query('SELECT id FROM bookings WHERE id=? FOR UPDATE', [row.booking_id]);
+      await conn.query('SELECT id FROM notification_deliveries WHERE id=? FOR UPDATE', [deliveryId]);
+      await conn.query(`INSERT INTO notification_email_reviews (delivery_id,attempt_id,action,actor_user_id,reason)
+        VALUES (?,(SELECT MAX(id) FROM notification_email_attempts WHERE delivery_id=?),?,?,?)`,
+      [deliveryId,deliveryId,action,actorUserId,reason]);
+      await conn.commit();
+      return true;
+    } catch (err) { await conn.rollback(); throw err; }
+    finally { conn.release(); }
   }
 
   async upsertDevice(conn, data) {

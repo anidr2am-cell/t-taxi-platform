@@ -7,6 +7,7 @@ import '../../../widgets/app_ui.dart';
 import '../../admin_driver_application/pages/admin_driver_application_detail_page.dart';
 import '../../notification/services/notification_device_registration_service.dart';
 import '../services/admin_notification_api_service.dart';
+import 'admin_email_review_page.dart';
 
 class AdminNotificationQueuePage extends StatefulWidget {
   const AdminNotificationQueuePage({
@@ -110,11 +111,16 @@ class _AdminNotificationQueuePageState
       case NotificationDeviceRegistrationStatus.permissionDenied:
         return context.l10n.t('admin_ui_notification_permission_was_denied');
       case NotificationDeviceRegistrationStatus.unsupported:
-        return context.l10n.t('admin_ui_push_notifications_are_not_supported_in_this_browser');
+        return context.l10n.t(
+          'admin_ui_push_notifications_are_not_supported_in_this_browser',
+        );
       case NotificationDeviceRegistrationStatus.configMissing:
-        return context.l10n.t('admin_ui_push_notifications_are_not_configured_for_this_environment');
+        return context.l10n.t(
+          'admin_ui_push_notifications_are_not_configured_for_this_environment',
+        );
       case NotificationDeviceRegistrationStatus.failed:
-        return result.message ?? context.l10n.t('admin_ui_notification_registration_failed');
+        return result.message ??
+            context.l10n.t('admin_ui_notification_registration_failed');
     }
   }
 
@@ -150,6 +156,16 @@ class _AdminNotificationQueuePageState
         children: [
           AppUi.adminFilterBar(
             children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.mark_email_unread_outlined),
+                label: Text(context.l10n.t('admin_email_title')),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminEmailReviewPage(),
+                  ),
+                ),
+              ),
               FilterChip(
                 label: Text(context.l10n.t('admin_ui_unread_only')),
                 selected: _unreadOnly,
@@ -162,7 +178,10 @@ class _AdminNotificationQueuePageState
                 value: _typeFilter,
                 hint: Text(context.l10n.t('admin_ui_type')),
                 items: [
-                  DropdownMenuItem(value: null, child: Text(context.l10n.t('admin_ui_all_types'))),
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text(context.l10n.t('admin_ui_all_types')),
+                  ),
                   DropdownMenuItem(
                     value: 'BOOKING_CREATED',
                     child: Text(context.l10n.t('admin_ui_booking_created')),
@@ -184,7 +203,11 @@ class _AdminNotificationQueuePageState
               IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
               ElevatedButton(
                 onPressed: _markingAll ? null : _markAll,
-                child: Text(_markingAll ? 'Marking...' : context.l10n.t('admin_ui_mark_all_read')),
+                child: Text(
+                  _markingAll
+                      ? 'Marking...'
+                      : context.l10n.t('admin_ui_mark_all_read'),
+                ),
               ),
               OutlinedButton.icon(
                 onPressed: _enablingNotifications ? null : _enableNotifications,
