@@ -91,7 +91,7 @@ class _AdminRegionFaresPanelState extends State<AdminRegionFaresPanel> {
       ),
       validator: (v) {
         final n = double.tryParse(v ?? '');
-        return n == null || !n.isFinite || n < min || n > max || (c == priority && n % 1 != 0)
+        return n == null || !n.isFinite || n < min || n > max || (c == priority && int.tryParse(v ?? '') == null)
             ? t('admin_region_invalid')
             : null;
       },
