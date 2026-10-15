@@ -69,6 +69,15 @@ class RegionApi extends AdminRegionPricingApiService {
 }
 
 void main() {
+  test('phone-only WhatsApp setting builds the existing wa.me contact link', () {
+    expect(fareInquiryChannelUri(const ContactChannel(code:'WHATSAPP',displayName:'WhatsApp',phoneNumber:'+66 99-000-0002')).toString(), 'https://wa.me/66990000002');
+    expect(fareInquiryChannelUri(const ContactChannel(code:'LINE',displayName:'LINE',addUrl:'javascript:alert(1)')), isNull);
+  });
+  testWidgets('configured channels without a link still expose a support action', (t) async {
+    await t.pumpWidget(wrap(FareInquiryCard(loadChannels:() async => const [ContactChannel(code:'WECHAT',displayName:'WeChat',accountId:'QA_SUPPORT')]),'ko'));
+    await t.pumpAndSettle();expect(find.textContaining('WeChat'),findsOneWidget);
+    await t.tap(find.byType(OutlinedButton));await t.pumpAndSettle();expect(find.text('support-page'),findsOneWidget);
+  });
   for (final lang in ['ko', 'en', 'zh', 'ja', 'th']) {
     testWidgets(
       'inquiry has no price or booking action and wraps at 375: $lang',
