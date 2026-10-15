@@ -35,14 +35,14 @@ test('service datetime parser preserves SQL/mysql Date and converts explicit UTC
 test('HTML escapes itinerary content and excludes credentials from Google links',()=>{
  const r=renderCustomerEmail({...base,origin_address:'<script>alert(1)</script>'},{googleReviewUrl:'https://user:secret@example.com/review'});assert(!r.html.includes('<script>'));assert(r.html.includes('&lt;script&gt;'));assert(!r.text.includes('secret'));
 });
-test('driver/admin emails retain legacy adapter template and never query review setting',async()=>{
+test('driver emails are disabled and admin emails retain legacy adapter template and never query review setting',async()=>{
  let settings=0,sends=0;const a=new EmailNotificationAdapter({smtp:{host:'smtp.example',fromEmail:'qa@example.com'},googleReviewUrlProvider:async()=>{settings++;return ''},transport:{async sendMail(){sends++}}});
- for(const audience_role of ['DRIVER','ADMIN']){const n={type:'TRIP_ENDED',audience_role,title:'Legacy',body:'Legacy body',recipient_email:'qa@example.com'};assert(!isCustomerEmail(n));assert.equal(a.buildMessage(n).subject,'Legacy');await a.send(n)}assert.equal(settings,0);assert.equal(sends,2);
+ for(const audience_role of ['DRIVER','ADMIN']){const n={type:'TRIP_ENDED',audience_role,title:'Legacy',body:'Legacy body',recipient_email:'qa@example.com'};assert(!isCustomerEmail(n));assert.equal(a.buildMessage(n).subject,'Legacy');await a.send(n)}assert.equal(settings,0);assert.equal(sends,1);
 });
 test('customer send uses one SMTP call, optional Google setting failure does not change delivery',async()=>{
  let settings=0;const sent=[];const a=new EmailNotificationAdapter({smtp:{host:'smtp.example',fromEmail:'qa@example.com'},googleReviewUrlProvider:async()=>{settings++;throw Error('setting unavailable')},transport:{async sendMail(m){sent.push(m)}}});
  const result=await a.send({...base,recipient_email:'qa@example.com'});assert.equal(result.status,'DELIVERED');assert.equal(settings,1);assert.equal(sent.length,1);assert(sent[0].html);assert(!sent[0].text.includes('g.page'));
- const complete=await a.send({...base,type:'TRIP_COMPLETED',recipient_email:'qa@example.com'});assert.equal(complete.status,'DELIVERED');assert.equal(settings,1);
+ const complete=await a.send({...base,type:'TRIP_COMPLETED',recipient_email:'qa@example.com'});assert.equal(complete.status,'SKIPPED');assert.equal(settings,1);
 });
 test('repository selects booking locale and amount without selecting contact fields',async()=>{
  const Repo=require('../src/repositories/notification.repository');let sql='';const repo=new Repo({async query(q){sql=q;return [[{id:1,payload:'{}'}]]}});await repo.findById(1);assert(sql.includes('b.metadata AS booking_metadata'));assert(sql.includes('b.total_amount AS booking_total_amount'));assert(!sql.includes('customer_phone'));assert(!sql.includes('driver_phone'));

@@ -1,6 +1,7 @@
 const database = require('../config/database');
 const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const DELIVERY_STATUS = require('../constants/notificationDeliveryStatus');
+const { customerEmailSlot } = require('../policies/notificationEmail.policy');
 
 class NotificationRepository {
   constructor(pool = database.pool) {
@@ -105,18 +106,18 @@ class NotificationRepository {
     return rows;
   }
 
-  async updateDeliveryStatus(conn, deliveryId, status, lastError = null, deliveredAt = null) {
+  async updateDeliveryStatus(conn, deliveryId, status, lastError = null, deliveredAt = null, incrementAttempt = true) {
     await conn.query(
       `
         UPDATE notification_deliveries
         SET delivery_status = ?,
-            attempt_count = attempt_count + 1,
+            attempt_count = attempt_count + ?,
             last_error = ?,
             delivered_at = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
-      [status, lastError, deliveredAt, deliveryId],
+      [status, incrementAttempt ? 1 : 0, lastError, deliveredAt, deliveryId],
     );
   }
 
@@ -136,6 +137,8 @@ class NotificationRepository {
           u.role AS recipient_user_role,
           b.metadata AS booking_metadata,
           b.total_amount AS booking_total_amount,
+          b.payment_method AS booking_payment_method,
+          vt.code AS booking_vehicle_type,
           b.booking_number,
           b.scheduled_pickup_at,
           b.origin_address,
@@ -144,6 +147,7 @@ class NotificationRepository {
         FROM notifications n
         LEFT JOIN users u ON u.id = n.user_id AND u.deleted_at IS NULL
         LEFT JOIN bookings b ON b.id = n.booking_id AND b.deleted_at IS NULL
+        LEFT JOIN vehicle_types vt ON vt.id = b.vehicle_type_id
         WHERE n.id = ? AND n.deleted_at IS NULL
         LIMIT 1
       `,
@@ -155,6 +159,55 @@ class NotificationRepository {
       try { row.payload = JSON.parse(row.payload); } catch { row.payload = {}; }
     }
     return row;
+  }
+
+  async claimCustomerEmail(notification, delivery) {
+    if (!notification.booking_id) return { allowed: false, error: 'EMAIL_POLICY_BOOKING_REQUIRED' };
+    const conn = await this.pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [bookings] = await conn.query('SELECT id FROM bookings WHERE id = ? AND deleted_at IS NULL FOR UPDATE', [notification.booking_id]);
+      if (!bookings.length) {
+        await conn.commit();
+        return { allowed: false, error: 'EMAIL_POLICY_BOOKING_REQUIRED' };
+      }
+      const [[current]] = await conn.query('SELECT delivery_status, attempt_count, last_error FROM notification_deliveries WHERE id = ? FOR UPDATE', [delivery.id]);
+      if (!current || ['DELIVERED', 'SKIPPED'].includes(current.delivery_status)
+        || current.last_error?.startsWith('PERMANENT_EMAIL_')) {
+        await conn.commit();
+        return { alreadyProcessed: true };
+      }
+      // Count historical sends too, including other customer event types. Failed
+      // attempts may have been accepted by SMTP; count conservatively, not twice.
+      const [history] = await conn.query(`SELECT n.type FROM notification_deliveries d
+        JOIN notifications n ON n.id = d.notification_id LEFT JOIN users u ON u.id = n.user_id
+        WHERE n.booking_id = ? AND d.channel = 'EMAIL'
+          AND COALESCE(n.audience_role, IF(n.recipient_type = 'GUEST_BOOKING', 'CUSTOMER', u.role)) = 'CUSTOMER'
+          AND (d.delivery_status = 'DELIVERED' OR d.last_error LIKE 'PERMANENT_EMAIL_%'
+            OR (d.attempt_count > 0 AND d.delivery_status <> 'SKIPPED'
+              AND COALESCE(d.last_error, '') <> 'PERMANENT_INVALID_RECIPIENT'))`, [notification.booking_id]);
+      let error = history.length >= 2 ? 'EMAIL_POLICY_BOOKING_LIMIT' : null;
+      if (history.some((row) => customerEmailSlot(row.type) === customerEmailSlot(notification.type))) {
+        error = 'EMAIL_POLICY_SLOT_ALREADY_USED';
+      }
+      if (notification.type === 'BOOKING_CANCELLED') {
+        const [[started]] = await conn.query(`SELECT COUNT(*) AS n FROM booking_status_logs
+          WHERE booking_id = ? AND (from_status IN ('ON_ROUTE','DRIVER_ARRIVED','PICKED_UP','SETTLEMENT_PENDING','COMPLETED')
+            OR to_status IN ('ON_ROUTE','DRIVER_ARRIVED','PICKED_UP','SETTLEMENT_PENDING','COMPLETED'))`, [notification.booking_id]);
+        if (Number(started.n)) error = 'EMAIL_POLICY_CANCELLATION_AFTER_START';
+      }
+      if (error) {
+        await conn.commit();
+        return { allowed: false, error };
+      }
+      await conn.query(`UPDATE notification_deliveries SET attempt_count = attempt_count + 1,
+        last_error = 'PERMANENT_EMAIL_SEND_RESERVED', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [delivery.id]);
+      await conn.commit();
+      return { allowed: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally { conn.release(); }
   }
 
   async upsertDevice(conn, data) {

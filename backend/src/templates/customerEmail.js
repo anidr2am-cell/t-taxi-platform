@@ -1,5 +1,6 @@
 const copy = require('./customer-email.json');
 const { parseServiceDateTimeToMs } = require('../utils/serviceDateTime.util');
+const { customerPaymentFromMetadata } = require('../utils/customerPayment');
 
 const CUSTOMER_TYPES = Object.keys(copy.en.messages);
 function normalizeLocale(value) {
@@ -61,11 +62,17 @@ function renderCustomerEmail(notification, { origin = 'https://trider.taxi', goo
   const route = [notification.origin_address, notification.destination_address].filter(Boolean).join(' → ');
   const rawAmount = notification.booking_total_amount;
   const amount = rawAmount == null || rawAmount === '' ? null : Number(rawAmount);
+  const receipt = notification.type === 'BOOKING_CREATED';
+  const vehicle = t.vehicles?.[notification.booking_vehicle_type];
+  const payment = customerPaymentFromMetadata(notification.booking_metadata, notification.booking_payment_method);
+  const paymentLabel = t.paymentMethods?.[payment.method];
   const lines = [body, '', `${t.booking}: ${number}`,
     pickup ? `${t.pickup}: ${pickup}` : null,
     route ? `${t.route}: ${route}` : null,
+    receipt && vehicle ? `${t.vehicle}: ${vehicle}` : null,
     amount != null && Number.isFinite(amount) && amount >= 0
       ? `${t.amount}: ${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(amount)} ${t.currency}` : null,
+    receipt && paymentLabel ? `${t.paymentMethod}: ${paymentLabel}` : null,
     '', t.fare, t.cancel, t.payment, '', `${t.lookup}: ${bookingUrl.href}`, `${t.support}: ${supportUrl.href}`,
   ].filter((line) => line != null);
   // Allowlist only the itinerary above; never interpolate arbitrary payload/body or contact fields.
