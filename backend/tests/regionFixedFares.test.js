@@ -65,3 +65,8 @@ test('registered landing catalog does not change when geographic policy is enabl
   const s=service();s.legacyCalculate=async body=>body;
   assert.deepEqual(await s.calculateRegisteredRoute({originLocationCode:'BKK',destinationLocationCode:'PATTAYA'}),{originLocationCode:'BKK',destinationLocationCode:'PATTAYA'});
 });
+test('dropoff quote contract accepts destination airport IATA without an invented region', () => {
+  const { pricingCalculateSchema } = require('../src/validators/pricing.validator');
+  const result = pricingCalculateSchema.validate({ serviceTypeCode:'AIRPORT_DROPOFF',vehicleTypeCode:'SEDAN',originLocationCode:'PATTAYA',destinationAirportIata:'bkk' });
+  assert.equal(result.error,undefined); assert.equal(result.value.destinationAirportIata,'BKK');
+});

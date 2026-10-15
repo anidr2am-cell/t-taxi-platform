@@ -392,6 +392,8 @@ class PricingService {
       destination = await this.locationRepository.findByCode(
         this.normalizeRegionCode(input.destinationRegion),
       );
+    } else if (input.destinationAirportIata) {
+      destination = await this.locationRepository.findByAirportIata(input.destinationAirportIata.trim().toUpperCase());
     }
 
     return { origin, destination };

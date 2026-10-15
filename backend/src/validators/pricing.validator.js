@@ -31,6 +31,7 @@ const pricingCalculateSchema = Joi.object({
   vehicleCount: Joi.number().integer().min(1).default(1),
   scheduledPickupAt: Joi.date().iso().optional(),
   originAirportIata: Joi.string().trim().uppercase().length(3).optional(),
+  destinationAirportIata: Joi.string().trim().uppercase().length(3).optional(),
   destinationRegion: Joi.string().trim().optional(),
   originLocationCode: Joi.string().trim().uppercase().optional(),
   destinationLocationCode: Joi.string().trim().uppercase().optional(),
@@ -42,7 +43,7 @@ const pricingCalculateSchema = Joi.object({
   passengers: passengersDto.optional(),
   luggage: luggageDto.optional(),
 }).or('originAirportIata', 'originLocationCode')
-  .or('destinationRegion', 'destinationLocationCode');
+  .or('destinationRegion', 'destinationLocationCode', 'destinationAirportIata');
 
 const routeCreateSchema = Joi.object({
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).optional(),
