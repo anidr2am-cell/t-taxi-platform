@@ -81,3 +81,11 @@ test('admin route accepts only server evidence IDs, ignores client-supplied outc
     assert.equal((await request(app).post(path).set('Authorization', `Bearer ${token}`).send({ action: 'RETRY_APPROVED', reason: 'proof' })).status, 400);
   } finally { container.registry.set('notificationService', previous); }
 });
+test('missing SMTP configuration cannot consume a recovery claim or replace its rejection evidence', async () => {
+  let claimed = 0;
+  const repo = { async findEmailDelivery() { return { id: 4, notification_id: 1 }; }, async findById() { return base; },
+    async claimCustomerEmail() { claimed++; return { allowed: true }; } };
+  const service = new NotificationService({}, repo, {}, {}, {}, {}, { EMAIL: { isConfigured: () => false } });
+  await assert.rejects(() => service.reviewEmailDelivery(4, { action: 'RETRY_APPROVED' }, { role: 'ADMIN', id: 2 }), { statusCode: 409 });
+  assert.equal(claimed, 0);
+});

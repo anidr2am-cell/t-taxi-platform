@@ -903,6 +903,11 @@ class NotificationService {
     if (!notification || emailAudience(notification) !== ROLES.CUSTOMER || emailPolicyError(notification)) {
       throw new AppError('Email recovery blocked by policy', { statusCode: 409, errorCode: 'EMAIL_RECOVERY_BLOCKED' });
     }
+    const emailAdapter = this.adapters.EMAIL;
+    if (!emailAdapter || (emailAdapter.isConfigured && !emailAdapter.isConfigured())
+      || (emailAdapter.getRecipientEmail && !emailAdapter.getRecipientEmail(notification))) {
+      throw new AppError('Email delivery unavailable', { statusCode: 409, errorCode: 'EMAIL_RECOVERY_BLOCKED' });
+    }
     const claim = await this.notificationRepository.claimCustomerEmail(notification, delivery, {
       expectedAttemptId: input.expectedAttemptId, actorUserId: actor.id, reason: input.reason,
     });
@@ -911,7 +916,7 @@ class NotificationService {
     delivery.emailAttempt = claim.attempt;
     let result;
     try {
-      result = await this.adapters.EMAIL.send(notification, { emailAttempt: claim.attempt,
+      result = await emailAdapter.send(notification, { emailAttempt: claim.attempt,
         saveEmailEnvelope: (encrypted) => this.notificationRepository.saveEmailEnvelope(claim.attempt.id, encrypted) });
     } catch (err) {
       result = { status: DELIVERY_STATUS.FAILED, error: 'PERMANENT_EMAIL_SEND_UNCERTAIN', emailTrace: { outcome: 'UNKNOWN', errorCode: this.safeDeliveryError(err) } };

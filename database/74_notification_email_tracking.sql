@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS notification_email_attempts (
   finished_at DATETIME NULL,
   UNIQUE KEY uq_email_trace (trace_id),
   KEY idx_email_delivery (delivery_id,id),
-  CONSTRAINT fk_email_attempt_delivery FOREIGN KEY (delivery_id) REFERENCES notification_deliveries(id)
+  CONSTRAINT fk_email_attempt_delivery FOREIGN KEY (delivery_id) REFERENCES notification_deliveries(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS notification_email_reviews (
@@ -26,6 +26,6 @@ CREATE TABLE IF NOT EXISTS notification_email_reviews (
   reason VARCHAR(1000) NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_email_review_delivery (delivery_id,id),
-  CONSTRAINT fk_email_review_delivery FOREIGN KEY (delivery_id) REFERENCES notification_deliveries(id),
-  CONSTRAINT fk_email_review_attempt FOREIGN KEY (attempt_id) REFERENCES notification_email_attempts(id)
+  CONSTRAINT fk_email_review_delivery FOREIGN KEY (delivery_id) REFERENCES notification_deliveries(id) ON DELETE CASCADE,
+  CONSTRAINT fk_email_review_attempt FOREIGN KEY (attempt_id) REFERENCES notification_email_attempts(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
