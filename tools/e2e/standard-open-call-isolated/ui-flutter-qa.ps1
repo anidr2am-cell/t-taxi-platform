@@ -1,7 +1,7 @@
 # Driver web UI against isolated QA API via SSH tunnel (run on dev machine).
 # Prerequisite: SSH tunnel to staging QA API container IP:3000 -> local 127.0.0.1:13001 (see run-driver-ui-gate-false.sh KEEP output).
 param(
-  [string]$SshHost = 'tride-staging',
+  [string]$SshHost = 'tride-prod',
   [int]$LocalPort = 13001
 )
 

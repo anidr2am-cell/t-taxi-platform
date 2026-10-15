@@ -1,5 +1,5 @@
 #!/bin/bash
-# Safety guards before STANDARD open-call QA. Run on tride-staging only.
+# Safety guards before STANDARD open-call QA. Connect via tride-prod; use the isolated QA network and DB only (never production).
 set -eu
 
 QA_NET="${QA_NET:-tride-qa-admin-net}"

@@ -155,7 +155,7 @@ qa_ui_print_keep_instructions() {
   echo "Manifest/API artifacts: $out_dir"
   echo "Server health:  curl -sS http://${ip}:3000/api/v1/health"
   echo "PC tunnel (Windows):"
-  echo "  ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:13001:${ip}:3000 tride-staging"
+  echo "  ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:13001:${ip}:3000 tride-prod"
   echo "Flutter defines: API_BASE_URL and SOCKET_URL = http://127.0.0.1:13001"
   echo "Login route:    http://127.0.0.1:8088/driver/login"
   qa_ui_print_login_hint

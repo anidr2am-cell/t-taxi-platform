@@ -166,7 +166,11 @@ test('rate limit stops remaining provider calls in current cycle', async () => {
   assert.deepEqual(calls.synced, [1]);
 });
 
-test('transient retry is bounded', async () => {
+test('transient retry is bounded', async (t) => {
+  // Production retry timers are intentionally unref'ed. Keep this test's event
+  // loop alive until the awaited retry cycle finishes, even on an idle CI runner.
+  const keepAlive = setInterval(() => {}, 1000);
+  t.after(() => clearInterval(keepAlive));
   const { worker, calls } = createWorker({
     rows: [row({ booking_id: 1 })],
     maxRetries: 3,
@@ -191,7 +195,7 @@ test('manual cooldown conflict is treated as skipped auto item', async () => {
   assert.equal(summary.failed, 0);
 });
 
-test('scheduler prevents overlapping cycles and stops timer cleanly', async () => {
+test('scheduler prevents overlapping cycles and stops timer cleanly', async (t) => {
   let resolveRun;
   const worker = {
     runCycle() {
@@ -205,6 +209,7 @@ test('scheduler prevents overlapping cycles and stops timer cleanly', async () =
     { enabled: true, intervalMs: 300000, batchSize: 20 },
     () => true,
   );
+  t.after(() => scheduler.stop());
   const first = scheduler.runCycle();
   const overlap = await scheduler.runCycle();
   assert.equal(overlap.skippedReason, 'ALREADY_RUNNING');
