@@ -21,9 +21,10 @@ String reviewRequestMessage(
   final text = l10n
       .t('admin_review_request_template')
       .replaceAll('{bookingUrl}', bookingUrl.toString());
-  return googleUrl.isEmpty
-      ? text
-      : '$text\n${l10n.t('admin_review_request_google_line').replaceAll('{googleUrl}', googleUrl)}';
+  final googleLine = googleUrl.isEmpty
+      ? ''
+      : '${l10n.t('admin_review_request_google_line').replaceAll('{googleUrl}', googleUrl)}\n';
+  return text.replaceAll('{googleLine}', googleLine);
 }
 
 class AdminReviewRequestCard extends StatefulWidget {

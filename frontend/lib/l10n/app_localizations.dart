@@ -8921,7 +8921,7 @@ class AppLocalizations {
       "admin_review_request_channel": "발송 채널",
       "admin_review_request_sent_detail": "{channel} · {time} · 처리자 {actor}",
       "admin_review_request_template":
-          "T-Rider를 이용해 주셔서 감사합니다. 이용 경험을 들려주실 수 있을까요?\n예약 조회 후 리뷰 남기기: {bookingUrl}",
+          "T-Rider를 이용해 주셔서 감사합니다 😊\n이번 이동은 어떠셨나요? 짧은 후기를 남겨 주시면 큰 힘이 됩니다.\n{googleLine}예약 조회에서 별점 남기기: {bookingUrl}",
       "admin_review_request_google_line": "구글 리뷰: {googleUrl}",
       "admin_review_request_manual_note": "자동 발송되지 않습니다. 고객에게 직접 보낸 뒤 기록해 주세요.",
       "admin_review_channel_kakao": "카카오톡",
@@ -8956,7 +8956,7 @@ class AppLocalizations {
       "admin_review_request_channel": "Sent via",
       "admin_review_request_sent_detail": "{channel} · {time} · By {actor}",
       "admin_review_request_template":
-          "Thank you for riding with T-Rider. Would you share your experience?\nLook up your booking to leave a review: {bookingUrl}",
+          "Thank you for choosing T-Rider 😊\nHow was your ride? A short review would mean a lot to us.\n{googleLine}Rate your ride on the booking lookup page: {bookingUrl}",
       "admin_review_request_google_line": "Google review: {googleUrl}",
       "admin_review_request_manual_note":
           "Nothing is sent automatically. Send the message yourself, then record it here.",
@@ -8989,7 +8989,7 @@ class AppLocalizations {
       "admin_review_request_channel": "发送渠道",
       "admin_review_request_sent_detail": "{channel} · {time} · 操作人 {actor}",
       "admin_review_request_template":
-          "感谢您选择T-Rider。愿意分享这次乘车体验吗？\n查询预订后留下评价：{bookingUrl}",
+          "感谢您选择T-Rider 😊\n这次乘车体验如何？您的简短评价将给予我们很大的支持。\n{googleLine}在预订查询页面为行程评分：{bookingUrl}",
       "admin_review_request_google_line": "Google评价：{googleUrl}",
       "admin_review_request_manual_note": "系统不会自动发送。请自行联系客户后在此记录。",
       "admin_review_channel_kakao": "KakaoTalk",
@@ -9021,7 +9021,7 @@ class AppLocalizations {
       "admin_review_request_channel": "送信手段",
       "admin_review_request_sent_detail": "{channel} · {time} · 担当者 {actor}",
       "admin_review_request_template":
-          "T-Riderをご利用いただきありがとうございます。ご乗車の感想をお聞かせいただけますか？\n予約を確認して口コミを投稿：{bookingUrl}",
+          "T-Riderをご利用いただきありがとうございます 😊\n今回のご乗車はいかがでしたか？短いご感想をお寄せいただけると励みになります。\n{googleLine}予約確認ページで評価する：{bookingUrl}",
       "admin_review_request_google_line": "Googleの口コミ：{googleUrl}",
       "admin_review_request_manual_note": "自動送信はされません。お客様に直接送信した後、ここに記録してください。",
       "admin_review_channel_kakao": "カカオトーク",
@@ -9057,7 +9057,7 @@ class AppLocalizations {
       "admin_review_request_sent_detail":
           "{channel} · {time} · ผู้ดำเนินการ {actor}",
       "admin_review_request_template":
-          "ขอบคุณที่เดินทางกับ T-Rider กรุณาแบ่งปันประสบการณ์การเดินทางของคุณได้ไหม?\nตรวจสอบการจองเพื่อเขียนรีวิว: {bookingUrl}",
+          "ขอบคุณที่ใช้บริการ T-Rider 😊\nการเดินทางครั้งนี้เป็นอย่างไรบ้าง? ความคิดเห็นสั้น ๆ ของคุณเป็นกำลังใจสำคัญให้เรา\n{googleLine}ให้คะแนนการเดินทางผ่านหน้าตรวจสอบการจอง: {bookingUrl}",
       "admin_review_request_google_line": "รีวิว Google: {googleUrl}",
       "admin_review_request_manual_note":
           "ระบบไม่ส่งข้อความอัตโนมัติ กรุณาส่งให้ลูกค้าด้วยตนเองแล้วบันทึกที่นี่",

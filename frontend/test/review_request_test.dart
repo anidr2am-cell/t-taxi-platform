@@ -103,6 +103,16 @@ void main() {
           ),
         );
         expect(text, contains('https://g.page/r/abc/review'));
+        expect(text.indexOf('https://g.page/r/abc/review'),
+            lessThan(text.indexOf('https://trider.taxi/booking/lookup')));
+        expect(text, contains('😊'));
+        final withoutGoogle = reviewRequestMessage(locale, 'TX202610140001', '',
+            origin: 'https://trider.taxi');
+        expect(withoutGoogle, isNot(contains('{googleLine}')));
+        expect(withoutGoogle, isNot(contains('g.page')));
+        expect(withoutGoogle, contains('/booking/lookup?'));
+        expect(withoutGoogle.split('\n').length, 3);
+
         expect(text, isNot(contains('guestAccessToken')));
         for (final key in [
           'review_experience_title',
