@@ -22,6 +22,35 @@ const {
 
 const router = express.Router();
 const adminOnly = [authMiddleware, roleMiddleware([ROLES.ADMIN, ROLES.SUPER_ADMIN])];
+const RegionRepository = require('../repositories/pricingRegion.repository');
+const asyncHandler = require('../utils/asyncHandler');
+const { success } = require('../utils/apiResponse');
+const Joi = require('joi');
+const geometry = Joi.alternatives().try(
+  Joi.object({ type: Joi.string().valid('Circle').required(), lat: Joi.number().min(-90).max(90).required(),
+    lng: Joi.number().min(-180).max(180).required(), radiusKm: Joi.number().positive().max(200).required() }),
+  Joi.object({ type: Joi.string().valid('Polygon').required(), coordinates: Joi.array().length(1).items(
+    Joi.array().min(4).max(5000).items(Joi.array().ordered(Joi.number().min(-180).max(180).required(), Joi.number().min(-90).max(90).required()).length(2))
+      .custom((ring, h) => JSON.stringify(ring[0]) === JSON.stringify(ring[ring.length - 1]) ? ring : h.error('any.invalid')),
+  ).required() }),
+).required();
+// Retain the preview API path; it now returns approved, editable regional fares.
+router.get('/pricing/region-candidates', adminOnly, asyncHandler(async (_req, res) => success(res, await new RegionRepository().listFares())));
+router.patch('/pricing/region-fares/:id', adminOnly, validate({ params: idParamSchema,
+  body: Joi.object({ price: Joi.number().positive().max(1000000).required() }) }),
+asyncHandler(async (req, res) => {
+  const changed = await new RegionRepository().updateFare(Number(req.params.id), req.body.price);
+  if (!changed) return res.status(404).json({ success:false,message:'Regional fare not found' });
+  return success(res,{updated:true});
+}));
+router.get('/pricing/regions', adminOnly, asyncHandler(async (_req, res) => success(res, await new RegionRepository().list())));
+router.patch('/pricing/regions/:id', adminOnly, validate({ params: idParamSchema,
+  body: Joi.object({ geometry, priority: Joi.number().integer().min(0).max(1000).required(), isActive: Joi.boolean().required() }) }),
+asyncHandler(async (req, res) => {
+  const changed = await new RegionRepository().update(Number(req.params.id), req.body);
+  if (!changed) return res.status(404).json({ success: false, message: 'Region not found' });
+  return success(res, { updated: true });
+}));
 
 router.get(
   '/routes',

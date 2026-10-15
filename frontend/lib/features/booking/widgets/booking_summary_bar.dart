@@ -33,7 +33,7 @@ class _BookingSummaryBarState extends State<BookingSummaryBar> {
     final scheduleLine = _scheduleLine(l10n, state);
     final vehicleLine = state.selectedVehicle;
     final priceLine = state.pricing == null
-        ? null
+        ? (state.errorMessage == 'pricing_inquiry_required' ? l10n.t('fare_inquiry_title') : null)
         : CustomerBookingFormat.money(
             state.pricing!.totalAmount,
             state.pricing!.currency,

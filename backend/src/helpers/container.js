@@ -19,6 +19,7 @@ const DriverPasswordResetEmailService = require("../services/driverPasswordReset
 const SocialAuthService = require("../services/socialAuth.service");
 const VehicleRecommendationService = require("../services/vehicleRecommendation.service");
 const PricingService = require("../services/pricing.service");
+const PricingRegionRepository = require('../repositories/pricingRegion.repository');
 const RouteAdminService = require("../services/routeAdmin.service");
 const VehiclePriceAdminService = require("../services/vehiclePriceAdmin.service");
 const ChargePolicyAdminService = require("../services/chargePolicyAdmin.service");
@@ -234,6 +235,7 @@ container.register(
       c.get("chargePolicyRepository"),
       c.get("vehicleRepository"),
       c.get("cityTransferDistancePricingService"),
+      require('../config/env').regionFixedFaresEnabled ? new PricingRegionRepository() : null,
     ),
 );
 container.register(

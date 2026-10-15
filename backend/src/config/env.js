@@ -43,6 +43,7 @@ const envSchema = Joi.object({
   AERODATABOX_HOST: Joi.string().hostname().default('aerodatabox.p.rapidapi.com'),
   AERODATABOX_TIMEOUT_MS: Joi.number().integer().min(1000).max(30000).default(5000),
   FLIGHT_SYNC_ENABLED: Joi.boolean().truthy('true', '1').falsy('false', '0').default(false),
+  REGION_FIXED_FARES_ENABLED: Joi.boolean().truthy('true', '1').falsy('false', '0').default(false),
   FLIGHT_SYNC_MIN_INTERVAL_MS: Joi.number().integer().min(30000).max(3600000).default(120000),
   FLIGHT_SYNC_INTERVAL_MS: Joi.number().integer().min(30000).max(3600000).default(300000),
   FLIGHT_SYNC_BATCH_SIZE: Joi.number().integer().min(1).max(100).default(20),
@@ -184,6 +185,8 @@ if (env.NODE_ENV === 'production') {
 }
 
 module.exports = {
+  // Opt-in only: proposal boundaries must not change production implicitly.
+  regionFixedFaresEnabled: env.REGION_FIXED_FARES_ENABLED,
   server: {
     nodeEnv: env.NODE_ENV,
     port: env.PORT,

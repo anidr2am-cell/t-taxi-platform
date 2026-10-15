@@ -227,3 +227,11 @@ String chargePolicyStatus(Map<String, dynamic> policy) {
   if (from != null && now.isBefore(from)) return 'future';
   return 'current';
 }
+
+class AdminRegionPricingApiService extends AdminPricingApiService {
+  const AdminRegionPricingApiService();
+  Future<List<dynamic>> listRegionFareCandidates() async => await _request('GET', '/admin/pricing/region-candidates') as List<dynamic>;
+  Future<List<dynamic>> listPricingRegions() async => await _request('GET', '/admin/pricing/regions') as List<dynamic>;
+  Future<void> updatePricingRegion(int id, Map<String,dynamic> body) async { await _request('PATCH', '/admin/pricing/regions/$id', body: body); }
+  Future<void> updateRegionFare(int id, Map<String,dynamic> body) async { await _request('PATCH', '/admin/pricing/region-fares/$id', body: body); }
+}

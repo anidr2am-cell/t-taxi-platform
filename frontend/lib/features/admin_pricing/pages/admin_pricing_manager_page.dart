@@ -5,6 +5,7 @@ import '../../../utils/user_facing_error.dart';
 import '../../../theme/app_tokens.dart';
 import '../../../widgets/app_ui.dart';
 import '../services/admin_pricing_api_service.dart';
+import 'admin_region_fares_panel.dart';
 
 class AdminPricingManagerPage extends StatefulWidget {
   const AdminPricingManagerPage({super.key, this.api});
@@ -45,7 +46,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadAll();
   }
 
@@ -1282,6 +1283,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               Tab(text: l10n.t('admin_pricing_tab_prices')),
               Tab(text: l10n.t('admin_pricing_tab_policies')),
               Tab(text: l10n.t('admin_pricing_tab_simulator')),
+              Tab(text: l10n.t('admin_region_fares')),
             ],
           ),
         ),
@@ -1293,6 +1295,7 @@ class _AdminPricingManagerPageState extends State<AdminPricingManagerPage>
               _pricesTab(),
               _policiesTab(),
               _simulatorTab(),
+              AdminRegionFaresPanel(api: _api),
             ],
           ),
         ),

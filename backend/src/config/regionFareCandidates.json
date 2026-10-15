@@ -1,0 +1,158 @@
+[
+  {
+    "origin": "DMK",
+    "destination": "AYUTTHAYA",
+    "serviceTypeCode": "AIRPORT_PICKUP",
+    "prices": {
+      "SEDAN": 900,
+      "SUV": 1200,
+      "VAN": 1600
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "BANGKOK",
+    "destination": "AYUTTHAYA",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 1100,
+      "SUV": 1400,
+      "VAN": 1800
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "BANGKOK",
+    "destination": "HUA_HIN",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 2000,
+      "SUV": 2300,
+      "VAN": 3000
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "BANGKOK",
+    "destination": "RAYONG",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 2000,
+      "SUV": 2200,
+      "VAN": 2600
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "PATTAYA",
+    "destination": "RAYONG",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 800,
+      "SUV": 900,
+      "VAN": 1300
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "PATTAYA",
+    "destination": "HUA_HIN",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 3000,
+      "SUV": 3500,
+      "VAN": 3800
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "PATTAYA",
+    "destination": "UTP",
+    "serviceTypeCode": "AIRPORT_DROPOFF",
+    "prices": {
+      "SEDAN": 800,
+      "SUV": 1100,
+      "VAN": 1400
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "UTP",
+    "destination": "PATTAYA",
+    "serviceTypeCode": "AIRPORT_PICKUP",
+    "prices": {
+      "SEDAN": 800,
+      "SUV": 1100,
+      "VAN": 1400
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "UTP",
+    "destination": "BANGKOK",
+    "serviceTypeCode": "AIRPORT_PICKUP",
+    "prices": {
+      "SEDAN": 1800,
+      "SUV": 2100,
+      "VAN": 2700
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "HUA_HIN",
+    "destination": "BANGKOK",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 1800,
+      "SUV": 2200,
+      "VAN": 2600
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "HUA_HIN",
+    "destination": "PATTAYA",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 3000,
+      "SUV": 3500,
+      "VAN": 3800
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "RAYONG",
+    "destination": "PATTAYA",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 700,
+      "SUV": 800,
+      "VAN": 1000
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  },
+  {
+    "origin": "RAYONG",
+    "destination": "BANGKOK",
+    "serviceTypeCode": "CITY_TRANSFER",
+    "prices": {
+      "SEDAN": 2000,
+      "SUV": 2200,
+      "VAN": 2600
+    },
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
+  }
+]

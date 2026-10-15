@@ -550,6 +550,7 @@ class BookingService {
     };
 
     if (input.originAirportIata) body.originAirportIata = input.originAirportIata;
+    if (input.destinationAirportIata) body.destinationAirportIata = input.destinationAirportIata;
     if (input.destinationRegion) body.destinationRegion = input.destinationRegion;
     if (input.originLocationCode) body.originLocationCode = input.originLocationCode;
     if (input.destinationLocationCode) body.destinationLocationCode = input.destinationLocationCode;

@@ -9,6 +9,7 @@ import '../utils/pricing_display.dart';
 import 'wizard_compact.dart';
 import 'wizard_status_views.dart';
 import 'wizard_ui.dart';
+import 'fare_inquiry_card.dart';
 
 class StepVehicleSelect extends StatelessWidget {
   final BookingWizardState state;
@@ -147,10 +148,12 @@ class StepVehicleSelect extends StatelessWidget {
         else if (state.errorMessage != null && state.pricing == null)
           Padding(
             padding: const EdgeInsets.only(top: WizardCompact.fieldGap),
-            child: WizardErrorView(
-              message: state.errorMessage!,
-              onRetry: controller.loadPricing,
-            ),
+            child: state.errorMessage == 'pricing_inquiry_required'
+                ? (embedded ? const SizedBox.shrink() : const FareInquiryCard())
+                : WizardErrorView(
+                    message: state.errorMessage!,
+                    onRetry: controller.loadPricing,
+                  ),
           )
         else if (state.pricing != null) ...[
           const SizedBox(height: WizardCompact.fieldGap),
