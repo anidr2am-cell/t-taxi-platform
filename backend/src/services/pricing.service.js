@@ -49,6 +49,7 @@ class PricingService {
     chargePolicyRepository,
     vehicleRepository,
     cityTransferDistancePricingService = null,
+    pricingRegionRepository = null,
   ) {
     this.serviceTypeRepository = serviceTypeRepository;
     this.locationRepository = locationRepository;
@@ -57,6 +58,7 @@ class PricingService {
     this.chargePolicyRepository = chargePolicyRepository;
     this.vehicleRepository = vehicleRepository;
     this.cityTransferDistancePricingService = cityTransferDistancePricingService;
+    this.pricingRegionRepository = pricingRegionRepository;
   }
 
   extractPricingCoordinates(input) {
@@ -661,7 +663,48 @@ class PricingService {
     };
   }
 
+  // Registered catalog prices are also the landing fallback. Never rematch a
+  // catalog row geographically or recalculate an already persisted booking.
+  async calculateRegisteredRoute(input) { return this.legacyCalculate(input); }
+
   async calculate(input) {
+    if (!this.pricingRegionRepository || input.serviceTypeCode === SERVICE_TYPES.GOLF_TRANSFER) {
+      return this.legacyCalculate(input);
+    }
+    const { matchRegion } = require('../utils/pricingRegion.util');
+    const regions = await this.pricingRegionRepository.list();
+    const airportCodes = new Set(regions.map(r => r.airport_iata).filter(Boolean));
+    const originIata = input.originAirportIata || (airportCodes.has(input.originLocationCode) ? input.originLocationCode : null);
+    const destinationIata = input.destinationAirportIata || (airportCodes.has(input.destinationLocationCode) ? input.destinationLocationCode : null);
+    const origin = matchRegion(regions, input.originLat ?? input.origin?.lat, input.originLng ?? input.origin?.lng, originIata);
+    const destination = matchRegion(regions, input.destinationLat ?? input.destination?.lat, input.destinationLng ?? input.destination?.lng, destinationIata);
+    if (origin && destination && origin.code === destination.code && input.serviceTypeCode === SERVICE_TYPES.CITY_TRANSFER) {
+      return this.legacyCalculate(input); // Same-region policy is intentionally unchanged in phase 1.
+    }
+    const inquiry = () => new AppError('Fare inquiry required', { statusCode: 422, errorCode: 'INQUIRY_REQUIRED' });
+    if (!origin || !destination) throw inquiry();
+    const serviceType = await this.resolveServiceType(input.serviceTypeCode);
+    const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
+    if (!vehicleType) throw new AppError('Vehicle type not found', { statusCode: 400, errorCode: ERROR_CODES.VALIDATION_ERROR });
+    const [o, d] = await Promise.all([
+      this.locationRepository.findByCode(origin.fare_location_code),
+      this.locationRepository.findByCode(destination.fare_location_code),
+    ]);
+    if (!o || !d) throw inquiry();
+    try {
+      const quote = await this.computeQuote({ serviceType, vehicleType, originLocationId: o.id,
+        destinationLocationId: d.id, vehicleCount: input.vehicleCount ?? 1, options: input.options ?? {},
+        scheduledPickupAt: input.scheduledPickupAt, customerFacing: true });
+      // No nearest-route or C-distance fallback for a region-matched quote.
+      return { ...this.formatCalculateResponse(quote), pricingMode: 'REGION_FIXED',
+        originRegion: origin.code, destinationRegion: destination.code };
+    } catch (err) {
+      if (err.errorCode === ERROR_CODES.NOT_FOUND || o.id === d.id) throw inquiry();
+      throw err;
+    }
+  }
+
+  async legacyCalculate(input) {
     const serviceType = await this.serviceTypeRepository.findByCode(input.serviceTypeCode);
     if (!serviceType) {
       throw new AppError('Service type not found', {

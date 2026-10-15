@@ -184,6 +184,8 @@ if (env.NODE_ENV === 'production') {
 }
 
 module.exports = {
+  // Opt-in only: proposal boundaries must not change production implicitly.
+  regionFixedFaresEnabled: process.env.REGION_FIXED_FARES_ENABLED === 'true',
   server: {
     nodeEnv: env.NODE_ENV,
     port: env.PORT,

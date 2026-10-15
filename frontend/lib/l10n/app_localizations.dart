@@ -9266,7 +9266,147 @@ class AppLocalizations {
     },
   };
 
+  static const Map<String, Map<String, String>> _regionFareTranslations = {
+    "ko": {
+      "fare_inquiry_title": "요금 문의",
+      "fare_inquiry_body": "이 구간은 자동 요금표에 없습니다. 고객센터에서 요금과 예약을 안내해 드립니다.",
+      "fare_inquiry_contact": "고객센터 문의",
+      "admin_region_fares": "지역별 고정 요금",
+      "admin_region_boundary": "지역 범위",
+      "admin_region_geometry": "지역 경계",
+      "admin_region_geometry_help":
+          "원형은 중심 위도(lat)·경도(lng)·반경(radiusKm), 다각형은 경도·위도 순서의 닫힌 좌표 목록을 입력하세요.",
+      "admin_region_priority": "매칭 우선순위",
+      "admin_region_edit": "수정",
+      "admin_region_fixed_price": "고정 요금",
+      "admin_region_proposal":
+          "지역 경계는 검토용 제안입니다. 기존 노선 요금은 그대로 사용하며 새 노선은 승인 전까지 요금 문의로 안내합니다.",
+      "admin_region_invalid": "입력값을 확인해 주세요.",
+      "admin_region_save": "저장",
+      "admin_region_cancel": "취소",
+    },
+    "en": {
+      "fare_inquiry_title": "Fare inquiry",
+      "fare_inquiry_body":
+          "This trip is not in our automatic fare table. Contact support for a quote and booking help.",
+      "fare_inquiry_contact": "Contact support",
+      "admin_region_fares": "Fixed regional fares",
+      "admin_region_boundary": "Region boundaries",
+      "admin_region_geometry": "Boundary geometry",
+      "admin_region_geometry_help":
+          "Circle: center lat/lng and radiusKm. Polygon: a closed ring of longitude/latitude coordinates.",
+      "admin_region_priority": "Matching priority",
+      "admin_region_edit": "Edit",
+      "admin_region_fixed_price": "Fixed fare",
+      "admin_region_proposal":
+          "Boundaries are proposals for review. Existing route prices are preserved; new routes require approval before automatic quoting.",
+      "admin_region_invalid": "Please check the input.",
+      "admin_region_save": "Save",
+      "admin_region_cancel": "Cancel",
+    },
+    "zh": {
+      "fare_inquiry_title": "咨询车费",
+      "fare_inquiry_body": "此行程未列入自动报价表。请联系客服获取报价和预订帮助。",
+      "fare_inquiry_contact": "联系客服",
+      "admin_region_fares": "区域固定车费",
+      "admin_region_boundary": "区域范围",
+      "admin_region_geometry": "区域边界",
+      "admin_region_geometry_help":
+          "圆形：中心纬度lat、经度lng和半径radiusKm。多边形：按经度、纬度顺序输入闭合坐标列表。",
+      "admin_region_priority": "匹配优先级",
+      "admin_region_edit": "修改",
+      "admin_region_fixed_price": "固定车费",
+      "admin_region_proposal": "区域边界为待确认方案。保留现有路线价格，新增路线经批准后才提供自动报价。",
+      "admin_region_invalid": "请检查输入内容。",
+      "admin_region_save": "保存",
+      "admin_region_cancel": "取消",
+    },
+    "ja": {
+      "fare_inquiry_title": "料金のお問い合わせ",
+      "fare_inquiry_body": "この区間は自動料金表の対象外です。料金とご予約についてサポートへお問い合わせください。",
+      "fare_inquiry_contact": "サポートに問い合わせる",
+      "admin_region_fares": "エリア別固定料金",
+      "admin_region_boundary": "エリア範囲",
+      "admin_region_geometry": "エリア境界",
+      "admin_region_geometry_help":
+          "円形：中心の緯度lat・経度lng・半径radiusKm。多角形：経度・緯度の順で閉じた座標リストを入力します。",
+      "admin_region_priority": "一致の優先順位",
+      "admin_region_edit": "編集",
+      "admin_region_fixed_price": "固定料金",
+      "admin_region_proposal":
+          "境界は確認用の提案です。既存路線の料金は維持し、新規路線は承認後に自動見積もりの対象になります。",
+      "admin_region_invalid": "入力内容を確認してください。",
+      "admin_region_save": "保存",
+      "admin_region_cancel": "キャンセル",
+    },
+    "th": {
+      "fare_inquiry_title": "สอบถามราคา",
+      "fare_inquiry_body":
+          "เส้นทางนี้ยังไม่มีในตารางราคาอัตโนมัติ กรุณาติดต่อเจ้าหน้าที่เพื่อสอบถามราคาและจองรถ",
+      "fare_inquiry_contact": "ติดต่อเจ้าหน้าที่",
+      "admin_region_fares": "ราคาคงที่ตามพื้นที่",
+      "admin_region_boundary": "ขอบเขตพื้นที่",
+      "admin_region_geometry": "รูปทรงขอบเขต",
+      "admin_region_geometry_help":
+          "วงกลม: ระบุละติจูด lat ลองจิจูด lng และรัศมี radiusKm รูปหลายเหลี่ยม: ระบุพิกัดลองจิจูด/ละติจูดเป็นวงปิด",
+      "admin_region_priority": "ลำดับความสำคัญ",
+      "admin_region_edit": "แก้ไข",
+      "admin_region_fixed_price": "ราคาคงที่",
+      "admin_region_proposal":
+          "ขอบเขตนี้เป็นข้อเสนอเพื่อพิจารณา คงราคาเส้นทางเดิมไว้ เส้นทางใหม่ต้องได้รับอนุมัติก่อนเสนอราคาอัตโนมัติ",
+      "admin_region_invalid": "กรุณาตรวจสอบข้อมูล",
+      "admin_region_save": "บันทึก",
+      "admin_region_cancel": "ยกเลิก",
+    },
+  };
+
+  static const Map<String, Map<String, String>> _regionUiExtra = {
+  "ko": {
+    "admin_region_latitude": "중심 위도",
+    "admin_region_longitude": "중심 경도",
+    "admin_region_radius": "반경",
+    "admin_region_points": "공항 외곽 다각형 · 꼭짓점 {count}개",
+    "admin_region_pending": "승인 대기 신규 요금 후보",
+    "admin_region_shared": "공유 가격을 수정하면 연결된 모든 지역 요금에 반영됩니다."
+  },
+  "en": {
+    "admin_region_latitude": "Center latitude",
+    "admin_region_longitude": "Center longitude",
+    "admin_region_radius": "Radius",
+    "admin_region_points": "Airport perimeter polygon · {count} vertices",
+    "admin_region_pending": "New fare proposals awaiting approval",
+    "admin_region_shared": "Changing a shared price affects every region linked to it."
+  },
+  "zh": {
+    "admin_region_latitude": "中心纬度",
+    "admin_region_longitude": "中心经度",
+    "admin_region_radius": "半径",
+    "admin_region_points": "机场外围多边形 · {count}个顶点",
+    "admin_region_pending": "待批准的新车费方案",
+    "admin_region_shared": "修改共享价格将影响关联的所有区域。"
+  },
+  "ja": {
+    "admin_region_latitude": "中心緯度",
+    "admin_region_longitude": "中心経度",
+    "admin_region_radius": "半径",
+    "admin_region_points": "空港外周の多角形 · 頂点{count}個",
+    "admin_region_pending": "承認待ちの新規料金案",
+    "admin_region_shared": "共有料金の変更は関連するすべてのエリアに反映されます。"
+  },
+  "th": {
+    "admin_region_latitude": "ละติจูดจุดศูนย์กลาง",
+    "admin_region_longitude": "ลองจิจูดจุดศูนย์กลาง",
+    "admin_region_radius": "รัศมี",
+    "admin_region_points": "รูปหลายเหลี่ยมรอบสนามบิน · {count} จุด",
+    "admin_region_pending": "ข้อเสนอราคาใหม่ที่รออนุมัติ",
+    "admin_region_shared": "การแก้ไขราคาที่ใช้ร่วมกันจะมีผลกับทุกพื้นที่ที่เชื่อมโยงกัน"
+  }
+};
   String t(String key) {
+    final regionExtra = _regionUiExtra[languageCode]?[key];
+    if (regionExtra != null) return regionExtra;
+    final regionText = _regionFareTranslations[languageCode]?[key];
+    if (regionText != null) return regionText;
     final emailReview = _emailReviewTranslations[languageCode]?[key];
     if (emailReview != null) return emailReview;
     final reviewText = _reviewRequestTranslations[languageCode]?[key];

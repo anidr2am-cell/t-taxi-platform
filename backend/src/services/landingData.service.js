@@ -28,7 +28,7 @@ class LandingDataService {
     for (const route of routes.filter(r => r.isActive && isEffectiveAt(r, new Date(this.now())))) {
       const prices = {};
       for (const vehicleTypeCode of vehicleCodes) {
-        const quote = await this.pricingService.calculate({
+        const quote = await (this.pricingService.calculateRegisteredRoute || this.pricingService.calculate).call(this.pricingService, {
           serviceTypeCode: route.serviceTypeCode, vehicleTypeCode, vehicleCount: 1,
           originLocationCode: route.originLocationCode,
           destinationLocationCode: route.destinationLocationCode, options: {},
