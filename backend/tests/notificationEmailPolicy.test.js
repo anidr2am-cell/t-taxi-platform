@@ -28,6 +28,8 @@ function harness({ started = false, failSmtp = false, historical = [] } = {}) {
         if (sql.includes('SELECT n.type')) return [[...historical, ...rows.filter((r) => r.n.audience_role === 'CUSTOMER'
           && (r.delivery.delivery_status === 'DELIVERED' || r.delivery.last_error?.startsWith('PERMANENT_EMAIL_'))).map((r) => ({ type: r.n.type }))]];
         if (sql.includes('COUNT(*) AS n FROM booking_status_logs')) return [[{ n: started ? 1 : 0 }]];
+        if (sql.startsWith('INSERT INTO notification_email_attempts')) return [{ insertId: 1 }];
+        if (sql.startsWith('UPDATE notification_email_attempts')) return [{ affectedRows: 1 }];
         if (sql.includes("last_error = 'PERMANENT_EMAIL_SEND_RESERVED'")) {
           const d = rows.find((r) => r.delivery.id === params[0]).delivery;
           d.attempt_count++; d.last_error = 'PERMANENT_EMAIL_SEND_RESERVED';

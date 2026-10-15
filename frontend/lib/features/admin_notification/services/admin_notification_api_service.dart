@@ -23,20 +23,37 @@ class AdminNotificationApiService {
     return prefs.getString(_tokenKey);
   }
 
-  Future<dynamic> _request(String method, String path, {Map<String, String>? query}) async {
+  Future<dynamic> _request(
+    String method,
+    String path, {
+    Map<String, String>? query,
+    Map<String, dynamic>? body,
+  }) async {
     final token = await getSavedToken();
     if (token == null || token.isEmpty) {
       throw const AdminNotificationApiException('Please log in');
     }
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
-    final headers = {'Accept': 'application/json', 'Authorization': 'Bearer $token'};
+    final headers = {
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     final response = await (method == 'GET'
         ? http.get(uri, headers: headers)
-        : http.post(uri, headers: headers));
+        : http.post(
+            uri,
+            headers: {
+              ...headers,
+              if (body != null) 'Content-Type': 'application/json',
+            },
+            body: body == null ? null : jsonEncode(body),
+          ));
     final decoded = jsonDecode(response.body);
     if (response.statusCode >= 400) {
       throw AdminNotificationApiException(
-        decoded is Map ? decoded['message'] as String? ?? 'Request failed' : 'Request failed',
+        decoded is Map
+            ? decoded['message'] as String? ?? 'Request failed'
+            : 'Request failed',
       );
     }
     if (decoded is Map && decoded.containsKey('data')) return decoded['data'];
@@ -66,4 +83,42 @@ class AdminNotificationApiService {
   Future<void> markAllRead() async {
     await _request('POST', '/admin/notifications/read-all');
   }
+
+  Future<Map<String, dynamic>> listEmailReviews({
+    bool includeHandled = false,
+    int page = 1,
+  }) async {
+    return Map<String, dynamic>.from(
+      await _request(
+            'GET',
+            '/admin/notifications/email-review',
+            query: {'includeHandled': '$includeHandled', 'page': '$page'},
+          )
+          as Map,
+    );
+  }
+
+  Future<Map<String, dynamic>> emailHistory(int id) async =>
+      Map<String, dynamic>.from(
+        await _request('GET', '/admin/notifications/email-review/$id') as Map,
+      );
+
+  Future<Map<String, dynamic>> reviewEmail(
+    int id, {
+    required String action,
+    required String reason,
+    int? expectedAttemptId,
+  }) async => Map<String, dynamic>.from(
+    await _request(
+          'POST',
+          '/admin/notifications/email-review/$id',
+          body: {
+            'action': action,
+            'reason': reason,
+            if (action == 'RETRY_APPROVED')
+              'expectedAttemptId': expectedAttemptId,
+          },
+        )
+        as Map,
+  );
 }
