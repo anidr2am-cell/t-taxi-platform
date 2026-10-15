@@ -22,4 +22,11 @@ function matchRegion(regions, lat, lng, airportIata) {
   return active.filter(r => contains(r, lat, lng))
     .sort((a, b) => b.priority - a.priority || a.code.localeCompare(b.code))[0] || null;
 }
-module.exports = { contains, matchRegion };
+// Price is determined by the geographic pair, not by the service button used
+// to enter the wizard. Both-airport catalog rows are registered as pickup.
+function regionalServiceType(origin, destination) {
+  if (origin.airport_iata) return 'AIRPORT_PICKUP';
+  if (destination.airport_iata) return 'AIRPORT_DROPOFF';
+  return 'CITY_TRANSFER';
+}
+module.exports = { contains, matchRegion, regionalServiceType };

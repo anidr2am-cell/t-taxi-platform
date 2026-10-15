@@ -8,10 +8,10 @@ const regions = [
   { code: 'SIRACHA', fare_location_code: 'PATTAYA', geometry: { type: 'Circle', lat: 13.1542112, lng: 100.9836189, radiusKm: 10 }, priority: 20, is_active: 1 },
 ];
 function service() {
-  const routes = [{ id: 1, originLocationId: 1, destinationLocationId: 8, isActive: true }];
-  return new Pricing({ findByCode: async code => ({ id: 1, code }) },
+  const routes = [{ id: 1, serviceTypeId: 1, originLocationId: 1, destinationLocationId: 8, isActive: true }];
+  return new Pricing({ findByCode: async code => ({ id: {AIRPORT_PICKUP:1,AIRPORT_DROPOFF:2,CITY_TRANSFER:3,GOLF_TRANSFER:4}[code], code }) },
     { findByCode: async code => ({ id: code === 'BKK' ? 1 : 8 }) },
-    { findActiveByServiceAndLocations: async (_s, o, d) => routes.filter(r => r.originLocationId === o && r.destinationLocationId === d) },
+    { findActiveByServiceAndLocations: async (s, o, d) => routes.filter(r => r.serviceTypeId === s && r.originLocationId === o && r.destinationLocationId === d) },
     { findByRouteId: async () => ['SEDAN','SUV','VAN'].map((v, i) => ({ id: i + 1, vehicleTypeId: i + 1, isActive: true, price: [1000,1300,1700][i], currency: 'THB' })) },
     { findActivePolicies: async () => ['NAME_SIGN','WAITING','PARKING','TOLL','NIGHT','AIRPORT'].map((chargeType, i) => ({ id: i + 1, chargeType, calculationType: 'FIXED', amount: 100, isActive: true })) },
     { findTypeByCode: async code => ({ id: ['SEDAN','SUV','VAN'].indexOf(code) + 1, code }) },
@@ -69,4 +69,9 @@ test('dropoff quote contract accepts destination airport IATA without an invente
   const { pricingCalculateSchema } = require('../src/validators/pricing.validator');
   const result = pricingCalculateSchema.validate({ serviceTypeCode:'AIRPORT_DROPOFF',vehicleTypeCode:'SEDAN',originLocationCode:'PATTAYA',destinationAirportIata:'bkk' });
   assert.equal(result.error,undefined); assert.equal(result.value.destinationAirportIata,'BKK');
+});
+test('the same regional pair keeps its fixed fare across non-golf service selections', async () => {
+  for (const serviceTypeCode of ['AIRPORT_PICKUP','AIRPORT_DROPOFF','CITY_TRANSFER']) {
+    assert.equal((await service().calculate({...input,serviceTypeCode})).totalAmount,1000);
+  }
 });

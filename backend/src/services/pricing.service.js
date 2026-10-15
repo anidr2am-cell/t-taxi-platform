@@ -673,7 +673,7 @@ class PricingService {
     if (!this.pricingRegionRepository || input.serviceTypeCode === SERVICE_TYPES.GOLF_TRANSFER) {
       return this.legacyCalculate(input);
     }
-    const { matchRegion } = require('../utils/pricingRegion.util');
+    const { matchRegion, regionalServiceType } = require('../utils/pricingRegion.util');
     const regions = await this.pricingRegionRepository.list();
     const airportCodes = new Set(regions.map(r => r.airport_iata).filter(Boolean));
     const originIata = input.originAirportIata || (airportCodes.has(input.originLocationCode) ? input.originLocationCode : null);
@@ -685,7 +685,7 @@ class PricingService {
     }
     const inquiry = () => new AppError('Fare inquiry required', { statusCode: 422, errorCode: 'INQUIRY_REQUIRED' });
     if (!origin || !destination) throw inquiry();
-    const serviceType = await this.resolveServiceType(input.serviceTypeCode);
+    const serviceType = await this.resolveServiceType(regionalServiceType(origin, destination));
     const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
     if (!vehicleType) throw new AppError('Vehicle type not found', { statusCode: 400, errorCode: ERROR_CODES.VALIDATION_ERROR });
     const [o, d] = await Promise.all([
