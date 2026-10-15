@@ -100,6 +100,7 @@ class BookingWizardController extends ChangeNotifier {
   BookingWizardState _state = const BookingWizardState();
   bool _isLoading = false;
   String? _submitIdempotencyKey;
+  String? _submitLocale;
   bool _isSubmitting = false;
   bool _isInitialized = false;
   bool _returnToReview = false;
@@ -1204,21 +1205,27 @@ class BookingWizardController extends ChangeNotifier {
     );
   }
 
-  Future<BookingCreateResult?> submitBooking({String? accessToken}) async {
+  Future<BookingCreateResult?> submitBooking({
+    String? accessToken,
+    String? locale,
+  }) async {
     return _submitBooking(
       bookingMode: 'STANDARD',
       validatePickup: isStandardPickupAllowed,
       accessToken: accessToken,
+      locale: locale,
     );
   }
 
   Future<BookingCreateResult?> submitUrgentBooking({
     String? accessToken,
+    String? locale,
   }) async {
     return _submitBooking(
       bookingMode: 'URGENT',
       validatePickup: isUrgentPickupWindow,
       accessToken: accessToken,
+      locale: locale,
     );
   }
 
@@ -1226,6 +1233,7 @@ class BookingWizardController extends ChangeNotifier {
     required String bookingMode,
     required bool Function(DateTime value) validatePickup,
     String? accessToken,
+    String? locale,
   }) async {
     if (_isSubmitting || _isLoading) return null;
     if (!canSubmitAll(validatePickup: validatePickup)) return null;
@@ -1239,6 +1247,7 @@ class BookingWizardController extends ChangeNotifier {
     _isSubmitting = true;
     _setLoading(true);
     final idempotencyKey = _ensureSubmitIdempotencyKey();
+    final submissionLocale = _submitLocale ??= locale;
     const maxInProgressRetries = 3;
     try {
       if (!await _ensurePricingCoordinates()) {
@@ -1259,7 +1268,10 @@ class BookingWizardController extends ChangeNotifier {
       for (var attempt = 0; attempt <= maxInProgressRetries; attempt++) {
         try {
           final result = await _api.createBooking(
-            buildCreatePayload(bookingMode: bookingMode),
+            {
+              ...buildCreatePayload(bookingMode: bookingMode),
+              if (submissionLocale != null) 'locale': submissionLocale,
+            },
             idempotencyKey: idempotencyKey,
             accessToken: accessToken,
           );
@@ -1275,6 +1287,7 @@ class BookingWizardController extends ChangeNotifier {
             totalPrice: result.totalAmount,
           );
           _submitIdempotencyKey = null;
+          _submitLocale = null;
           await _storage.clear();
           _state = const BookingWizardState();
           notifyListeners();
@@ -1319,6 +1332,7 @@ class BookingWizardController extends ChangeNotifier {
 
   void _invalidateSubmitIdempotencyKey() {
     _submitIdempotencyKey = null;
+    _submitLocale = null;
   }
 
   String _ensureSubmitIdempotencyKey() {

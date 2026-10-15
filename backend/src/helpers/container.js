@@ -777,4 +777,7 @@ container.register(
     new SupportInquiryService(database.pool, c.get("supportInquiryRepository")),
 );
 
+container.register("reviewRequestService", (c) => new (require("../services/reviewRequest.service"))(
+  database.pool, c.get("bookingRepository"), c.get("platformSettingsService"),
+));
 module.exports = container;

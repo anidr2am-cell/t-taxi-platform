@@ -101,6 +101,7 @@ function createHarness({ pricingService } = {}) {
   };
 
   const bookingRepository = {
+    async resolveBookingLocale(_conn, _userId, locale) { return locale || "ko"; },
     async insertBooking(_conn, row) {
       calls.booking = row;
       return 10;

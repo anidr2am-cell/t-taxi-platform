@@ -144,6 +144,7 @@ function createRowLockHarness(initialRow, options = {}) {
         driver_user_id: 44,
       };
     },
+    async markReviewRequestEligible() {},
     async updateStatus(_conn, _id, status) {
       row = { ...row, status };
     },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/features/booking/widgets/booking_review_form.dart';
 import 'package:frontend/features/auth/controllers/auth_controller.dart';
 import 'package:frontend/features/booking/models/booking_complete_review.dart';
 import 'package:frontend/features/booking/models/booking_create_result.dart';
@@ -59,25 +60,25 @@ void main() {
     expect(find.text('Submit rating'), findsOneWidget);
   });
 
-  testWidgets('completed booking with existing review hides submit form', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(
-        _page(
-          result: _result(status: 'COMPLETED'),
-          review: const BookingCompleteReview(
-            customerName: 'Kim',
-            customerPhone: '+66123456789',
+  testWidgets(
+    'completed booking summary does not hide the post-trip review section',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          _page(
+            result: _result(status: 'COMPLETED'),
+            review: const BookingCompleteReview(
+              customerName: 'Kim',
+              customerPhone: '+66123456789',
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('Kim'), findsOneWidget);
-    expect(find.text('How was your ride?'), findsNothing);
-    expect(find.text('Submit rating'), findsNothing);
-  });
+      expect(find.text('Kim'), findsOneWidget);
+      expect(find.byType(BookingReviewForm), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'completed booking without notification still shows review form',
@@ -100,7 +101,10 @@ void main() {
 }
 
 Widget _wrap(Widget child) {
-  return wrapBookingCompleteTestApp(home: child, authController: _authController);
+  return wrapBookingCompleteTestApp(
+    home: child,
+    authController: _authController,
+  );
 }
 
 BookingCompletePage _page({

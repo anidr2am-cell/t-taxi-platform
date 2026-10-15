@@ -755,6 +755,7 @@ function createCustomerDecisionHarness(overrides = {}) {
       calls.assignments.push(row);
       return 9001;
     },
+    async markReviewRequestEligible() {},
     async updateStatus(_conn, bookingId, status, actorUserId, statusFields = {}) {
       calls.statusUpdates.push({ bookingId, status, actorUserId, statusFields });
       booking = { ...booking, status };
@@ -1105,6 +1106,7 @@ function createRejectThenSubmitEtaHarness() {
   const bookingRepository = {
     async findActiveAssignmentForUpdate() { return null; },
     async insertDriverAssignment() { return 9001; },
+    async markReviewRequestEligible() {},
     async updateStatus(_conn, _bookingId, status) {
       booking = { ...booking, status };
     },
@@ -1302,6 +1304,7 @@ function createTimeoutHarness(overrides = {}) {
       if (bookingId !== booking.id) return null;
       return overrides.activeAssignment ?? null;
     },
+    async markReviewRequestEligible() {},
     async updateStatus(_conn, _bookingId, status) {
       booking = { ...booking, status };
     },
@@ -1887,6 +1890,7 @@ function createConcurrentTimeoutHarness() {
     async findActiveAssignmentForUpdate() {
       return null;
     },
+    async markReviewRequestEligible() {},
     async updateStatus() {},
     async insertStatusLog() {},
     async insertActivityLog() {},

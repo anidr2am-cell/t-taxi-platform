@@ -48,8 +48,10 @@ import 'widgets/analytics_consent_banner.dart';
 const bool _enableE2ERoutes = bool.fromEnvironment('TRIDE_ENABLE_E2E_ROUTES');
 final Ga4RouteObserver _ga4RouteObserver = Ga4RouteObserver();
 final Map<String, WidgetBuilder> _landingUtilityRoutes = {
-  '/booking/lookup': (_) =>
-      const GuestBookingLookupPage(enableCustomerTools: true),
+  '/booking/lookup': (_) => GuestBookingLookupPage(
+    enableCustomerTools: true,
+    initialBookingNumber: Uri.base.queryParameters['bookingNumber'],
+  ),
   '/support': (_) => const CustomerSupportPage(),
   '/privacy-policy': (_) => const PrivacyPolicyPage(),
 };

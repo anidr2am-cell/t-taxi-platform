@@ -97,6 +97,7 @@ const placeSchema = Joi.object({
 });
 
 const createBookingSchema = Joi.object({
+  locale: Joi.string().valid('ko', 'en', 'zh', 'ja', 'th').optional(),
   bookingMode: Joi.string().valid('STANDARD', 'URGENT').default('STANDARD'),
   serviceTypeCode: Joi.string().valid(...Object.values(SERVICE_TYPES)).required(),
   vehicleTypeCode: Joi.string().valid(...Object.values(VEHICLE_TYPES)).required(),

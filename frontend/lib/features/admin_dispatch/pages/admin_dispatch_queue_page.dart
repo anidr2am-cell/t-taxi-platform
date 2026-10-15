@@ -60,6 +60,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
   bool _lowRating = false;
   bool _unassignedOnly = false;
   bool _hasInquiry = false;
+  bool _reviewRequestsOnly = false;
   bool _showArchived = false;
   bool _archiveSubmitting = false;
   final Set<String> _selectedForArchive = {};
@@ -105,6 +106,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
     if (_lowRating) count++;
     if (_unassignedOnly) count++;
     if (_hasInquiry) count++;
+    if (_reviewRequestsOnly) count++;
     return count;
   }
 
@@ -183,6 +185,7 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         settlementStatus: _settlementStatus,
         lowRating: _lowRating ? true : null,
         hasInquiry: _hasInquiry ? true : null,
+        reviewRequestsOnly: _reviewRequestsOnly ? true : null,
         archived: _showArchived ? true : null,
         page: page,
         limit: _limit,
@@ -522,6 +525,15 @@ class _AdminDispatchQueuePageState extends State<AdminDispatchQueuePage> {
         runSpacing: AppTokens.spaceXs,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
+          FilterChip(
+            key: const ValueKey('review_request_filter'),
+            label: Text(l10n.t('admin_review_request_filter')),
+            selected: _reviewRequestsOnly,
+            onSelected: (value) {
+              setState(() => _reviewRequestsOnly = value);
+              _load(page: 1);
+            },
+          ),
           FilterChip(
             selected: _showArchived,
             avatar: const Icon(Icons.archive_outlined, size: 18),
