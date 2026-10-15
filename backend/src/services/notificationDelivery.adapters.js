@@ -2,6 +2,7 @@ const DELIVERY_STATUS = require('../constants/notificationDeliveryStatus');
 const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const config = require('../config/env');
 const fs = require('node:fs');
+const { isCustomerEmail, renderCustomerEmail } = require('../templates/customerEmail');
 
 const CONFIG_MISSING = 'CONFIG_MISSING';
 const INVALID_RECIPIENT = 'PERMANENT_INVALID_RECIPIENT';
@@ -19,6 +20,12 @@ class EmailNotificationAdapter {
     this.smtp = options.smtp ?? config.smtp;
     this.transportFactory = options.transportFactory;
     this.transport = options.transport ?? null;
+    this.customerWebOrigin = options.customerWebOrigin || config.server.publicApiUrl || 'https://trider.taxi';
+    this.googleReviewUrlProvider = options.googleReviewUrlProvider || (async () => {
+      const SettingsRepository = require('../repositories/settings.repository');
+      const row = await new SettingsRepository().findByGroupAndKey('operations', 'googleReviewUrl');
+      return row?.value || '';
+    });
   }
 
   isConfigured() {
@@ -40,6 +47,11 @@ class EmailNotificationAdapter {
   }
 
   buildMessage(notification) {
+    if (isCustomerEmail(notification)) {
+      return renderCustomerEmail(notification, {
+        origin: this.customerWebOrigin, googleReviewUrl: notification.google_review_url || '',
+      });
+    }
     const bookingNumber = notification.booking_number
       || notification.payload?.bookingNumber
       || 'your booking';
@@ -123,11 +135,19 @@ class EmailNotificationAdapter {
     }
 
     try {
+      let emailNotification = notification;
+      if (isCustomerEmail(notification) && ['TRIP_ENDED', 'REVIEW_REQUESTED'].includes(notification.type)) {
+        let googleUrl = '';
+        try { googleUrl = await this.googleReviewUrlProvider(); } catch (_) {
+          // A missing/unavailable optional setting must not change email delivery/retry behavior.
+        }
+        emailNotification = { ...notification, google_review_url: googleUrl };
+      }
       const transport = await this.createTransport();
       await transport.sendMail({
         from: this.normalizeFrom(),
         to,
-        ...this.buildMessage(notification),
+        ...this.buildMessage(emailNotification),
       });
       return { status: DELIVERY_STATUS.DELIVERED };
     } catch (err) {

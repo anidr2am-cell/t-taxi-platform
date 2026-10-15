@@ -1,0 +1,362 @@
+{
+  "ko": {
+    "booking": "예약번호",
+    "pickup": "픽업 일시 (태국 시간)",
+    "route": "이동 경로",
+    "amount": "요금",
+    "currency": "바트",
+    "lookup": "예약 조회",
+    "support": "고객센터 · 24시간 상담",
+    "fare": "표시된 요금이 최종 요금입니다. 고속도로 통행료·공항 주차비·항공편 지연 대기가 모두 포함되어 추가 요금이 없습니다.",
+    "cancel": "운행 시작 전이며 픽업까지 2시간보다 많이 남았다면 예약 조회에서 무료 취소·전액 환불이 가능합니다.",
+    "payment": "예약금은 없습니다. 현금은 목적지 도착 후 기사에게 결제하며, 계좌이체·카드결제는 관리자 안내로 가능합니다.",
+    "review": "T-Rider를 이용해 주셔서 감사합니다 😊\n이번 이동은 어떠셨나요? 짧은 후기를 남겨 주시면 큰 힘이 됩니다.\n{googleLine}예약 조회에서 별점 남기기: {bookingUrl}",
+    "google": "구글 리뷰: {googleUrl}",
+    "messages": {
+      "BOOKING_CREATED": {
+        "subject": "예약이 접수되었습니다",
+        "body": "예약이 접수되었습니다. 예약 조회에서 이동 일정을 확인해 주세요."
+      },
+      "BOOKING_CONFIRMED": {
+        "subject": "예약이 확정되었습니다",
+        "body": "예약이 확정되었습니다. 예약 조회에서 이동 일정을 확인해 주세요."
+      },
+      "DRIVER_ASSIGNED": {
+        "subject": "담당 기사가 배정되었습니다",
+        "body": "담당 기사가 배정되었습니다. 예약 조회에서 배정 정보를 확인해 주세요."
+      },
+      "DRIVER_ARRIVED": {
+        "subject": "기사가 픽업 장소에 도착했습니다",
+        "body": "기사가 픽업 장소에 도착했습니다. 예약 조회에서 픽업 안내를 확인해 주세요."
+      },
+      "TRIP_ON_ROUTE": {
+        "subject": "기사가 픽업 장소로 이동 중입니다",
+        "body": "기사가 픽업 장소로 이동 중입니다. 예약 조회에서 진행 상황을 확인해 주세요."
+      },
+      "TRIP_PICKED_UP": {
+        "subject": "운행이 시작되었습니다",
+        "body": "고객님을 모시고 운행을 시작했습니다. 편안한 이동 되세요."
+      },
+      "TRIP_ENDED": {
+        "subject": "목적지에 도착했습니다",
+        "body": ""
+      },
+      "TRIP_COMPLETED": {
+        "subject": "운행이 완료되었습니다",
+        "body": "운행이 완료되었습니다. T-Rider를 이용해 주셔서 감사합니다."
+      },
+      "BOOKING_CANCELLED": {
+        "subject": "예약이 취소되었습니다",
+        "body": "예약이 취소되었습니다. 도움이 필요하시면 고객센터로 문의해 주세요."
+      },
+      "BOOKING_NO_SHOW": {
+        "subject": "예약이 노쇼로 처리되었습니다",
+        "body": "예약이 노쇼 상태로 처리되었습니다. 확인이 필요하시면 고객센터로 문의해 주세요."
+      },
+      "FLIGHT_DELAYED": {
+        "subject": "항공편 지연 안내",
+        "body": "항공편 지연이 확인되었습니다. 실제 도착 시각에 맞춰 픽업 시간을 조정합니다."
+      },
+      "FLIGHT_CANCELLED": {
+        "subject": "항공편 취소 안내",
+        "body": "항공편 취소가 확인되었습니다. 픽업 일정은 고객센터로 문의해 주세요."
+      },
+      "FLIGHT_LANDED": {
+        "subject": "항공편 도착 안내",
+        "body": "항공편 도착이 확인되었습니다. 예약 조회에서 픽업 안내를 확인해 주세요."
+      },
+      "REVIEW_REQUESTED": {
+        "subject": "이용 후기를 부탁드립니다",
+        "body": ""
+      }
+    }
+  },
+  "en": {
+    "booking": "Booking number",
+    "pickup": "Pickup date and time (Thailand time)",
+    "route": "Route",
+    "amount": "Fare",
+    "currency": "THB",
+    "lookup": "Look up your booking",
+    "support": "Customer support · available 24 hours",
+    "fare": "The price shown is your final price. Highway tolls, airport parking and flight-delay waiting are all included — no extra charges.",
+    "cancel": "Before the ride starts, you can cancel free of charge for a full refund through booking lookup if more than 2 hours remain before pickup.",
+    "payment": "No deposit is required. Pay cash to your driver after arriving at your destination. Bank transfer and card payment are also available through the administrator.",
+    "review": "Thank you for choosing T-Rider 😊\nHow was your ride? A short review would mean a lot to us.\n{googleLine}Rate your ride on the booking lookup page: {bookingUrl}",
+    "google": "Google review: {googleUrl}",
+    "messages": {
+      "BOOKING_CREATED": {
+        "subject": "Your booking has been received",
+        "body": "We have received your booking. Check your itinerary on the booking lookup page."
+      },
+      "BOOKING_CONFIRMED": {
+        "subject": "Your booking is confirmed",
+        "body": "Your booking is confirmed. Check your itinerary on the booking lookup page."
+      },
+      "DRIVER_ASSIGNED": {
+        "subject": "Your driver has been assigned",
+        "body": "A driver has been assigned to your ride. Check the assignment on the booking lookup page."
+      },
+      "DRIVER_ARRIVED": {
+        "subject": "Your driver has arrived",
+        "body": "Your driver has arrived at the pickup location. Check the pickup instructions on the booking lookup page."
+      },
+      "TRIP_ON_ROUTE": {
+        "subject": "Your driver is on the way",
+        "body": "Your driver is heading to the pickup location. Check the progress on the booking lookup page."
+      },
+      "TRIP_PICKED_UP": {
+        "subject": "Your ride has started",
+        "body": "Your ride has started. We wish you a comfortable journey."
+      },
+      "TRIP_ENDED": {
+        "subject": "You have arrived at your destination",
+        "body": ""
+      },
+      "TRIP_COMPLETED": {
+        "subject": "Your ride is complete",
+        "body": "Your ride is complete. Thank you for choosing T-Rider."
+      },
+      "BOOKING_CANCELLED": {
+        "subject": "Your booking has been cancelled",
+        "body": "Your booking has been cancelled. Contact customer support if you need help."
+      },
+      "BOOKING_NO_SHOW": {
+        "subject": "Your booking has been marked as a no-show",
+        "body": "Your booking has been marked as a no-show. Contact customer support if you need clarification."
+      },
+      "FLIGHT_DELAYED": {
+        "subject": "Flight delay update",
+        "body": "Your flight is delayed. Pickup will be adjusted to your actual arrival time."
+      },
+      "FLIGHT_CANCELLED": {
+        "subject": "Flight cancellation update",
+        "body": "Your flight has been cancelled. Please contact customer support about your pickup arrangements."
+      },
+      "FLIGHT_LANDED": {
+        "subject": "Your flight has landed",
+        "body": "Your flight has landed. Check the pickup instructions on the booking lookup page."
+      },
+      "REVIEW_REQUESTED": {
+        "subject": "Please share your ride experience",
+        "body": ""
+      }
+    }
+  },
+  "th": {
+    "booking": "หมายเลขการจอง",
+    "pickup": "วันและเวลารับ (เวลาประเทศไทย)",
+    "route": "เส้นทาง",
+    "amount": "ค่าโดยสาร",
+    "currency": "บาท",
+    "lookup": "ตรวจสอบการจอง",
+    "support": "บริการลูกค้า · สอบถามได้ตลอด 24 ชั่วโมง",
+    "fare": "ราคาที่แสดงเป็นราคาสุดท้าย รวมค่าทางด่วน ค่าจอดรถสนามบิน และการรอกรณีเที่ยวบินล่าช้าแล้ว ไม่มีค่าใช้จ่ายเพิ่มเติม",
+    "cancel": "หากยังไม่เริ่มการเดินทางและเหลือเวลาก่อนรับมากกว่า 2 ชั่วโมง สามารถยกเลิกฟรีและรับเงินคืนเต็มจำนวนผ่านหน้าตรวจสอบการจอง",
+    "payment": "ไม่ต้องวางมัดจำ ชำระเงินสดกับคนขับเมื่อถึงจุดหมาย สามารถโอนเงินหรือชำระด้วยบัตรผ่านการแนะนำของผู้ดูแลได้เช่นกัน",
+    "review": "ขอบคุณที่ใช้บริการ T-Rider 😊\nการเดินทางครั้งนี้เป็นอย่างไรบ้าง? ความคิดเห็นสั้น ๆ ของคุณเป็นกำลังใจสำคัญให้เรา\n{googleLine}ให้คะแนนการเดินทางผ่านหน้าตรวจสอบการจอง: {bookingUrl}",
+    "google": "รีวิว Google: {googleUrl}",
+    "messages": {
+      "BOOKING_CREATED": {
+        "subject": "ได้รับการจองของคุณแล้ว",
+        "body": "เราได้รับการจองของคุณแล้ว ตรวจสอบรายละเอียดการเดินทางได้ที่หน้าตรวจสอบการจอง"
+      },
+      "BOOKING_CONFIRMED": {
+        "subject": "ยืนยันการจองแล้ว",
+        "body": "ยืนยันการจองของคุณแล้ว ตรวจสอบรายละเอียดการเดินทางได้ที่หน้าตรวจสอบการจอง"
+      },
+      "DRIVER_ASSIGNED": {
+        "subject": "จัดคนขับให้คุณแล้ว",
+        "body": "จัดคนขับให้การเดินทางของคุณแล้ว ตรวจสอบข้อมูลการจัดรถได้ที่หน้าตรวจสอบการจอง"
+      },
+      "DRIVER_ARRIVED": {
+        "subject": "คนขับถึงจุดรับแล้ว",
+        "body": "คนขับถึงจุดรับแล้ว ตรวจสอบคำแนะนำการรับได้ที่หน้าตรวจสอบการจอง"
+      },
+      "TRIP_ON_ROUTE": {
+        "subject": "คนขับกำลังเดินทางไปยังจุดรับ",
+        "body": "คนขับกำลังเดินทางไปยังจุดรับ ติดตามความคืบหน้าได้ที่หน้าตรวจสอบการจอง"
+      },
+      "TRIP_PICKED_UP": {
+        "subject": "เริ่มการเดินทางแล้ว",
+        "body": "เริ่มการเดินทางแล้ว ขอให้คุณเดินทางอย่างสะดวกสบาย"
+      },
+      "TRIP_ENDED": {
+        "subject": "ถึงจุดหมายแล้ว",
+        "body": ""
+      },
+      "TRIP_COMPLETED": {
+        "subject": "การเดินทางเสร็จสมบูรณ์",
+        "body": "การเดินทางเสร็จสมบูรณ์ ขอบคุณที่ใช้บริการ T-Rider"
+      },
+      "BOOKING_CANCELLED": {
+        "subject": "ยกเลิกการจองแล้ว",
+        "body": "ยกเลิกการจองแล้ว หากต้องการความช่วยเหลือ ติดต่อฝ่ายบริการลูกค้าได้"
+      },
+      "BOOKING_NO_SHOW": {
+        "subject": "การจองถูกระบุว่าไม่มาตามนัด",
+        "body": "การจองถูกระบุว่าไม่มาตามนัด หากต้องการตรวจสอบ ติดต่อฝ่ายบริการลูกค้าได้"
+      },
+      "FLIGHT_DELAYED": {
+        "subject": "แจ้งเที่ยวบินล่าช้า",
+        "body": "เที่ยวบินของคุณล่าช้า เราจะปรับเวลารับตามเวลาถึงจริง"
+      },
+      "FLIGHT_CANCELLED": {
+        "subject": "แจ้งเที่ยวบินยกเลิก",
+        "body": "เที่ยวบินของคุณถูกยกเลิก โปรดติดต่อฝ่ายบริการลูกค้าเพื่อสอบถามเรื่องการรับ"
+      },
+      "FLIGHT_LANDED": {
+        "subject": "เที่ยวบินลงจอดแล้ว",
+        "body": "เที่ยวบินของคุณลงจอดแล้ว ตรวจสอบคำแนะนำการรับได้ที่หน้าตรวจสอบการจอง"
+      },
+      "REVIEW_REQUESTED": {
+        "subject": "ขอเชิญแบ่งปันประสบการณ์การเดินทาง",
+        "body": ""
+      }
+    }
+  },
+  "ja": {
+    "booking": "予約番号",
+    "pickup": "乗車日時（タイ時間）",
+    "route": "移動区間",
+    "amount": "料金",
+    "currency": "バーツ",
+    "lookup": "予約を確認",
+    "support": "カスタマーサポート · 24時間対応",
+    "fare": "表示料金が最終料金です。高速道路料金・空港駐車場代・フライト遅延時の待機がすべて含まれ、追加料金はありません。",
+    "cancel": "運行開始前で、乗車まで2時間より多く残っている場合は、予約確認ページから無料でキャンセルでき、全額返金されます。",
+    "payment": "予約金は不要です。現金は目的地到着後にドライバーへお支払いください。銀行振込・カード決済も管理者の案内でご利用いただけます。",
+    "review": "T-Riderをご利用いただきありがとうございます 😊\n今回のご乗車はいかがでしたか？短いご感想をお寄せいただけると励みになります。\n{googleLine}予約確認ページで評価する：{bookingUrl}",
+    "google": "Googleの口コミ：{googleUrl}",
+    "messages": {
+      "BOOKING_CREATED": {
+        "subject": "ご予約を受け付けました",
+        "body": "ご予約を受け付けました。予約確認ページで移動の予定をご確認ください。"
+      },
+      "BOOKING_CONFIRMED": {
+        "subject": "ご予約が確定しました",
+        "body": "ご予約が確定しました。予約確認ページで移動の予定をご確認ください。"
+      },
+      "DRIVER_ASSIGNED": {
+        "subject": "担当ドライバーが決まりました",
+        "body": "担当ドライバーが決まりました。予約確認ページで配車情報をご確認ください。"
+      },
+      "DRIVER_ARRIVED": {
+        "subject": "ドライバーが乗車場所に到着しました",
+        "body": "ドライバーが乗車場所に到着しました。予約確認ページでお迎えの案内をご確認ください。"
+      },
+      "TRIP_ON_ROUTE": {
+        "subject": "ドライバーが乗車場所へ向かっています",
+        "body": "ドライバーが乗車場所へ向かっています。予約確認ページで状況をご確認ください。"
+      },
+      "TRIP_PICKED_UP": {
+        "subject": "ご乗車が始まりました",
+        "body": "ご乗車が始まりました。どうぞ快適な移動をお楽しみください。"
+      },
+      "TRIP_ENDED": {
+        "subject": "目的地に到着しました",
+        "body": ""
+      },
+      "TRIP_COMPLETED": {
+        "subject": "ご利用が完了しました",
+        "body": "ご利用が完了しました。T-Riderをご利用いただきありがとうございます。"
+      },
+      "BOOKING_CANCELLED": {
+        "subject": "ご予約がキャンセルされました",
+        "body": "ご予約がキャンセルされました。お困りの際はカスタマーサポートへお問い合わせください。"
+      },
+      "BOOKING_NO_SHOW": {
+        "subject": "ご予約がノーショーとして処理されました",
+        "body": "ご予約がノーショーとして処理されました。確認が必要な場合はカスタマーサポートへお問い合わせください。"
+      },
+      "FLIGHT_DELAYED": {
+        "subject": "フライト遅延のお知らせ",
+        "body": "フライトの遅延を確認しました。実際の到着時刻に合わせてお迎えを調整します。"
+      },
+      "FLIGHT_CANCELLED": {
+        "subject": "フライト欠航のお知らせ",
+        "body": "フライトの欠航を確認しました。お迎えの予定についてカスタマーサポートへお問い合わせください。"
+      },
+      "FLIGHT_LANDED": {
+        "subject": "フライト到着のお知らせ",
+        "body": "フライトの到着を確認しました。予約確認ページでお迎えの案内をご確認ください。"
+      },
+      "REVIEW_REQUESTED": {
+        "subject": "ご乗車の感想をお聞かせください",
+        "body": ""
+      }
+    }
+  },
+  "zh": {
+    "booking": "预订编号",
+    "pickup": "接车日期与时间（泰国时间）",
+    "route": "行程路线",
+    "amount": "车费",
+    "currency": "泰铢",
+    "lookup": "查询预订",
+    "support": "客服 · 24小时咨询",
+    "fare": "显示的价格即为最终价格。已包含高速公路通行费、机场停车费及航班延误等待，无任何额外费用。",
+    "cancel": "在行程开始前，且距离接车还有超过2小时时，可通过预订查询页面免费取消并获得全额退款。",
+    "payment": "无需订金。现金请在到达目的地后支付给司机，也可由管理员指引使用银行转账或银行卡付款。",
+    "review": "感谢您选择T-Rider 😊\n这次乘车体验如何？您的简短评价将给予我们很大的支持。\n{googleLine}在预订查询页面为行程评分：{bookingUrl}",
+    "google": "Google评价：{googleUrl}",
+    "messages": {
+      "BOOKING_CREATED": {
+        "subject": "已收到您的预订",
+        "body": "已收到您的预订，请在预订查询页面查看行程安排。"
+      },
+      "BOOKING_CONFIRMED": {
+        "subject": "您的预订已确认",
+        "body": "您的预订已确认，请在预订查询页面查看行程安排。"
+      },
+      "DRIVER_ASSIGNED": {
+        "subject": "已为您安排司机",
+        "body": "已为您的行程安排司机，请在预订查询页面查看派车信息。"
+      },
+      "DRIVER_ARRIVED": {
+        "subject": "司机已到达上车地点",
+        "body": "司机已到达上车地点，请在预订查询页面查看接车指引。"
+      },
+      "TRIP_ON_ROUTE": {
+        "subject": "司机正在前往上车地点",
+        "body": "司机正在前往上车地点，请在预订查询页面查看进展。"
+      },
+      "TRIP_PICKED_UP": {
+        "subject": "行程已开始",
+        "body": "行程已开始，祝您一路舒适。"
+      },
+      "TRIP_ENDED": {
+        "subject": "已到达目的地",
+        "body": ""
+      },
+      "TRIP_COMPLETED": {
+        "subject": "行程已完成",
+        "body": "行程已完成，感谢您选择T-Rider。"
+      },
+      "BOOKING_CANCELLED": {
+        "subject": "预订已取消",
+        "body": "预订已取消，如需帮助，请联系客服。"
+      },
+      "BOOKING_NO_SHOW": {
+        "subject": "预订已标记为未到场",
+        "body": "预订已标记为未到场，如需核实，请联系客服。"
+      },
+      "FLIGHT_DELAYED": {
+        "subject": "航班延误通知",
+        "body": "已确认您的航班延误，我们会按实际到达时间调整接机安排。"
+      },
+      "FLIGHT_CANCELLED": {
+        "subject": "航班取消通知",
+        "body": "已确认您的航班取消，请联系客服沟通接机安排。"
+      },
+      "FLIGHT_LANDED": {
+        "subject": "航班已落地",
+        "body": "您的航班已落地，请在预订查询页面查看接车指引。"
+      },
+      "REVIEW_REQUESTED": {
+        "subject": "邀请您分享乘车体验",
+        "body": ""
+      }
+    }
+  }
+}
