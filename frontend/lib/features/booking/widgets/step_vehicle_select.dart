@@ -149,7 +149,7 @@ class StepVehicleSelect extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: WizardCompact.fieldGap),
             child: state.errorMessage == 'pricing_inquiry_required'
-                ? const FareInquiryCard()
+                ? (embedded ? const SizedBox.shrink() : const FareInquiryCard())
                 : WizardErrorView(
                     message: state.errorMessage!,
                     onRetry: controller.loadPricing,

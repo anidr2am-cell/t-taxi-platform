@@ -2106,6 +2106,7 @@ class BookingWizardController extends ChangeNotifier {
           return 'wizard_required_name_sign_text';
         }
         if (_state.adults < 1) return 'wizard_required_passengers';
+        if (_state.errorMessage == 'pricing_inquiry_required') return 'fare_inquiry_title';
         if (_state.selectedVehicle == null) {
           return canLoadRecommendation()
               ? 'wizard_required_vehicle'

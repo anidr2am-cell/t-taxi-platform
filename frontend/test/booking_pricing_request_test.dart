@@ -914,6 +914,8 @@ void main() {
 
       expect(controller.state.errorMessage, 'pricing_inquiry_required');
       expect(controller.state.pricing, isNull);
+      expect(controller.stepValidationMessageKey(BookingWizardSteps.vehicle), 'fare_inquiry_title');
+      expect(controller.canProceedFromStep(BookingWizardSteps.vehicle), isFalse);
     },
   );
 

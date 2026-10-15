@@ -28,6 +28,7 @@ import '../widgets/step_passengers_luggage.dart';
 import '../widgets/step_pickup_datetime.dart';
 import '../widgets/step_route_select.dart';
 import '../widgets/step_vehicle_select.dart';
+import '../widgets/fare_inquiry_card.dart';
 import '../widgets/wizard_compact.dart';
 import '../widgets/wizard_status_views.dart';
 import '../../auth/widgets/booking_social_login_section.dart';
@@ -215,6 +216,7 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
       case BookingWizardSteps.schedule:
         return l10n.t('wizard_cta_schedule');
       case BookingWizardSteps.vehicle:
+        if (state.errorMessage == 'pricing_inquiry_required') return l10n.t('fare_inquiry_title');
         if (state.selectedVehicle == null || price == null) {
           return l10n.t('wizard_cta_vehicle_unselected');
         }
@@ -494,6 +496,10 @@ class _BookingWizardPageState extends State<BookingWizardPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (state.errorMessage == 'pricing_inquiry_required') ...[
+              const FareInquiryCard(),
+              const SizedBox(height: AppTokens.spaceMd),
+            ],
             StepPassengersLuggage(
               embedded: true,
               state: state,
