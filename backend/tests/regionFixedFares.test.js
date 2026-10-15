@@ -75,3 +75,28 @@ test('the same regional pair keeps its fixed fare across non-golf service select
     assert.equal((await service().calculate({...input,serviceTypeCode})).totalAmount,1000);
   }
 });
+
+test('approved new regional fares use normal included-cost/name-sign policy and vehicle count', async () => {
+  const s = service();
+  s.pricingRegionRepository.findFare = async () => ({id:1,price:3000,currency:'THB'});
+  const q = await s.calculate({...input,vehicleCount:2,options:{nameSign:true,toll:true,parking:true,waiting:true}});
+  assert.equal(q.totalAmount,6100);
+  assert.equal(q.routeId,null); assert.equal(q.vehiclePriceId,null);
+  assert.equal(q.chargeItems[0].referenceType,'REGION_FARE');
+  assert.equal(q.chargeItems[0].referenceId,1);
+});
+
+test('approved migration contains 9 regions, 39 fares; Pattaya wins coastal overlap', () => {
+  const fs = require('node:fs'); const path = require('node:path');
+  const sql=fs.readFileSync(path.join(__dirname,'../../database/75_region_fixed_fare_proposal.sql'),'utf8');
+  const section=sql.split('INSERT INTO pricing_regions')[1].split('-- Separate regional additions')[0];
+  const seeded=[...section.matchAll(/\('([^']+)','([^']+)',(NULL|'[^']+'),'([^']+)',(\d+),'[^']*'\)/g)]
+    .map(m=>({code:m[1],fare_location_code:m[2],geometry:JSON.parse(m[4]),priority:Number(m[5]),is_active:1}));
+  assert.equal(seeded.length,9);
+  for (const [lat,lng] of [[13.1542112,100.9836189],[13.2751426,100.9288993],[13.3611,100.9847]])
+    assert.equal(matchRegion(seeded,lat,lng).code,'SIRACHA');
+  assert.equal(matchRegion(seeded,13.088764,100.92392).code,'PATTAYA');
+  assert.equal(matchRegion(seeded,12.6664,100.9007),null);
+  assert.equal((sql.split('INSERT INTO pricing_region_fares')[1].match(/\('[^']+','[^']+','[^']+',\d+\)/g)||[]).length,39);
+  assert(!/\b(?:UPDATE|INSERT INTO)\s+(?:routes|vehicle_prices|bookings|vehicle_capacity_rules)\b/i.test(sql));
+});

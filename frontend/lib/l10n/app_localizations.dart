@@ -9280,7 +9280,7 @@ class AppLocalizations {
       "admin_region_edit": "수정",
       "admin_region_fixed_price": "고정 요금",
       "admin_region_proposal":
-          "지역 경계는 검토용 제안입니다. 기존 노선 요금은 그대로 사용하며 새 노선은 승인 전까지 요금 문의로 안내합니다.",
+          "승인된 지역 고정 요금입니다. 기존 노선 가격은 유지되며, 시라차·방센은 파타야 가격을 공유합니다.",
       "admin_region_invalid": "입력값을 확인해 주세요.",
       "admin_region_save": "저장",
       "admin_region_cancel": "취소",
@@ -9299,7 +9299,7 @@ class AppLocalizations {
       "admin_region_edit": "Edit",
       "admin_region_fixed_price": "Fixed fare",
       "admin_region_proposal":
-          "Boundaries are proposals for review. Existing route prices are preserved; new routes require approval before automatic quoting.",
+          "Approved fixed regional fares. Existing route prices are preserved; Si Racha and Bang Saen share Pattaya fares.",
       "admin_region_invalid": "Please check the input.",
       "admin_region_save": "Save",
       "admin_region_cancel": "Cancel",
@@ -9316,7 +9316,7 @@ class AppLocalizations {
       "admin_region_priority": "匹配优先级",
       "admin_region_edit": "修改",
       "admin_region_fixed_price": "固定车费",
-      "admin_region_proposal": "区域边界为待确认方案。保留现有路线价格，新增路线经批准后才提供自动报价。",
+      "admin_region_proposal": "已批准的区域固定车费。保留现有路线价格，是拉差和邦盛共用芭提雅价格。",
       "admin_region_invalid": "请检查输入内容。",
       "admin_region_save": "保存",
       "admin_region_cancel": "取消",
@@ -9334,7 +9334,7 @@ class AppLocalizations {
       "admin_region_edit": "編集",
       "admin_region_fixed_price": "固定料金",
       "admin_region_proposal":
-          "境界は確認用の提案です。既存路線の料金は維持し、新規路線は承認後に自動見積もりの対象になります。",
+          "承認済みのエリア固定料金です。既存路線の料金は維持し、シラチャ・バンセンはパタヤ料金を共有します。",
       "admin_region_invalid": "入力内容を確認してください。",
       "admin_region_save": "保存",
       "admin_region_cancel": "キャンセル",
@@ -9353,7 +9353,7 @@ class AppLocalizations {
       "admin_region_edit": "แก้ไข",
       "admin_region_fixed_price": "ราคาคงที่",
       "admin_region_proposal":
-          "ขอบเขตนี้เป็นข้อเสนอเพื่อพิจารณา คงราคาเส้นทางเดิมไว้ เส้นทางใหม่ต้องได้รับอนุมัติก่อนเสนอราคาอัตโนมัติ",
+          "ราคาคงที่ตามพื้นที่ที่อนุมัติแล้ว คงราคาเส้นทางเดิมไว้ ศรีราชาและบางแสนใช้ราคาเดียวกับพัทยา",
       "admin_region_invalid": "กรุณาตรวจสอบข้อมูล",
       "admin_region_save": "บันทึก",
       "admin_region_cancel": "ยกเลิก",

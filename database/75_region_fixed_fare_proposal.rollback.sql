@@ -1,3 +1,5 @@
--- Export administrator boundary edits before rollback. Disable REGION_FIXED_FARES_ENABLED first.
+-- Disable REGION_FIXED_FARES_ENABLED and recreate backend first.
+-- Export administrator edits to both regional tables before destructive rollback.
+DROP TABLE IF EXISTS pricing_region_fares;
 DROP TABLE IF EXISTS pricing_regions;
--- Existing routes, prices, bookings, capacity rules were not changed.
+-- Existing routes, vehicle_prices, bookings and capacity rules are unchanged.

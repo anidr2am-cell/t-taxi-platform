@@ -8,8 +8,8 @@
       "SUV": 1200,
       "VAN": 1600
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "BANGKOK",
@@ -20,8 +20,8 @@
       "SUV": 1400,
       "VAN": 1800
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "BANGKOK",
@@ -32,8 +32,8 @@
       "SUV": 2300,
       "VAN": 3000
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "BANGKOK",
@@ -44,8 +44,8 @@
       "SUV": 2200,
       "VAN": 2600
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "PATTAYA",
@@ -56,8 +56,8 @@
       "SUV": 900,
       "VAN": 1300
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "PATTAYA",
@@ -68,8 +68,8 @@
       "SUV": 3500,
       "VAN": 3800
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "PATTAYA",
@@ -80,8 +80,8 @@
       "SUV": 1100,
       "VAN": 1400
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "UTP",
@@ -92,8 +92,8 @@
       "SUV": 1100,
       "VAN": 1400
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "UTP",
@@ -104,8 +104,8 @@
       "SUV": 2100,
       "VAN": 2700
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "HUA_HIN",
@@ -116,8 +116,8 @@
       "SUV": 2200,
       "VAN": 2600
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "HUA_HIN",
@@ -128,8 +128,8 @@
       "SUV": 3500,
       "VAN": 3800
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "RAYONG",
@@ -140,8 +140,8 @@
       "SUV": 800,
       "VAN": 1000
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   },
   {
     "origin": "RAYONG",
@@ -152,7 +152,7 @@
       "SUV": 2200,
       "VAN": 2600
     },
-    "approval": "PENDING",
-    "source": "Edward supplied comparison figures; not active fares"
+    "approval": "APPROVED",
+    "source": "Edward approved 2026-10-16; migration 75 regional fares"
   }
 ]

@@ -251,9 +251,9 @@ class _AdminRegionFaresPanelState extends State<AdminRegionFaresPanel> {
     await route.completed;
     if (ok == true && mounted)
       await _save(
-        () => widget.api.updateVehiclePrice(row['id'] as int, {
-          'price': double.parse(amount.text),
-        }),
+        () => row['regional'] == true
+            ? _regionApi.updateRegionFare(row['id'] as int, {'price': double.parse(amount.text)})
+            : widget.api.updateVehiclePrice(row['id'] as int, {'price': double.parse(amount.text)}),
       );
     amount.dispose();
   }
@@ -344,7 +344,7 @@ class _AdminRegionFaresPanelState extends State<AdminRegionFaresPanel> {
           ),
         const SizedBox(height: AppTokens.spaceMd),
         Text(
-          t('admin_region_pending'),
+          t('admin_region_fares'),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         for (final candidate in _candidates)
@@ -354,8 +354,11 @@ class _AdminRegionFaresPanelState extends State<AdminRegionFaresPanel> {
                 '${candidate['origin']} → ${candidate['destination']}',
               ),
               subtitle: Text(
-                '${t('fare_inquiry_title')} · ${candidate['prices']}',
+                '${candidate['vehicleTypeCode']} · ${candidate['price']} THB',
               ),
+              trailing: IconButton(tooltip: t('admin_region_edit'),
+                onPressed: _saving ? null : () => _editPrice(candidate as Map),
+                icon: const Icon(Icons.edit_outlined)),
             ),
           ),
       ],

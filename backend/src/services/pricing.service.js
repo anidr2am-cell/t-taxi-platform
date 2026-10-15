@@ -683,11 +683,32 @@ class PricingService {
     if (origin && destination && origin.code === destination.code && input.serviceTypeCode === SERVICE_TYPES.CITY_TRANSFER) {
       return this.legacyCalculate(input); // Same-region policy is intentionally unchanged in phase 1.
     }
-    const inquiry = () => new AppError('Fare inquiry required', { statusCode: 422, errorCode: 'INQUIRY_REQUIRED' });
+    const inquiry = () => {
+      logger.info('Regional fare inquiry', { originRegion: origin?.code ?? 'UNMATCHED',
+        destinationRegion: destination?.code ?? 'UNMATCHED' });
+      return new AppError('Fare inquiry required', { statusCode: 422, errorCode: 'INQUIRY_REQUIRED' });
+    };
     if (!origin || !destination) throw inquiry();
     const serviceType = await this.resolveServiceType(regionalServiceType(origin, destination));
     const vehicleType = await this.vehicleRepository.findTypeByCode(input.vehicleTypeCode);
     if (!vehicleType) throw new AppError('Vehicle type not found', { statusCode: 400, errorCode: ERROR_CODES.VALIDATION_ERROR });
+    // Approved additions live separately so neither the landing catalog nor
+    // the flag-disabled legacy calculation gains any new fallback routes.
+    const regionalFare = await this.pricingRegionRepository.findFare?.(
+      origin.fare_location_code, destination.fare_location_code, vehicleType.code);
+    if (regionalFare) {
+      const quantity = input.vehicleCount ?? 1;
+      const baseAmount = roundMoney(regionalFare.price * quantity);
+      const priced = await this.appendPolicyChargeItems({
+        chargeItems: [{ chargeType: CHARGE_TYPES.VEHICLE_BASE, description: `${vehicleType.code} ${serviceType.code}`,
+          quantity, unitPrice: regionalFare.price, amount: baseAmount,
+          referenceType: 'REGION_FARE', referenceId: regionalFare.id }],
+        baseAmount, options: input.options ?? {}, serviceTypeCode: serviceType.code,
+        scheduledPickupAt: input.scheduledPickupAt, customerFacing: true,
+      });
+      return { ...this.formatCalculateResponse({ ...priced, currency: regionalFare.currency }),
+        pricingMode: 'REGION_FIXED', originRegion: origin.code, destinationRegion: destination.code };
+    }
     const [o, d] = await Promise.all([
       this.locationRepository.findByCode(origin.fare_location_code),
       this.locationRepository.findByCode(destination.fare_location_code),
