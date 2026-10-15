@@ -57,7 +57,7 @@ bash run-driver-ui-gate-true-post.sh /opt/t-ride/releases/qa-standard-open-call/
 Use the tunnel line from `KEEP_QA_RUNNING=1` output (container IP on staging). Form:
 
 ```powershell
-ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:13001:<QA_API_IP>:3000 tride-staging
+ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:13001:<QA_API_IP>:3000 tride-prod
 ```
 
 Health on PC: `curl -sS http://127.0.0.1:13001/api/v1/health`

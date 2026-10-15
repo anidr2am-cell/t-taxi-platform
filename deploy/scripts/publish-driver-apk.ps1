@@ -3,7 +3,7 @@ param(
   [Parameter(Mandatory = $true)][string]$ApkPath,
   [Parameter(Mandatory = $true)][string]$VersionName,
   [Parameter(Mandatory = $true)][int]$VersionCode,
-  [string]$SshHost = 'tride-staging',
+  [string]$SshHost = 'tride-prod',
   [string]$RemoteDirectory = '/srv/tride/downloads',
   [string]$ExpectedCertificateSha256 = 'E250C0FCF3EA61DF09D9AEE86242159321EECAED6E7DE7B425E6EB34812892B5'
 )
