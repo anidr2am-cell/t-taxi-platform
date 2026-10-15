@@ -69,6 +69,18 @@
         "subject": "이용 후기를 부탁드립니다",
         "body": ""
       }
+    },
+    "vehicle": "차량",
+    "paymentMethod": "결제 방법",
+    "vehicles": {
+      "SEDAN": "세단",
+      "SUV": "SUV",
+      "VAN": "밴"
+    },
+    "paymentMethods": {
+      "PAY_DRIVER": "현금 · 도착 후 기사에게 결제",
+      "BANK_TRANSFER": "계좌이체 · 관리자 안내",
+      "CARD": "카드결제 · 관리자 안내"
     }
   },
   "en": {
@@ -141,6 +153,18 @@
         "subject": "Please share your ride experience",
         "body": ""
       }
+    },
+    "vehicle": "Vehicle",
+    "paymentMethod": "Payment method",
+    "vehicles": {
+      "SEDAN": "Sedan",
+      "SUV": "SUV",
+      "VAN": "Van"
+    },
+    "paymentMethods": {
+      "PAY_DRIVER": "Cash · pay the driver on arrival",
+      "BANK_TRANSFER": "Bank transfer · arranged by the administrator",
+      "CARD": "Card · arranged by the administrator"
     }
   },
   "th": {
@@ -213,6 +237,18 @@
         "subject": "ขอเชิญแบ่งปันประสบการณ์การเดินทาง",
         "body": ""
       }
+    },
+    "vehicle": "รถ",
+    "paymentMethod": "วิธีชำระเงิน",
+    "vehicles": {
+      "SEDAN": "รถเก๋ง",
+      "SUV": "SUV",
+      "VAN": "รถตู้"
+    },
+    "paymentMethods": {
+      "PAY_DRIVER": "เงินสด · ชำระกับคนขับเมื่อถึงจุดหมาย",
+      "BANK_TRANSFER": "โอนเงิน · ติดต่อผู้ดูแล",
+      "CARD": "บัตร · ติดต่อผู้ดูแล"
     }
   },
   "ja": {
@@ -285,6 +321,18 @@
         "subject": "ご乗車の感想をお聞かせください",
         "body": ""
       }
+    },
+    "vehicle": "車両",
+    "paymentMethod": "お支払い方法",
+    "vehicles": {
+      "SEDAN": "セダン",
+      "SUV": "SUV",
+      "VAN": "バン"
+    },
+    "paymentMethods": {
+      "PAY_DRIVER": "現金 · 到着後にドライバーへお支払い",
+      "BANK_TRANSFER": "銀行振込 · 管理者がご案内",
+      "CARD": "カード · 管理者がご案内"
     }
   },
   "zh": {
@@ -357,6 +405,18 @@
         "subject": "邀请您分享乘车体验",
         "body": ""
       }
+    },
+    "vehicle": "车辆",
+    "paymentMethod": "付款方式",
+    "vehicles": {
+      "SEDAN": "轿车",
+      "SUV": "SUV",
+      "VAN": "面包车"
+    },
+    "paymentMethods": {
+      "PAY_DRIVER": "现金 · 到达目的地后付给司机",
+      "BANK_TRANSFER": "银行转账 · 由管理员提供指引",
+      "CARD": "银行卡 · 由管理员提供指引"
     }
   }
 }

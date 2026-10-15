@@ -10,6 +10,7 @@ const DELIVERY_STATUS = require('../constants/notificationDeliveryStatus');
 const RECIPIENT_TYPES = require('../constants/notificationRecipientTypes');
 const { EVENTS } = require('../events');
 const { createDeliveryAdapters } = require('./notificationDelivery.adapters');
+const { emailAudience, emailPolicyError } = require('../policies/notificationEmail.policy');
 
 const TOKEN_HASH_LOG_LENGTH = 8;
 
@@ -643,7 +644,9 @@ class NotificationService {
         await this.notificationRepository.insertDelivery(conn, {
           notificationId,
           channel,
-          deliveryStatus: DELIVERY_STATUS.PENDING,
+          deliveryStatus: channel === NOTIFICATION_CHANNELS.EMAIL && emailPolicyError(spec)
+            ? DELIVERY_STATUS.SKIPPED : DELIVERY_STATUS.PENDING,
+          lastError: channel === NOTIFICATION_CHANNELS.EMAIL ? emailPolicyError(spec) : null,
         });
       }
     }
@@ -717,6 +720,24 @@ class NotificationService {
       if (!adapter) continue;
 
       try {
+        if (delivery.channel === NOTIFICATION_CHANNELS.EMAIL) {
+          const policyError = emailPolicyError(notification);
+          if (policyError) {
+            await this.recordDeliveryResult(notificationId, delivery, { status: DELIVERY_STATUS.SKIPPED, error: policyError });
+            continue;
+          }
+          if (emailAudience(notification) === ROLES.CUSTOMER) {
+            // Reserve before SMTP, under a booking row lock. An ambiguous send is
+            // never retried: avoiding duplicate customer mail takes precedence.
+            const claim = await this.notificationRepository.claimCustomerEmail(notification, delivery);
+            if (claim.alreadyProcessed) continue;
+            if (!claim.allowed) {
+              await this.recordDeliveryResult(notificationId, delivery, { status: DELIVERY_STATUS.SKIPPED, error: claim.error });
+              continue;
+            }
+            delivery.emailReserved = true;
+          }
+        }
         const result = delivery.channel === NOTIFICATION_CHANNELS.FCM
           ? await this.sendFcmToActiveDevices(notification, recipient)
           : await adapter.send(notification, recipient);
@@ -724,7 +745,8 @@ class NotificationService {
       } catch (err) {
         await this.recordDeliveryResult(notificationId, delivery, {
           status: DELIVERY_STATUS.FAILED,
-          error: this.safeDeliveryError(err),
+          error: delivery.channel === NOTIFICATION_CHANNELS.EMAIL && emailAudience(notification) === ROLES.CUSTOMER
+            ? `PERMANENT_EMAIL_SEND_UNCERTAIN:${this.safeDeliveryError(err)}` : this.safeDeliveryError(err),
         });
         logger.warn('Notification adapter failed', {
           notificationId,
@@ -803,6 +825,7 @@ class NotificationService {
         result.status,
         error,
         deliveredAt,
+        !delivery.emailReserved,
       );
       await conn.commit();
     } catch (err) {

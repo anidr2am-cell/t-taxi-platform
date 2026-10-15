@@ -3,6 +3,7 @@ const NOTIFICATION_CHANNELS = require('../constants/notificationChannels');
 const config = require('../config/env');
 const fs = require('node:fs');
 const { isCustomerEmail, renderCustomerEmail } = require('../templates/customerEmail');
+const { emailPolicyError } = require('../policies/notificationEmail.policy');
 
 const CONFIG_MISSING = 'CONFIG_MISSING';
 const INVALID_RECIPIENT = 'PERMANENT_INVALID_RECIPIENT';
@@ -125,6 +126,8 @@ class EmailNotificationAdapter {
   }
 
   async send(notification, _recipient) {
+    const policyError = emailPolicyError(notification);
+    if (policyError) return { status: DELIVERY_STATUS.SKIPPED, error: policyError };
     if (!this.isConfigured()) {
       return { status: DELIVERY_STATUS.SKIPPED, error: CONFIG_MISSING };
     }
