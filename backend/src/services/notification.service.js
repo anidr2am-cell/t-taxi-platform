@@ -383,6 +383,7 @@ class NotificationService {
     const driverId = payload.driverId ?? booking?.driver_id ?? null;
 
     const customerPayload = this.sanitizePayload({ bookingNumber });
+    const customerEmailPayload = this.sanitizePayload({ bookingNumber, locale: payload.locale ?? payload.language ?? null });
 
     const addCustomer = (notificationType) => {
       if (customerUserId) {
@@ -394,7 +395,7 @@ class NotificationService {
           userId: customerUserId,
           bookingId: payload.bookingId ?? booking?.id ?? null,
           audienceRole: ROLES.CUSTOMER,
-          payload: customerPayload,
+          payload: customerEmailPayload,
         });
       } else if (payload.bookingId || booking?.id) {
         specs.push({
@@ -404,7 +405,7 @@ class NotificationService {
           recipientType: RECIPIENT_TYPES.GUEST_BOOKING,
           bookingId: payload.bookingId ?? booking.id,
           audienceRole: ROLES.CUSTOMER,
-          payload: customerPayload,
+          payload: customerEmailPayload,
         });
       }
     };

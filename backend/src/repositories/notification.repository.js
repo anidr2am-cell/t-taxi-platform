@@ -133,6 +133,9 @@ class NotificationRepository {
             ELSE NULL
           END AS recipient_email,
           u.locale AS recipient_locale,
+          u.role AS recipient_user_role,
+          b.metadata AS booking_metadata,
+          b.total_amount AS booking_total_amount,
           b.booking_number,
           b.scheduled_pickup_at,
           b.origin_address,
