@@ -63,6 +63,16 @@ class _AdminEmailReviewPageState extends State<AdminEmailReviewPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                SelectableText(
+                  '${row['bookingNumber'] ?? ''} · ${t('type_${row['notificationType']}')}',
+                ),
+                if (action == 'RETRY_APPROVED')
+                  SelectableText(
+                    '${t('smtp_evidence')}: ${row['smtpCommand'] ?? ''} ${row['smtpResponseCode'] ?? ''} · ${row['errorCode'] ?? ''}',
+                  ),
+                if (row['traceId'] != null)
+                  SelectableText('${t('trace')}: ${row['traceId']}'),
+                const SizedBox(height: AppTokens.spaceSm),
                 Text(
                   t(
                     action == 'RETRY_APPROVED'
@@ -114,7 +124,8 @@ class _AdminEmailReviewPageState extends State<AdminEmailReviewPage> {
           content: Text(
             t(
               action == 'RETRY_APPROVED'
-                  ? (result['outcome'] == 'ACCEPTED' && result['trackingSaved'] != false
+                  ? (result['outcome'] == 'ACCEPTED' &&
+                            result['trackingSaved'] != false
                         ? 'accepted'
                         : 'check_again')
                   : 'recorded',
@@ -151,7 +162,7 @@ class _AdminEmailReviewPageState extends State<AdminEmailReviewPage> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppTokens.spaceMd),
                       child: SelectableText(
-                        '${t('trace')}: ${a['trace_id']}\n${t('message_id')}: ${a['message_id']}\n${t('outcome_${a['outcome']}')}\n${formatBackendServiceDateTimeBangkok(a['started_at']?.toString()) ?? ''}\n${a['error_code'] ?? ''} ${a['smtp_command'] ?? ''} ${a['smtp_response_code'] ?? ''}',
+                        '${t('trace')}: ${a['trace_id']}\n${t('message_id')}: ${a['message_id']}\n${t('provider_id')}: ${a['provider_message_id'] ?? '—'}\n${t('outcome_${a['outcome']}')}\n${formatBackendServiceDateTimeBangkok(a['started_at']?.toString()) ?? ''}\n${a['error_code'] ?? ''} ${a['smtp_command'] ?? ''} ${a['smtp_response_code'] ?? ''}',
                       ),
                     ),
                   for (final r in result['reviews'] as List)

@@ -9072,6 +9072,8 @@ class AppLocalizations {
 
   static const Map<String, Map<String, String>> _emailReviewTranslations = {
     "ko": {
+      "admin_email_smtp_evidence": "SMTP 미수락 근거",
+      "admin_email_provider_id": "공급자 메시지 ID",
       "admin_email_previous": "이전 페이지",
       "admin_email_next": "다음 페이지",
       "admin_email_title": "메일 확인 필요",
@@ -9108,6 +9110,8 @@ class AppLocalizations {
       "admin_email_type_BOOKING_CANCELLED": "예약 취소",
     },
     "en": {
+      "admin_email_smtp_evidence": "SMTP non-acceptance evidence",
+      "admin_email_provider_id": "Provider message ID",
       "admin_email_previous": "Previous page",
       "admin_email_next": "Next page",
       "admin_email_title": "Email review needed",
@@ -9147,6 +9151,8 @@ class AppLocalizations {
       "admin_email_type_BOOKING_CANCELLED": "Booking cancelled",
     },
     "zh": {
+      "admin_email_smtp_evidence": "SMTP未受理依据",
+      "admin_email_provider_id": "服务商邮件ID",
       "admin_email_previous": "上一页",
       "admin_email_next": "下一页",
       "admin_email_title": "待确认邮件",
@@ -9181,6 +9187,8 @@ class AppLocalizations {
       "admin_email_type_BOOKING_CANCELLED": "预约取消",
     },
     "ja": {
+      "admin_email_smtp_evidence": "SMTP未受理の根拠",
+      "admin_email_provider_id": "配信事業者メッセージID",
       "admin_email_previous": "前のページ",
       "admin_email_next": "次のページ",
       "admin_email_title": "メール要確認",
@@ -9217,6 +9225,8 @@ class AppLocalizations {
       "admin_email_type_BOOKING_CANCELLED": "予約キャンセル",
     },
     "th": {
+      "admin_email_smtp_evidence": "หลักฐานว่า SMTP ไม่ยอมรับ",
+      "admin_email_provider_id": "รหัสข้อความจากผู้ให้บริการ",
       "admin_email_previous": "หน้าก่อนหน้า",
       "admin_email_next": "หน้าถัดไป",
       "admin_email_title": "อีเมลที่ต้องตรวจสอบ",

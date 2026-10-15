@@ -25,6 +25,9 @@ class FakeMailApi extends AdminNotificationApiService {
         'updatedAt': '2026-10-15T03:00:00.000Z',
         'traceId': 'trace-1234',
         'messageId': '<mail-1@trider.taxi>',
+        if (recoverable) 'smtpCommand': 'RCPT TO',
+        if (recoverable) 'smtpResponseCode': 550,
+        if (recoverable) 'errorCode': 'EENVELOPE',
       },
     ],
   };
@@ -103,6 +106,20 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('미수락 메일 승인 복구'));
       await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('QA_MAIL'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('RCPT TO 550'),
+        ),
+        findsOneWidget,
+      );
       expect(
         tester
             .widget<FilledButton>(find.widgetWithText(FilledButton, '확인'))
