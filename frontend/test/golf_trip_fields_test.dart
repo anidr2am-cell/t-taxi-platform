@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,31 @@ import 'package:frontend/features/booking/controllers/booking_wizard_controller.
 import 'package:frontend/features/booking/models/location_option.dart';
 import 'package:frontend/features/booking/services/recent_locations_storage.dart';
 import 'support/booking_wizard_test_helpers.dart';
+import 'package:frontend/features/booking/models/vehicle_recommendation.dart';
+
+class DelayedGolfRecommendation extends CapturingBookingApi {
+  final gate = Completer<void>();
+  int calls = 0;
+  @override
+  Future<VehicleRecommendation> recommendVehicle({
+    required int adults,
+    int children = 0,
+    int infants = 0,
+    int luggage20 = 0,
+    int luggage24 = 0,
+    int golfBags = 0,
+    int specialLuggageCount = 0,
+  }) async {
+    calls++;
+    await gate.future;
+    return const VehicleRecommendation(
+      recommendedVehicle: 'SEDAN',
+      selectableVehicles: ['SEDAN'],
+      multipleVehicles: false,
+      message: 'OK',
+    );
+  }
+}
 
 final courses = [
   {
@@ -36,6 +62,57 @@ Widget wrap(Widget child, String lang) => MaterialApp(
   home: Scaffold(body: SingleChildScrollView(child: child)),
 );
 void main() {
+  test(
+    'rapid course changes retain the last course when an earlier recommendation completes',
+    () async {
+      final api = DelayedGolfRecommendation();
+      final controller = BookingWizardController(
+        apiService: api,
+        storage: MemoryBookingStateStorage(),
+        recentLocationsStorage: RecentLocationsStorage(
+          guestRepository: MemoryRecentLocationsRepository(),
+        ),
+        now: () => DateTime.utc(2026, 10, 16),
+      );
+      await controller.initialize();
+      await controller.selectService(BookingServiceType.golfTransfer);
+      await controller.setPickupDateTime(DateTime(2026, 10, 19, 12));
+      await controller.setOrigin(
+        const LocationOption(
+          id: 'sn',
+          displayName: 'SN Plus',
+          kind: LocationKind.place,
+          code: 'PATTAYA',
+          latitude: 12.9477908,
+          longitude: 100.8968352,
+        ),
+      );
+      final first = controller.selectGolfCourse({
+        'courseId': 1,
+        'tripType': 'ROUND_TRIP',
+        'holes': 18,
+      }, courses.first);
+      await Future<void>.delayed(Duration.zero);
+      expect(api.calls, 1);
+      final second = controller.selectGolfCourse(
+        {'courseId': 2, 'tripType': 'ROUND_TRIP', 'holes': 27},
+        {
+          ...courses.first,
+          'id': 2,
+          'name': 'Second course',
+          'lat': 13.04,
+          'lng': 101.04,
+        },
+      );
+      await Future<void>.delayed(Duration.zero);
+      api.gate.complete();
+      await Future.wait([first, second]);
+      expect(controller.state.golf!['courseId'], 2);
+      expect(controller.state.destination!.id, 'golf:2');
+      expect(controller.state.golf!['holes'], 27);
+      controller.dispose();
+    },
+  );
   test(
     'golf requires explicit choices and keeps hotel when switching outbound/return',
     () async {

@@ -395,6 +395,9 @@ class BookingWizardController extends ChangeNotifier {
     Map<String, dynamic>? course,
   ) async {
     final previousType = _state.golf?['tripType'];
+    var origin = _state.origin;
+    var destination = _state.destination;
+    LocationOption? selectedCourse;
     if (course != null) {
       final option = LocationOption(
         id: 'golf:${course['id']}',
@@ -408,19 +411,41 @@ class BookingWizardController extends ChangeNotifier {
       );
       if (selection['tripType'] == 'RETURN') {
         if (previousType != 'RETURN' &&
-            _state.origin?.kind != LocationKind.golf &&
-            _state.origin != null)
-          await setDestination(_state.origin!);
-        await setOrigin(option);
+            origin?.kind != LocationKind.golf &&
+            origin != null) {
+          destination = origin;
+        }
+        origin = option;
       } else {
         if (previousType == 'RETURN' &&
-            _state.destination?.kind != LocationKind.golf &&
-            _state.destination != null)
-          await setOrigin(_state.destination!);
-        await setDestination(option);
+            destination?.kind != LocationKind.golf &&
+            destination != null) {
+          origin = destination;
+        }
+        destination = option;
       }
+      selectedCourse = option;
     }
-    await setGolf(selection);
+    // Commit the selected package and both endpoints before any async work.
+    // An older recommendation must never restore an earlier course selection.
+    _invalidateSubmitIdempotencyKey();
+    _recommendationGeneration++;
+    _pricingGeneration++;
+    _isLoading = false;
+    _state = _state.copyWith(
+      golf: selection,
+      origin: origin,
+      destination: destination,
+      clearOrigin: origin == null,
+      clearDestination: destination == null,
+      clearRecommendation: true,
+      clearPricing: true,
+      clearError: true,
+    );
+    notifyListeners();
+    await _persist();
+    if (selectedCourse != null) await _recentLocations.add(selectedCourse);
+    await syncDerivedData();
   }
 
   bool _golfComplete(BookingWizardState state) =>
