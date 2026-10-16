@@ -329,7 +329,7 @@ test('GOLF_TRANSFER does not use city transfer distance fallback', async () => {
       destinationLat: COORDS.mediumTrip.lat,
       destinationLng: COORDS.mediumTrip.lng,
     }),
-    (err) => err.errorCode === ERROR_CODES.NOT_FOUND,
+    (err) => err.errorCode === 'INQUIRY_REQUIRED' && err.statusCode === 422,
   );
 });
 

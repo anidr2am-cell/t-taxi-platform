@@ -56,10 +56,21 @@ test('polygon edge is inclusive and exterior is excluded', () => {
   const r={ geometry:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]] } };
   assert.equal(contains(r,1,1),true); assert.equal(contains(r,0,1),true); assert.equal(contains(r,3,1),false);
 });
-test('same-region city and golf preserve the existing calculation', async () => {
+test('same-region city preserves the existing calculation', async () => {
   const s=service();s.legacyCalculate=async()=>({legacy:true});
-  assert.deepEqual(await s.calculate({ ...input,serviceTypeCode:'GOLF_TRANSFER' }),{legacy:true});
   assert.deepEqual(await s.calculate({ serviceTypeCode:'CITY_TRANSFER', originLat:12.93,originLng:100.89,destinationLat:12.95,destinationLng:100.90 }),{legacy:true});
+});
+
+test('golf returns the inquiry contract for every origin with either region flag', async () => {
+  for (const regional of [true, false]) {
+    const s = service();
+    if (!regional) s.pricingRegionRepository = null;
+    s.legacyCalculate = async () => { throw Error('legacy golf must not run'); };
+    for (const origin of [{originLocationCode:'PATTAYA'}, {originAirportIata:'BKK'}, {originLocationCode:'UNKNOWN'}]) {
+      await assert.rejects(s.calculate({ ...input, ...origin, serviceTypeCode:'GOLF_TRANSFER' }),
+        { statusCode:422, errorCode:'INQUIRY_REQUIRED' });
+    }
+  }
 });
 test('registered landing catalog does not change when geographic policy is enabled', async () => {
   const s=service();s.legacyCalculate=async body=>body;

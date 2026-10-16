@@ -670,7 +670,13 @@ class PricingService {
   async calculateRegisteredRoute(input) { return this.legacyCalculate(input); }
 
   async calculate(input) {
-    if (!this.pricingRegionRepository || input.serviceTypeCode === SERVICE_TYPES.GOLF_TRANSFER) {
+    // Golf packages are not connected to the route catalog yet. Use the same
+    // customer inquiry contract as unregistered regional fares, even when the
+    // regional-fare flag is disabled; never leak legacy same-location errors.
+    if (input.serviceTypeCode === SERVICE_TYPES.GOLF_TRANSFER) {
+      throw new AppError('Fare inquiry required', { statusCode: 422, errorCode: 'INQUIRY_REQUIRED' });
+    }
+    if (!this.pricingRegionRepository) {
       return this.legacyCalculate(input);
     }
     const { matchRegion, regionalServiceType } = require('../utils/pricingRegion.util');
